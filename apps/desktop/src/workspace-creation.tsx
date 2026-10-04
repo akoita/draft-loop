@@ -31,7 +31,7 @@ export function WorkspaceCreationForm({
   const canCreate = draft.name.trim() !== "" && validRounds;
   return (
     <form
-      className="setup-form workspace-creation-form"
+      className="setup-form"
       aria-label="Create or open a review workspace"
       onSubmit={(event) => {
         event.preventDefault();

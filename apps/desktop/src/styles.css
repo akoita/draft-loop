@@ -2954,6 +2954,244 @@ input[type="checkbox"] {
 }
 
 /* =========================================================================
+   Candidate knowledge store and configured model pair
+   ========================================================================= */
+
+.knowledge-panel {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.knowledge-panel h2 {
+  margin: 0;
+}
+
+.knowledge-panel .eyebrow {
+  margin-bottom: var(--space-1);
+}
+
+.knowledge-copy,
+.knowledge-status,
+.knowledge-hint {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  max-width: 76ch;
+}
+
+.knowledge-hint {
+  font-size: var(--text-xs);
+}
+
+.knowledge-status {
+  color: var(--amber);
+}
+
+.knowledge-store-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 22rem) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.knowledge-store-actions,
+.knowledge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.knowledge-base-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.knowledge-base-card {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2);
+}
+
+.knowledge-base-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.knowledge-base-header strong {
+  color: var(--text-1);
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+
+.knowledge-workspace-import {
+  display: grid;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+/* The pair a new run will use: plain names first, exact ids as quiet detail. */
+.workspace-model-summary {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2);
+}
+
+/* The title is an h2 for structure but reads as a section label; beat the panel's h2 sizing. */
+.workspace-model-summary h2.eyebrow {
+  margin: 0;
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: var(--label-tracking);
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.workspace-model-summary-rows {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.workspace-model-summary-row {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.workspace-model-summary-row dt {
+  color: var(--text-2);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.workspace-model-summary-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+
+.workspace-model-summary-name {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.workspace-model-summary-provider {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.workspace-model-summary-id {
+  color: var(--text-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  overflow-wrap: anywhere;
+}
+
+.workspace-model-summary-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+/* Presets or custom: a compact segmented control under a field-style label. */
+.model-editor-mode {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: var(--space-4) 0 0;
+  border: 0;
+  padding: 0;
+}
+
+.model-editor-mode legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  color: var(--text-2);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.model-editor-mode .view-toggle {
+  width: fit-content;
+}
+
+/* The profile section sits inside a fieldset only so that it can be disabled
+   as a unit; the fieldset itself draws nothing. */
+.profile-knowledge-lock {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.profile-catalog-picker {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.profile-catalog-picker > label {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-catalog-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.profile-catalog-controls select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.model-suggestion-note {
+  border-left: 2px solid var(--amber-line);
+  padding-left: var(--space-3);
+}
+
+.model-profile-picker-retry {
+  justify-self: start;
+  width: fit-content;
+}
+
+/* =========================================================================
    Canonical candidate profile
    ========================================================================= */
 
@@ -4517,8 +4755,14 @@ input[type="checkbox"] {
   }
 
   .profile-controls,
-  .profile-metadata {
+  .profile-metadata,
+  .knowledge-store-row {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-model-summary-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
   }
 
   .profile-approval-label {
