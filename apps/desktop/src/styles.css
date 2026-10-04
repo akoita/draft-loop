@@ -4097,6 +4097,19 @@ input[type="checkbox"] {
   max-width: 14rem;
 }
 
+.profile-issue-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+}
+
 .profile-actions {
   display: flex;
   flex-wrap: wrap;
