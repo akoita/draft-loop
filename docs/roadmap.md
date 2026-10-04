@@ -85,6 +85,12 @@ An opt-in provider adapter supports DeepInfra's GLM-5.3-Flash for development
 experiments. This exception does not change the default Anthropic/OpenAI pair
 or imply representative-CV quality validation.
 
+An opt-in adapter also supports Gemini 3.7 Flash through Google's Gemini API
+for development ([#813](https://github.com/akoita/draft-loop/issues/813)).
+Default pairs and representative quality claims are unchanged. Free-tier Gemini
+API terms may allow Google to use submitted content, so candidate material
+needs a paid-tier key.
+
 Current cost-reporting work preserves validated OpenAI cached-input,
 cache-write, and reasoning-output counts in adapter results. Estimates use
 explicitly supplied rates and remain unknown when usage or an applicable rate
