@@ -273,6 +273,59 @@ describe("provider author agent revision", () => {
   });
 });
 
+describe("provider author agent grounded blocks", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  function twoBlockProposal(): JsonObject {
+    return {
+      sections: [
+        {
+          title: "Experience",
+          kind: "experience",
+          blocks: [acceptedText, rejectedText].map((text) => ({
+            type: "bullet",
+            text,
+            claims: [{ text, substantive: true, evidenceChunkIds: ["chunk"] }],
+          })),
+        },
+      ],
+    };
+  }
+
+  it("keeps the grounded blocks and reports the removed one as a warning", async () => {
+    const { author } = agent([twoBlockProposal()]);
+
+    const execution = await author.execute(request("run-1"));
+
+    expect(execution.output.sections[0]?.blocks.map(({ text }) => text)).toEqual([acceptedText]);
+    expect(execution.output.claims.map(({ text }) => text)).toEqual([acceptedText]);
+    expect(execution.outputFindings).toEqual([
+      expect.objectContaining({
+        code: "ungrounded-author-content-dropped",
+        severity: "warning",
+        message: expect.stringMatching(/^1 draft block was removed because/u),
+      }),
+    ]);
+    expect(JSON.stringify(execution.outputFindings)).not.toContain("2023");
+  });
+
+  it("adds no warning when every block is grounded", async () => {
+    const { author } = agent([proposal(acceptedText)]);
+
+    const execution = await author.execute(request("run-1"));
+
+    expect(execution).not.toHaveProperty("outputFindings");
+  });
+
+  it("still rejects a proposal with no grounded block left", async () => {
+    const { author } = agent([proposal(rejectedText)]);
+
+    await expect(author.execute(request("run-1"))).rejects.toMatchObject({
+      failureStage: "factual-invariant-rejection",
+    });
+  });
+});
+
 describe("local driver author revision", () => {
   const roots: string[] = [];
   beforeEach(() => resetAuthorRevisionMemoryForTests());

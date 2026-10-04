@@ -5,6 +5,7 @@ import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { proposalIssues } from "./author-diagnostic-counts.js";
+import { ungroundedAuthorContentFindings } from "./author-grounded-filter.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
 import {
   authorRevisionKey,
@@ -46,7 +47,9 @@ export interface ProviderAuthorAgentDependencies {
  * After a local validation rejection it remembers the rejected proposal and a
  * specific report in process memory; the next retry for the same run and
  * round sends both so the author revises instead of regenerating. Nothing
- * from that memory is persisted or placed in retry feedback.
+ * from that memory is persisted or placed in retry feedback. A proposal whose
+ * grounding failures are confined to blocks is not rejected: the draft keeps
+ * the grounded blocks and carries a warning finding with the counts.
  */
 export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies): AuthorAgent {
   const { context } = deps;
@@ -109,7 +112,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       };
       const adapter = await deps.createAdapter(deps.authorCompany, deps.authorModel, "author");
       const response = await adapter.execute(request);
-      const artifact = await buildAuthorArtifactWithCapture(
+      const grounded = await buildAuthorArtifactWithCapture(
         response,
         {
           executionId,
@@ -126,7 +129,11 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
           }),
       );
       forgetAuthorRevision(revisionKey);
-      return responseExecution(response, artifact);
+      const outputFindings = ungroundedAuthorContentFindings(grounded);
+      return {
+        ...responseExecution(response, grounded.artifact),
+        ...(outputFindings.length === 0 ? {} : { outputFindings }),
+      };
     },
   };
 }

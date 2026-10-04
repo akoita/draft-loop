@@ -2,11 +2,10 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { type JsonObject, type ModelResponse, ProviderAdapterError } from "@draft-loop/providers";
-import type { DraftArtifact } from "@draft-loop/schemas";
-
 import {
   type BuildAuthorArtifactOptions,
-  buildAuthorArtifact,
+  buildGroundedAuthorArtifact,
+  type GroundedAuthorArtifact,
   invalidAuthorProposalError,
 } from "./author-output.js";
 
@@ -14,16 +13,18 @@ import {
  * Opt-in local capture; the caller owns retention of sensitive replay inputs.
  * `onRejection` observes the original validation error before conversion and
  * capture; anything it throws is ignored so it cannot change the rejection.
+ * Proposals whose grounding failures are confined to blocks are not rejected:
+ * the artifact keeps the grounded blocks and reports how many were left out.
  */
 export async function buildAuthorArtifactWithCapture(
   response: ModelResponse<JsonObject>,
   inputs: Omit<BuildAuthorArtifactOptions, "proposal">,
   captureDirectory?: string,
   onRejection?: (validationInputs: BuildAuthorArtifactOptions, error: unknown) => void,
-): Promise<DraftArtifact> {
+): Promise<GroundedAuthorArtifact> {
   const validationInputs = { ...inputs, proposal: response.output };
   try {
-    return buildAuthorArtifact(validationInputs);
+    return buildGroundedAuthorArtifact(validationInputs);
   } catch (error) {
     try {
       onRejection?.(validationInputs, error);

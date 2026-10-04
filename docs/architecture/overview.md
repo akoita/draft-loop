@@ -180,6 +180,22 @@ these holds:
 Headings, labels, and explicit missing-data notices stay exempt. Wording built
 only from function words and evidence words is left to critic and human review.
 
+The checks never pass ungrounded content, but one failing block does not
+discard the whole draft. When every failure is confined to individual blocks,
+the draft keeps the blocks that pass:
+
+- A block with a failing claim, or a failing date range in its text, is removed.
+  A section left without blocks is removed.
+- A block whose claims pass but whose surrounding text fails is shortened to
+  its own claim text, with no new wording.
+- The kept draft is re-checked with the same rules. The draft carries one
+  content-free `ungrounded-author-content-dropped` warning with the counts, so
+  the critic, the revision round, and the user see that content was left out.
+
+The author step still fails, with the original diagnostics, when a failure is
+not confined to a block, such as a required section losing all its content, or
+when no section would remain.
+
 SQLite migration 26 preserves the artifact-history boundary: each immutable
 artifact ID may begin its own version-1 lineage, later rows link by parent
 version, and dependent run, execution, finding, decision, and export references
