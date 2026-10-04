@@ -4016,7 +4016,7 @@ describe("native host", () => {
           code: "capability-unavailable",
           capability: "models.list",
           message:
-            "Google model discovery is unavailable. Enter the exact model id gemini-3.7-flash.",
+            "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
         },
       });
       expect(discoveryFetch).not.toHaveBeenCalled();

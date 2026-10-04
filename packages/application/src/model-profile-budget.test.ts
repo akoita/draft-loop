@@ -20,7 +20,7 @@ const development: ModelProfileReferences = {
 };
 
 const geminiDevelopment: ModelProfileReferences = {
-  author: { id: "dev-google-gemini-author", version: 1 },
+  author: { id: "dev-google-gemini-author", version: 2 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 

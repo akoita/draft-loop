@@ -243,5 +243,6 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
   },
   createDeepInfraGLMAuthorProfile(),
-  createGoogleGeminiAuthorProfile(),
+  createGoogleGeminiAuthorProfile(1),
+  createGoogleGeminiAuthorProfile(2),
 ]);

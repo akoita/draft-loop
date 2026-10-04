@@ -207,25 +207,35 @@ describe("run model profile resolution", () => {
     }
   });
 
-  it("accepts only the exact development Gemini profile route", () => {
-    const gemini = defaultModelProfileRegistry.resolve("dev-google-gemini-author", 1, "author");
+  it.each([
+    [1, "gemini-3.7-flash"],
+    [2, "gemini-3.8-flash"],
+  ])("accepts only the exact development Gemini profile v%i route", (version, modelId) => {
+    const gemini = defaultModelProfileRegistry.resolve(
+      "dev-google-gemini-author",
+      version,
+      "author",
+    );
+    expect(gemini.modelId).toBe(modelId);
     expect(
       resolveRunModelProfiles(
-        references(gemini.id, "test-critic"),
+        { author: { id: gemini.id, version }, critic: { id: "test-critic", version: 1 } },
         registryFor(gemini),
         apiKeyRoutes,
       ).author,
     ).toEqual(gemini);
 
+    const otherModelId = modelId === "gemini-3.7-flash" ? "gemini-3.8-flash" : "gemini-3.7-flash";
     for (const invalid of [
       { ...gemini, modelId: "another-gemini-model" },
+      { ...gemini, modelId: otherModelId },
       { ...gemini, runtime: { ...gemini.runtime, effort: "high" as const } },
       { ...gemini, runtime: { ...gemini.runtime, thinking: { mode: "disabled" as const } } },
       { ...gemini, runtime: { ...gemini.runtime, maxOutputTokens: 16384 } },
     ]) {
       expect(() =>
         resolveRunModelProfiles(
-          references(invalid.id, "test-critic"),
+          { author: { id: invalid.id, version }, critic: { id: "test-critic", version: 1 } },
           registryFor(invalid),
           apiKeyRoutes,
         ),

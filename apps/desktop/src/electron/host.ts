@@ -2144,7 +2144,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       if (target.provider === "google") {
         return fail(
           "capability-unavailable",
-          "Google model discovery is unavailable. Enter the exact model id gemini-3.7-flash.",
+          "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
         );
       }
       const provider = target.provider;

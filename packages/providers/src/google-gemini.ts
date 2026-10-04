@@ -22,9 +22,13 @@ import {
   type RetryOptions,
 } from "./index.js";
 import {
+  googleGemini37FlashModelId,
+  googleGemini38FlashModelId,
   googleGeminiCompany,
   googleGeminiModelId,
   googleGeminiProvider,
+  googleGeminiSupportedModelIds,
+  isGoogleGeminiSupportedModelId,
 } from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import {
@@ -33,7 +37,15 @@ import {
   withoutSchemaKeywords,
 } from "./structured-output-schema.js";
 
-export { googleGeminiCompany, googleGeminiModelId, googleGeminiProvider };
+export {
+  googleGemini37FlashModelId,
+  googleGemini38FlashModelId,
+  googleGeminiCompany,
+  googleGeminiModelId,
+  googleGeminiProvider,
+  googleGeminiSupportedModelIds,
+  isGoogleGeminiSupportedModelId,
+};
 
 // Gemini rejects array item-count limits with INVALID_ARGUMENT; local validation still enforces them.
 const geminiUnsupportedSchemaKeywords: ReadonlySet<string> = new Set(["maxItems", "minItems"]);
@@ -132,7 +144,11 @@ function resolveSelectionControls(
   configured: ModelSelection,
   requested: ModelSelection,
   requestedMaxTokens: number | undefined,
-): { readonly outputTokens: number; readonly thinking?: GeminiThinkingControl } {
+): {
+  readonly modelId: string;
+  readonly outputTokens: number;
+  readonly thinking?: GeminiThinkingControl;
+} {
   const configuredData = validSelection(configured);
   const requestedData = validSelection(requested);
   if (
@@ -140,8 +156,8 @@ function resolveSelectionControls(
     requestedData === undefined ||
     configuredData.company !== googleGeminiCompany ||
     requestedData.company !== googleGeminiCompany ||
-    configuredData.modelId !== googleGeminiModelId ||
-    requestedData.modelId !== googleGeminiModelId ||
+    !isGoogleGeminiSupportedModelId(configuredData.modelId) ||
+    configuredData.modelId !== requestedData.modelId ||
     configuredData.role !== requestedData.role ||
     configuredData.promptTemplateVersion !== requestedData.promptTemplateVersion ||
     JSON.stringify(configuredData.profile) !== JSON.stringify(requestedData.profile)
@@ -156,7 +172,7 @@ function resolveSelectionControls(
   let outputTokens = requestedMaxTokens ?? defaultMaxOutputTokens;
   let thinking: GeminiThinkingControl | undefined;
   if (profile !== undefined) {
-    if (profile.provider !== googleGeminiCompany || profile.modelId !== googleGeminiModelId) {
+    if (profile.provider !== googleGeminiCompany || profile.modelId !== requestedData.modelId) {
       throw invalidRequest(
         "The selected profile does not match the Google Gemini model.",
         "profile_mismatch",
@@ -204,7 +220,11 @@ function resolveSelectionControls(
   if (!Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > maxOutputTokens) {
     throw invalidRequest("The output-token budget is invalid.", "invalid_output_token_budget");
   }
-  return { outputTokens, ...(thinking === undefined ? {} : { thinking }) };
+  return {
+    modelId: requestedData.modelId,
+    outputTokens,
+    ...(thinking === undefined ? {} : { thinking }),
+  };
 }
 
 function compileOutputSchema(schema: JsonSchema): CompiledOutputSchema {
@@ -451,11 +471,8 @@ function withStreamVolumeCounts(
   });
 }
 
-function isExpectedModelVersion(value: unknown): boolean {
-  return (
-    typeof value === "string" &&
-    (value === googleGeminiModelId || value.startsWith(`${googleGeminiModelId}-`))
-  );
+function isExpectedModelVersion(value: unknown, modelId: string): boolean {
+  return typeof value === "string" && (value === modelId || value.startsWith(`${modelId}-`));
 }
 
 const nonTextPartKeys = [
@@ -492,6 +509,7 @@ async function collectGeminiStream(
     readonly signal: AbortSignal;
     readonly abort: () => void;
     readonly deadlineAt: number;
+    readonly modelId: string;
   },
 ): Promise<CollectedGeminiResponse> {
   const iterator = stream[Symbol.asyncIterator]();
@@ -522,7 +540,10 @@ async function collectGeminiStream(
       const chunk: unknown = next.value;
       if (!isRecord(chunk)) throw malformedStream("stream_chunk_envelope");
 
-      if (chunk.modelVersion !== undefined && !isExpectedModelVersion(chunk.modelVersion)) {
+      if (
+        chunk.modelVersion !== undefined &&
+        !isExpectedModelVersion(chunk.modelVersion, options.modelId)
+      ) {
         throw failResponse(
           "Google Gemini returned a response from an unexpected model.",
           "unexpected_response_model",
@@ -708,7 +729,7 @@ export class GoogleGeminiAdapter<
       try {
         if (Date.now() >= deadlineAt) throw streamTimeoutError("total");
         const pendingResponse = this.client.models.generateContentStream({
-          model: googleGeminiModelId,
+          model: controls.modelId,
           contents: [{ role: "user", parts: [{ text: serializedInput }] }],
           config: { ...baseConfig, abortSignal: abortScope.signal },
         });
@@ -729,6 +750,7 @@ export class GoogleGeminiAdapter<
           signal: abortScope.signal,
           abort: abortScope.abort,
           deadlineAt,
+          modelId: controls.modelId,
         });
         if (response.finishReason === FinishReason.MAX_TOKENS) {
           throw failResponse(
@@ -761,7 +783,7 @@ export class GoogleGeminiAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: googleGeminiProvider,
           company: googleGeminiCompany,
-          modelId: googleGeminiModelId,
+          modelId: controls.modelId,
           providerRequestId: response.responseId ?? null,
           structuredOutputSha256: sha256(output),
           usage: accounting.usage,

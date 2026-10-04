@@ -1502,7 +1502,7 @@ describe("desktop workspace setup", () => {
       },
     );
     const gemini = renderForm(
-      { ...named, authorCompany: "google", authorModel: "gemini-3.7-flash" },
+      { ...named, authorCompany: "google", authorModel: "gemini-3.8-flash" },
       { status: "idle" },
       {
         ...idleDiscovery,
@@ -1532,7 +1532,7 @@ describe("desktop workspace setup", () => {
     expect(glm).toContain('value="zai-org/GLM-5.3-Flash"');
     expect(glm).toContain("registered for Author");
     expect(gemini).toContain("Google (Gemini)");
-    expect(gemini).toContain('value="gemini-3.7-flash"');
+    expect(gemini).toContain('value="gemini-3.8-flash"');
     expect(gemini).toContain("registered for Author");
     expect(glmLive).toContain('value="glm-from-live"');
     expect(local).not.toContain("setup-model-suggestions");

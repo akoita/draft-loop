@@ -10,6 +10,8 @@ import {
   googleGeminiCompany,
   googleGeminiModelId,
   googleGeminiProvider,
+  googleGeminiSupportedModelIds,
+  isGoogleGeminiSupportedModelId,
   type ModelRequest,
   ProviderAdapterError,
 } from "./index.js";
@@ -172,7 +174,7 @@ describe("Google Gemini adapter", () => {
 
     expect(fixture.generate).toHaveBeenCalledTimes(1);
     const parameters = sentParameters(fixture.generate);
-    expect(parameters.model).toBe("gemini-3.7-flash");
+    expect(parameters.model).toBe("gemini-3.8-flash");
     expect(parameters.contents).toEqual([
       { role: "user", parts: [{ text: JSON.stringify({ question: "fixture" }) }] },
     ]);
@@ -268,21 +270,33 @@ describe("Google Gemini adapter", () => {
     expect(JSON.stringify(result)).not.toContain("reasoning");
   });
 
-  it("accepts documented model-version suffixes and rejects other models", async () => {
-    const accepted = harness(validStream({ modelVersion: "gemini-3.7-flash-001" }));
-    await expect(accepted.adapter.execute(request())).resolves.toMatchObject({
-      modelId: googleGeminiModelId,
-    });
-
-    for (const modelVersion of ["gemini-3.7-flash2", "gemini-3.7-pro", "other"]) {
-      const rejected = harness(validStream({ modelVersion }));
-      await expect(rejected.adapter.execute(request())).rejects.toMatchObject({
-        code: "invalid-response",
-        retryable: false,
-        diagnostics: [{ code: "unexpected_response_model", path: "response" }],
-      });
-    }
+  it("defaults to Gemini 3.8 Flash and keeps 3.7 Flash supported", () => {
+    expect(googleGeminiModelId).toBe("gemini-3.8-flash");
+    expect(googleGeminiSupportedModelIds).toEqual(["gemini-3.7-flash", "gemini-3.8-flash"]);
+    expect(isGoogleGeminiSupportedModelId("gemini-3.6-flash")).toBe(false);
   });
+
+  it.each(googleGeminiSupportedModelIds)(
+    "sends %s and accepts only its documented model-version suffixes",
+    async (modelId) => {
+      const model = selection({ modelId });
+      const accepted = harness(validStream({ modelVersion: `${modelId}-001` }), {
+        configuredModel: model,
+      });
+      await expect(accepted.adapter.execute(request(model))).resolves.toMatchObject({ modelId });
+      expect(sentParameters(accepted.generate).model).toBe(modelId);
+
+      const other = googleGeminiSupportedModelIds.find((candidate) => candidate !== modelId);
+      for (const modelVersion of [`${modelId}2`, "gemini-3.7-pro", "other", other ?? ""]) {
+        const rejected = harness(validStream({ modelVersion }), { configuredModel: model });
+        await expect(rejected.adapter.execute(request(model))).rejects.toMatchObject({
+          code: "invalid-response",
+          retryable: false,
+          diagnostics: [{ code: "unexpected_response_model", path: "response" }],
+        });
+      }
+    },
+  );
 
   it("rejects invalid JSON without retrying", async () => {
     const fixture = harness(iterable([chunk({ text: "{not json", finish: "STOP" })]), {
@@ -548,13 +562,29 @@ describe("Google Gemini request controls", () => {
     expect(fixture.generate).not.toHaveBeenCalled();
   });
 
-  it("rejects a configured model that is not Gemini 3.7 Flash", async () => {
-    const wrong = selection({ modelId: "gemini-3.7-pro" });
-    const fixture = harness(validStream(), { configuredModel: wrong });
+  it.each(["gemini-3.7-pro", "gemini-3.6-flash"])(
+    "rejects a configured model that is not a supported Gemini Flash (%s)",
+    async (modelId) => {
+      const wrong = selection({ modelId });
+      const fixture = harness(validStream(), { configuredModel: wrong });
 
-    await expect(fixture.adapter.execute(request(wrong))).rejects.toMatchObject({
-      diagnostics: [{ code: "model_mismatch", path: "request" }],
-    });
+      await expect(fixture.adapter.execute(request(wrong))).rejects.toMatchObject({
+        diagnostics: [{ code: "model_mismatch", path: "request" }],
+      });
+      expect(fixture.generate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["3.7 requested on a 3.8 adapter", "gemini-3.8-flash", "gemini-3.7-flash"],
+    ["3.8 requested on a 3.7 adapter", "gemini-3.7-flash", "gemini-3.8-flash"],
+  ])("rejects a mismatch between configured and requested models: %s", async (_n, a, b) => {
+    const fixture = harness(validStream(), { configuredModel: selection({ modelId: a }) });
+
+    await expect(fixture.adapter.execute(request(selection({ modelId: b })))).rejects.toMatchObject(
+      { diagnostics: [{ code: "model_mismatch", path: "request" }] },
+    );
+    expect(fixture.generate).not.toHaveBeenCalled();
   });
 
   it.each([

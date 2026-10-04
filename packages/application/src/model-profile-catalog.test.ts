@@ -21,7 +21,7 @@ describe("model profile catalog", () => {
       "standard-anthropic-author@1",
       "standard-openai-critic@2",
       "dev-deepinfra-glm-author@1",
-      "dev-google-gemini-author@1",
+      "dev-google-gemini-author@2",
     ]);
     for (const entry of catalog) {
       expect(entry).toMatchObject({
@@ -54,7 +54,7 @@ describe("model profile catalog", () => {
       "standard-anthropic-author@1": [4, 20],
       "standard-openai-critic@2": [2, 10],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
-      "dev-google-gemini-author@1": [0.75, 3.75],
+      "dev-google-gemini-author@2": [0.75, 3.75],
     });
     expect(byId.get("economy-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
@@ -69,14 +69,14 @@ describe("model profile catalog", () => {
       "https://deepinfra.com/zai-org/GLM-5.3-Flash/api",
       "https://deepinfra.com/blog/glm-5-3-flash-deepinfra",
     ]);
-    expect(byId.get("dev-google-gemini-author@1")?.sources).toEqual([
+    expect(byId.get("dev-google-gemini-author@2")?.sources).toEqual([
       "https://ai.google.dev/gemini-api/docs/pricing",
       "https://ai.google.dev/gemini-api/docs/models",
     ]);
-    expect(byId.get("dev-google-gemini-author@1")).toMatchObject({
+    expect(byId.get("dev-google-gemini-author@2")).toMatchObject({
       profile: {
         provider: "google",
-        modelId: "gemini-3.7-flash",
+        modelId: "gemini-3.8-flash",
         roles: ["author"],
         runtime: { effort: "low", maxOutputTokens: 32768, thinking: { mode: "provider-default" } },
       },
@@ -149,7 +149,7 @@ describe("model profile catalog", () => {
         id: "development-gemini",
         label: "Development — Gemini Flash — unvalidated",
         tier: "economy",
-        author: { id: "dev-google-gemini-author", version: 1 },
+        author: { id: "dev-google-gemini-author", version: 2 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
     ]);
