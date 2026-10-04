@@ -258,7 +258,9 @@ Separate output-limit recovery can also make source-focused requests; the
 grounding correction itself does not fan out.
 
 Empty profiles and drafts with open issues cannot be marked reviewed; warnings
-also block until acknowledged or resolved and saved. A reviewed profile is a
+also block until acknowledged or resolved and saved. In the desktop app, a
+severity group with several issues offers one control that sets the status of
+every error or every warning at once. A reviewed profile is a
 human-reviewed record, not a claim of application readiness or quality.
 
 Anthropic structured output uses the SDK-normalized provider schema, while

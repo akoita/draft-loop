@@ -19,6 +19,7 @@ import {
   type ReviewedCanonicalCandidateProfileSummary,
   reviewedCanonicalCandidateProfileChoice,
 } from "./profile-catalog.js";
+import { ProfileIssueBulkStatus } from "./profile-issue-bulk-status.js";
 import {
   type CanonicalCandidateProfileOutcome,
   canReviewCanonicalCandidateProfile,
@@ -495,6 +496,12 @@ export function ProfileDetails({
                 aria-labelledby={`profile-issues-${severity}`}
               >
                 <h4 id={`profile-issues-${severity}`}>{severity}</h4>
+                <ProfileIssueBulkStatus
+                  severity={severity}
+                  issues={[...byStatus.values()].flat()}
+                  editable={editable}
+                  onIssueStatusChange={onIssueStatusChange}
+                />
                 {[...byStatus.entries()].map(([status, issues]) => (
                   <div className="profile-issue-group" key={status}>
                     <h5>{status}</h5>
