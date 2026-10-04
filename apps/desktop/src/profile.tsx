@@ -33,6 +33,13 @@ import {
   projectCanonicalCandidateProfileOutcome,
   safeCanonicalCandidateProfileFeedback,
 } from "./profile-outcome.js";
+import {
+  humanizeProfileCategory,
+  humanizeProfileFieldLabel,
+  profileIssueCodeLabel,
+  sourceCountLabel,
+  truncateProfileText,
+} from "./profile-presentation.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
@@ -275,6 +282,43 @@ function latestVersionOf(
   return history.at(-1)?.version ?? record?.version ?? null;
 }
 
+function ProvenanceList({
+  label,
+  references,
+}: {
+  readonly label: string;
+  readonly references: CanonicalCandidateProfileFactResult["provenance"];
+}) {
+  return (
+    <fieldset className="profile-provenance" aria-label={label}>
+      {references.map((reference) => (
+        <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
+          <div>
+            <dt>Store</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
+          </div>
+          <div>
+            <dt>CKB</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
+          </div>
+          <div>
+            <dt>Kind</dt>
+            <dd>{reference.kind}</dd>
+          </div>
+        </dl>
+      ))}
+    </fieldset>
+  );
+}
+
 function ProfileFact({
   fact,
   editable,
@@ -287,76 +331,80 @@ function ProfileFact({
   readonly onRemove: () => void;
 }) {
   const allowUrl = fact.category === "approved-link";
+  const inputId = `profile-fact-value-${fact.id.replace(/[^A-Za-z0-9_-]/gu, "-")}`;
   return (
     <li className="profile-fact">
-      <div className="profile-fact-heading">
-        <strong>{safeCanonicalCandidateProfileText(fact.field)}</strong>
-        {fact.subjectId === undefined ? null : (
-          <span className="profile-opaque-id">
-            subject {safeCanonicalCandidateProfileText(fact.subjectId)}
-          </span>
-        )}
+      <div className="profile-fact-row">
+        <label className="profile-fact-label" htmlFor={inputId}>
+          {safeCanonicalCandidateProfileText(humanizeProfileFieldLabel(fact.field))}
+        </label>
+        <input
+          id={inputId}
+          className="profile-fact-value"
+          type="text"
+          aria-label={`Value for fact ${fact.id}`}
+          value={safeCanonicalCandidateProfileText(fact.value, allowUrl)}
+          disabled={!editable}
+          onChange={(event) =>
+            onValueChange(
+              allowUrl ? event.target.value : safeCanonicalCandidateProfileText(event.target.value),
+            )
+          }
+        />
+        <span className="profile-fact-sources meta-chip">
+          {sourceCountLabel(fact.provenance.length)}
+        </span>
+        {editable ? (
+          <button
+            className="button button-quiet profile-remove"
+            type="button"
+            aria-label="Remove fact"
+            onClick={onRemove}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
-      <input
-        className="profile-fact-value"
-        type="text"
-        aria-label={`Value for fact ${fact.id}`}
-        value={safeCanonicalCandidateProfileText(fact.value, allowUrl)}
-        disabled={!editable}
-        onChange={(event) =>
-          onValueChange(
-            allowUrl ? event.target.value : safeCanonicalCandidateProfileText(event.target.value),
-          )
-        }
-      />
-      <fieldset className="profile-provenance" aria-label={`Provenance for fact ${fact.id}`}>
-        {fact.provenance.map((reference) => (
-          <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
-            <div>
-              <dt>Store</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
-            </div>
-            <div>
-              <dt>CKB</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
-            </div>
-            <div>
-              <dt>Source</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
-            </div>
-            <div>
-              <dt>Kind</dt>
-              <dd>{reference.kind}</dd>
-            </div>
-          </dl>
-        ))}
-      </fieldset>
-      {editable ? (
-        <button className="button button-quiet profile-remove" type="button" onClick={onRemove}>
-          Remove fact
-        </button>
-      ) : null}
+      <details className="profile-fact-details">
+        <summary>Details</summary>
+        <div className="profile-fact-details-body">
+          <span className="profile-opaque-id">
+            Field {safeCanonicalCandidateProfileText(fact.field)}
+          </span>
+          {fact.subjectId === undefined ? null : (
+            <span className="profile-opaque-id">
+              subject {safeCanonicalCandidateProfileText(fact.subjectId)}
+            </span>
+          )}
+          <ProvenanceList label={`Provenance for fact ${fact.id}`} references={fact.provenance} />
+        </div>
+      </details>
     </li>
   );
 }
 
+function describeReferencedFact(fact: CanonicalCandidateProfileFactResult | undefined): string {
+  if (fact === undefined) return "unavailable fact";
+  const label = safeCanonicalCandidateProfileText(humanizeProfileFieldLabel(fact.field));
+  const value = safeCanonicalCandidateProfileText(fact.value);
+  return `${truncateProfileText(label)}: ${truncateProfileText(value)}`;
+}
+
 function ProfileIssue({
   issue,
+  factsById,
   editable,
   onStatusChange,
 }: {
   readonly issue: CanonicalCandidateProfileIssueResult;
+  readonly factsById: ReadonlyMap<string, CanonicalCandidateProfileFactResult>;
   readonly editable: boolean;
   readonly onStatusChange: (status: CanonicalCandidateProfileIssueStatus) => void;
 }) {
   return (
     <li className="profile-issue">
       <div className="profile-issue-heading">
-        <strong>{issue.code}</strong>
+        <strong>{profileIssueCodeLabel(issue.code)}</strong>
         <span className={`profile-issue-severity profile-issue-${issue.severity}`}>
           {issue.severity}
         </span>
@@ -378,38 +426,21 @@ function ProfileIssue({
         </select>
       </label>
       {issue.factIds.length === 0 ? null : (
-        <span className="profile-opaque-id">
+        <span className="profile-issue-facts">
           Facts:{" "}
-          {issue.factIds.map((factId) => safeCanonicalCandidateProfileText(factId)).join(", ")}
+          {issue.factIds.map((factId) => describeReferencedFact(factsById.get(factId))).join("; ")}
         </span>
       )}
       {issue.sourceRefs.length === 0 ? null : (
-        <fieldset className="profile-provenance" aria-label={`Provenance for issue ${issue.id}`}>
-          {issue.sourceRefs.map((reference) => (
-            <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
-              <div>
-                <dt>Store</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
-              </div>
-              <div>
-                <dt>CKB</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
-              </div>
-              <div>
-                <dt>Source</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
-              </div>
-              <div>
-                <dt>Version</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
-              </div>
-              <div>
-                <dt>Kind</dt>
-                <dd>{reference.kind}</dd>
-              </div>
-            </dl>
-          ))}
-        </fieldset>
+        <details className="profile-fact-details">
+          <summary>Details</summary>
+          <div className="profile-fact-details-body">
+            <ProvenanceList
+              label={`Provenance for issue ${issue.id}`}
+              references={issue.sourceRefs}
+            />
+          </div>
+        </details>
       )}
     </li>
   );
@@ -451,6 +482,7 @@ export function ProfileDetails({
     () => groupCanonicalCandidateProfileIssues(draftIssues),
     [draftIssues],
   );
+  const factsById = useMemo(() => new Map(draftFacts.map((fact) => [fact.id, fact])), [draftFacts]);
   const historical = history.length > 0 && record.version !== history.at(-1)?.version;
   const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
 
@@ -517,7 +549,10 @@ export function ProfileDetails({
                     key={category}
                     aria-labelledby={`profile-facts-${category}`}
                   >
-                    <h4 id={`profile-facts-${category}`}>{category}</h4>
+                    <h4 id={`profile-facts-${category}`}>
+                      {humanizeProfileCategory(category)}{" "}
+                      <span className="meta-chip">{facts.length}</span>
+                    </h4>
                     <ul className="profile-fact-list">
                       {facts.map((fact) => (
                         <ProfileFact
@@ -562,6 +597,7 @@ export function ProfileDetails({
                             <ProfileIssue
                               key={issue.id}
                               issue={issue}
+                              factsById={factsById}
                               editable={editable}
                               onStatusChange={(nextStatus) =>
                                 onIssueStatusChange(issue.id, nextStatus)

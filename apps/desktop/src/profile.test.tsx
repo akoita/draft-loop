@@ -47,6 +47,22 @@ const facts: readonly CanonicalCandidateProfileFactResult[] = [
   },
 ];
 
+const roleFact: CanonicalCandidateProfileFactResult = {
+  id: "fact-role",
+  category: "role",
+  field: "title",
+  value: "Platform engineer",
+  provenance: [provenance],
+};
+
+const linkFact: CanonicalCandidateProfileFactResult = {
+  id: "fact-link",
+  category: "approved-link",
+  field: "url",
+  value: "https://approved.example.test/me",
+  provenance: [provenance],
+};
+
 const issues: readonly CanonicalCandidateProfileIssueResult[] = [
   {
     id: "issue-date",
@@ -149,9 +165,11 @@ describe("desktop canonical candidate profile", () => {
       />,
     );
     expect(html).toContain("Facts by category");
-    expect(html).toContain("approved-link");
+    expect(html).toContain("Approved link");
+    expect(html).not.toContain(">approved-link<");
     expect(html).toContain("Issues by severity and status");
-    expect(html).toContain("conflict-date");
+    expect(html).toContain("Conflicting dates");
+    expect(html).not.toContain("conflict-date");
     expect(html).toContain("Store");
     expect(html).toContain("CKB");
     expect(html).toContain("Source");
@@ -161,6 +179,73 @@ describe("desktop canonical candidate profile", () => {
     expect(html).not.toContain("candidateKnowledgeSelection");
     expect(html).not.toContain("storeRoot");
     expect(html).not.toContain("/private");
+  });
+
+  it("renders each fact as a readable row with its provenance behind collapsed details", () => {
+    const html = renderToStaticMarkup(
+      <ProfileDetails
+        record={record()}
+        history={[record()]}
+        draftFacts={[
+          { ...roleFact, field: "employment_end_date", subjectId: "subject-77" },
+          linkFact,
+        ]}
+        draftIssues={issues}
+        editable
+        busy={false}
+        onFactValueChange={() => undefined}
+        onRemoveFact={() => undefined}
+        onIssueStatusChange={() => undefined}
+        onSave={() => undefined}
+        onReview={() => undefined}
+      />,
+    );
+    expect(html).toContain(">Employment end date</label>");
+    expect(html).toContain('for="profile-fact-value-fact-role"');
+    expect(html).toContain('id="profile-fact-value-fact-role"');
+    expect(html).toContain('aria-label="Value for fact fact-role"');
+    expect(html).toContain("1 source</span>");
+    expect(html).toContain('aria-label="Remove fact"');
+    expect(html).toContain("<summary>Details</summary>");
+    expect(html).not.toContain("<details open");
+    expect(html.match(/<details class="profile-fact-details"/g)).toHaveLength(3);
+    // Technical identifiers stay available inside the collapsed details.
+    expect(html).toContain("Field employment_end_date");
+    expect(html).toContain("subject subject-77");
+    expect(html).toContain('aria-label="Provenance for fact fact-role"');
+    expect(html).toContain('aria-label="Provenance for issue issue-date"');
+    for (const id of ["store-1", "ckb-1", "source-1", "version-1", "candidate-provided"]) {
+      expect(html).toContain(id);
+    }
+    // Category headings carry a count chip; issues cite facts by label and value.
+    expect(html).toContain('<span class="meta-chip">1</span></h4>');
+    expect(html).toContain("Facts: Employment end date: Platform engineer");
+    expect(html).not.toContain("Facts: fact-role");
+  });
+
+  it("falls back to a generic label for issue facts that are no longer present", () => {
+    const html = renderToStaticMarkup(
+      <ProfileDetails
+        record={record()}
+        history={[record()]}
+        draftFacts={[{ ...roleFact, id: "fact-long", field: "skillName", value: "x".repeat(100) }]}
+        draftIssues={[
+          {
+            ...(issues[0] as CanonicalCandidateProfileIssueResult),
+            factIds: ["fact-long", "gone"],
+          },
+        ]}
+        editable={false}
+        busy={false}
+        onFactValueChange={() => undefined}
+        onRemoveFact={() => undefined}
+        onIssueStatusChange={() => undefined}
+        onSave={() => undefined}
+        onReview={() => undefined}
+      />,
+    );
+    expect(html).toContain(`Facts: Skill name: ${"x".repeat(59)}…; unavailable fact`);
+    expect(html).not.toContain("Remove fact");
   });
 
   it("renders saved failure guidance and keeps retry behind the existing consent checkbox", () => {
