@@ -1176,6 +1176,60 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("accepts Google credential operations in the runtime validator and rejects unknown providers", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { provider: "google", configured: true, source: "app", protection: "os-backed" },
+    }));
+    const port = createCapabilityPort(
+      bridge(invoke, ["credential.set", "credential.status", "credential.remove"]),
+    );
+
+    for (const command of [
+      { type: "credential.set", input: { provider: "google", apiKey: "synthetic-google-key" } },
+      { type: "credential.status", input: { provider: "google" } },
+      { type: "credential.remove", input: { provider: "google" } },
+    ] as const) {
+      expect(() => validateBridgeCommand(command)).not.toThrow();
+      await expect(port.execute(command)).resolves.toMatchObject({
+        ok: true,
+        value: { provider: "google", configured: true, source: "app" },
+      });
+    }
+    expect(invoke).toHaveBeenCalledTimes(3);
+    expect(() =>
+      validateBridgeCommand({ type: "credential.status", input: { provider: "gemini" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "credential.set",
+        input: { provider: "mistral", apiKey: "synthetic-key" },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "google" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "provider-auth.set",
+        input: { provider: "google", mode: "user-session" },
+      }),
+    ).toThrow("invalid");
+
+    const unknownResult = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { provider: "gemini", configured: true, source: "app", protection: "os-backed" },
+        }),
+        ["credential.status"],
+      ),
+    );
+    await expect(
+      unknownResult.execute({ type: "credential.status", input: { provider: "google" } }),
+    ).resolves.toMatchObject({ ok: false });
+  });
+
   it("strictly validates provider-managed user-session credential status", async () => {
     const accepted = createCapabilityPort(
       bridge(

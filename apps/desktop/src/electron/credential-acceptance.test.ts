@@ -15,6 +15,7 @@ describe("packaged credential acceptance logic", () => {
     const previousAnthropic = process.env.ANTHROPIC_API_KEY;
     const previousOpenai = process.env.OPENAI_API_KEY;
     const previousDeepinfra = process.env.DEEPINFRA_API_KEY;
+    const previousGemini = process.env.GEMINI_API_KEY;
     const secrets = {
       anthropic: {
         initial: `anthropic-initial-${randomUUID()}`,
@@ -30,6 +31,11 @@ describe("packaged credential acceptance logic", () => {
         initial: `deepinfra-initial-${randomUUID()}`,
         replacement: `deepinfra-replacement-${randomUUID()}`,
         environment: `deepinfra-environment-${randomUUID()}`,
+      },
+      google: {
+        initial: `google-initial-${randomUUID()}`,
+        replacement: `google-replacement-${randomUUID()}`,
+        environment: `google-environment-${randomUUID()}`,
       },
     };
     const safeStorage: SafeStorageAdapter = {
@@ -66,6 +72,7 @@ describe("packaged credential acceptance logic", () => {
           anthropic: "os-backed",
           openai: "os-backed",
           deepinfra: "os-backed",
+          google: "os-backed",
         },
         checks: {
           restart: true,
@@ -86,6 +93,8 @@ describe("packaged credential acceptance logic", () => {
       else process.env.OPENAI_API_KEY = previousOpenai;
       if (previousDeepinfra === undefined) delete process.env.DEEPINFRA_API_KEY;
       else process.env.DEEPINFRA_API_KEY = previousDeepinfra;
+      if (previousGemini === undefined) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = previousGemini;
       await rm(root, { recursive: true, force: true });
     }
   });

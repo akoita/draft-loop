@@ -3421,6 +3421,102 @@ describe("native host", () => {
       }
     });
 
+    it("isolates the Google Gemini key from other providers across save, replace, remove, and resolve", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-google-credentials-"));
+      const filename = join(parent, "credentials.json");
+      const names = {
+        anthropic: "ANTHROPIC_API_KEY",
+        openai: "OPENAI_API_KEY",
+        deepinfra: "DEEPINFRA_API_KEY",
+        google: "GEMINI_API_KEY",
+      } as const;
+      const previous = Object.fromEntries(
+        Object.values(names).map((name) => [name, process.env[name]]),
+      );
+      const environment = {
+        anthropic: `synthetic-anthropic-${crypto.randomUUID()}`,
+        openai: `synthetic-openai-${crypto.randomUUID()}`,
+        deepinfra: `synthetic-deepinfra-${crypto.randomUUID()}`,
+        google: `synthetic-google-env-${crypto.randomUUID()}`,
+      };
+      const appKey = `synthetic-google-app-${crypto.randomUUID()}`;
+      const replacement = `synthetic-google-replacement-${crypto.randomUUID()}`;
+      const safeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain) => Buffer.from(`mock:${plain}`),
+        decryptString: (encrypted) => encrypted.toString("utf8").replace(/^mock:/u, ""),
+      };
+      for (const provider of Object.keys(names) as (keyof typeof names)[]) {
+        process.env[names[provider]] = environment[provider];
+      }
+      try {
+        const store = createSafeStorageCredentialStore({ safeStorage, filename });
+        const host = createNativeHost({
+          dialogs: { chooseDirectory: async () => undefined, chooseFiles: async () => [] },
+          credentials: store,
+        });
+        const envStatus = await host.invoke({
+          type: "credential.status",
+          input: { provider: "google" },
+        });
+        expect(envStatus).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "env", protection: "environment" },
+        });
+        expect(JSON.stringify(envStatus)).not.toContain(environment.google);
+        expect(await resolveCredential(store, "google")).toBe(environment.google);
+
+        const saved = await host.invoke({
+          type: "credential.set",
+          input: { provider: "google", apiKey: appKey },
+        });
+        expect(saved).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "app", protection: "os-backed" },
+        });
+        expect(JSON.stringify(saved)).not.toContain(appKey);
+        expect(await resolveCredential(store, "google")).toBe(appKey);
+        expect(await readFile(filename, "utf8")).not.toContain(appKey);
+        // Other providers never see the Google key, and keep their own.
+        expect(await resolveCredential(store, "anthropic")).toBe(environment.anthropic);
+        expect(await resolveCredential(store, "openai")).toBe(environment.openai);
+        expect(await resolveCredential(store, "deepinfra")).toBe(environment.deepinfra);
+        expect(await store.status("deepinfra")).toMatchObject({ source: "env" });
+
+        // Saving another provider's key leaves the Google key untouched.
+        expect(await store.set("deepinfra", "synthetic-other-deepinfra-key")).toBe(true);
+        expect(await resolveCredential(store, "google")).toBe(appKey);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+
+        expect(await store.set("google", replacement)).toBe(true);
+        const reopened = createSafeStorageCredentialStore({ safeStorage, filename });
+        expect(await resolveCredential(reopened, "google")).toBe(replacement);
+        expect(await reopened.status("google")).toMatchObject({ source: "app" });
+
+        const removed = await host.invoke({
+          type: "credential.remove",
+          input: { provider: "google" },
+        });
+        expect(removed).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "env" },
+        });
+        expect(await resolveCredential(store, "google")).toBe(environment.google);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+        expect(await readFile(filename, "utf8")).not.toContain(replacement);
+
+        delete process.env.GEMINI_API_KEY;
+        expect(await store.status("google")).toMatchObject({ configured: false, source: "none" });
+        expect(await resolveCredential(store, "google")).toBeUndefined();
+      } finally {
+        for (const [name, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
     it("discloses Electron basic_text as weak Linux protection", async () => {
       const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-basic-text-"));
       const store = createSafeStorageCredentialStore({

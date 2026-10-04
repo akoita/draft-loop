@@ -125,7 +125,7 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = ["anthropic", "openai", "deepinfra"] as const;
+export const credentialProviders = ["anthropic", "openai", "deepinfra", "google"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
 
 export const providerAuthModeProviders = ["anthropic", "openai"] as const;

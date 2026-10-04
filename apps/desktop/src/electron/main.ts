@@ -214,6 +214,9 @@ app.whenReady().then(async () => {
     const deepinfraInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_INITIAL;
     const deepinfraReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_REPLACEMENT;
     const deepinfraEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_ENVIRONMENT;
+    const googleInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_INITIAL;
+    const googleReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_REPLACEMENT;
+    const googleEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_ENVIRONMENT;
     if (
       (phase !== "prepare" && phase !== "verify") ||
       evidencePath === undefined ||
@@ -226,7 +229,10 @@ app.whenReady().then(async () => {
       openaiEnvironment === undefined ||
       deepinfraInitial === undefined ||
       deepinfraReplacement === undefined ||
-      deepinfraEnvironment === undefined
+      deepinfraEnvironment === undefined ||
+      googleInitial === undefined ||
+      googleReplacement === undefined ||
+      googleEnvironment === undefined
     ) {
       throw new Error("Packaged credential acceptance configuration is incomplete.");
     }
@@ -260,6 +266,11 @@ app.whenReady().then(async () => {
           initial: deepinfraInitial,
           replacement: deepinfraReplacement,
           environment: deepinfraEnvironment,
+        },
+        google: {
+          initial: googleInitial,
+          replacement: googleReplacement,
+          environment: googleEnvironment,
         },
       },
     })
