@@ -25,11 +25,15 @@ import { accountOpenAIUsage } from "./openai-usage.js";
 import {
   type CompiledOutputSchema,
   compileStructuredOutputSchema,
+  withoutSchemaKeywords,
 } from "./structured-output-schema.js";
 
 export const googleGeminiProvider = "google" as const;
 export const googleGeminiCompany = "google" as const;
 export const googleGeminiModelId = "gemini-3.7-flash" as const;
+
+// Gemini rejects array item-count limits with INVALID_ARGUMENT; local validation still enforces them.
+const geminiUnsupportedSchemaKeywords: ReadonlySet<string> = new Set(["maxItems", "minItems"]);
 /** The only endpoint the adapter talks to; no custom base URL is accepted. */
 export const googleGeminiBaseUrl = "https://generativelanguage.googleapis.com/";
 
@@ -676,7 +680,10 @@ export class GoogleGeminiAdapter<
     const baseConfig: GenerateContentConfig = {
       systemInstruction: request.systemPrompt,
       responseMimeType: "application/json",
-      responseJsonSchema: request.outputSchema,
+      responseJsonSchema: withoutSchemaKeywords(
+        request.outputSchema,
+        geminiUnsupportedSchemaKeywords,
+      ),
       maxOutputTokens: controls.outputTokens,
       candidateCount: 1,
       ...(controls.thinking === undefined
