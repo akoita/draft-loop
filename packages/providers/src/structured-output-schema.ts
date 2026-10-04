@@ -24,27 +24,26 @@ const schemaMapKeywords = new Set([
   "properties",
 ]);
 
-function withoutSchemaDefaults(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) return value.map((item) => withoutSchemaDefaults(item));
+/** Return a detached schema copy without the given keywords; property names are never dropped. */
+export function withoutSchemaKeywords(value: JsonValue, keywords: ReadonlySet<string>): JsonValue {
+  const strip = (child: JsonValue): JsonValue => withoutSchemaKeywords(child, keywords);
+  if (Array.isArray(value)) return value.map((item) => strip(item));
   if (!isRecord(value)) return value as JsonValue;
 
   const entries = Object.entries(value).flatMap(([key, child]): [string, JsonValue][] => {
-    if (key === "default") return [];
+    if (keywords.has(key)) return [];
     if (singleSchemaKeywords.has(key)) {
-      return [[key, withoutSchemaDefaults(child as JsonValue)]];
+      return [[key, strip(child as JsonValue)]];
     }
     if (schemaArrayKeywords.has(key) && Array.isArray(child)) {
-      return [[key, child.map((schema) => withoutSchemaDefaults(schema as JsonValue))]];
+      return [[key, child.map((schema) => strip(schema as JsonValue))]];
     }
     if (schemaMapKeywords.has(key) && isRecord(child)) {
       return [
         [
           key,
           Object.fromEntries(
-            Object.entries(child).map(([name, schema]) => [
-              name,
-              withoutSchemaDefaults(schema as JsonValue),
-            ]),
+            Object.entries(child).map(([name, schema]) => [name, strip(schema as JsonValue)]),
           ),
         ],
       ];
@@ -56,9 +55,7 @@ function withoutSchemaDefaults(value: JsonValue): JsonValue {
           Object.fromEntries(
             Object.entries(child).map(([name, dependency]) => [
               name,
-              Array.isArray(dependency)
-                ? dependency
-                : withoutSchemaDefaults(dependency as JsonValue),
+              Array.isArray(dependency) ? dependency : strip(dependency as JsonValue),
             ]),
           ),
         ],
@@ -68,6 +65,8 @@ function withoutSchemaDefaults(value: JsonValue): JsonValue {
   });
   return Object.fromEntries(entries) as JsonObject;
 }
+
+const schemaDefaultKeywords: ReadonlySet<string> = new Set(["default"]);
 
 export type CompiledOutputSchema = ReturnType<typeof z.fromJSONSchema>;
 
@@ -79,7 +78,9 @@ export type CompiledOutputSchema = ReturnType<typeof z.fromJSONSchema>;
  * the wire and the returned JSON stay untouched. Throws when the schema is unsupported.
  */
 export function compileStructuredOutputSchema(schema: JsonSchema): CompiledOutputSchema {
-  return z.fromJSONSchema(withoutSchemaDefaults(schema) as Parameters<typeof z.fromJSONSchema>[0]);
+  return z.fromJSONSchema(
+    withoutSchemaKeywords(schema, schemaDefaultKeywords) as Parameters<typeof z.fromJSONSchema>[0],
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

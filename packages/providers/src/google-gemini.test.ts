@@ -299,6 +299,42 @@ describe("Google Gemini adapter", () => {
     expect(fixture.generate).toHaveBeenCalledTimes(1);
   });
 
+  it("sends Gemini a schema without item counts while local validation keeps them", async () => {
+    const countedSchema = {
+      type: "object",
+      properties: {
+        items: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 2 },
+        maxItems: { type: "string" },
+      },
+      required: ["items", "maxItems"],
+      additionalProperties: false,
+    };
+    const original = JSON.stringify(countedSchema);
+    const accepted = harness(
+      iterable([chunk({ text: '{"items":["a"],"maxItems":"x"}', finish: "STOP" })]),
+    );
+
+    await accepted.adapter.execute(request(selection(), { outputSchema: countedSchema }));
+
+    expect(sentParameters(accepted.generate).config?.responseJsonSchema).toEqual({
+      type: "object",
+      properties: {
+        items: { type: "array", items: { type: "string" } },
+        maxItems: { type: "string" },
+      },
+      required: ["items", "maxItems"],
+      additionalProperties: false,
+    });
+    expect(JSON.stringify(countedSchema)).toBe(original);
+
+    const tooMany = harness(
+      iterable([chunk({ text: '{"items":["a","b","c"],"maxItems":"x"}', finish: "STOP" })]),
+    );
+    await expect(
+      tooMany.adapter.execute(request(selection(), { outputSchema: countedSchema })),
+    ).rejects.toMatchObject({ failureStage: "response-schema-validation" });
+  });
+
   it("rejects schema mismatches with content-free issue counts", async () => {
     const fixture = harness(
       iterable([chunk({ text: '{"answer":42,"secret":"value"}', finish: "STOP" })]),
