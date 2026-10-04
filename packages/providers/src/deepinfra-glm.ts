@@ -26,15 +26,18 @@ import {
   ProviderAdapterError,
   type RetryOptions,
 } from "./index.js";
+import {
+  deepInfraGLMCompany,
+  deepInfraGLMModelId,
+  deepInfraGLMProvider,
+} from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import {
   type CompiledOutputSchema,
   compileStructuredOutputSchema,
 } from "./structured-output-schema.js";
 
-export const deepInfraGLMProvider = "deepinfra" as const;
-export const deepInfraGLMCompany = "zai" as const;
-export const deepInfraGLMModelId = "zai-org/GLM-5.3-Flash" as const;
+export { deepInfraGLMCompany, deepInfraGLMModelId, deepInfraGLMProvider };
 export const deepInfraGLMBaseUrl = "https://api.deepinfra.com/v1/openai";
 
 const defaultTimeoutMs = 120_000;
