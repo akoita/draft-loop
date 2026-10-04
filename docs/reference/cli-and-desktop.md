@@ -54,6 +54,13 @@ workspace model settings, transmission approval, or credentials. Resume uses
 the pair already recorded in run history. Omitting profile options preserves
 the existing workspace-configured behavior.
 
+The opt-in Gemini 3.7 Flash development author has no preset. Select it with
+`--author-profile dev-google-gemini-author@1` and an exact critic profile, or
+with `--author-company google --author-model gemini-3.7-flash`. It requires
+`GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
+use submitted content. Desktop key storage is not available yet, and the
+desktop host does not read `GEMINI_API_KEY`.
+
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
 does not switch authentication modes automatically. Account and provider
@@ -286,7 +293,8 @@ Claude Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
 Canonical profile extraction uses a detached GLM profile at the same ceiling
 and requests `reasoning_effort: "none"` to disable reasoning, following
 [DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
-normal GLM author profile keeps `low` reasoning. These settings make no speed
+normal GLM author profile keeps `low` reasoning. The Gemini author route uses the same ceiling, with a
+detached extraction profile that sets `thinkingBudget: 0`. These settings make no speed
 or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 

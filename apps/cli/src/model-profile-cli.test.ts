@@ -162,6 +162,8 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("unvalidated");
     expect(startHelp).toContain("development-glm");
     expect(startHelp).toContain("DEEPINFRA_API_KEY");
+    expect(startHelp).toContain("GEMINI_API_KEY");
+    expect(startHelp).toContain("dev-google-gemini-author@1");
     expect(startHelp).toContain("pinned to this run");
     expect(modelProfilesHelp).toContain("unvalidated");
     expect(modelProfilesHelp).toContain("availability has not been checked");

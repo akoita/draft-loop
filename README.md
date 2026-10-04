@@ -184,6 +184,12 @@ approving or exporting.
   standard $0.15/$0.50 per million input/output rates reviewed on 2026-10-02.
   CV quality is unvalidated and account availability is unchecked. This choice
   does not change defaults or existing workspaces.
+- An opt-in development Gemini 3.7 Flash author is available through
+  `--author-company google` or the exact profile `dev-google-gemini-author@1`
+  in the CLI. It requires the dedicated `GEMINI_API_KEY` from a paid-tier Gemini
+  API project, because free-tier terms let Google use submitted content. CV
+  quality and account availability are unvalidated, and there is no desktop
+  preset yet.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

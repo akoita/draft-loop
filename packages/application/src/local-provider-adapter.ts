@@ -5,8 +5,13 @@ import {
   type AnthropicClient,
   createDeepInfraGLMAdapter,
   createDeepInfraGLMClient,
+  createGoogleGeminiAdapter,
+  createGoogleGeminiClient,
   type DeepInfraGLMClient,
   deepInfraGLMModelId,
+  type GoogleGeminiClient,
+  googleGeminiCompany,
+  googleGeminiModelId,
   type JsonObject,
   type LocalClient,
   LocalModelAdapter,
@@ -28,6 +33,7 @@ export interface ProviderClientFactories {
   readonly anthropic?: (apiKey: string) => AnthropicClient;
   readonly openai?: (apiKey: string) => OpenAIClient;
   readonly deepinfra?: (apiKey: string) => DeepInfraGLMClient;
+  readonly google?: (apiKey: string) => GoogleGeminiClient;
   /**
    * Builds the local transport. Receives the workspace's configured endpoint,
    * or `undefined` when the workspace leaves the adapter default in place.
@@ -47,7 +53,18 @@ type ProviderAuthModeConfiguration = Readonly<
 >;
 
 /** Resolve the literal transport company; model lineage remains a separate concern. */
-function providerId(model: ModelSelection): "anthropic" | "openai" | "local" | "deepinfra" {
+function providerId(
+  model: ModelSelection,
+): "anthropic" | "openai" | "local" | "deepinfra" | "google" {
+  if (model.company === googleGeminiCompany) {
+    if (model.modelId === googleGeminiModelId) return "google";
+    throw new ProviderAdapterError(
+      "google",
+      "invalid-request",
+      "The configured Google model is unsupported.",
+      { retryable: false },
+    );
+  }
   if (model.company === "zai") {
     if (model.modelId === deepInfraGLMModelId) return "deepinfra";
     throw new ProviderAdapterError(
@@ -119,6 +136,28 @@ export async function createProviderAdapter(
         inputUsdPerMillionTokens: 0.15,
         outputUsdPerMillionTokens: 0.5,
         cachedInputUsdPerMillionTokens: 0.03,
+      },
+    });
+  }
+  if (provider === "google") {
+    const apiKey = await resolveCredential("google");
+    if (apiKey === undefined || apiKey.trim() === "") {
+      throw new ProviderAdapterError(
+        provider,
+        "authentication",
+        "The Gemini API credential is not configured.",
+        { retryable: false },
+      );
+    }
+    const client = providerClientFactories?.google?.(apiKey) ?? createGoogleGeminiClient(apiKey);
+    return createGoogleGeminiAdapter<JsonObject, JsonObject>(client, {
+      configuredModel: model,
+      ...(config.retry === undefined ? {} : { retry: config.retry }),
+      // Google's paid-tier list prices through 2026-12-31; they double from 2027-01-01.
+      pricing: {
+        inputUsdPerMillionTokens: 0.75,
+        outputUsdPerMillionTokens: 3.75,
+        cachedInputUsdPerMillionTokens: 0.075,
       },
     });
   }

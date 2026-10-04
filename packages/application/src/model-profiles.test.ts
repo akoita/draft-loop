@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(10);
+    expect(profiles).toHaveLength(11);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
@@ -196,6 +196,20 @@ describe("model profile registry", () => {
         thinking: { mode: "provider-default" },
       },
       knownLimits: { maxOutputTokens: 131072, contextWindowTokens: 1048576 },
+    });
+    expect(profiles[10]).toEqual({
+      id: "dev-google-gemini-author",
+      version: 1,
+      provider: "google",
+      modelId: "gemini-3.7-flash",
+      tier: "economy",
+      roles: ["author"],
+      runtime: {
+        effort: "low",
+        maxOutputTokens: 32768,
+        thinking: { mode: "provider-default" },
+      },
+      knownLimits: { maxOutputTokens: 65536, contextWindowTokens: 1048576 },
     });
     expect(defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author")).toEqual(
       profiles[0],
