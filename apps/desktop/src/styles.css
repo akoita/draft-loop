@@ -85,13 +85,20 @@
     ui-monospace, SFMono-Regular, "SF Mono", "Liberation Mono", Consolas, "DejaVu Sans Mono",
     monospace;
 
-  --text-micro: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.875rem;
-  --text-md: 0.9375rem;
-  --text-lg: 1rem;
+  /* Reading sizes. Most chrome text sits on the two smallest steps, so they are
+     kept at 12px and above: the instrument is read for long sessions on ordinary
+     desktop displays, not glanced at. */
+  --text-micro: 0.75rem;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.0625rem;
   --text-xl: 1.75rem;
+
+  /* Section labels. Small capitals need some tracking to stay legible, but wide
+     tracking on every label turns the interface into a wall of shouting. */
+  --label-tracking: 0.06em;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -269,7 +276,7 @@ h3 {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.11em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -300,7 +307,7 @@ h3 {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -575,7 +582,7 @@ input[type="checkbox"] {
 .severity {
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -838,7 +845,7 @@ input[type="checkbox"] {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -901,7 +908,7 @@ input[type="checkbox"] {
   background: var(--surface);
   font-size: var(--text-micro);
   font-weight: 650;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1021,7 +1028,7 @@ input[type="checkbox"] {
   color: var(--text-1);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -1592,7 +1599,7 @@ input[type="checkbox"] {
   border-bottom: 1px solid var(--paper-rule);
   padding-bottom: var(--space-2);
   color: var(--paper-ink-2);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--label-tracking);
 }
 
 .sheet .editable-block {
@@ -1942,7 +1949,7 @@ input[type="checkbox"] {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--label-tracking);
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1960,13 +1967,14 @@ input[type="checkbox"] {
 }
 
 .margin-note-actions {
-  display: flex;
+  /* Equal columns that drop to a 2 x 2 grid in a narrow margin instead of clipping labels. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.75rem, 1fr));
   gap: 4px;
   padding: 0 var(--space-3) var(--space-2);
 }
 
 .margin-note-action {
-  flex: 1 1 auto;
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -2135,7 +2143,7 @@ input[type="checkbox"] {
   background: var(--surface-3);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -2302,7 +2310,7 @@ input[type="checkbox"] {
   margin-bottom: var(--space-2);
   color: var(--text-4);
   font-size: var(--text-micro);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -2321,7 +2329,15 @@ input[type="checkbox"] {
   margin-bottom: var(--space-3);
 }
 
+/* In a narrow panel the severity badge moves under the title rather than squeezing the
+   progress line into two ragged rows. */
+.findings-queue-header .section-heading {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+
 .finding-progress {
+  white-space: nowrap;
   margin: var(--space-1) 0 0;
   color: var(--text-2);
   font-size: var(--text-sm);
@@ -2832,7 +2848,7 @@ input[type="checkbox"] {
   font-size: var(--text-micro);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--label-tracking);
 }
 
 .setup-state {
@@ -2842,7 +2858,7 @@ input[type="checkbox"] {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -2904,7 +2920,7 @@ input[type="checkbox"] {
   display: block;
   margin-bottom: var(--space-2);
   font-size: var(--text-micro);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -3503,7 +3519,7 @@ input[type="checkbox"] {
   color: var(--text-4);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -4095,7 +4111,7 @@ input[type="checkbox"] {
   color: var(--text-1);
   font-size: var(--text-micro);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
