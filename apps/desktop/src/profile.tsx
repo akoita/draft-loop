@@ -156,6 +156,43 @@ function shortChecksum(checksum: string): string {
   return `${checksum.slice(0, 12)}…`;
 }
 
+/** True when the outcome is shown as a single failure or empty callout instead of status text. */
+export function isProfileOutcomeCallout(outcome: CanonicalCandidateProfileOutcome): boolean {
+  return outcome.kind === "extraction-failure" || (outcome.kind === "empty" && outcome.retry);
+}
+
+function ProfileOutcomeCallout({
+  outcome,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+}) {
+  const failed = outcome.kind === "extraction-failure";
+  return (
+    <section
+      className={`profile-outcome ${failed ? "profile-outcome-failure" : "profile-outcome-empty"}`}
+      aria-label="Canonical profile status"
+    >
+      <strong className="profile-outcome-title">
+        {failed
+          ? "Profile generation failed. No facts were saved."
+          : "This profile version has no facts."}
+      </strong>
+      {outcome.failureReasons.length === 0 ? null : (
+        <ul aria-label="Recorded cause">
+          {outcome.failureReasons.map((reason) => (
+            <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+          ))}
+        </ul>
+      )}
+      <p>
+        {failed
+          ? "Fix the cause above, then retry. Retrying sends your selected material again and may use provider credits. Renaming the profile does not help."
+          : "Check that the selected source material includes the facts you need, then retry. Retrying sends your selected material again and may use provider credits."}
+      </p>
+    </section>
+  );
+}
+
 export function ProfileOutcomeFeedback({
   outcome,
   showMessage = true,
@@ -163,36 +200,17 @@ export function ProfileOutcomeFeedback({
   readonly outcome: CanonicalCandidateProfileOutcome;
   readonly showMessage?: boolean;
 }) {
+  if (isProfileOutcomeCallout(outcome)) return <ProfileOutcomeCallout outcome={outcome} />;
   return (
     <section className="profile-outcome" aria-label="Canonical profile status">
       {showMessage ? <p>{outcome.message}</p> : null}
       {outcome.failureReasons.length === 0 ? null : (
-        <>
-          <p>Saved issue guidance</p>
-          <ul aria-label="Saved profile issue guidance">
-            {outcome.failureReasons.map((reason) => (
-              <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
-            ))}
-          </ul>
-        </>
+        <ul aria-label="Saved profile issue guidance">
+          {outcome.failureReasons.map((reason) => (
+            <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+          ))}
+        </ul>
       )}
-      {outcome.kind === "extraction-failure" ? (
-        <p>
-          Follow the displayed cause and recovery steps first; changing the profile name alone will
-          not fix the underlying input or provider failure.
-        </p>
-      ) : outcome.kind === "empty" && outcome.retry ? (
-        <p>
-          Check that the selected source material includes the facts you need; renaming adds no
-          evidence.
-        </p>
-      ) : null}
-      {outcome.retry ? (
-        <p>
-          Retrying sends the selected material again, can consume provider credits, and bounded
-          recovery may make multiple requests.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -239,6 +257,13 @@ export function ProfileGenerationAction({
             ? "Retry profile generation"
             : "Derive profile"}
       </button>
+      {!busy && profileIdValid && !providerTransmissionApproved ? (
+        <p className="profile-approval-hint">
+          {outcome.retry
+            ? "Tick the approval box to enable Retry."
+            : "Tick the approval box to generate."}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -397,6 +422,7 @@ export function ProfileDetails({
   draftIssues,
   editable,
   busy,
+  failureRecorded = false,
   onFactValueChange,
   onRemoveFact,
   onIssueStatusChange,
@@ -409,6 +435,8 @@ export function ProfileDetails({
   readonly draftIssues: readonly CanonicalCandidateProfileIssueResult[];
   readonly editable: boolean;
   readonly busy: boolean;
+  /** The version records a failed generation whose cause is shown in the outcome callout. */
+  readonly failureRecorded?: boolean;
   readonly onFactValueChange: (factId: string, value: string) => void;
   readonly onRemoveFact: (factId: string) => void;
   readonly onIssueStatusChange: (
@@ -465,100 +493,113 @@ export function ProfileDetails({
         <p className="profile-note">Reviewed versions are immutable.</p>
       ) : null}
 
-      <section className="profile-subsection" aria-labelledby="profile-facts-title">
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">Canonical facts</p>
-            <h3 id="profile-facts-title">Facts by category</h3>
-          </div>
-          <span className="meta-chip">{draftFacts.length}</span>
-        </div>
-        {factGroups.length === 0 ? (
-          <p className="profile-empty">No facts are recorded in this version.</p>
-        ) : (
-          <div className="profile-groups">
-            {factGroups.map(([category, facts]) => (
-              <section
-                className="profile-group"
-                key={category}
-                aria-labelledby={`profile-facts-${category}`}
-              >
-                <h4 id={`profile-facts-${category}`}>{category}</h4>
-                <ul className="profile-fact-list">
-                  {facts.map((fact) => (
-                    <ProfileFact
-                      key={fact.id}
-                      fact={fact}
-                      editable={editable}
-                      onValueChange={(value) => onFactValueChange(fact.id, value)}
-                      onRemove={() => onRemoveFact(fact.id)}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="profile-subsection" aria-labelledby="profile-issues-title">
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">Review blockers</p>
-            <h3 id="profile-issues-title">Issues by severity and status</h3>
-          </div>
-          <span className="meta-chip">{draftIssues.length}</span>
-        </div>
-        {draftIssues.length === 0 ? (
-          <p className="profile-empty">No issues are recorded in this version.</p>
-        ) : (
-          <div className="profile-groups">
-            {[...issueGroups.entries()].map(([severity, byStatus]) => (
-              <section
-                className="profile-group"
-                key={severity}
-                aria-labelledby={`profile-issues-${severity}`}
-              >
-                <h4 id={`profile-issues-${severity}`}>{severity}</h4>
-                {[...byStatus.entries()].map(([status, issues]) => (
-                  <div className="profile-issue-group" key={status}>
-                    <h5>{status}</h5>
-                    <ul className="profile-issue-list">
-                      {issues.map((issue) => (
-                        <ProfileIssue
-                          key={issue.id}
-                          issue={issue}
+      {failureRecorded ? (
+        <p className="profile-failure-note">
+          This version records a failed generation; its cause is shown above.
+        </p>
+      ) : (
+        <>
+          <section className="profile-subsection" aria-labelledby="profile-facts-title">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Canonical facts</p>
+                <h3 id="profile-facts-title">Facts by category</h3>
+              </div>
+              <span className="meta-chip">{draftFacts.length}</span>
+            </div>
+            {factGroups.length === 0 ? (
+              <p className="profile-empty">No facts are recorded in this version.</p>
+            ) : (
+              <div className="profile-groups">
+                {factGroups.map(([category, facts]) => (
+                  <section
+                    className="profile-group"
+                    key={category}
+                    aria-labelledby={`profile-facts-${category}`}
+                  >
+                    <h4 id={`profile-facts-${category}`}>{category}</h4>
+                    <ul className="profile-fact-list">
+                      {facts.map((fact) => (
+                        <ProfileFact
+                          key={fact.id}
+                          fact={fact}
                           editable={editable}
-                          onStatusChange={(nextStatus) => onIssueStatusChange(issue.id, nextStatus)}
+                          onValueChange={(value) => onFactValueChange(fact.id, value)}
+                          onRemove={() => onRemoveFact(fact.id)}
                         />
                       ))}
                     </ul>
-                  </div>
+                  </section>
                 ))}
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+              </div>
+            )}
+          </section>
 
-      <div className="profile-actions">
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={!editable || busy}
-          onClick={onSave}
-        >
-          {busy ? "Saving profile…" : "Save draft edits"}
-        </button>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={!editable || busy || !reviewAllowed}
-          onClick={onReview}
-        >
-          Mark latest draft reviewed
-        </button>
-      </div>
+          <section className="profile-subsection" aria-labelledby="profile-issues-title">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Review blockers</p>
+                <h3 id="profile-issues-title">Issues by severity and status</h3>
+              </div>
+              <span className="meta-chip">{draftIssues.length}</span>
+            </div>
+            {draftIssues.length === 0 ? (
+              <p className="profile-empty">No issues are recorded in this version.</p>
+            ) : (
+              <div className="profile-groups">
+                {[...issueGroups.entries()].map(([severity, byStatus]) => (
+                  <section
+                    className="profile-group"
+                    key={severity}
+                    aria-labelledby={`profile-issues-${severity}`}
+                  >
+                    <h4 id={`profile-issues-${severity}`}>{severity}</h4>
+                    {[...byStatus.entries()].map(([status, issues]) => (
+                      <div className="profile-issue-group" key={status}>
+                        <h5>{status}</h5>
+                        <ul className="profile-issue-list">
+                          {issues.map((issue) => (
+                            <ProfileIssue
+                              key={issue.id}
+                              issue={issue}
+                              editable={editable}
+                              onStatusChange={(nextStatus) =>
+                                onIssueStatusChange(issue.id, nextStatus)
+                              }
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* A failed generation has nothing to save or review. */}
+      {failureRecorded ? null : (
+        <div className="profile-actions">
+          <button
+            className="button button-outline"
+            type="button"
+            disabled={!editable || busy}
+            onClick={onSave}
+          >
+            {busy ? "Saving profile…" : "Save draft edits"}
+          </button>
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={!editable || busy || !reviewAllowed}
+            onClick={onReview}
+          >
+            Mark latest draft reviewed
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -621,6 +662,20 @@ export function ProfileWorkspace({
     draftFacts,
     draftIssues,
   );
+  const outcomeFeedbackShown =
+    record !== null &&
+    !busy &&
+    errorMessage === null &&
+    (currentOutcome.retry ||
+      currentOutcome.failureReasons.length > 0 ||
+      statusMessage !== currentOutcome.message);
+  // The failure or empty callout already says this; do not repeat it in the status region.
+  const statusText =
+    outcomeFeedbackShown &&
+    isProfileOutcomeCallout(currentOutcome) &&
+    statusMessage === currentOutcome.message
+      ? ""
+      : statusMessage;
   const selectedThisRecord =
     selectedProfile !== null &&
     record !== null &&
@@ -1070,6 +1125,12 @@ export function ProfileWorkspace({
           Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
           applies to this name only.
         </p>
+        {outcomeFeedbackShown ? (
+          <ProfileOutcomeFeedback
+            outcome={currentOutcome}
+            showMessage={statusMessage !== currentOutcome.message}
+          />
+        ) : null}
         <ProfileGenerationAction
           outcome={currentOutcome}
           profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
@@ -1080,17 +1141,6 @@ export function ProfileWorkspace({
           onDerive={derive}
         />
       </div>
-      {record === null ||
-      busy ||
-      errorMessage !== null ||
-      (!currentOutcome.retry &&
-        currentOutcome.failureReasons.length === 0 &&
-        statusMessage === currentOutcome.message) ? null : (
-        <ProfileOutcomeFeedback
-          outcome={currentOutcome}
-          showMessage={statusMessage !== currentOutcome.message}
-        />
-      )}
       <div
         className={
           busy && generationStartedAt === null ? "profile-status boot-loading" : "profile-status"
@@ -1099,7 +1149,7 @@ export function ProfileWorkspace({
         aria-live="polite"
       >
         {generationStartedAt === null ? (
-          statusMessage
+          statusText
         ) : (
           <ProfileGenerationProgress
             startedAt={generationStartedAt}
@@ -1147,6 +1197,7 @@ export function ProfileWorkspace({
           draftIssues={draftIssues}
           editable={editable}
           busy={busy}
+          failureRecorded={currentOutcome.kind === "extraction-failure"}
           onFactValueChange={(factId, value) =>
             setDraftFacts((facts) =>
               facts.map((fact) => (fact.id === factId ? { ...fact, value } : fact)),

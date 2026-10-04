@@ -3424,6 +3424,50 @@ input[type="checkbox"] {
   margin-top: 0.2em;
 }
 
+.profile-approval-hint,
+.profile-failure-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.profile-outcome-failure,
+.profile-outcome-empty {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--red-line);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius-md);
+  background: var(--red-wash);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.profile-outcome-empty {
+  border-color: var(--amber-line);
+  border-left-color: var(--amber);
+  background: var(--amber-wash);
+}
+
+.profile-outcome-title {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.profile-outcome-failure p,
+.profile-outcome-empty p,
+.profile-outcome-failure ul,
+.profile-outcome-empty ul {
+  margin: 0;
+}
+
+.profile-outcome-failure ul,
+.profile-outcome-empty ul {
+  padding-left: var(--space-5);
+}
+
 .profile-status {
   min-height: 1.4em;
   color: var(--text-4);

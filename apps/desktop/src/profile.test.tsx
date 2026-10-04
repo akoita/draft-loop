@@ -198,11 +198,142 @@ describe("desktop canonical candidate profile", () => {
     expect(html).toContain('disabled=""');
     expect(html).toContain("I approve sending selected candidate material");
     expect(html).not.toContain("Existing reviewed profiles");
-    expect(html).toContain("can consume provider credits");
-    expect(html).toContain("bounded recovery may make multiple requests");
+    expect(html).toContain("may use provider credits");
+    expect(html).toContain("Tick the approval box to enable Retry.");
     expect(html).not.toContain('checked=""');
     expect(html).not.toContain("/private");
     expect(onDerive).not.toHaveBeenCalled();
+  });
+
+  describe("failure shown once", () => {
+    const cause = "Profile extraction exceeded the available output limit. No facts were saved.";
+    const failureRecord = {
+      ...record(),
+      facts: [],
+      issues: [
+        {
+          id: "issue-extraction-failure",
+          code: "omission",
+          severity: "error",
+          status: "open",
+          message: cause,
+          factIds: [],
+          sourceRefs: [],
+        } satisfies CanonicalCandidateProfileIssueResult,
+      ],
+    };
+    const count = (html: string, text: string) => html.split(text).length - 1;
+    const failureOutcome = projectCanonicalCandidateProfileOutcome(
+      failureRecord,
+      "profile-1",
+      "profile-1",
+    );
+
+    it("renders the cause once in one callout with one next step", () => {
+      const feedback = renderToStaticMarkup(<ProfileOutcomeFeedback outcome={failureOutcome} />);
+      const details = renderToStaticMarkup(
+        <ProfileDetails
+          record={failureRecord}
+          history={[failureRecord]}
+          draftFacts={[]}
+          draftIssues={failureRecord.issues}
+          editable
+          busy={false}
+          failureRecorded
+          onFactValueChange={() => undefined}
+          onRemoveFact={() => undefined}
+          onIssueStatusChange={() => undefined}
+          onSave={() => undefined}
+          onReview={() => undefined}
+        />,
+      );
+      const all = feedback + details;
+      expect(count(all, cause)).toBe(1);
+      expect(feedback).toContain("profile-outcome-failure");
+      expect(feedback).toContain("Profile generation failed. No facts were saved.");
+      expect(feedback).toContain('aria-label="Recorded cause"');
+      expect(feedback).toContain("Fix the cause above, then retry.");
+      expect(feedback).not.toContain("Saved issue guidance");
+      expect(feedback).not.toContain(failureOutcome.message);
+      expect(details).not.toContain("Issues by severity and status");
+      expect(details).not.toContain("Save draft edits");
+      expect(details).not.toContain("Mark latest draft reviewed");
+      expect(details).not.toContain("Facts by category");
+      expect(details).toContain(
+        "This version records a failed generation; its cause is shown above.",
+      );
+      expect(details).toContain("Version");
+    });
+
+    it("keeps the facts and issues sections when no failure is recorded", () => {
+      const html = renderToStaticMarkup(
+        <ProfileDetails
+          record={record()}
+          history={[record()]}
+          draftFacts={facts}
+          draftIssues={issues}
+          editable
+          busy={false}
+          onFactValueChange={() => undefined}
+          onRemoveFact={() => undefined}
+          onIssueStatusChange={() => undefined}
+          onSave={() => undefined}
+          onReview={() => undefined}
+        />,
+      );
+      expect(html).toContain("Issues by severity and status");
+      expect(html).not.toContain("profile-failure-note");
+    });
+
+    it("renders an empty callout for a retryable empty version and plain feedback otherwise", () => {
+      const empty = projectCanonicalCandidateProfileOutcome(
+        { ...record(), facts: [], issues: [] },
+        "profile-1",
+        "profile-1",
+      );
+      expect(empty.kind).toBe("empty");
+      const html = renderToStaticMarkup(<ProfileOutcomeFeedback outcome={empty} />);
+      expect(html).toContain("profile-outcome-empty");
+      expect(html).toContain("This profile version has no facts.");
+      expect(html).toContain("Check that the selected source material");
+      expect(html).not.toContain('aria-label="Recorded cause"');
+
+      const draft = projectCanonicalCandidateProfileOutcome(record(), "profile-1", "profile-1");
+      const plain = renderToStaticMarkup(<ProfileOutcomeFeedback outcome={draft} />);
+      expect(plain).toContain(draft.message);
+      expect(plain).not.toContain("profile-outcome-failure");
+      expect(plain).not.toContain("profile-outcome-empty");
+    });
+
+    it("hints at approval only when approval is the sole blocker", () => {
+      const render = (props: {
+        busy?: boolean;
+        profileIdValid?: boolean;
+        providerTransmissionApproved?: boolean;
+        retry?: boolean;
+      }) =>
+        renderToStaticMarkup(
+          <ProfileGenerationAction
+            outcome={
+              props.retry === true
+                ? failureOutcome
+                : projectCanonicalCandidateProfileOutcome(null, "profile-1", null)
+            }
+            profileIdValid={props.profileIdValid ?? true}
+            providerTransmissionApproved={props.providerTransmissionApproved ?? false}
+            busy={props.busy ?? false}
+            onApprovalChange={() => undefined}
+            onDerive={() => undefined}
+          />,
+        );
+      expect(render({ retry: true })).toContain("Tick the approval box to enable Retry.");
+      expect(render({})).toContain("Tick the approval box to generate.");
+      expect(render({ retry: true, busy: true })).not.toContain("Tick the approval box");
+      expect(render({ retry: true, profileIdValid: false })).not.toContain("Tick the approval box");
+      expect(render({ retry: true, providerTransmissionApproved: true })).not.toContain(
+        "Tick the approval box",
+      );
+    });
   });
 
   it("keeps progress and cancel optional and offers no Cancel while idle", () => {
