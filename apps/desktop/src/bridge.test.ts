@@ -1732,6 +1732,74 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates and normalizes profile progress and cancel commands at runtime", async () => {
+    const progress = {
+      type: "profile.progress" as const,
+      input: { workspaceId: "workspace-1", profileId: "profile-1" },
+    };
+    const cancel = {
+      type: "profile.cancel" as const,
+      input: { workspaceId: "workspace-1", profileId: "profile-1" },
+    };
+    expect(validateBridgeCommand(progress)).toEqual(progress);
+    expect(validateBridgeCommand(cancel)).toEqual(cancel);
+    expect(bridgeCapabilities).toEqual(
+      expect.arrayContaining(["profile.progress", "profile.cancel"]),
+    );
+    for (const type of ["profile.progress", "profile.cancel"] as const) {
+      for (const input of [
+        { workspaceId: "workspace-1" },
+        { workspaceId: "workspace-1", profileId: "profile:unsafe" },
+        { workspaceId: "workspace-1", profileId: "profile-1", root: "/private" },
+        { workspaceId: "workspace-1", profileId: "profile-1", providerTransmissionApproved: true },
+        "profile-1",
+      ]) {
+        expect(() => validateBridgeCommand({ type, input })).toThrow("invalid");
+      }
+    }
+
+    const respond = (value: unknown, type: "profile.progress" | "profile.cancel") =>
+      createCapabilityPort(bridge(async () => ({ ok: true, value }), [type])).execute(
+        type === "profile.progress" ? progress : cancel,
+      );
+    await expect(respond({ active: false }, "profile.progress")).resolves.toEqual({
+      ok: true,
+      value: { active: false },
+    });
+    await expect(respond({ active: true }, "profile.progress")).resolves.toEqual({
+      ok: true,
+      value: { active: true },
+    });
+    await expect(
+      respond({ active: true, completedCalls: 1, plannedCalls: 3 }, "profile.progress"),
+    ).resolves.toEqual({ ok: true, value: { active: true, completedCalls: 1, plannedCalls: 3 } });
+    for (const malformed of [
+      { active: "yes" },
+      { active: true, completedCalls: 1 },
+      { active: false, completedCalls: 1, plannedCalls: 3 },
+      { active: true, completedCalls: 4, plannedCalls: 3 },
+      { active: true, completedCalls: -1, plannedCalls: 3 },
+      { active: true, completedCalls: 0, plannedCalls: 0 },
+      { active: true, completedCalls: 0.5, plannedCalls: 3 },
+      { active: true, completedCalls: 1, plannedCalls: 3, path: "/private" },
+    ]) {
+      await expect(respond(malformed, "profile.progress")).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+    await expect(respond({ cancelled: true }, "profile.cancel")).resolves.toEqual({
+      ok: true,
+      value: { cancelled: true },
+    });
+    for (const malformed of [{}, { cancelled: "true" }, { cancelled: true, path: "/private" }]) {
+      await expect(respond(malformed, "profile.cancel")).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("normalizes canonical profile results while rejecting malformed lineage and leaked fields", async () => {
     const record = canonicalCandidateProfileResult();
     const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {

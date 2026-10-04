@@ -3285,7 +3285,14 @@ input[type="checkbox"] {
   animation: spin 900ms linear infinite;
 }
 
-.profile-generation-elapsed {
+/* A secondary action: as wide as its label, never a full-width bar. */
+.profile-generation-cancel {
+  justify-self: start;
+  width: fit-content;
+}
+
+.profile-generation-elapsed,
+.profile-generation-part {
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }

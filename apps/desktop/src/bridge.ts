@@ -2236,6 +2236,31 @@ export interface CanonicalCandidateProfileDeriveInput {
   readonly providerTransmissionApproved?: boolean;
 }
 
+export interface CanonicalCandidateProfileProgressInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+export interface CanonicalCandidateProfileCancelInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+/** The fixed message a cancelled generation reports; the renderer shows it as a status, not a failure. */
+export const canonicalCandidateProfileGenerationCancelledMessage =
+  "Profile generation was cancelled. No facts were saved.";
+
+/** Counts are present only once the running generation has reported them. */
+export interface CanonicalCandidateProfileProgressResult {
+  readonly active: boolean;
+  readonly completedCalls?: number;
+  readonly plannedCalls?: number;
+}
+
+export interface CanonicalCandidateProfileCancelResult {
+  readonly cancelled: boolean;
+}
+
 export interface CanonicalCandidateProfileGetInput {
   readonly workspaceId: string;
   readonly profileId: string;
@@ -2300,6 +2325,22 @@ const canonicalCandidateProfileDeriveKeys = inputKeys<CanonicalCandidateProfileD
   "profileId",
   "providerTransmissionApproved",
 ]);
+const canonicalCandidateProfileProgressKeys = inputKeys<CanonicalCandidateProfileProgressInput>()([
+  "workspaceId",
+  "profileId",
+]);
+const canonicalCandidateProfileCancelKeys = inputKeys<CanonicalCandidateProfileCancelInput>()([
+  "workspaceId",
+  "profileId",
+]);
+const canonicalCandidateProfileProgressResultKeys =
+  resultKeys<CanonicalCandidateProfileProgressResult>()([
+    "active",
+    "completedCalls",
+    "plannedCalls",
+  ]);
+const canonicalCandidateProfileCancelResultKeys =
+  resultKeys<CanonicalCandidateProfileCancelResult>()(["cancelled"]);
 const canonicalCandidateProfileGetKeys = inputKeys<CanonicalCandidateProfileGetInput>()([
   "workspaceId",
   "profileId",
@@ -2597,6 +2638,8 @@ export interface BridgeCommandInputMap {
   "opportunity.edit": OpportunityEditInput;
   "opportunity.review": OpportunityReviewInput;
   "profile.derive": CanonicalCandidateProfileDeriveInput;
+  "profile.progress": CanonicalCandidateProfileProgressInput;
+  "profile.cancel": CanonicalCandidateProfileCancelInput;
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
@@ -2672,6 +2715,8 @@ export interface BridgeCommandOutputMap {
   "opportunity.edit": OpportunityRecordResult;
   "opportunity.review": OpportunityRecordResult;
   "profile.derive": CanonicalCandidateProfileRecordResult;
+  "profile.progress": CanonicalCandidateProfileProgressResult;
+  "profile.cancel": CanonicalCandidateProfileCancelResult;
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
@@ -4310,6 +4355,28 @@ function validateCanonicalCandidateProfileDeriveInput(
   };
 }
 
+function validateCanonicalCandidateProfileProgressInput(
+  value: unknown,
+): CanonicalCandidateProfileProgressInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileProgressKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
+function validateCanonicalCandidateProfileCancelInput(
+  value: unknown,
+): CanonicalCandidateProfileCancelInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileCancelKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
 function validateCanonicalCandidateProfileGetInput(
   value: unknown,
 ): CanonicalCandidateProfileGetInput {
@@ -4686,6 +4753,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "profile.derive",
         input: validateCanonicalCandidateProfileDeriveInput(command.input),
+      };
+    case "profile.progress":
+      return {
+        type: "profile.progress",
+        input: validateCanonicalCandidateProfileProgressInput(command.input),
+      };
+    case "profile.cancel":
+      return {
+        type: "profile.cancel",
+        input: validateCanonicalCandidateProfileCancelInput(command.input),
       };
     case "profile.get":
       return {
@@ -6504,6 +6581,40 @@ function normalizeCanonicalCandidateProfileIssueResult(
   };
 }
 
+const maximumCanonicalCandidateProfileProgressCalls = 10_000;
+
+function normalizeCanonicalCandidateProfileProgressResult(
+  value: unknown,
+): CanonicalCandidateProfileProgressResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileProgressResultKeys)) return invalidInput();
+  const active = booleanValue(result.active);
+  if (result.completedCalls === undefined && result.plannedCalls === undefined) {
+    return { active };
+  }
+  if (!active || result.completedCalls === undefined || result.plannedCalls === undefined) {
+    return invalidInput();
+  }
+  const completedCalls = finiteInteger(
+    result.completedCalls,
+    maximumCanonicalCandidateProfileProgressCalls,
+  );
+  const plannedCalls = finiteInteger(
+    result.plannedCalls,
+    maximumCanonicalCandidateProfileProgressCalls,
+  );
+  if (plannedCalls < 1 || completedCalls > plannedCalls) return invalidInput();
+  return { active, completedCalls, plannedCalls };
+}
+
+function normalizeCanonicalCandidateProfileCancelResult(
+  value: unknown,
+): CanonicalCandidateProfileCancelResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileCancelResultKeys)) return invalidInput();
+  return { cancelled: booleanValue(result.cancelled) };
+}
+
 function normalizeCanonicalCandidateProfileRecordResult(
   value: unknown,
   expectedWorkspaceId?: string,
@@ -6739,6 +6850,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
         command.input.workspaceId,
         command.input.profileId,
       );
+    case "profile.progress":
+      return normalizeCanonicalCandidateProfileProgressResult(value);
+    case "profile.cancel":
+      return normalizeCanonicalCandidateProfileCancelResult(value);
     case "profile.list":
       return normalizeCanonicalCandidateProfileListResult(value);
     case "profile.catalog":

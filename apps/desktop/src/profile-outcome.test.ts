@@ -5,9 +5,11 @@ import type {
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
 } from "./bridge.js";
+import { canonicalCandidateProfileGenerationCancelledMessage } from "./bridge.js";
 import {
   canReviewCanonicalCandidateProfile,
   canSelectReviewedCanonicalCandidateProfile,
+  isCanonicalCandidateProfileGenerationCancelled,
   projectCanonicalCandidateProfileOperationResult,
   projectCanonicalCandidateProfileOutcome,
   safeCanonicalCandidateProfileFeedback,
@@ -235,6 +237,24 @@ describe("canonical candidate profile outcome", () => {
     expect(
       canSelectReviewedCanonicalCandidateProfile(
         profile({ status: "reviewed", reviewedAt: "2026-09-30T10:00:00.000Z", facts: [] }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("cancelled profile generation", () => {
+  it("recognizes only the fixed cancellation message and keeps it readable", () => {
+    const cancelled = new Error(canonicalCandidateProfileGenerationCancelledMessage);
+    expect(isCanonicalCandidateProfileGenerationCancelled(cancelled)).toBe(true);
+    expect(safeCanonicalCandidateProfileFeedback(cancelled)).toBe(
+      "Profile generation was cancelled. No facts were saved.",
+    );
+    expect(isCanonicalCandidateProfileGenerationCancelled(new Error("provider failed"))).toBe(
+      false,
+    );
+    expect(
+      isCanonicalCandidateProfileGenerationCancelled(
+        canonicalCandidateProfileGenerationCancelledMessage,
       ),
     ).toBe(false);
   });

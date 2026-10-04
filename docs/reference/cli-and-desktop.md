@@ -254,10 +254,12 @@ empty failed version shows up to three deduplicated, sanitized issue reasons.
 The action is labeled **Retry profile generation**; the existing provider-data
 approval must be granted again before selected material is sent.
 
-While a profile is generating, the desktop shows a spinner and an elapsed timer
-(it does not estimate progress or completion) and labels the button
+While a profile is generating, the desktop shows a spinner, an elapsed timer,
+and, once the plan is known, which part is running (for example **Part 2 of 4**,
+then **Finishing…**); it does not estimate completion time. The button reads
 **Generating…**. Large knowledge bases are processed in parts and can take
-several minutes, so keep DraftLoop open.
+several minutes, so keep DraftLoop open. **Cancel generation** stops further
+provider calls and saves nothing.
 
 Before retrying, follow the recorded cause and recovery guidance. Renaming the
 profile does not fix the underlying failure. Retrying sends selected material

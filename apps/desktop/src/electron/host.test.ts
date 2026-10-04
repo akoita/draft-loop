@@ -6260,6 +6260,157 @@ describe("candidate knowledge native controls", () => {
     expect(JSON.stringify(stale)).not.toContain("private stale");
   });
 
+  describe("profile generation progress and cancellation", () => {
+    const root = "/local/profile-generation-workspace";
+    const deriveCommand = {
+      type: "profile.derive",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        providerTransmissionApproved: true,
+      },
+    } as const;
+    const keyInput = { workspaceId: "workspace-native", profileId: "profile-native" };
+
+    async function openHost() {
+      const fixture = service(root);
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      return { fixture, host };
+    }
+
+    it("mirrors reported counts while a derive is pending and clears them afterwards", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation((async (request: {
+        onProgress?: (progress: { completedCalls: number; plannedCalls: number }) => void;
+      }) => {
+        request.onProgress?.({ completedCalls: 0, plannedCalls: 3 });
+        await gate;
+        return canonicalCandidateProfileRecord();
+      }) as never);
+
+      const progress = { type: "profile.progress", input: keyInput } as const;
+      await expect(host.invoke(progress)).resolves.toEqual({ ok: true, value: { active: false } });
+
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke(progress)).resolves.toEqual({
+        ok: true,
+        value: { active: true, completedCalls: 0, plannedCalls: 3 },
+      });
+      const request = fixture.service.deriveCanonicalCandidateProfile.mock.calls[0]?.[0];
+      request?.onProgress?.({ completedCalls: 2, plannedCalls: 3 });
+      await expect(host.invoke(progress)).resolves.toEqual({
+        ok: true,
+        value: { active: true, completedCalls: 2, plannedCalls: 3 },
+      });
+      await expect(
+        host.invoke({
+          type: "profile.progress",
+          input: { workspaceId: "workspace-native", profileId: "other-profile" },
+        }),
+      ).resolves.toEqual({ ok: true, value: { active: false } });
+
+      release();
+      await expect(pending).resolves.toMatchObject({ ok: true });
+      await expect(host.invoke(progress)).resolves.toEqual({ ok: true, value: { active: false } });
+    });
+
+    it("reports active without counts before the first report", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation((async () => {
+        await gate;
+        return canonicalCandidateProfileRecord();
+      }) as never);
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: true },
+      });
+      release();
+      await pending;
+    });
+
+    it("aborts a pending derive on cancel and reports the fixed cancellation message", async () => {
+      const { fixture, host } = await openHost();
+      let observed: AbortSignal | undefined;
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation(((request: {
+        signal?: AbortSignal;
+      }) => {
+        observed = request.signal;
+        return new Promise((_resolve, reject) => {
+          request.signal?.addEventListener("abort", () => reject(new Error("aborted at /private")));
+        });
+      }) as never);
+      const cancel = { type: "profile.cancel", input: keyInput } as const;
+      await expect(host.invoke(cancel)).resolves.toEqual({
+        ok: true,
+        value: { cancelled: false },
+      });
+
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: true } });
+      expect(observed?.aborted).toBe(true);
+      await expect(host.invoke(cancel)).resolves.toEqual({
+        ok: true,
+        value: { cancelled: false },
+      });
+
+      const result = await pending;
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "profile.derive",
+          message: "Profile generation was cancelled. No facts were saved.",
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("/private");
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: false },
+      });
+    });
+
+    it("clears the record after a failed derive and refuses a concurrent duplicate", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile
+        .mockImplementationOnce((async () => {
+          await gate;
+          throw new Error("provider exploded");
+        }) as never)
+        .mockResolvedValueOnce(canonicalCandidateProfileRecord() as never);
+
+      const first = host.invoke(deriveCommand);
+      await expect(host.invoke(deriveCommand)).resolves.toMatchObject({
+        ok: false,
+        error: { message: "Profile generation is already running for this profile." },
+      });
+      expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenCalledTimes(1);
+      release();
+      await expect(first).resolves.toMatchObject({ ok: false });
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: false },
+      });
+      await expect(host.invoke(deriveCommand)).resolves.toMatchObject({ ok: true });
+    });
+  });
+
   it("exposes canonical profile controls through a dialog-free, minimal projection", async () => {
     const root = "/local/profile-workspace";
     const fixture = service(root);
@@ -6360,11 +6511,15 @@ describe("candidate knowledge native controls", () => {
       root,
       profileId: "profile-native",
       allowProviderData: false,
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
     });
     expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(2, {
       root,
       profileId: "profile-native",
       allowProviderData: true,
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
     });
     expect(fixture.service.getCanonicalCandidateProfile).toHaveBeenCalledWith({
       root,
