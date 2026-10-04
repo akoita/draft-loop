@@ -441,6 +441,7 @@ kbd::after {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="url"],
 input[type="password"],
 input[type="number"],
@@ -3831,7 +3832,7 @@ input[type="checkbox"] {
 }
 
 .profile-group h4,
-.profile-issue-group h5 {
+.profile-group-summary {
   color: var(--text-2);
   font-size: var(--text-xs);
   font-weight: 700;
@@ -3984,10 +3985,6 @@ input[type="checkbox"] {
   gap: var(--space-2);
 }
 
-.profile-group h4 .meta-chip {
-  letter-spacing: 0.01em;
-}
-
 .profile-remove {
   justify-self: start;
   padding: 2px 8px;
@@ -3997,6 +3994,76 @@ input[type="checkbox"] {
 .profile-issue-group {
   display: grid;
   gap: var(--space-2);
+}
+
+/* Disclosure rows for fact categories and issue status groups. */
+.profile-group-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.profile-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-group-summary::after {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  content: "⌄";
+}
+
+.profile-category[open] > .profile-group-summary::after,
+.profile-issue-group[open] > .profile-group-summary::after {
+  content: "⌃";
+}
+
+.profile-group-summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.profile-group-count {
+  color: var(--text-3);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.profile-category[open] > .profile-group-summary {
+  margin-bottom: var(--space-2);
+}
+
+.profile-facts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.profile-facts-filter {
+  flex: 1 1 12rem;
+  min-width: min(12rem, 100%);
+}
+
+.profile-filter-count {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.profile-review-hint {
+  flex: 1 1 14rem;
+  align-self: center;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
 }
 
 .profile-issue-heading {
