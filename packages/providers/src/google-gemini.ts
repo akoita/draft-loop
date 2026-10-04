@@ -332,8 +332,24 @@ function normalizeGeminiError(error: unknown): ProviderAdapterError {
       },
     );
   }
+  // The SDK throws a plain Error when the response stream is cut off mid-way; that is a
+  // temporary transport failure, so classify it as retryable without exposing its text.
+  if (status === undefined && interruptedStreamMessage.test(message)) {
+    return new ProviderAdapterError(
+      googleGeminiProvider,
+      "transient",
+      "Google Gemini ended the response stream early.",
+      {
+        retryable: true,
+        diagnostics: [{ code: "stream_interrupted", path: "response.stream" }],
+      },
+    );
+  }
   return normalizeProviderError(googleGeminiProvider, error);
 }
+
+const interruptedStreamMessage =
+  /incomplete json segment|unexpected end of (?:json|data|stream)|premature close|socket hang up|other side closed/iu;
 
 function canceledError(): ProviderAdapterError {
   return new ProviderAdapterError(
