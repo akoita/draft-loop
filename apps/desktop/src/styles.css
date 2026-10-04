@@ -2954,6 +2954,11 @@ input[type="checkbox"] {
   font-size: var(--text-sm);
 }
 
+/* Sits right under the disabled start button so the reasons read as its own. */
+.start-review-blockers {
+  margin-top: var(--space-3);
+}
+
 /* =========================================================================
    Candidate knowledge store and configured model pair
    ========================================================================= */

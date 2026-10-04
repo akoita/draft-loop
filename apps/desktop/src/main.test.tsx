@@ -282,6 +282,14 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Choose policy file");
     expect(html).toContain("kept separate from career evidence");
     expect(html).toContain("Start author–critic review");
+    expect(html).toContain('aria-describedby="start-review-blockers"');
+    expect(html).toContain(
+      'title="Can&#x27;t start yet: Add a target job description. Add at least one candidate evidence source. Acknowledge provider transmission above."',
+    );
+    expect(html).toContain('id="start-review-blockers" role="status"');
+    expect(html).toContain("To start the review");
+    expect(html).toContain("<li>Add at least one candidate evidence source.</li>");
+    expect(html).toContain("<li>Acknowledge provider transmission above.</li>");
     expect(html).toContain("Acknowledgement required");
     expect(html).toContain("selected candidate-source excerpts");
     expect(html).toContain("complete candidate corpus");
