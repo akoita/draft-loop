@@ -49,6 +49,7 @@ export function canonicalProfileRequest(
   const googleGeminiProfile =
     isGoogleGeminiModel(model.company, model.modelId) &&
     model.profile !== undefined &&
+    model.profile.modelId === model.modelId &&
     (isGoogleGeminiAuthorProfile(model.profile) || isGoogleGeminiExtractionProfile(model.profile))
       ? model.profile
       : undefined;

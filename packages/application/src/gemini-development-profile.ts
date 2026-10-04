@@ -1,19 +1,46 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import { googleGeminiCompany, googleGeminiModelId } from "@draft-loop/providers/model-identities";
+import {
+  googleGemini37FlashModelId,
+  googleGemini38FlashModelId,
+  googleGeminiCompany,
+  isGoogleGeminiSupportedModelId,
+} from "@draft-loop/providers/model-identities";
 
 export const googleGeminiAuthorProfileId = "dev-google-gemini-author" as const;
 
-export function isGoogleGeminiModel(company: string, modelId: string): boolean {
-  return company === googleGeminiCompany && modelId === googleGeminiModelId;
+/**
+ * Immutable profile versions: v1 pins Gemini 3.7 Flash so existing runs resume; v2 pins
+ * Gemini 3.8 Flash and is the development preset's author.
+ */
+export type GoogleGeminiProfileVersion = 1 | 2;
+export const latestGoogleGeminiProfileVersion: GoogleGeminiProfileVersion = 2;
+
+const geminiModelIdByProfileVersion: Readonly<Record<GoogleGeminiProfileVersion, string>> = {
+  1: googleGemini37FlashModelId,
+  2: googleGemini38FlashModelId,
+};
+
+export function googleGeminiProfileVersionFor(
+  modelId: string,
+): GoogleGeminiProfileVersion | undefined {
+  if (modelId === googleGemini37FlashModelId) return 1;
+  if (modelId === googleGemini38FlashModelId) return 2;
+  return undefined;
 }
 
-/** A detached, opt-in development profile for the Gemini 3.7 Flash author. */
-export function createGoogleGeminiAuthorProfile(): ModelProfile {
+export function isGoogleGeminiModel(company: string, modelId: string): boolean {
+  return company === googleGeminiCompany && isGoogleGeminiSupportedModelId(modelId);
+}
+
+/** A detached, opt-in development profile for the Gemini Flash author. */
+export function createGoogleGeminiAuthorProfile(
+  version: GoogleGeminiProfileVersion = latestGoogleGeminiProfileVersion,
+): ModelProfile {
   return {
     id: googleGeminiAuthorProfileId,
-    version: 1,
+    version,
     provider: googleGeminiCompany,
-    modelId: googleGeminiModelId,
+    modelId: geminiModelIdByProfileVersion[version],
     tier: "economy",
     roles: ["author"],
     runtime: {
@@ -29,11 +56,15 @@ export function isGoogleGeminiAuthorProfile(
   profile: ModelProfile | undefined,
 ): profile is ModelProfile {
   if (profile === undefined) return false;
+  const expectedModelId =
+    profile.version === 1 || profile.version === 2
+      ? geminiModelIdByProfileVersion[profile.version]
+      : undefined;
   return (
     profile.id === googleGeminiAuthorProfileId &&
-    profile.version === 1 &&
+    expectedModelId !== undefined &&
     profile.provider === googleGeminiCompany &&
-    profile.modelId === googleGeminiModelId &&
+    profile.modelId === expectedModelId &&
     profile.tier === "economy" &&
     profile.roles.length === 1 &&
     profile.roles[0] === "author" &&

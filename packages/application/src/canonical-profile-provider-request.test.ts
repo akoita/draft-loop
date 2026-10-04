@@ -81,14 +81,23 @@ describe("canonical candidate profile provider request contract", () => {
 
   it("uses the pinned budget only for exact development Gemini author and extraction profiles", () => {
     for (const profile of [
-      createGoogleGeminiAuthorProfile(),
-      createGoogleGeminiExtractionProfile(),
+      createGoogleGeminiAuthorProfile(1),
+      createGoogleGeminiExtractionProfile(1),
+      createGoogleGeminiAuthorProfile(2),
+      createGoogleGeminiExtractionProfile(2),
     ]) {
       expect(
-        canonicalProfileRequest({ ...model("google", "gemini-3.7-flash"), profile }, "api-key")
+        canonicalProfileRequest({ ...model("google", profile.modelId), profile }, "api-key")
           .maxOutputTokens,
       ).toBe(32768);
     }
+    // A profile pinned to one Gemini model never matches the other model.
+    expect(
+      canonicalProfileRequest(
+        { ...model("google", "gemini-3.8-flash"), profile: createGoogleGeminiAuthorProfile(1) },
+        "api-key",
+      ).maxOutputTokens,
+    ).toBe(8192);
 
     const extractionProfile = createGoogleGeminiExtractionProfile();
     for (const profile of [
@@ -97,12 +106,12 @@ describe("canonical candidate profile provider request contract", () => {
       { ...extractionProfile, runtime: { ...extractionProfile.runtime, effort: "low" as const } },
     ]) {
       expect(
-        canonicalProfileRequest({ ...model("google", "gemini-3.7-flash"), profile }, "api-key")
+        canonicalProfileRequest({ ...model("google", "gemini-3.8-flash"), profile }, "api-key")
           .maxOutputTokens,
       ).toBe(8192);
     }
     expect(
-      canonicalProfileRequest(model("google", "gemini-3.7-flash"), "api-key").maxOutputTokens,
+      canonicalProfileRequest(model("google", "gemini-3.8-flash"), "api-key").maxOutputTokens,
     ).toBe(8192);
     expect(
       canonicalProfileRequest(

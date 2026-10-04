@@ -85,7 +85,7 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     apiPricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.5 },
     reviewedAt: "2026-10-02",
   },
-  "dev-google-gemini-author@1": {
+  "dev-google-gemini-author@2": {
     sources: [googleGeminiPricing, googleGeminiModels],
     apiPricing: { inputUsdPerMillion: 0.75, outputUsdPerMillion: 3.75 },
     reviewedAt: "2026-10-04",
@@ -123,7 +123,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "development-gemini",
     label: "Development — Gemini Flash — unvalidated",
     tier: "economy",
-    author: { id: "dev-google-gemini-author", version: 1 },
+    author: { id: "dev-google-gemini-author", version: 2 },
     critic: { id: "economy-openai-critic", version: 1 },
   },
 ];

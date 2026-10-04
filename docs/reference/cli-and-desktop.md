@@ -49,7 +49,7 @@ must support its selected role. Economy and standard are unvalidated opt-in
 pairs. The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
 requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
-the Gemini 3.7 Flash author and the GPT-6 Luna critic; it requires
+the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
 `GEMINI_API_KEY`. The active catalog contains six unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
@@ -58,15 +58,17 @@ workspace model settings, transmission approval, or credentials. Resume uses
 the pair already recorded in run history. Omitting profile options preserves
 the existing workspace-configured behavior.
 
-The opt-in Gemini 3.7 Flash development author is also selectable with
-`--author-profile dev-google-gemini-author@1` and an exact critic profile, or
-with `--author-company google --author-model gemini-3.7-flash`. It requires
+The opt-in Gemini 3.8 Flash development author is also selectable with
+`--author-profile dev-google-gemini-author@2` and an exact critic profile, or
+with `--author-company google --author-model gemini-3.8-flash`. Profile `@1`
+(Gemini 3.7 Flash) stays registered and accepted so existing runs resume, but it
+is no longer a preset or catalog entry. The 3.8 author requires
 `GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
 use submitted content. The desktop offers the same `development-gemini` preset
 in its model picker and stores the key in its own settings row; see
 [Provider credentials](#provider-credentials). Desktop readiness for a Gemini
 author requires the Google key, and Gemini model discovery is manual: enter the
-exact model ID `gemini-3.7-flash`.
+exact model ID `gemini-3.8-flash`.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -437,7 +439,7 @@ CLI-specific live availability for these suggestions has not been reverified. Ec
 standard remain the curated pair presets, with a separate development GLM
 preset and a separate development Gemini preset. The active catalog lists
 Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
-through DeepInfra, and Gemini 3.7 Flash. GLM's standard uncached API rates are
+through DeepInfra, and Gemini 3.8 Flash. GLM's standard uncached API rates are
 $0.15 per million input tokens and $0.50 per million output tokens, reviewed
 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04. Quality is
 unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain

@@ -58,7 +58,7 @@ describe("model profile CLI commands", () => {
     },
     {
       modelPreset: "development-gemini",
-      author: { id: "dev-google-gemini-author", version: 1 },
+      author: { id: "dev-google-gemini-author", version: 2 },
       critic: { id: "economy-openai-critic", version: 1 },
     },
   ] as const)(
@@ -170,7 +170,10 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("development-gemini");
     expect(startHelp).toContain("GEMINI_API_KEY");
     expect(startHelp).toContain("GEMINI_API_KEY");
-    expect(startHelp).toContain("dev-google-gemini-author@1");
+    expect(startHelp).toContain("dev-google-gemini-author@2");
+    expect(startHelp?.replace(/\s+/g, " ")).toContain(
+      "dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs",
+    );
     expect(startHelp).toContain("pinned to this run");
     expect(modelProfilesHelp).toContain("unvalidated");
     expect(modelProfilesHelp).toContain("availability has not been checked");

@@ -13,6 +13,7 @@ const modelNames: Readonly<Record<string, string>> = {
   "gpt-5.6-luna": "GPT-5.6 Luna",
   "zai-org/GLM-5.3-Flash": "GLM-5.3 Flash",
   "gemini-3.7-flash": "Gemini 3.7 Flash",
+  "gemini-3.8-flash": "Gemini 3.8 Flash",
 };
 
 const providerNames: Readonly<Record<string, string>> = {

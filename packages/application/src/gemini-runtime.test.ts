@@ -34,13 +34,14 @@ const schema = {
   additionalProperties: false,
 } as const;
 
-function selection(): ModelSelection {
+function selection(version: 1 | 2 = 2): ModelSelection {
+  const profile = createGoogleGeminiAuthorProfile(version);
   return {
     company: "google",
-    modelId: googleGeminiModelId,
+    modelId: profile.modelId,
     role: "author",
     promptTemplateVersion: "gemini-runtime-test-v1",
-    profile: createGoogleGeminiAuthorProfile(),
+    profile,
   };
 }
 
@@ -121,6 +122,51 @@ describe("Google Gemini application route", () => {
     });
     expect(policy.allowedCompanies).toEqual(["google"]);
     expect(policy.requestedRetention).toBe("ephemeral-request");
+  });
+
+  it("routes the historical v1 profile to Gemini 3.7 Flash and rejects a model mismatch", async () => {
+    const authModes = { anthropic: "user-session", openai: "user-session" } as const;
+    const model = selection(1);
+    expect(model.modelId).toBe("gemini-3.7-flash");
+    const { client, generate } = geminiClient({ answer: "ready" });
+    const adapter = await createProviderAdapter(
+      {},
+      model,
+      true,
+      async () => "synthetic-gemini-key",
+      { google: () => client },
+      authModes,
+    );
+    const input = {
+      contextSnapshotId: "gemini-37-snapshot",
+      systemPrompt: "Return the requested JSON.",
+      input: { task: "test" },
+      outputSchema: schema,
+      outputName: "gemini_test",
+      maxOutputTokens: 32768,
+      dataPolicy: providerDataPolicy("google", true, authModes),
+    };
+
+    await expect(adapter.execute({ ...input, model })).resolves.toMatchObject({
+      modelId: "gemini-3.7-flash",
+    });
+    expect(generate.mock.calls[0]?.[0]).toMatchObject({
+      model: "gemini-3.7-flash",
+      config: { thinkingConfig: { thinkingLevel: "LOW" } },
+    });
+    await expect(adapter.execute({ ...input, model: selection(2) })).rejects.toMatchObject({
+      diagnostics: [{ code: "model_mismatch", path: "request" }],
+    });
+    await expect(
+      createProviderAdapter(
+        {},
+        { ...model, modelId: "gemini-3.6-flash" },
+        true,
+        async () => "synthetic-gemini-key",
+        { google: () => client },
+        authModes,
+      ),
+    ).rejects.toMatchObject({ code: "invalid-request" });
   });
 
   describe("temporary overload retry", () => {
@@ -285,8 +331,15 @@ describe("Google Gemini application route", () => {
 
   it("selects the detached extraction profile only for the exact Gemini model", () => {
     expect(canonicalExtractionProfileFor("google", googleGeminiModelId)).toEqual(
-      createGoogleGeminiExtractionProfile(),
+      createGoogleGeminiExtractionProfile(2),
     );
+    expect(canonicalExtractionProfileFor("google", "gemini-3.8-flash")?.version).toBe(2);
+    expect(canonicalExtractionProfileFor("google", "gemini-3.7-flash")).toEqual(
+      createGoogleGeminiExtractionProfile(1),
+    );
+    expect(createGoogleGeminiExtractionProfile(1).modelId).toBe("gemini-3.7-flash");
+    expect(createGoogleGeminiExtractionProfile(2).modelId).toBe("gemini-3.8-flash");
+    expect(canonicalExtractionProfileFor("google", "gemini-3.6-flash")).toBeUndefined();
     expect(canonicalExtractionProfileFor("google", "another-google-model")).toBeUndefined();
     expect(canonicalExtractionProfileFor("anthropic", googleGeminiModelId)).toBeUndefined();
     expect(canonicalExtractionProfileFor("zai", "zai-org/GLM-5.3-Flash")?.id).toBe(
@@ -362,68 +415,78 @@ describe("Google Gemini application route", () => {
     }
   });
 
-  it("persists exact profile controls and resumes without consulting the registry", async () => {
-    const root = await mkdtemp(join(tmpdir(), "gemini-profile-resume-"));
-    const author = defaultModelProfileRegistry.resolve("dev-google-gemini-author", 1, "author");
-    const critic = defaultModelProfileRegistry.resolve("economy-openai-critic", 1, "critic");
-    const resolve = vi.fn(defaultModelProfileRegistry.resolve);
-    const driver = createLocalApplicationDriver({
-      modelProfileRegistry: { resolve, list: defaultModelProfileRegistry.list },
-    });
-
-    try {
-      await mkdir(join(root, "evidence"), { recursive: true });
-      await writeFile(join(root, "job.md"), "Software engineering role.");
-      await writeFile(join(root, "evidence", "candidate.md"), "Built TypeScript tools.");
-      await driver.initialize(
-        {
-          root,
-          jobDescription: "job.md",
-          sources: "evidence",
-          authorCompany: "anthropic",
-          authorModel: "claude-sonnet-5-5",
-          criticCompany: "openai",
-          criticModel: "gpt-6-luna",
-          fixtureMode: true,
-        },
-        silent,
+  it.each([
+    [1, "gemini-3.7-flash"],
+    [2, "gemini-3.8-flash"],
+  ])(
+    "persists exact v%i profile controls and resumes without consulting the registry",
+    async (version, modelId) => {
+      const root = await mkdtemp(join(tmpdir(), "gemini-profile-resume-"));
+      const author = defaultModelProfileRegistry.resolve(
+        "dev-google-gemini-author",
+        version,
+        "author",
       );
-      const originalWorkspace = await driver.readWorkspace(root);
-      const begun = await driver.begin(
-        {
-          root,
-          modelProfiles: {
-            author: { id: author.id, version: author.version },
-            critic: { id: critic.id, version: critic.version },
-          },
-        },
-        silent,
-      );
-      const persisted = await contextForRun(root, begun.contextSnapshotId);
-      expect(persisted.modelConfiguration.author).toMatchObject({
-        company: "google",
-        modelId: googleGeminiModelId,
-        profile: author,
+      const critic = defaultModelProfileRegistry.resolve("economy-openai-critic", 1, "critic");
+      const resolve = vi.fn(defaultModelProfileRegistry.resolve);
+      const driver = createLocalApplicationDriver({
+        modelProfileRegistry: { resolve, list: defaultModelProfileRegistry.list },
       });
-      expect(persisted.modelConfiguration.author.profile?.runtime).toEqual(author.runtime);
-      expect((await driver.readWorkspace(root)).author).toEqual(originalWorkspace.author);
 
-      const throwingRegistry = {
-        resolve: vi.fn(() => {
-          throw new Error("resume must not resolve profiles");
-        }),
-        list: vi.fn(() => []),
-      };
-      const restarted = createLocalApplicationDriver({ modelProfileRegistry: throwingRegistry });
-      const resumed = await restarted.resume({ root, runId: begun.runId }, silent);
+      try {
+        await mkdir(join(root, "evidence"), { recursive: true });
+        await writeFile(join(root, "job.md"), "Software engineering role.");
+        await writeFile(join(root, "evidence", "candidate.md"), "Built TypeScript tools.");
+        await driver.initialize(
+          {
+            root,
+            jobDescription: "job.md",
+            sources: "evidence",
+            authorCompany: "anthropic",
+            authorModel: "claude-sonnet-5-5",
+            criticCompany: "openai",
+            criticModel: "gpt-6-luna",
+            fixtureMode: true,
+          },
+          silent,
+        );
+        const originalWorkspace = await driver.readWorkspace(root);
+        const begun = await driver.begin(
+          {
+            root,
+            modelProfiles: {
+              author: { id: author.id, version: author.version },
+              critic: { id: critic.id, version: critic.version },
+            },
+          },
+          silent,
+        );
+        const persisted = await contextForRun(root, begun.contextSnapshotId);
+        expect(persisted.modelConfiguration.author).toMatchObject({
+          company: "google",
+          modelId,
+          profile: author,
+        });
+        expect(persisted.modelConfiguration.author.profile?.runtime).toEqual(author.runtime);
+        expect((await driver.readWorkspace(root)).author).toEqual(originalWorkspace.author);
 
-      expect(throwingRegistry.resolve).not.toHaveBeenCalled();
-      expect(
-        resumed.executionHistory.map(({ provider, modelId }) => [provider, modelId]),
-      ).toContainEqual(["google", googleGeminiModelId]);
-      expect(persisted.modelConfiguration.critic.profile).toEqual(critic);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+        const throwingRegistry = {
+          resolve: vi.fn(() => {
+            throw new Error("resume must not resolve profiles");
+          }),
+          list: vi.fn(() => []),
+        };
+        const restarted = createLocalApplicationDriver({ modelProfileRegistry: throwingRegistry });
+        const resumed = await restarted.resume({ root, runId: begun.runId }, silent);
+
+        expect(throwingRegistry.resolve).not.toHaveBeenCalled();
+        expect(
+          resumed.executionHistory.map(({ provider, modelId }) => [provider, modelId]),
+        ).toContainEqual(["google", modelId]);
+        expect(persisted.modelConfiguration.critic.profile).toEqual(critic);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

@@ -20,7 +20,7 @@ const development: ModelProfileReferences = {
   critic: { id: "economy-openai-critic", version: 1 },
 };
 const geminiDevelopment: ModelProfileReferences = {
-  author: { id: "dev-google-gemini-author", version: 1 },
+  author: { id: "dev-google-gemini-author", version: 2 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 const apiKeyModes: RunProviderAuthModeConfiguration = {
@@ -69,8 +69,8 @@ describe("desktop model profile API budget scenario", () => {
 
   it("labels the development Gemini public rates as Google documentation", () => {
     const html = renderBudget(geminiDevelopment, apiKeyModes);
-    expect(html).toContain("dev-google-gemini-author@1");
-    expect(html).toContain("google/gemini-3.7-flash");
+    expect(html).toContain("dev-google-gemini-author@2");
+    expect(html).toContain("google/gemini-3.8-flash");
     expect(html).toContain("$0.75/1M input · $3.75/1M output");
     expect(html).toContain("Official Google model/pricing documentation");
   });

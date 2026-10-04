@@ -151,9 +151,10 @@ describe("registry-derived model-suggestion preflight", () => {
     );
     const template = catalog[0];
     if (template === undefined) throw new Error("expected a profile catalog");
-    const geminiEntry = { ...template, profile: createGoogleGeminiAuthorProfile() };
+    const geminiEntry = { ...template, profile: createGoogleGeminiAuthorProfile(2) };
+    const historicalGeminiEntry = { ...template, profile: createGoogleGeminiAuthorProfile(1) };
     const planned = buildModelSuggestionPreflightPlan(apiModes, {
-      catalog: [...catalog, geminiEntry],
+      catalog: [...catalog, geminiEntry, historicalGeminiEntry],
     });
     expect(planned.rows).toHaveLength(4);
     expect(JSON.stringify(planned.rows)).not.toContain("gemini");
@@ -167,7 +168,7 @@ describe("registry-derived model-suggestion preflight", () => {
         resolvedProviders.push(provider);
         return "test-only-api-key";
       },
-      planDependencies: { catalog: [...catalog, geminiEntry] },
+      planDependencies: { catalog: [...catalog, geminiEntry, historicalGeminiEntry] },
     });
     expect(result.passed).toBe(true);
     expect(calls).toHaveLength(4);

@@ -90,7 +90,7 @@ describe("desktop model profile picker rendering", () => {
     expect(cards).toContain(">Custom pair</span>");
     expect(cards).toContain("Claude Sonnet 5.5 writes · GPT-6 Luna reviews");
     expect(cards).toContain("GLM-5.3 Flash writes · GPT-6 Luna reviews");
-    expect(cards).toContain("Gemini 3.7 Flash writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Gemini 3.8 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Anthropic + OpenAI");
     expect(cards).toContain("Z.ai via DeepInfra + OpenAI");
     expect(cards).toContain("Google + OpenAI");

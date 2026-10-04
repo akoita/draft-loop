@@ -11,7 +11,7 @@ import {
   deepInfraGLMModelId,
   type GoogleGeminiClient,
   googleGeminiCompany,
-  googleGeminiModelId,
+  isGoogleGeminiSupportedModelId,
   type JsonObject,
   type LocalClient,
   LocalModelAdapter,
@@ -58,7 +58,7 @@ function providerId(
   model: ModelSelection,
 ): "anthropic" | "openai" | "local" | "deepinfra" | "google" {
   if (model.company === googleGeminiCompany) {
-    if (model.modelId === googleGeminiModelId) return "google";
+    if (isGoogleGeminiSupportedModelId(model.modelId)) return "google";
     throw new ProviderAdapterError(
       "google",
       "invalid-request",
