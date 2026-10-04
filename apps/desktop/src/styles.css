@@ -3656,6 +3656,12 @@ input[type="checkbox"] {
   font-weight: 650;
 }
 
+.credential-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
 .credential-protection {
   flex: 1 1 100%;
   color: var(--text-4);

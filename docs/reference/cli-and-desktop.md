@@ -58,8 +58,9 @@ The opt-in Gemini 3.7 Flash development author has no preset. Select it with
 `--author-profile dev-google-gemini-author@1` and an exact critic profile, or
 with `--author-company google --author-model gemini-3.7-flash`. It requires
 `GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
-use submitted content. Desktop key storage is not available yet, and the
-desktop host does not read `GEMINI_API_KEY`.
+use submitted content. The desktop stores the key in its own settings row; see
+[Provider credentials](#provider-credentials). Selecting the Gemini author in
+the desktop is not available yet.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -82,6 +83,13 @@ Z.ai models served by DeepInfra. It uses the same local credential store as the 
 and OpenAI keys, and saved app keys take precedence over environment variables.
 The host reads `DEEPINFRA_API_KEY` when no app key is saved. DeepInfra remains API-key-only:
 provider-managed session preferences are still limited to Anthropic and OpenAI.
+
+A separate Google Gemini API key row works the same way for the development
+Gemini author. The host reads `GEMINI_API_KEY` when no app key is saved. The row
+states that the key sends submitted content to Google and that Gemini API
+free-tier terms let Google use it, so candidate material needs a paid-tier key.
+Google keys are API-key-only and are never shared with another provider.
+
 The renderer receives only whether a key is configured and its storage source
 and protection, never the stored key.
 

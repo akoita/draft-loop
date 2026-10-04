@@ -2020,8 +2020,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     createApplicationService(
       createLocalApplicationDriver({
         providerAuthModeConfiguration,
-        resolveCredential: async (provider) =>
-          provider === "google" ? undefined : resolveCredential(credentials, provider),
+        resolveCredential: (provider) => resolveCredential(credentials, provider),
         ...(options.userSessionRunners === undefined
           ? {}
           : { userSessionRunners: options.userSessionRunners }),
