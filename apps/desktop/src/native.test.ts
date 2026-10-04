@@ -260,6 +260,32 @@ describe("desktop native profile capabilities", () => {
     expect(port.editCanonicalCandidateProfile).toBeUndefined();
     expect(port.reviewCanonicalCandidateProfile).toBeUndefined();
     expect(port.listReviewedCanonicalCandidateProfiles).toBeUndefined();
+    expect(port.listCanonicalCandidateProfileSummaries).toBeUndefined();
+  });
+
+  it("lists saved profile summaries through the catalog command with drafts included", async () => {
+    const state = createFixtureReviewState();
+    const summary = {
+      profileId: "profile-1",
+      latestVersion: 2,
+      status: "draft",
+      updatedAt: "2026-09-30T12:00:00Z",
+      reviewedVersion: 1,
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { workspaceId: state.workspaceId, profiles: [], summaries: [summary] },
+    }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["review.load", "profile.catalog"], invoke }),
+    );
+    await expect(port.listCanonicalCandidateProfileSummaries?.(state.workspaceId)).resolves.toEqual(
+      [summary],
+    );
+    expect(invoke).toHaveBeenCalledWith({
+      type: "profile.catalog",
+      input: { workspaceId: state.workspaceId, includeDrafts: true },
+    });
   });
 
   it("binds candidate knowledge operations to native dialogs and one explicit workspace selection", async () => {

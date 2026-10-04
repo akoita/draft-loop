@@ -35,6 +35,7 @@ import {
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
   type ReviewedCanonicalCandidateProfileCatalogResult,
+  type SavedCanonicalCandidateProfileSummary,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
 } from "./bridge.js";
@@ -141,6 +142,10 @@ export interface DesktopProfileCapabilities {
   readonly listReviewedCanonicalCandidateProfiles?: (
     workspaceId: string,
   ) => Promise<ReviewedCanonicalCandidateProfileCatalogResult>;
+  /** Every saved profile (draft or reviewed), newest first. */
+  readonly listCanonicalCandidateProfileSummaries?: (
+    workspaceId: string,
+  ) => Promise<readonly SavedCanonicalCandidateProfileSummary[]>;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -689,6 +694,13 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { workspaceId },
               }),
             ),
+          listCanonicalCandidateProfileSummaries: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "profile.catalog",
+                input: { workspaceId, includeDrafts: true },
+              }),
+            ).summaries ?? [],
         }
       : {}),
     ...(capabilityPort.hasCapability("profile.edit")

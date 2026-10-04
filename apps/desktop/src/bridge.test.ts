@@ -1744,6 +1744,41 @@ describe("desktop capability bridge", () => {
       ok: true,
       value: { workspaceId: "workspace-1", profiles: [{ profileId: "profile-1", version: 2 }] },
     });
+    const withDrafts = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profiles: [],
+            summaries: [
+              {
+                profileId: "profile-1",
+                latestVersion: 1,
+                status: "draft",
+                updatedAt: "2026-09-30T12:00:00Z",
+              },
+            ],
+          },
+        }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(
+      withDrafts.execute({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-1", includeDrafts: true },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { summaries: [{ profileId: "profile-1", latestVersion: 1, status: "draft" }] },
+    });
+    await expect(
+      withDrafts.execute({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-1", includeDrafts: false } as never,
+      }),
+    ).resolves.toMatchObject({ ok: false });
     const foreignCatalog = createCapabilityPort(
       bridge(
         async () => ({ ok: true, value: { workspaceId: "workspace-other", profiles: [] } }),

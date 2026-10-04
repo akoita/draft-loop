@@ -232,6 +232,12 @@ reviewed version locally; it does not derive or transmit candidate material.
 Source compatibility is checked again before starting a review. Older hosts
 without the catalog capability retain the profile-name and history controls.
 
+When a workspace opens, the desktop lists its saved profiles, drafts included,
+in a **Saved profiles** picker (newest first, showing version and status) and
+loads the most recent one locally if no profile name is entered. Dismissing the
+native folder dialog for **Open knowledge store** is not an error and shows no
+message.
+
 Before approval, the desktop can show blockers from the readiness decision
 persisted for the exact artifact. A rubric blocker includes its recorded score
 and required threshold. The score is a check result, not a confirmed candidate

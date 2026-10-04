@@ -14,10 +14,13 @@ import type {
 import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
+  defaultProfileToAutoload,
   findReviewedCanonicalCandidateProfileChoice,
   parseReviewedCanonicalCandidateProfileCatalogResult,
   type ReviewedCanonicalCandidateProfileSummary,
   reviewedCanonicalCandidateProfileChoice,
+  type SavedCanonicalCandidateProfileSummary,
+  savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
   type ProfileGenerationCallProgress,
@@ -50,6 +53,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
   Omit<
     DesktopProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
+    | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
     | "cancelCanonicalCandidateProfileGeneration"
   >
@@ -57,6 +61,7 @@ export type CanonicalCandidateProfileCapabilities = Required<
   Pick<
     DesktopProfileCapabilities,
     | "listReviewedCanonicalCandidateProfiles"
+    | "listCanonicalCandidateProfileSummaries"
     | "getCanonicalCandidateProfileProgress"
     | "cancelCanonicalCandidateProfileGeneration"
   >;
@@ -640,6 +645,43 @@ export function ProfileDetails({
   );
 }
 
+/** Lists every saved profile (draft or reviewed), newest first; renders nothing when empty. */
+export function SavedProfilePicker({
+  summaries,
+  currentName,
+  disabled,
+  onChoose,
+}: {
+  readonly summaries: readonly SavedCanonicalCandidateProfileSummary[];
+  readonly currentName: string;
+  readonly disabled: boolean;
+  readonly onChoose: (summary: SavedCanonicalCandidateProfileSummary) => void;
+}) {
+  if (summaries.length === 0) return null;
+  return (
+    <div className="profile-catalog-picker">
+      <label htmlFor="saved-profiles">Saved profiles</label>
+      <select
+        id="saved-profiles"
+        aria-label="Saved profiles"
+        value={summaries.some((summary) => summary.profileId === currentName) ? currentName : ""}
+        disabled={disabled}
+        onChange={(event) => {
+          const chosen = summaries.find((summary) => summary.profileId === event.target.value);
+          if (chosen !== undefined) onChoose(chosen);
+        }}
+      >
+        <option value="">Choose a saved profile…</option>
+        {summaries.map((summary) => (
+          <option key={summary.profileId} value={summary.profileId}>
+            {savedCanonicalCandidateProfileLabel(summary)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ProfileWorkspace({
   workspaceId,
   capabilities,
@@ -675,6 +717,15 @@ export function ProfileWorkspace({
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogChoice, setCatalogChoice] = useState("");
   const [catalogEpoch, setCatalogEpoch] = useState(0);
+  const [savedSummaries, setSavedSummaries] = useState<
+    readonly SavedCanonicalCandidateProfileSummary[]
+  >([]);
+  const [savedSummariesWorkspaceId, setSavedSummariesWorkspaceId] = useState<string | null>(null);
+  const autoloadedWorkspaceRef = useRef<string | null>(null);
+  const summariesRequestRef = useRef(0);
+  const loadSavedProfileRef = useRef<
+    ((summary: SavedCanonicalCandidateProfileSummary) => void) | null
+  >(null);
   const workspaceIdRef = useRef(workspaceId);
   const catalogRequestRef = useRef(0);
   const selectionRequestRef = useRef(0);
@@ -754,6 +805,9 @@ export function ProfileWorkspace({
     setCatalogChoice("");
     setCatalogProfiles([]);
     setCatalogWorkspaceId(null);
+    setSavedSummaries([]);
+    setSavedSummariesWorkspaceId(null);
+    autoloadedWorkspaceRef.current = null;
     setProfileId("");
     setLoadedProfileId(null);
     setHistory([]);
@@ -816,6 +870,36 @@ export function ProfileWorkspace({
       active = false;
     };
   }, [available, workspaceId, capabilities.listReviewedCanonicalCandidateProfiles, catalogEpoch]);
+
+  const listSummaries = capabilities.listCanonicalCandidateProfileSummaries;
+  useEffect(() => {
+    if (!available || listSummaries === undefined || workspaceId.trim() === "") return;
+    const request = ++summariesRequestRef.current;
+    const epoch = catalogEpoch;
+    let active = true;
+    void listSummaries(workspaceId)
+      .then((summaries) => {
+        if (!active || request !== summariesRequestRef.current || epoch !== catalogEpochRef.current)
+          return;
+        setSavedSummaries(Array.isArray(summaries) ? summaries : []);
+        setSavedSummariesWorkspaceId(workspaceId);
+      })
+      .catch(() => {
+        // Saved profiles are a convenience; loading by name still works.
+      });
+    return () => {
+      active = false;
+    };
+  }, [available, workspaceId, listSummaries, catalogEpoch]);
+
+  useEffect(() => {
+    if (savedSummariesWorkspaceId !== workspaceId || autoloadedWorkspaceRef.current === workspaceId)
+      return;
+    if (busy) return;
+    autoloadedWorkspaceRef.current = workspaceId;
+    const candidate = defaultProfileToAutoload(savedSummaries, profileId, loadedProfileId);
+    if (candidate !== undefined) loadSavedProfileRef.current?.(candidate);
+  }, [savedSummaries, savedSummariesWorkspaceId, workspaceId, busy, profileId, loadedProfileId]);
 
   if (!available) return null;
 
@@ -943,6 +1027,67 @@ export function ProfileWorkspace({
       }
     }
   };
+
+  const loadSavedProfile = (summary: SavedCanonicalCandidateProfileSummary): void => {
+    const request = ++selectionRequestRef.current;
+    const selectedWorkspaceId = workspaceId;
+    const current = (): boolean =>
+      request === selectionRequestRef.current && workspaceIdRef.current === selectedWorkspaceId;
+    const id = summary.profileId;
+    catalogChoiceRef.current = null;
+    setCatalogChoice("");
+    setProfileId(id);
+    setProviderTransmissionApproved(false);
+    setStatusMessage("Loading the saved profile locally…");
+    setErrorMessage(null);
+    setLoadedProfileId(null);
+    setHistory([]);
+    setRecord(null);
+    setDraftFacts([]);
+    setDraftIssues([]);
+    onSelectionChange(null);
+    setBusy(true);
+    void (async () => {
+      try {
+        const listing = await capabilities.listCanonicalCandidateProfileVersions(id);
+        if (!current()) return;
+        const targetVersion = listing.versions.at(-1)?.version;
+        if (
+          listing.workspaceId !== selectedWorkspaceId ||
+          listing.profileId !== id ||
+          targetVersion === undefined
+        ) {
+          throw new Error("saved profile mismatch");
+        }
+        const loaded = await capabilities.getCanonicalCandidateProfile(id, targetVersion);
+        if (!current()) return;
+        if (
+          loaded.workspaceId !== selectedWorkspaceId ||
+          loaded.profileId !== id ||
+          loaded.version !== targetVersion
+        ) {
+          throw new Error("saved profile mismatch");
+        }
+        setHistory(listing.versions);
+        setLoadedProfileId(id);
+        applyRecord(loaded);
+        setStatusMessage(`Loaded saved profile ${id} version ${loaded.version} locally.`);
+      } catch {
+        if (!current()) return;
+        setLoadedProfileId(null);
+        setHistory([]);
+        setRecord(null);
+        setDraftFacts([]);
+        setDraftIssues([]);
+        onSelectionChange(null);
+        setStatusMessage("");
+        setErrorMessage("Could not load that saved profile. Choose it again or load by name.");
+      } finally {
+        if (current()) setBusy(false);
+      }
+    })();
+  };
+  loadSavedProfileRef.current = loadSavedProfile;
 
   const loadLatest = (): void => {
     if (!isCanonicalCandidateProfileId(normalizedProfileId)) {
@@ -1108,6 +1253,14 @@ export function ProfileWorkspace({
             <p className="profile-empty">No reviewed profiles are available in this workspace.</p>
           ) : null}
         </div>
+      )}
+      {savedSummariesWorkspaceId !== workspaceId ? null : (
+        <SavedProfilePicker
+          summaries={savedSummaries}
+          currentName={normalizedProfileId}
+          disabled={busy}
+          onChoose={loadSavedProfile}
+        />
       )}
       <div className="profile-controls">
         <label className="profile-id-label">

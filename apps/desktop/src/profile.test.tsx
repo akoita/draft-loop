@@ -17,6 +17,7 @@ import {
   ProfileGenerationAction,
   ProfileOutcomeFeedback,
   ProfileWorkspace,
+  SavedProfilePicker,
   safeCanonicalCandidateProfileText,
 } from "./profile.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
@@ -603,5 +604,42 @@ describe("desktop canonical candidate profile", () => {
     expect(markup).toContain("Choose a reviewed profile…");
     expect(markup).toContain("Source compatibility is checked again before starting a review.");
     expect(markup).toContain("Loading reviewed profiles…");
+  });
+
+  it("renders the saved-profile picker newest first with name, version, and status", () => {
+    const markup = renderToStaticMarkup(
+      <SavedProfilePicker
+        summaries={[
+          { profileId: "writer", latestVersion: 3, status: "draft", updatedAt: capturedAt },
+          {
+            profileId: "engineer",
+            latestVersion: 1,
+            status: "reviewed",
+            updatedAt: capturedAt,
+            reviewedVersion: 1,
+          },
+        ]}
+        currentName="engineer"
+        disabled={false}
+        onChoose={() => undefined}
+      />,
+    );
+    expect(markup).toContain('aria-label="Saved profiles"');
+    expect(markup).toContain("Choose a saved profile…");
+    expect(markup.indexOf("writer · v3 · draft")).toBeGreaterThan(-1);
+    expect(markup.indexOf("writer · v3 · draft")).toBeLessThan(
+      markup.indexOf("engineer · v1 · reviewed"),
+    );
+    expect(markup).toMatch(/<option value="engineer" selected/u);
+    expect(
+      renderToStaticMarkup(
+        <SavedProfilePicker
+          summaries={[]}
+          currentName=""
+          disabled={false}
+          onChoose={() => undefined}
+        />,
+      ),
+    ).toBe("");
   });
 });
