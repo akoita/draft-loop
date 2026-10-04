@@ -3860,6 +3860,105 @@ describe("canonical candidate profile application API", () => {
     }
   });
 
+  it("reports bounded extraction progress and stops without saving when cancelled", async () => {
+    const root = await providerWorkspace("draft-loop-profile-progress-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-profile.md");
+    await writeFile(candidatePath, "Ada Lovelace built local-first tools.\n".repeat(2_000), "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "progress-store",
+      "progress-ckb",
+      "progress-source",
+      "progress-version",
+    ]);
+    const controller = new AbortController();
+    let abortAfterCalls = Number.POSITIVE_INFINITY;
+    const transport = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(String(init.body)).not.toContain("onProgress");
+      if (transport.mock.calls.length >= abortAfterCalls) controller.abort();
+      return localCompletion({ schemaVersion: 1, facts: [], issues: [] }, "profile-progress");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: transport as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "profile-extractor",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "progress-store", knowledgeBaseId: "progress-ckb" }],
+        },
+        silent,
+      );
+
+      const completed: { completedCalls: number; plannedCalls: number }[] = [];
+      const saved = await driver.deriveCanonicalCandidateProfile({
+        root,
+        profileId: "profile-progress",
+        allowProviderData: true,
+        createdAt: "2026-08-30T10:00:00.000Z",
+        onProgress: (value) => completed.push({ ...value }),
+      });
+      expect(saved.profile.version).toBe(1);
+      const plannedCalls = transport.mock.calls.length;
+      expect(plannedCalls).toBeGreaterThan(1);
+      expect(completed).toEqual(
+        Array.from({ length: plannedCalls + 1 }, (_, completedCalls) => ({
+          completedCalls,
+          plannedCalls,
+        })),
+      );
+
+      transport.mockClear();
+      abortAfterCalls = 2;
+      const cancelledProgress: number[] = [];
+      await expect(
+        driver.deriveCanonicalCandidateProfile({
+          root,
+          profileId: "profile-progress-cancelled",
+          allowProviderData: true,
+          signal: controller.signal,
+          onProgress: (value) => cancelledProgress.push(value.completedCalls),
+        }),
+      ).rejects.toThrow();
+      expect(transport).toHaveBeenCalledTimes(2);
+      expect(cancelledProgress).toEqual([0, 1]);
+      await expect(
+        driver.getCanonicalCandidateProfile({ root, profileId: "profile-progress-cancelled" }),
+      ).resolves.toBeUndefined();
+
+      transport.mockClear();
+      await expect(
+        driver.deriveCanonicalCandidateProfile({
+          root,
+          profileId: "profile-progress-preaborted",
+          allowProviderData: true,
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow();
+      expect(transport).not.toHaveBeenCalled();
+      await expect(
+        driver.getCanonicalCandidateProfile({ root, profileId: "profile-progress-preaborted" }),
+      ).resolves.toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects profile derivation when a configured root no longer matches its pinned store", async () => {
     const root = await providerWorkspace("draft-loop-profile-selection-identity-");
     const storeRoot = join(root, "candidate-store");

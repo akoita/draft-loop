@@ -17,6 +17,7 @@ import type {
   OpportunityBriefVersionRecord,
 } from "@draft-loop/storage";
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
+import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 
 export type {
@@ -291,6 +292,10 @@ export interface DeriveCanonicalCandidateProfileCommand {
   readonly profileId: string;
   readonly allowProviderData: boolean;
   readonly createdAt?: string;
+  /** Stops extraction before the next provider call; no profile version is saved. */
+  readonly signal?: AbortSignal;
+  /** Receives content-free progress for bounded multi-call extractions. */
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
 }
 
 export interface GetCanonicalCandidateProfileCommand {
@@ -574,6 +579,10 @@ export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
 export * from "./candidate-profile-extraction.js";
 export * from "./candidate-profile-persistence.js";
+export type {
+  CanonicalProfileExtractionProgress,
+  CanonicalProfileExtractionProgressListener,
+} from "./canonical-profile-extraction-progress.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";

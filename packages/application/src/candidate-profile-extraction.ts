@@ -25,6 +25,7 @@ import {
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
 import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
+import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
@@ -57,6 +58,8 @@ export interface CanonicalCandidateProfileExtractionRequest {
   readonly operationId: string;
   readonly sources: readonly CanonicalCandidateProfileExtractionSource[];
   readonly signal?: AbortSignal;
+  /** Local advisory progress observer for planned extractions; never sent to a provider. */
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
   readonly groundingRecovery?: readonly CandidateProfileGroundingDiagnosticCount[];
   /**
    * Local validator applied to each bounded batch of a planned extraction. It returns the
@@ -79,6 +82,7 @@ export interface CanonicalCandidateProfileExtractionInput {
   readonly sources: readonly CanonicalCandidateProfileExtractionMaterial[];
   readonly allowProviderData: boolean;
   readonly signal?: AbortSignal;
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
 }
 
 export interface CanonicalCandidateProfileExtractionResult {
@@ -203,6 +207,7 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
       operationId: input.operationId,
       sources: Object.freeze(sources),
       ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(typeof input.onProgress === "function" ? { onProgress: input.onProgress } : {}),
     }),
     references,
   };

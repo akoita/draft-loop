@@ -26,6 +26,7 @@ import {
   processCanonicalCandidateProfileExtraction,
 } from "./candidate-profile-extraction.js";
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
   type CandidateKnowledgeStoreService,
   type CreateKnowledgeSelectionSnapshotSelection,
@@ -50,6 +51,25 @@ export interface DeriveCanonicalCandidateProfileCommand {
   readonly allowProviderData: boolean;
   readonly createdAt?: string;
   readonly signal?: AbortSignal;
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
+}
+
+/** Optional derivation fields forwarded from the selection binding and the caller's command. */
+export function canonicalProfileDerivationOptions(
+  binding: { readonly combinationApproved?: boolean },
+  command: Pick<DeriveCanonicalCandidateProfileCommand, "createdAt" | "signal" | "onProgress">,
+): Pick<
+  DeriveCanonicalCandidateProfileCommand,
+  "combinationApproved" | "createdAt" | "signal" | "onProgress"
+> {
+  return {
+    ...(binding.combinationApproved === undefined
+      ? {}
+      : { combinationApproved: binding.combinationApproved }),
+    ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+    ...(command.signal === undefined ? {} : { signal: command.signal }),
+    ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
+  };
 }
 
 export interface CanonicalCandidateProfileDerivationService {
@@ -384,6 +404,7 @@ export function createCanonicalCandidateProfileDerivationService(
               sources: materialization.materials,
               allowProviderData: true,
               ...(command.signal === undefined ? {} : { signal: command.signal }),
+              ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
             });
       const issues = [
         ...extracted.issues,

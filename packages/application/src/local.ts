@@ -81,6 +81,7 @@ import {
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
+  canonicalProfileDerivationOptions,
   createCanonicalCandidateProfileDerivationService,
 } from "./candidate-profile-derivation.js";
 import type {
@@ -3271,11 +3272,8 @@ export function createLocalApplicationDriver(
             storeRoot,
             knowledgeBaseId,
           })),
-          ...(binding.combinationApproved === undefined
-            ? {}
-            : { combinationApproved: binding.combinationApproved }),
           allowProviderData: true,
-          ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+          ...canonicalProfileDerivationOptions(binding, command),
         });
       } finally {
         await storage.close();
