@@ -23,6 +23,7 @@ import {
   type CanonicalProfileExtractionPlannedCall,
   planCanonicalProfileExtractionCalls,
 } from "./canonical-profile-extraction-plan.js";
+import { reportCanonicalProfileExtractionProgress } from "./canonical-profile-extraction-progress.js";
 import {
   type CanonicalProfileExtractionTextWindow,
   canonicalProfileExtractionSectionFocus,
@@ -278,8 +279,10 @@ export async function executeCanonicalProfileExtractionWithFallback(
   const plannedCalls = planCanonicalProfileExtractionCalls(request.sources);
   if (plannedCalls !== null) {
     const batches: CanonicalCandidateProfileExtractionProposal[] = [];
-    for (const plannedCall of plannedCalls) {
+    reportCanonicalProfileExtractionProgress(request.onProgress, 0, plannedCalls.length);
+    for (const [index, plannedCall] of plannedCalls.entries()) {
       batches.push(await executePlannedCall(executor, request, controls, plannedCall));
+      reportCanonicalProfileExtractionProgress(request.onProgress, index + 1, plannedCalls.length);
     }
 
     const aggregate = aggregateBatches(batches, controls.model.company);
