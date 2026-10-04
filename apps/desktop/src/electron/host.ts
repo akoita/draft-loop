@@ -21,6 +21,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
   type ProviderUserSessionRunners,
+  readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
@@ -86,6 +87,7 @@ import {
   type FileSelectResult,
   type KnowledgeBaseDeletionPlanResult,
   type KnowledgeBaseDeletionResult,
+  type KnowledgeCurrentResult,
   type KnowledgeDirectoryAddMembersResult,
   type KnowledgeDirectoryMemberMoveResult,
   type KnowledgeDirectoryMovedCandidatesResult,
@@ -2361,6 +2363,45 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return knowledgeStoreResult(view);
   }
 
+  /**
+   * Reopens the knowledge store the active workspace saved, without a dialog.
+   *
+   * The saved store root stays inside the host: it re-registers the store so
+   * later store-scoped commands work, and is never returned or put in an error.
+   * A workspace can save entries from several stores; only the first entry's
+   * store is restored, with the selected bases that belong to that store.
+   */
+  async function currentKnowledgeResult(workspaceId: string): Promise<KnowledgeCurrentResult> {
+    const workspace = workspaceFor(workspaceId);
+    const unavailable: KnowledgeCurrentResult = {
+      store: null,
+      selectedKnowledgeBaseIds: [],
+      unavailable: true,
+    };
+    let entries: readonly { storeRoot: string; storeId: string; knowledgeBaseId: string }[];
+    try {
+      const config = await readWorkspaceConfig(workspace.root);
+      entries = config.candidateKnowledgeSelection?.entries ?? [];
+    } catch {
+      return unavailable;
+    }
+    const first = entries[0];
+    if (first === undefined) return { store: null, selectedKnowledgeBaseIds: [] };
+    try {
+      const view = await knowledgeService.openStore({ storeRoot: first.storeRoot });
+      if (view.store.id !== first.storeId) return unavailable;
+      knowledgeStoreRoots.set(first.storeId, first.storeRoot);
+      const store = knowledgeStoreResult(view);
+      const baseIds = new Set(store.knowledgeBases.map((base) => base.id));
+      const selectedKnowledgeBaseIds = entries
+        .filter((entry) => entry.storeId === first.storeId && baseIds.has(entry.knowledgeBaseId))
+        .map((entry) => entry.knowledgeBaseId);
+      return { store, selectedKnowledgeBaseIds };
+    } catch {
+      return unavailable;
+    }
+  }
+
   async function verifiedKnowledgeStoreRoot(storeId: string): Promise<{
     readonly root: string;
     readonly view: CandidateKnowledgeStoreView;
@@ -3560,6 +3601,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             value: verifiedKnowledgeStoreResult(command.input.storeId, view),
           };
         }
+        case "knowledge.current":
+          return { ok: true, value: await currentKnowledgeResult(command.input.workspaceId) };
         case "knowledge.readiness": {
           const root = knowledgeStoreRoot(command.input.storeId);
           const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });

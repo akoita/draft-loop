@@ -323,6 +323,23 @@ describe("desktop native profile capabilities", () => {
     ]);
   });
 
+  it("reads the workspace's saved knowledge store through knowledge.current", async () => {
+    const value = { store: null, selectedKnowledgeBaseIds: [] };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["knowledge.current"], invoke }),
+    );
+    await expect(port.getCurrentCandidateKnowledge?.("workspace-1")).resolves.toEqual(value);
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      { type: "knowledge.current", input: { workspaceId: "workspace-1" } },
+    ]);
+
+    const without = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["knowledge.open"], invoke }),
+    );
+    expect(without.getCurrentCandidateKnowledge).toBeUndefined();
+  });
+
   it("gates each candidate knowledge method on its own host capability", () => {
     const port = createBridgeReviewPort(
       createNativeCapabilityPort({

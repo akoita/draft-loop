@@ -11,6 +11,7 @@ import {
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
+  type KnowledgeCurrentResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeFileImportResult,
   type KnowledgeReadinessResult,
@@ -147,6 +148,7 @@ export interface DesktopKnowledgeCapabilities {
     input: Omit<KnowledgeStoreCreateInput, "selection">,
   ) => Promise<KnowledgeStoreResult>;
   readonly openCandidateKnowledgeStore?: () => Promise<KnowledgeStoreResult>;
+  readonly getCurrentCandidateKnowledge?: (workspaceId: string) => Promise<KnowledgeCurrentResult>;
   readonly selectCandidateKnowledgeBase?: (
     workspaceId: string,
     entry: KnowledgeSelectionEntry,
@@ -465,6 +467,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.open",
                 input: { selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.current")
+      ? {
+          getCurrentCandidateKnowledge: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.current",
+                input: { workspaceId },
               }),
             ),
         }

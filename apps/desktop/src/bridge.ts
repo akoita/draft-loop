@@ -247,6 +247,12 @@ export interface KnowledgeStoreListInput {
 
 const knowledgeStoreListKeys = inputKeys<KnowledgeStoreListInput>()(["storeId"]);
 
+export interface KnowledgeCurrentInput {
+  readonly workspaceId: string;
+}
+
+const knowledgeCurrentKeys = inputKeys<KnowledgeCurrentInput>()(["workspaceId"]);
+
 export interface KnowledgeReadinessInput extends KnowledgeStoreListInput {
   readonly knowledgeBaseId: string;
 }
@@ -898,6 +904,19 @@ export interface KnowledgeStoreResult {
   readonly knowledgeBases: readonly KnowledgeBaseSummary[];
 }
 
+/**
+ * The knowledge store a workspace has saved, reopened without a file dialog.
+ *
+ * `store` is null when nothing is saved or the saved store could not be opened;
+ * `unavailable` marks the second case so the renderer can tell the user to open
+ * the store again. No filesystem path ever appears here.
+ */
+export interface KnowledgeCurrentResult {
+  readonly store: KnowledgeStoreResult | null;
+  readonly selectedKnowledgeBaseIds: readonly string[];
+  readonly unavailable?: true;
+}
+
 export interface KnowledgeReadinessResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1332,6 +1351,11 @@ const knowledgeBaseSummaryKeys = resultKeys<KnowledgeBaseSummary>()([
   "isDefault",
 ]);
 const knowledgeStoreResultKeys = resultKeys<KnowledgeStoreResult>()(["storeId", "knowledgeBases"]);
+const knowledgeCurrentResultKeys = resultKeys<KnowledgeCurrentResult>()([
+  "store",
+  "selectedKnowledgeBaseIds",
+  "unavailable",
+]);
 const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -2599,6 +2623,7 @@ export interface BridgeCommandInputMap {
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
+  "knowledge.current": KnowledgeCurrentInput;
   "knowledge.readiness": KnowledgeReadinessInput;
   "knowledge.sources": KnowledgeSourcesInput;
   "knowledge.duplicates": KnowledgeDuplicatesInput;
@@ -2676,6 +2701,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
+  "knowledge.current": KnowledgeCurrentResult;
   "knowledge.readiness": KnowledgeReadinessResult;
   "knowledge.sources": KnowledgeSourcesResult;
   "knowledge.duplicates": KnowledgeDuplicatesResult;
@@ -3183,6 +3209,12 @@ function validateKnowledgeStoreListInput(value: unknown): KnowledgeStoreListInpu
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeStoreListKeys)) return invalidInput();
   return { storeId: identifier(input.storeId) };
+}
+
+function validateKnowledgeCurrentInput(value: unknown): KnowledgeCurrentInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeCurrentKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
 }
 
 function validateKnowledgeBackupExportInput(value: unknown): KnowledgeBackupExportInput {
@@ -4573,6 +4605,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.open", input: validateKnowledgeStoreOpenInput(command.input) };
     case "knowledge.list":
       return { type: "knowledge.list", input: validateKnowledgeStoreListInput(command.input) };
+    case "knowledge.current":
+      return { type: "knowledge.current", input: validateKnowledgeCurrentInput(command.input) };
     case "knowledge.readiness":
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
     case "knowledge.sources":
@@ -4993,6 +5027,33 @@ function normalizeKnowledgeStoreResult(value: unknown): KnowledgeStoreResult {
     return invalidInput();
   }
   return { storeId: identifier(result.storeId), knowledgeBases };
+}
+
+function normalizeKnowledgeCurrentResult(value: unknown): KnowledgeCurrentResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeCurrentResultKeys)) return invalidInput();
+  if (
+    !Array.isArray(result.selectedKnowledgeBaseIds) ||
+    result.selectedKnowledgeBaseIds.length > maximumKnowledgeSelections
+  ) {
+    return invalidInput();
+  }
+  const selectedKnowledgeBaseIds = result.selectedKnowledgeBaseIds.map(identifier);
+  if (new Set(selectedKnowledgeBaseIds).size !== selectedKnowledgeBaseIds.length) {
+    return invalidInput();
+  }
+  if (result.unavailable !== undefined && result.unavailable !== true) return invalidInput();
+  if (result.store === null) {
+    if (selectedKnowledgeBaseIds.length > 0) return invalidInput();
+    return result.unavailable === true
+      ? { store: null, selectedKnowledgeBaseIds, unavailable: true }
+      : { store: null, selectedKnowledgeBaseIds };
+  }
+  if (result.unavailable !== undefined) return invalidInput();
+  const store = normalizeKnowledgeStoreResult(result.store);
+  const baseIds = new Set(store.knowledgeBases.map((base) => base.id));
+  if (!selectedKnowledgeBaseIds.every((id) => baseIds.has(id))) return invalidInput();
+  return { store, selectedKnowledgeBaseIds };
 }
 
 function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessResult {
@@ -6824,6 +6885,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesClearResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
+    case "knowledge.current":
+      return normalizeKnowledgeCurrentResult(value);
     case "knowledge.create":
     case "knowledge.open":
     case "knowledge.list":

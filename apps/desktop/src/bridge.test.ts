@@ -3762,6 +3762,68 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("restores the saved knowledge store through a strict path-free command", async () => {
+    const input = { workspaceId: "workspace-1" };
+    expect(validateBridgeCommand({ type: "knowledge.current", input })).toEqual({
+      type: "knowledge.current",
+      input,
+    });
+    expect(bridgeCapabilities).toContain("knowledge.current");
+    for (const invalidInput of [
+      {},
+      { workspaceId: "workspace-1", storeRoot: "/private/candidate-data" },
+      "workspace-1",
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.current", input: invalidInput }),
+      ).toThrow("invalid");
+    }
+
+    const store = {
+      storeId: "store-1",
+      knowledgeBases: [
+        {
+          id: "kb-1",
+          displayName: "Engineering",
+          description: "",
+          state: "active",
+          isDefault: true,
+        },
+      ],
+    };
+    const respond = async (value: unknown) =>
+      createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), ["knowledge.current"]),
+      ).execute({ type: "knowledge.current", input });
+    const accepted = [
+      { store, selectedKnowledgeBaseIds: ["kb-1"] },
+      { store, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+    ];
+    for (const value of accepted) {
+      await expect(respond(value)).resolves.toEqual({ ok: true, value });
+    }
+    const rejected = [
+      { store, selectedKnowledgeBaseIds: ["kb-unknown"] },
+      { store, selectedKnowledgeBaseIds: ["kb-1", "kb-1"] },
+      { store, selectedKnowledgeBaseIds: [], unavailable: true },
+      { store, selectedKnowledgeBaseIds: [], unavailable: false },
+      { store: null, selectedKnowledgeBaseIds: ["kb-1"] },
+      { store: null, selectedKnowledgeBaseIds: [], unavailable: false },
+      { store: null },
+      { selectedKnowledgeBaseIds: [] },
+      { store: { ...store, storeRoot: "/private/candidate-data" }, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [], storeRoot: "/private/candidate-data" },
+    ];
+    for (const value of rejected) {
+      await expect(respond(value)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("validates path-free CKB maintenance commands and explicit archive confirmation", () => {
     expect(
       validateBridgeCommand({
