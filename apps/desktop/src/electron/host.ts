@@ -69,14 +69,17 @@ import {
   type BridgeCommand,
   type BridgeResult,
   bridgeCapabilities,
+  type CanonicalCandidateProfileCancelResult,
   type CanonicalCandidateProfileFactResult,
   type CanonicalCandidateProfileIssueResult,
   type CanonicalCandidateProfileListResult,
+  type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileProvenanceReferenceResult,
   type CanonicalCandidateProfileRecordResult,
   type CredentialProtection,
   type CredentialProvider,
   type CredentialSource,
+  canonicalCandidateProfileGenerationCancelledMessage,
   credentialProviders,
   type ExportFormat,
   type FileSelectInput,
@@ -2736,16 +2739,80 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return projectOpportunityRecord(workspace.descriptor.id, record);
   }
 
+  const activeProfileGenerations = new Map<
+    string,
+    { controller: AbortController; completedCalls?: number; plannedCalls?: number }
+  >();
+
+  function profileGenerationKey(workspaceId: string, profileId: string): string {
+    return `${workspaceId}\u0000${profileId}`;
+  }
+
   async function deriveCanonicalCandidateProfile(
     input: Extract<BridgeCommand, { type: "profile.derive" }>["input"],
   ): Promise<CanonicalCandidateProfileRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
-    const record = await service.deriveCanonicalCandidateProfile({
-      root: workspace.root,
-      profileId: input.profileId,
-      allowProviderData: input.providerTransmissionApproved === true,
-    });
-    return projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record, input.profileId);
+    const key = profileGenerationKey(workspace.descriptor.id, input.profileId);
+    if (activeProfileGenerations.has(key)) {
+      return fail("operation-failed", "Profile generation is already running for this profile.");
+    }
+    const entry: { controller: AbortController; completedCalls?: number; plannedCalls?: number } = {
+      controller: new AbortController(),
+    };
+    activeProfileGenerations.set(key, entry);
+    try {
+      const record = await service.deriveCanonicalCandidateProfile({
+        root: workspace.root,
+        profileId: input.profileId,
+        allowProviderData: input.providerTransmissionApproved === true,
+        signal: entry.controller.signal,
+        onProgress: (progress) => {
+          entry.completedCalls = progress.completedCalls;
+          entry.plannedCalls = progress.plannedCalls;
+        },
+      });
+      return projectCanonicalCandidateProfileRecord(
+        workspace.descriptor.id,
+        record,
+        input.profileId,
+      );
+    } catch (error) {
+      // A cancelled run saves nothing, whatever shape the abort took on its way up.
+      if (entry.controller.signal.aborted) {
+        return fail("operation-failed", canonicalCandidateProfileGenerationCancelledMessage);
+      }
+      throw error;
+    } finally {
+      activeProfileGenerations.delete(key);
+    }
+  }
+
+  function canonicalCandidateProfileProgress(
+    input: Extract<BridgeCommand, { type: "profile.progress" }>["input"],
+  ): CanonicalCandidateProfileProgressResult {
+    const workspace = workspaceFor(input.workspaceId);
+    const entry = activeProfileGenerations.get(
+      profileGenerationKey(workspace.descriptor.id, input.profileId),
+    );
+    if (entry === undefined) return { active: false };
+    return {
+      active: true,
+      ...(entry.completedCalls === undefined || entry.plannedCalls === undefined
+        ? {}
+        : { completedCalls: entry.completedCalls, plannedCalls: entry.plannedCalls }),
+    };
+  }
+
+  function cancelCanonicalCandidateProfileGeneration(
+    input: Extract<BridgeCommand, { type: "profile.cancel" }>["input"],
+  ): CanonicalCandidateProfileCancelResult {
+    const workspace = workspaceFor(input.workspaceId);
+    const entry = activeProfileGenerations.get(
+      profileGenerationKey(workspace.descriptor.id, input.profileId),
+    );
+    if (entry === undefined || entry.controller.signal.aborted) return { cancelled: false };
+    entry.controller.abort();
+    return { cancelled: true };
   }
 
   async function getCanonicalCandidateProfile(
@@ -4712,6 +4779,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await reviewOpportunity(command.input) };
         case "profile.derive":
           return { ok: true, value: await deriveCanonicalCandidateProfile(command.input) };
+        case "profile.progress":
+          return { ok: true, value: canonicalCandidateProfileProgress(command.input) };
+        case "profile.cancel":
+          return { ok: true, value: cancelCanonicalCandidateProfileGeneration(command.input) };
         case "profile.get":
           return { ok: true, value: await getCanonicalCandidateProfile(command.input) };
         case "profile.list":

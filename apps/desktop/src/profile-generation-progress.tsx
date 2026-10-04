@@ -15,6 +15,20 @@ export function formatProfileGenerationElapsed(ms: number): string {
   return `${minutes}:${ss}`;
 }
 
+export interface ProfileGenerationCallProgress {
+  readonly completedCalls: number;
+  readonly plannedCalls: number;
+}
+
+/** The part label is shown only once the host has reported a bounded plan. */
+export function formatProfileGenerationPart(
+  progress: ProfileGenerationCallProgress | undefined,
+): string | null {
+  if (progress === undefined || progress.plannedCalls < 1) return null;
+  if (progress.completedCalls >= progress.plannedCalls) return "Finishing…";
+  return `Part ${Math.max(progress.completedCalls, 0) + 1} of ${progress.plannedCalls}`;
+}
+
 /**
  * Waiting indicator for profile generation. It belongs inside an existing
  * `role="status"` region: the screen-reader text is static so it is announced
@@ -24,10 +38,13 @@ export function formatProfileGenerationElapsed(ms: number): string {
 export function ProfileGenerationProgress({
   startedAt,
   now,
+  progress,
 }: {
   readonly startedAt: number;
   readonly now?: number;
+  readonly progress?: ProfileGenerationCallProgress;
 }) {
+  const part = formatProfileGenerationPart(progress);
   const [current, setCurrent] = useState(() => now ?? Date.now());
 
   useEffect(() => {
@@ -44,11 +61,36 @@ export function ProfileGenerationProgress({
         <span className="profile-generation-elapsed" aria-hidden="true">
           Elapsed {formatProfileGenerationElapsed(current - startedAt)}
         </span>
+        {part === null ? null : (
+          <span className="profile-generation-part" aria-hidden="true">
+            {part}
+          </span>
+        )}
       </div>
       <p className="profile-generation-note">
         Large knowledge bases are processed in parts, so this can take several minutes. Keep
         DraftLoop open.
       </p>
     </div>
+  );
+}
+
+/** Stops the pending generation; it is disabled after one click so a cancel is requested once. */
+export function ProfileGenerationCancel({
+  cancelling,
+  onCancel,
+}: {
+  readonly cancelling: boolean;
+  readonly onCancel: () => void;
+}) {
+  return (
+    <button
+      className="button button-outline profile-generation-cancel"
+      type="button"
+      disabled={cancelling}
+      onClick={onCancel}
+    >
+      {cancelling ? "Cancelling…" : "Cancel generation"}
+    </button>
   );
 }

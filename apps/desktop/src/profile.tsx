@@ -19,11 +19,16 @@ import {
   type ReviewedCanonicalCandidateProfileSummary,
   reviewedCanonicalCandidateProfileChoice,
 } from "./profile-catalog.js";
-import { ProfileGenerationProgress } from "./profile-generation-progress.js";
+import {
+  type ProfileGenerationCallProgress,
+  ProfileGenerationCancel,
+  ProfileGenerationProgress,
+} from "./profile-generation-progress.js";
 import {
   type CanonicalCandidateProfileOutcome,
   canReviewCanonicalCandidateProfile,
   canSelectReviewedCanonicalCandidateProfile,
+  isCanonicalCandidateProfileGenerationCancelled,
   projectCanonicalCandidateProfileOperationResult,
   projectCanonicalCandidateProfileOutcome,
   safeCanonicalCandidateProfileFeedback,
@@ -31,12 +36,23 @@ import {
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
+const generationProgressPollMs = 1000;
 const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
 export type CanonicalCandidateProfileCapabilities = Required<
-  Omit<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">
+  Omit<
+    DesktopProfileCapabilities,
+    | "listReviewedCanonicalCandidateProfiles"
+    | "getCanonicalCandidateProfileProgress"
+    | "cancelCanonicalCandidateProfileGeneration"
+  >
 > &
-  Pick<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">;
+  Pick<
+    DesktopProfileCapabilities,
+    | "listReviewedCanonicalCandidateProfiles"
+    | "getCanonicalCandidateProfileProgress"
+    | "cancelCanonicalCandidateProfileGeneration"
+  >;
 
 export interface ProfileWorkspaceProps {
   readonly workspaceId: string;
@@ -566,6 +582,11 @@ export function ProfileWorkspace({
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<
+    ProfileGenerationCallProgress | undefined
+  >(undefined);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const generatingProfileIdRef = useRef("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [catalogProfiles, setCatalogProfiles] = useState<
     readonly ReviewedCanonicalCandidateProfileSummary[]
@@ -610,6 +631,30 @@ export function ProfileWorkspace({
   useEffect(() => {
     onPendingChange?.(workspaceId, busy);
   }, [busy, onPendingChange, workspaceId]);
+
+  const getProgress = capabilities.getCanonicalCandidateProfileProgress;
+  useEffect(() => {
+    if (generationStartedAt === null || getProgress === undefined) return;
+    let active = true;
+    const timer = setInterval(() => {
+      void getProgress(generatingProfileIdRef.current)
+        .then((progress) => {
+          if (!active || !progress.active) return;
+          if (progress.completedCalls === undefined || progress.plannedCalls === undefined) return;
+          setGenerationProgress({
+            completedCalls: progress.completedCalls,
+            plannedCalls: progress.plannedCalls,
+          });
+        })
+        .catch(() => {
+          // Progress is advisory; a missed poll never fails the generation itself.
+        });
+    }, generationProgressPollMs);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [generationStartedAt, getProgress]);
 
   useEffect(() => {
     if (workspaceId.trim() === "") return;
@@ -701,8 +746,12 @@ export function ProfileWorkspace({
       const result = await operation();
       setStatusMessage(projectCanonicalCandidateProfileOperationResult(result).message);
     } catch (reason: unknown) {
-      setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
-      setStatusMessage("The operation did not complete. No new profile version was confirmed.");
+      if (isCanonicalCandidateProfileGenerationCancelled(reason)) {
+        setStatusMessage(safeCanonicalCandidateProfileFeedback(reason));
+      } else {
+        setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
+        setStatusMessage("The operation did not complete. No new profile version was confirmed.");
+      }
     } finally {
       setBusy(false);
     }
@@ -830,6 +879,9 @@ export function ProfileWorkspace({
     if (!isCanonicalCandidateProfileId(normalizedProfileId) || !providerTransmissionApproved)
       return;
     setProviderTransmissionApproved(false);
+    generatingProfileIdRef.current = normalizedProfileId;
+    setGenerationProgress(undefined);
+    setCancelRequested(false);
     setGenerationStartedAt(Date.now());
     void withBusy(async () => {
       try {
@@ -842,8 +894,20 @@ export function ProfileWorkspace({
         return refreshed;
       } finally {
         setGenerationStartedAt(null);
+        setGenerationProgress(undefined);
+        setCancelRequested(false);
       }
     }, "Generating profile…");
+  };
+
+  const cancelGeneration = (): void => {
+    const cancel = capabilities.cancelCanonicalCandidateProfileGeneration;
+    if (cancel === undefined || cancelRequested) return;
+    setCancelRequested(true);
+    void cancel(generatingProfileIdRef.current).catch(() => {
+      // The generation keeps running; let the candidate try again.
+      setCancelRequested(false);
+    });
   };
 
   const save = (): void => {
@@ -1037,9 +1101,16 @@ export function ProfileWorkspace({
         {generationStartedAt === null ? (
           statusMessage
         ) : (
-          <ProfileGenerationProgress startedAt={generationStartedAt} />
+          <ProfileGenerationProgress
+            startedAt={generationStartedAt}
+            {...(generationProgress === undefined ? {} : { progress: generationProgress })}
+          />
         )}
       </div>
+      {generationStartedAt === null ||
+      capabilities.cancelCanonicalCandidateProfileGeneration === undefined ? null : (
+        <ProfileGenerationCancel cancelling={cancelRequested} onCancel={cancelGeneration} />
+      )}
       {errorMessage === null ? null : (
         <div className="error-banner profile-error" role="alert">
           <p>{errorMessage}</p>

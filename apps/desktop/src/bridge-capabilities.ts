@@ -49,6 +49,8 @@ export const bridgeCapabilities = [
   "opportunity.edit",
   "opportunity.review",
   "profile.derive",
+  "profile.progress",
+  "profile.cancel",
   "profile.get",
   "profile.list",
   "profile.edit",

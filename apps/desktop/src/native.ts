@@ -3,9 +3,11 @@ import {
   type BridgeResult,
   bridgeCapabilities,
   bridgeError,
+  type CanonicalCandidateProfileCancelResult,
   type CanonicalCandidateProfileDeriveInput,
   type CanonicalCandidateProfileEditInput,
   type CanonicalCandidateProfileListResult,
+  type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
@@ -113,6 +115,14 @@ export interface DesktopProfileCapabilities {
   readonly deriveCanonicalCandidateProfile?: (
     input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
   ) => Promise<CanonicalCandidateProfileRecordResult>;
+  /** Reports a pending generation's bounded call progress; answerable while it runs. */
+  readonly getCanonicalCandidateProfileProgress?: (
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileProgressResult>;
+  /** Stops a pending generation before any further provider call; nothing is saved. */
+  readonly cancelCanonicalCandidateProfileGeneration?: (
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileCancelResult>;
   readonly getCanonicalCandidateProfile?: (
     profileId: string,
     version?: number,
@@ -596,6 +606,32 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "profile.derive",
                 input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.progress")
+      ? {
+          getCanonicalCandidateProfileProgress: async (profileId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.progress",
+                input: { workspaceId: state.workspaceId, profileId },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.cancel")
+      ? {
+          cancelCanonicalCandidateProfileGeneration: async (profileId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.cancel",
+                input: { workspaceId: state.workspaceId, profileId },
               }),
             );
           },

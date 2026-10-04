@@ -205,6 +205,37 @@ describe("desktop canonical candidate profile", () => {
     expect(onDerive).not.toHaveBeenCalled();
   });
 
+  it("keeps progress and cancel optional and offers no Cancel while idle", () => {
+    const base = {
+      deriveCanonicalCandidateProfile: vi.fn(async () => record()),
+      getCanonicalCandidateProfile: vi.fn(async () => record()),
+      listCanonicalCandidateProfileVersions: vi.fn(async () => ({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        versions: [record()],
+      })),
+      editCanonicalCandidateProfile: vi.fn(async () => record()),
+      reviewCanonicalCandidateProfile: vi.fn(async () => record("reviewed")),
+    };
+    const withGenerationControls = {
+      ...base,
+      getCanonicalCandidateProfileProgress: vi.fn(async () => ({ active: false })),
+      cancelCanonicalCandidateProfileGeneration: vi.fn(async () => ({ cancelled: false })),
+    };
+    expect(hasCanonicalCandidateProfileCapabilities(base)).toBe(true);
+    expect(hasCanonicalCandidateProfileCapabilities(withGenerationControls)).toBe(true);
+    const html = renderToStaticMarkup(
+      <ProfileWorkspace
+        workspaceId="workspace-1"
+        capabilities={withGenerationControls}
+        selectedProfile={null}
+        onSelectionChange={() => undefined}
+      />,
+    );
+    expect(html).not.toContain("Cancel generation");
+    expect(withGenerationControls.getCanonicalCandidateProfileProgress).not.toHaveBeenCalled();
+  });
+
   it("labels the generate button by whether generation or another operation is pending", () => {
     const outcome = projectCanonicalCandidateProfileOutcome(null, "profile-1", null);
     const render = (props: { busy: boolean; generating?: boolean }) =>
