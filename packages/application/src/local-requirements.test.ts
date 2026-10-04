@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { localJobRequirements } from "./local-requirements.js";
+import { CliUserError } from "./cli-user-error.js";
+import {
+  JobRequirementUserError,
+  localJobRequirements,
+  maxLocalRequirementUnitTokens,
+} from "./local-requirements.js";
 
 it("joins wrapped list items and paragraphs and omits structural headings", () => {
   expect(
@@ -42,4 +47,43 @@ it("preserves source wording and handles CRLF without merging separate items", (
       (r) => r.text,
     ),
   ).toEqual(["Python", "TypeScript", "Remote work from Europe."]);
+});
+
+const words = (count: number) => Array.from({ length: count }, (_, i) => `skill${i}`).join(" ");
+const pastedPage = [
+  "Acme Widgets Careers Home About Us Blog Contact",
+  "",
+  `Acme builds widgets for logistics teams. ${words(60)}`,
+  `Meet the team: our founder started in a garage. ${words(70)}`,
+  "Copyright Acme Widgets. All rights reserved.",
+].join("\n");
+
+it("refuses a pasted web page whose paragraphs are too long to match against CV lines", () => {
+  let thrown: unknown;
+  try {
+    localJobRequirements(pastedPage);
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(JobRequirementUserError);
+  expect(thrown).toBeInstanceOf(CliUserError);
+  expect((thrown as Error).message).toMatch(
+    /^Requirement 2 in the job description has 151 words, too long to match against individual CV lines \("Acme builds widgets for logistics teams. skill0 skill1…"\)\. List each requirement on its own bullet line.*reviewed opportunity brief\.$/u,
+  );
+});
+it("accepts a bulleted job ad", () => {
+  expect(
+    localJobRequirements(
+      "# Engineer\n\n- Build stable APIs with TypeScript.\n- Maintain integrations.\n- Write clear documentation.",
+    ),
+  ).toHaveLength(3);
+});
+it("allows a unit at exactly the token limit and refuses one token more", () => {
+  expect(localJobRequirements(`- ${words(maxLocalRequirementUnitTokens)}`)).toHaveLength(1);
+  expect(() => localJobRequirements(`- ${words(maxLocalRequirementUnitTokens + 1)}`)).toThrow(
+    JobRequirementUserError,
+  );
+});
+it("reports existing local requirement limits as user errors", () => {
+  expect(() => localJobRequirements("# Only a heading")).toThrow(CliUserError);
 });

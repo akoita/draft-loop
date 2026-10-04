@@ -587,6 +587,7 @@ export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
+export { JobRequirementUserError } from "./local-requirements.js";
 export * from "./opportunity-brief.js";
 export * from "./opportunity-extraction.js";
 export * from "./opportunity-intake.js";

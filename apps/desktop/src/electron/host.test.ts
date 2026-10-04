@@ -717,6 +717,39 @@ describe("native host", () => {
     }
   });
 
+  it("explains how to fix an unbulleted job description that cannot be matched", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-long-requirement-"));
+    const root = join(parent, "long-requirement-workspace");
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+      });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "long-requirement-workspace", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const paragraph = Array.from({ length: 60 }, (_, i) => `invented${i}`).join(" ");
+      await writeFile(join(root, "job.md"), `Acme page header ${paragraph}\n`, "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Built TypeScript services.\n", "utf8");
+
+      const started = await host.invoke({ type: "run.start", input: { workspaceId } });
+
+      expect(started).toMatchObject({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "run.start",
+          message: expect.stringContaining("List each requirement on its own bullet line"),
+        },
+      });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("forwards an exact reviewed opportunity selection only when starting a run", async () => {
     const root = "/local/opportunity-selection";
     const fixture = service(root);

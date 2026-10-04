@@ -15,6 +15,7 @@
     { "path": "../rendering" },
     { "path": "../schemas" },
     { "path": "../security" },
-    { "path": "../storage" }
+    { "path": "../storage" },
+    { "path": "../validation" }
   ]
 }

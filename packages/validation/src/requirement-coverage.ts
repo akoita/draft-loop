@@ -35,6 +35,11 @@ function tokens(text: string): readonly string[] {
     .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
+/** Number of meaningful tokens the coverage matcher counts for a requirement text. */
+export function meaningfulRequirementTokenCount(text: string): number {
+  return new Set(tokens(text)).size;
+}
+
 export const requirementCoverageHeuristic =
   "coverage = at least half of meaningful normalized requirement tokens within one artifact block, with at least one match, for at least one permitted alternative branch, with every organisation-maturity qualifier that branch states present in that same block; recognized explicit degree requirements use the strict degree rule";
 

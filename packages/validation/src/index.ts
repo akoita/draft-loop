@@ -14,6 +14,7 @@ export { alternativeRequirementBranches } from "./alternative-coverage.js";
 export { requiredMaturityQualifiers } from "./maturity-coverage.js";
 export {
   isRequirementCoveredByBlock,
+  meaningfulRequirementTokenCount,
   requirementCoverageHeuristic,
 } from "./requirement-coverage.js";
 

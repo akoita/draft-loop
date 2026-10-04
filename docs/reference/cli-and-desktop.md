@@ -192,6 +192,11 @@ source units, not reviewed job criteria: use an opportunity brief to select
 requirements and priorities before interpreting relevance as job fit. Local
 input limits are 64 KiB, 100 units, and 2,000 characters per unit; overflow,
 code fences, and tables require a reviewed brief instead of silent truncation.
+A unit longer than 40 meaningful tokens is also refused at start, before any
+provider call, because no CV block could cover half of it. This happens when a
+web page is pasted with its navigation and biographies: list each requirement
+as its own bullet line, remove boilerplate, or use a reviewed brief. The CLI
+and desktop show the message.
 
 Deterministic relevance uses lexical overlap within individual CV blocks: at
 least half of a requirement’s meaningful tokens must appear in one block.

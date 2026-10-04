@@ -1447,6 +1447,9 @@ opt-in `development-gemini` preset adds the Gemini 3.8 Flash author (profile v2;
 same critic and the dedicated Google key, with price metadata reviewed
 2026-10-04 and the same unvalidated status
 ([#813](https://github.com/akoita/draft-loop/issues/813)).
+Runs without a reviewed brief now refuse job-description units over 40
+meaningful tokens at start, before any provider call, because relevance could
+never cover them ([#858](https://github.com/akoita/draft-loop/issues/858)).
 Existing exact profile versions and run snapshots remain compatible. A profile holds:
 
 - provider and exact model ID;
@@ -1566,6 +1569,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-05 | Refused job-description requirement units over 40 meaningful tokens at run start (#858). | A job ad pasted from a web page without bullets can no longer spend every round at 0% relevance. The user is told to list requirements as bullets or use a reviewed brief. |
 | 2026-09-26 | Candidate review confirmed a factual chronology error in #526: the accepted draft merged employment periods from different employers, so the fixed factuality rule failed. | Milestone 16 remains active. #544 adds complete-range checks for substantive claims and fully covered blocks before another live observation. Each new live run needs explicit authorization; frontier evaluation remains separately gated. |
 | 2026-09-23 | Sent the author a specific validation report after a rejection (#524). The next attempt in the same process revises its rejected proposal; the report stays in memory and out of run history. | First step of automating the user's proven loop: validation report, then a richer critic report with author reconciliation, then source of truth and house rules as default inputs. |
 | 2026-09-23 | Replaced verbatim coverage with grounded coverage (#522). Text outside claims is rejected only when a word, protected value, date range, or name is unsupported by the evidence. | Honest wording no longer fails, and invented wording, dates, and names still do. Offline, the #520 drafts remain rejected on employment dates absent from the source. |
