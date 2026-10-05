@@ -1,8 +1,8 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-30<br>
-**Current stage:** Model profiles and tiers
+**Last reviewed:** 2026-10-05<br>
+**Current stage:** Manual parity: inputs
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -256,7 +256,9 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. No next sprint has started. |
+| Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
+| Now | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | Planned; 0/9 execution issues closed | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
+| Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1435,7 +1437,7 @@ cohort cannot be tuned or rerun under that admission. Milestone 17 is now the
 priority. Further generalization observations require fresh bounded work and
 separate authorization.
 
-### Now — Model profiles and tiers
+### Completed — Model profiles and tiers
 
 Offer four curated models: `claude-sonnet-5-5`, `claude-opus-5-5`,
 `gpt-6-luna`, and `gpt-6.1-sol`, grouped into economy and standard presets.
@@ -1500,6 +1502,56 @@ the full controls and resume from their snapshots; the legacy path remains
 available. The catalog discloses API pricing, estimated-budget assumptions,
 and availability and quality limitations. Current defaults stay unchanged;
 representative validation and default promotion are tracked separately.
+
+### Now — Manual parity: inputs
+
+DraftLoop exists to replace a manual loop: the candidate passes a resume
+between Claude and Codex until both agree it is ready to send. On 2026-10-05 a
+DraftLoop draft for a real application was accurate but far from sendable when
+compared with the CV that loop produced from the same career source. Rollup
+[#869](https://github.com/akoita/draft-loop/issues/869) records the causes:
+
+- the author sees at most 20 retrieved excerpts of a much larger career source;
+- the reviewed canonical profile is only a run reference and never reaches the author;
+- the source's own CV-usable, interview-only and never-share markings are not
+  modelled, so private context reached the draft;
+- there is no default writing policy;
+- the critic checks grounding only, and export stops at Markdown.
+
+This sprint fixes the inputs and measures before the review loop changes:
+
+1. [#870](https://github.com/akoita/draft-loop/issues/870) content-free parity score and baseline;
+2. [#871](https://github.com/akoita/draft-loop/issues/871) one large source without manual splitting;
+3. [#872](https://github.com/akoita/draft-loop/issues/872), [#873](https://github.com/akoita/draft-loop/issues/873), [#874](https://github.com/akoita/draft-loop/issues/874) normal, sensitive and never-share sections, enforced before any provider call;
+4. [#875](https://github.com/akoita/draft-loop/issues/875), [#876](https://github.com/akoita/draft-loop/issues/876) a default writing policy and a desktop editor;
+5. [#877](https://github.com/akoita/draft-loop/issues/877) a full-source evidence mode within a token budget;
+6. [#878](https://github.com/akoita/draft-loop/issues/878) one scored parity observation.
+
+Product constraints decided with the user:
+
+- **Defaults for everyone.** A new user gets a working configuration;
+  candidate-specific rules live in user configuration editable in the desktop,
+  never in code.
+- **Data tiers.** Never-share material is never sent; sensitive material is
+  sent only with explicit consent.
+- **Model routes.** Subscription sessions are preferred when available, with
+  API routes as an explicit alternative when session limits are reached.
+  Economy development presets remain for cheap runs.
+- **Private references.** Four reference applications stay outside the
+  repository; only content-free scores enter it.
+
+**Exit criterion:** #878 records a scored parity observation for one
+reference application with the new inputs, and states which remaining gap
+(critic, stopping rule, or export) to address first.
+
+### Next — Manual parity: review and export
+
+An editorial critic that judges fit, missing strongest evidence, register and
+sendability, with a ready-to-send verdict; a stop rule based on author and
+critic agreement or the person's decision; pause and resume when a
+subscription session reaches its limit; a professional two-page DOCX/PDF
+export; and an observation across all four references. Issues are created
+after the #878 stage decision.
 
 ### Later — Production-ready beta
 
@@ -1572,6 +1624,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-05 | Opened the Manual parity stage (#869) with sprint milestone 22 (#870–#878) after a real application showed DraftLoop drafts are accurate but not sendable. | Inputs come first: full eligible source material, sensitivity tiers, default policy, measured against private reference CVs. Model profiles and tiers is closed; default promotion (#683) and broad fixtures (#583) stay separate. |
 | 2026-10-05 | Refused job-description requirement units over 40 meaningful tokens at run start (#858). | A job ad pasted from a web page without bullets can no longer spend every round at 0% relevance. The user is told to list requirements as bullets or use a reviewed brief. |
 | 2026-09-26 | Candidate review confirmed a factual chronology error in #526: the accepted draft merged employment periods from different employers, so the fixed factuality rule failed. | Milestone 16 remains active. #544 adds complete-range checks for substantive claims and fully covered blocks before another live observation. Each new live run needs explicit authorization; frontier evaluation remains separately gated. |
 | 2026-09-23 | Sent the author a specific validation report after a rejection (#524). The next attempt in the same process revises its rejected proposal; the report stays in memory and out of run history. | First step of automating the user's proven loop: validation report, then a richer critic report with author reconciliation, then source of truth and house rules as default inputs. |
