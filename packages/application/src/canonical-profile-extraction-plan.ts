@@ -4,7 +4,9 @@ const proactivePlanMinimumSourceCount = 1;
 const proactivePlanMaximumSourceCount = 4;
 const proactivePlanTotalTextThreshold = 65_536;
 const proactivePlanSourceWindowThreshold = 8_192;
-const proactivePlanMaximumCallCount = 64;
+// One 512 Ki source with newline-shortened windows (down to ~80% of the window size) needs up to
+// about 80 calls.
+const proactivePlanMaximumCallCount = 96;
 
 export interface CanonicalProfileExtractionPlannedCall {
   readonly sourceId: string;

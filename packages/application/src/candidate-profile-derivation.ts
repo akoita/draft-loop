@@ -28,6 +28,10 @@ import {
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
+  canonicalProfileUnboundableSourceMessage,
+  partitionCanonicalProfileUnboundableSources,
+} from "./canonical-profile-unboundable-sources.js";
+import {
   type CandidateKnowledgeStoreService,
   type CreateKnowledgeSelectionSnapshotSelection,
   createCandidateKnowledgeStoreService,
@@ -97,6 +101,7 @@ interface MaterializationResult {
   readonly materials: readonly CanonicalCandidateProfileExtractionMaterial[];
   readonly failedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   readonly oversizedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
+  readonly unboundableReferences: readonly CanonicalCandidateProfileProvenanceReference[];
 }
 
 type NormalizedSourceResult =
@@ -305,7 +310,13 @@ async function materializeSelection(
   if (logicalSelections.size !== snapshot.entries.length) {
     throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
   }
-  return { materials, failedReferences, oversizedReferences };
+  const { boundable, unboundable } = partitionCanonicalProfileUnboundableSources(materials);
+  return {
+    materials: boundable,
+    failedReferences,
+    oversizedReferences,
+    unboundableReferences: unboundable.map((material) => material.reference),
+  };
 }
 
 function materializationIssue(
@@ -415,6 +426,15 @@ export function createCanonicalCandidateProfileDerivationService(
                 "source-too-large",
                 sourceTooLargeMessage,
                 materialization.oversizedReferences,
+              ),
+            ]),
+        ...(materialization.unboundableReferences.length === 0
+          ? []
+          : [
+              materializationIssue(
+                "source-too-large",
+                canonicalProfileUnboundableSourceMessage,
+                materialization.unboundableReferences,
               ),
             ]),
         ...(materialization.failedReferences.length === 0

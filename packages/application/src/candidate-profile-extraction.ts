@@ -31,8 +31,16 @@ import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-pr
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
-/** Maximum normalized text sent for one exact source version. */
-export const maximumCanonicalCandidateProfileExtractionSourceCharacters = 128 * 1024;
+/**
+ * Maximum normalized text accepted for one exact source version. Sources above the unplanned
+ * bound are only extracted through bounded windows, so this equals the operation total.
+ */
+export const maximumCanonicalCandidateProfileExtractionSourceCharacters = 512 * 1024;
+/**
+ * Maximum characters of one source that a single provider request may carry. Larger sources
+ * must be extracted through bounded windows; a request never exceeds this bound.
+ */
+export const maximumUnplannedCanonicalCandidateProfileExtractionSourceCharacters = 128 * 1024;
 /** Maximum normalized text sent across one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionCharacters = 512 * 1024;
 export const canonicalCandidateProfileExtractionApprovalErrorMessage =

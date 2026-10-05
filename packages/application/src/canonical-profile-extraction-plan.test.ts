@@ -102,13 +102,38 @@ describe("canonical profile extraction proactive plan", () => {
       ),
     ).toBeNull();
 
-    const newlineHeavySource = `${"x".repeat(6_999)}\n`.repeat(18);
-    expect(newlineHeavySource.length).toBeLessThanOrEqual(128 * 1_024);
+    // Four 200,000-unit sources need 25 calls each: 100 calls exceeds the 96-call cap.
     expect(
-      planCanonicalProfileExtractionCalls(
-        ["a", "b", "c", "d"].map((id) => ({ id, text: newlineHeavySource })),
-      ),
+      planCanonicalProfileExtractionCalls(["a", "b", "c", "d"].map((id) => source(id, 200_000))),
     ).toBeNull();
+    expect(
+      planCanonicalProfileExtractionCalls(["a", "b", "c", "d"].map((id) => source(id, 190_000))),
+    ).toHaveLength(96);
+  });
+
+  it("plans one 200,000-unit source as contiguous bounded windows covering all of it", () => {
+    const text = `${"Synthetic career line. ".repeat(9)}\n`.repeat(1_000).slice(0, 200_000);
+    const calls = planCanonicalProfileExtractionCalls([{ id: "source-a", text }]);
+
+    expect(calls).not.toBeNull();
+    expect(calls?.length).toBeGreaterThanOrEqual(25);
+    expect(calls?.length).toBeLessThanOrEqual(32);
+    const windows = calls?.flatMap((call) => (call.window === undefined ? [] : [call.window]));
+    expect(windows).toHaveLength(calls?.length ?? -1);
+    expectCompleteWindows(text, windows ?? []);
+  });
+
+  it("plans a 512-KiB newline-heavy source within the 96-call cap", () => {
+    // 6,555-unit lines place the last newline just inside the 80% window preference.
+    const line = `${"x".repeat(6_554)}\n`;
+    const text = line.repeat(Math.ceil((512 * 1_024) / line.length)).slice(0, 512 * 1_024);
+    const calls = planCanonicalProfileExtractionCalls([{ id: "source-a", text }]);
+
+    expect(calls).not.toBeNull();
+    expect(calls?.length).toBeGreaterThan(64);
+    expect(calls?.length).toBeLessThanOrEqual(96);
+    const windows = calls?.flatMap((call) => (call.window === undefined ? [] : [call.window]));
+    expectCompleteWindows(text, windows ?? []);
   });
 
   it("preserves newline boundaries, emoji pairs, and exact original offsets", () => {
