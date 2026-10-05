@@ -30,6 +30,11 @@ import {
   canonicalProfileExtractionSectionFocusInstructions,
   planCanonicalProfileExtractionTextWindows,
 } from "./canonical-profile-extraction-sections.js";
+import {
+  canonicalProfileUnboundableSourceMessage,
+  hasCanonicalProfileSourceAboveUnplannedBound,
+} from "./canonical-profile-unboundable-sources.js";
+import { CliUserError } from "./cli-user-error.js";
 
 const maximumFocusedSourceCount = 4;
 const outputName = "canonical_candidate_profile_extraction";
@@ -282,6 +287,14 @@ export async function executeCanonicalProfileExtractionWithFallback(
   controls: CanonicalProfileExtractionControls,
 ): Promise<JsonObject> {
   throwIfAborted(request.signal);
+  const plannedCalls = planCanonicalProfileExtractionCalls(request.sources);
+  // No request may carry more than the unplanned bound of one source: only planned windows may.
+  if (
+    hasCanonicalProfileSourceAboveUnplannedBound(request.sources) &&
+    (plannedCalls === null || request.groundingRecovery !== undefined)
+  ) {
+    throw new CliUserError(canonicalProfileUnboundableSourceMessage);
+  }
   if (request.groundingRecovery !== undefined) {
     const response = await executeWithCancellation(
       executor,
@@ -292,7 +305,6 @@ export async function executeCanonicalProfileExtractionWithFallback(
     return response.output;
   }
 
-  const plannedCalls = planCanonicalProfileExtractionCalls(request.sources);
   if (plannedCalls !== null) {
     const batches: CanonicalCandidateProfileExtractionProposal[] = [];
     reportCanonicalProfileExtractionProgress(request.onProgress, 0, plannedCalls.length);

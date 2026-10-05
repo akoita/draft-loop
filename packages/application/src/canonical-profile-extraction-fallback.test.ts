@@ -1385,6 +1385,86 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(1);
   });
 
+  describe("large single source", () => {
+    const largeText = "TypeScript\n".repeat(18_200);
+    const unplannedBound = 128 * 1_024;
+
+    it("refuses before any provider call when a source above 128 KiB cannot be planned", async () => {
+      expect(largeText.length).toBeGreaterThan(unplannedBound);
+      const sources = ["a", "b", "c", "d"].map((id) => source(`source-${id}`, "React\n"));
+      const { calls, executor } = executorFor(() => proposal([]));
+
+      await expect(
+        executeCanonicalProfileExtractionWithFallback(
+          executor,
+          request([source("source-large", largeText), ...sources]),
+          controls,
+        ),
+      ).rejects.toMatchObject({ name: "CliUserError" });
+      expect(calls).toHaveLength(0);
+    });
+
+    it("refuses a grounding-recovery request that would carry a source above 128 KiB whole", async () => {
+      const { calls, executor } = executorFor(() => proposal([]));
+
+      await expect(
+        executeCanonicalProfileExtractionWithFallback(
+          executor,
+          {
+            ...request([source("source-large", largeText)]),
+            groundingRecovery: [{ code: "value_not_in_quote", count: 1 }],
+          },
+          controls,
+        ),
+      ).rejects.toMatchObject({ name: "CliUserError" });
+      expect(calls).toHaveLength(0);
+    });
+
+    it("extracts one 200,000-character source and its grounding replacement in bounded windows", async () => {
+      const large = material("source-large", largeText);
+      const plannedCalls = planCanonicalProfileExtractionCalls([large]);
+      if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+      const { calls, executor } = executorFor((call) => {
+        const window = call.input.extractionWindow as { readonly start: number } | undefined;
+        if (window?.start !== 0) return proposal([]);
+        return proposal([
+          {
+            key: "good",
+            category: "skill",
+            field: "name",
+            value: "TypeScript",
+            sourceId: large.id,
+            quote: "TypeScript",
+          },
+          {
+            key: "bad",
+            category: "skill",
+            field: "name",
+            value: "Rust",
+            sourceId: large.id,
+            quote: "TypeScript",
+          },
+        ]);
+      });
+
+      const result = await processCanonicalCandidateProfileExtraction(
+        {
+          extract: (preparedRequest) =>
+            executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+        },
+        input([large]),
+      );
+
+      expect(plannedCalls.length).toBeGreaterThanOrEqual(25);
+      expect(calls).toHaveLength(plannedCalls.length + 1);
+      for (const [call] of calls) {
+        expect(requestSources(call)).toHaveLength(1);
+        expect(requestSources(call)[0]?.text.length).toBeLessThanOrEqual(8_192);
+      }
+      expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    });
+  });
+
   describe("bounded progress", () => {
     const portFor = (executor: CanonicalProfileExtractionExecutor) => ({
       extract: (preparedRequest: CanonicalCandidateProfileExtractionRequest) =>

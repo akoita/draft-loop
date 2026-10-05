@@ -429,6 +429,52 @@ describe("canonical candidate profile derivation", () => {
     expect(extract).not.toHaveBeenCalled();
   });
 
+  it("sends a single 200,000-character source to extraction without a size issue", async () => {
+    const content = largeMarkdown();
+    expect(content.length).toBeGreaterThan(190_000);
+    expect(content.length).toBeLessThan(210_000);
+    const { saved, extract } = await deriveFromSources([{ sourceId: "source-large", content }], {
+      schemaVersion: 1,
+      facts: [],
+      issues: [],
+    });
+
+    expect(saved.profile.issues.map((issue) => issue.message)).not.toContain(tooLargeMessage);
+    expect(saved.profile.issues.every((issue) => issue.sourceRefs.length === 0)).toBe(true);
+    expect(extract).toHaveBeenCalledTimes(1);
+    const request = extract.mock.calls[0]?.[0] as { sources: { text: string }[] };
+    expect(request.sources).toHaveLength(1);
+    expect(request.sources[0]?.text.length).toBeGreaterThan(190_000);
+  });
+
+  it("records a size issue instead of sending a source above 128 KiB that cannot be windowed", async () => {
+    const small = (index: number) => ({
+      sourceId: `source-small-${index}`,
+      content: `# Notes ${index}\n\nRepresentative experience.`,
+    });
+    const { saved, extract } = await deriveFromSources(
+      [
+        { sourceId: "source-large", content: largeMarkdown() },
+        small(1),
+        small(2),
+        small(3),
+        small(4),
+      ],
+      { schemaVersion: 1, facts: [], issues: [] },
+    );
+
+    const tooLarge = saved.profile.issues.filter((issue) =>
+      issue.message.includes("too large to extract in bounded windows"),
+    );
+    expect(tooLarge).toHaveLength(1);
+    expect(tooLarge[0]?.sourceRefs).toEqual([
+      expect.objectContaining({ sourceId: "source-large" }),
+    ]);
+    const request = extract.mock.calls[0]?.[0] as { sources: { text: string }[] };
+    expect(request.sources).toHaveLength(4);
+    expect(request.sources.every((entry) => entry.text.length < 128 * 1_024)).toBe(true);
+  });
+
   it("keeps the generic issue for a selected source that normalizes to empty text", async () => {
     const { saved, extract } = await deriveFromSources([
       { sourceId: "source-empty", content: emptyMarkdown() },
@@ -474,10 +520,14 @@ describe("canonical candidate profile derivation", () => {
 const genericNormalizationMessage =
   "Selected candidate knowledge could not be normalized; candidate review is required.";
 const tooLargeMessage =
-  "A selected source is longer than the 131,072-character limit for profile derivation. Split it into smaller files and derive again.";
+  "A selected source is longer than the 524,288-character limit for profile derivation. Split it into smaller files and derive again.";
 
 function oversizedMarkdown(): string {
-  return `# Career history\n\n${"Representative experience. ".repeat(5_000)}`;
+  return `# Career history\n\n${"Representative experience. ".repeat(20_000)}`;
+}
+
+function largeMarkdown(): string {
+  return `# Career history\n\n${"Representative experience.\n".repeat(7_400)}`;
 }
 
 function emptyMarkdown(): string {
@@ -486,6 +536,7 @@ function emptyMarkdown(): string {
 
 async function deriveFromSources(
   sources: readonly { readonly sourceId: string; readonly content: string }[],
+  extractOutput?: unknown,
 ) {
   const selected = createCandidateKnowledgeSelectionSnapshot({
     capturedAt: createdAt,
@@ -543,7 +594,7 @@ async function deriveFromSources(
     ),
     close: vi.fn(async () => undefined),
   } as unknown as CandidateKnowledgeStoreHandle;
-  const extract = vi.fn();
+  const extract = vi.fn(async (_request: unknown) => extractOutput);
   const saveCanonicalCandidateProfile = vi.fn(async (workspaceId, profile) => ({
     workspaceId,
     profile,

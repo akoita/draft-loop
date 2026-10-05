@@ -400,14 +400,22 @@ tokens.
 For more than 65,536 UTF-16 text units across one to four unique prepared
 sources, extraction proactively makes one call per source up to 8,192 UTF-16
 units and divides each larger source into contiguous windows of at most 8,192
-units. The plan uses at most 64 calls and is declined if it would exceed that
+units. The plan uses at most 96 calls and is declined if it would exceed that
 cap.
+
+One source may be up to 524,288 characters, the same bound as the whole
+selection, and is extracted in these bounded windows without manual splitting.
+No provider request ever carries more than 131,072 characters of one source.
+When a source above that size cannot be windowed, for example because more than
+four sources are selected, it is left out of extraction and the profile records
+a source-too-large issue naming it; sources above 524,288 characters are
+likewise reported and skipped.
 
 Each planned call sends only its own source, or only its window text with the
 source ID, media type, and the window's UTF-16 offsets and source length. Other
 sources and windows are never included. Each result is grounded as it arrives. A
 call that fails grounding gets at most one replacement for that same call with
-fixed diagnostic counts, so a plan makes at most 128 calls. After a second
+fixed diagnostic counts, so a plan makes at most 192 calls. After a second
 failure, only that call's ungrounded facts are dropped and counted toward the
 single warning above; planned extractions never make the full-corpus replacement.
 
