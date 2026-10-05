@@ -751,6 +751,70 @@ describe("native host", () => {
     }
   });
 
+  it("blocks setup up front when the job description has a requirement too long to match", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-setup-long-requirement-"));
+    const root = join(parent, "setup-long-requirement-workspace");
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+      });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "setup-long-requirement-workspace", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const paragraph = Array.from({ length: 60 }, (_, i) => `invented${i}`).join(" ");
+      await writeFile(join(root, "job.md"), `Acme page header ${paragraph}\n`, "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Built TypeScript services.\n", "utf8");
+
+      const loaded = await host.invoke({ type: "review.load", input: { workspaceId } });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          setup: {
+            jobDescriptionReady: true,
+            ready: false,
+            nextSteps: [expect.stringMatching(/^Requirement 1 in the job description has/u)],
+          },
+        },
+      });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps setup ready when the same requirements are short bullet lines", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-setup-bullets-"));
+    const root = join(parent, "setup-bullets-workspace");
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+      });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "setup-bullets-workspace", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const bullets = Array.from({ length: 60 }, (_, i) => `- invented${i}`).join("\n");
+      await writeFile(join(root, "job.md"), `Acme page header\n${bullets}\n`, "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Built TypeScript services.\n", "utf8");
+
+      const loaded = await host.invoke({ type: "review.load", input: { workspaceId } });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: { setup: { jobDescriptionReady: true, ready: true, nextSteps: [] } },
+      });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("forwards an exact reviewed opportunity selection only when starting a run", async () => {
     const root = "/local/opportunity-selection";
     const fixture = service(root);

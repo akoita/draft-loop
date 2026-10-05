@@ -139,6 +139,11 @@ whose requirements are too long or an unreadable source file. Any other failure
 names the action that failed, for example "Starting the review failed with an
 unexpected error.", and never its private error text.
 
+The desktop setup applies the same job-description check before a run when no
+reviewed opportunity brief is selected. A job description with a requirement
+that is too long to match keeps **Start author–critic review** disabled and
+lists that message among its reasons, so the problem appears before you click.
+
 ## Desktop workspace navigation
 
 Use **Close workspace** to return to the create/open screen. Saved workspace
