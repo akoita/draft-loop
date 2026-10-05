@@ -245,6 +245,8 @@ export interface LifecycleCommand {
   readonly root: string;
   readonly action: LifecycleAction;
   readonly runId?: string;
+  /** Approval only: the person's reason for approving past failing final CV checks. */
+  readonly readinessOverrideRationale?: string;
 }
 
 export interface StatusCommand {

@@ -2637,6 +2637,39 @@ describe("native host", () => {
     }
   });
 
+  it("passes an approval override reason through to the application lifecycle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-approval-override-"));
+    const fixture = service(root, { findings: [] });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "approve", readinessOverrideRationale: "Checked by hand." },
+        },
+      });
+
+      expect(result).toMatchObject({ ok: true });
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        {
+          root,
+          runId: "run-native",
+          action: "approve",
+          readinessOverrideRationale: "Checked by hand.",
+        },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not turn unrelated or stale-artifact approval failures into review states", async () => {
     for (const scenario of [
       {

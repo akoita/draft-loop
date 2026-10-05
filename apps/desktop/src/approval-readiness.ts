@@ -34,6 +34,8 @@ export interface ApprovalReadiness {
   readonly artifactVersion: number;
   readonly applicationReady: boolean;
   readonly blockers: readonly ApprovalReadinessBlocker[];
+  /** True when a person approved this artifact past these failing checks. */
+  readonly overridden?: true;
 }
 
 export function approvalReadinessForArtifact(
@@ -45,7 +47,13 @@ export function approvalReadinessForArtifact(
     : null;
 }
 
-const readinessKeys = ["artifactId", "artifactVersion", "applicationReady", "blockers"];
+const readinessKeys = [
+  "artifactId",
+  "artifactVersion",
+  "applicationReady",
+  "blockers",
+  "overridden",
+];
 const blockerKeys = ["code", "dimension", "score", "threshold"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -74,7 +82,8 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     (value.artifactVersion as number) < 1 ||
     typeof value.applicationReady !== "boolean" ||
     !Array.isArray(value.blockers) ||
-    value.blockers.length > 100
+    value.blockers.length > 100 ||
+    (value.overridden !== undefined && (value.overridden !== true || value.applicationReady))
   ) {
     return null;
   }
@@ -117,6 +126,7 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     artifactVersion: value.artifactVersion as number,
     applicationReady: value.applicationReady,
     blockers,
+    ...(value.overridden === true ? { overridden: true as const } : {}),
   };
 }
 
@@ -132,6 +142,7 @@ function matchingArtifact(
 export function projectApprovalReadiness(
   decision: unknown,
   artifact: { readonly id: string; readonly version: number },
+  approvedArtifact?: unknown,
 ): ApprovalReadiness | null {
   if (!isRecord(decision) || !matchingArtifact(decision.artifact, artifact)) return null;
   if (typeof decision.applicationReady !== "boolean" || !Array.isArray(decision.blockers)) {
@@ -179,11 +190,16 @@ export function projectApprovalReadiness(
       });
     }
   }
+  const overridden =
+    decision.applicationReady === false &&
+    matchingArtifact(approvedArtifact, artifact) &&
+    isRecord((approvedArtifact as Record<string, unknown>).readinessOverride);
   return normalizeApprovalReadiness({
     artifactId: artifact.id,
     artifactVersion: artifact.version,
     applicationReady: decision.applicationReady,
     blockers,
+    ...(overridden ? { overridden: true } : {}),
   });
 }
 
@@ -230,4 +246,4 @@ export function formatApprovalReadinessBlocker(blocker: ApprovalReadinessBlocker
 }
 
 export const approvalReadinessGuidance =
-  "Accepting a finding records your decision but does not change coverage. A low score reflects this check, not a confirmed candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then request a revision when appropriate. At the round limit, correct input or coverage evidence before a new run; it may still be blocked.";
+  "Accepting a finding records your decision but does not change coverage. A low score reflects this check, not a confirmed candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then request a revision when appropriate. If you have checked the draft and still want it, approve it with a recorded reason; the override stays in the run history.";
