@@ -5,6 +5,7 @@ import { defaultAntiFormulaicTerms } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 import {
   activateDefaultWritingPolicy,
+  activateWritingPolicyContent,
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
@@ -33,7 +34,7 @@ async function config(root: string): Promise<Record<string, unknown>> {
 }
 
 async function policyTempEntries(): Promise<string[]> {
-  return (await readdir(tmpdir())).filter((name) => name.startsWith("draft-loop-default-policy-"));
+  return (await readdir(tmpdir())).filter((name) => name.startsWith("draft-loop-policy-"));
 }
 
 describe("default writing policy", () => {
@@ -134,6 +135,53 @@ describe("default writing policy", () => {
       const missing = join(root, "missing-workspace");
       await expect(activateDefaultWritingPolicy(missing, silent)).rejects.toThrow();
       expect(await policyTempEntries()).toEqual(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("saves edited text as a new activated version and keeps the old one", async () => {
+    const root = await newRoot();
+    try {
+      await service().initialize({ root, jobDescription: "job.md", sources: "evidence" }, silent);
+      const first = (await config(root)).writingPolicyChecksum as string;
+      const edited = defaultWritingPolicyContent.replace("Tone: professional", "Tone: warm");
+      await activateWritingPolicyContent(root, edited, silent);
+      const second = (await config(root)).writingPolicyChecksum as string;
+      expect(second).not.toBe(first);
+      expect(await readFile(join(root, ".draft-loop", "writing-policy.md"), "utf8")).toBe(
+        `${edited.trim()}\n`,
+      );
+      const driver = createLocalApplicationDriver();
+      const active = await driver.getWritingPolicy?.({ root, includeContent: true });
+      expect(active?.checksum).toBe(second);
+      expect(active?.policy?.preferences).toMatchObject({ tone: "warm" });
+      const versions = await driver.listWritingPolicyVersions?.({ root });
+      expect(versions?.map((version) => version.checksum)).toEqual(
+        expect.arrayContaining([first, second]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid text with the application message and saves nothing", async () => {
+    const root = await newRoot();
+    try {
+      await service().initialize({ root, jobDescription: "job.md", sources: "evidence" }, silent);
+      const before = await readFile(join(root, ".draft-loop", "workspace.json"), "utf8");
+      await expect(activateWritingPolicyContent(root, "Tone: sarcastic\n", silent)).rejects.toThrow(
+        /tone/iu,
+      );
+      await expect(activateWritingPolicyContent(root, "   \n", silent)).rejects.toThrow(
+        "The writing policy is empty.",
+      );
+      await expect(
+        activateWritingPolicyContent(root, `${"a".repeat(64 * 1024)}b`, silent),
+      ).rejects.toThrow("too large");
+      expect(await readFile(join(root, ".draft-loop", "workspace.json"), "utf8")).toBe(before);
+      const versions = await createLocalApplicationDriver().listWritingPolicyVersions?.({ root });
+      expect(versions).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

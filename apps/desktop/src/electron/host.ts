@@ -5,6 +5,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import {
   type ApplicationIo,
   type ApplicationService,
+  activateWritingPolicyContent,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
   type CanonicalCandidateProfilePatch,
@@ -12,6 +13,7 @@ import {
   createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
+  defaultWritingPolicyContent,
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
@@ -3614,6 +3616,78 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               criticCompany: descriptor.critic.company,
               criticModel: descriptor.critic.model,
               localEndpoint: descriptor.localEndpoint ?? null,
+            },
+          };
+        }
+        case "writing-policy.read": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          if (service.getWritingPolicy === undefined) {
+            return fail("capability-unavailable", "Reading the writing policy is unavailable.");
+          }
+          const current = await service.getWritingPolicy({
+            root: workspace.root,
+            includeContent: true,
+          });
+          if (current === undefined) {
+            // Nothing saved yet: offer the starting template, marked as such so
+            // the editor can say that saving will create the first version.
+            return {
+              ok: true,
+              value: {
+                workspaceId: workspace.descriptor.id,
+                content: defaultWritingPolicyContent,
+                version: null,
+                checksum: null,
+                isDefaultTemplate: true,
+              },
+            };
+          }
+          const metadata = safeWritingPolicyMetadata(current);
+          if (metadata === undefined || typeof current.policy?.content !== "string") {
+            return fail("operation-failed", "The writing policy could not be read.");
+          }
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              content: current.policy.content,
+              version: metadata.version,
+              checksum: metadata.checksum,
+              isDefaultTemplate: false,
+            },
+          };
+        }
+        case "writing-policy.save": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          let descriptor: WorkspaceDescriptor | undefined;
+          // The text takes the same path as an imported file, so the application
+          // validates it, records a new immutable version and activates it.
+          await activateWritingPolicyContent(
+            workspace.root,
+            command.input.content,
+            io(),
+            async (configure, configureIo) => {
+              descriptor = await service.configureWritingPolicy(configure, configureIo);
+              return descriptor;
+            },
+          );
+          const saved = safeWritingPolicyMetadata(descriptor?.activeWritingPolicy);
+          if (descriptor === undefined || saved === undefined) {
+            return fail("operation-failed", "The writing policy was saved but could not be read.");
+          }
+          active = { descriptor, root: workspace.root };
+          // A newly active workspace policy replaces any pending opportunity
+          // override that was layered on the previous one, as an import does.
+          const preferences = await readOverrides(workspace.root);
+          if (preferences.pendingWritingPolicyOverride !== undefined) {
+            await writeOverrides(workspace.root, withoutPendingWritingPolicyOverride(preferences));
+          }
+          return {
+            ok: true,
+            value: {
+              workspaceId: descriptor.id,
+              version: saved.version,
+              checksum: saved.checksum,
             },
           };
         }

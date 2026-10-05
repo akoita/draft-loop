@@ -38,6 +38,7 @@ import {
   type SavedCanonicalCandidateProfileSummary,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
+  type WritingPolicyReadResult,
 } from "./bridge.js";
 import {
   createFixtureReviewPort,
@@ -89,6 +90,13 @@ export interface WorkspaceSetupCapabilities {
   readonly configureModels?: (
     workspaceId: string,
     selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
+  ) => Promise<DesktopReviewState>;
+  /** Reads the policy text to edit; a workspace without a policy gets the starting template. */
+  readonly readWritingPolicy?: (workspaceId: string) => Promise<WritingPolicyReadResult>;
+  /** Saves policy text as a new activated version and returns the refreshed review state. */
+  readonly saveWritingPolicy?: (
+    workspaceId: string,
+    content: string,
   ) => Promise<DesktopReviewState>;
   readonly listModels?: (provider: ModelDiscoveryProvider) => Promise<ModelsListResult>;
   readonly previewIndependence?: (
@@ -308,6 +316,30 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "workspace.configure-models",
                 input: { workspaceId, ...selection },
+              }),
+            );
+            return refresh();
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("writing-policy.read")
+      ? {
+          readWritingPolicy: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "writing-policy.read",
+                input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("writing-policy.save")
+      ? {
+          saveWritingPolicy: async (workspaceId: string, content: string) => {
+            unwrap(
+              await capabilityPort.execute({
+                type: "writing-policy.save",
+                input: { workspaceId, content },
               }),
             );
             return refresh();

@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ApplicationIo, ApplicationService } from "./index.js";
+import type { ApplicationIo, ApplicationService, ConfigureWritingPolicyCommand } from "./index.js";
 import { configureWorkspaceWritingPolicy } from "./local.js";
 
 /**
@@ -30,19 +30,40 @@ Anti-formulaic defaults: enabled
 - Leave out personal circumstances such as health, family, salary and reasons for leaving a job.
 `;
 
+/**
+ * Saves policy text as a new immutable version and activates it for future runs.
+ *
+ * The text goes through the same validation as an imported file, so a bad
+ * directive value, too many rules, or empty or oversized text raises the
+ * application's own user-facing error and nothing is saved. No temporary file
+ * is left behind. `configure` defaults to the local application, and a host
+ * that works through an application service passes that service's import.
+ */
+export async function activateWritingPolicyContent(
+  root: string,
+  content: string,
+  io?: ApplicationIo,
+  configure: (command: ConfigureWritingPolicyCommand, io?: ApplicationIo) => Promise<unknown> = (
+    command,
+    commandIo,
+  ) => configureWorkspaceWritingPolicy(command, commandIo),
+): Promise<void> {
+  const directory = await mkdtemp(join(tmpdir(), "draft-loop-policy-"));
+  try {
+    const sourcePath = join(directory, "writing-policy.md");
+    await writeFile(sourcePath, content, "utf8");
+    await configure({ root, sourcePath, activate: true }, io);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 /** Activates the default policy in an initialized workspace, leaving no temporary file behind. */
 export async function activateDefaultWritingPolicy(
   root: string,
   io?: ApplicationIo,
 ): Promise<void> {
-  const directory = await mkdtemp(join(tmpdir(), "draft-loop-default-policy-"));
-  try {
-    const sourcePath = join(directory, "default-writing-policy.md");
-    await writeFile(sourcePath, defaultWritingPolicyContent, "utf8");
-    await configureWorkspaceWritingPolicy({ root, sourcePath, activate: true }, io);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
+  await activateWritingPolicyContent(root, defaultWritingPolicyContent, io);
 }
 
 /**
