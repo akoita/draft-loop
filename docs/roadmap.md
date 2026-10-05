@@ -1450,6 +1450,9 @@ same critic and the dedicated Google key, with price metadata reviewed
 Runs without a reviewed brief now refuse job-description units over 40
 meaningful tokens at start, before any provider call, because relevance could
 never cover them ([#858](https://github.com/akoita/draft-loop/issues/858)).
+A person can now approve past failing final CV checks with a recorded reason
+bound to the exact artifact and blocker codes, so a review stays finishable at
+the round limit.
 Existing exact profile versions and run snapshots remain compatible. A profile holds:
 
 - provider and exact model ID;

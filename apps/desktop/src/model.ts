@@ -315,7 +315,11 @@ export type ReviewAction =
   | { readonly type: "stop" }
   | { readonly type: "request-revision" }
   | { readonly type: "set-autopilot"; readonly enabled: boolean }
-  | { readonly type: "approve" }
+  | {
+      readonly type: "approve";
+      /** Reason for approving past failing final CV checks, recorded with the approval. */
+      readonly readinessOverrideRationale?: string;
+    }
   | { readonly type: "export" };
 
 export interface DesktopReviewPort {

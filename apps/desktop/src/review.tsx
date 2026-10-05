@@ -1299,6 +1299,14 @@ export function ReviewWorkspace({
     state.reviewComplete &&
     blockingFindings.length === 0 &&
     approvalReadiness?.applicationReady !== false;
+  // Final CV checks are heuristics, so a person who has reviewed the draft can
+  // approve past them with a recorded reason, as with blocking findings.
+  const canOverrideReadiness =
+    hasArtifact &&
+    state.state === "awaiting-approval" &&
+    state.reviewComplete &&
+    blockingFindings.length === 0 &&
+    approvalReadiness?.applicationReady === false;
   const canExport = canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
@@ -1321,6 +1329,13 @@ export function ReviewWorkspace({
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
+  const readinessOverrideKey = `${state.runId}:${state.artifact.id}:${state.artifact.version}`;
+  const [readinessOverrideDraft, setReadinessOverrideDraft] = useState({
+    key: readinessOverrideKey,
+    reason: "",
+  });
+  const readinessOverrideReason =
+    readinessOverrideDraft.key === readinessOverrideKey ? readinessOverrideDraft.reason : "";
   const initialQueueState = useMemo(
     () => initialFindingQueueState(state.findings),
     [state.findings],
@@ -1475,12 +1490,16 @@ export function ReviewWorkspace({
       label: "Blocking findings resolved or overridden",
       met: hasArtifact && blockingFindings.length === 0,
     },
-    ...(approvalReadiness !== null && state.approval !== "approved"
+    ...(approvalReadiness !== null &&
+    (state.approval !== "approved" || approvalReadiness.overridden === true)
       ? [
           {
             id: "application-readiness",
-            label: "Final CV checks passed",
-            met: approvalReadiness.applicationReady,
+            label:
+              approvalReadiness.overridden === true
+                ? "Final CV checks overridden with a recorded reason"
+                : "Final CV checks passed",
+            met: approvalReadiness.applicationReady || approvalReadiness.overridden === true,
           },
         ]
       : []),
@@ -3099,7 +3118,7 @@ export function ReviewWorkspace({
                 : roundLimitRecovery
                   ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
                   : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-                    ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence before deciding what to change."
+                    ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
                     : !state.reviewComplete
                       ? "Complete an independent critic review before approval or export."
                       : findingSummary.status === "blocked"
@@ -3911,6 +3930,43 @@ export function ReviewWorkspace({
                   {approvalReadiness.blockers.map(formatApprovalReadinessBlocker).join("; ")}.
                 </p>
                 <p>{approvalReadinessGuidance}</p>
+                {canOverrideReadiness ? (
+                  <section className="override-editor" aria-label="Approve past final CV checks">
+                    <label className="rationale-input-label">
+                      <span>Reason for approving anyway (required)</span>
+                      <input
+                        className="rationale-input"
+                        type="text"
+                        maxLength={500}
+                        value={readinessOverrideReason}
+                        disabled={pendingReviewAction !== null}
+                        onChange={(event) =>
+                          setReadinessOverrideDraft({
+                            key: readinessOverrideKey,
+                            reason: event.target.value,
+                          })
+                        }
+                        aria-label="Reason for approving past final CV checks"
+                      />
+                    </label>
+                    <div className="override-editor-actions">
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        disabled={
+                          pendingReviewAction !== null || readinessOverrideReason.trim() === ""
+                        }
+                        onClick={() => {
+                          const reason = readinessOverrideReason.trim();
+                          if (reason === "") return;
+                          onAction({ type: "approve", readinessOverrideRationale: reason });
+                        }}
+                      >
+                        Approve with override
+                      </button>
+                    </div>
+                  </section>
+                ) : null}
               </div>
             ) : warnings.length > 0 ? (
               <p className="warning-copy">

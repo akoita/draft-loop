@@ -973,7 +973,11 @@ function reviewState(
     execution: reviewExecution(descriptor, snapshot, executionRunning),
     round: snapshot.round,
     approval: snapshot.approval,
-    approvalReadiness: projectApprovalReadiness(snapshot.readinessDecision, artifact),
+    approvalReadiness: projectApprovalReadiness(
+      snapshot.readinessDecision,
+      artifact,
+      snapshot.approvedArtifact,
+    ),
     reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,
     budgetUsd: descriptor.maxCostUsd ?? null,
@@ -3420,6 +3424,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                     : action.type === "recover-round-limit"
                       ? "recover-round-budget"
                       : action.type,
+              ...(action.type === "approve" && action.readinessOverrideRationale !== undefined
+                ? { readinessOverrideRationale: action.readinessOverrideRationale }
+                : {}),
             },
             io(),
           );

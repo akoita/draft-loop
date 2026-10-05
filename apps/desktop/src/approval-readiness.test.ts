@@ -38,6 +38,37 @@ describe("application approval readiness projection", () => {
     expect(projectApprovalReadiness(decision(), { id: "artifact-old", version: 2 })).toBeNull();
   });
 
+  it("marks a decision overridden only when the exact approved artifact records an override", () => {
+    const binding = {
+      id: "artifact-1",
+      version: 2,
+      checksum: "a".repeat(64),
+      readinessOverride: {
+        rationale: "must not cross the renderer boundary",
+        blockers: ["unmet-rubric-threshold"],
+        createdAt: "2026-10-04T00:00:00.000Z",
+      },
+    };
+    const projected = projectApprovalReadiness(decision(), artifact, binding);
+    expect(projected).toMatchObject({ applicationReady: false, overridden: true });
+    expect(JSON.stringify(projected)).not.toContain("renderer boundary");
+    expect(
+      projectApprovalReadiness(decision(), artifact, { ...binding, version: 1 }),
+    ).not.toHaveProperty("overridden");
+    expect(
+      projectApprovalReadiness(decision(), artifact, { ...binding, readinessOverride: undefined }),
+    ).not.toHaveProperty("overridden");
+    expect(
+      normalizeApprovalReadiness({
+        artifactId: "artifact-1",
+        artifactVersion: 2,
+        applicationReady: true,
+        blockers: [],
+        overridden: true,
+      }),
+    ).toBeNull();
+  });
+
   it("preserves ready decisions and rejects malformed or inconsistent renderer projections", () => {
     expect(
       projectApprovalReadiness(decision({ applicationReady: true, blockers: [] }), artifact),

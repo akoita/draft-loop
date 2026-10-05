@@ -453,6 +453,31 @@ describe("desktop capability bridge", () => {
 
     expect(
       validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "approve", readinessOverrideRationale: "  Checked by hand. " },
+        },
+      }),
+    ).toMatchObject({
+      input: { action: { type: "approve", readinessOverrideRationale: "Checked by hand." } },
+    });
+    for (const readinessOverrideRationale of ["   ", "x".repeat(501), 42]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-1",
+            runId: "run-1",
+            action: { type: "approve", readinessOverrideRationale },
+          },
+        }),
+      ).toThrow("invalid");
+    }
+
+    expect(
+      validateBridgeCommand({
         type: "workspace.create",
         input: { name: "candidate", mode: "real" },
       }),

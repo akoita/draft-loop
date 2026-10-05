@@ -61,6 +61,7 @@ import {
   approvedArtifactBinding,
   assertExactApprovedArtifact,
   buildApplicationReadinessStoppingDecision,
+  readinessOverrideRationale,
 } from "./readiness.js";
 
 export type RunState = WorkflowState | "provider-error";
@@ -326,6 +327,14 @@ export interface ResumeOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface ApproveOptions {
+  /**
+   * The person's reason for approving even though final CV checks fail. It is
+   * ignored when the checks pass and required to approve when they fail.
+   */
+  readonly readinessOverrideRationale?: string;
+}
+
 export interface OrchestrationEngine {
   /** Persist a new run without invoking an author or critic. */
   readonly begin: (request: OrchestrationRequest) => Promise<RunSnapshot>;
@@ -335,7 +344,7 @@ export interface OrchestrationEngine {
   readonly stop: (runId: string) => Promise<RunSnapshot>;
   readonly recoverToReview: (runId: string) => Promise<RunSnapshot>;
   readonly recoverRoundBudget: (runId: string) => Promise<RunSnapshot>;
-  readonly approve: (runId: string) => Promise<RunSnapshot>;
+  readonly approve: (runId: string, options?: ApproveOptions) => Promise<RunSnapshot>;
   readonly markExported: (runId: string) => Promise<RunSnapshot>;
   readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
   readonly requestAdjudicatedRevision: (
@@ -1943,7 +1952,11 @@ export function createOrchestrationEngine(
     return updated;
   };
 
-  const approve = async (runId: string): Promise<RunSnapshot> => {
+  const approve = async (runId: string, approveOptions?: ApproveOptions): Promise<RunSnapshot> => {
+    const overrideRationale =
+      approveOptions?.readinessOverrideRationale === undefined
+        ? undefined
+        : readinessOverrideRationale(approveOptions.readinessOverrideRationale);
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
       throw new Error("Only a run awaiting approval can be approved.");
@@ -1993,7 +2006,7 @@ export function createOrchestrationEngine(
       approvedArtifact: null,
       updatedAt: now,
     };
-    if (!readinessDecision.applicationReady) {
+    if (!readinessDecision.applicationReady && overrideRationale === undefined) {
       await save(reviewed);
       throw new Error(
         `The current artifact is not application-ready (${readinessDecision.blockers
@@ -2006,10 +2019,25 @@ export function createOrchestrationEngine(
       state: "approved" as const,
       approval: "approved" as const,
       currentStep: null,
-      approvedArtifact: approvedArtifactBinding(snapshot.artifact),
+      approvedArtifact: {
+        ...approvedArtifactBinding(snapshot.artifact),
+        ...(readinessDecision.applicationReady || overrideRationale === undefined
+          ? {}
+          : {
+              readinessOverride: {
+                rationale: overrideRationale,
+                blockers: readinessDecision.blockers.map((blocker) => blocker.code),
+                createdAt: now,
+              },
+            }),
+      },
       updatedAt: now,
     };
-    await saveAndEmit(updated, "user.approved");
+    await saveAndEmit(
+      updated,
+      "user.approved",
+      readinessDecision.applicationReady ? undefined : { readinessOverride: true },
+    );
     await emit(updated, "state.changed", { to: "approved" });
     return updated;
   };
@@ -2252,10 +2280,13 @@ export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,
   BuildApplicationReadinessDecisionInput,
+  ReadinessOverride,
 } from "./readiness.js";
 export {
   approvedArtifactBinding,
   assertExactApprovedArtifact,
   buildApplicationReadinessStoppingDecision,
+  maximumReadinessOverrideRationaleLength,
+  readinessOverrideRationale,
 } from "./readiness.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

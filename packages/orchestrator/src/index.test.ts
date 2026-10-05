@@ -532,6 +532,73 @@ describe("durable orchestration", () => {
     expect(revision.approvedArtifact).toBeNull();
   });
 
+  it("approves and exports past failing final checks only with a recorded reason", async () => {
+    const unsupported = artifact();
+    const claim = unsupported.claims[0];
+    if (claim === undefined) throw new Error("the artifact fixture is incomplete");
+    claim.evidence = [];
+    const { engine, store } = engineFixture({
+      author: async () => execution(unsupported, "anthropic", "author-test"),
+    });
+
+    await engine.start(request());
+    await expect(engine.approve("run-1", { readinessOverrideRationale: "   " })).rejects.toThrow(
+      /reason is required/i,
+    );
+    expect((await store.loadRun("run-1"))?.state).toBe("awaiting-approval");
+
+    const approved = await engine.approve("run-1", {
+      readinessOverrideRationale: "  Checked the claim against my own records.  ",
+    });
+    expect(approved).toMatchObject({ state: "approved", approval: "approved" });
+    expect(approved.readinessDecision?.applicationReady).toBe(false);
+    expect(approved.approvedArtifact?.readinessOverride).toEqual({
+      rationale: "Checked the claim against my own records.",
+      blockers: approved.readinessDecision?.blockers.map((blocker) => blocker.code),
+      createdAt: approved.updatedAt,
+    });
+    const approvedEvent = (await engine.events("run-1")).find(
+      (event) => event.type === "user.approved",
+    );
+    expect(approvedEvent?.details).toEqual({ readinessOverride: true });
+    expect((await engine.markExported("run-1")).state).toBe("exported");
+  });
+
+  it("refuses export when an override does not match the stored blockers", async () => {
+    const unsupported = artifact();
+    const claim = unsupported.claims[0];
+    if (claim === undefined) throw new Error("the artifact fixture is incomplete");
+    claim.evidence = [];
+    const { engine, store } = engineFixture({
+      author: async () => execution(unsupported, "anthropic", "author-test"),
+    });
+    await engine.start(request());
+    const approved = await engine.approve("run-1", { readinessOverrideRationale: "Reviewed." });
+    const binding = approved.approvedArtifact;
+    if (binding === null || binding === undefined || binding.readinessOverride === undefined) {
+      throw new Error("the override binding is missing");
+    }
+    await store.saveRun({
+      ...approved,
+      approvedArtifact: {
+        ...binding,
+        readinessOverride: { ...binding.readinessOverride, blockers: ["report-error"] },
+      },
+    });
+
+    await expect(engine.markExported("run-1")).rejects.toThrow(/not application-ready/i);
+  });
+
+  it("ignores an override reason when final checks pass", async () => {
+    const { engine } = engineFixture();
+    await engine.start(request());
+
+    const approved = await engine.approve("run-1", { readinessOverrideRationale: "Not needed." });
+
+    expect(approved.readinessDecision?.applicationReady).toBe(true);
+    expect(approved.approvedArtifact?.readinessOverride).toBeUndefined();
+  });
+
   it("rejects exporting content that no longer matches the approved binding", async () => {
     const { engine, store } = engineFixture();
     await engine.start(request());
