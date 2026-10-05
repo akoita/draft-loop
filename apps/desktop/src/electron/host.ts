@@ -26,6 +26,7 @@ import {
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   type WorkspaceDescriptor,
+  withDefaultWritingPolicy,
 } from "@draft-loop/application";
 import {
   canonicalCandidateProfileFactCategories,
@@ -2043,14 +2044,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   const requireProviderPreflight = options.requireProviderPreflight === true;
   const service =
     options.applicationService ??
-    createApplicationService(
-      createLocalApplicationDriver({
-        providerAuthModeConfiguration,
-        resolveCredential: (provider) => resolveCredential(credentials, provider),
-        ...(options.userSessionRunners === undefined
-          ? {}
-          : { userSessionRunners: options.userSessionRunners }),
-      }),
+    withDefaultWritingPolicy(
+      createApplicationService(
+        createLocalApplicationDriver({
+          providerAuthModeConfiguration,
+          resolveCredential: (provider) => resolveCredential(credentials, provider),
+          ...(options.userSessionRunners === undefined
+            ? {}
+            : { userSessionRunners: options.userSessionRunners }),
+        }),
+      ),
     );
   const knowledgeService =
     options.knowledgeService ??
