@@ -2088,3 +2088,114 @@ describe("uncapped diagnostic counts", () => {
     }
   });
 });
+
+describe("autopilot", () => {
+  const blockingFinding = (category: "coverage" | "factuality") => ({
+    id: `finding-${category}`,
+    code: `critic-${category}`,
+    category,
+    severity: "error" as const,
+    message: `A blocking ${category} finding.`,
+  });
+
+  function autopilotFixture(
+    critic: (request: { readonly round: number }) => Critique,
+    author: (request: AuthorRequest) => DraftArtifact = (request) => artifact(request.round),
+    autopilot = true,
+  ) {
+    const store = new InMemoryRunStore();
+    const authorAgent = vi.fn(async (request: AuthorRequest) =>
+      execution(author(request), "anthropic", "author-test"),
+    );
+    const criticAgent = vi.fn(async (request: { readonly round: number }) =>
+      execution(critic(request), "openai", "critic-test"),
+    );
+    const engine = createOrchestrationEngine({
+      author: { execute: authorAgent },
+      critic: { execute: criticAgent },
+      store,
+      now: () => timestamp,
+      autopilot,
+    });
+    return { engine, author: authorAgent, critic: criticAgent };
+  }
+
+  it("pauses after the first round on a blocking finding when autopilot is off", async () => {
+    const { engine, author } = autopilotFixture(
+      () => ({ findings: [blockingFinding("coverage")] }),
+      undefined,
+      false,
+    );
+
+    const result = await engine.start(request());
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 1 });
+    expect(author).toHaveBeenCalledOnce();
+  });
+
+  it("revises through blocking findings up to the round limit and passes them to the author", async () => {
+    const { engine, author } = autopilotFixture(() => ({
+      findings: [blockingFinding("coverage")],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 3 } }));
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 3, currentStep: null });
+    expect(result.artifact?.version).toBe(3);
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(author.mock.calls[1]?.[0].findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "finding-coverage" })]),
+    );
+    const events = await engine.events("run-1");
+    expect(
+      events.filter((event) => event.details?.reason === "autopilot").map((event) => event.round),
+    ).toEqual([2, 3]);
+    expect(events.at(-1)?.details).toMatchObject({
+      to: "awaiting-approval",
+      reason: "blocked-findings",
+    });
+  });
+
+  it("pauses on a blocking factuality finding before the round limit", async () => {
+    const { engine, author } = autopilotFixture((request) => ({
+      findings: [blockingFinding(request.round === 2 ? "factuality" : "coverage")],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 4 } }));
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 2 });
+    expect(author).toHaveBeenCalledTimes(2);
+    expect((await engine.events("run-1")).at(-1)?.details).toMatchObject({
+      to: "awaiting-approval",
+      reason: "autopilot-conflict",
+    });
+  });
+
+  it("pauses on a disputed claim", async () => {
+    const { engine, author } = autopilotFixture(
+      () => ({ findings: [blockingFinding("coverage")] }),
+      (request) => {
+        const draft = artifact(request.round);
+        const claim = draft.claims[0];
+        if (claim === undefined) throw new Error("the artifact fixture is incomplete");
+        claim.status = "disputed";
+        return draft;
+      },
+    );
+
+    const result = await engine.start(request());
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 1 });
+    expect(author).toHaveBeenCalledOnce();
+  });
+
+  it("still stops as soon as the draft is ready", async () => {
+    const { engine, author } = autopilotFixture(() => ({ findings: [] }));
+
+    const result = await engine.start(request());
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 1 });
+    expect(result.latestEvaluation?.ready).toBe(true);
+    expect(author).toHaveBeenCalledOnce();
+  });
+});

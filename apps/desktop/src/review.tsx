@@ -14,6 +14,7 @@ import {
   approvalReadinessGuidance,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
+import { AutopilotToggle } from "./autopilot-toggle.js";
 import type {
   CredentialProvider,
   CredentialStatus,
@@ -2011,6 +2012,15 @@ export function ReviewWorkspace({
     target.focus();
   });
 
+  const renderAutopilotToggle = () =>
+    state.setup.autopilot === undefined ? null : (
+      <AutopilotToggle
+        enabled={state.setup.autopilot}
+        maximumRounds={maximumRounds}
+        disabled={pendingReviewAction !== null}
+        onChange={(enabled) => onAction({ type: "set-autopilot", enabled })}
+      />
+    );
   const pendingActionReason =
     pendingReviewAction === null ? null : "Another review action is already running.";
   const revisionReason = !hasArtifact
@@ -2944,6 +2954,7 @@ export function ReviewWorkspace({
                     ? `Required sections: ${state.setup.requiredSections.join(", ")}`
                     : "No required sections"}
                 </span>
+                {renderAutopilotToggle()}
                 <button
                   className="button button-primary"
                   type="button"
@@ -3493,6 +3504,7 @@ export function ReviewWorkspace({
                   : ` · timeout in ${Math.ceil(state.execution.timeoutRemainingMs / 1_000)}s`}
               </p>
             )}
+            {renderAutopilotToggle()}
             <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
               <RunTimeline events={state.events} describeState={stateLabel} />
             </div>

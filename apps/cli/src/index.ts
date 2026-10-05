@@ -1434,6 +1434,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--max-words <number>", "maximum output words", integerOption)
     .option("--max-characters <number>", "maximum output characters", integerOption)
     .option("--fixture", "use deterministic offline agents")
+    .option(
+      "--autopilot",
+      "revise unattended up to --max-rounds, pausing only on conflicts (off by default)",
+    )
     .addHelpText(
       "after",
       "\nDevelopment-only Z.ai GLM Flash requires DEEPINFRA_API_KEY; model quality and account availability are unvalidated.\nDevelopment-only Gemini 3.8 Flash requires GEMINI_API_KEY from a paid-tier Gemini API project: free-tier terms let Google use submitted content, so candidate material needs a paid-tier key. Quality and account availability are unvalidated.\n",
@@ -1480,7 +1484,28 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           ? {}
           : { maxCharacters: options.maxCharacters as number }),
         fixtureMode: boolOption(options, "fixture"),
+        autopilot: boolOption(options, "autopilot"),
       });
+    });
+
+  command
+    .command("autopilot")
+    .description(
+      "Turn autopilot on or off: runs revise unattended up to the round limit and pause only when the draft is ready or on a conflict (a disputed claim or a blocking factuality finding)",
+    )
+    .argument("<state>", "on or off")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (state: string, workspace: string) => {
+      if (state !== "on" && state !== "off") {
+        throw new Error(`Expected on or off, received ${state}.`);
+      }
+      if (service.configureAutopilot === undefined) {
+        throw new Error("Autopilot is unsupported by this application service.");
+      }
+      await service.configureAutopilot(
+        { root: workspaceRoot(workspace), enabled: state === "on" },
+        io,
+      );
     });
 
   command

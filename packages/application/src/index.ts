@@ -58,6 +58,8 @@ export interface InitializeWorkspaceCommand {
   readonly maxCharacters?: number;
   readonly requiredSections?: readonly string[];
   readonly fixtureMode?: boolean;
+  /** Revise unattended up to the round limit; see `ConfigureAutopilotCommand`. */
+  readonly autopilot?: boolean;
 }
 
 /**
@@ -83,6 +85,18 @@ export interface ReconfigureWorkspaceModelsCommand {
   readonly independenceOverrideRationale?: string;
   /** Loopback base URL of the local inference server, when a company is `local`. */
   readonly localEndpoint?: string;
+}
+
+/**
+ * Turn autopilot on or off for a workspace.
+ *
+ * With autopilot on, a run keeps revising through blocking findings until the
+ * round limit and pauses for the candidate only when the draft is ready or a
+ * conflict needs them: a disputed claim or a blocking factuality finding.
+ */
+export interface ConfigureAutopilotCommand {
+  readonly root: string;
+  readonly enabled: boolean;
 }
 
 export interface ConfigureWritingPolicyCommand {
@@ -174,6 +188,8 @@ export interface WorkspaceDescriptor {
   /** Where a `local` company sends material; absent when no local endpoint is configured. */
   readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
+  /** Whether runs revise unattended up to the round limit; absent means off. */
+  readonly autopilot?: boolean;
   readonly latestRunId?: string;
   /** Safe summary of the configured candidate-knowledge selection; roots stay local-only. */
   readonly candidateKnowledgeSelection?: readonly {
@@ -383,6 +399,11 @@ export interface ApplicationDriver {
     command: ReconfigureWorkspaceModelsCommand,
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
+  /** Turn autopilot on or off; applies from the next run action. */
+  readonly configureAutopilot?: (
+    command: ConfigureAutopilotCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
   /** Import and activate an explicitly selected local writing-policy file. */
   readonly configureWritingPolicy: (
     command: ConfigureWritingPolicyCommand,
@@ -497,6 +518,15 @@ export function createApplicationService(driver: ApplicationDriver): Application
     readWorkspace: async (root) => driver.readWorkspace(requireRoot(root)),
     reconfigureModels: async (command, io) =>
       driver.reconfigureModels({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    configureAutopilot: async (command, io) => {
+      if (driver.configureAutopilot === undefined) {
+        throw new Error("This application driver cannot configure autopilot.");
+      }
+      return driver.configureAutopilot(
+        { ...command, root: requireRoot(command.root) },
+        normalizeIo(io),
+      );
+    },
     configureWritingPolicy: async (command, io) =>
       driver.configureWritingPolicy(
         { ...command, root: requireRoot(command.root) },

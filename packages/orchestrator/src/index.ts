@@ -48,6 +48,7 @@ import {
   type AuthorRetryCorrection,
   buildAuthorRetryCorrections,
 } from "./author-retry-feedback.js";
+import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
 import {
   activateDurationAccounting,
   createDurationAccounting,
@@ -360,6 +361,12 @@ export interface OrchestrationEngineOptions {
   readonly now?: () => string;
   readonly contextResolver?: (contextSnapshotId: string) => Promise<ContextSnapshot | undefined>;
   readonly retrieval?: RetrievalPort;
+  /**
+   * Keep revising through blocking findings and stalled scores until the round
+   * limit, pausing for the candidate only on readiness or a conflict (a disputed
+   * claim or a blocking factuality finding). Off by default.
+   */
+  readonly autopilot?: boolean;
 }
 
 export interface StorageRunStore extends RunStore {}
@@ -1684,10 +1691,19 @@ export function createOrchestrationEngine(
         "ready",
         now,
       );
-    if (evaluation.shouldStop)
+    const autopilot =
+      options.autopilot === true && evaluation.shouldStop
+        ? autopilotDecision({
+            stopReason: evaluation.stopReason,
+            round: snapshot.round,
+            maxRounds: snapshot.budget.maxRounds,
+            conflicts: autopilotConflicts(updated.artifact, combined),
+          })
+        : "stop";
+    if (evaluation.shouldStop && autopilot !== "continue")
       return transitionToAwaitingApproval(
         { ...updated, state: "awaiting-approval" as const, currentStep: null },
-        evaluation.stopReason,
+        autopilot === "pause-on-conflict" ? "autopilot-conflict" : evaluation.stopReason,
         now,
       );
     return saveAndEmit(
@@ -1698,7 +1714,7 @@ export function createOrchestrationEngine(
         currentStep: "revision" as const,
       },
       "state.changed",
-      { to: "revising" },
+      autopilot === "continue" ? { to: "revising", reason: "autopilot" } : { to: "revising" },
     );
   };
 
@@ -2259,6 +2275,7 @@ export interface OrchestrationPort {
 }
 
 export * from "./adjudication.js";
+export * from "./autopilot.js";
 export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,

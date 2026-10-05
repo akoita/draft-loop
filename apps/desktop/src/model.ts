@@ -239,6 +239,8 @@ export interface WorkspaceReadiness {
   readonly selectedEvidenceSourceCount: number;
   /** Sections this workspace requires, so the candidate can see them before a run. */
   readonly requiredSections: readonly string[];
+  /** Whether runs revise unattended up to the round limit, pausing only on conflicts. */
+  readonly autopilot?: boolean;
   readonly ready: boolean;
   readonly nextSteps: readonly string[];
 }
@@ -312,6 +314,7 @@ export type ReviewAction =
   | { readonly type: "recover-round-limit" }
   | { readonly type: "stop" }
   | { readonly type: "request-revision" }
+  | { readonly type: "set-autopilot"; readonly enabled: boolean }
   | {
       readonly type: "approve";
       /** Reason for approving past failing final CV checks, recorded with the approval. */
@@ -442,6 +445,8 @@ export function reduceReviewState(
           acknowledgedAt: new Date().toISOString(),
         },
       };
+    case "set-autopilot":
+      return { ...state, setup: { ...state.setup, autopilot: action.enabled } };
     case "start":
       return state.state === "collecting" && state.setup.ready
         ? { ...state, state: "drafting", execution: { ...state.execution, status: "running" } }

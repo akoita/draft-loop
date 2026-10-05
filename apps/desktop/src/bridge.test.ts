@@ -596,6 +596,28 @@ describe("desktop capability bridge", () => {
         },
       }),
     ).toMatchObject({ input: { action: { type: "recover-round-limit" } } });
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "set-autopilot", enabled: true },
+        },
+      }),
+    ).toMatchObject({ input: { action: { type: "set-autopilot", enabled: true } } });
+    for (const action of [
+      { type: "set-autopilot" },
+      { type: "set-autopilot", enabled: "yes" },
+      { type: "set-autopilot", enabled: true, rounds: 9 },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-1", runId: "run-1", action },
+        }),
+      ).toThrow();
+    }
     expect(() =>
       validateBridgeCommand({
         type: "review.dispatch",

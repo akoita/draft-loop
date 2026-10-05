@@ -451,6 +451,34 @@ describe("local application driver", () => {
     }
   });
 
+  it("keeps autopilot off by default and toggles it without touching other settings", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-autopilot-"));
+    const silent = { write: () => undefined };
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      const driver = createLocalApplicationDriver();
+      const created = await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", maxRounds: 4 },
+        silent,
+      );
+      expect(created.autopilot).toBe(false);
+
+      const enabled = await driver.configureAutopilot?.({ root, enabled: true }, silent);
+      expect(enabled).toMatchObject({ autopilot: true, maxRounds: 4 });
+      expect((await driver.readWorkspace(root)).autopilot).toBe(true);
+
+      const disabled = await driver.configureAutopilot?.({ root, enabled: false }, silent);
+      expect(disabled).toMatchObject({ autopilot: false, maxRounds: 4 });
+      const stored = JSON.parse(
+        await readFile(join(root, ".draft-loop", "workspace.json"), "utf8"),
+      );
+      expect(stored).not.toHaveProperty("autopilot");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("lets the candidate widen the required sections explicitly", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-required-sections-"));
     try {

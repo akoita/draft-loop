@@ -169,10 +169,12 @@ import {
   writeRunPreflight,
 } from "./run-model-profiles.js";
 import { modelConfiguration } from "./run-model-selection.js";
+import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
 import {
   assertModelCompaniesMatch,
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
+import { ensureDirectory, ensureFile } from "./workspace-paths.js";
 
 export type {
   AnthropicClient,
@@ -510,6 +512,8 @@ export interface WorkspaceConfig {
    */
   readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
+  /** Revise unattended up to the round limit, pausing only on conflicts. */
+  readonly autopilot?: true;
   readonly latestRunId?: string;
   /** Local-only roots and pinned identities used to build future run snapshots. */
   readonly candidateKnowledgeSelection?: WorkspaceKnowledgeSelectionBinding;
@@ -935,6 +939,7 @@ function parseConfig(value: unknown): WorkspaceConfig {
     ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
     ...(typeof localEndpoint === "string" ? { localEndpoint: localEndpoint.trim() } : {}),
     fixtureMode: record.fixtureMode === true,
+    ...(record.autopilot === true ? { autopilot: true as const } : {}),
     ...(typeof record.latestRunId === "string" && record.latestRunId.trim() !== ""
       ? { latestRunId: record.latestRunId.trim() }
       : {}),
@@ -963,30 +968,6 @@ async function saveWorkspaceConfig(root: string, config: WorkspaceConfig): Promi
   await writeFile(workspaceConfigPath(root), `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
-async function ensureDirectory(path: string, label: string): Promise<void> {
-  let details: Awaited<ReturnType<typeof stat>>;
-  try {
-    details = await stat(path);
-  } catch {
-    throw new CliUserError(`${label} does not exist: ${path}`);
-  }
-  if (!details.isDirectory()) {
-    throw new CliUserError(`${label} is not a directory: ${path}`);
-  }
-}
-
-async function ensureFile(path: string, label: string): Promise<void> {
-  let details: Awaited<ReturnType<typeof stat>>;
-  try {
-    details = await stat(path);
-  } catch {
-    throw new CliUserError(`${label} does not exist: ${path}`);
-  }
-  if (!details.isFile()) {
-    throw new CliUserError(`${label} is not a file: ${path}`);
-  }
-}
-
 export interface InitWorkspaceOptions {
   readonly root: string;
   readonly jobDescription: string;
@@ -1009,6 +990,7 @@ export interface InitWorkspaceOptions {
   readonly maxCharacters?: number;
   readonly requiredSections?: readonly string[];
   readonly fixtureMode?: boolean;
+  readonly autopilot?: boolean;
 }
 
 export async function initWorkspace(
@@ -1056,6 +1038,7 @@ export async function initWorkspace(
       : {}),
     ...(options.localEndpoint?.trim() ? { localEndpoint: options.localEndpoint.trim() } : {}),
     fixtureMode: options.fixtureMode === true,
+    ...(options.autopilot === true ? { autopilot: true as const } : {}),
   };
   assertModelCompaniesMatch(parseConfig(config));
   await saveWorkspaceConfig(root, config);
@@ -2046,6 +2029,7 @@ function engine(
   return createOrchestrationEngine({
     author: agents.author,
     critic: agents.critic,
+    autopilot: config.autopilot === true,
     store,
     retrieval: retrieval ?? createChronologyRetrieval(storage, context),
     contextResolver: async (contextSnapshotId) => {
@@ -2764,6 +2748,7 @@ async function workspaceDescriptor(
     critic: { company: config.criticCompany, model: config.criticModel },
     ...(config.localEndpoint === undefined ? {} : { localEndpoint: config.localEndpoint }),
     fixtureMode: config.fixtureMode,
+    autopilot: config.autopilot === true,
     ...(config.latestRunId === undefined ? {} : { latestRunId: config.latestRunId }),
     ...(config.candidateKnowledgeSelection === undefined
       ? {}
@@ -3093,6 +3078,11 @@ export function createLocalApplicationDriver(
         resolve(command.root),
         await reconfigureWorkspaceModels(command.root, command, io),
       ),
+    configureAutopilot: async (command, io) => {
+      const root = resolve(command.root);
+      const deps = { readWorkspace, saveWorkspaceConfig };
+      return workspaceDescriptor(root, await configureWorkspaceAutopilot(root, command, deps, io));
+    },
     configureWritingPolicy: async (command, io) =>
       await workspaceDescriptor(
         resolve(command.root),

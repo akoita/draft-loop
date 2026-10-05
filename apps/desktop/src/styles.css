@@ -5082,3 +5082,13 @@ input[type="checkbox"] {
     scroll-behavior: auto;
   }
 }
+
+.autopilot-toggle {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.autopilot-toggle label {
+  font-size: var(--text-micro);
+  font-weight: 600;
+}

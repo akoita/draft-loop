@@ -53,7 +53,10 @@ can yield a different result.
 The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
 cost, or time limits, when quality is stable, or when the user reviews early.
-It never loops indefinitely to optimize a subjective score. See [ADR
+With the off-by-default workspace autopilot, it keeps revising through blocking
+findings and stable scores until the round limit, and pauses earlier only when
+the draft is ready or on a conflict: a disputed claim or a blocking factuality
+finding. It never loops indefinitely to optimize a subjective score. See [ADR
 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
 
 ### Degree coverage

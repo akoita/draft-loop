@@ -1047,6 +1047,37 @@ describe("draft-loop init independence flags", () => {
   });
 });
 
+describe("draft-loop autopilot", () => {
+  it("keeps autopilot off unless init asks for it", async () => {
+    const dependencies = harness();
+
+    await run(dependencies, "init", "off", "-j", "job.md", "-s", "evidence");
+    await run(dependencies, "init", "on", "-j", "job.md", "-s", "evidence", "--autopilot");
+
+    expect(dependencies.initializations.map((command) => command.autopilot)).toEqual([false, true]);
+  });
+
+  it("turns autopilot on and off for an existing workspace", async () => {
+    const dependencies = harness();
+    const configureAutopilot = vi.fn(async (command: { readonly root: string }) =>
+      descriptor(command.root),
+    );
+    const withAutopilot = {
+      ...dependencies,
+      service: { ...dependencies.service, configureAutopilot },
+    };
+
+    await run(withAutopilot, "autopilot", "on", "workspace");
+    await run(withAutopilot, "autopilot", "off");
+
+    expect(configureAutopilot.mock.calls.map(([command]) => command)).toEqual([
+      { root: resolve("workspace"), enabled: true },
+      { root: resolve("."), enabled: false },
+    ]);
+    await expect(run(withAutopilot, "autopilot", "maybe")).rejects.toThrow(/Expected on or off/u);
+  });
+});
+
 describe("independent review in status output", () => {
   it("reports distinct lineages as a claim rather than as proof", async () => {
     const dependencies = harness({
