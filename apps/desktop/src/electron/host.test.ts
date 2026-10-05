@@ -3441,7 +3441,8 @@ describe("native host", () => {
               checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
               schemaVersion: 1,
               createdAt: expect.any(String),
-              priorChecksum: null,
+              // The imported policy replaces the default every new real workspace starts with.
+              priorChecksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
             },
           },
           providerTransmissionPreflight: {

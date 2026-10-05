@@ -557,6 +557,13 @@ not persisted run totals or invoice amounts.
 
 ## Writing policies
 
+New real workspaces start with a default policy that asks for a professional,
+concise, two-page CV, plain punctuation without em dashes, exact facts with no
+rounding up, every listed certification kept, employment kept distinct from
+consulting, training and personal projects, and personal circumstances left out.
+Replace it with `policy activate`. Existing workspaces and demo (fixture)
+workspaces are not changed.
+
 Writing policies are local, immutable versions. `policy activate` imports a
 file and makes it the workspace default for future runs; `policy import` adds a
 version without changing that default. Metadata-only reads are the default, and
