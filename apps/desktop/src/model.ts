@@ -312,7 +312,11 @@ export type ReviewAction =
   | { readonly type: "recover-round-limit" }
   | { readonly type: "stop" }
   | { readonly type: "request-revision" }
-  | { readonly type: "approve" }
+  | {
+      readonly type: "approve";
+      /** Reason for approving past failing final CV checks, recorded with the approval. */
+      readonly readinessOverrideRationale?: string;
+    }
   | { readonly type: "export" };
 
 export interface DesktopReviewPort {

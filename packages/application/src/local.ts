@@ -117,6 +117,7 @@ import type {
   ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
   GetWritingPolicyCommand,
+  LifecycleAction,
   ListWritingPolicyVersionsCommand,
   OpportunityBriefSelection,
   ReadRunWritingPolicyCommand,
@@ -131,6 +132,7 @@ import {
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
 import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
+import { type LifecycleOptions, lifecycleDecisionRecord } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import type {
@@ -2399,19 +2401,12 @@ export async function resumeRun(
     await storage.close();
   }
 }
-type LifecycleAction =
-  | "pause"
-  | "stop"
-  | "approve"
-  | "revision"
-  | "recover-review"
-  | "recover-round-budget";
-
 export async function lifecycleRun(
   rootInput: string,
   action: LifecycleAction,
   runIdInput: string | undefined,
   io: CliIo = defaultIo,
+  options: LifecycleOptions = {},
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
@@ -2430,12 +2425,13 @@ export async function lifecycleRun(
         : action === "stop"
           ? await runEngine.stop(runId)
           : action === "approve"
-            ? await runEngine.approve(runId)
+            ? await runEngine.approve(runId, options)
             : action === "revision"
               ? await runEngine.requestRevision(runId)
               : action === "recover-review"
                 ? await runEngine.recoverToReview(runId)
                 : await runEngine.recoverRoundBudget(runId);
+    const record = lifecycleDecisionRecord(action, snapshot);
     await storage.saveDecision({
       id: `decision-${runId}-${action}-${snapshot.round}-${Date.now()}`,
       workspaceId: config.id,
@@ -2443,19 +2439,10 @@ export async function lifecycleRun(
       roundId: `${runId}:round:${action === "revision" ? snapshot.round - 1 : snapshot.round}`,
       artifactId: snapshot.artifact?.id ?? null,
       type: action === "approve" ? "approve" : "reject-finding",
-      rationale:
-        action === "approve"
-          ? "Approved through the explicit CLI approval command."
-          : action === "revision"
-            ? "Revision requested through the explicit CLI command."
-            : action === "recover-review"
-              ? "Returned to review after a provider failure."
-              : action === "recover-round-budget"
-                ? "Returned to the last fully reviewed round after an exhausted round limit."
-                : `${action} requested through the CLI command.`,
+      rationale: record.rationale,
       actor: "user:cli",
       createdAt: timestamp(),
-      payload: { action, source: "cli" },
+      payload: record.payload,
     });
     outputEvents(await runEngine.events(runId), io);
     outputSnapshot(snapshot, io);
@@ -3140,7 +3127,8 @@ export function createLocalApplicationDriver(
         },
         io,
       ),
-    lifecycle: async (command, io) => lifecycleRun(command.root, command.action, command.runId, io),
+    lifecycle: async (command, io) =>
+      lifecycleRun(command.root, command.action, command.runId, io, command),
     status: async (command, io) => statusRun(command.root, command.runId, io),
     createOpportunity: async (command) => {
       const root = resolve(command.root);

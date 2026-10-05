@@ -31,11 +31,53 @@ import {
 } from "@draft-loop/validation";
 import type { CritiqueFinding, RunBudget } from "./index.js";
 
+/**
+ * A person's explicit decision to approve past failing final CV checks. It is
+ * bound to the exact blocker codes they saw, so a different decision for the
+ * same artifact cannot reuse it.
+ */
+export interface ReadinessOverride {
+  readonly rationale: string;
+  readonly blockers: readonly string[];
+  readonly createdAt: string;
+}
+
 /** The durable identity/content binding recorded when a human approves. */
 export interface ApprovedArtifactBinding {
   readonly id: string;
   readonly version: number;
   readonly checksum: string;
+  /** Present only when the human approved past failing final CV checks. */
+  readonly readinessOverride?: ReadinessOverride;
+}
+
+export const maximumReadinessOverrideRationaleLength = 500;
+
+/** Trimmed override rationale, or an error when a person gave no usable reason. */
+export function readinessOverrideRationale(value: string): string {
+  const rationale = value.trim();
+  if (rationale.length === 0) {
+    throw new Error("A reason is required to approve past failing final CV checks.");
+  }
+  if (rationale.length > maximumReadinessOverrideRationaleLength) {
+    throw new Error(
+      `The final CV check override reason must be at most ${maximumReadinessOverrideRationaleLength} characters.`,
+    );
+  }
+  return rationale;
+}
+
+function overrideMatchesDecision(
+  override: ReadinessOverride | undefined,
+  decision: ApplicationReadinessStoppingDecision,
+): boolean {
+  if (override === undefined || override.rationale.trim().length === 0) return false;
+  const codes = decision.blockers.map((blocker) => blocker.code);
+  return (
+    codes.length > 0 &&
+    override.blockers.length === codes.length &&
+    override.blockers.every((code, index) => code === codes[index])
+  );
 }
 
 export interface BuildApplicationReadinessDecisionInput {
@@ -340,8 +382,9 @@ export function assertExactApprovedArtifact(
   const parsed = applicationReadinessStoppingDecisionSchema.safeParse(decision);
   if (
     !parsed.success ||
-    !parsed.data.applicationReady ||
-    parsed.data.humanApprovalRequired !== true
+    parsed.data.humanApprovalRequired !== true ||
+    (!parsed.data.applicationReady &&
+      !overrideMatchesDecision(binding.readinessOverride, parsed.data))
   ) {
     throw new Error("The stored application-readiness decision is not application-ready.");
   }

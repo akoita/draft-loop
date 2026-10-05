@@ -432,6 +432,50 @@ describe("desktop trust-centered review", () => {
     );
     expect(html).toContain("Final CV checks passed");
     expect(html).toMatch(/title="Approve artifact \(Alt\+A\)" disabled=""/u);
+    expect(html).toContain('aria-label="Reason for approving past final CV checks"');
+    expect(html).toMatch(/disabled="">Approve with override<\/button>/u);
+  });
+
+  it("offers no final-check override while blocking findings remain", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        applicationReady: false,
+        blockers: [{ code: "report-error" }],
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).not.toContain("Approve with override");
+  });
+
+  it("shows an approval made past final CV checks as overridden", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "approved",
+      approval: "approved",
+      findings: fixture.findings
+        .filter((finding) => finding.severity === "warning")
+        .map((finding) => ({ ...finding, decision: "accepted" as const })),
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        applicationReady: false,
+        blockers: [{ code: "disputed-dimension", dimension: "accuracy" }],
+        overridden: true,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).not.toContain("Final CV checks block approval");
+    expect(html).not.toContain("Approve with override");
+    expect(html).toContain("Final CV checks overridden with a recorded reason");
+    expect(html).toMatch(/title="Export Markdown \(Alt\+E\)"(?! disabled)/u);
   });
 
   it("ignores readiness projected for an older artifact version", () => {
