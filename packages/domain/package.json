@@ -10,6 +10,10 @@
     "./model-profile": {
       "types": "./src/model-profile.ts",
       "import": "./src/model-profile.ts"
+    },
+    "./source-sensitivity": {
+      "types": "./src/source-sensitivity.ts",
+      "import": "./src/source-sensitivity.ts"
     }
   },
   "files": [
