@@ -155,6 +155,35 @@ is unavailable, the desktop shows a connection error instead of loading the
 browser fixture or creating a demo workspace. Choose **Try demo workspace**
 explicitly when you want the fixture.
 
+## Autopilot
+
+By default a review pauses for you whenever the critic reports a blocking
+finding, so you decide each finding before the next revision. Autopilot is an
+off-by-default workspace setting that runs the author/critic/revise loop through
+to the workspace's maximum rounds instead. The author revises from every critic
+finding, blocking or warning, on its own.
+
+An autopilot review still pauses early when:
+
+- the draft is ready;
+- a claim is disputed;
+- a blocking factuality finding says the draft contradicts your materials, such
+  as a date or metric that disagrees with the source;
+- a provider or validation error stops a step, as without autopilot.
+
+The last round always ends in review, and approval and export stay with you.
+Turn it on in the desktop with the **Autopilot** checkbox on the start screen
+or in **Run progress**. In the CLI, pass `--autopilot` to `init`, or switch an
+existing workspace:
+
+```sh
+pnpm --filter @draft-loop/cli start autopilot on ./workspace
+pnpm --filter @draft-loop/cli start autopilot off ./workspace
+```
+
+The setting applies from the next run action, including **Request revision** on
+a run already awaiting approval.
+
 ## Opportunity briefs
 
 The `opportunity` command group creates and reloads one durable brief, lists

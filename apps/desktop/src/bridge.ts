@@ -1753,6 +1753,7 @@ const workspaceReadinessKeys = [
   "selectedEvidenceChunkCount",
   "selectedEvidenceSourceCount",
   "requiredSections",
+  "autopilot",
   "ready",
   "nextSteps",
 ] as const;
@@ -3812,6 +3813,9 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "export":
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
+    case "set-autopilot":
+      if (!hasOnlyKeys(action, ["type", "enabled"])) return invalidInput();
+      return { type: action.type, enabled: booleanValue(action.enabled) };
     case "start": {
       if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles"]))
         return invalidInput();
@@ -6168,6 +6172,9 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   if (setup !== undefined) {
     const setupRecord = requireRecord(setup);
     if (!hasOnlyKeys(setupRecord, workspaceReadinessKeys)) return invalidInput();
+    if (setupRecord.autopilot !== undefined && typeof setupRecord.autopilot !== "boolean") {
+      return invalidInput();
+    }
     const normalizedPolicy =
       setupRecord.writingPolicy === undefined || setupRecord.writingPolicy === null
         ? setupRecord.writingPolicy

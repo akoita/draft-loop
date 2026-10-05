@@ -2697,6 +2697,36 @@ describe("native host", () => {
     }
   });
 
+  it("turns workspace autopilot on through the application service", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-autopilot-"));
+    const fixture = service(root);
+    const configureAutopilot = vi.fn<NonNullable<ApplicationService["configureAutopilot"]>>(
+      async (command) => ({ ...descriptor(root), autopilot: command.enabled }),
+    );
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, configureAutopilot },
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "set-autopilot", enabled: true },
+        },
+      });
+
+      expect(configureAutopilot).toHaveBeenCalledWith({ root, enabled: true }, expect.anything());
+      expect(result).toMatchObject({ ok: true, value: { setup: { autopilot: true } } });
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("routes explicit round-limit recovery through the application lifecycle", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-round-limit-recovery-"));
     const previousCritique = {

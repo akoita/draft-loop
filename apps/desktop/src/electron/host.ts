@@ -1312,6 +1312,7 @@ async function workspaceReadiness(
     selectedEvidenceChunkCount,
     selectedEvidenceSourceCount,
     requiredSections: [...descriptor.requiredSections],
+    autopilot: descriptor.autopilot === true,
     ready:
       jobDescriptionReady &&
       evidenceSourceCount > 0 &&
@@ -3233,9 +3234,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   }
 
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
-    const workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
+    let workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
     const currentSnapshot =
-      input.action.type === "acknowledge-provider-transmission"
+      input.action.type === "acknowledge-provider-transmission" ||
+      input.action.type === "set-autopilot"
         ? undefined
         : input.action.type === "start"
           ? await service.status({ root: workspace.root })
@@ -3324,6 +3326,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           await writeOverrides(workspace.root, overrides);
         }
         resumeInBackground(workspace, dispatchedSnapshot);
+        break;
+      }
+      case "set-autopilot": {
+        if (service.configureAutopilot === undefined) {
+          return fail("operation-failed", "Autopilot is unavailable in this version.");
+        }
+        const descriptor = await service.configureAutopilot(
+          { root: workspace.root, enabled: action.enabled },
+          io(),
+        );
+        workspace = { ...workspace, descriptor };
+        active = workspace;
         break;
       }
       case "finding-decision":
