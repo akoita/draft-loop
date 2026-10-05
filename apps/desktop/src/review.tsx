@@ -70,6 +70,8 @@ interface ReviewWorkspaceProps {
   readonly workspaceNavigationAction?: ReactNode;
   /** Profile controls rendered in the collecting/setup workspace. */
   readonly profilePanel?: ReactNode;
+  /** The "Edit policy" action for the Writing policy setup card. */
+  readonly writingPolicyAction?: ReactNode;
   readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
   readonly onSetCredential?: (provider: CredentialProvider, apiKey: string) => Promise<void>;
   readonly onRemoveCredential?: (provider: CredentialProvider) => Promise<void>;
@@ -804,7 +806,7 @@ export function ProviderAuthenticationMode({
  * closes it from anywhere, and focus returns to wherever the reviewer was. One implementation,
  * so the credential dialog and the command palette cannot drift apart.
  */
-function useModalFocusTrap(
+export function useModalFocusTrap(
   open: boolean,
   dialogRef: RefObject<HTMLElement | null>,
   onClose: () => void,
@@ -1274,6 +1276,7 @@ export function ReviewWorkspace({
   modelSettingsAction,
   workspaceNavigationAction,
   profilePanel,
+  writingPolicyAction,
   getCredentialStatus,
   onSetCredential,
   onRemoveCredential,
@@ -2890,6 +2893,7 @@ export function ReviewWorkspace({
                       ? "Choose policy file"
                       : "Replace policy"}
                   </button>
+                  {writingPolicyAction}
                   <button
                     className="button button-outline"
                     type="button"

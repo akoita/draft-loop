@@ -583,6 +583,14 @@ A policy may contain `Tone`, `Spelling locale`, `Verbosity`, `Page target`,
 anti-formulaic defaults are transparent and enabled unless the policy says
 `Anti-formulaic defaults: disabled`.
 
+In the desktop, **Edit policy** on the Writing policy setup card opens the
+active policy as text, or the default policy when the workspace has none.
+Tone, verbosity, page target and spelling locale selectors rewrite the matching
+`Name: value` lines, and editing the text updates the selectors. Saving creates
+a new version for future runs, as `policy activate` does; the application's
+message appears inline when the text is rejected, and nothing is saved. Choosing
+a policy file remains available.
+
 An imported version can be selected as a complete override for one reviewed
 opportunity. The active workspace policy is unchanged, and the run records both
 base and override versions:

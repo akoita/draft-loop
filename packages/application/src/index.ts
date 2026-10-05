@@ -617,6 +617,7 @@ export type {
 } from "./canonical-profile-extraction-progress.js";
 export {
   activateDefaultWritingPolicy,
+  activateWritingPolicyContent,
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";

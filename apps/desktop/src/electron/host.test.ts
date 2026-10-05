@@ -8,12 +8,15 @@ import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
   canonicalCandidateProfileSelectionStaleErrorMessage,
+  createApplicationService,
   createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
+  defaultWritingPolicyContent,
   type IndependentReviewRecord,
   JobRequirementUserError,
   type WorkspaceDescriptor,
+  withDefaultWritingPolicy,
 } from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7097,5 +7100,204 @@ describe("candidate knowledge native controls", () => {
     expect(stale).toMatchObject({ ok: false, error: { code: "operation-failed" } });
     expect(JSON.stringify(stale)).not.toContain("private stale");
     expect(JSON.stringify(stale)).not.toContain("/secret");
+  });
+});
+
+describe("writing policy editing", () => {
+  const baseChecksum = "a".repeat(64);
+  const baseMetadata = {
+    checksum: baseChecksum,
+    version: "sha256:aaaaaaaaaaaa",
+    schemaVersion: 1,
+    createdAt: "2026-08-28T10:00:00.000Z",
+    priorChecksum: null,
+  };
+
+  async function openHost(fixture: ReturnType<typeof service>, root: string) {
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    return host;
+  }
+
+  const read = { type: "writing-policy.read", input: { workspaceId: "workspace-native" } } as const;
+  const save = (content: string) =>
+    ({
+      type: "writing-policy.save",
+      input: { workspaceId: "workspace-native", content },
+    }) as const;
+
+  it("offers the starting template, marked as such, when no policy is saved", async () => {
+    const root = "/local/policy-template";
+    const fixture = service(root);
+    const host = await openHost(fixture, root);
+    await expect(host.invoke(read)).resolves.toEqual({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        content: defaultWritingPolicyContent,
+        version: null,
+        checksum: null,
+        isDefaultTemplate: true,
+      },
+    });
+    expect(fixture.service.getWritingPolicy).toHaveBeenCalledWith({
+      root,
+      includeContent: true,
+    });
+  });
+
+  it("reads the saved policy text with its version", async () => {
+    const root = "/local/policy-saved";
+    const fixture = service(root);
+    fixture.service.getWritingPolicy.mockResolvedValue({
+      ...baseMetadata,
+      policy: { content: "Tone: warm\n" },
+    } as never);
+    const host = await openHost(fixture, root);
+    await expect(host.invoke(read)).resolves.toEqual({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        content: "Tone: warm\n",
+        version: baseMetadata.version,
+        checksum: baseChecksum,
+        isDefaultTemplate: false,
+      },
+    });
+  });
+
+  it("refuses a workspace that is not open", async () => {
+    const root = "/local/policy-not-open";
+    const host = await openHost(service(root), root);
+    await expect(
+      host.invoke({ type: "writing-policy.read", input: { workspaceId: "other-workspace" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+    await expect(
+      host.invoke({
+        type: "writing-policy.save",
+        input: { workspaceId: "other-workspace", content: "Tone: warm" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+  });
+
+  it("saves the text through the application import and activates it", async () => {
+    const root = "/local/policy-save";
+    const fixture = service(root);
+    let importedText: string | undefined;
+    let importedPath: string | undefined;
+    fixture.service.configureWritingPolicy.mockImplementation(async (command) => {
+      importedPath = command.sourcePath;
+      importedText = await readFile(command.sourcePath, "utf8");
+      expect(command.activate).toBe(true);
+      return { ...descriptor(root), activeWritingPolicy: baseMetadata };
+    });
+    const host = await openHost(fixture, root);
+    await expect(host.invoke(save("Tone: warm\n"))).resolves.toEqual({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        version: baseMetadata.version,
+        checksum: baseChecksum,
+      },
+    });
+    expect(importedText).toBe("Tone: warm\n");
+    expect(importedPath).toBeDefined();
+    await expect(readFile(importedPath as string, "utf8")).rejects.toThrow();
+  });
+
+  it("passes the application's validation message through and saves nothing", async () => {
+    const root = "/local/policy-invalid";
+    const fixture = service(root);
+    fixture.service.configureWritingPolicy.mockRejectedValue(
+      new CliUserError("The writing policy contains an invalid Tone directive."),
+    );
+    const host = await openHost(fixture, root);
+    await expect(host.invoke(save("Tone: sarcastic\n"))).resolves.toMatchObject({
+      ok: false,
+      error: { message: "The writing policy contains an invalid Tone directive." },
+    });
+  });
+
+  it("keeps unexpected save failures free of the error text and the policy", async () => {
+    const root = "/local/policy-unexpected";
+    const fixture = service(root);
+    fixture.service.configureWritingPolicy.mockRejectedValue(
+      new Error("EACCES: /private/path/secret-policy-marker"),
+    );
+    const host = await openHost(fixture, root);
+    const failed = await host.invoke(save("Tone: warm\nsecret-content-marker\n"));
+    expect(failed).toMatchObject({ ok: false });
+    expect(JSON.stringify(failed)).not.toContain("secret-policy-marker");
+    expect(JSON.stringify(failed)).not.toContain("secret-content-marker");
+    expect(JSON.stringify(failed)).toContain("Saving the writing policy");
+  });
+
+  it("runs end to end against the real application: template, save, new version, rejection", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-edit-"));
+    await mkdir(join(root, "evidence"), { recursive: true });
+    await writeFile(join(root, "job.md"), "TypeScript platform role\n", "utf8");
+    await writeFile(join(root, "evidence", "resume.md"), "Built TypeScript tools.\n", "utf8");
+    const applicationService = withDefaultWritingPolicy(
+      createApplicationService(createLocalApplicationDriver()),
+    );
+    try {
+      await applicationService.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        { write: () => undefined },
+      );
+      const host = createNativeHost({
+        applicationService,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      const opened = await host.invoke({
+        type: "workspace.open",
+        input: { selection: "native-dialog" },
+      });
+      expect(opened).toMatchObject({ ok: true });
+      const id = (opened as { value: { workspace: { id: string } } }).value.workspace.id;
+      const readPolicy = { type: "writing-policy.read", input: { workspaceId: id } } as const;
+
+      await expect(host.invoke(readPolicy)).resolves.toMatchObject({
+        ok: true,
+        value: { isDefaultTemplate: true, content: defaultWritingPolicyContent },
+      });
+
+      const edited = defaultWritingPolicyContent.replace("Tone: professional", "Tone: warm");
+      const saved = await host.invoke({
+        type: "writing-policy.save",
+        input: { workspaceId: id, content: edited },
+      });
+      expect(saved).toMatchObject({ ok: true, value: { workspaceId: id } });
+      await expect(host.invoke(readPolicy)).resolves.toMatchObject({
+        ok: true,
+        value: { isDefaultTemplate: false, content: edited.trim() },
+      });
+
+      const rejected = await host.invoke({
+        type: "writing-policy.save",
+        input: { workspaceId: id, content: "Tone: sarcastic\n" },
+      });
+      expect(rejected).toMatchObject({
+        ok: false,
+        error: { message: expect.stringMatching(/invalid Tone directive/u) },
+      });
+      await expect(host.invoke(readPolicy)).resolves.toMatchObject({
+        ok: true,
+        value: { content: edited.trim() },
+      });
+      const empty = await host.invoke({
+        type: "writing-policy.save",
+        input: { workspaceId: id, content: "   \n" },
+      });
+      expect(empty).toMatchObject({
+        ok: false,
+        error: { message: "The writing policy is empty." },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

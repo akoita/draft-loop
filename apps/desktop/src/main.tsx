@@ -61,6 +61,7 @@ import {
   isWorkspaceContextLost,
   WorkspaceRecovery,
 } from "./workspace-recovery.js";
+import { WritingPolicyEditAction } from "./writing-policy-editor.js";
 import "./styles.css";
 
 const runRefreshIntervalMs = 750;
@@ -1950,6 +1951,38 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               >
                 Change models
               </button>
+            ),
+          })}
+      {...(activePort.readWritingPolicy === undefined || activePort.saveWritingPolicy === undefined
+        ? {}
+        : {
+            writingPolicyAction: (
+              <WritingPolicyEditAction
+                key={`${state.workspaceId}:${workspaceGeneration}`}
+                workspaceId={state.workspaceId}
+                disabled={
+                  busy || pendingReviewAction !== null || state.execution.status === "running"
+                }
+                readPolicy={activePort.readWritingPolicy}
+                savePolicy={async (workspaceId, content) => {
+                  const generation = workspaceGeneration;
+                  try {
+                    const loaded = await activePort.saveWritingPolicy?.(workspaceId, content);
+                    if (
+                      loaded !== undefined &&
+                      isCurrentWorkspaceContext(workspaceId, generation) &&
+                      loaded.workspaceId === workspaceId
+                    ) {
+                      setState(loaded);
+                    }
+                  } catch (reason: unknown) {
+                    // A lost workspace sends the person to recovery; anything else is the
+                    // application's own message about the policy, shown inside the editor.
+                    if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+                    throw reason;
+                  }
+                }}
+              />
             ),
           })}
       workspaceNavigationAction={

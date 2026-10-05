@@ -1,4 +1,8 @@
-import { JobRequirementUserError, SourceIngestionUserError } from "@draft-loop/application";
+import {
+  CliUserError,
+  JobRequirementUserError,
+  SourceIngestionUserError,
+} from "@draft-loop/application";
 
 import type { BridgeCommand, BridgeErrorCode } from "../bridge.js";
 import type { ReviewAction } from "../model.js";
@@ -41,6 +45,8 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "source.add-url": "Adding the source URL",
   "export.write": "Exporting the draft",
   "models.list": "Listing provider models",
+  "writing-policy.read": "Reading the writing policy",
+  "writing-policy.save": "Saving the writing policy",
 };
 
 const capabilityGroupLabels: Readonly<Record<string, string>> = {
@@ -93,6 +99,12 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   if (command.type === "profile.derive") {
     const message = userFixableProfileDerivationMessage(error);
     if (message !== undefined) return message;
+  }
+  // The application words its policy validation (a bad directive value, too
+  // many rules, empty or oversized text) for a person and never quotes the
+  // text, so the editor can show it as written.
+  if (command.type === "writing-policy.save" && error instanceof CliUserError) {
+    return error.message;
   }
   if (hasBridgeErrorCode(error)) return undefined;
   return `${describeDesktopOperation(command)} failed with an unexpected error.`;

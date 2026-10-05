@@ -3,6 +3,8 @@ export const bridgeCapabilities = [
   "workspace.open",
   "workspace.create",
   "workspace.configure-models",
+  "writing-policy.read",
+  "writing-policy.save",
   "workspace.recent-list",
   "workspace.recent-open",
   "workspace.recent-clear",

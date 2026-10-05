@@ -5092,3 +5092,20 @@ input[type="checkbox"] {
   font-size: var(--text-micro);
   font-weight: 600;
 }
+
+/* =========================================================================
+   Writing policy editor
+
+   The policy is plain text, so the editing surface is a monospace textarea and
+   the selectors above it are a view of its directive lines.
+   ========================================================================= */
+
+.policy-editor {
+  margin-top: 0;
+}
+
+.policy-editor-text {
+  min-height: 16em;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}

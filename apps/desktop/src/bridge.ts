@@ -687,6 +687,59 @@ const workspaceConfigureModelsKeys = inputKeys<WorkspaceConfigureModelsInput>()(
   "independenceOverrideRationale",
 ]);
 
+/** The largest policy text the application accepts: 64 KiB. */
+export const maximumWritingPolicyContentBytes = 64 * 1024;
+
+export interface WritingPolicyReadInput {
+  readonly workspaceId: string;
+}
+
+const writingPolicyReadKeys = inputKeys<WritingPolicyReadInput>()(["workspaceId"]);
+
+/**
+ * The policy text the editor starts from.
+ *
+ * `isDefaultTemplate` is true when the workspace has no policy yet and the text
+ * is the starting template; `version` and `checksum` are then null because
+ * nothing has been saved.
+ */
+export interface WritingPolicyReadResult {
+  readonly workspaceId: string;
+  readonly content: string;
+  readonly version: string | null;
+  readonly checksum: string | null;
+  readonly isDefaultTemplate: boolean;
+}
+
+const writingPolicyReadResultKeys = resultKeys<WritingPolicyReadResult>()([
+  "workspaceId",
+  "content",
+  "version",
+  "checksum",
+  "isDefaultTemplate",
+]);
+
+export interface WritingPolicySaveInput {
+  readonly workspaceId: string;
+  /** The whole policy text; it becomes a new immutable version for future runs. */
+  readonly content: string;
+}
+
+const writingPolicySaveKeys = inputKeys<WritingPolicySaveInput>()(["workspaceId", "content"]);
+
+/** The version now active, reported back so the editor shows what was written. */
+export interface WritingPolicySaveResult {
+  readonly workspaceId: string;
+  readonly version: string;
+  readonly checksum: string;
+}
+
+const writingPolicySaveResultKeys = resultKeys<WritingPolicySaveResult>()([
+  "workspaceId",
+  "version",
+  "checksum",
+]);
+
 export interface RunStatusInput {
   readonly workspaceId: string;
   readonly runId?: string;
@@ -2619,6 +2672,8 @@ export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
   "workspace.create": WorkspaceCreateInput;
   "workspace.configure-models": WorkspaceConfigureModelsInput;
+  "writing-policy.read": WritingPolicyReadInput;
+  "writing-policy.save": WritingPolicySaveInput;
   "workspace.recent-list": RecentWorkspacesListInput;
   "workspace.recent-open": RecentWorkspaceOpenInput;
   "workspace.recent-clear": RecentWorkspacesClearInput;
@@ -2697,6 +2752,8 @@ export interface BridgeCommandOutputMap {
   "workspace.open": WorkspaceResult;
   "workspace.create": WorkspaceResult;
   "workspace.configure-models": WorkspaceModelsResult;
+  "writing-policy.read": WritingPolicyReadResult;
+  "writing-policy.save": WritingPolicySaveResult;
   "workspace.recent-list": RecentWorkspacesListResult;
   "workspace.recent-open": WorkspaceResult;
   "workspace.recent-clear": RecentWorkspacesClearResult;
@@ -3696,6 +3753,38 @@ function validateWorkspaceConfigureModelsInput(value: unknown): WorkspaceConfigu
   };
 }
 
+function validateWritingPolicyReadInput(value: unknown): WritingPolicyReadInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, writingPolicyReadKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+/**
+ * Policy text of any content up to the application's size limit.
+ *
+ * Empty text and invalid directive values are deliberately not refused here:
+ * the application owns those rules and words them for a person, and a generic
+ * "invalid input" would hide which line to fix. Only the size is bounded, since
+ * that protects the host before the text is parsed.
+ */
+function writingPolicyContentValue(value: unknown): string {
+  if (typeof value !== "string") return invalidInput();
+  if (value.length > maximumWritingPolicyContentBytes) return invalidInput();
+  if (new TextEncoder().encode(value).byteLength > maximumWritingPolicyContentBytes) {
+    return invalidInput();
+  }
+  return value;
+}
+
+function validateWritingPolicySaveInput(value: unknown): WritingPolicySaveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, writingPolicySaveKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    content: writingPolicyContentValue(input.content),
+  };
+}
+
 function validateRunStatusInput(value: unknown): RunStatusInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, runStatusKeys)) return invalidInput();
@@ -4595,6 +4684,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "workspace.configure-models",
         input: validateWorkspaceConfigureModelsInput(command.input),
+      };
+    case "writing-policy.read":
+      return {
+        type: "writing-policy.read",
+        input: validateWritingPolicyReadInput(command.input),
+      };
+    case "writing-policy.save":
+      return {
+        type: "writing-policy.save",
+        input: validateWritingPolicySaveInput(command.input),
       };
     case "workspace.recent-list":
       return {
@@ -6043,6 +6142,35 @@ function normalizeWorkspaceModelsResult(value: unknown): WorkspaceModelsResult {
   };
 }
 
+function normalizeWritingPolicyReadResult(value: unknown): WritingPolicyReadResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, writingPolicyReadResultKeys)) return invalidInput();
+  const isDefaultTemplate = booleanValue(result.isDefaultTemplate);
+  const version = result.version === null ? null : identifier(result.version);
+  const checksum = result.checksum === null ? null : writingPolicyChecksumValue(result.checksum);
+  // A saved policy has an identity; the starting template has none.
+  if (isDefaultTemplate !== (version === null) || isDefaultTemplate !== (checksum === null)) {
+    return invalidInput();
+  }
+  return {
+    workspaceId: identifier(result.workspaceId),
+    content: writingPolicyContentValue(result.content),
+    version,
+    checksum,
+    isDefaultTemplate,
+  };
+}
+
+function normalizeWritingPolicySaveResult(value: unknown): WritingPolicySaveResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, writingPolicySaveResultKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(result.workspaceId),
+    version: identifier(result.version),
+    checksum: writingPolicyChecksumValue(result.checksum),
+  };
+}
+
 function normalizeWritingPolicyIdentity(value: unknown): WritingPolicyIdentity {
   const identity = requireRecord(value);
   if (!hasOnlyKeys(identity, writingPolicyIdentityKeys)) return invalidInput();
@@ -6900,6 +7028,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesClearResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
+    case "writing-policy.read":
+      return normalizeWritingPolicyReadResult(value);
+    case "writing-policy.save":
+      return normalizeWritingPolicySaveResult(value);
     case "knowledge.current":
       return normalizeKnowledgeCurrentResult(value);
     case "knowledge.create":
