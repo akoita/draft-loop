@@ -34,7 +34,7 @@ describe("Anthropic structured output schema", () => {
       required: ["schemaVersion", "facts", "issues"],
     });
     expect(facts).not.toHaveProperty("maxItems");
-    expect(facts.description).toContain("maxItems: 512");
+    expect(facts.description).toContain("maxItems: 2048");
     expect(fact).toMatchObject({ type: "object", additionalProperties: false });
     expect(fact.required).toEqual(["key", "category", "field", "value", "evidence"]);
     expect(evidence).toMatchObject({ type: "array", minItems: 1 });
@@ -56,7 +56,7 @@ describe("Anthropic structured output schema", () => {
     const normalizedFacts = record(record(normalized.schema).properties);
 
     expect(record(normalizedFacts.facts).description).toMatch(
-      /^Candidate sourced facts\.\n\n\{maxItems: 512\}$/u,
+      /^Candidate sourced facts\.\n\n\{maxItems: 2048\}$/u,
     );
     expect(facts.description).toBe("Candidate sourced facts.");
   });

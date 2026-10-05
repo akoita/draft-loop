@@ -25,6 +25,7 @@ import {
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
 import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
+import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 
@@ -405,7 +406,9 @@ function mapProposal(
     return fact;
   });
   if (facts.length > maximumCanonicalCandidateProfileFactCount) {
-    throw new Error("The extraction proposal contains too many facts.");
+    throw new CandidateProfileProposalValidationError([
+      { code: "profile_too_many_facts", count: 1 },
+    ]);
   }
 
   const proposedIssues = proposal.issues.map((candidate) => {
@@ -443,7 +446,9 @@ function mapProposal(
     (issue) => issue.id,
   );
   if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
-    throw new Error("The extraction proposal produces too many review issues.");
+    throw new CandidateProfileProposalValidationError([
+      { code: "profile_too_many_issues", count: 1 },
+    ]);
   }
   return cloneAndFreeze({ facts, issues });
 }

@@ -545,8 +545,8 @@ export type CanonicalCandidateProfileIssueStatus =
 
 /** Bounds keep a profile useful for a career history while keeping persistence predictable. */
 export const maximumCanonicalCandidateProfileIdLength = 120 as const;
-export const maximumCanonicalCandidateProfileFactCount = 512 as const;
-export const maximumCanonicalCandidateProfileIssueCount = 256 as const;
+export const maximumCanonicalCandidateProfileFactCount = 2_048 as const;
+export const maximumCanonicalCandidateProfileIssueCount = 1_024 as const;
 export const maximumCanonicalCandidateProfileProvenanceCount = 32 as const;
 export const maximumCanonicalCandidateProfileIssueFactReferenceCount = 64 as const;
 export const maximumCanonicalCandidateProfileIssueSourceReferenceCount = 64 as const;

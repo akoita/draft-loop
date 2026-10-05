@@ -1,3 +1,7 @@
+import {
+  maximumCanonicalCandidateProfileFactCount,
+  maximumCanonicalCandidateProfileValueLength,
+} from "@draft-loop/domain";
 import { canonicalCandidateProfileExtractionProposalSchema } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 import {
@@ -226,6 +230,28 @@ describe("canonical candidate profile proposal validation", () => {
       ],
     });
     expectValidationFailure(oversized, "profile_output_too_big");
+  });
+
+  it("names oversized fact values, evidence quotes, and fact counts", () => {
+    const longText = "x".repeat(maximumCanonicalCandidateProfileValueLength + 1);
+    expectValidationFailure(
+      proposal({ facts: [{ ...fact("fact-a"), value: longText }] }),
+      "profile_fact_value_too_long",
+    );
+    expectValidationFailure(
+      proposal({
+        facts: [{ ...fact("fact-a"), evidence: [{ sourceId: "source-a", quote: longText }] }],
+      }),
+      "profile_evidence_quote_too_long",
+    );
+    expectValidationFailure(
+      proposal({
+        facts: Array.from({ length: maximumCanonicalCandidateProfileFactCount + 1 }, (_, index) =>
+          fact(`fact-${index}`, `Value ${index}`),
+        ),
+      }),
+      "profile_too_many_facts",
+    );
   });
 
   it("preserves exact failure reasons without retaining values, keys, paths, or schema messages", () => {

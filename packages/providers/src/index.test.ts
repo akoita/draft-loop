@@ -198,7 +198,7 @@ describe("provider-neutral model adapters", () => {
       required: ["schemaVersion", "facts", "issues"],
     });
     expect(facts).not.toHaveProperty("maxItems");
-    expect(facts.description).toContain("maxItems: 512");
+    expect(facts.description).toContain("maxItems: 2048");
   });
 
   it("sends OpenAI Responses input as user data and uses strict JSON schema text format", async () => {

@@ -1,3 +1,4 @@
+import { maximumCanonicalCandidateProfileFactCount } from "@draft-loop/domain";
 import type { JsonObject, ModelRequest } from "@draft-loop/providers";
 import type { CanonicalCandidateProfileExtractionProposal } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
@@ -227,9 +228,11 @@ describe("unreferenced duplicate candidate fact keys", () => {
     );
     expectValidationFailure(
       proposal(
-        Array.from({ length: 513 }, (_, index) => fact("same", `Value ${index}`, `Value ${index}`)),
+        Array.from({ length: maximumCanonicalCandidateProfileFactCount + 1 }, (_, index) =>
+          fact("same", `Value ${index}`, `Value ${index}`),
+        ),
       ),
-      "profile_output_too_big",
+      "profile_too_many_facts",
     );
   });
 

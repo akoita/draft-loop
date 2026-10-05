@@ -878,8 +878,37 @@ describe("canonical profile extraction output-limit fallback", () => {
       code: "invalid-response",
       failureStage: "response-schema-validation",
       diagnostics: [{ code: "invalid_profile_extraction_batch", path: "output" }],
-      diagnosticCounts: [{ code: "profile_output_too_big", count: 1 }],
+      diagnosticCounts: [{ code: "profile_too_many_facts", count: 1 }],
     });
+    expect(calls).toHaveLength(3);
+  });
+
+  it("aggregates more than 512 facts across bounded calls", async () => {
+    const first = source("source-a", "Claim");
+    const second = source("source-b", "Claim");
+    const facts = (sourceId: string) =>
+      proposal(
+        Array.from({ length: 300 }, (_, index) => ({
+          key: `fact-${index + 1}`,
+          category: "skill",
+          field: "name",
+          value: "Claim",
+          sourceId,
+          quote: "Claim",
+        })),
+      );
+    const { calls, executor } = executorFor(() => {
+      if (calls.length === 1) throw providerTruncation();
+      return calls.length === 2 ? facts(first.id) : facts(second.id);
+    });
+
+    const output = await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      request([first, second]),
+      controls,
+    );
+
+    expect((output as { facts: unknown[] }).facts).toHaveLength(600);
     expect(calls).toHaveLength(3);
   });
 
