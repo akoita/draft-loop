@@ -15,6 +15,8 @@ import {
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
+  JobRequirementUserError,
+  localJobRequirements,
   type OpportunityDraftPatch,
   type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -1288,8 +1290,20 @@ async function workspaceReadiness(
       retrievalStatus = "unavailable";
     }
   }
+  // The run splits the job description into requirements unless a reviewed brief supplies
+  // them, so surface the same guard here instead of failing when Start is clicked.
+  let jobRequirementProblem: string | undefined;
+  if (jobDescriptionReady && overrides.reviewedOpportunity === undefined) {
+    try {
+      localJobRequirements(jobDescription);
+    } catch (error) {
+      if (!(error instanceof JobRequirementUserError)) throw error;
+      jobRequirementProblem = error.message;
+    }
+  }
   const nextSteps: string[] = [];
   if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
+  if (jobRequirementProblem !== undefined) nextSteps.push(jobRequirementProblem);
   if (evidenceSourceCount === 0) nextSteps.push("Add at least one candidate evidence source.");
   if (writingPolicyStatus === "unavailable") {
     nextSteps.push("Replace the configured writing policy before starting a review.");
@@ -1317,6 +1331,7 @@ async function workspaceReadiness(
     autopilot: descriptor.autopilot === true,
     ready:
       jobDescriptionReady &&
+      jobRequirementProblem === undefined &&
       evidenceSourceCount > 0 &&
       writingPolicyStatus !== "unavailable" &&
       retrievalStatus !== "no-query" &&
