@@ -12,6 +12,7 @@ import {
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
+  JobRequirementUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
@@ -1219,7 +1220,7 @@ describe("native host", () => {
         error: {
           code: "operation-failed",
           capability: "run.start",
-          message: "The desktop operation could not be completed.",
+          message: "Starting the review failed with an unexpected error.",
         },
       });
       expect(JSON.stringify(started)).not.toContain(privateMessage);
@@ -1227,6 +1228,55 @@ describe("native host", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("shows why the job description cannot start a review from the review screen", async () => {
+    const root = "/local/job-requirement-error-workspace";
+    const fixture = service(root);
+    const message =
+      'Requirement 1 in the job description has 196 words, too long to match against individual CV lines ("About us We are a…"). List each requirement on its own bullet line in the job description and remove page navigation and boilerplate, or use a reviewed opportunity brief.';
+    fixture.service.begin.mockRejectedValueOnce(new JobRequirementUserError(message));
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const started = await host.invoke({
+      type: "review.dispatch",
+      input: { workspaceId: "workspace-native", runId: "pending", action: { type: "start" } },
+    });
+
+    expect(started).toEqual({
+      ok: false,
+      error: { code: "operation-failed", capability: "review.dispatch", message },
+    });
+  });
+
+  it("names the review action that failed unexpectedly without its private text", async () => {
+    const root = "/local/review-dispatch-error-workspace";
+    const fixture = service(root);
+    fixture.service.begin.mockRejectedValueOnce(new Error(`Disk read failed at ${root}/job.md.`));
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const started = await host.invoke({
+      type: "review.dispatch",
+      input: { workspaceId: "workspace-native", runId: "pending", action: { type: "start" } },
+    });
+
+    expect(started).toEqual({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        capability: "review.dispatch",
+        message: "Starting the review failed with an unexpected error.",
+      },
+    });
+    expect(JSON.stringify(started)).not.toContain(root);
   });
 
   it.each([
@@ -1287,7 +1337,7 @@ describe("native host", () => {
       error: {
         code: "operation-failed",
         capability: "profile.derive",
-        message: "The desktop operation could not be completed.",
+        message: "Generating the candidate profile failed with an unexpected error.",
       },
     });
     expect(JSON.stringify(derived)).not.toContain("/private/kb");
@@ -1312,7 +1362,7 @@ describe("native host", () => {
 
     expect(started).toMatchObject({
       ok: false,
-      error: { message: "The desktop operation could not be completed." },
+      error: { message: "Starting the review failed with an unexpected error." },
     });
   });
 

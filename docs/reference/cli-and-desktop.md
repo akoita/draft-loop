@@ -125,10 +125,19 @@ under the application’s folder in `%APPDATA%` on Windows, `$XDG_CONFIG_HOME`
 (or `~/.config`) on Linux, and `~/Library/Application Support` on macOS.
 
 Each line contains only an ISO timestamp, capability, recognized error class,
-and recognized bridge or provider code. Messages, stacks, filesystem paths,
+and recognized bridge or provider code. Recognized classes include the
+application's user errors (`JobRequirementUserError`,
+`SourceIngestionUserError`, `CliUserError`), so a refused run start is
+distinguishable from an unexpected failure. Messages, stacks, filesystem paths,
 filenames, source content, and provider responses are excluded. The current log
 and one rotated backup are each bounded to 64 KiB. Logging failures do not
 interrupt a review operation. Logs stay local and are not uploaded automatically.
+
+When a desktop action fails, the banner shows the application's own message
+only when it is fixed, path-free and user-fixable, such as a job description
+whose requirements are too long or an unreadable source file. Any other failure
+names the action that failed, for example "Starting the review failed with an
+unexpected error.", and never its private error text.
 
 ## Desktop workspace navigation
 
