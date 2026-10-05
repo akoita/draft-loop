@@ -577,8 +577,10 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Blocking");
     expect(html).toContain("Warnings");
     expect(html).toContain("Resolved");
-    expect(html.match(/aria-expanded="true"/gu)).toHaveLength(1);
-    expect(html.match(/aria-expanded="false"/gu)).toHaveLength(1);
+    // The panel disclosures carry aria-expanded too; only the finding rows count here.
+    const findingRows = html.match(/<button class="finding-summary"[^>]*>/gu) ?? [];
+    expect(findingRows.filter((row) => row.includes('aria-expanded="true"'))).toHaveLength(1);
+    expect(findingRows.filter((row) => row.includes('aria-expanded="false"'))).toHaveLength(1);
     expect(html).not.toContain("Override rationale (required)");
   });
 

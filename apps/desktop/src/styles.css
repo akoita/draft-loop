@@ -599,10 +599,15 @@ input[type="checkbox"] {
    App frame: rail · document column · review panel
    ========================================================================= */
 
+/* The frame is exactly one window tall and never scrolls itself: the document column and the
+   review panel each scroll inside it. Without the clip, anything that escapes a column's own
+   overflow (an absolutely positioned screen-reader label far down a long queue, say) extends
+   the page, and the whole frame can be dragged up off an empty desk. */
 .app-frame {
   display: flex;
   align-items: stretch;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .side-rail {
@@ -674,6 +679,7 @@ input[type="checkbox"] {
 }
 
 .main-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2179,7 +2185,9 @@ input[type="checkbox"] {
    Review panel (right column)
    ========================================================================= */
 
+/* Positioned so absolutely positioned descendants are clipped by the panel's own scroll. */
 .side-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -2209,6 +2217,56 @@ input[type="checkbox"] {
 
 .side-column .section-heading h2 {
   font-size: var(--text-md);
+}
+
+/* A panel's eyebrow is its disclosure: the chevron turns when the panel folds, and the heading
+   under it stays on screen. */
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  background: transparent;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.panel-toggle:hover {
+  color: var(--text-1);
+}
+
+.panel-toggle-chevron {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.panel-toggle[aria-expanded="false"] .panel-toggle-chevron {
+  transform: rotate(-90deg);
+}
+
+.event-list-more {
+  margin-top: var(--space-3);
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  background: transparent;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.event-list-more:hover {
+  text-decoration: underline;
+}
+
+.event-count {
+  margin-left: var(--space-2);
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .event-list {
@@ -2343,6 +2401,10 @@ input[type="checkbox"] {
   color: var(--text-2);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+}
+
+.finding-filters[hidden] {
+  display: none;
 }
 
 .finding-filters {
@@ -2741,6 +2803,10 @@ input[type="checkbox"] {
   justify-self: start;
 }
 
+.approval-panel .round-limit-note {
+  margin-top: var(--space-3);
+}
+
 .approval-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2781,6 +2847,32 @@ input[type="checkbox"] {
 
 .export-path {
   overflow-wrap: anywhere;
+}
+
+/* The gate's actions, kept on screen at the foot of the review panel. In flow it rests under
+   the gate; while the panel is scrolled above that point it sticks to the bottom edge. */
+.gate-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  background: var(--surface);
+  box-shadow: 0 -12px 20px -18px rgba(15, 23, 33, 0.45);
+}
+
+.gate-action-bar .approval-actions {
+  margin-top: 0;
+}
+
+.gate-action-bar .export-action {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.gate-action-bar .approval-action-error {
+  margin-bottom: var(--space-3);
 }
 
 /* =========================================================================
@@ -4862,6 +4954,13 @@ input[type="checkbox"] {
 @media (max-width: 1024px) {
   .app-shell {
     grid-template-columns: 1fr;
+  }
+
+  /* One column here, so the page scrolls as a whole again. */
+  .app-frame {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .main-column,
