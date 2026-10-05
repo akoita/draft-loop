@@ -3808,10 +3808,17 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "recover-round-limit":
     case "stop":
     case "request-revision":
-    case "approve":
     case "export":
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
+    case "approve": {
+      if (!hasOnlyKeys(action, ["type", "readinessOverrideRationale"])) return invalidInput();
+      const rationale = optionalOverrideRationale(action.readinessOverrideRationale);
+      return {
+        type: action.type,
+        ...(rationale === undefined ? {} : { readinessOverrideRationale: rationale }),
+      };
+    }
     case "start": {
       if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles"]))
         return invalidInput();

@@ -250,6 +250,13 @@ gap; token matching can miss equivalent phrasing. Accepting a finding does not
 change coverage or bypass the gate. Review requirements and coverage evidence;
 readiness can remain blocked after a revision or new run.
 
+Once blocking findings are resolved, you can still approve a draft whose final
+checks fail. Enter a reason and choose **Approve with override**, or run
+`draft-loop approve --override-final-checks "<reason>"`. The reason and the
+blocker codes it covers are bound to that exact artifact and recorded in the run
+history, and export accepts only that recorded override. This keeps a review
+finishable at the round limit, when **Request revision** is unavailable.
+
 If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input

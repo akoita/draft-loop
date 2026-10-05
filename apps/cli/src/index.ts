@@ -1641,18 +1641,27 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     ["approve", "Approve a run awaiting review", "approve"],
     ["revise", "Request another author revision", "revision"],
   ] as const) {
-    command
+    const lifecycleCommand = command
       .command(name)
       .description(description)
       .argument("[workspace]", "workspace directory", ".")
-      .option("--run-id <id>", "run id to update")
-      .action(async (workspace: string, options: Record<string, unknown>) => {
-        await service.lifecycle({
-          root: workspaceRoot(workspace),
-          action,
-          ...(options.runId === undefined ? {} : { runId: options.runId as string }),
-        });
+      .option("--run-id <id>", "run id to update");
+    if (action === "approve") {
+      lifecycleCommand.option(
+        "--override-final-checks <reason>",
+        "approve even though final CV checks fail, recording this reason",
+      );
+    }
+    lifecycleCommand.action(async (workspace: string, options: Record<string, unknown>) => {
+      await service.lifecycle({
+        root: workspaceRoot(workspace),
+        action,
+        ...(options.runId === undefined ? {} : { runId: options.runId as string }),
+        ...(options.overrideFinalChecks === undefined
+          ? {}
+          : { readinessOverrideRationale: options.overrideFinalChecks as string }),
       });
+    });
   }
 
   command
