@@ -52,6 +52,47 @@ import {
 } from "@draft-loop/schemas";
 import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
+import {
+  type CandidateKnowledgeRetentionClassPolicy,
+  type CandidateKnowledgeRetentionClassPolicyInput,
+  type CandidateKnowledgeRetentionOverrideInput,
+  type CandidateKnowledgeRetentionOverrideRecord,
+  type CandidateKnowledgeRetentionPolicyRecord,
+  type CandidateKnowledgeRetentionPolicyUpdateInput,
+  maximumCandidateKnowledgeRetentionExpireAfterDays,
+} from "./candidate-knowledge-retention-types.js";
+import {
+  appendSourceSensitivityRules,
+  deleteSourceSensitivityRules,
+  listSourceSensitivityRuleVersions,
+  readCurrentSourceSensitivityRules,
+  readSourceSensitivityRulesVersion,
+  type SourceSensitivityRuleAppendInput,
+  type SourceSensitivityRuleStoragePort,
+  type SourceSensitivityRuleVersionRecord,
+  type SourceSensitivityRuleVersionSummary,
+  sourceSensitivityRulesImmutableDeleteTrigger,
+  sourceSensitivityRulesMigration,
+} from "./source-sensitivity-rules.js";
+import {
+  StorageConflictError,
+  StorageSecurityError,
+  StorageValidationError,
+} from "./storage-errors.js";
+
+export * from "./candidate-knowledge-retention-types.js";
+export type {
+  SourceSensitivityRuleAppendInput,
+  SourceSensitivityRuleStoragePort,
+  SourceSensitivityRuleVersionRecord,
+  SourceSensitivityRuleVersionSummary,
+} from "./source-sensitivity-rules.js";
+export {
+  StorageConflictError,
+  StorageSecurityError,
+  StorageValidationError,
+} from "./storage-errors.js";
+
 import { listCanonicalCandidateProfileCatalog } from "./canonical-profile-catalog.js";
 import {
   type ApprovedEvidenceSources,
@@ -462,82 +503,6 @@ export interface CandidateKnowledgeBaseLifecycleReadinessRecord {
   readonly sources: readonly CandidateKnowledgeSourceLifecycleReadinessRecord[];
 }
 
-export const maximumCandidateKnowledgeRetentionExpireAfterDays = 36_500;
-
-export interface CandidateKnowledgeRetentionClassPolicyInput {
-  readonly class: CandidateKnowledgeRetentionClass;
-  readonly rule: CandidateKnowledgeRetentionRule;
-  readonly expireAfterDays?: number | null;
-}
-
-export interface CandidateKnowledgeRetentionClassPolicy
-  extends CandidateKnowledgeRetentionClassPolicyInput {
-  readonly expireAfterDays: number | null;
-}
-
-export interface CandidateKnowledgeRetentionPolicyUpdateInput {
-  readonly expectedRevision: number;
-  readonly updatedAt: string;
-  readonly classes: readonly CandidateKnowledgeRetentionClassPolicyInput[];
-}
-
-export interface CandidateKnowledgeRetentionOverrideRecord {
-  readonly class: CandidateKnowledgeRetentionClass;
-  readonly kind: CandidateKnowledgeRetentionOverrideKind;
-  readonly state: "applied" | "released";
-  readonly sequence: number;
-  readonly overrideRevision: number;
-  readonly policyRevision: number;
-  readonly changedAt: string;
-}
-
-export interface CandidateKnowledgeRetentionOverrideInput {
-  readonly class: CandidateKnowledgeRetentionClass;
-  readonly kind: CandidateKnowledgeRetentionOverrideKind;
-  readonly expectedPolicyRevision: number;
-  readonly expectedState: "none" | "applied" | "released";
-  readonly changedAt: string;
-}
-
-export interface CandidateKnowledgeRetentionPolicyRecord {
-  readonly knowledgeBaseId: string;
-  readonly revision: number;
-  readonly overrideRevision: number;
-  readonly updatedAt: string;
-  readonly classes: readonly CandidateKnowledgeRetentionClassPolicy[];
-  readonly activeOverrides: readonly CandidateKnowledgeRetentionOverrideRecord[];
-}
-
-export type CandidateKnowledgeRetentionOwnershipStatus = "owned" | "preserved" | "not-materialized";
-
-export interface CandidateKnowledgeRetentionPlanClass {
-  readonly class: CandidateKnowledgeRetentionClass;
-  readonly rule: CandidateKnowledgeRetentionRule;
-  readonly expireAfterDays: number | null;
-  readonly ownershipStatus: CandidateKnowledgeRetentionOwnershipStatus;
-  readonly eligibleCount: number;
-  readonly preservedCount: number;
-  readonly unmanagedCount: number;
-  readonly unknownCount: number;
-  readonly countCapped: boolean;
-  readonly preservationReasons: readonly (
-    | "retention-rule"
-    | "override"
-    | "unmanaged"
-    | "unknown"
-    | "not-materialized"
-  )[];
-}
-
-export interface CandidateKnowledgeRetentionPlan {
-  readonly schemaVersion: 1;
-  readonly knowledgeBaseId: string;
-  readonly asOf: string;
-  readonly policyRevision: number;
-  readonly overrideRevision: number;
-  readonly classes: readonly CandidateKnowledgeRetentionPlanClass[];
-}
-
 export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
 export type CandidateKnowledgeSourceRetirementReason =
   (typeof candidateKnowledgeSourceRetirementReasons)[number];
@@ -681,7 +646,7 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly expectedOwnerGeneration?: number;
     };
 
-export interface CandidateKnowledgeBaseStoragePort {
+export interface CandidateKnowledgeBaseStoragePort extends SourceSensitivityRuleStoragePort {
   readonly ensureDefaultCandidateKnowledgeBase: (
     input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
   ) => Promise<CandidateKnowledgeBaseRecord>;
@@ -1358,28 +1323,7 @@ export class StorageUnavailableError extends Error {
   }
 }
 
-export class StorageSecurityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StorageSecurityError";
-  }
-}
-
-export class StorageConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StorageConflictError";
-  }
-}
-
-export class StorageValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StorageValidationError";
-  }
-}
-
-export const storageSchemaVersion = 26 as const;
+export const storageSchemaVersion = 27 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3342,6 +3286,7 @@ const migrations: readonly Migration[] = [
   migrationTwentyFour,
   migrationTwentyFive,
   artifactHistoryMigration,
+  sourceSensitivityRulesMigration,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -4161,6 +4106,7 @@ const candidateKnowledgeDeletionImmutableDeleteTriggers: readonly {
     table: "candidate_knowledge_retention_override_events",
     message: "candidate knowledge retention override events are immutable",
   },
+  sourceSensitivityRulesImmutableDeleteTrigger,
 ];
 
 function dropCandidateKnowledgeDeletionImmutableDeleteTriggers(database: SqliteHandle): void {
@@ -6397,6 +6343,7 @@ export class SqliteStorage
              WHERE knowledge_base_id = ?`,
           )
           .run(knowledgeBaseId);
+        deleteSourceSensitivityRules(this.database, knowledgeBaseId);
         const removed = this.database
           .prepare("DELETE FROM candidate_knowledge_bases WHERE id = ?")
           .run(knowledgeBaseId);
@@ -6535,6 +6482,36 @@ export class SqliteStorage
       )
       .get(confirmationToken);
     return row === undefined ? undefined : candidateKnowledgeDeletionAuditFromRow(row);
+  }
+
+  public async appendCandidateKnowledgeSourceSensitivityRules(
+    knowledgeBaseId: string,
+    input: SourceSensitivityRuleAppendInput,
+  ): Promise<SourceSensitivityRuleVersionRecord> {
+    this.ensureOpen();
+    return appendSourceSensitivityRules(this.database, knowledgeBaseId, input);
+  }
+
+  public async getCandidateKnowledgeSourceSensitivityRules(
+    knowledgeBaseId: string,
+  ): Promise<SourceSensitivityRuleVersionRecord | undefined> {
+    this.ensureOpen();
+    return readCurrentSourceSensitivityRules(this.database, knowledgeBaseId);
+  }
+
+  public async getCandidateKnowledgeSourceSensitivityRulesVersion(
+    knowledgeBaseId: string,
+    version: number,
+  ): Promise<SourceSensitivityRuleVersionRecord | undefined> {
+    this.ensureOpen();
+    return readSourceSensitivityRulesVersion(this.database, knowledgeBaseId, version);
+  }
+
+  public async listCandidateKnowledgeSourceSensitivityRuleVersions(
+    knowledgeBaseId: string,
+  ): Promise<readonly SourceSensitivityRuleVersionSummary[]> {
+    this.ensureOpen();
+    return listSourceSensitivityRuleVersions(this.database, knowledgeBaseId);
   }
 
   public async getCandidateKnowledgeRetentionPolicy(

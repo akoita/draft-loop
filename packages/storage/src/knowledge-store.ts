@@ -98,12 +98,19 @@ import {
   StorageValidationError,
   storageSchemaVersion,
 } from "./index.js";
+import type {
+  ManagedCandidateKnowledgeFileInventory,
+  ManagedCandidateKnowledgeWriteInterruptionBoundary,
+} from "./knowledge-store-types.js";
+import { coordinateSourceSensitivityRulesPort } from "./source-sensitivity-rules.js";
 import {
   type StorageWriterLease,
   StorageWriterLeaseError,
   type StorageWriterLeaseOptions,
   withStorageWriterLease,
 } from "./writer-lease.js";
+
+export type * from "./knowledge-store-types.js";
 
 const manifestFilename = "draft-loop-knowledge.json";
 const privateDirectory = ".draft-loop";
@@ -254,31 +261,6 @@ export interface CandidateKnowledgeDeletionResult {
   readonly preservedUnmanagedCount: number;
   readonly countCapped: boolean;
   readonly audit: CandidateKnowledgeDeletionAudit;
-}
-
-export type ManagedCandidateKnowledgeWriteInterruptionBoundary =
-  | "intent"
-  | "staging"
-  | "target-intent"
-  | "target-publication"
-  | "published-event"
-  | "commit"
-  | "staging-cleanup"
-  | "after-staging-cleanup";
-
-export interface ManagedCandidateKnowledgeFileInventory {
-  readonly schemaVersion: 1;
-  readonly verifiedManagedFileCount: number;
-  readonly scannedEntryCount: number;
-  readonly unknownEntries: {
-    readonly intakeShapedFilesAtSourcesRoot: number;
-    readonly opaqueEntriesAtSourcesRoot: number;
-    readonly entriesInsideManagedSourceDirectories: number;
-    readonly symbolicLinks: number;
-    readonly otherEntries: number;
-  };
-  readonly complete: boolean;
-  readonly scanLimitReached: boolean;
 }
 
 export interface CandidateKnowledgePortableBackupExportOptions {
@@ -5713,6 +5695,7 @@ function createHandle(
         );
         return Object.freeze({ ...result });
       }),
+    ...coordinateSourceSensitivityRulesPort(storage, coordinateWrite),
     getCandidateKnowledgeRetentionPolicy: async (knowledgeBaseId) =>
       storage.getCandidateKnowledgeRetentionPolicy(knowledgeBaseId),
     setCandidateKnowledgeRetentionPolicy: (knowledgeBaseId, input) =>
