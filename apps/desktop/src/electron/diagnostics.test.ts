@@ -1,6 +1,11 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  CliUserError,
+  JobRequirementUserError,
+  SourceIngestionUserError,
+} from "@draft-loop/application";
 import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it } from "vitest";
 import { DesktopBridgeError } from "../native.js";
@@ -72,6 +77,24 @@ describe("packaged desktop host diagnostics", () => {
         expect(directoryMode).toBe(0o700);
         expect(fileMode).toBe(0o600);
       }
+    } finally {
+      rmSync(userDataDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("names application user errors by class without their messages", () => {
+    const userDataDirectory = tempUserData();
+    try {
+      const logger = createHostErrorLogger(userDataDirectory);
+      logger.record(new JobRequirementUserError("private job words"), "review.dispatch");
+      logger.record(new SourceIngestionUserError("/private/source.pdf"), "review.dispatch");
+      logger.record(new CliUserError("private user error"), "review.dispatch");
+
+      const current = readFileSync(join(userDataDirectory, "diagnostics", filenames[0]), "utf8");
+      expect(
+        readRecords(userDataDirectory, filenames[0]).map((record) => record.errorClass),
+      ).toEqual(["JobRequirementUserError", "SourceIngestionUserError", "CliUserError"]);
+      expect(current).not.toMatch(/private/u);
     } finally {
       rmSync(userDataDirectory, { recursive: true, force: true });
     }

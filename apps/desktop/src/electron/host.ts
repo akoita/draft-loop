@@ -15,7 +15,6 @@ import {
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
-  JobRequirementUserError,
   type OpportunityDraftPatch,
   type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -24,7 +23,6 @@ import {
   type ProviderUserSessionRunners,
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
-  SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import {
@@ -158,9 +156,9 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
-import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
   type ProviderAuthModePreferenceStore,
@@ -5134,13 +5132,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
     } catch (error) {
       options.onError?.(error, command.type);
-      const userMessage =
-        error instanceof SourceIngestionUserError ||
-        (command.type === "run.start" && error instanceof JobRequirementUserError)
-          ? error.message
-          : command.type === "profile.derive"
-            ? userFixableProfileDerivationMessage(error)
-            : undefined;
+      const userMessage = hostFailureMessage(command, error);
       const hostError =
         userMessage === undefined ? error : new NativeHostError("operation-failed", userMessage);
       return { ok: false, error: safeBridgeError(hostError, command.type) };

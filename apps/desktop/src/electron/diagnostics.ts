@@ -9,6 +9,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+import {
+  CliUserError,
+  JobRequirementUserError,
+  SourceIngestionUserError,
+} from "@draft-loop/application";
 import { ProviderAdapterError, type ProviderErrorCode } from "@draft-loop/providers";
 import { type BridgeErrorCode, bridgeCapabilities } from "../bridge.js";
 import { DesktopBridgeError } from "../native.js";
@@ -42,6 +47,9 @@ type LoggedErrorClass =
   | "ProviderAdapterError"
   | "NativeHostError"
   | "DesktopBridgeError"
+  | "JobRequirementUserError"
+  | "SourceIngestionUserError"
+  | "CliUserError"
   | "TypeError"
   | "RangeError"
   | "Error"
@@ -70,6 +78,9 @@ function safeStringProperty(value: unknown, property: string): string | undefine
 function classifyError(value: unknown): LoggedErrorClass {
   if (safeTest(() => value instanceof ProviderAdapterError)) return "ProviderAdapterError";
   if (safeTest(() => value instanceof DesktopBridgeError)) return "DesktopBridgeError";
+  if (safeTest(() => value instanceof JobRequirementUserError)) return "JobRequirementUserError";
+  if (safeTest(() => value instanceof SourceIngestionUserError)) return "SourceIngestionUserError";
+  if (safeTest(() => value instanceof CliUserError)) return "CliUserError";
   if (safeTest(() => value instanceof TypeError)) return "TypeError";
   if (safeTest(() => value instanceof RangeError)) return "RangeError";
   if (!safeTest(() => value instanceof Error)) return "UnknownError";
