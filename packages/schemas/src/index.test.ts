@@ -2,6 +2,8 @@ import {
   type ContextSnapshotInput,
   createContextSnapshot,
   type ModelConfigurationInput,
+  maximumCanonicalCandidateProfileFactCount,
+  maximumCanonicalCandidateProfileIssueCount,
   maximumWritingPolicySpellingLocaleLength,
 } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
@@ -1497,9 +1499,15 @@ describe("canonicalCandidateProfileExtractionProposalSchema", () => {
     expect(() =>
       canonicalCandidateProfileExtractionProposalSchema.parse({
         ...proposal,
-        issues: [...proposal.issues, ...Array.from({ length: 255 }, () => omissionIssue)],
+        issues: [
+          ...proposal.issues,
+          ...Array.from(
+            { length: maximumCanonicalCandidateProfileIssueCount - proposal.issues.length + 1 },
+            () => omissionIssue,
+          ),
+        ],
       }),
-    ).toThrow(/256/iu);
+    ).toThrow(new RegExp(String(maximumCanonicalCandidateProfileIssueCount), "u"));
 
     expect(
       canonicalCandidateProfileExtractionProposalSchema.parse({
@@ -1516,8 +1524,8 @@ describe("canonicalCandidateProfileExtractionProposalSchema", () => {
       additionalProperties: false,
       properties: {
         schemaVersion: { const: 1 },
-        facts: { type: "array", maxItems: 512 },
-        issues: { type: "array", maxItems: 256 },
+        facts: { type: "array", maxItems: maximumCanonicalCandidateProfileFactCount },
+        issues: { type: "array", maxItems: maximumCanonicalCandidateProfileIssueCount },
       },
     });
     const extractionJsonSchema =

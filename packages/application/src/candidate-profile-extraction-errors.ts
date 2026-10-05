@@ -1,3 +1,8 @@
+import {
+  maximumCanonicalCandidateProfileFactCount,
+  maximumCanonicalCandidateProfileIssueCount,
+  maximumCanonicalCandidateProfileValueLength,
+} from "@draft-loop/domain";
 import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
@@ -59,6 +64,14 @@ const localProposalDiagnosticLabels = [
   ["profile_unknown_issue_facts", "unknown issue fact references"],
   ["profile_duplicate_issue_sources", "duplicate issue source references"],
   ["profile_unpaired_conflicts", "conflicts without two distinct facts"],
+  [
+    "profile_fact_value_too_long",
+    `fact values over ${maximumCanonicalCandidateProfileValueLength} characters`,
+  ],
+  [
+    "profile_evidence_quote_too_long",
+    `evidence quotes over ${maximumCanonicalCandidateProfileValueLength} characters`,
+  ],
   ...schemaDiagnosticLabels,
 ] as const;
 const groundingDiagnosticLabels = [
@@ -136,6 +149,19 @@ function deepInfraOutputSchemaFailureMessage(error: unknown): string | undefined
   return `DeepInfra profile format is invalid. No facts were saved. Renaming will not help; check model support before retrying. Reasons: ${summary}.`;
 }
 
+function profileCapacityFailureMessage(
+  diagnosticCounts: readonly { readonly code: string; readonly count: number }[],
+): string | undefined {
+  const codes = new Set(diagnosticCounts.filter(({ count }) => count > 0).map(({ code }) => code));
+  if (codes.has("profile_too_many_facts")) {
+    return `The selected sources produced more facts than one profile can hold (${maximumCanonicalCandidateProfileFactCount}). No facts were saved. Select fewer or smaller sources, then retry.`;
+  }
+  if (codes.has("profile_too_many_issues")) {
+    return `The selected sources produced more review issues than one profile can hold (${maximumCanonicalCandidateProfileIssueCount}). No facts were saved. Select fewer or smaller sources, then retry.`;
+  }
+  return undefined;
+}
+
 function localProposalFailureMessage(
   error: CandidateProfileProposalValidationError | ProviderAdapterError,
 ): string | undefined {
@@ -149,6 +175,8 @@ function localProposalFailureMessage(
   ) {
     return undefined;
   }
+  const capacityMessage = profileCapacityFailureMessage(error.diagnosticCounts);
+  if (capacityMessage !== undefined) return capacityMessage;
   const summary = summarizeCounts(error.diagnosticCounts, localProposalDiagnosticLabels);
   if (summary === undefined) return undefined;
   return `Profile output failed local validation. No facts were saved. Renaming will not help; check model support. Reasons: ${summary}.`;
@@ -233,17 +261,16 @@ export function candidateProfileExtractionFailureMessage(
   error: unknown,
   stage: CandidateProfileExtractionStage,
 ): string {
-  if (stage === "provider" || stage === "response-schema") {
-    if (
-      error instanceof CandidateProfileProposalValidationError ||
-      (error instanceof ProviderAdapterError &&
-        error.diagnostics.some(
-          (diagnostic) => diagnostic.code === "invalid_profile_extraction_batch",
-        ))
-    ) {
-      const localMessage = localProposalFailureMessage(error);
-      if (localMessage !== undefined) return localMessage;
-    }
+  if (
+    error instanceof CandidateProfileProposalValidationError ||
+    ((stage === "provider" || stage === "response-schema") &&
+      error instanceof ProviderAdapterError &&
+      error.diagnostics.some(
+        (diagnostic) => diagnostic.code === "invalid_profile_extraction_batch",
+      ))
+  ) {
+    const localMessage = localProposalFailureMessage(error);
+    if (localMessage !== undefined) return localMessage;
   }
   if (stage === "provider" && error instanceof ProviderAdapterError) {
     return providerFailureMessage(error);

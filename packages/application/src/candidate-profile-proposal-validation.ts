@@ -17,6 +17,10 @@ export const candidateProfileProposalDiagnosticCodes = {
 export type CandidateProfileProposalDiagnosticCode =
   | (typeof candidateProfileProposalDiagnosticCodes)[keyof typeof candidateProfileProposalDiagnosticCodes]
   | "profile_output_constraint"
+  | "profile_too_many_facts"
+  | "profile_too_many_issues"
+  | "profile_fact_value_too_long"
+  | "profile_evidence_quote_too_long"
   | "profile_duplicate_evidence"
   | "profile_duplicate_fact_keys"
   | "profile_duplicate_issue_facts"
@@ -57,20 +61,52 @@ export class CandidateProfileProposalValidationError extends Error {
   }
 }
 
+interface ProposalIssue {
+  readonly code: string;
+  readonly message: string;
+  readonly path?: readonly PropertyKey[];
+}
+
+/** Name the oversized part from the issue path shape only; values and indexes are never kept. */
+function oversizedDiagnosticCode(
+  path: readonly PropertyKey[] | undefined,
+): CandidateProfileProposalDiagnosticCode {
+  const shape = (path ?? []).map((segment) =>
+    typeof segment === "number" ? "#" : typeof segment === "string" ? segment : "?",
+  );
+  switch (shape.join(".")) {
+    case "facts":
+      return "profile_too_many_facts";
+    case "issues":
+      return "profile_too_many_issues";
+    case "facts.#.value":
+      return "profile_fact_value_too_long";
+    case "facts.#.evidence.#.quote":
+      return "profile_evidence_quote_too_long";
+    default:
+      return candidateProfileProposalDiagnosticCodes.too_big;
+  }
+}
+
+function diagnosticCode(issue: ProposalIssue): CandidateProfileProposalDiagnosticCode {
+  if (issue.code === "custom") {
+    return customDiagnosticCodes.get(issue.message) ?? "profile_output_constraint";
+  }
+  if (issue.code === "too_big") return oversizedDiagnosticCode(issue.path);
+  return Object.hasOwn(candidateProfileProposalDiagnosticCodes, issue.code)
+    ? candidateProfileProposalDiagnosticCodes[
+        issue.code as keyof typeof candidateProfileProposalDiagnosticCodes
+      ]
+    : "profile_output_constraint";
+}
+
 /** Summarize only fixed Zod/custom codes from top-level issues. */
 export function summarizeCandidateProfileProposalIssues(
-  issues: readonly { readonly code: string; readonly message: string }[],
+  issues: readonly ProposalIssue[],
 ): readonly CandidateProfileProposalDiagnosticCount[] {
   const counts = new Map<CandidateProfileProposalDiagnosticCode, number>();
   for (const issue of issues) {
-    const code =
-      issue.code === "custom"
-        ? (customDiagnosticCodes.get(issue.message) ?? "profile_output_constraint")
-        : Object.hasOwn(candidateProfileProposalDiagnosticCodes, issue.code)
-          ? candidateProfileProposalDiagnosticCodes[
-              issue.code as keyof typeof candidateProfileProposalDiagnosticCodes
-            ]
-          : "profile_output_constraint";
+    const code = diagnosticCode(issue);
     const count = counts.get(code) ?? 0;
     counts.set(code, count < Number.MAX_SAFE_INTEGER ? count + 1 : count);
   }
@@ -167,7 +203,7 @@ function omissionFactKeyReferenceToRemove(
 }
 
 function validationError(
-  issues: readonly { readonly code: string; readonly message: string }[],
+  issues: readonly ProposalIssue[],
 ): CandidateProfileProposalValidationError {
   return new CandidateProfileProposalValidationError(
     summarizeCandidateProfileProposalIssues(issues),

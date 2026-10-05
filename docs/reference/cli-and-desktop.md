@@ -411,11 +411,16 @@ Every request keeps the same per-call token cap. These bounds make no latency or
 coverage guarantee. Results are aggregated after every call succeeds, then pass
 the existing schema and source-grounding checks before any facts are saved.
 
+One profile holds at most 2,048 facts and 1,024 review issues. When the
+aggregated calls exceed either bound, nothing is saved and the guidance names
+the bound and asks for fewer or smaller sources.
+
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full
 schema. Other schema failures reject the full proposal, so no facts are saved.
-Guidance may show bounded reason counts but omits values, field names,
-source text, and paths.
+Guidance may show bounded reason counts, such as fact values or evidence
+quotes over the 2,000-character limit, but omits values, source text, and
+paths.
 
 Skills are treated as collection values, so distinct skill facts do not become
 automatic conflicts even when they share a subject. Equal values can still

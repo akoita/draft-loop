@@ -335,6 +335,40 @@ describe("candidate profile extraction failure guidance", () => {
     expect(message.length).toBeLessThanOrEqual(240);
   });
 
+  it("explains when bounded calls produce more facts than one profile can hold", () => {
+    const error = new ProviderAdapterError("google", "invalid-response", "private", {
+      failureStage: "response-schema-validation",
+      diagnostics: [{ code: "invalid_profile_extraction_batch", path: "output" }],
+      diagnosticCounts: [{ code: "profile_too_many_facts", count: 1 }],
+    });
+
+    expect(candidateProfileExtractionFailureMessage(error, "provider")).toBe(
+      "The selected sources produced more facts than one profile can hold (2048). No facts were saved. Select fewer or smaller sources, then retry.",
+    );
+  });
+
+  it("explains too many review issues at any stage", () => {
+    const error = new CandidateProfileProposalValidationError([
+      { code: "profile_too_many_issues", count: 1 },
+    ]);
+
+    expect(candidateProfileExtractionFailureMessage(error, "grounding")).toBe(
+      "The selected sources produced more review issues than one profile can hold (1024). No facts were saved. Select fewer or smaller sources, then retry.",
+    );
+  });
+
+  it("names oversized fact values and evidence quotes", () => {
+    const error = new CandidateProfileProposalValidationError([
+      { code: "profile_evidence_quote_too_long", count: 2 },
+      { code: "profile_fact_value_too_long", count: 1 },
+    ]);
+
+    const message = candidateProfileExtractionFailureMessage(error, "response-schema");
+
+    expect(message).toContain("fact values over 2000 characters: 1");
+    expect(message).toContain("evidence quotes over 2000 characters: 2");
+  });
+
   it("does not apply DeepInfra guidance to other providers", () => {
     const guidance = candidateProfileExtractionFailureMessage(
       new ProviderAdapterError("openai", "invalid-response", "private details", {
