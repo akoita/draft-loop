@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { type GraniteEmbeddingTier, getGraniteEmbeddingModel } from "./model-manifest.js";
+import {
+  type GraniteEmbeddingTier,
+  getGraniteEmbeddingModel,
+  graniteEmbeddingModels,
+} from "./model-manifest.js";
 import { createOnnxTextEmbedder } from "./onnx-text-embedder.js";
 import { cosineSimilarity } from "./vector.js";
 
 const modelDirectory = process.env.DRAFT_LOOP_EMBEDDING_MODEL_DIR;
-const tier: GraniteEmbeddingTier =
-  process.env.DRAFT_LOOP_EMBEDDING_TIER === "311m" ? "311m" : "97m";
+const requestedTier = process.env.DRAFT_LOOP_EMBEDDING_TIER ?? "97m";
+const tier = (
+  requestedTier in graniteEmbeddingModels ? requestedTier : "97m"
+) as GraniteEmbeddingTier;
 
 describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
   "Granite embedding model (real files)",

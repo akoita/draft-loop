@@ -5,6 +5,7 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
   createOnnxTextEmbedder,
   type GraniteEmbeddingTier,
+  graniteEmbeddingModels,
   type SemanticRelevanceFloor,
   semanticRelevanceFloorForIdentity,
   type TextEmbedder,
@@ -19,16 +20,18 @@ import {
 } from "./semantic-retrieval-comparison.js";
 
 /**
- * Real-model retrieval comparison. It only runs when a local Granite model directory is supplied:
+ * Real-model retrieval comparison. It only runs when a local local embedding model directory is supplied:
  *
  *   DRAFT_LOOP_EMBEDDING_MODEL_DIR   directory with the verified model files
- *   DRAFT_LOOP_EMBEDDING_TIER        "97m" (default) or "311m"
+ *   DRAFT_LOOP_EMBEDDING_TIER        "97m" (default), "311m", or "eg2-text"
  *   DRAFT_LOOP_EMBEDDING_DIMENSIONS  optional Matryoshka truncation
  *   DRAFT_LOOP_RETRIEVAL_REPORT_PATH optional path for the content-free JSON report
  */
 const modelDirectory = process.env.DRAFT_LOOP_EMBEDDING_MODEL_DIR;
-const tier: GraniteEmbeddingTier =
-  process.env.DRAFT_LOOP_EMBEDDING_TIER === "311m" ? "311m" : "97m";
+const requestedTier = process.env.DRAFT_LOOP_EMBEDDING_TIER ?? "97m";
+const tier = (
+  requestedTier in graniteEmbeddingModels ? requestedTier : "97m"
+) as GraniteEmbeddingTier;
 const dimensionsEnv = process.env.DRAFT_LOOP_EMBEDDING_DIMENSIONS;
 const dimensions = dimensionsEnv === undefined ? undefined : Number(dimensionsEnv);
 const reportPath = process.env.DRAFT_LOOP_RETRIEVAL_REPORT_PATH;
@@ -185,7 +188,7 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
             expectNoPrecisionRegression(report.semantic);
             expectNoPrecisionRegression(report.semanticHybrid);
           }
-          if (tier === "311m") {
+          if (tier === "311m" || tier === "eg2-text") {
             expect(semanticReport.semantic.candidateMetrics.recall).toBeGreaterThanOrEqual(0.9);
           }
         }

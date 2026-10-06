@@ -94,10 +94,14 @@ rankings fused with RRF per CKB, then the existing cross-CKB fusion).
 
 ### EmbeddingGemma 2
 
-It had the best ranking quality in the spike and is Apache-2.0 licensed. It is
-deferred (#923) because no released Node runtime supports it yet:
-node-llama-cpp 3.22.1 rejects the architecture, and llama.cpp support merged on
-2026-10-06. It was also three to seventeen times slower than Granite on CPU.
+It had the best ranking quality in the spike and is Apache-2.0 licensed. It was
+first deferred because no released Node runtime supported it: node-llama-cpp
+3.22.1 rejected the architecture. A community ONNX export then made it usable
+on the same `onnxruntime-node` runtime.
+
+The #923 evaluation found higher precision than Granite 311M on the invented
+fixtures, but indexing was about 3.4 times slower on CPU. It ships as the
+optional experimental tier `eg2-text`, and Granite 311M stays the default.
 
 ### harrier-oss-v1-270m and EmbeddingGemma 1
 

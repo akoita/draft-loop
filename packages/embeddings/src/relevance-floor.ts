@@ -36,7 +36,7 @@ export function applySemanticRelevanceFloor<Hit extends { readonly score: number
 }
 
 /**
- * Floors calibrated against the real local models at their native dimensions (see #926 and
+ * Floors calibrated against the real local models at their native dimensions (see #926, #923, and
  * `docs/evaluation/semantic-retrieval-comparison.md`). The margin keeps the lexical-guard cases at
  * lexical precision; the minimum sits between the best off-topic score and the weakest relevant
  * top score observed for each tier.
@@ -46,6 +46,7 @@ export const defaultSemanticRelevanceFloors: Readonly<
 > = Object.freeze({
   "311m": Object.freeze({ maxMarginFromTop: 0.05, minimumScore: 0.8 }),
   "97m": Object.freeze({ maxMarginFromTop: 0.05, minimumScore: 0.75 }),
+  "eg2-text": Object.freeze({ maxMarginFromTop: 0.05, minimumScore: 0.68 }),
 });
 
 export function defaultSemanticRelevanceFloor(tier: GraniteEmbeddingTier): SemanticRelevanceFloor {
@@ -54,7 +55,7 @@ export function defaultSemanticRelevanceFloor(tier: GraniteEmbeddingTier): Seman
 
 /**
  * The calibrated floor for an embedding identity, or `undefined` when the identity is not a pinned
- * Granite model at its native dimensions (the calibration does not transfer to other models or to
+ * local embedding model at its native dimensions (the calibration does not transfer to other models or to
  * Matryoshka-truncated vectors).
  */
 export function semanticRelevanceFloorForIdentity(

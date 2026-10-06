@@ -80,7 +80,7 @@ describe("pinned default floors", () => {
     expect(Object.keys(defaultSemanticRelevanceFloors).sort()).toEqual(
       Object.keys(graniteEmbeddingModels).sort(),
     );
-    for (const tier of ["311m", "97m"] as const) {
+    for (const tier of ["311m", "97m", "eg2-text"] as const) {
       const floor = defaultSemanticRelevanceFloor(tier);
       expect(JSON.parse(JSON.stringify(floor))).toEqual(floor);
       expect(floor.maxMarginFromTop).toBeGreaterThan(0);

@@ -7,6 +7,7 @@ export type {
 } from "./model-manifest.js";
 export {
   defaultGraniteEmbeddingTier,
+  embeddingModelFiles,
   getGraniteEmbeddingModel,
   graniteEmbeddingModels,
 } from "./model-manifest.js";

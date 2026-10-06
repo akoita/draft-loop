@@ -5,7 +5,7 @@
  * owned by the main process, and the renderer only ever sees this label for it.
  */
 
-export const embeddingModelTiers = ["311m", "97m"] as const;
+export const embeddingModelTiers = ["311m", "97m", "eg2-text"] as const;
 export type EmbeddingModelTier = (typeof embeddingModelTiers)[number];
 export const defaultEmbeddingModelTier: EmbeddingModelTier = "311m";
 

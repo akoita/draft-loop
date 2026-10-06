@@ -6,7 +6,7 @@ export interface EmbeddingModelIdentity {
   readonly revision: string;
   readonly modelFileSha256: string;
   readonly dimensions: number;
-  readonly pooling: "cls";
+  readonly pooling: "cls" | "mean";
   readonly runtime: string;
 }
 

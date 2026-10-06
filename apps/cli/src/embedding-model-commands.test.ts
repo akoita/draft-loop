@@ -123,7 +123,7 @@ describe("embeddings CLI", () => {
     for (const command of ["status", "install", "remove"]) {
       const failure = await run(command, "--tier", "huge").catch((error: unknown) => error);
       expect(failure).toBeInstanceOf(CliUserError);
-      expect((failure as Error).message).toBe("--tier must be one of: 311m, 97m.");
+      expect((failure as Error).message).toBe("--tier must be one of: 311m, 97m, eg2-text.");
     }
     expect(service.install).not.toHaveBeenCalled();
   });

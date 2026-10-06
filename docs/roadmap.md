@@ -1560,8 +1560,9 @@ paraphrase-heavy set, against 0.81–0.92 for local embedding models.
 [ADR 0009](adr/0009-local-semantic-retrieval.md) records the choices:
 
 - **Model.** IBM Granite Embedding Multilingual R2, Apache-2.0: 311M by default
-  and 97M for low-resource machines. An EmbeddingGemma 2 ONNX export now
-  exists, so its re-evaluation (#923) can run on the same runtime.
+  and 97M for low-resource machines. EmbeddingGemma 2 (#923) is an optional
+  experimental tier. It is more precise on the invented fixtures but about 3.4
+  times slower to index on CPU.
 - **Runtime.** CPU-only `onnxruntime-node` in a new `packages/embeddings`
   package behind a model-agnostic port.
 - **Privacy.** The model is installed only on explicit user action with pinned

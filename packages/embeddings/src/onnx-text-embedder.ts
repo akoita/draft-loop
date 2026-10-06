@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { EmbeddingInputError, EmbeddingModelUnavailableError } from "./errors.js";
 import {
   defaultGraniteEmbeddingTier,
+  embeddingModelFiles,
   type GraniteEmbeddingModel,
   type GraniteEmbeddingTier,
-  type GraniteModelFile,
   getGraniteEmbeddingModel,
 } from "./model-manifest.js";
 import { loadOnnxRuntime } from "./onnx-runtime-loader.js";
@@ -22,7 +22,8 @@ import { truncateAndNormalize } from "./vector.js";
 export const onnxRuntimeIdentity = "onnxruntime-node@1.30.0";
 
 export interface OnnxFeed {
-  readonly data: BigInt64Array;
+  /** Token ids and masks are int64; empty modality features are float32. */
+  readonly data: BigInt64Array | Float32Array;
   readonly dims: readonly number[];
 }
 
@@ -82,7 +83,10 @@ const defaultSessionFactory: OnnxSessionFactory = async (modelPath, options) => 
     async run(feeds) {
       const tensors: Record<string, InstanceType<typeof ort.Tensor>> = {};
       for (const [name, feed] of Object.entries(feeds)) {
-        tensors[name] = new ort.Tensor("int64", feed.data, [...feed.dims]);
+        tensors[name] =
+          feed.data instanceof Float32Array
+            ? new ort.Tensor("float32", feed.data, [...feed.dims])
+            : new ort.Tensor("int64", feed.data, [...feed.dims]);
       }
       const outputs = await session.run(tensors);
       const result: Record<string, OnnxOutput> = {};
@@ -137,12 +141,7 @@ async function verifyModelFiles(
   model: GraniteEmbeddingModel,
   inspect: FileInspector,
 ): Promise<void> {
-  const files: readonly GraniteModelFile[] = [
-    model.files.model,
-    model.files.tokenizer,
-    model.files.tokenizerConfig,
-  ];
-  for (const file of files) {
+  for (const file of embeddingModelFiles(model)) {
     const found = await inspect(file.path);
     if (found === undefined) {
       throw new EmbeddingModelUnavailableError("missing-file", file.path);
@@ -151,6 +150,27 @@ async function verifyModelFiles(
       throw new EmbeddingModelUnavailableError("size-mismatch", file.path);
     }
   }
+}
+
+/**
+ * Mean of the first `dimensions` features over the real (unpadded) token positions. Padding sits
+ * after the real tokens, so only the first `tokenCount` positions of the row contribute.
+ */
+function meanPool(
+  data: ArrayLike<number>,
+  rowStart: number,
+  width: number,
+  ids: readonly number[],
+  dimensions: number,
+): number[] {
+  const sum = new Array<number>(dimensions).fill(0);
+  for (let position = 0; position < ids.length; position += 1) {
+    const offset = rowStart + position * width;
+    for (let feature = 0; feature < dimensions; feature += 1) {
+      sum[feature] = (sum[feature] as number) + (data[offset + feature] as number);
+    }
+  }
+  return sum.map((value) => value / ids.length);
 }
 
 function prefixFor(model: GraniteEmbeddingModel, role: EmbeddingRole): string {
@@ -247,10 +267,14 @@ export async function createOnnxTextEmbedder(
       });
     });
     const dims = [batch.length, longest];
-    const outputs = await session.run({
+    const feeds: Record<string, OnnxFeed> = {
       input_ids: { data: inputIds, dims },
       attention_mask: { data: attentionMask, dims },
-    });
+    };
+    for (const input of model.emptyFeatureInputs ?? []) {
+      feeds[input.name] = { data: new Float32Array(0), dims: [0, input.width] };
+    }
+    const outputs = await session.run(feeds);
     const hidden = outputs.last_hidden_state;
     if (hidden === undefined) {
       throw new Error("Embedding model did not return last_hidden_state.");
@@ -267,8 +291,11 @@ export async function createOnnxTextEmbedder(
     const vectors: Float32Array[] = [];
     for (let row = 0; row < batch.length; row += 1) {
       const start = row * longest * width;
-      const cls = Array.prototype.slice.call(hidden.data, start, start + width) as number[];
-      vectors.push(truncateAndNormalize(cls, dimensions));
+      const pooled =
+        model.pooling === "mean"
+          ? meanPool(hidden.data, start, width, batch[row] as number[], dimensions)
+          : (Array.prototype.slice.call(hidden.data, start, start + width) as number[]);
+      vectors.push(truncateAndNormalize(pooled, dimensions));
     }
     return vectors;
   }
