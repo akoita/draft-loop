@@ -19,6 +19,7 @@ import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
 import { registerModelProfileSelectionCommands } from "./model-profile-selection-commands.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
+import { registerRetrievalModeCommands } from "./retrieval-mode-commands.js";
 import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
   type AddKnowledgeSourceDirectoryMembersResult,
@@ -61,10 +62,12 @@ import {
   type WorkspaceDescriptor,
   type WorkspaceEvidenceModeService,
   type WorkspaceModelProfileSelectionService,
+  type WorkspaceRetrievalModeService,
   type WritingPolicyVersionMetadata,
   type WritingPolicyVersionView,
   workspaceEvidenceModeService,
   workspaceModelProfileSelectionService,
+  workspaceRetrievalModeService,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -248,6 +251,8 @@ export interface CliDependencies {
   readonly sensitivityService?: SourceSensitivityService;
   /** The workspace evidence-mode boundary; replaced in tests. */
   readonly evidenceModeService?: WorkspaceEvidenceModeService;
+  /** The workspace retrieval-mode boundary; replaced in tests. */
+  readonly retrievalModeService?: WorkspaceRetrievalModeService;
   /** The workspace applied model-profile boundary; replaced in tests. */
   readonly modelProfileSelectionService?: WorkspaceModelProfileSelectionService;
   /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
@@ -2784,6 +2789,13 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,
+    io,
+  );
+  registerRetrievalModeCommands(
+    command,
+    dependencies.retrievalModeService ?? workspaceRetrievalModeService,
+    dependencies.embeddingModelServiceFactory ??
+      ((modelRoot) => createEmbeddingModelService({ modelRoot })),
     io,
   );
 
