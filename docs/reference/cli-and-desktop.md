@@ -687,11 +687,10 @@ Rules are saved as immutable versions; every add or remove writes a new
 version, and a knowledge base with no saved version has no rules.
 
 > **Where rules apply.** Canonical profile derivation and review runs use the
-> knowledge base's current rules and send neither `never-share` nor
-> `sensitive` sections to a provider. `sensitive` will become shareable once a
-> workspace can consent to it
-> ([#892](https://github.com/akoita/draft-loop/issues/892)). Markdown only:
-> other sources are sent unchanged.
+> knowledge base's current rules. `never-share` sections are never sent to a
+> provider. `sensitive` sections are withheld too, unless the workspace has
+> explicitly allowed them (see [Sensitive-section consent](#sensitive-section-consent)).
+> Markdown only: other sources are sent unchanged.
 >
 > - **Derivation** removes excluded sections before extraction and drops any
 >   fact whose evidence quote is not found in allowed source text, which is
@@ -752,6 +751,37 @@ is rejected. `preview` prints each section's heading path, tier, matching rule
 ids and character count for the latest version of the source (`--version` picks
 another) and omits section text unless you pass `--text`. `list`, `add`,
 `remove`, `suggestions`, `adopt` and `preview` accept `--json`.
+
+#### Sensitive-section consent
+
+A workspace can allow `sensitive` sections, for example contact details for a
+CV header, to be sent to providers. The default is off. The setting is stored
+per workspace in `.draft-loop/sensitive-knowledge-consent.json`, separate from
+`workspace.json`.
+
+- **Never-share is unaffected.** `never-share` sections are never sent,
+  whether consent is on or off.
+- **One setting for every send.** Profile derivation reads the consent once per
+  derivation. A run reads it once on start and once on resume, and uses the same
+  setting for retrieval and for the check that refuses outgoing requests.
+- **Fails closed.** A missing file means consent is off. A corrupt or invalid
+  file stops the derivation or run before any retrieval or provider request,
+  with a message that tells you to reset it with `--deny`.
+- **Counts only.** The read form prints section and character counts per
+  selected knowledge base, now and under the opposite setting, but never
+  headings or text.
+
+```sh
+pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace
+pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace --allow
+pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace --deny
+```
+
+Without a flag the command only prints the state. `--allow` and `--deny` are
+mutually exclusive, and all forms accept `--json`. The output always states that
+`never-share` sections are never sent and whether `sensitive` sections are sent.
+The desktop preflight control for this setting arrives with
+[#897](https://github.com/akoita/draft-loop/issues/897); until then, use the CLI.
 
 ### Desktop knowledge operations
 

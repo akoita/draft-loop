@@ -45,9 +45,11 @@ import {
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
   type RunWritingPolicyProjection,
   runPilot,
+  type SensitiveKnowledgeConsentService,
   type SourceSensitivityService,
   type StatusCommand,
   safeErrorMessage,
+  sensitiveKnowledgeConsentService,
   sourceSensitivityService,
   type WorkspaceDescriptor,
   type WritingPolicyVersionMetadata,
@@ -233,6 +235,8 @@ export interface CliDependencies {
   readonly knowledgeService?: CandidateKnowledgeStoreService;
   /** The source-sensitivity rule boundary; replaced in tests. */
   readonly sensitivityService?: SourceSensitivityService;
+  /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
+  readonly consentService?: SensitiveKnowledgeConsentService;
   /** Where status lines are written; replaced in tests. */
   readonly io?: ApplicationIo;
 }
@@ -1361,6 +1365,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   const service = dependencies.service ?? applicationService;
   const candidateKnowledge = dependencies.knowledgeService ?? knowledgeService;
   const sensitivity = dependencies.sensitivityService ?? sourceSensitivityService;
+  const consent = dependencies.consentService ?? sensitiveKnowledgeConsentService;
   const io = dependencies.io ?? stdoutIo;
 
   /** Reports the recorded independence claim, including that there is none. */
@@ -2747,7 +2752,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       );
     });
 
-  registerSensitivityCommands(knowledge, sensitivity, io);
+  registerSensitivityCommands(knowledge, sensitivity, io, consent);
 
   const lifecycle = knowledge
     .command("lifecycle")

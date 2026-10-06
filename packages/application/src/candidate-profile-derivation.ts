@@ -7,6 +7,7 @@ import {
   maximumCanonicalCandidateProfileIssueCount,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
 } from "@draft-loop/domain";
+import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { ingestBytes as defaultIngestBytes, type IngestionResult } from "@draft-loop/ingestion";
 import type {
   CanonicalCandidateProfileIssue,
@@ -60,6 +61,11 @@ export interface DeriveCanonicalCandidateProfileCommand {
   readonly createdAt?: string;
   readonly signal?: AbortSignal;
   readonly onProgress?: CanonicalProfileExtractionProgressListener;
+  /**
+   * Sensitivity tiers withheld from extraction. Defaults to the consent-off tiers (`never-share`
+   * and `sensitive`); a workspace that allowed sensitive sections passes its own set.
+   */
+  readonly excludedSensitivityTiers?: ReadonlySet<SourceSensitivityTier>;
 }
 
 /** Optional derivation fields forwarded from the selection binding and the caller's command. */
@@ -248,6 +254,7 @@ async function materializeSelection(
   selections: readonly CreateKnowledgeSelectionSnapshotSelection[],
   openKnowledgeStore: (root: string) => Promise<CandidateKnowledgeStoreHandle>,
   ingestBytes: typeof defaultIngestBytes,
+  excludedSensitivityTiers: ReadonlySet<SourceSensitivityTier> | undefined,
 ): Promise<MaterializationResult> {
   const materials: CanonicalCandidateProfileExtractionMaterial[] = [];
   const failedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
@@ -334,6 +341,7 @@ async function materializeSelection(
           source.text,
           source.mediaType,
           sensitivityRules?.rules,
+          excludedSensitivityTiers,
         );
         if (filtered.status === "fully-excluded") {
           fullyExcludedReferences.push(reference);
@@ -448,6 +456,7 @@ export function createCanonicalCandidateProfileDerivationService(
         selections,
         openKnowledgeStore,
         ingestBytes,
+        command.excludedSensitivityTiers,
       );
       const refreshedSnapshot =
         await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
