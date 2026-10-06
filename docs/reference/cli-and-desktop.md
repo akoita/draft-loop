@@ -851,6 +851,8 @@ and keeps paths local.
   runtime-only CLI input or the native desktop picker and returns only status
   and the binding timestamp. Logical retirement is idempotent, preserves
   evidence, and requires confirmation. Retired sources cannot be reactivated.
+  The knowledge base stays usable: a retired source is excluded from runs and
+  profiles, and its evidence is kept.
 
 - **Directory intake.** CLI users choose a local path; the desktop offers a
   native directory picker or **Import workspace candidate sources**. The latter

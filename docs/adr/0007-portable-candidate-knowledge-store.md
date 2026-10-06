@@ -64,6 +64,9 @@ preserves metadata, bytes, bindings, observations, and journal evidence. It is
 not physical deletion, index cleanup, or reactivation; no reactivation operation
 is defined by this decision.
 
+Selection snapshots omit retired sources, and still fail on any other blocked
+source or when no ready source remains.
+
 A read-only lifecycle-readiness projection evaluates one CKB from one
 consistent persisted snapshot. It returns only CKB, source, and latest-version
 identities; bounded `ready`/`blocked` state and reasons; safe lifecycle
