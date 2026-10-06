@@ -32,6 +32,10 @@ import {
 import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
 import { candidateKnowledgeSearchText } from "./candidate-knowledge-query.js";
 import {
+  type CandidateKnowledgeSensitivityExclusions,
+  createCandidateKnowledgeSensitivityExclusions,
+} from "./candidate-knowledge-sensitivity-exclusion.js";
+import {
   candidatePriorityEvidenceChunkLimit,
   candidatePriorityEvidenceQuery,
   candidatePriorityEvidenceQueryLimit,
@@ -205,6 +209,8 @@ export function candidateKnowledgeRuntimeRetrieval(
   storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace">,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
+  /** Withheld-section filter; defaults to the one built from the knowledge base's current rules. */
+  exclusions?: CandidateKnowledgeSensitivityExclusions,
 ):
   | {
       readonly port: RetrievalPort;
@@ -216,10 +222,15 @@ export function candidateKnowledgeRuntimeRetrieval(
   if (binding === undefined || selection === undefined) return undefined;
 
   const service = createCandidateKnowledgeStoreService();
-  const loadPinnedSourceReferences = createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
+  const withheld =
+    exclusions ?? createCandidateKnowledgeSensitivityExclusions(binding.entries, selection);
+  const loadAllPinnedSourceReferences = createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
     binding.entries,
     selection,
   );
+  // Chunks in withheld sections are dropped here and below, before any selection or tracing.
+  const loadPinnedSourceReferences: typeof loadAllPinnedSourceReferences = async (...args) =>
+    withheld.filterChunks(await loadAllPinnedSourceReferences(...args));
   const loadPinnedSourceChunks = (hits: readonly CandidateKnowledgeLexicalHit[]) =>
     loadPinnedSourceReferences(hits.map((hit) => hit.metadata.provenance));
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
@@ -232,18 +243,20 @@ export function candidateKnowledgeRuntimeRetrieval(
     const pending = (async () => {
       const startedAt = Date.now();
       const operationId = `ckb-retrieval-${randomUUID()}`;
-      const result = await service.queryCandidateKnowledge({
-        selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
-          storeRoot,
-          knowledgeBaseId,
-        })),
-        ...(binding.combinationApproved === undefined
-          ? {}
-          : { combinationApproved: binding.combinationApproved }),
-        purpose: "achievement-recall",
-        query: searchText,
-        limit,
-      });
+      const result = await withheld.filterResult(
+        await service.queryCandidateKnowledge({
+          selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+            storeRoot,
+            knowledgeBaseId,
+          })),
+          ...(binding.combinationApproved === undefined
+            ? {}
+            : { combinationApproved: binding.combinationApproved }),
+          purpose: "achievement-recall",
+          query: searchText,
+          limit,
+        }),
+      );
       const createdAt = timestamp();
       const queryChecksum = createHash("sha256").update(searchText, "utf8").digest("hex");
       const latencyMs = Math.max(0, Date.now() - startedAt);

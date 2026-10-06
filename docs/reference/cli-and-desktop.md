@@ -686,19 +686,27 @@ Markdown sources into three tiers: `normal`, `sensitive`, and `never-share`.
 Rules are saved as immutable versions; every add or remove writes a new
 version, and a knowledge base with no saved version has no rules.
 
-> **Where rules apply.** Canonical profile derivation uses the knowledge base's
-> current rules and sends neither `never-share` nor `sensitive` sections to the
-> provider. `sensitive` will become shareable once a workspace can consent to it
-> ([#892](https://github.com/akoita/draft-loop/issues/892)). Runs are not
-> filtered yet ([#891](https://github.com/akoita/draft-loop/issues/891)), so
-> rules have no effect on them today.
+> **Where rules apply.** Canonical profile derivation and review runs use the
+> knowledge base's current rules and send neither `never-share` nor
+> `sensitive` sections to a provider. `sensitive` will become shareable once a
+> workspace can consent to it
+> ([#892](https://github.com/akoita/draft-loop/issues/892)). Markdown only:
+> other sources are sent unchanged.
 >
-> Derivation removes excluded sections before extraction and drops any fact
-> whose evidence quote is not found in allowed source text, which is reported in
-> the profile's dropped-fact warning. A source whose sections are all excluded
-> is skipped, with a warning issue on the profile. Markdown only: other sources
-> are sent unchanged. The command result lists the rules version used per
-> knowledge base; the profile file does not store it.
+> - **Derivation** removes excluded sections before extraction and drops any
+>   fact whose evidence quote is not found in allowed source text, which is
+>   reported in the profile's dropped-fact warning. A source whose sections are
+>   all excluded is skipped, with a warning issue on the profile. The command
+>   result lists the rules version used per knowledge base; the profile file
+>   does not store it.
+> - **Runs** drop every retrieved chunk that overlaps an excluded section
+>   (any overlap, so a chunk that straddles a boundary is dropped) before it
+>   is selected, traced or sent, on every retrieval path. A second check
+>   refuses any author or critic request that still contains a distinctive
+>   line of an excluded section, without calling the provider and without
+>   quoting the text. If the rules or source text cannot be read, the run
+>   stops instead of sending unfiltered material. A run does not record the
+>   rules version yet.
 
 How rules classify a source:
 
