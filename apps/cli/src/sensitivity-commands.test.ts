@@ -8,9 +8,11 @@ import {
   CliUserError,
   createCandidateKnowledgeStoreService,
   createSourceSensitivityService,
+  type SensitiveKnowledgeConsentService,
   type SourceSensitivityPreview,
   type SourceSensitivityRulesView,
   type SourceSensitivityService,
+  type WithheldKnowledgeCounts,
 } from "./workflow.js";
 
 const rulesView: SourceSensitivityRulesView = {
@@ -43,8 +45,36 @@ const preview: SourceSensitivityPreview = {
   ],
 };
 
+const noCounts = { sections: 0, characters: 0 };
+const neverShareCounts = { sections: 1, characters: 87 };
+const sensitiveCounts = { sections: 2, characters: 150 };
+const bothCounts = { sections: 3, characters: 237 };
+
+function consentCounts(allowSensitive: boolean): WithheldKnowledgeCounts {
+  const totals = {
+    neverShare: neverShareCounts,
+    sensitive: sensitiveCounts,
+    withheldNow: allowSensitive ? neverShareCounts : bothCounts,
+    withheldIfToggled: allowSensitive ? bothCounts : neverShareCounts,
+  };
+  return {
+    allowSensitive,
+    consentUpdatedAt: "2030-01-02T03:04:05.000Z",
+    knowledgeBases: [{ storeId: "store-1", knowledgeBaseId: "kb-1", ...totals }],
+    total: totals,
+  };
+}
+
 function setup() {
   const lines: string[] = [];
+  let allowSensitive = false;
+  const consentService = {
+    countWithheldKnowledge: vi.fn(async () => consentCounts(allowSensitive)),
+    setSensitiveKnowledgeConsent: vi.fn(async (_root: string, allow: boolean) => {
+      allowSensitive = allow;
+      return { allowSensitive: allow, updatedAt: "2030-01-02T03:04:05.000Z" };
+    }),
+  } satisfies SensitiveKnowledgeConsentService;
   const service = {
     listSensitivityRules: vi.fn(async () => rulesView),
     addSensitivityRule: vi.fn(async () => rulesView),
@@ -62,12 +92,13 @@ function setup() {
   const cli = createCli({
     service: {} as ApplicationService,
     sensitivityService: service,
+    consentService,
     io: { write: (line: string) => lines.push(line) },
   });
   cli.exitOverride();
   const run = (...args: string[]) =>
     cli.parseAsync(["node", "draft-loop", "knowledge", "sensitivity", ...args]);
-  return { service, lines, run };
+  return { service, consentService, lines, run };
 }
 
 describe("knowledge sensitivity CLI", () => {
@@ -204,6 +235,70 @@ describe("knowledge sensitivity CLI", () => {
       includeText: true,
     });
     expect(lines).toContain("SYNTHETIC BODY");
+  });
+
+  it("prints the consent state and counts without changing anything", async () => {
+    const { consentService, lines, run } = setup();
+    await run("consent", "workspace");
+    expect(consentService.setSensitiveKnowledgeConsent).not.toHaveBeenCalled();
+    expect(consentService.countWithheldKnowledge).toHaveBeenCalledWith("workspace");
+    expect(lines).toEqual([
+      "sensitive-knowledge consent: denied (updated 2030-01-02T03:04:05.000Z)",
+      "never-share sections are never sent to a provider.",
+      "sensitive sections are NOT sent to a provider.",
+      "never-share in the selected knowledge: 1 sections, 87 characters",
+      "sensitive in the selected knowledge: 2 sections, 150 characters",
+      "withheld now: 3 sections, 237 characters",
+      "if you allow sensitive sections, withheld would be: 1 sections, 87 characters",
+      "  store store-1 knowledge-base kb-1: never-share 1 sections, 87 characters; sensitive 2 sections, 150 characters",
+    ]);
+  });
+
+  it("allows and denies sensitive sections explicitly and says what is sent", async () => {
+    const { consentService, lines, run } = setup();
+    await run("consent", "workspace", "--allow");
+    expect(consentService.setSensitiveKnowledgeConsent).toHaveBeenLastCalledWith("workspace", true);
+    expect(lines).toContain("sensitive sections ARE sent to a provider.");
+    expect(lines).toContain("never-share sections are never sent to a provider.");
+    expect(lines).toContain("withheld now: 1 sections, 87 characters");
+    expect(lines).toContain(
+      "if you deny sensitive sections, withheld would be: 3 sections, 237 characters",
+    );
+    lines.length = 0;
+    await run("consent", "workspace", "--deny");
+    expect(consentService.setSensitiveKnowledgeConsent).toHaveBeenLastCalledWith(
+      "workspace",
+      false,
+    );
+    expect(lines).toContain("sensitive sections are NOT sent to a provider.");
+  });
+
+  it("prints the consent view as JSON and rejects --allow with --deny", async () => {
+    const { consentService, lines, run } = setup();
+    await run("consent", "workspace", "--json");
+    expect(JSON.parse(lines[0] ?? "")).toEqual(consentCounts(false));
+    await expect(run("consent", "workspace", "--allow", "--deny")).rejects.toThrow(
+      /at most one of --allow or --deny/u,
+    );
+    expect(consentService.setSensitiveKnowledgeConsent).not.toHaveBeenCalled();
+  });
+
+  it("states that consent is unset when no consent has been recorded", async () => {
+    const { consentService, lines, run } = setup();
+    consentService.countWithheldKnowledge.mockResolvedValueOnce({
+      ...consentCounts(false),
+      consentUpdatedAt: null,
+      knowledgeBases: [],
+      total: {
+        neverShare: noCounts,
+        sensitive: noCounts,
+        withheldNow: noCounts,
+        withheldIfToggled: noCounts,
+      },
+    });
+    await run("consent", "workspace");
+    expect(lines[0]).toBe("sensitive-knowledge consent: not set (sensitive sections are not sent)");
+    expect(lines).toContain("withheld now: 0 sections, 0 characters");
   });
 
   it("works end to end against a real store", async () => {

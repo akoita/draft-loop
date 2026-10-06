@@ -2,11 +2,6 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
-  createArtifact,
-  createArtifactVersion,
-  type NewArtifactInput,
-} from "@draft-loop/artifacts";
-import {
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
@@ -33,7 +28,6 @@ import {
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
-  type AgentExecution,
   type AuthorAgent,
   type CriticAgent,
   type Critique,
@@ -59,7 +53,6 @@ import {
 } from "@draft-loop/rendering";
 import {
   contextSnapshotSchema,
-  type DraftArtifact,
   opportunityExtractionProposalJsonSchema,
 } from "@draft-loop/schemas";
 import { redactText } from "@draft-loop/security";
@@ -78,7 +71,10 @@ import {
   candidateKnowledgeEvidenceSourceId,
   candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
-import { candidateKnowledgeRequestGuard } from "./candidate-knowledge-sensitivity-exclusion.js";
+import {
+  type CandidateKnowledgeSensitivityExclusions,
+  candidateKnowledgeRequestGuard,
+} from "./candidate-knowledge-sensitivity-exclusion.js";
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
@@ -136,6 +132,7 @@ import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
 import { type LifecycleOptions, lifecycleDecisionRecord } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
+import { fixtureAgents } from "./local-fixture-agents.js";
 import {
   createProviderAdapter,
   type ProviderClientFactories,
@@ -171,6 +168,8 @@ import {
   writeRunPreflight,
 } from "./run-model-profiles.js";
 import { modelConfiguration } from "./run-model-selection.js";
+import { runSensitivityExclusions } from "./run-sensitivity-exclusions.js";
+import { excludedSensitivityTiersForWorkspace } from "./sensitive-knowledge-consent.js";
 import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
 import {
   assertModelCompaniesMatch,
@@ -1633,182 +1632,6 @@ function budget(config: WorkspaceConfig): RunBudget {
   };
 }
 
-function execution<T>(output: T, provider: string, modelId: string): AgentExecution<T> {
-  const serialized = JSON.stringify(output);
-  const digest = createHash("sha256").update(serialized, "utf8").digest("hex");
-  return {
-    output,
-    provider,
-    modelId,
-    providerRequestId: null,
-    outputChecksum: digest,
-    inputTokens: 0,
-    outputTokens: 0,
-    totalTokens: 0,
-    estimatedUsd: 0,
-    completedAt: timestamp(),
-  };
-}
-
-function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null): DraftArtifact {
-  const version = current === null ? 1 : current.version + 1;
-  const suffix = `${version}-${context.id}`;
-  const source = context.evidenceManifest[0];
-  if (source === undefined) throw new CliUserError("At least one evidence source is required.");
-  const requirementText = context.requirements.map((requirement) => requirement.text).join("; ");
-  const summarySectionId = `summary-${suffix}`;
-  const experienceSectionId = `experience-${suffix}`;
-  const educationSectionId = `education-${suffix}`;
-  const skillsSectionId = `skills-${suffix}`;
-  const summaryBlockId = `summary-block-${suffix}`;
-  const experienceBlockId = `experience-block-${suffix}`;
-  const educationBlockId = `education-block-${suffix}`;
-  const skillsBlockId = `skills-block-${suffix}`;
-  const summaryClaimId = `summary-claim-${suffix}`;
-  const summaryText = `Profile aligned to candidate-provided materials and requirements: ${requirementText}`;
-  const input: NewArtifactInput = {
-    id: `artifact-${suffix}`,
-    createdAt: timestamp(),
-    language: context.language,
-    sections: [
-      {
-        id: summarySectionId,
-        title: "Summary",
-        kind: "summary",
-        order: 0,
-        blocks: [
-          { id: summaryBlockId, type: "paragraph", text: summaryText, claimIds: [summaryClaimId] },
-        ],
-      },
-      {
-        id: experienceSectionId,
-        title: "Experience",
-        kind: "experience",
-        order: 1,
-        blocks: [
-          {
-            id: experienceBlockId,
-            type: "bullet",
-            text: "Candidate source material is retained locally and should be reviewed before approval.",
-            claimIds: [],
-          },
-        ],
-      },
-      {
-        id: educationSectionId,
-        title: "Education",
-        kind: "education",
-        order: 2,
-        blocks: [
-          {
-            id: educationBlockId,
-            type: "bullet",
-            text: "Education entries are taken from candidate-provided materials and are not inferred.",
-            claimIds: [],
-          },
-        ],
-      },
-      {
-        id: skillsSectionId,
-        title: "Skills",
-        kind: "skills",
-        order: 3,
-        blocks: [
-          {
-            id: skillsBlockId,
-            type: "bullet",
-            text: "Skills are listed only where candidate-provided materials support them.",
-            claimIds: [],
-          },
-        ],
-      },
-    ],
-    claims: [
-      {
-        id: summaryClaimId,
-        text: summaryText,
-        sectionId: summarySectionId,
-        blockId: summaryBlockId,
-        substantive: true,
-        status: "unverified",
-        evidence: [
-          {
-            sourcePath: source.path,
-            sourceChecksum: source.checksum,
-            excerpt: "Local evidence source",
-          },
-        ],
-      },
-    ],
-    decisions: [],
-  };
-  return current === null ? createArtifact(input) : createArtifactVersion(current, input);
-}
-function fixtureAgents(
-  config: WorkspaceConfig,
-  context: ContextSnapshot,
-): {
-  readonly author: AuthorAgent;
-  readonly critic: CriticAgent;
-} {
-  const authorIdentity = runModelIdentity(
-    { company: config.authorCompany, modelId: config.authorModel },
-    context.modelConfiguration.author,
-  );
-  const criticIdentity = runModelIdentity(
-    { company: config.criticCompany, modelId: config.criticModel },
-    context.modelConfiguration.critic,
-  );
-  const waitForFixtureStep = (signal?: AbortSignal): Promise<void> =>
-    new Promise((resolveDelay, reject) => {
-      if (signal?.aborted === true) {
-        reject(signal.reason);
-        return;
-      }
-      const timer = setTimeout(() => {
-        signal?.removeEventListener("abort", onAbort);
-        resolveDelay();
-      }, 500);
-      const onAbort = () => {
-        clearTimeout(timer);
-        reject(signal?.reason);
-      };
-      signal?.addEventListener("abort", onAbort, { once: true });
-    });
-  return {
-    author: {
-      execute: async ({ currentArtifact, signal }) => {
-        await waitForFixtureStep(signal);
-        return execution(
-          fixtureArtifact(context, currentArtifact),
-          authorIdentity.company,
-          authorIdentity.modelId,
-        );
-      },
-    },
-    critic: {
-      execute: async ({ artifact, signal }) => {
-        await waitForFixtureStep(signal);
-        const firstClaim = artifact.claims[0];
-        const findings: Critique["findings"] =
-          artifact.version === 1 && firstClaim !== undefined
-            ? [
-                {
-                  id: "fixture-unsupported-claim",
-                  code: "unsupported-claim",
-                  category: "factuality",
-                  severity: "error",
-                  message:
-                    "Synthetic pilot critic requires the lead claim to be compared with candidate-provided materials.",
-                  claimId: firstClaim.id,
-                },
-              ]
-            : [];
-        return execution<Critique>({ findings }, criticIdentity.company, criticIdentity.modelId);
-      },
-    },
-  };
-}
 const critiqueOutputSchema: JsonObject = {
   type: "object",
   additionalProperties: false,
@@ -1896,6 +1719,7 @@ function providerAgents(
   userSessionTimeoutMs?: number,
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
+  withheld?: CandidateKnowledgeSensitivityExclusions,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const authorIdentity = runModelIdentity(
     { company: config.authorCompany, modelId: config.authorModel },
@@ -1907,7 +1731,7 @@ function providerAgents(
   );
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
-  const refuseWithheldText = candidateKnowledgeRequestGuard(config, context);
+  const refuseWithheldText = candidateKnowledgeRequestGuard(config, context, withheld);
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
     const adapter = await createProviderAdapter(
       config,
@@ -1998,6 +1822,7 @@ function engine(
   retrieval?: RetrievalPort,
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
+  withheld?: CandidateKnowledgeSensitivityExclusions,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
@@ -2013,6 +1838,7 @@ function engine(
           userSessionTimeoutMs,
           authorProposalCaptureDirectory,
           localClaudeCategoryCaptureParent,
+          withheld,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
@@ -2255,7 +2081,13 @@ async function createRun(
       }
     }
     await saveInputs(storage, config, inputs);
-    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(storage, config, inputs.context);
+    const withheld = await runSensitivityExclusions(root, config, inputs.context);
+    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(
+      storage,
+      config,
+      inputs.context,
+      withheld,
+    );
     const retrieval =
       candidateRetrieval === undefined
         ? await storage.inspectEvidenceRetrieval(inputs.context.jobDescription, {
@@ -2282,6 +2114,7 @@ async function createRun(
       candidateRetrieval?.port,
       options.authorProposalCaptureDirectory,
       options.localClaudeCategoryCaptureParent,
+      withheld,
     );
     const request = {
       runId,
@@ -2345,7 +2178,13 @@ export async function resumeRun(
       );
     }
     await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
-    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(storage, config, context);
+    const withheld = await runSensitivityExclusions(root, config, context);
+    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(
+      storage,
+      config,
+      context,
+      withheld,
+    );
     const runEngine = engine(
       storage,
       config,
@@ -2360,6 +2199,7 @@ export async function resumeRun(
       candidateRetrieval?.port,
       options.authorProposalCaptureDirectory,
       options.localClaudeCategoryCaptureParent,
+      withheld,
     );
     writeRunPreflight(config, io.write, budget(config), context);
     const snapshot = await runEngine.resume(runId, {
@@ -3208,6 +3048,8 @@ export function createLocalApplicationDriver(
       if (binding === undefined || validatedSelection === undefined) {
         throw new CliUserError(canonicalCandidateProfileDerivationErrorMessage);
       }
+      // Read before any provider work: an invalid consent file stops the derivation here.
+      const excludedSensitivityTiers = await excludedSensitivityTiersForWorkspace(root);
       const storage = await openStorage(root);
       try {
         await ensureWorkspaceRecord(storage, config.id);
@@ -3228,6 +3070,7 @@ export function createLocalApplicationDriver(
             knowledgeBaseId,
           })),
           allowProviderData: true,
+          excludedSensitivityTiers,
           ...canonicalProfileDerivationOptions(binding, command),
         });
       } finally {

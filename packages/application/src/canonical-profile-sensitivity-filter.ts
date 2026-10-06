@@ -9,14 +9,15 @@ import type {
 } from "@draft-loop/schemas";
 
 import { parseCanonicalCandidateProfileExtractionProposal } from "./candidate-profile-proposal-validation.js";
+import { excludedSensitivityTiersForConsent } from "./sensitive-knowledge-consent.js";
 
 /**
- * Sensitivity tiers withheld from canonical profile derivation. Workspace consent (#892) does not
- * exist yet, so `sensitive` is excluded alongside `never-share`. Allowing consented sensitive
- * sections later means removing `sensitive` from this set (or passing a narrower set per call).
+ * Sensitivity tiers withheld from canonical profile derivation when the workspace has not allowed
+ * sensitive sections: the consent-off policy. A workspace that consented passes
+ * `excludedSensitivityTiersForConsent(true)` instead.
  */
 export const canonicalProfileExcludedSensitivityTiers: ReadonlySet<SourceSensitivityTier> =
-  new Set<SourceSensitivityTier>(["never-share", "sensitive"]);
+  excludedSensitivityTiersForConsent(false);
 
 /** Joins kept sections that were separated by a removed section. */
 const removedSectionJoin = "\n\n";

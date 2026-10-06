@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import {
   type ApplicationIo,
   CliUserError,
+  type SensitiveKnowledgeConsentService,
   type SourceSensitivityPreview,
   type SourceSensitivityRule,
   type SourceSensitivityRuleMatch,
@@ -9,6 +10,8 @@ import {
   type SourceSensitivityService,
   type SourceSensitivityTier,
   sourceSensitivityTiers,
+  type WithheldKnowledgeCounts,
+  type WithheldTierCounts,
 } from "./workflow.js";
 
 const storeRootArgument = "local candidate-knowledge store directory";
@@ -62,14 +65,47 @@ function writePreview(io: ApplicationIo, preview: SourceSensitivityPreview): voi
   }
 }
 
+function countText(counts: WithheldTierCounts): string {
+  return `${counts.sections} sections, ${counts.characters} characters`;
+}
+
+/** States plainly what the workspace sends and withholds, with content-free counts. */
+function writeConsent(io: ApplicationIo, view: WithheldKnowledgeCounts): void {
+  io.write(
+    view.consentUpdatedAt === null
+      ? "sensitive-knowledge consent: not set (sensitive sections are not sent)"
+      : `sensitive-knowledge consent: ${view.allowSensitive ? "allowed" : "denied"} (updated ${view.consentUpdatedAt})`,
+  );
+  io.write("never-share sections are never sent to a provider.");
+  io.write(
+    view.allowSensitive
+      ? "sensitive sections ARE sent to a provider."
+      : "sensitive sections are NOT sent to a provider.",
+  );
+  const { total } = view;
+  io.write(`never-share in the selected knowledge: ${countText(total.neverShare)}`);
+  io.write(`sensitive in the selected knowledge: ${countText(total.sensitive)}`);
+  io.write(`withheld now: ${countText(total.withheldNow)}`);
+  io.write(
+    `if you ${view.allowSensitive ? "deny" : "allow"} sensitive sections, withheld would be: ${countText(total.withheldIfToggled)}`,
+  );
+  for (const base of view.knowledgeBases) {
+    io.write(
+      `  store ${base.storeId} knowledge-base ${base.knowledgeBaseId}: never-share ${countText(base.neverShare)}; sensitive ${countText(base.sensitive)}`,
+    );
+  }
+}
+
 /**
  * Registers `knowledge sensitivity` on the knowledge command. The commands
- * edit and preview rules only; enforcement in provider requests is separate.
+ * edit and preview rules and manage the workspace consent for sensitive sections;
+ * enforcement in provider requests lives in the application layer.
  */
 export function registerSensitivityCommands(
   knowledge: Command,
   service: SourceSensitivityService,
   io: ApplicationIo,
+  consentService: SensitiveKnowledgeConsentService,
 ): void {
   const sensitivity = knowledge
     .command("sensitivity")
@@ -236,6 +272,29 @@ export function registerSensitivityCommands(
         });
         if (options.json === true) io.write(JSON.stringify(preview));
         else writePreview(io, preview);
+      },
+    );
+
+  sensitivity
+    .command("consent")
+    .description(
+      "Show or set whether this workspace may send sensitive sections to providers; never-share sections are never sent",
+    )
+    .argument("<workspace>", "workspace directory")
+    .option("--allow", "allow sensitive sections to be sent to providers")
+    .option("--deny", "withhold sensitive sections from providers (the default)")
+    .option("--json", "print machine-readable JSON")
+    .action(
+      async (workspace: string, options: { allow?: boolean; deny?: boolean; json?: boolean }) => {
+        if (options.allow === true && options.deny === true) {
+          throw new CliUserError("Give at most one of --allow or --deny.");
+        }
+        if (options.allow === true || options.deny === true) {
+          await consentService.setSensitiveKnowledgeConsent(workspace, options.allow === true);
+        }
+        const view = await consentService.countWithheldKnowledge(workspace);
+        if (options.json === true) io.write(JSON.stringify(view));
+        else writeConsent(io, view);
       },
     );
 }

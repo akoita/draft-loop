@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { createCandidateKnowledgeSelectionSnapshot } from "@draft-loop/domain";
-import type { SourceSensitivityRule } from "@draft-loop/domain/source-sensitivity";
+import type {
+  SourceSensitivityRule,
+  SourceSensitivityTier,
+} from "@draft-loop/domain/source-sensitivity";
 import { type JsonObject, type ModelRequest, ProviderAdapterError } from "@draft-loop/providers";
 import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCanonicalCandidateProfileDerivationService } from "./candidate-profile-derivation.js";
 import type { CanonicalCandidateProfileExtractionRequest } from "./candidate-profile-extraction.js";
 import { executeCanonicalProfileExtractionWithFallback } from "./canonical-profile-extraction-fallback.js";
+import { excludedSensitivityTiersForConsent } from "./sensitive-knowledge-consent.js";
 
 const createdAt = "2026-08-28T08:00:00.000Z";
 const checksum = "a".repeat(64);
@@ -91,6 +95,7 @@ async function derive(
     readonly rules?: typeof rulesRecord | undefined;
     readonly respond: Respond;
     readonly throwWhen?: (request: ProviderRequest, index: number) => boolean;
+    readonly excludedSensitivityTiers?: ReadonlySet<SourceSensitivityTier>;
   },
 ) {
   const versions = sources.map(({ sourceId }) => ({ sourceId, versionId: `version-${sourceId}` }));
@@ -183,6 +188,9 @@ async function derive(
     profileId: "profile-1",
     selections: [{ storeRoot: "/private/store", knowledgeBaseId: "knowledge-1" }],
     allowProviderData: true,
+    ...(options.excludedSensitivityTiers === undefined
+      ? {}
+      : { excludedSensitivityTiers: options.excludedSensitivityTiers }),
   });
   return { result, providerRequests, extractionRequests, handle, saveCanonicalCandidateProfile };
 }
@@ -430,5 +438,54 @@ describe("profile derivation sensitivity filtering", () => {
     );
     expect(serialized(providerRequests)).toContain(neverShareMarker);
     expect(serialized(providerRequests)).toContain(sensitiveMarker);
+  });
+
+  describe("with workspace consent for sensitive sections", () => {
+    const sensitiveQuote = `${sensitiveMarker} phone detail.`;
+    const respond: Respond = (request) =>
+      proposal(
+        fact(requestSources(request)[0]?.id ?? "", allowedQuote, "fact-1"),
+        fact(requestSources(request)[0]?.id ?? "", sensitiveQuote, "fact-2"),
+      );
+
+    it("withholds sensitive and never-share text when consent is off", async () => {
+      const { result, providerRequests } = await derive(
+        [{ sourceId: "source-1", content: smallMarkdown }],
+        {
+          rules: rulesRecord,
+          respond,
+          excludedSensitivityTiers: excludedSensitivityTiersForConsent(false),
+        },
+      );
+      expectNoExcludedText(providerRequests);
+      expect(result.profile.facts.map((item) => item.value)).toEqual([allowedQuote]);
+    });
+
+    it("sends sensitive text but still never sends never-share text when consent is on", async () => {
+      const { result, providerRequests } = await derive(
+        [{ sourceId: "source-1", content: smallMarkdown }],
+        {
+          rules: rulesRecord,
+          respond,
+          excludedSensitivityTiers: excludedSensitivityTiersForConsent(true),
+        },
+      );
+      const text = serialized(providerRequests);
+      expect(text).toContain(sensitiveMarker);
+      expect(text).toContain(allowedQuote);
+      expect(text).not.toContain(neverShareMarker);
+      expect(text).not.toContain("Compensation");
+      expect(result.profile.facts.map((item) => item.value).sort()).toEqual(
+        [sensitiveQuote, allowedQuote].sort(),
+      );
+    });
+
+    it("defaults to the consent-off policy when no tiers are passed", async () => {
+      const { providerRequests } = await derive(
+        [{ sourceId: "source-1", content: smallMarkdown }],
+        { rules: rulesRecord, respond },
+      );
+      expectNoExcludedText(providerRequests);
+    });
   });
 });

@@ -1,8 +1,5 @@
 import type { CandidateKnowledgeSelectionSnapshot, ContextSnapshot } from "@draft-loop/domain";
-import {
-  classifySourceSections,
-  type SourceSensitivityTier,
-} from "@draft-loop/domain/source-sensitivity";
+import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { ingestBytes as defaultIngestBytes } from "@draft-loop/ingestion";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import {
@@ -10,9 +7,10 @@ import {
   openCandidateKnowledgeStore as defaultOpenCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
 
-import { canonicalProfileExcludedSensitivityTiers } from "./canonical-profile-sensitivity-filter.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
+import { openPinnedEntryStore, readPinnedEntrySections } from "./pinned-source-sections.js";
+import { excludedSensitivityTiersForConsent } from "./sensitive-knowledge-consent.js";
 
 /**
  * Keeps withheld source sections out of a review run.
@@ -20,7 +18,8 @@ import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
  * Retrieval chunks that overlap a section the knowledge base's current rules withhold are dropped
  * before they can be selected, traced or sent. A second, independent check refuses any author or
  * critic request that still contains a distinctive line of a withheld section. Both use the same
- * tier policy as profile derivation, so consent (#892) changes it in one place. Everything here
+ * tier policy as profile derivation: the consent-off tiers unless the caller passes the workspace's
+ * consented set (see `sensitive-knowledge-consent.ts`). Everything here
  * fails closed: rules or source text that cannot be read stop the run.
  */
 
@@ -116,24 +115,7 @@ export function createCandidateKnowledgeSensitivityExclusions(
 ): CandidateKnowledgeSensitivityExclusions {
   const open = dependencies.open ?? defaultOpenCandidateKnowledgeStore;
   const ingest = dependencies.ingestBytes ?? defaultIngestBytes;
-  const excludedTiers = dependencies.excludedTiers ?? canonicalProfileExcludedSensitivityTiers;
-
-  async function openEntryStore(
-    entry: CandidateKnowledgeSelectionSnapshot["entries"][number],
-  ): Promise<CandidateKnowledgeStoreHandle> {
-    for (const binding of bindings) {
-      if (binding.knowledgeBaseId !== entry.knowledgeBaseId) continue;
-      let handle: CandidateKnowledgeStoreHandle | undefined;
-      try {
-        handle = await open(binding.storeRoot);
-      } catch {
-        continue;
-      }
-      if (handle.descriptor.id === entry.storeId) return handle;
-      await handle.close().catch(() => undefined);
-    }
-    throw new Error("The pinned knowledge store is unavailable.");
-  }
+  const excludedTiers = dependencies.excludedTiers ?? excludedSensitivityTiersForConsent(false);
 
   async function compute(): Promise<ExclusionState> {
     const knowledgeBasesWithRules = new Set<string>();
@@ -141,50 +123,29 @@ export function createCandidateKnowledgeSensitivityExclusions(
     const withheldLines = new Set<string>();
     const allowedLines = new Set<string>();
     for (const entry of snapshot.entries) {
-      const handle = await openEntryStore(entry);
+      const handle = await openPinnedEntryStore(bindings, entry, open);
       try {
-        const rules = await handle.getCandidateKnowledgeSourceSensitivityRules(
-          entry.knowledgeBaseId,
-        );
-        if (rules === undefined || rules.rules.length === 0) continue;
+        const sources = await readPinnedEntrySections(handle, entry, ingest);
+        if (sources === undefined) continue;
         knowledgeBasesWithRules.add(knowledgeBaseKey(entry));
-        for (const selected of entry.sources) {
-          const content = await handle.readManagedCandidateKnowledgeSourceVersion(
-            entry.knowledgeBaseId,
-            selected.sourceId,
-            selected.versionId,
-          );
-          if (content === undefined) throw new Error("A pinned source version is unavailable.");
-          const ingested = await ingest(
-            { path: "sensitivity-exclusion", mediaType: content.metadata.mediaType },
-            content.bytes,
-            { maxSourceBytes: content.metadata.sizeBytes || 1 },
-          );
-          const source = ingested.source;
-          if (source === null || ingested.issues.length > 0 || source.issues.length > 0) {
-            throw new Error("A pinned source version could not be read as text.");
-          }
+        for (const source of sources) {
           const ranges: ExcludedLineRange[] = [];
-          if (source.mediaType === "text/markdown") {
-            for (const section of classifySourceSections(source.text, rules.rules)) {
-              const excluded = excludedTiers.has(section.tier);
-              const range = excluded
-                ? lineRange(source.text, section.start, section.end)
-                : undefined;
-              if (range !== undefined) ranges.push(range);
-              const target = excluded ? withheldLines : allowedLines;
-              for (const line of source.text.slice(section.start, section.end).split("\n")) {
-                const normalized = normalizeLine(line);
-                if (normalized !== "") target.add(normalized);
-              }
+          for (const section of source.sections) {
+            const excluded = excludedTiers.has(section.tier);
+            const range = excluded ? lineRange(source.text, section.start, section.end) : undefined;
+            if (range !== undefined) ranges.push(range);
+            const target = excluded ? withheldLines : allowedLines;
+            for (const line of source.text.slice(section.start, section.end).split("\n")) {
+              const normalized = normalizeLine(line);
+              if (normalized !== "") target.add(normalized);
             }
           }
           rangesBySource.set(
             sourceKey({
               storeId: entry.storeId,
               knowledgeBaseId: entry.knowledgeBaseId,
-              sourceId: selected.sourceId,
-              versionId: selected.versionId,
+              sourceId: source.sourceId,
+              versionId: source.versionId,
             }),
             ranges,
           );
