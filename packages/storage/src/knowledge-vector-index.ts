@@ -1,5 +1,11 @@
-import type { CandidateKnowledgeRetrievalScopeInput } from "@draft-loop/domain";
-import { candidateKnowledgeRetrievalScopeSchema } from "@draft-loop/schemas";
+import type {
+  CandidateKnowledgeLexicalChunk,
+  CandidateKnowledgeRetrievalScopeInput,
+} from "@draft-loop/domain";
+import {
+  candidateKnowledgeLexicalChunkSchema,
+  candidateKnowledgeRetrievalScopeSchema,
+} from "@draft-loop/schemas";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
 /**
@@ -28,12 +34,12 @@ export interface CandidateKnowledgeVectorIndexInspection {
 }
 
 export interface CandidateKnowledgeVectorHit {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-  readonly sourceId: string;
-  readonly versionId: string;
-  readonly chunkId: string;
-  readonly ordinal: number;
+  /**
+   * The validated lexical chunk, identical to what lexical retrieval returns
+   * for the same chunk id (minus `bm25Rank`). Store, knowledge base, source,
+   * and version identity live in `chunk.metadata.provenance`.
+   */
+  readonly chunk: CandidateKnowledgeLexicalChunk;
   /** Cosine similarity of unit-length vectors, i.e. their dot product. */
   readonly score: number;
 }
@@ -504,6 +510,44 @@ function upsertVectors(
   })();
 }
 
+/** Validates a stored lexical row with the same schema the lexical path uses. */
+function lexicalChunkFromRow(
+  row: Record<string, unknown>,
+  storeId: string,
+  knowledgeBaseId: string,
+  sourceId: string,
+  versionId: string,
+): CandidateKnowledgeLexicalChunk {
+  let metadata: unknown;
+  try {
+    metadata = JSON.parse(stringColumn(row, "metadata_json"));
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw new StorageValidationError("Candidate knowledge lexical chunk is invalid");
+  }
+  const parsed = candidateKnowledgeLexicalChunkSchema.safeParse({
+    chunkId: stringColumn(row, "chunk_id"),
+    ordinal: numberColumn(row, "ordinal"),
+    lineStart: numberColumn(row, "line_start"),
+    lineEnd: numberColumn(row, "line_end"),
+    text: stringColumn(row, "text"),
+    metadata,
+  });
+  if (!parsed.success) {
+    throw new StorageValidationError("Candidate knowledge lexical chunk is invalid");
+  }
+  const { provenance } = parsed.data.metadata;
+  if (
+    provenance.storeId !== storeId ||
+    provenance.knowledgeBaseId !== knowledgeBaseId ||
+    provenance.sourceId !== sourceId ||
+    provenance.versionId !== versionId
+  ) {
+    throw new StorageValidationError("Candidate knowledge lexical chunk provenance is invalid");
+  }
+  return parsed.data;
+}
+
 function queryVectors(
   database: CandidateKnowledgeVectorDatabase,
   inputValue: unknown,
@@ -535,10 +579,17 @@ function queryVectors(
     );
     const rows = database
       .prepare(
-        "SELECT c.source_id, c.version_id, c.chunk_id, c.ordinal, v.vector FROM candidate_knowledge_vector_chunks AS v JOIN candidate_knowledge_lexical_chunks AS c ON c.store_id = v.store_id AND c.knowledge_base_id = v.knowledge_base_id AND c.chunk_id = v.chunk_id WHERE v.store_id = ? AND v.knowledge_base_id = ?",
+        "SELECT c.source_id, c.version_id, c.chunk_id, c.ordinal, c.line_start, c.line_end, c.text, c.metadata_json, v.vector FROM candidate_knowledge_vector_chunks AS v JOIN candidate_knowledge_lexical_chunks AS c ON c.store_id = v.store_id AND c.knowledge_base_id = v.knowledge_base_id AND c.chunk_id = v.chunk_id WHERE v.store_id = ? AND v.knowledge_base_id = ?",
       )
       .all(storeId, knowledgeBaseId);
-    const hits: CandidateKnowledgeVectorHit[] = [];
+    const scored: {
+      readonly row: Record<string, unknown>;
+      readonly sourceId: string;
+      readonly versionId: string;
+      readonly chunkId: string;
+      readonly ordinal: number;
+      readonly score: number;
+    }[] = [];
     for (const row of rows) {
       const sourceId = stringColumn(row, "source_id");
       const versionId = stringColumn(row, "version_id");
@@ -548,9 +599,8 @@ function queryVectors(
       for (let index = 0; index < stored.length; index += 1) {
         score += (stored[index] as number) * (queryVector[index] as number);
       }
-      hits.push({
-        storeId,
-        knowledgeBaseId,
+      scored.push({
+        row,
         sourceId,
         versionId,
         chunkId: stringColumn(row, "chunk_id"),
@@ -560,7 +610,7 @@ function queryVectors(
     }
     const compare = (left: string, right: string): number =>
       left < right ? -1 : left > right ? 1 : 0;
-    hits.sort(
+    scored.sort(
       (left, right) =>
         right.score - left.score ||
         compare(left.sourceId, right.sourceId) ||
@@ -568,7 +618,21 @@ function queryVectors(
         left.ordinal - right.ordinal ||
         compare(left.chunkId, right.chunkId),
     );
-    return Object.freeze(hits.slice(0, limit).map((hit) => Object.freeze(hit)));
+    // Only the returned hits are validated, matching the lexical retrieval path.
+    return Object.freeze(
+      scored.slice(0, limit).map((entry) =>
+        Object.freeze({
+          chunk: lexicalChunkFromRow(
+            entry.row,
+            storeId,
+            knowledgeBaseId,
+            entry.sourceId,
+            entry.versionId,
+          ),
+          score: entry.score,
+        }),
+      ),
+    );
   })();
 }
 
