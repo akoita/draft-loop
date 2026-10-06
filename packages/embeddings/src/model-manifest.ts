@@ -1,4 +1,4 @@
-export type GraniteEmbeddingTier = "311m" | "97m";
+export type GraniteEmbeddingTier = "311m" | "97m" | "eg2-text";
 
 export const defaultGraniteEmbeddingTier: GraniteEmbeddingTier = "311m";
 
@@ -16,21 +16,31 @@ export interface GraniteEmbeddingModel {
   readonly license: "Apache-2.0";
   readonly nativeDimensions: number;
   readonly matryoshkaDimensions: readonly number[];
-  readonly pooling: "cls";
+  readonly pooling: "cls" | "mean";
   readonly queryPrefix: string;
   readonly documentPrefix: string;
   readonly defaultMaxTokens: number;
   readonly maximumMaxTokens: number;
+  /**
+   * Optional modality inputs the graph declares but text never uses. Each is fed as a float32
+   * tensor with zero rows and `width` columns.
+   */
+  readonly emptyFeatureInputs?: readonly { readonly name: string; readonly width: number }[];
   readonly files: {
     readonly model: GraniteModelFile;
+    /** External ONNX weights that must sit next to `model`, named by the graph itself. */
+    readonly modelData?: GraniteModelFile;
     readonly tokenizer: GraniteModelFile;
     readonly tokenizerConfig: GraniteModelFile;
   };
 }
 
 function freezeModel(model: GraniteEmbeddingModel): GraniteEmbeddingModel {
+  for (const input of model.emptyFeatureInputs ?? []) Object.freeze(input);
+  if (model.emptyFeatureInputs !== undefined) Object.freeze(model.emptyFeatureInputs);
   Object.freeze(model.matryoshkaDimensions);
   Object.freeze(model.files.model);
+  if (model.files.modelData !== undefined) Object.freeze(model.files.modelData);
   Object.freeze(model.files.tokenizer);
   Object.freeze(model.files.tokenizerConfig);
   Object.freeze(model.files);
@@ -101,7 +111,56 @@ export const graniteEmbeddingModels: Readonly<Record<GraniteEmbeddingTier, Grani
         },
       },
     }),
+    "eg2-text": freezeModel({
+      tier: "eg2-text",
+      modelId: "google/embeddinggemma-2",
+      sourceRepository: "onnx-community/embeddinggemma-2-ONNX",
+      revision: "daa72c51243991dfcaf9f9137d2c573d8f7790c0",
+      license: "Apache-2.0",
+      nativeDimensions: 768,
+      matryoshkaDimensions: [768, 512, 256, 128],
+      pooling: "mean",
+      queryPrefix: "task: search result | query: ",
+      documentPrefix: "title: none | text: ",
+      defaultMaxTokens: 512,
+      maximumMaxTokens: 8192,
+      emptyFeatureInputs: [
+        { name: "image_features", width: 512 },
+        { name: "video_features", width: 512 },
+        { name: "audio_features", width: 512 },
+      ],
+      files: {
+        model: {
+          path: "onnx/model_q4.onnx",
+          sizeBytes: 490742,
+          sha256: "f9eeba97acddf139b8ee2ddf04bc30dceafa88de93fadf74d7644e0d61a477a9",
+        },
+        modelData: {
+          path: "onnx/model_q4.onnx_data",
+          sizeBytes: 174028800,
+          sha256: "c3975f2d1ab7a1878ae31a7d7a9b7804a827aff3800b60dfceafce21cac3df49",
+        },
+        tokenizer: {
+          path: "tokenizer.json",
+          sizeBytes: 32170510,
+          sha256: "4d777ef5bdc1aa36227abdfb77c3e49e7b9c892d16e1b6bda41c393504828be4",
+        },
+        tokenizerConfig: {
+          path: "tokenizer_config.json",
+          sizeBytes: 1599,
+          sha256: "17bd5d6e9364ca49a534e1502076593317c298d4a663623091ed45388f004874",
+        },
+      },
+    }),
   });
+
+/** Every file a tier needs on disk, in install order. */
+export function embeddingModelFiles(model: GraniteEmbeddingModel): readonly GraniteModelFile[] {
+  const { model: graph, modelData, tokenizer, tokenizerConfig } = model.files;
+  return modelData === undefined
+    ? [graph, tokenizer, tokenizerConfig]
+    : [graph, modelData, tokenizer, tokenizerConfig];
+}
 
 export function getGraniteEmbeddingModel(
   tier: GraniteEmbeddingTier = defaultGraniteEmbeddingTier,

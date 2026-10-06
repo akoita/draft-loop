@@ -10,6 +10,7 @@ export const embeddingTierChoices: readonly {
 }[] = [
   { tier: "311m", label: "Standard (311M parameters, recommended)" },
   { tier: "97m", label: "Low resource (97M parameters)" },
+  { tier: "eg2-text", label: "EmbeddingGemma 2 (text, experimental)" },
 ];
 
 export const retrievalModeChoices: readonly {

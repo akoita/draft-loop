@@ -869,11 +869,16 @@ never starts a run. Both forms accept `--json`.
 ### Local embedding model
 
 Semantic retrieval ([ADR 0009](../adr/0009-local-semantic-retrieval.md)) uses a
-pinned local Granite Embedding Multilingual R2 model. It is optional and is
-never downloaded implicitly. Two tiers are available:
+pinned local embedding model. It is optional and is never downloaded
+implicitly. Three tiers are available:
 
-- `311m` (default): 768 dimensions, about 313 MB.
-- `97m`: 384 dimensions, about 98 MB, for low-resource machines.
+- `311m` (default): Granite Embedding Multilingual R2, 768 dimensions, about
+  313 MB.
+- `97m`: Granite, 384 dimensions, about 98 MB, for low-resource machines.
+- `eg2-text` (experimental): the text model of EmbeddingGemma 2, 768
+  dimensions, about 175 MB. It scored higher on the
+  [evaluation fixtures](../evaluation/semantic-retrieval-comparison.md#embeddinggemma-2)
+  but embeds about three times slower than `311m`.
 
 ```sh
 pnpm --filter @draft-loop/cli start embeddings status --tier 311m --verify
@@ -921,7 +926,7 @@ pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --json
 ```
 
 The workspace argument is required. Without a mode the command shows the
-current mode and model tier. `--tier` (`311m` or `97m`) can only be given with a
+current mode and model tier. `--tier` (`311m`, `97m`, or `eg2-text`) can only be given with a
 mode; when omitted, the saved tier is kept, starting from `311m`. `--model-dir`
 overrides the model directory, as for `embeddings`. Both forms accept `--json`.
 
@@ -955,7 +960,7 @@ When a workspace is collecting or stopped, the desktop shows a **Semantic
 retrieval** section under the knowledge store. It uses the same application
 contracts as the `embeddings` and `retrieval mode` commands above.
 
-- **Model status** for the chosen tier (`311m` or `97m`) appears as a badge:
+- **Model status** for the chosen tier (`311m`, `97m`, or `eg2-text`) appears as a badge:
   not installed, installing, installed, corrupt, or unsupported.
 - **Install** opens an approval step that names the Hugging Face source at the
   pinned revision, the file sizes, the license, and the destination, shown as

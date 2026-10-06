@@ -5,6 +5,7 @@ import { homedir as osHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   defaultGraniteEmbeddingTier,
+  embeddingModelFiles,
   type GraniteEmbeddingModel,
   type GraniteEmbeddingTier,
   type GraniteModelFile,
@@ -189,7 +190,7 @@ function assertWithin(root: string, target: string): void {
 }
 
 function manifestFiles(model: GraniteEmbeddingModel): readonly GraniteModelFile[] {
-  return [model.files.model, model.files.tokenizer, model.files.tokenizerConfig];
+  return embeddingModelFiles(model);
 }
 
 function totalSize(model: GraniteEmbeddingModel): number {

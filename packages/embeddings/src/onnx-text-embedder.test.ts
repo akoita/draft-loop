@@ -25,7 +25,7 @@ function rowsOf(feed: OnnxFeed): bigint[][] {
   const [batch = 0, sequence = 0] = feed.dims;
   const rows: bigint[][] = [];
   for (let row = 0; row < batch; row += 1) {
-    rows.push(Array.from(feed.data.slice(row * sequence, (row + 1) * sequence)));
+    rows.push(Array.from((feed.data as BigInt64Array).slice(row * sequence, (row + 1) * sequence)));
   }
   return rows;
 }

@@ -18,6 +18,8 @@ decision. The model and runtime choice is in
 - **Relevance floor (#926):** the pinned floor below removes the regression on
   the lexical-guard cases and keeps the recall gain. Choosing a non-lexical
   default remains the #114 decision.
+- **EmbeddingGemma 2 (#923):** evaluated against Granite 311M and offered as an
+  optional experimental tier; see [EmbeddingGemma 2](#embeddinggemma-2).
 
 ## Results
 
@@ -150,6 +152,106 @@ still carries lexical noise, and 97M hybrid recall is unchanged at 0.750.
   (about 0.06) are noise. The recall gap and the precision regression are
   consistent across every configuration.
 
+## EmbeddingGemma 2
+
+This section records the #923 evaluation of the text model in
+[`onnx-community/embeddinggemma-2-ONNX`](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX)
+(Apache-2.0, pinned revision `daa72c5`) against Granite 311M. It uses the same
+fixtures, three-chunk limit, floor method, and hardware as above.
+
+### Recommendation
+
+**Offer it as an optional, experimental tier (`eg2-text`). Keep Granite 311M and
+lexical retrieval as the defaults.**
+
+- **Quality.** With its pinned floor it finds every relevant chunk and ranks it
+  first, and it cuts irrelevant context on the semantic fixture from 0.41 to
+  0.16 against Granite 311M.
+- **Cost.** It embeds about 3.4 times slower and queries about 3 times slower
+  than Granite 311M. Indexing 1,000 chunks takes about two minutes instead of
+  36 seconds.
+- **Footprint.** The download is smaller (207 MB against 347 MB) and peak
+  memory is similar.
+- **Why not the default.** The model is new, its ONNX export is a community
+  conversion of a multimodal graph, and sixteen invented cases cannot justify
+  moving the default. Revisit with real career material under #114.
+
+### Model files and runtime
+
+The tier pins the 4-bit `model_q4` export. Against the int8 `model_quantized`
+export it is 140 MB smaller and answers a single query about three times faster,
+with the same quality and per-chunk throughput on these fixtures.
+
+| File | Size (bytes) | SHA-256 |
+| --- | --- | --- |
+| `onnx/model_q4.onnx` | 490,742 | `f9eeba97acddf139b8ee2ddf04bc30dceafa88de93fadf74d7644e0d61a477a9` |
+| `onnx/model_q4.onnx_data` | 174,028,800 | `c3975f2d1ab7a1878ae31a7d7a9b7804a827aff3800b60dfceafce21cac3df49` |
+| `tokenizer.json` | 32,170,510 | `4d777ef5bdc1aa36227abdfb77c3e49e7b9c892d16e1b6bda41c393504828be4` |
+| `tokenizer_config.json` | 1,599 | `17bd5d6e9364ca49a534e1502076593317c298d4a663623091ed45388f004874` |
+
+- **External data.** The graph names its weights file by relative path, so both
+  files install side by side. `onnxruntime-node` 1.30 loads it from a path.
+- **Inputs.** The graph is the multimodal model. Besides `input_ids` and
+  `attention_mask` it declares `image_features`, `video_features`, and
+  `audio_features`, which the adapter feeds as empty `[0, 512]` float tensors.
+- **Outputs.** `last_hidden_state` is `[batch, sequence, 768]` and
+  `sentence_embedding` is `[batch, 768]`. The adapter mean-pools
+  `last_hidden_state` over the attention mask, which reproduced
+  `sentence_embedding` to a cosine of 1.0, then truncates and renormalizes for
+  Matryoshka dimensions (768, 512, 256, 128).
+- **Prompts.** Queries start with `task: search result | query:` and documents
+  with `title: none | text:`, each followed by one space. The tokenizer adds
+  `<bos>` and `<eos>`.
+
+### EmbeddingGemma 2 results
+
+Native 768 dimensions with the pinned floor, limit three. Lexical rows are in
+the tables above.
+
+| Fixture and mode | Recall | MRR | Citation accuracy | Irrelevant context | Unsupported claims |
+| --- | --- | --- | --- | --- | --- |
+| Semantic fixture, semantic, 311M | 0.969 | 1.000 | 0.594 | 0.406 | 0 |
+| Semantic fixture, semantic, EG2 q4 | **1.000** | **1.000** | **0.844** | **0.156** | 0 |
+| Semantic fixture, semantic, EG2 int8 | 1.000 | 0.969 | 0.875 | 0.125 | 0 |
+| Semantic fixture, hybrid, 311M | 1.000 | 0.677 | 0.479 | 0.521 | 0 |
+| Semantic fixture, hybrid, EG2 q4 | 1.000 | 0.688 | 0.510 | 0.490 | 0 |
+| Semantic fixture, hybrid, EG2 int8 | 0.938 | 0.656 | 0.490 | 0.510 | 0.063 |
+| Guard, semantic or hybrid, all three | 1.000 | 1.000 | 1.000 | 0.000 | 0 |
+
+At 256 dimensions the floor does not apply. Without it, EG2 q4 keeps recall 1.000
+and MRR 1.000 (semantic) against 0.969 and 0.969 for Granite 311M, and both
+return irrelevant context on the guard fixture (citation accuracy 0.333).
+
+### EmbeddingGemma 2 floor
+
+The sweep repeated the margins 0.02 to 0.15 and minimums 0 to 0.7 from the
+Granite calibration, on the q4 export.
+
+- **Pinned floor:** `maxMarginFromTop` 0.05 and `minimumScore` 0.68.
+- **Margin.** Every margin from 0.02 to 0.10 restores lexical precision on the
+  guard cases, where the next hit trails the best by at least 0.145. Recall on
+  the semantic fixture drops from 1.000 to 0.969 at 0.03 and below, so 0.05 keeps
+  the same 0.02 headroom as the Granite tiers.
+- **Minimum.** Eight off-topic queries scored at most 0.643, and the weakest
+  relevant top score was 0.717. The minimum 0.68 sits in that gap, which is
+  about 0.04 on each side. Granite 311M's gap is about 0.03 wide, so the EG2
+  floor is less brittle, although the sample is still small.
+- **Unsupported claims** stay at zero and the guard cases show no regression.
+
+### EmbeddingGemma 2 cost
+
+Same machine, CPU only, four inference threads, batches of eight. Throughput
+embeds 120 synthetic chunks of about 90 words; memory is the process peak.
+
+| Tier | Download | ms per chunk | Single query | Peak RSS |
+| --- | --- | --- | --- | --- |
+| Granite 311M | 347 MB | 36 | 10 ms | ~910 MB |
+| EG2 q4 | 207 MB | 124 | 33 ms | ~810 MB |
+| EG2 int8 | 346 MB | 130 | 101 ms | ~895 MB |
+
+The int8 export is slower per query and is not pinned. Batches of 32 did not
+help it (130 ms per chunk, 1.18 GB peak).
+
 ## Reproduce
 
 Point the opt-in test at a directory holding the pinned model files from the
@@ -159,6 +261,7 @@ Point the opt-in test at a directory holding the pinned model files from the
 DRAFT_LOOP_EMBEDDING_MODEL_DIR=<model-dir> DRAFT_LOOP_EMBEDDING_TIER=311m DRAFT_LOOP_EMBEDDING_DIMENSIONS=768 DRAFT_LOOP_RETRIEVAL_REPORT_PATH=<report.json> pnpm vitest run packages/evaluations/src/semantic-retrieval.model.test.ts
 ```
 
-The test applies the pinned floor for the tier and asserts the criteria above.
+`DRAFT_LOOP_EMBEDDING_TIER` also accepts `97m` and `eg2-text`. The test applies
+the pinned floor for the tier and asserts the criteria above.
 The JSON report is content-free. It contains the embedding identity, the applied
 floor, metrics, deltas, and timings, but no query or chunk text.

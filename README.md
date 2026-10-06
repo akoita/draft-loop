@@ -110,16 +110,17 @@ pnpm validate
 
 ### Local semantic retrieval model (optional)
 
-DraftLoop can use a pinned, local Granite embedding model (Apache-2.0; about
-313 MB for the default `311m` tier, 98 MB for `97m`). It runs on your machine
+DraftLoop can use a pinned, local embedding model (Apache-2.0; Granite, about
+313 MB for the default `311m` tier and 98 MB for `97m`, or the experimental
+EmbeddingGemma 2 `eg2-text` tier at about 175 MB). It runs on your machine
 and is never downloaded implicitly. The files are fetched only when you run
 `install` with `--confirm`; without it, the command prints what would be
 downloaded and exits.
 
 ```sh
-pnpm --filter @draft-loop/cli start embeddings status [--tier 311m|97m] [--verify]
-pnpm --filter @draft-loop/cli start embeddings install [--tier 311m|97m] [--from <dir>] --confirm
-pnpm --filter @draft-loop/cli start embeddings remove [--tier 311m|97m]
+pnpm --filter @draft-loop/cli start embeddings status [--tier 311m|97m|eg2-text] [--verify]
+pnpm --filter @draft-loop/cli start embeddings install [--tier 311m|97m|eg2-text] [--from <dir>] --confirm
+pnpm --filter @draft-loop/cli start embeddings remove [--tier 311m|97m|eg2-text]
 ```
 
 Use `--from <dir>` to import the files offline from a directory that mirrors the
@@ -134,7 +135,7 @@ lexical retrieval when the local model or index is unavailable; see the
 [CLI reference](docs/reference/cli-and-desktop.md#retrieval-mode).
 
 ```sh
-pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic|hybrid] [--tier 311m|97m] [--json]
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic|hybrid] [--tier 311m|97m|eg2-text] [--json]
 ```
 
 ## Technology and architecture
