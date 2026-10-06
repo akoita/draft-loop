@@ -1,4 +1,5 @@
 import type { ModelSelection } from "@draft-loop/domain";
+import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas";
 import { ApiError, type GenerateContentParameters } from "@google/genai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
   googleGeminiProvider,
   googleGeminiSupportedModelIds,
   isGoogleGeminiSupportedModelId,
+  type JsonObject,
   type ModelRequest,
   ProviderAdapterError,
 } from "./index.js";
@@ -347,6 +349,90 @@ describe("Google Gemini adapter", () => {
     await expect(
       tooMany.adapter.execute(request(selection(), { outputSchema: countedSchema })),
     ).rejects.toMatchObject({ failureStage: "response-schema-validation" });
+  });
+
+  describe("large enums", () => {
+    const evidenceIds = Array.from({ length: 181 }, (_, index) =>
+      index.toString(16).padStart(64, "0"),
+    );
+    const authorSchema = authorArtifactProposalJsonSchemaForEvidence(
+      evidenceIds,
+    ) as unknown as JsonObject;
+
+    function proposal(evidenceChunkIds: string[]): string {
+      return JSON.stringify({
+        sections: [
+          {
+            title: "Summary",
+            kind: "summary",
+            blocks: [
+              {
+                type: "paragraph",
+                text: "Synthetic text.",
+                claims: [{ text: "Synthetic claim.", substantive: true, evidenceChunkIds }],
+              },
+            ],
+          },
+        ],
+      });
+    }
+
+    function claimsItems(schema: unknown): Record<string, unknown> {
+      const path = ["sections", "blocks", "claims"];
+      let node = schema as Record<string, Record<string, Record<string, unknown>>>;
+      for (const name of path) {
+        node = (node.properties as Record<string, unknown>)[name] as typeof node;
+        node = node.items as typeof node;
+      }
+      return node as Record<string, unknown>;
+    }
+
+    it("omits an oversized evidence-id enum from the Gemini schema but keeps small enums", async () => {
+      const fixture = harness(
+        iterable([chunk({ text: proposal([evidenceIds[0] as string]), finish: "STOP" })]),
+      );
+
+      await fixture.adapter.execute(request(selection(), { outputSchema: authorSchema }));
+
+      const sent = sentParameters(fixture.generate).config?.responseJsonSchema;
+      const claim = claimsItems(sent) as { properties: Record<string, Record<string, unknown>> };
+      expect(claim.properties.evidenceChunkIds?.items).toEqual({ type: "string" });
+      expect(JSON.stringify(sent)).toContain('"enum":["summary"');
+      expect(JSON.stringify(sent)).not.toContain(evidenceIds[1] as string);
+      const original = claimsItems(authorSchema) as {
+        properties: { evidenceChunkIds: { items: { enum: string[] } } };
+      };
+      expect(original.properties.evidenceChunkIds.items.enum).toHaveLength(181);
+    });
+
+    it("keeps a small enum in the Gemini schema", async () => {
+      const smallEnum = {
+        type: "object",
+        properties: { tier: { type: "string", enum: ["a", "b", "c"] } },
+        required: ["tier"],
+        additionalProperties: false,
+      };
+      const fixture = harness(iterable([chunk({ text: '{"tier":"a"}', finish: "STOP" })]));
+
+      await fixture.adapter.execute(request(selection(), { outputSchema: smallEnum }));
+
+      expect(sentParameters(fixture.generate).config?.responseJsonSchema).toEqual(smallEnum);
+    });
+
+    it("still rejects an unknown evidence id through local validation", async () => {
+      const fixture = harness(
+        iterable([chunk({ text: proposal(["f".repeat(64)]), finish: "STOP" })]),
+      );
+
+      await expect(
+        fixture.adapter.execute(request(selection(), { outputSchema: authorSchema })),
+      ).rejects.toMatchObject({
+        code: "invalid-response",
+        retryable: false,
+        failureStage: "response-schema-validation",
+        diagnostics: [{ code: "output_schema_mismatch", path: "response" }],
+      });
+    });
   });
 
   it("rejects schema mismatches with content-free issue counts", async () => {
@@ -825,6 +911,36 @@ describe("Google Gemini cancellation and errors", () => {
       retryable: false,
     });
   });
+
+  it.each([
+    [
+      "Invalid JSON payload received. Unknown name response_json_schema: too many states",
+      "provider_rejected_schema",
+    ],
+    [
+      "The specified schema produces a constraint that has too many states for serving.",
+      "provider_rejected_schema",
+    ],
+    ["Request contains an invalid argument.", "provider_rejected_request"],
+  ] as const)(
+    "records a content-free diagnostic for a 400 rejection: %s",
+    async (message, code) => {
+      const fixture = failingHarness(apiError(400, message));
+
+      const error = await fixture.adapter.execute(request()).catch((value: unknown) => value);
+
+      expect(error).toBeInstanceOf(ProviderAdapterError);
+      expect(error).toMatchObject({
+        code: "invalid-request",
+        status: 400,
+        retryable: false,
+        diagnostics: [{ code, path: "request" }],
+      });
+      expect(JSON.stringify(error)).not.toContain(message);
+      expect((error as Error).message).not.toContain(message);
+      expect(fixture.generate).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("reports an unavailable model without retrying", async () => {
     const fixture = failingHarness(apiError(404, "models/gemini-3.7-flash is not found"));

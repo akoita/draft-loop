@@ -34,6 +34,7 @@ import { accountOpenAIUsage } from "./openai-usage.js";
 import {
   type CompiledOutputSchema,
   compileStructuredOutputSchema,
+  withoutOversizedEnums,
   withoutSchemaKeywords,
 } from "./structured-output-schema.js";
 
@@ -49,6 +50,17 @@ export {
 
 // Gemini rejects array item-count limits with INVALID_ARGUMENT; local validation still enforces them.
 const geminiUnsupportedSchemaKeywords: ReadonlySet<string> = new Set(["maxItems", "minItems"]);
+// Gemini structured output rejects very large enums with HTTP 400 (for example the several
+// hundred evidence-chunk IDs of a full-source author request). Enums above this size are dropped
+// from the provider-facing schema; local validation still enforces them on the response.
+const maximumGeminiSchemaEnumValues = 32;
+
+function geminiProviderSchema(schema: JsonValue): JsonValue {
+  return withoutOversizedEnums(
+    withoutSchemaKeywords(schema, geminiUnsupportedSchemaKeywords),
+    maximumGeminiSchemaEnumValues,
+  );
+}
 /** The only endpoint the adapter talks to; no custom base URL is accepted. */
 export const googleGeminiBaseUrl = "https://generativelanguage.googleapis.com/";
 
@@ -340,6 +352,26 @@ function normalizeGeminiError(error: unknown): ProviderAdapterError {
       { retryable: false, status },
     );
   }
+  if (status === 400) {
+    // Never copy the provider message; only its category is recorded.
+    return new ProviderAdapterError(
+      googleGeminiProvider,
+      "invalid-request",
+      "Google Gemini rejected the request.",
+      {
+        retryable: false,
+        status,
+        diagnostics: [
+          {
+            code: geminiSchemaRejection.test(message)
+              ? "provider_rejected_schema"
+              : "provider_rejected_request",
+            path: "request",
+          },
+        ],
+      },
+    );
+  }
   if (status === 404) {
     return new ProviderAdapterError(
       googleGeminiProvider,
@@ -367,6 +399,8 @@ function normalizeGeminiError(error: unknown): ProviderAdapterError {
   }
   return normalizeProviderError(googleGeminiProvider, error);
 }
+
+const geminiSchemaRejection = /response_?(?:json_)?schema|too many states|schema/iu;
 
 const interruptedStreamMessage =
   /incomplete json segment|unexpected end of (?:json|data|stream)|premature close|socket hang up|other side closed/iu;
@@ -720,10 +754,7 @@ export class GoogleGeminiAdapter<
     const baseConfig: GenerateContentConfig = {
       systemInstruction: request.systemPrompt,
       responseMimeType: "application/json",
-      responseJsonSchema: withoutSchemaKeywords(
-        request.outputSchema,
-        geminiUnsupportedSchemaKeywords,
-      ),
+      responseJsonSchema: geminiProviderSchema(request.outputSchema),
       maxOutputTokens: controls.outputTokens,
       candidateCount: 1,
       ...(controls.thinking === undefined

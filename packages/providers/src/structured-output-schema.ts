@@ -26,12 +26,29 @@ const schemaMapKeywords = new Set([
 
 /** Return a detached schema copy without the given keywords; property names are never dropped. */
 export function withoutSchemaKeywords(value: JsonValue, keywords: ReadonlySet<string>): JsonValue {
-  const strip = (child: JsonValue): JsonValue => withoutSchemaKeywords(child, keywords);
+  return transformSchema(value, (key) => !keywords.has(key));
+}
+
+/**
+ * Return a detached schema copy without any `enum` listing more than `maximum` values.
+ * The rest of each affected node (for example `type`) is kept; property names are never dropped.
+ */
+export function withoutOversizedEnums(value: JsonValue, maximum: number): JsonValue {
+  return transformSchema(
+    value,
+    (key, child) => !(key === "enum" && Array.isArray(child) && child.length > maximum),
+  );
+}
+
+type KeywordFilter = (key: string, child: JsonValue) => boolean;
+
+function transformSchema(value: JsonValue, keep: KeywordFilter): JsonValue {
+  const strip = (child: JsonValue): JsonValue => transformSchema(child, keep);
   if (Array.isArray(value)) return value.map((item) => strip(item));
   if (!isRecord(value)) return value as JsonValue;
 
   const entries = Object.entries(value).flatMap(([key, child]): [string, JsonValue][] => {
-    if (keywords.has(key)) return [];
+    if (!keep(key, child as JsonValue)) return [];
     if (singleSchemaKeywords.has(key)) {
       return [[key, strip(child as JsonValue)]];
     }
