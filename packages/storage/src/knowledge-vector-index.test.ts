@@ -57,7 +57,13 @@ function scopeOf(
   };
 }
 
-function chunk(sourceId: string, versionId: string, chunkId: string, ordinal: number, text = "x") {
+function chunk(
+  sourceId: string,
+  versionId: string,
+  chunkId: string,
+  ordinal: number,
+  text = "alpha",
+) {
   return {
     chunkId,
     ordinal,
@@ -307,21 +313,20 @@ describe("candidate knowledge vector index", () => {
 
     const hits = await query(scopeOf(["source-a", "version-a1"], ["source-b", "version-b1"]), 10);
     // a1-0 and b1-0 tie at score 1; source id breaks the tie, then the weaker diagonal follows.
-    expect(hits.map((hit) => hit.chunkId)).toEqual(["a1-0", "b1-0", "a1-1"]);
+    expect(hits.map((hit) => hit.chunk.chunkId)).toEqual(["a1-0", "b1-0", "a1-1"]);
     expect(hits[0]).toEqual({
-      storeId,
-      knowledgeBaseId: ckb,
-      sourceId: "source-a",
-      versionId: "version-a1",
-      chunkId: "a1-0",
-      ordinal: 0,
+      chunk: chunk("source-a", "version-a1", "a1-0", 0),
       score: 1,
     });
     expect(hits[2]?.score).toBeCloseTo(Math.SQRT1_2, 6);
     // The unselected version a2 of the same source never appears.
-    expect(hits.some((hit) => hit.versionId === "version-a2")).toBe(false);
+    expect(hits.some((hit) => hit.chunk.metadata.provenance.versionId === "version-a2")).toBe(
+      false,
+    );
     await expect(query(scopeA1, 1)).resolves.toHaveLength(1);
-    await expect(query(scopeA2, 10)).resolves.toMatchObject([{ chunkId: "a2-0", score: 0 }]);
+    await expect(query(scopeA2, 10)).resolves.toMatchObject([
+      { chunk: { chunkId: "a2-0" }, score: 0 },
+    ]);
     expect(await query(fullScope, 10)).toEqual(await query(fullScope, 10));
 
     for (const limit of [0, 201, 1.5, Number.NaN]) {
@@ -346,7 +351,99 @@ describe("candidate knowledge vector index", () => {
       queryVector: east,
       limit: 10,
     });
-    expect(hits.map((hit) => hit.chunkId)).toEqual(["a1-0", "a1-1"]);
+    expect(hits.map((hit) => hit.chunk.chunkId)).toEqual(["a1-0", "a1-1"]);
+  });
+
+  it("returns the same validated chunk payload as lexical retrieval", async () => {
+    await upsertAll();
+    const hits = await store.queryCandidateKnowledgeVectors({
+      scope: fullScope,
+      identity,
+      queryVector: east,
+      limit: 10,
+    });
+    const lexical = await store.queryCandidateKnowledge({
+      purpose: "achievement-recall",
+      query: "alpha",
+      scope: fullScope,
+    });
+    expect(hits).toHaveLength(4);
+    expect(lexical.hits).toHaveLength(4);
+    for (const hit of hits) {
+      const match = lexical.hits.find((candidate) => candidate.chunkId === hit.chunk.chunkId);
+      expect(match).toBeDefined();
+      const { bm25Rank: _bm25Rank, ...lexicalChunk } = match as NonNullable<typeof match>;
+      expect(hit.chunk).toEqual(lexicalChunk);
+      expect(Object.isFrozen(hit)).toBe(true);
+      expect(Object.isFrozen(hit.chunk)).toBe(true);
+      expect(Object.isFrozen(hit.chunk.metadata.provenance)).toBe(true);
+    }
+    expect(hits[0]?.chunk).toMatchObject({
+      lineStart: 1,
+      lineEnd: 1,
+      text: "alpha",
+      metadata: {
+        section: "evidence",
+        provenance: {
+          storeId,
+          knowledgeBaseId: ckb,
+          sourceId: "source-a",
+          versionId: "version-a1",
+        },
+      },
+    });
+  });
+
+  it("rejects a corrupt stored lexical row with the lexical validation error", async () => {
+    await upsertAll();
+    const raw = createRequire(import.meta.url)("better-sqlite3") as new (
+      path: string,
+    ) => {
+      prepare: (sql: string) => { run: (...args: unknown[]) => unknown };
+      close: () => void;
+    };
+    const database = new raw(
+      join(parent, "candidate-knowledge", ".draft-loop", "knowledge.sqlite"),
+    );
+    const corrupt = (metadataJson: string) =>
+      database
+        .prepare(
+          "UPDATE candidate_knowledge_lexical_chunks SET metadata_json = ? WHERE chunk_id = 'a1-0'",
+        )
+        .run(metadataJson);
+    const vectorQuery = () =>
+      store.queryCandidateKnowledgeVectors({
+        scope: scopeA1,
+        identity,
+        queryVector: east,
+        limit: 10,
+      });
+    const lexicalQuery = () =>
+      store.queryCandidateKnowledge({
+        purpose: "achievement-recall",
+        query: "alpha",
+        scope: fullScope,
+      });
+    try {
+      corrupt(JSON.stringify({ section: "evidence" }));
+      await expect(lexicalQuery()).rejects.toMatchObject({ name: "StorageValidationError" });
+      await expect(vectorQuery()).rejects.toMatchObject({ name: "StorageValidationError" });
+      corrupt("{not json");
+      await expect(vectorQuery()).rejects.toMatchObject({ name: "StorageValidationError" });
+      corrupt(
+        JSON.stringify({
+          provenance: {
+            storeId,
+            knowledgeBaseId: ckb,
+            sourceId: "source-b",
+            versionId: "version-b1",
+          },
+        }),
+      );
+      await expect(vectorQuery()).rejects.toMatchObject({ name: "StorageValidationError" });
+    } finally {
+      database.close();
+    }
   });
 
   it("isolates vectors between knowledge bases", async () => {
@@ -413,14 +510,14 @@ describe("candidate knowledge vector index", () => {
       queryVector: east,
       limit: 10,
     });
-    expect(other.map((hit) => hit.chunkId)).toEqual(["o-0"]);
+    expect(other.map((hit) => hit.chunk.chunkId)).toEqual(["o-0"]);
     const main = await store.queryCandidateKnowledgeVectors({
       scope: fullScope,
       identity,
       queryVector: east,
       limit: 10,
     });
-    expect(main.some((hit) => hit.chunkId === "o-0")).toBe(false);
+    expect(main.some((hit) => hit.chunk.chunkId === "o-0")).toBe(false);
     await expect(
       store.upsertCandidateKnowledgeVectors({
         storeId,
@@ -476,7 +573,7 @@ describe("candidate knowledge vector index", () => {
       queryVector: north,
       limit: 10,
     });
-    expect(hits.find((hit) => hit.chunkId === "a1-0")?.score).toBe(1);
+    expect(hits.find((hit) => hit.chunk.chunkId === "a1-0")?.score).toBe(1);
     expect(hits).toHaveLength(4);
   });
 
