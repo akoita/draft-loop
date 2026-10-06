@@ -13,6 +13,7 @@ import { isEntryPoint } from "./entry-point.js";
 import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
+import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
   type AddKnowledgeSourceDirectoryMembersResult,
   type ApplicationIo,
@@ -44,8 +45,10 @@ import {
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
   type RunWritingPolicyProjection,
   runPilot,
+  type SourceSensitivityService,
   type StatusCommand,
   safeErrorMessage,
+  sourceSensitivityService,
   type WorkspaceDescriptor,
   type WritingPolicyVersionMetadata,
   type WritingPolicyVersionView,
@@ -228,6 +231,8 @@ export interface CliDependencies {
   readonly service?: ApplicationService;
   /** The candidate-knowledge boundary the path-explicit controls drive; replaced in tests. */
   readonly knowledgeService?: CandidateKnowledgeStoreService;
+  /** The source-sensitivity rule boundary; replaced in tests. */
+  readonly sensitivityService?: SourceSensitivityService;
   /** Where status lines are written; replaced in tests. */
   readonly io?: ApplicationIo;
 }
@@ -1355,6 +1360,7 @@ function writeKnowledgeSelection(io: ApplicationIo, descriptor: WorkspaceDescrip
 export function createCli(dependencies: CliDependencies = {}): Command {
   const service = dependencies.service ?? applicationService;
   const candidateKnowledge = dependencies.knowledgeService ?? knowledgeService;
+  const sensitivity = dependencies.sensitivityService ?? sourceSensitivityService;
   const io = dependencies.io ?? stdoutIo;
 
   /** Reports the recorded independence claim, including that there is none. */
@@ -2740,6 +2746,8 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         await candidateKnowledge.listKnowledgeSourceDuplicateGroups({ storeRoot, knowledgeBaseId }),
       );
     });
+
+  registerSensitivityCommands(knowledge, sensitivity, io);
 
   const lifecycle = knowledge
     .command("lifecycle")

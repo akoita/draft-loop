@@ -634,3 +634,4 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export * from "./source-sensitivity-service.js";
