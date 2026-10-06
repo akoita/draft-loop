@@ -74,6 +74,7 @@ import {
 } from "@draft-loop/storage/knowledge-store";
 import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
 import { deriveCandidateKnowledgeLexicalChunks } from "./candidate-knowledge-source-chunks.js";
+import { toKnowledgeSelectionSnapshotEntry } from "./knowledge-selection-entry.js";
 import { monotonicTimestamp } from "./monotonic-timestamp.js";
 
 export type {
@@ -1354,27 +1355,6 @@ function validateLifecycleReadinessResult(
     archivedAt: value.archivedAt,
     sources: Object.freeze(sources),
   });
-}
-
-function toKnowledgeSelectionSnapshotEntry(
-  storeId: string,
-  readiness: KnowledgeBaseLifecycleReadinessResult,
-): CandidateKnowledgeSelectionSnapshotEntryInput {
-  if (readiness.state !== "active" || readiness.sources.length === 0) {
-    throw lifecycleReadinessInvariantFailure();
-  }
-  if (readiness.sources.some((source) => source.status !== "ready")) {
-    throw lifecycleReadinessInvariantFailure();
-  }
-  return {
-    storeId: requireText(storeId, "Candidate knowledge store id"),
-    knowledgeBaseId: readiness.knowledgeBaseId,
-    sources: readiness.sources.map((source) => ({
-      sourceId: source.sourceId,
-      versionId: source.latestVersionId,
-      lifecycleRevision: source.lifecycleRevision,
-    })),
-  };
 }
 
 function importUrlFailure(): Error {
@@ -4404,7 +4384,11 @@ export function createCandidateKnowledgeStoreService(
                 await handle.getCandidateKnowledgeBaseLifecycleReadiness(selection.knowledgeBaseId),
                 selection.knowledgeBaseId,
               );
-              const projected = toKnowledgeSelectionSnapshotEntry(storeId, readiness);
+              const projected = toKnowledgeSelectionSnapshotEntry(
+                requireText(storeId, "Candidate knowledge store id"),
+                readiness,
+                lifecycleReadinessInvariantFailure,
+              );
               logicalSelections.add(logicalKey);
               return projected;
             },
