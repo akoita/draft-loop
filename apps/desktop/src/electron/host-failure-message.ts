@@ -1,5 +1,6 @@
 import {
   CliUserError,
+  EmbeddingModelInstallError,
   JobRequirementUserError,
   SourceIngestionUserError,
 } from "@draft-loop/application";
@@ -47,6 +48,14 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "models.list": "Listing provider models",
   "writing-policy.read": "Reading the writing policy",
   "writing-policy.save": "Saving the writing policy",
+  "embedding-model.status": "Checking the local search model",
+  "embedding-model.plan-install": "Preparing the local search model download",
+  "embedding-model.install": "Installing the local search model",
+  "embedding-model.progress": "Reading the model download progress",
+  "embedding-model.cancel": "Cancelling the model download",
+  "embedding-model.remove": "Removing the local search model",
+  "workspace.retrieval-mode.get": "Reading the retrieval mode",
+  "workspace.retrieval-mode.set": "Saving the retrieval mode",
 };
 
 const capabilityGroupLabels: Readonly<Record<string, string>> = {
@@ -57,6 +66,7 @@ const capabilityGroupLabels: Readonly<Record<string, string>> = {
   credential: "The API key action",
   "provider-auth": "The provider sign-in action",
   models: "The model action",
+  "embedding-model": "The local search model action",
 };
 
 /** A short, content-free name for what a desktop command was doing. */
@@ -104,6 +114,15 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   // many rules, empty or oversized text) for a person and never quotes the
   // text, so the editor can show it as written.
   if (command.type === "writing-policy.save" && error instanceof CliUserError) {
+    return error.message;
+  }
+  // A model install failure is worded for a person (checksum, size, network, unsupported
+  // platform) and never names a local path, so it can be shown as written.
+  if (command.type.startsWith("embedding-model.") && error instanceof EmbeddingModelInstallError) {
+    return error.message;
+  }
+  // The retrieval-mode file's own validation message names the setting, never a path.
+  if (command.type.startsWith("workspace.retrieval-mode.") && error instanceof CliUserError) {
     return error.message;
   }
   if (hasBridgeErrorCode(error)) return undefined;

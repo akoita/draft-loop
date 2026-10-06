@@ -938,6 +938,28 @@ In a run, the mode works as follows:
 - **Vectors.** Missing vectors are built from the selected exact source
   versions when a run starts, which can take a moment on first use.
 
+### Desktop semantic retrieval controls
+
+When a workspace is collecting or stopped, the desktop shows a **Semantic
+retrieval** section under the knowledge store. It uses the same application
+contracts as the `embeddings` and `retrieval mode` commands above.
+
+- **Model status** for the chosen tier (`311m` or `97m`) appears as a badge:
+  not installed, installing, installed, corrupt, or unsupported.
+- **Install** opens an approval step that names the Hugging Face source at the
+  pinned revision, the file sizes, the license, and the destination, shown as
+  "DraftLoop application data" rather than a path. Nothing downloads until you
+  confirm. A progress bar and **Cancel download** follow; a cancelled install
+  keeps nothing. **Remove model** deletes only that tier's files.
+- **Retrieval mode** (lexical, semantic, or hybrid) is saved per workspace. When
+  the mode needs a model that is not installed, the section says that runs fall
+  back to keyword retrieval until it is.
+
+The main process stores models in `models` under the desktop's application data
+directory and sets `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` to it at startup unless you
+already set that variable, so runs started from the desktop read the same
+directory. The renderer never receives this path.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer
