@@ -9,6 +9,7 @@
   "references": [
     { "path": "../artifacts" },
     { "path": "../domain" },
+    { "path": "../embeddings" },
     { "path": "../ingestion" },
     { "path": "../orchestrator" },
     { "path": "../providers" },

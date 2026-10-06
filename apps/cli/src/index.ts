@@ -9,6 +9,10 @@ import { Command } from "commander";
 import packageJson from "../package.json";
 
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
+import {
+  type EmbeddingModelServiceFactory,
+  registerEmbeddingModelCommands,
+} from "./embedding-model-commands.js";
 import { isEntryPoint } from "./entry-point.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
@@ -30,6 +34,7 @@ import {
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
   type CanonicalCandidateProfilePatch,
+  createEmbeddingModelService,
   type ImportKnowledgeSourceDirectoryResult,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
@@ -247,6 +252,8 @@ export interface CliDependencies {
   readonly modelProfileSelectionService?: WorkspaceModelProfileSelectionService;
   /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
   readonly consentService?: SensitiveKnowledgeConsentService;
+  /** Builds the local embedding-model service for a model directory; replaced in tests. */
+  readonly embeddingModelServiceFactory?: EmbeddingModelServiceFactory;
   /** Where status lines are written; replaced in tests. */
   readonly io?: ApplicationIo;
 }
@@ -2768,6 +2775,12 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     });
 
   registerSensitivityCommands(knowledge, sensitivity, io, consent);
+  registerEmbeddingModelCommands(
+    command,
+    dependencies.embeddingModelServiceFactory ??
+      ((modelRoot) => createEmbeddingModelService({ modelRoot })),
+    io,
+  );
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,

@@ -855,6 +855,42 @@ The workspace argument is required. Without a mode the command shows the
 current one. It applies to workspaces with a candidate knowledge selection and
 never starts a run. Both forms accept `--json`.
 
+### Local embedding model
+
+Semantic retrieval ([ADR 0009](../adr/0009-local-semantic-retrieval.md)) uses a
+pinned local Granite Embedding Multilingual R2 model. It is optional and is
+never downloaded implicitly. Two tiers are available:
+
+- `311m` (default): 768 dimensions, about 313 MB.
+- `97m`: 384 dimensions, about 98 MB, for low-resource machines.
+
+```sh
+pnpm --filter @draft-loop/cli start embeddings status --tier 311m --verify
+pnpm --filter @draft-loop/cli start embeddings install --tier 311m
+pnpm --filter @draft-loop/cli start embeddings install --tier 311m --confirm
+pnpm --filter @draft-loop/cli start embeddings install --tier 97m --from ./model-files --confirm
+pnpm --filter @draft-loop/cli start embeddings remove --tier 97m
+```
+
+The commands behave as follows:
+
+- **`status`** reports `absent`, `installing`, `ready`, `corrupt`, or
+  `unsupported-platform`. `--verify` checks SHA-256 checksums as well as sizes.
+  It makes no network calls.
+- **`install` without `--confirm`** prints the approval details and downloads
+  nothing: the Hugging Face source at the pinned revision, each file's size,
+  the license, and the destination.
+- **`install --confirm`** downloads the files into a staging directory, checks
+  every size and checksum, and moves the directory into place in one rename. A
+  failed or cancelled install leaves nothing behind. `--from <dir>` imports the
+  same files from a local directory instead, with the same checks.
+- **`remove`** deletes only that tier's files.
+
+Models are stored in the per-user data directory, outside every knowledge base,
+workspace, and backup. Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
+`--model-dir`, to use another location. The runtime supports Linux x64 and
+arm64, Windows x64 and arm64, and macOS on Apple silicon.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer
