@@ -27,6 +27,13 @@ import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-p
 import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
+import {
+  lexicalCompare,
+  normalizedSemantic,
+  referenceKey,
+  uniqueSorted,
+} from "./canonical-profile-fact-keys.js";
+import { mergeIdenticalProfileFacts } from "./canonical-profile-fact-merge.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 import {
   type CanonicalProfileSourceSensitivityGuard,
@@ -132,20 +139,6 @@ function digest(parts: readonly string[]): string {
   return createHash("sha256").update(parts.join("\u0000"), "utf8").digest("hex");
 }
 
-function normalizedSemantic(value: string): string {
-  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
-}
-
-function referenceKey(reference: CanonicalCandidateProfileProvenanceReference): string {
-  return JSON.stringify([
-    reference.storeId,
-    reference.knowledgeBaseId,
-    reference.sourceId,
-    reference.versionId,
-    reference.kind,
-  ]);
-}
-
 function isOpaqueCandidateReference(
   reference: CanonicalCandidateProfileProvenanceReference,
 ): boolean {
@@ -155,18 +148,6 @@ function isOpaqueCandidateReference(
       (value) => safeIdentifierPattern.test(value),
     )
   );
-}
-
-function lexicalCompare(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function uniqueSorted<T>(values: readonly T[], key: (value: T) => string): readonly T[] {
-  const entries = new Map<string, T>();
-  for (const value of values) entries.set(key(value), value);
-  return [...entries.entries()]
-    .sort(([left], [right]) => lexicalCompare(left, right))
-    .map(([, value]) => value);
 }
 
 function validateInput(input: CanonicalCandidateProfileExtractionInput): {
@@ -400,8 +381,8 @@ function mapProposal(
   droppedFacts: number,
   sources: readonly CanonicalCandidateProfileExtractionMaterial[],
 ): CanonicalCandidateProfileExtractionResult {
-  const factByKey = new Map<string, CanonicalCandidateProfileFact>();
-  const facts = proposal.facts.map((candidate) => {
+  const unmergedByKey = new Map<string, CanonicalCandidateProfileFact>();
+  const unmergedFacts = proposal.facts.map((candidate) => {
     const provenance = uniqueSorted(
       candidate.evidence.flatMap((evidence) => {
         return referencesByRepresentativeId.get(evidence.sourceId) ?? [];
@@ -420,9 +401,19 @@ function mapProposal(
       value: candidate.value,
       provenance: [...provenance],
     };
-    factByKey.set(candidate.key, fact);
+    unmergedByKey.set(candidate.key, fact);
     return fact;
   });
+  const { facts, aliasOf } = mergeIdenticalProfileFacts(
+    unmergedFacts,
+    maximumCanonicalCandidateProfileProvenanceCount,
+  );
+  const survivorById = new Map(facts.map((fact) => [fact.id, fact]));
+  const factByKey = new Map<string, CanonicalCandidateProfileFact>();
+  for (const [key, fact] of unmergedByKey) {
+    const survivor = survivorById.get(aliasOf.get(fact.id) ?? fact.id);
+    if (survivor !== undefined) factByKey.set(key, survivor);
+  }
   if (facts.length > maximumCanonicalCandidateProfileFactCount) {
     throw new CandidateProfileProposalValidationError([
       { code: "profile_too_many_facts", count: 1 },

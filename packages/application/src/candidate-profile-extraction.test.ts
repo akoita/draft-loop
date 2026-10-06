@@ -157,7 +157,7 @@ describe("canonical candidate profile extraction", () => {
     );
   });
 
-  it("keeps conflicting and duplicate facts while adding visible omissions", async () => {
+  it("keeps conflicting facts and merges identical facts while adding visible omissions", async () => {
     const result = await processCanonicalCandidateProfileExtraction(
       {
         extract: async () => ({
@@ -202,9 +202,9 @@ describe("canonical candidate profile extraction", () => {
       { operationId: "profile-operation", sources: [material()], allowProviderData: true },
     );
 
-    expect(result.facts).toHaveLength(4);
+    expect(result.facts).toHaveLength(3);
     expect(result.issues.some((issue) => issue.code === "conflict-title")).toBe(true);
-    expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(true);
+    expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.filter((issue) => issue.code === "omission")).toHaveLength(10);
     expect(result.issues.every((issue) => issue.status === "open")).toBe(true);
   });

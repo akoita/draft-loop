@@ -300,6 +300,12 @@ blocker codes it covers are bound to that exact artifact and recorded in the run
 history, and export accepts only that recorded override. This keeps a review
 finishable at the round limit, when **Request revision** is unavailable.
 
+Facts with the same category, subject, field, and value found in several places
+(for example the same skill in different sections of one source) are merged into
+one fact that keeps all their sources. A possible-duplicate warning remains only
+when such facts cannot be merged because the combined sources would exceed the
+per-fact limit; different values of the same field still raise a conflict.
+
 If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
