@@ -47,6 +47,14 @@ import {
   selectCandidateProductionSkillsEvidence,
 } from "./candidate-production-skills-evidence.js";
 import { composeCandidateRequiredSectionBodyEvidence } from "./candidate-required-section-body-evidence.js";
+import {
+  decideFullSourceEvidence,
+  type EvidenceModeDecision,
+  type EvidenceModeRetrieval,
+  fullSourceBudgetCharacters,
+  fullSourceInspectionResult,
+  retrievalEvidenceModeDecision,
+} from "./full-source-evidence.js";
 import type {
   CandidateKnowledgeRetrievalDiagnostic,
   CandidateKnowledgeRetrievalResult,
@@ -62,6 +70,7 @@ import {
   requiredSectionQueries,
 } from "./required-section-evidence.js";
 import { timestamp } from "./response-execution.js";
+import type { EvidenceMode } from "./workspace-evidence-mode.js";
 
 export interface CandidateKnowledgeRuntimeConfig {
   readonly id: string;
@@ -211,11 +220,13 @@ export function candidateKnowledgeRuntimeRetrieval(
   context: ContextSnapshot,
   /** Withheld-section filter; defaults to the one built from the knowledge base's current rules. */
   exclusions?: CandidateKnowledgeSensitivityExclusions,
+  /** `full-source` sends every eligible chunk when it fits the budget; see full-source-evidence. */
+  evidenceMode: EvidenceMode = "retrieval",
 ):
-  | {
+  | (EvidenceModeRetrieval & {
       readonly port: RetrievalPort;
       readonly inspect: (query: string) => Promise<CandidateKnowledgeRetrievalResult>;
-    }
+    })
   | undefined {
   const binding = config.candidateKnowledgeSelection;
   const selection = context.candidateKnowledgeSelection;
@@ -611,10 +622,53 @@ export function candidateKnowledgeRuntimeRetrieval(
     return pending;
   };
 
+  type FullSourceEvidence = {
+    readonly decision: EvidenceModeDecision;
+    readonly hits: readonly CandidateKnowledgeLexicalHit[];
+    readonly evidence: readonly ScoredEvidenceChunk[];
+  };
+  let fullSource: Promise<FullSourceEvidence> | undefined;
+  /** Every eligible chunk of every pinned source, in selection, source and chunk order. */
+  const resolveFullSource = (): Promise<FullSourceEvidence> => {
+    fullSource ??= (async () => {
+      if (evidenceMode !== "full-source") {
+        return { decision: retrievalEvidenceModeDecision, hits: [], evidence: [] };
+      }
+      const chunks = await loadPinnedSourceReferences(
+        selection.entries.flatMap((entry) =>
+          entry.sources.map((source) => ({
+            storeId: entry.storeId,
+            knowledgeBaseId: entry.knowledgeBaseId,
+            sourceId: source.sourceId,
+            versionId: source.versionId,
+          })),
+        ),
+      );
+      const hits = chunks.map((chunk) =>
+        createCandidateKnowledgeLexicalHit({ ...chunk, bm25Rank: 0 }),
+      );
+      const evidence = hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
+      const decision = decideFullSourceEvidence(
+        evidence,
+        fullSourceBudgetCharacters(context.modelConfiguration),
+      );
+      return { decision, hits, evidence };
+    })();
+    return fullSource;
+  };
+
   return {
-    inspect: (text) => query(text),
+    evidenceModeDecision: async () => (await resolveFullSource()).decision,
+    inspect: async (text) => {
+      const full = await resolveFullSource();
+      return full.decision.effectiveMode === "full-source"
+        ? fullSourceInspectionResult(full.hits)
+        : query(text);
+    },
     port: {
       queryEvidence: async (text, options) => {
+        const full = await resolveFullSource();
+        if (full.decision.effectiveMode === "full-source") return full.evidence;
         const result = await query(text, options?.limit);
         return result.hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
       },

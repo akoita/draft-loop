@@ -637,3 +637,5 @@ export * from "./requirement-achievement-plan.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
+export * from "./workspace-evidence-mode.js";
+export * from "./workspace-evidence-mode-service.js";

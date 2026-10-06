@@ -267,8 +267,10 @@ references. Ranked evidence fills the remaining slots after duplicate and
 unapproved-source filtering. This keeps explicit career ranges available even
 when their headings contain no job-query terms.
 
-The provider selection allows at most twenty chunks and 128 KiB of serialized
-evidence. The heading scan allows at most one hundred pinned sources and one
+In the default `retrieval` evidence mode, the provider selection allows at most
+twenty chunks and 128 KiB of serialized evidence. The `full-source` mode of a CKB
+workspace replaces those limits with its own size budget; see
+[Evidence mode](../reference/cli-and-desktop.md#evidence-mode). The heading scan allows at most one hundred pinned sources and one
 hundred heading chunks per source. Missing or mismatched sources, scan overflow,
 or headings that cannot fit the requested count or byte limit fail retrieval
 before provider execution. The bounded matcher recognizes Markdown headings

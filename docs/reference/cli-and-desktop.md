@@ -783,6 +783,41 @@ mutually exclusive, and all forms accept `--json`. The output always states that
 The desktop preflight control for this setting arrives with
 [#897](https://github.com/akoita/draft-loop/issues/897); until then, use the CLI.
 
+### Evidence mode
+
+A workspace chooses what candidate material a run's author and critic
+receive. The setting is stored in `.draft-loop/evidence-mode.json` beside
+`workspace.json` and is read each time a run starts or resumes.
+
+- `retrieval` (the default) sends the composed top excerpts, at most twenty
+  chunks.
+- `full-source` sends every eligible chunk of the selected knowledge sources,
+  in selection, source and chunk order, instead of the top excerpts. Chunks
+  withheld by [source sensitivity](#source-sensitivity) are never included.
+  Evidence IDs, citation rules and validation are the same as in retrieval
+  mode.
+
+The evidence must fit a size budget: half of the smaller known context window
+of the author and critic profiles, at four characters per token, or 240,000
+characters when either window is unknown. The serialized chunks, including
+their identifiers, are counted against it. When they do not fit, or no chunk is
+eligible, the run uses retrieval instead. A `full-source` run prints an
+`Evidence mode:` line in its preflight with the chunk count and the budget, or
+the reason for the fallback, and records the decision as a `run.evidence-mode`
+audit event in the workspace history. A run in `retrieval` mode prints and
+records nothing extra. A missing setting means `retrieval`; an unreadable one
+stops the run before anything is sent.
+
+```sh
+pnpm --filter @draft-loop/cli start evidence mode ./workspace
+pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source
+pnpm --filter @draft-loop/cli start evidence mode ./workspace retrieval --json
+```
+
+The workspace argument is required. Without a mode the command shows the
+current one. It applies to workspaces with a candidate knowledge selection and
+never starts a run. Both forms accept `--json`.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer
