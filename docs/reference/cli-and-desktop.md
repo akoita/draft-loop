@@ -679,6 +679,63 @@ pnpm --filter @draft-loop/cli start knowledge select ./workspace \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
 
+### Source sensitivity
+
+A knowledge base can hold sensitivity rules that classify the sections of its
+Markdown sources into three tiers: `normal`, `sensitive`, and `never-share`.
+Rules are saved as immutable versions; every add or remove writes a new
+version, and a knowledge base with no saved version has no rules.
+
+> **Enforcement is not active yet.** These commands only edit and preview
+> rules. Keeping `never-share` sections out of provider requests arrives with
+> [#873](https://github.com/akoita/draft-loop/issues/873), so today the rules
+> have no effect on runs.
+
+How rules classify a source:
+
+- **Heading matching.** A rule matches a section's own heading or any
+  ancestor's, either by text (`--heading-contains`, case-, accent- and
+  emphasis-insensitive) or by an exact heading path from the top level down
+  (`--heading-path`). Rules never use offsets, so they keep working when the
+  source file is refreshed.
+- **Strictest wins.** A section takes the strictest tier among the rules that
+  match it: `never-share` over `sensitive` over `normal`.
+- **Headings only.** Only ATX headings (`#` to `######`) start a section.
+  Text that is not under its own heading cannot be tiered separately; add a
+  heading to isolate it. Setext (underlined) headings and `#` lines inside
+  code fences are not headings.
+- **Markdown only.** Plain-text, HTML, PDF and DOCX sources are not split, so
+  `preview` shows one root section that no rule can match.
+- **Suggestions are never applied silently.** `suggestions` lists defaults
+  such as compensation and contact headings; `adopt ... --confirm` adds the
+  ones you name, skipping any that already exist.
+
+```sh
+pnpm --filter @draft-loop/cli start knowledge sensitivity list \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+pnpm --filter @draft-loop/cli start knowledge sensitivity add \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID --tier never-share \
+  --heading-contains "Salary expectations"
+pnpm --filter @draft-loop/cli start knowledge sensitivity add \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID --tier sensitive \
+  --heading-path "Experience" "Acme" --id acme-details
+pnpm --filter @draft-loop/cli start knowledge sensitivity remove \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID acme-details
+pnpm --filter @draft-loop/cli start knowledge sensitivity suggestions
+pnpm --filter @draft-loop/cli start knowledge sensitivity adopt \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID suggest-compensation --confirm
+pnpm --filter @draft-loop/cli start knowledge sensitivity preview \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+```
+
+`add` takes exactly one of `--heading-contains <text>` or
+`--heading-path <heading...>`, with one argument per heading, and an optional
+`--id`; an id is generated when omitted. A duplicate id or an equivalent rule
+is rejected. `preview` prints each section's heading path, tier, matching rule
+ids and character count for the latest version of the source (`--version` picks
+another) and omits section text unless you pass `--text`. `list`, `add`,
+`remove`, `suggestions`, `adopt` and `preview` accept `--json`.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer
