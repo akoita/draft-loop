@@ -1,3 +1,5 @@
+import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+
 import {
   type BridgeCommand,
   type BridgeResult,
@@ -36,6 +38,7 @@ import {
   type ProviderAuthModeStatus,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
+  type SavedModelProfilesResult,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
   type WritingPolicyReadResult,
@@ -104,6 +107,13 @@ export interface WorkspaceSetupCapabilities {
     critic: ModelCandidate,
   ) => Promise<ModelsPreviewIndependenceResult>;
   readonly getModelProfileSupport?: (workspaceId: string) => Promise<ModelProfileSupportResult>;
+  /** Reads the profile pair saved for the workspace, with why new runs would ignore it. */
+  readonly readSavedModelProfiles?: (workspaceId: string) => Promise<SavedModelProfilesResult>;
+  /** Saves the pair for future runs of the workspace, or clears it when `null`. */
+  readonly saveModelProfiles?: (
+    workspaceId: string,
+    modelProfiles: ModelProfileReferences | null,
+  ) => Promise<SavedModelProfilesResult>;
 }
 
 export interface DesktopOpportunityCapabilities {
@@ -480,6 +490,31 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "models.profile-support",
                 input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("models.saved-profiles.read")
+      ? {
+          readSavedModelProfiles: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "models.saved-profiles.read",
+                input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("models.saved-profiles.save")
+      ? {
+          saveModelProfiles: async (
+            workspaceId: string,
+            modelProfiles: ModelProfileReferences | null,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "models.saved-profiles.save",
+                input: { workspaceId, modelProfiles },
               }),
             ),
         }

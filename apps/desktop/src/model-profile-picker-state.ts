@@ -8,6 +8,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type {
   ModelCompany,
   ModelProfileSupportResult,
+  SavedModelProfilesResult,
   WorkspaceConfigureModelsInput,
 } from "./bridge.js";
 import type { DesktopReviewState, ReviewAction } from "./model.js";
@@ -28,6 +29,90 @@ export type ModelProfileSupportState =
       readonly generation: number;
       readonly result: ModelProfileSupportResult;
     };
+
+/** What the host reports about the pair saved for the open workspace. */
+export type SavedModelProfilesState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading"; readonly workspaceId: string; readonly generation: number }
+  | { readonly status: "unavailable"; readonly workspaceId: string; readonly generation: number }
+  | {
+      readonly status: "ready";
+      readonly workspaceId: string;
+      readonly generation: number;
+      readonly result: SavedModelProfilesResult;
+    };
+
+/** The pair a new run will use, or null when the saved pair is absent or no longer fits. */
+export function usableSavedModelProfiles(
+  result: SavedModelProfilesResult,
+): ModelProfileReferences | null {
+  return result.ignoredReason === null ? result.modelProfiles : null;
+}
+
+/** The apply failed after the models changed, because the pair could not be saved. */
+export class ModelProfileSaveError extends Error {
+  constructor(detail?: string) {
+    super(
+      `The models were configured, but the profile pair could not be saved for future runs.${
+        detail === undefined || detail === "" ? "" : ` ${detail}`
+      } It is not applied.`,
+    );
+    this.name = "ModelProfileSaveError";
+  }
+}
+
+/** What the dialog says when applying failed; only a failed save names its own reason. */
+export function modelProfileApplyErrorMessage(reason: unknown): string {
+  return reason instanceof ModelProfileSaveError
+    ? reason.message
+    : "The profile pair could not be applied. Your draft is unchanged.";
+}
+
+export const noModelProfilesWarning =
+  "No model profiles: provider defaults, unknown context windows.";
+
+function describeReferences(references: ModelProfileReferences): string {
+  return `author ${references.author.id}@${references.author.version}; critic ${references.critic.id}@${references.critic.version}`;
+}
+
+/**
+ * Why the next run attaches no saved profiles even though the workspace may have some, or null when
+ * there is nothing to explain. Only a settled answer for this workspace is described.
+ */
+export function savedModelProfilesNotice(
+  saved: SavedModelProfilesState,
+  workspaceId: string,
+  generation: number,
+): string | null {
+  if (
+    saved.status === "idle" ||
+    saved.workspaceId !== workspaceId ||
+    saved.generation !== generation
+  ) {
+    return null;
+  }
+  if (saved.status === "unavailable") {
+    return "The saved profile pair could not be read, so it is not shown. Apply a pair again or check the workspace.";
+  }
+  if (saved.status !== "ready") return null;
+  const { modelProfiles, ignoredReason } = saved.result;
+  if (modelProfiles === null || ignoredReason === null) return null;
+  return `The saved profile pair (${describeReferences(modelProfiles)}) is not used because ${ignoredReason}.`;
+}
+
+/** The warning shown beside the configured models when the next run would attach no profiles. */
+export function modelProfileWarning(
+  applied: AppliedModelProfileSelection | null,
+  saved: SavedModelProfilesState,
+  workspaceId: string,
+  generation: number,
+): string | null {
+  if (applied !== null) return null;
+  if (saved.status === "idle" || saved.status === "loading") return null;
+  if (saved.workspaceId !== workspaceId || saved.generation !== generation) return null;
+  const notice = savedModelProfilesNotice(saved, workspaceId, generation);
+  return notice === null ? noModelProfilesWarning : `${notice} ${noModelProfilesWarning}`;
+}
 
 export const modelProfileCatalog = listModelProfileCatalog();
 export const modelProfilePresets = listModelProfilePresets();

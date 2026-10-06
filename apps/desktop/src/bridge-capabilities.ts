@@ -77,4 +77,6 @@ export const bridgeCapabilities = [
   "models.list",
   "models.preview-independence",
   "models.profile-support",
+  "models.saved-profiles.read",
+  "models.saved-profiles.save",
 ] as const;

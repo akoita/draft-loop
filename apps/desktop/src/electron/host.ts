@@ -14,6 +14,7 @@ import {
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   defaultWritingPolicyContent,
+  describeModelProfileSelectionMismatch,
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
@@ -28,8 +29,10 @@ import {
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   type WorkspaceDescriptor,
+  type WorkspaceModelProfileSelectionService,
   withDefaultWritingPolicy,
   withSavedModelProfiles,
+  workspaceModelProfileSelectionService,
 } from "@draft-loop/application";
 import {
   canonicalCandidateProfileFactCategories,
@@ -160,7 +163,7 @@ import type {
   WritingPolicyVersionMetadata,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
-import { projectModelProfileSupport } from "../model-profile-bridge.js";
+import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
@@ -308,6 +311,7 @@ export interface NativeModelDiscoveryOptions {
 export interface NativeHostOptions {
   readonly applicationService?: ApplicationService;
   readonly knowledgeService?: CandidateKnowledgeStoreService;
+  readonly modelProfileSelectionService?: WorkspaceModelProfileSelectionService;
   readonly dialogs: NativeHostDialogs;
   readonly credentials?: NativeCredentialStore;
   readonly urlFetcher?: UrlFetcher;
@@ -2072,6 +2076,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             : { resolveHostname: options.urlHostnameResolver }),
         }),
     });
+  const modelProfileSelection =
+    options.modelProfileSelectionService ?? workspaceModelProfileSelectionService;
   let active: ActiveWorkspace | undefined;
   const knowledgeStoreRoots = new Map<string, string>();
   const backgroundRuns = new Map<string, BackgroundRun>();
@@ -2227,6 +2233,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
     modelCatalogues.set(cacheKey, { result, expiresAt: now + modelCatalogueCacheTtlMs });
     return result;
+  }
+
+  async function readSavedModelProfiles(workspace: ActiveWorkspace) {
+    const saved = await modelProfileSelection.get({ root: workspace.root });
+    const configured = workspace.descriptor;
+    return projectSavedModelProfiles(
+      configured.id,
+      saved,
+      saved === undefined
+        ? undefined
+        : describeModelProfileSelectionMismatch(configured, saved.modelProfiles),
+    );
   }
 
   function workspaceFor(id: string): ActiveWorkspace {
@@ -5223,6 +5241,24 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               providerAuthModeConfiguration,
             ),
           };
+        }
+        case "models.saved-profiles.read": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return { ok: true, value: await readSavedModelProfiles(workspace) };
+        }
+        case "models.saved-profiles.save": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          // A pair is saved only after the application checks it against the workspace's
+          // configured models; `null` removes it so new runs use the legacy path again.
+          if (command.input.modelProfiles === null) {
+            await modelProfileSelection.clear({ root: workspace.root });
+          } else {
+            await modelProfileSelection.save({
+              root: workspace.root,
+              modelProfiles: command.input.modelProfiles,
+            });
+          }
+          return { ok: true, value: await readSavedModelProfiles(workspace) };
         }
       }
     } catch (error) {

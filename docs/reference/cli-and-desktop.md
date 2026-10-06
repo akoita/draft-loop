@@ -528,12 +528,24 @@ and **Not available with your current sign-in** badges where they apply. A
 **Custom pair** card reveals the exact author and critic profile selects, and
 exact IDs and runtime controls sit in a collapsed **Details** disclosure.
 Choices stay a draft until **Apply for future runs** saves their provider/model
-destinations.
-The renderer keeps the exact references for new starts; existing run records
-remain unchanged. Unsupported or unavailable routes block profile-backed starts,
-and provider-transmission acknowledgement is still required. OpenAI Codex
+destinations and the pair itself. Existing run records remain unchanged.
+Unsupported or unavailable routes block profile-backed starts, and
+provider-transmission acknowledgement is still required. OpenAI Codex
 user-session routes do not support these profiles, and authentication is never
 switched automatically.
+
+The applied pair is the one the CLI saves in `.draft-loop/model-profile-selection.json`
+(see [Applied profile pair](#applied-profile-pair)). The desktop reads it when a
+workspace opens, so after reopening the workspace or restarting the app the
+dialog shows **Applied next-run profiles** with the exact versions, and new
+runs send that pair. If the pair cannot be saved, the dialog says so and does
+not show it as applied, although the models themselves were already changed.
+Saving custom models clears the pair. A saved pair that no longer matches the
+workspace models is not used; the dialog says why.
+
+The configured-models card names the applied preset, or warns "No model
+profiles: provider defaults, unknown context windows." when the next run would
+attach none.
 
 For a selected draft pair, the picker also provides an editable API token-cost
 scenario based on the catalog's dated public, uncached text API rates. Its
@@ -546,8 +558,7 @@ only and do not estimate subscription quota or charges. The reusable
 application boundary is `@draft-loop/application/model-profile-budget`.
 
 Cancel leaves the saved provider/model destinations and current next-run
-selection unchanged. The next-run profile choice belongs to the current window;
-manual model saves and workspace changes clear it.
+selection unchanged.
 
 When provider model discovery fails or returns no IDs, the setup and **Change
 models** forms offer exact IDs from the active application profile catalog.

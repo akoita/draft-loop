@@ -21,6 +21,8 @@ export interface WorkspaceModelSummaryProps {
   readonly author: WorkspaceModelSummarySide;
   readonly critic: WorkspaceModelSummarySide;
   readonly appliedProfiles?: ModelProfileReferences | null;
+  /** Said when the next run would attach no model profiles. */
+  readonly profileWarning?: string | null;
 }
 
 function SummaryRow({
@@ -71,6 +73,7 @@ export function WorkspaceModelSummary({
   author,
   critic,
   appliedProfiles = null,
+  profileWarning = null,
 }: WorkspaceModelSummaryProps) {
   return (
     <section className="workspace-model-summary" aria-label={title}>
@@ -80,6 +83,11 @@ export function WorkspaceModelSummary({
         <SummaryRow label="Reviewer" side={critic} />
       </dl>
       {appliedProfiles === null ? null : appliedProfilesLine(appliedProfiles)}
+      {profileWarning === null ? null : (
+        <p className="workspace-model-summary-profiles" role="status">
+          {profileWarning}
+        </p>
+      )}
     </section>
   );
 }

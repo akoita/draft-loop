@@ -53,6 +53,12 @@ import {
   parseModelProfileReferences,
   parseModelProfileSupportInput,
   parseModelProfileSupportResult,
+  parseSavedModelProfilesReadInput,
+  parseSavedModelProfilesResult,
+  parseSavedModelProfilesSaveInput,
+  type SavedModelProfilesReadInput,
+  type SavedModelProfilesResult,
+  type SavedModelProfilesSaveInput,
 } from "./model-profile-bridge.js";
 import {
   parseReviewedCanonicalCandidateProfileCatalogInput,
@@ -93,6 +99,9 @@ export type BridgeCapability = (typeof bridgeCapabilities)[number];
 export type {
   ModelProfileSupportInput,
   ModelProfileSupportResult,
+  SavedModelProfilesReadInput,
+  SavedModelProfilesResult,
+  SavedModelProfilesSaveInput,
 } from "./model-profile-bridge.js";
 export type {
   ReviewedCanonicalCandidateProfileCatalogInput,
@@ -2746,6 +2755,8 @@ export interface BridgeCommandInputMap {
   "models.list": ModelsListInput;
   "models.preview-independence": ModelsPreviewIndependenceInput;
   "models.profile-support": ModelProfileSupportInput;
+  "models.saved-profiles.read": SavedModelProfilesReadInput;
+  "models.saved-profiles.save": SavedModelProfilesSaveInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -2826,6 +2837,8 @@ export interface BridgeCommandOutputMap {
   "models.list": ModelsListResult;
   "models.preview-independence": ModelsPreviewIndependenceResult;
   "models.profile-support": ModelProfileSupportResult;
+  "models.saved-profiles.read": SavedModelProfilesResult;
+  "models.saved-profiles.save": SavedModelProfilesResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -4982,6 +4995,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "models.profile-support",
         input: parseModelProfileSupportInput(command.input),
+      };
+    case "models.saved-profiles.read":
+      return {
+        type: "models.saved-profiles.read",
+        input: parseSavedModelProfilesReadInput(command.input),
+      };
+    case "models.saved-profiles.save":
+      return {
+        type: "models.saved-profiles.save",
+        input: parseSavedModelProfilesSaveInput(command.input),
       };
   }
 }
@@ -7150,6 +7173,9 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeModelsPreviewIndependenceResult(value);
     case "models.profile-support":
       return parseModelProfileSupportResult(value, command.input.workspaceId);
+    case "models.saved-profiles.read":
+    case "models.saved-profiles.save":
+      return parseSavedModelProfilesResult(value, command.input.workspaceId);
   }
 }
 

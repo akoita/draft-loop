@@ -14,7 +14,10 @@ import type {
   FindingDecision,
   ReviewAction,
 } from "./model.js";
-import { parseModelProfileSupportResult } from "./model-profile-bridge.js";
+import {
+  parseModelProfileSupportResult,
+  type SavedModelProfilesResult,
+} from "./model-profile-bridge.js";
 import { ModelProfilePicker } from "./model-profile-picker.js";
 import {
   type AppliedModelProfileSelection,
@@ -25,8 +28,11 @@ import {
   modelProfileRouteIsSupported,
   modelProfileStartDisabledReason,
   modelProfileSupportUnavailableMessage,
+  modelProfileWarning,
   profileReferencesMatchPreflight,
   reviewActionWithModelProfiles,
+  type SavedModelProfilesState,
+  savedModelProfilesNotice,
   workspaceModelsForProfileReferences,
 } from "./model-profile-picker-state.js";
 import { hasFallbackModelSuggestions, ModelSuggestionDatalist } from "./model-suggestions.js";
@@ -40,6 +46,12 @@ import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./pr
 import { RecentWorkspaces } from "./recent-workspaces-ui.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
+import {
+  appliedSelectionFromSaved,
+  clearSavedModelProfiles,
+  loadSavedModelProfilesState,
+  saveAppliedModelProfiles,
+} from "./saved-model-profiles.js";
 import { ThemeToggle } from "./theme.js";
 import { WorkspaceCreationForm, workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
@@ -899,6 +911,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [modelProfileSupport, setModelProfileSupport] = useState<ModelProfileSupportState>({
     status: "idle",
   });
+  const [savedModelProfiles, setSavedModelProfiles] = useState<SavedModelProfilesState>({
+    status: "idle",
+  });
   const [modelProfileSupportEpoch, setModelProfileSupportEpoch] = useState(0);
   const modelProfileSupportEpochRef = useRef(modelProfileSupportEpoch);
   modelProfileSupportEpochRef.current = modelProfileSupportEpoch;
@@ -1057,6 +1072,33 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     workspaceGeneration,
   ]);
   useEffect(() => {
+    const readSaved = activePort.readSavedModelProfiles;
+    if (activeWorkspaceId === null || readSaved === undefined) {
+      setSavedModelProfiles({ status: "idle" });
+      return;
+    }
+    const workspaceId = activeWorkspaceId;
+    const generation = workspaceGeneration;
+    let current = true;
+    setSavedModelProfiles({ status: "loading", workspaceId, generation });
+    void loadSavedModelProfilesState(activePort, workspaceId, generation).then((loaded) => {
+      if (!current || !isCurrentWorkspaceContext(workspaceId, generation)) return;
+      setSavedModelProfiles(loaded);
+      const fromSaved = appliedSelectionFromSaved(loaded);
+      if (fromSaved === null) return;
+      // The saved pair is what new runs use, so the dialog starts from it instead of the legacy
+      // path; a pair applied while this was loading stays.
+      setAppliedModelProfiles((existing) =>
+        existing?.workspaceId === workspaceId && existing.generation === generation
+          ? existing
+          : fromSaved,
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [activePort, activeWorkspaceId, isCurrentWorkspaceContext, workspaceGeneration]);
+  useEffect(() => {
     if (
       appliedModelProfiles !== null &&
       (appliedModelProfiles.workspaceId !== activeWorkspaceId ||
@@ -1078,6 +1120,19 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     appliedModelProfiles.generation === workspaceGeneration
       ? appliedModelProfiles
       : null;
+  const modelProfileNotice =
+    state === null
+      ? null
+      : savedModelProfilesNotice(savedModelProfiles, state.workspaceId, workspaceGeneration);
+  const modelProfileWarningText =
+    state === null
+      ? null
+      : modelProfileWarning(
+          selectedModelProfiles,
+          savedModelProfiles,
+          state.workspaceId,
+          workspaceGeneration,
+        );
   const candidateProfileStartReason = candidateProfileStartDisabledReason(
     profileCapabilities !== null &&
       state !== null &&
@@ -1448,6 +1503,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setProfilePendingScope(null);
       setCandidateProfileSelection(null);
       setAppliedModelProfiles(null);
+      setSavedModelProfiles({ status: "idle" });
       setModelProfileSupport({ status: "idle" });
       setModelProfileSupportEpoch((current) => current + 1);
       setProfileResetEpoch((current) => current + 1);
@@ -1539,6 +1595,23 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       }
       setState(loaded);
       setAppliedModelProfiles(null);
+      // Choosing custom models leaves the legacy path: drop the saved pair so new runs do not
+      // attach profiles that were chosen for other models.
+      if (activePort.saveModelProfiles !== undefined) {
+        let cleared: SavedModelProfilesResult;
+        try {
+          cleared = await clearSavedModelProfiles(activePort, workspaceId);
+        } catch {
+          if (isCurrentWorkspaceContext(workspaceId, generation)) {
+            setModelSettingsError(
+              "The models were saved, but the previously saved profile pair could not be cleared. Try saving again.",
+            );
+          }
+          return;
+        }
+        if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+        setSavedModelProfiles({ status: "ready", workspaceId, generation, result: cleared });
+      }
       setModelEditorFromCreation(false);
       setEditingModels(false);
     } catch {
@@ -1601,6 +1674,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         throw new Error("The updated models require a new provider-transmission acknowledgement.");
       }
       setState(loaded);
+      if (activePort.saveModelProfiles !== undefined) {
+        // The pair counts as applied only once it is saved: it is what later runs and a
+        // reopened workspace will use, so a failed save must not look like success.
+        const saved = await saveAppliedModelProfiles(activePort, workspaceId, references);
+        if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
+        setSavedModelProfiles({ status: "ready", workspaceId, generation, result: saved });
+      }
       setAppliedModelProfiles({
         workspaceId,
         generation,
@@ -1874,6 +1954,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               workspaceId={state.workspaceId}
               generation={workspaceGeneration}
               applied={selectedModelProfiles?.refs ?? null}
+              savedPairNotice={modelProfileNotice}
               {...(modelEditorFromCreation
                 ? {
                     pendingSelectionMessage: "No profile has been selected for this workspace yet.",
@@ -2019,6 +2100,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               author={state.providerTransmissionPreflight.author}
               critic={state.providerTransmissionPreflight.critic}
               appliedProfiles={selectedModelProfiles?.refs ?? null}
+              profileWarning={modelProfileWarningText}
             />
             {profileCapabilities === null ? null : (
               <fieldset

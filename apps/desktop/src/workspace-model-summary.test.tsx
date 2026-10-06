@@ -66,4 +66,26 @@ describe("workspace model summary", () => {
     expect(html).toContain("custom-author@2 and custom-critic@3");
     expect(html).not.toContain("Preset: ");
   });
+
+  it("warns when the next run would attach no model profiles", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceModelSummary
+        title="Configured model pair"
+        author={author}
+        critic={critic}
+        profileWarning="No model profiles: provider defaults, unknown context windows."
+      />,
+    );
+
+    expect(html).toContain("No model profiles: provider defaults, unknown context windows.");
+    expect(html).toContain('role="status"');
+  });
+
+  it("stays quiet without a warning", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceModelSummary title="Configured model pair" author={author} critic={critic} />,
+    );
+
+    expect(html).not.toContain("No model profiles");
+  });
 });

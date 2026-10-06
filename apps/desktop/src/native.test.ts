@@ -702,3 +702,49 @@ describe("desktop model profile support capability", () => {
     expect(port.getModelProfileSupport).toBeUndefined();
   });
 });
+
+describe("desktop saved model profiles capability", () => {
+  const references = {
+    author: { id: "standard-anthropic-author", version: 1 },
+    critic: { id: "standard-openai-critic", version: 2 },
+  };
+
+  it("reads and saves the pair through the bridge commands", async () => {
+    const result = {
+      workspaceId: "workspace-1",
+      modelProfiles: references,
+      appliedAt: "2026-01-01T00:00:00.000Z",
+      ignoredReason: null,
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value: result }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["models.saved-profiles.read", "models.saved-profiles.save"],
+        invoke,
+      }),
+    );
+
+    await expect(port.readSavedModelProfiles?.("workspace-1")).resolves.toEqual(result);
+    await expect(port.saveModelProfiles?.("workspace-1", references)).resolves.toEqual(result);
+    expect(invoke).toHaveBeenNthCalledWith(1, {
+      type: "models.saved-profiles.read",
+      input: { workspaceId: "workspace-1" },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, {
+      type: "models.saved-profiles.save",
+      input: { workspaceId: "workspace-1", modelProfiles: references },
+    });
+  });
+
+  it("does not expose saved profiles when the host lacks the capabilities", () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: vi.fn<NativeBridge["invoke"]>(),
+      }),
+    );
+
+    expect(port.readSavedModelProfiles).toBeUndefined();
+    expect(port.saveModelProfiles).toBeUndefined();
+  });
+});
