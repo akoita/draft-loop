@@ -78,6 +78,7 @@ import {
   candidateKnowledgeEvidenceSourceId,
   candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
+import { candidateKnowledgeRequestGuard } from "./candidate-knowledge-sensitivity-exclusion.js";
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
@@ -135,15 +136,16 @@ import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
 import { type LifecycleOptions, lifecycleDecisionRecord } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
-import type {
-  ProviderClientFactories,
-  ProviderCredentialResolver,
-  ProviderUserSessionRunners,
+import {
+  createProviderAdapter,
+  type ProviderClientFactories,
+  type ProviderCredentialResolver,
+  type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
-import { createProviderAdapter } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
 import { saveTypedHistory } from "./local-typed-history.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
+import { noopAgents } from "./noop-agents.js";
 import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
@@ -1905,8 +1907,9 @@ function providerAgents(
   );
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
+  const refuseWithheldText = candidateKnowledgeRequestGuard(config, context);
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
-    return createProviderAdapter(
+    const adapter = await createProviderAdapter(
       config,
       { ...context.modelConfiguration[role], company, modelId, role },
       allowProviderData,
@@ -1917,6 +1920,7 @@ function providerAgents(
       userSessionTimeoutMs,
       localClaudeCategoryCaptureParent,
     );
+    return refuseWithheldText(adapter);
   }
   const promptContext = modelFacingContext(context);
   const author = createProviderAuthorAgent({
@@ -1976,20 +1980,6 @@ function providerAgents(
     },
   } satisfies CriticAgent;
   return { author, critic };
-}
-function noopAgents(): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
-  return {
-    author: {
-      execute: async () => {
-        throw new CliUserError("This command does not execute the author.");
-      },
-    },
-    critic: {
-      execute: async () => {
-        throw new CliUserError("This command does not execute the critic.");
-      },
-    },
-  };
 }
 function engine(
   storage: SqliteStorage,
