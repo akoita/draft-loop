@@ -891,6 +891,36 @@ workspace, and backup. Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
 `--model-dir`, to use another location. The runtime supports Linux x64 and
 arm64, Windows x64 and arm64, and macOS on Apple silicon.
 
+### Retrieval mode
+
+A workspace chooses how its candidate knowledge is searched. The setting is
+stored in `.draft-loop/retrieval-mode.json` beside `workspace.json`.
+
+- `lexical` (the default) uses keyword retrieval only.
+- `semantic` searches by meaning with the [local embedding
+  model](#local-embedding-model) of the chosen tier.
+- `hybrid` fuses keyword and semantic results.
+
+```sh
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace semantic
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --tier 97m
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --json
+```
+
+The workspace argument is required. Without a mode the command shows the
+current mode and model tier. `--tier` (`311m` or `97m`) can only be given with a
+mode; when omitted, the saved tier is kept, starting from `311m`. `--model-dir`
+overrides the model directory, as for `embeddings`. Both forms accept `--json`.
+
+For `semantic` and `hybrid`, the command also reports the local model state for
+the tier (a local check, with no network request). When the model is not
+`ready`, it prints the `embeddings install` command to run. The mode is saved
+either way, and nothing is downloaded. The setting never starts a run.
+
+Runs do not read this setting yet: every run currently uses lexical
+retrieval, whatever the saved mode.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer
