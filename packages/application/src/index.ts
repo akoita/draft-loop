@@ -621,6 +621,7 @@ export {
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
+export * from "./embedding-model-install.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";

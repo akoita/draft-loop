@@ -108,6 +108,26 @@ pnpm test
 pnpm validate
 ```
 
+### Local semantic retrieval model (optional)
+
+DraftLoop can use a pinned, local Granite embedding model (Apache-2.0; about
+313 MB for the default `311m` tier, 98 MB for `97m`). It runs on your machine
+and is never downloaded implicitly. The files are fetched only when you run
+`install` with `--confirm`; without it, the command prints what would be
+downloaded and exits.
+
+```sh
+pnpm --filter @draft-loop/cli start embeddings status [--tier 311m|97m] [--verify]
+pnpm --filter @draft-loop/cli start embeddings install [--tier 311m|97m] [--from <dir>] --confirm
+pnpm --filter @draft-loop/cli start embeddings remove [--tier 311m|97m]
+```
+
+Use `--from <dir>` to import the files offline from a directory that mirrors the
+model repository layout. Every file is checked against its pinned SHA-256
+checksum before the model becomes available. The default location is your
+per-user data directory; set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` (or pass
+`--model-dir`) to choose another.
+
 ## Technology and architecture
 
 | Area                  | Technology or boundary                                           |
