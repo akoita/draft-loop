@@ -14,6 +14,7 @@ import {
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   defaultWritingPolicyContent,
+  type EmbeddingModelService,
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
@@ -28,6 +29,7 @@ import {
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   type WorkspaceDescriptor,
+  type WorkspaceRetrievalModeService,
   withDefaultWritingPolicy,
   withSavedModelProfiles,
 } from "@draft-loop/application";
@@ -174,6 +176,7 @@ import {
   RunModelProfileSelectionError,
   resolveWorkspaceModelProfileSelection,
 } from "./run-model-profile-selection.js";
+import { createSemanticRetrievalHost } from "./semantic-retrieval-host.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -317,6 +320,10 @@ export interface NativeHostOptions {
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
   readonly providerAuthModePreference?: ProviderAuthModePreferenceStore;
   readonly recentWorkspaces?: RecentWorkspaceStore;
+  /** Replaces the local embedding model service; tests inject a fake. */
+  readonly embeddingModelService?: EmbeddingModelService;
+  /** Replaces the workspace retrieval-mode service; tests inject a fake. */
+  readonly retrievalModeService?: WorkspaceRetrievalModeService;
   readonly providerAuthModeEnvironmentOverrides?: Readonly<
     Record<ProviderAuthModeProvider, boolean>
   >;
@@ -2073,6 +2080,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }),
     });
   let active: ActiveWorkspace | undefined;
+  const semanticRetrieval = createSemanticRetrievalHost({
+    ...(options.embeddingModelService === undefined
+      ? {}
+      : { embeddingModelService: options.embeddingModelService }),
+    ...(options.retrievalModeService === undefined
+      ? {}
+      : { retrievalModeService: options.retrievalModeService }),
+    workspaceFor: (id) => workspaceFor(id),
+    fail,
+  });
   const knowledgeStoreRoots = new Map<string, string>();
   const backgroundRuns = new Map<string, BackgroundRun>();
   const reviewedOpportunityCache = new Map<string, OpportunityBriefSelectionInput>();
@@ -5224,6 +5241,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ),
           };
         }
+        case "embedding-model.status":
+          return { ok: true, value: await semanticRetrieval.status(command.input) };
+        case "embedding-model.plan-install":
+          return { ok: true, value: semanticRetrieval.planInstall(command.input) };
+        case "embedding-model.install":
+          return { ok: true, value: await semanticRetrieval.install(command.input) };
+        case "embedding-model.progress":
+          return { ok: true, value: semanticRetrieval.progress(command.input) };
+        case "embedding-model.cancel":
+          return { ok: true, value: semanticRetrieval.cancel(command.input) };
+        case "embedding-model.remove":
+          return { ok: true, value: await semanticRetrieval.remove(command.input) };
+        case "workspace.retrieval-mode.get":
+          return { ok: true, value: await semanticRetrieval.getRetrievalMode(command.input) };
+        case "workspace.retrieval-mode.set":
+          return { ok: true, value: await semanticRetrieval.setRetrievalMode(command.input) };
       }
     } catch (error) {
       options.onError?.(error, command.type);
