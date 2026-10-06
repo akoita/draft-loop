@@ -621,6 +621,7 @@ export {
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
+export * from "./embedding-model-install.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";
@@ -634,6 +635,7 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
@@ -641,3 +643,5 @@ export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";
 export * from "./workspace-model-profile-selection.js";
 export * from "./workspace-model-profile-selection-service.js";
+export * from "./workspace-retrieval-mode.js";
+export * from "./workspace-retrieval-mode-service.js";

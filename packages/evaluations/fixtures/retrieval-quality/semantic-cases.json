@@ -1,0 +1,421 @@
+{
+  "workspaceId": "sanitized-semantic-workspace",
+  "sourceId": "sanitized-semantic-source",
+  "corpus": [
+    {
+      "id": "team-lead",
+      "text": "Managed a team of six engineers, running weekly one-on-ones and quarterly performance reviews.",
+      "ordinal": 0
+    },
+    {
+      "id": "mentoring",
+      "text": "Coached junior developers through code reviews and pairing sessions, two of whom were promoted.",
+      "ordinal": 1
+    },
+    {
+      "id": "cost-saving",
+      "text": "Reduced monthly infrastructure spending by 28 percent by rightsizing servers and removing idle resources.",
+      "ordinal": 2
+    },
+    {
+      "id": "incident",
+      "text": "Led the response to a major outage, wrote the post-mortem, and introduced an on-call rotation.",
+      "ordinal": 3
+    },
+    {
+      "id": "ci-cd",
+      "text": "Built a continuous delivery pipeline that shipped every merged change to production automatically.",
+      "ordinal": 4
+    },
+    {
+      "id": "k8s",
+      "text": "Operated Kubernetes workloads, including autoscaling and rolling node upgrades.",
+      "ordinal": 5
+    },
+    {
+      "id": "stakeholder",
+      "text": "Presented quarterly roadmaps to executives and aligned product, design, and sales on priorities.",
+      "ordinal": 6
+    },
+    {
+      "id": "perf",
+      "text": "Cut page load time from four seconds to under one second through lazy loading and caching.",
+      "ordinal": 7
+    },
+    {
+      "id": "ml",
+      "text": "Trained a gradient boosted model that predicted customer churn with 0.87 AUC.",
+      "ordinal": 8
+    },
+    {
+      "id": "sql",
+      "text": "Tuned PostgreSQL queries and added composite indexes, speeding up reports tenfold.",
+      "ordinal": 9
+    },
+    {
+      "id": "security",
+      "text": "Ran a threat-modelling workshop and fixed injection vulnerabilities found in an external penetration test.",
+      "ordinal": 10
+    },
+    {
+      "id": "docs",
+      "text": "Wrote onboarding guides and architecture decision records for the platform group.",
+      "ordinal": 11
+    },
+    {
+      "id": "react",
+      "text": "Developed accessible React components with TypeScript and Storybook.",
+      "ordinal": 12
+    },
+    {
+      "id": "terraform",
+      "text": "Provisioned cloud infrastructure using Terraform modules and remote state.",
+      "ordinal": 13
+    },
+    {
+      "id": "kafka",
+      "text": "Designed Kafka event streaming with exactly-once consumers for order processing.",
+      "ordinal": 14
+    },
+    {
+      "id": "fr-leadership",
+      "text": "Dirigé une équipe de huit développeurs et animé les rétrospectives mensuelles.",
+      "ordinal": 15
+    },
+    {
+      "id": "fr-testing",
+      "text": "Mis en place des tests automatisés de bout en bout qui ont réduit les régressions de moitié.",
+      "ordinal": 16
+    },
+    {
+      "id": "fr-migration",
+      "text": "Piloté la migration d'une base de données monolithique vers des services indépendants.",
+      "ordinal": 17
+    },
+    {
+      "id": "fr-customer",
+      "text": "Animé des ateliers avec les clients pour recueillir leurs besoins et prioriser les fonctionnalités.",
+      "ordinal": 18
+    },
+    {
+      "id": "distractor-team",
+      "text": "Captain of a weekend football team that finished second in the amateur league.",
+      "ordinal": 19
+    },
+    {
+      "id": "distractor-pipeline",
+      "text": "Hobby project: a text-adventure game with a content pipeline written in Rust.",
+      "ordinal": 20
+    },
+    {
+      "id": "distractor-cost",
+      "text": "Won a local cooking contest with a low-cost three-course menu.",
+      "ordinal": 21
+    },
+    {
+      "id": "education",
+      "text": "Master's degree in computer science with a thesis on distributed consensus.",
+      "ordinal": 22
+    },
+    {
+      "id": "hobby-audio",
+      "text": "Repairs vintage audio equipment and plays double bass in a community orchestra.",
+      "ordinal": 23
+    },
+    {
+      "id": "volunteer",
+      "text": "Volunteered as a coding instructor for teenagers at a weekend community workshop.",
+      "ordinal": 24
+    }
+  ],
+  "cases": [
+    {
+      "id": "paraphrase-people-leadership",
+      "query": "people leadership and developer growth",
+      "groundTruthEvidenceIds": ["team-lead", "mentoring"],
+      "requirements": [
+        {
+          "id": "paraphrase-people-leadership-requirement",
+          "text": "People leadership"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-people-leadership-claim",
+          "text": "Led a team and coached developers.",
+          "evidenceIds": ["team-lead", "mentoring"]
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-cost-optimisation",
+      "query": "optimising cloud spending",
+      "groundTruthEvidenceIds": ["cost-saving"],
+      "requirements": [
+        {
+          "id": "paraphrase-cost-optimisation-requirement",
+          "text": "Cost optimisation"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-cost-optimisation-claim",
+          "text": "Reduced infrastructure spending.",
+          "evidenceIds": ["cost-saving"]
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-crisis-handling",
+      "query": "crisis handling and operational resilience",
+      "groundTruthEvidenceIds": ["incident"],
+      "requirements": [
+        {
+          "id": "paraphrase-crisis-handling-requirement",
+          "text": "Operational resilience"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-crisis-handling-claim",
+          "text": "Led the response to a major outage.",
+          "evidenceIds": ["incident"]
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-executive-communication",
+      "query": "communicating strategy to senior management",
+      "groundTruthEvidenceIds": ["stakeholder"],
+      "requirements": [
+        {
+          "id": "paraphrase-executive-communication-requirement",
+          "text": "Executive communication"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-executive-communication-claim",
+          "text": "Presented roadmaps to executives.",
+          "evidenceIds": ["stakeholder"]
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-application-speed",
+      "query": "improving application speed for end users",
+      "groundTruthEvidenceIds": ["perf"],
+      "requirements": [
+        {
+          "id": "paraphrase-application-speed-requirement",
+          "text": "Application speed"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-application-speed-claim",
+          "text": "Cut page load time.",
+          "evidenceIds": ["perf"]
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-predictive-modelling",
+      "query": "predictive analytics and statistical modelling",
+      "groundTruthEvidenceIds": ["ml"],
+      "requirements": [
+        {
+          "id": "paraphrase-predictive-modelling-requirement",
+          "text": "Predictive modelling"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "paraphrase-predictive-modelling-claim",
+          "text": "Trained a churn prediction model.",
+          "evidenceIds": ["ml"]
+        }
+      ]
+    },
+    {
+      "id": "cross-fr-cost",
+      "query": "réduction des coûts d'infrastructure",
+      "groundTruthEvidenceIds": ["cost-saving"],
+      "requirements": [
+        {
+          "id": "cross-fr-cost-requirement",
+          "text": "Infrastructure cost reduction"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "cross-fr-cost-claim",
+          "text": "Reduced infrastructure spending.",
+          "evidenceIds": ["cost-saving"]
+        }
+      ]
+    },
+    {
+      "id": "cross-fr-delivery",
+      "query": "automatisation du déploiement continu",
+      "groundTruthEvidenceIds": ["ci-cd"],
+      "requirements": [
+        {
+          "id": "cross-fr-delivery-requirement",
+          "text": "Continuous deployment"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "cross-fr-delivery-claim",
+          "text": "Built an automated delivery pipeline.",
+          "evidenceIds": ["ci-cd"]
+        }
+      ]
+    },
+    {
+      "id": "cross-en-quality",
+      "query": "automated quality assurance to catch bugs early",
+      "groundTruthEvidenceIds": ["fr-testing"],
+      "requirements": [
+        {
+          "id": "cross-en-quality-requirement",
+          "text": "Automated quality assurance"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "cross-en-quality-claim",
+          "text": "Introduced automated end-to-end tests.",
+          "evidenceIds": ["fr-testing"]
+        }
+      ]
+    },
+    {
+      "id": "cross-en-discovery",
+      "query": "running customer discovery workshops",
+      "groundTruthEvidenceIds": ["fr-customer"],
+      "requirements": [
+        {
+          "id": "cross-en-discovery-requirement",
+          "text": "Customer discovery"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "cross-en-discovery-claim",
+          "text": "Ran workshops with customers.",
+          "evidenceIds": ["fr-customer"]
+        }
+      ]
+    },
+    {
+      "id": "synonym-ci-cd",
+      "query": "CI/CD automation",
+      "groundTruthEvidenceIds": ["ci-cd"],
+      "requirements": [
+        {
+          "id": "synonym-ci-cd-requirement",
+          "text": "CI/CD automation"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "synonym-ci-cd-claim",
+          "text": "Built a continuous delivery pipeline.",
+          "evidenceIds": ["ci-cd"]
+        }
+      ]
+    },
+    {
+      "id": "synonym-k8s",
+      "query": "k8s operations",
+      "groundTruthEvidenceIds": ["k8s"],
+      "requirements": [
+        {
+          "id": "synonym-k8s-requirement",
+          "text": "k8s operations"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "synonym-k8s-claim",
+          "text": "Operated Kubernetes workloads.",
+          "evidenceIds": ["k8s"]
+        }
+      ]
+    },
+    {
+      "id": "synonym-database-tuning",
+      "query": "DB performance tuning",
+      "groundTruthEvidenceIds": ["sql"],
+      "requirements": [
+        {
+          "id": "synonym-database-tuning-requirement",
+          "text": "Database tuning"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "synonym-database-tuning-claim",
+          "text": "Tuned PostgreSQL queries.",
+          "evidenceIds": ["sql"]
+        }
+      ]
+    },
+    {
+      "id": "lexical-react",
+      "query": "React components TypeScript Storybook",
+      "groundTruthEvidenceIds": ["react"],
+      "requirements": [
+        {
+          "id": "lexical-react-requirement",
+          "text": "React and TypeScript"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "lexical-react-claim",
+          "text": "Developed React components.",
+          "evidenceIds": ["react"]
+        }
+      ]
+    },
+    {
+      "id": "lexical-terraform",
+      "query": "Terraform modules remote state",
+      "groundTruthEvidenceIds": ["terraform"],
+      "requirements": [
+        {
+          "id": "lexical-terraform-requirement",
+          "text": "Terraform"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "lexical-terraform-claim",
+          "text": "Provisioned infrastructure with Terraform.",
+          "evidenceIds": ["terraform"]
+        }
+      ]
+    },
+    {
+      "id": "lexical-kafka",
+      "query": "Kafka event streaming exactly-once",
+      "groundTruthEvidenceIds": ["kafka"],
+      "requirements": [
+        {
+          "id": "lexical-kafka-requirement",
+          "text": "Kafka streaming"
+        }
+      ],
+      "draftClaims": [
+        {
+          "id": "lexical-kafka-claim",
+          "text": "Designed Kafka event streaming.",
+          "evidenceIds": ["kafka"]
+        }
+      ]
+    }
+  ]
+}

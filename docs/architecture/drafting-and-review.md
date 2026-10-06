@@ -12,21 +12,7 @@ the evaluator, and each revision is a bounded optimization step against a
 visible rubric. The product uses author–critic language in the UI because it is
 clearer to candidates.
 
-```text
-canonical inputs + rubric
-          |
-          v
-     author draft ---------> structured artifact + evidence links
-          ^                                      |
-          |                                      v
-   bounded revision <----- independent evaluator + deterministic checks
-          |
-          v
-  stable / budget exhausted / user review early
-          |
-          v
-       human approval -> local export
-```
+![Evaluator–optimizer loop: canonical inputs feed the author draft, a structured artifact with evidence links is evaluated by an independent critic and deterministic checks against a visible rubric, accepted findings drive a bounded revision, and the loop stops when stable, on budget exhaustion, or on early user review before human approval and local export.](../assets/evaluator-optimizer-loop.svg)
 
 The rubric covers factuality, evidence support, requirement coverage, and
 quality. Deterministic validators handle checks that do not need a model.

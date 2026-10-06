@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+  <title id="title">DraftLoop architecture at a glance</title>
+  <desc id="desc">The desktop app and the source-only CLI call the same application contracts. Those contracts drive a framework-free product core: orchestrator, domain and schemas, ingestion and evidence, validation and evaluations, artifacts and rendering, and security policy. The core persists to a local SQLite workspace store and portable candidate knowledge bases and writes local Markdown, PDF and DOCX exports. Provider adapters are the only model-facing boundary and send approved context to the Anthropic author route and the OpenAI critic route.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1319"/>
+      <stop offset="1" stop-color="#141b24"/>
+    </linearGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#232a33"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6f7d8e"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2fd0b8"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f0b53c"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="660" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="660" rx="24" fill="url(#dots)"/>
+
+  <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+    <text x="40" y="54" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">ARCHITECTURE</text>
+    <text x="40" y="88" font-size="26" font-weight="700" fill="#f2fbf8">One local core, two interfaces, two independent model routes</text>
+
+    <!-- Local machine boundary -->
+    <rect x="30" y="118" width="860" height="512" rx="20" fill="#11151b" fill-opacity="0.75" stroke="#2fd0b8" stroke-width="1.5" stroke-dasharray="10 8"/>
+    <text x="56" y="148" font-size="14" font-weight="700" letter-spacing="2" fill="#6ae3cf">YOUR MACHINE</text>
+    <text x="196" y="148" font-size="15" fill="#9aa7b4">· local-first by default</text>
+
+    <!-- Interfaces -->
+    <rect x="44" y="157" width="624" height="90" rx="16" fill="none" stroke="#2e3742" stroke-width="1.5" stroke-dasharray="4 5"/>
+    <rect x="56" y="166" width="290" height="70" rx="12" fill="#1d232c" stroke="#3b4652"/>
+    <text x="76" y="196" font-size="17" font-weight="700" fill="#f2fbf8">Desktop app</text>
+    <text x="76" y="220" font-size="14" fill="#9aa7b4">Electron 43 · React 19 · Vite</text>
+    <rect x="366" y="166" width="290" height="70" rx="12" fill="#1d232c" stroke="#3b4652"/>
+    <text x="386" y="196" font-size="17" font-weight="700" fill="#f2fbf8">CLI</text>
+    <text x="386" y="220" font-size="14" fill="#9aa7b4">Commander · source-only</text>
+
+    <g transform="translate(700 166)">
+      <rect width="164" height="70" rx="12" fill="#05231e" stroke="#0c7261"/>
+      <circle cx="34" cy="28" r="10" fill="#2fd0b8"/>
+      <path d="M16 56 a18 14 0 0 1 36 0" fill="#2fd0b8"/>
+      <text x="64" y="32" font-size="17" font-weight="700" fill="#f2fbf8">You</text>
+      <text x="64" y="54" font-size="14" fill="#6ae3cf">the candidate</text>
+    </g>
+    <path d="M698 201 H 674" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <path d="M201 236 V 258" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M511 236 V 258" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Application contracts -->
+    <rect x="56" y="262" width="600" height="50" rx="12" fill="#1a2030" stroke="#5b6b9a"/>
+    <text x="76" y="293" font-size="17" font-weight="700" fill="#f2fbf8">Application contracts</text>
+    <text x="270" y="293" font-size="14" fill="#9aa7b4">commands · queries · use cases shared by both</text>
+
+    <path d="M356 312 V 332" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Product core -->
+    <rect x="56" y="336" width="600" height="172" rx="14" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+    <text x="76" y="362" font-size="17" font-weight="700" fill="#6ae3cf">Product core</text>
+    <text x="196" y="362" font-size="14" fill="#9aa7b4">framework-free · provider-independent</text>
+    <g font-size="15" font-weight="700" fill="#f2fbf8">
+      <rect x="70" y="376" width="182" height="56" rx="10" fill="#161a21" stroke="#2fd0b8"/>
+      <text x="84" y="400">Orchestrator</text>
+      <text x="84" y="420" font-size="13" font-weight="400" fill="#6ae3cf">author–critic loop · budgets</text>
+      <rect x="264" y="376" width="182" height="56" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="278" y="400">Domain + schemas</text>
+      <text x="278" y="420" font-size="13" font-weight="400" fill="#9aa7b4">workflow state · Zod</text>
+      <rect x="458" y="376" width="184" height="56" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="472" y="400">Ingestion + evidence</text>
+      <text x="472" y="420" font-size="13" font-weight="400" fill="#9aa7b4">sources · provenance</text>
+      <rect x="70" y="442" width="182" height="56" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="84" y="466">Validation + evals</text>
+      <text x="84" y="486" font-size="13" font-weight="400" fill="#9aa7b4">checks · rubric findings</text>
+      <rect x="264" y="442" width="182" height="56" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="278" y="466">Artifacts + rendering</text>
+      <text x="278" y="486" font-size="13" font-weight="400" fill="#9aa7b4">approved CV output</text>
+      <rect x="458" y="442" width="184" height="56" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="472" y="466">Security policy</text>
+      <text x="472" y="486" font-size="13" font-weight="400" fill="#9aa7b4">redaction · retention</text>
+    </g>
+
+    <!-- Provider adapters -->
+    <rect x="690" y="372" width="174" height="96" rx="12" fill="#1d232c" stroke="#3b4652"/>
+    <text x="708" y="402" font-size="17" font-weight="700" fill="#f2fbf8">Provider</text>
+    <text x="708" y="422" font-size="17" font-weight="700" fill="#f2fbf8">adapters</text>
+    <text x="708" y="448" font-size="13" fill="#9aa7b4">policy · model identity</text>
+    <path d="M656 420 H 686" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Local storage and output -->
+    <path d="M181 508 V 536" stroke="#6f7d8e" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <path d="M447 508 V 536" stroke="#6f7d8e" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <path d="M630 508 V 536" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+    <g>
+      <rect x="56" y="540" width="250" height="70" rx="12" fill="#161a21" stroke="#3b4652"/>
+      <ellipse cx="86" cy="562" rx="14" ry="5" fill="#2fd0b8"/>
+      <path d="M72 562 v22 a14 5 0 0 0 28 0 v-22" fill="#0c7261"/>
+      <ellipse cx="86" cy="562" rx="14" ry="5" fill="#6ae3cf"/>
+      <text x="112" y="570" font-size="16" font-weight="700" fill="#f2fbf8">Workspace store</text>
+      <text x="112" y="592" font-size="13" fill="#9aa7b4">SQLite · Drizzle · run history</text>
+
+      <rect x="322" y="540" width="250" height="70" rx="12" fill="#161a21" stroke="#3b4652"/>
+      <rect x="338" y="556" width="28" height="36" rx="4" fill="#fbfaf7"/>
+      <rect x="344" y="552" width="28" height="36" rx="4" fill="#d6f2ec" stroke="#161a21" stroke-width="2"/>
+      <text x="384" y="570" font-size="16" font-weight="700" fill="#f2fbf8">Portable CKB</text>
+      <text x="384" y="592" font-size="13" fill="#9aa7b4">versioned sources · index</text>
+
+      <rect x="588" y="540" width="276" height="70" rx="12" fill="#161a21" stroke="#3b4652"/>
+      <rect x="604" y="552" width="30" height="40" rx="4" fill="#fbfaf7"/>
+      <rect x="610" y="562" width="18" height="4" rx="2" fill="#16181c"/>
+      <rect x="610" y="571" width="14" height="3" rx="1.5" fill="#c4c9cf"/>
+      <rect x="610" y="578" width="16" height="3" rx="1.5" fill="#c4c9cf"/>
+      <text x="648" y="570" font-size="16" font-weight="700" fill="#f2fbf8">Local exports</text>
+      <text x="648" y="592" font-size="13" fill="#9aa7b4">Markdown · PDF · DOCX</text>
+    </g>
+
+    <!-- Model providers -->
+    <text x="920" y="148" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">MODEL PROVIDERS</text>
+    <text x="920" y="182" font-size="15" fill="#c9d3dc">Cross-company pair by</text>
+    <text x="920" y="204" font-size="15" fill="#c9d3dc">default; provider and model</text>
+    <text x="920" y="226" font-size="15" fill="#c9d3dc">recorded for every run.</text>
+
+    <rect x="920" y="300" width="250" height="74" rx="14" fill="#161a21" stroke="#2fd0b8" stroke-width="1.5"/>
+    <circle cx="952" cy="337" r="16" fill="#05231e" stroke="#2fd0b8"/>
+    <text x="952" y="343" font-size="16" font-weight="800" fill="#6ae3cf" text-anchor="middle">A</text>
+    <text x="980" y="332" font-size="17" font-weight="700" fill="#f2fbf8">Anthropic</text>
+    <text x="980" y="354" font-size="14" fill="#6ae3cf">author route</text>
+
+    <rect x="920" y="466" width="250" height="74" rx="14" fill="#161a21" stroke="#f0b53c" stroke-width="1.5"/>
+    <circle cx="952" cy="503" r="16" fill="#261c08" stroke="#f0b53c"/>
+    <text x="952" y="509" font-size="16" font-weight="800" fill="#f0b53c" text-anchor="middle">O</text>
+    <text x="980" y="498" font-size="17" font-weight="700" fill="#f2fbf8">OpenAI</text>
+    <text x="980" y="520" font-size="14" fill="#f0b53c">critic route</text>
+
+    <path d="M864 404 C 890 404, 890 337, 914 337" fill="none" stroke="#2fd0b8" stroke-width="2.5" marker-end="url(#arrowTeal)"/>
+    <path d="M864 436 C 890 436, 890 503, 914 503" fill="none" stroke="#f0b53c" stroke-width="2.5" marker-end="url(#arrowAmber)"/>
+    <g transform="translate(890 420)">
+      <circle r="15" fill="#0f1319" stroke="#c9d3dc" stroke-width="1.5"/>
+      <rect x="-6" y="-2" width="12" height="9" rx="1.5" fill="#c9d3dc"/>
+      <path d="M-3.5 -2 v-3 a3.5 3.5 0 0 1 7 0 v3" fill="none" stroke="#c9d3dc" stroke-width="1.8"/>
+    </g>
+    <text x="920" y="420" font-size="14" font-weight="600" fill="#e6ebf0">approved</text>
+    <text x="920" y="438" font-size="14" font-weight="600" fill="#e6ebf0">transmission only</text>
+  </g>
+</svg>

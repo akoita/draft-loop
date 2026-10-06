@@ -33,6 +33,7 @@
     { "path": "./packages/rendering" },
     { "path": "./packages/storage" },
     { "path": "./packages/security" },
+    { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
     { "path": "./apps/cli" },
     { "path": "./apps/desktop" }

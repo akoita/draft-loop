@@ -9,12 +9,17 @@ import { Command } from "commander";
 import packageJson from "../package.json";
 
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
+import {
+  type EmbeddingModelServiceFactory,
+  registerEmbeddingModelCommands,
+} from "./embedding-model-commands.js";
 import { isEntryPoint } from "./entry-point.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
 import { registerModelProfileSelectionCommands } from "./model-profile-selection-commands.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
+import { registerRetrievalModeCommands } from "./retrieval-mode-commands.js";
 import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
   type AddKnowledgeSourceDirectoryMembersResult,
@@ -30,6 +35,7 @@ import {
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
   type CanonicalCandidateProfilePatch,
+  createEmbeddingModelService,
   type ImportKnowledgeSourceDirectoryResult,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
@@ -56,10 +62,12 @@ import {
   type WorkspaceDescriptor,
   type WorkspaceEvidenceModeService,
   type WorkspaceModelProfileSelectionService,
+  type WorkspaceRetrievalModeService,
   type WritingPolicyVersionMetadata,
   type WritingPolicyVersionView,
   workspaceEvidenceModeService,
   workspaceModelProfileSelectionService,
+  workspaceRetrievalModeService,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -243,10 +251,14 @@ export interface CliDependencies {
   readonly sensitivityService?: SourceSensitivityService;
   /** The workspace evidence-mode boundary; replaced in tests. */
   readonly evidenceModeService?: WorkspaceEvidenceModeService;
+  /** The workspace retrieval-mode boundary; replaced in tests. */
+  readonly retrievalModeService?: WorkspaceRetrievalModeService;
   /** The workspace applied model-profile boundary; replaced in tests. */
   readonly modelProfileSelectionService?: WorkspaceModelProfileSelectionService;
   /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
   readonly consentService?: SensitiveKnowledgeConsentService;
+  /** Builds the local embedding-model service for a model directory; replaced in tests. */
+  readonly embeddingModelServiceFactory?: EmbeddingModelServiceFactory;
   /** Where status lines are written; replaced in tests. */
   readonly io?: ApplicationIo;
 }
@@ -2768,9 +2780,22 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     });
 
   registerSensitivityCommands(knowledge, sensitivity, io, consent);
+  registerEmbeddingModelCommands(
+    command,
+    dependencies.embeddingModelServiceFactory ??
+      ((modelRoot) => createEmbeddingModelService({ modelRoot })),
+    io,
+  );
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,
+    io,
+  );
+  registerRetrievalModeCommands(
+    command,
+    dependencies.retrievalModeService ?? workspaceRetrievalModeService,
+    dependencies.embeddingModelServiceFactory ??
+      ((modelRoot) => createEmbeddingModelService({ modelRoot })),
     io,
   );
 

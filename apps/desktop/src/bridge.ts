@@ -81,6 +81,31 @@ import {
   parseRecentWorkspacesListResult,
 } from "./recent-workspaces.js";
 
+import {
+  type EmbeddingModelCancelResult,
+  type EmbeddingModelInstallInput,
+  type EmbeddingModelPlanResult,
+  type EmbeddingModelProgressResult,
+  type EmbeddingModelStatusResult,
+  type EmbeddingModelTierInput,
+  embeddingModelCancelResultKeys,
+  embeddingModelInstallKeys,
+  embeddingModelPlanFileKeys,
+  embeddingModelPlanResultKeys,
+  embeddingModelProgressResultKeys,
+  embeddingModelStates,
+  embeddingModelStatusResultKeys,
+  embeddingModelTierKeys,
+  embeddingModelTiers,
+  retrievalModes,
+  type WorkspaceRetrievalModeGetInput,
+  type WorkspaceRetrievalModeResult,
+  type WorkspaceRetrievalModeSetInput,
+  workspaceRetrievalModeGetKeys,
+  workspaceRetrievalModeResultKeys,
+  workspaceRetrievalModeSetKeys,
+} from "./semantic-retrieval-contract.js";
+
 // Re-export the safe policy vocabulary from the bridge so consumers that only
 // depend on renderer contracts do not need to import the model module.
 export type {
@@ -108,6 +133,17 @@ export type {
   ReviewedCanonicalCandidateProfileCatalogResult,
   SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
+export type {
+  EmbeddingModelCancelResult,
+  EmbeddingModelInstallInput,
+  EmbeddingModelPlanResult,
+  EmbeddingModelProgressResult,
+  EmbeddingModelStatusResult,
+  EmbeddingModelTierInput,
+  WorkspaceRetrievalModeGetInput,
+  WorkspaceRetrievalModeResult,
+  WorkspaceRetrievalModeSetInput,
+} from "./semantic-retrieval-contract.js";
 
 export const supportedFileExtensions = [
   ".docx",
@@ -2757,6 +2793,14 @@ export interface BridgeCommandInputMap {
   "models.profile-support": ModelProfileSupportInput;
   "models.saved-profiles.read": SavedModelProfilesReadInput;
   "models.saved-profiles.save": SavedModelProfilesSaveInput;
+  "embedding-model.status": EmbeddingModelTierInput;
+  "embedding-model.plan-install": EmbeddingModelTierInput;
+  "embedding-model.install": EmbeddingModelInstallInput;
+  "embedding-model.progress": EmbeddingModelTierInput;
+  "embedding-model.cancel": EmbeddingModelTierInput;
+  "embedding-model.remove": EmbeddingModelTierInput;
+  "workspace.retrieval-mode.get": WorkspaceRetrievalModeGetInput;
+  "workspace.retrieval-mode.set": WorkspaceRetrievalModeSetInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -2839,6 +2883,14 @@ export interface BridgeCommandOutputMap {
   "models.profile-support": ModelProfileSupportResult;
   "models.saved-profiles.read": SavedModelProfilesResult;
   "models.saved-profiles.save": SavedModelProfilesResult;
+  "embedding-model.status": EmbeddingModelStatusResult;
+  "embedding-model.plan-install": EmbeddingModelPlanResult;
+  "embedding-model.install": EmbeddingModelStatusResult;
+  "embedding-model.progress": EmbeddingModelProgressResult;
+  "embedding-model.cancel": EmbeddingModelCancelResult;
+  "embedding-model.remove": EmbeddingModelStatusResult;
+  "workspace.retrieval-mode.get": WorkspaceRetrievalModeResult;
+  "workspace.retrieval-mode.set": WorkspaceRetrievalModeResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -4682,6 +4734,122 @@ function validateModelsPreviewIndependenceInput(value: unknown): ModelsPreviewIn
   };
 }
 
+const maximumEmbeddingModelBytes = 100_000_000_000;
+const maximumEmbeddingModelFiles = 16;
+
+function validateEmbeddingModelTierInput(value: unknown): EmbeddingModelTierInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, embeddingModelTierKeys)) return invalidInput();
+  return { tier: enumValue(input.tier, embeddingModelTiers) };
+}
+
+function validateEmbeddingModelInstallInput(value: unknown): EmbeddingModelInstallInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, embeddingModelInstallKeys)) return invalidInput();
+  if (input.approved !== true) return invalidInput();
+  return { tier: enumValue(input.tier, embeddingModelTiers), approved: true };
+}
+
+function validateWorkspaceRetrievalModeGetInput(value: unknown): WorkspaceRetrievalModeGetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceRetrievalModeGetKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+function validateWorkspaceRetrievalModeSetInput(value: unknown): WorkspaceRetrievalModeSetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceRetrievalModeSetKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    mode: enumValue(input.mode, retrievalModes),
+    modelTier: enumValue(input.modelTier, embeddingModelTiers),
+  };
+}
+
+/** The pinned model pages live on one host; anything else is not a model source. */
+function embeddingModelSourceUrl(value: unknown): string {
+  const result = stringValue(value, 300);
+  if (!result.startsWith("https://huggingface.co/") || /\s/u.test(result)) return invalidInput();
+  return result;
+}
+
+function normalizeEmbeddingModelStatusResult(value: unknown): EmbeddingModelStatusResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, embeddingModelStatusResultKeys)) return invalidInput();
+  return {
+    tier: enumValue(result.tier, embeddingModelTiers),
+    state: enumValue(result.state, embeddingModelStates),
+    modelId: stringValue(result.modelId, 200),
+    revision: stringValue(result.revision, 64),
+    license: stringValue(result.license, 64),
+    totalSizeBytes: finiteInteger(result.totalSizeBytes, maximumEmbeddingModelBytes),
+    sourceUrl: embeddingModelSourceUrl(result.sourceUrl),
+  };
+}
+
+function normalizeEmbeddingModelPlanResult(value: unknown): EmbeddingModelPlanResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, embeddingModelPlanResultKeys)) return invalidInput();
+  if (
+    !Array.isArray(result.files) ||
+    result.files.length === 0 ||
+    result.files.length > maximumEmbeddingModelFiles
+  ) {
+    return invalidInput();
+  }
+  return {
+    tier: enumValue(result.tier, embeddingModelTiers),
+    modelId: stringValue(result.modelId, 200),
+    revision: stringValue(result.revision, 64),
+    license: stringValue(result.license, 64),
+    sourceUrl: embeddingModelSourceUrl(result.sourceUrl),
+    files: (result.files as readonly unknown[]).map((candidate) => {
+      const file = requireRecord(candidate);
+      if (!hasOnlyKeys(file, embeddingModelPlanFileKeys)) return invalidInput();
+      const path = stringValue(file.path, 200);
+      // A relative path inside the model repository; never a local location.
+      if (path.startsWith("/") || path.includes("\\") || path.split("/").includes("..")) {
+        return invalidInput();
+      }
+      return { path, sizeBytes: finiteInteger(file.sizeBytes, maximumEmbeddingModelBytes) };
+    }),
+    totalSizeBytes: finiteInteger(result.totalSizeBytes, maximumEmbeddingModelBytes),
+  };
+}
+
+function normalizeEmbeddingModelProgressResult(value: unknown): EmbeddingModelProgressResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, embeddingModelProgressResultKeys)) return invalidInput();
+  const active = booleanValue(result.active);
+  if (result.receivedBytes === undefined && result.totalBytes === undefined) return { active };
+  if (!active || result.receivedBytes === undefined || result.totalBytes === undefined) {
+    return invalidInput();
+  }
+  const receivedBytes = finiteInteger(result.receivedBytes, maximumEmbeddingModelBytes);
+  const totalBytes = finiteInteger(result.totalBytes, maximumEmbeddingModelBytes);
+  if (totalBytes < 1 || receivedBytes > totalBytes) return invalidInput();
+  return { active, receivedBytes, totalBytes };
+}
+
+function normalizeEmbeddingModelCancelResult(value: unknown): EmbeddingModelCancelResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, embeddingModelCancelResultKeys)) return invalidInput();
+  return { cancelled: booleanValue(result.cancelled) };
+}
+
+function normalizeWorkspaceRetrievalModeResult(value: unknown): WorkspaceRetrievalModeResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, workspaceRetrievalModeResultKeys)) return invalidInput();
+  const updatedAt = result.updatedAt === undefined ? undefined : stringValue(result.updatedAt, 64);
+  if (updatedAt !== undefined && !Number.isFinite(Date.parse(updatedAt))) return invalidInput();
+  return {
+    workspaceId: identifier(result.workspaceId),
+    mode: enumValue(result.mode, retrievalModes),
+    modelTier: enumValue(result.modelTier, embeddingModelTiers),
+    ...(updatedAt === undefined ? {} : { updatedAt }),
+  };
+}
+
 /** Parses untrusted renderer input into one of the allowlisted bridge commands. */
 export function validateBridgeCommand(value: unknown): BridgeCommand {
   const command = requireRecord(value);
@@ -5005,6 +5173,46 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "models.saved-profiles.save",
         input: parseSavedModelProfilesSaveInput(command.input),
+      };
+    case "embedding-model.status":
+      return {
+        type: "embedding-model.status",
+        input: validateEmbeddingModelTierInput(command.input),
+      };
+    case "embedding-model.plan-install":
+      return {
+        type: "embedding-model.plan-install",
+        input: validateEmbeddingModelTierInput(command.input),
+      };
+    case "embedding-model.progress":
+      return {
+        type: "embedding-model.progress",
+        input: validateEmbeddingModelTierInput(command.input),
+      };
+    case "embedding-model.cancel":
+      return {
+        type: "embedding-model.cancel",
+        input: validateEmbeddingModelTierInput(command.input),
+      };
+    case "embedding-model.remove":
+      return {
+        type: "embedding-model.remove",
+        input: validateEmbeddingModelTierInput(command.input),
+      };
+    case "embedding-model.install":
+      return {
+        type: "embedding-model.install",
+        input: validateEmbeddingModelInstallInput(command.input),
+      };
+    case "workspace.retrieval-mode.get":
+      return {
+        type: "workspace.retrieval-mode.get",
+        input: validateWorkspaceRetrievalModeGetInput(command.input),
+      };
+    case "workspace.retrieval-mode.set":
+      return {
+        type: "workspace.retrieval-mode.set",
+        input: validateWorkspaceRetrievalModeSetInput(command.input),
       };
   }
 }
@@ -7176,6 +7384,19 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "models.saved-profiles.read":
     case "models.saved-profiles.save":
       return parseSavedModelProfilesResult(value, command.input.workspaceId);
+    case "embedding-model.status":
+    case "embedding-model.install":
+    case "embedding-model.remove":
+      return normalizeEmbeddingModelStatusResult(value);
+    case "embedding-model.plan-install":
+      return normalizeEmbeddingModelPlanResult(value);
+    case "embedding-model.progress":
+      return normalizeEmbeddingModelProgressResult(value);
+    case "embedding-model.cancel":
+      return normalizeEmbeddingModelCancelResult(value);
+    case "workspace.retrieval-mode.get":
+    case "workspace.retrieval-mode.set":
+      return normalizeWorkspaceRetrievalModeResult(value);
   }
 }
 

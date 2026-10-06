@@ -1,4 +1,4 @@
-# DraftLoop
+<h1><img src="docs/assets/draftloop-hero.svg" alt="DraftLoop: job-specific CVs grounded in your own evidence. One AI drafts, another critiques, you decide."></h1>
 
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-24.5.0-339933?logo=node.js&logoColor=white)
@@ -31,22 +31,7 @@ accepted feedback drives bounded revision. The default cross-company pairing is
 Anthropic as author and OpenAI as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
 records DraftLoop's adaptation and controls.
 
-```mermaid
-flowchart LR
-    subgraph Local["Local workspace"]
-        Inputs["Approved job requirements<br/>+ candidate sources"]
-        Gate["Visible provider-transmission<br/>approval"]
-        Author["Grounded author"]
-        Critic["Independent evaluator / critic<br/>+ bounded revision"]
-        Human["Human review<br/>and approval"]
-        Export["Local CV export"]
-        Inputs --> Gate --> Author --> Critic --> Human --> Export
-    end
-    Anthropic["Anthropic<br/>author"]
-    OpenAI["OpenAI<br/>critic"]
-    Author <-->|"approved context"| Anthropic
-    Critic <-->|"approved draft and evidence"| OpenAI
-```
+![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before a local export.](docs/assets/how-draftloop-works.svg)
 
 The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
@@ -123,6 +108,35 @@ pnpm test
 pnpm validate
 ```
 
+### Local semantic retrieval model (optional)
+
+DraftLoop can use a pinned, local Granite embedding model (Apache-2.0; about
+313 MB for the default `311m` tier, 98 MB for `97m`). It runs on your machine
+and is never downloaded implicitly. The files are fetched only when you run
+`install` with `--confirm`; without it, the command prints what would be
+downloaded and exits.
+
+```sh
+pnpm --filter @draft-loop/cli start embeddings status [--tier 311m|97m] [--verify]
+pnpm --filter @draft-loop/cli start embeddings install [--tier 311m|97m] [--from <dir>] --confirm
+pnpm --filter @draft-loop/cli start embeddings remove [--tier 311m|97m]
+```
+
+Use `--from <dir>` to import the files offline from a directory that mirrors the
+model repository layout. Every file is checked against its pinned SHA-256
+checksum before the model becomes available. The default location is your
+per-user data directory; set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` (or pass
+`--model-dir`) to choose another.
+
+Choose how a workspace searches its knowledge with `retrieval mode`
+(`lexical`, the default, `semantic`, or `hybrid`). Runs fall back visibly to
+lexical retrieval when the local model or index is unavailable; see the
+[CLI reference](docs/reference/cli-and-desktop.md#retrieval-mode).
+
+```sh
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic|hybrid] [--tier 311m|97m] [--json]
+```
+
 ## Technology and architecture
 
 | Area                  | Technology or boundary                                           |
@@ -134,15 +148,7 @@ pnpm validate
 | Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
 | Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
 
-```mermaid
-flowchart LR
-    UI["CLI / Desktop"] --> Core["Shared application and core<br/>evaluator–optimizer workflow"]
-    Core --> Local["Local SQLite<br/>run history + exports"]
-    Core --> Adapters["Provider adapters"]
-    Adapters --> Anthropic["Approved Anthropic<br/>author route"]
-    Adapters --> OpenAI["Approved OpenAI<br/>critic route"]
-    CKB["Portable CKB component<br/>(basic controls + binding)"] --> Core
-```
+![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)
 
 The portable Candidate Knowledge Base (CKB) component can store approved local
 source versions. CLI and desktop adapters can create, open, list, and inspect

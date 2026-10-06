@@ -16,6 +16,7 @@
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/application": "workspace:*",
     "@draft-loop/domain": "workspace:*",
+    "@draft-loop/embeddings": "workspace:*",
     "@draft-loop/ingestion": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
     "@draft-loop/providers": "workspace:*",

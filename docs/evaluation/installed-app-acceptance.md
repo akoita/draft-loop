@@ -13,6 +13,12 @@ The second launch reopens the workspace, resumes the run, approves the revised
 artifact, exports Markdown, DOCX, and PDF, and checks durable history and
 workspace metadata.
 
+Packaged builds ship a pruned, CPU-only `onnxruntime-node` for the target
+platform as an extra resource (`resources/onnxruntime-node`, staged by
+`apps/desktop/forge.config.ts`); the embedding model itself is not bundled.
+The second launch also runs a tiny embedded ONNX model through the packaged
+runtime and records the result as the `embeddingRuntime` check.
+
 Each matrix job uploads a JSON artifact containing only the app version,
 packaged executable checksum, OS metadata, boolean workflow results, and
 limitations. It does not contain candidate text, the job URL, credentials, or

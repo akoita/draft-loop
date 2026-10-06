@@ -61,6 +61,8 @@ import {
   type CandidateKnowledgeRetentionPolicyUpdateInput,
   maximumCandidateKnowledgeRetentionExpireAfterDays,
 } from "./candidate-knowledge-retention-types.js";
+import * as vectorIndex from "./knowledge-vector-index.js";
+import * as semanticTrace from "./semantic-retrieval-trace.js";
 import {
   appendSourceSensitivityRules,
   deleteSourceSensitivityRules,
@@ -81,6 +83,8 @@ import {
 } from "./storage-errors.js";
 
 export * from "./candidate-knowledge-retention-types.js";
+export * from "./knowledge-vector-index.js";
+export * from "./semantic-retrieval-trace.js";
 export type {
   SourceSensitivityRuleAppendInput,
   SourceSensitivityRuleStoragePort,
@@ -1323,7 +1327,7 @@ export class StorageUnavailableError extends Error {
   }
 }
 
-export const storageSchemaVersion = 27 as const;
+export const storageSchemaVersion = 29 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3259,6 +3263,11 @@ const migrationTwentyFive: Migration = {
   `.trim(),
 };
 
+const traceSelectSql =
+  "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = ?";
+
+const traceByIdSql = `${traceSelectSql} AND trace_id = ?`;
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -3287,6 +3296,8 @@ const migrations: readonly Migration[] = [
   migrationTwentyFive,
   artifactHistoryMigration,
   sourceSensitivityRulesMigration,
+  vectorIndex.candidateKnowledgeVectorIndexMigration,
+  semanticTrace.semanticRetrievalTraceMigration,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3592,6 +3603,9 @@ function lexicalIndexEquals(
     left.manifestChecksum === right.manifestChecksum
   );
 }
+
+const lexicalIndexRowSql =
+  "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?";
 
 function candidateKnowledgeLexicalIndexRecordFromRow(
   database: SqliteHandle,
@@ -4158,6 +4172,20 @@ export class SqliteStorage
   private readonly database: SqliteHandle;
   private closed = false;
   private readonly readOnly: boolean;
+
+  /** Replaceable vector projection beside the lexical index; also available on read-only stores. */
+  public get candidateKnowledgeVectorIndex() {
+    return vectorIndex.createCandidateKnowledgeVectorStorage(this.database, () =>
+      this.ensureOpen(),
+    );
+  }
+
+  /** Append-only semantic companion to the v1 retrieval trace; also available on read-only stores. */
+  public get candidateKnowledgeSemanticRetrievalTrace() {
+    return semanticTrace.createSemanticRetrievalTraceStorage(this.database, () =>
+      this.ensureOpen(),
+    );
+  }
 
   public constructor(filename: string, options: SqliteStorageOpenOptions = {}) {
     this.readOnly = options.readOnly === true;
@@ -11998,11 +12026,7 @@ export class SqliteStorage
           createdAt,
         );
       this.insertCandidateKnowledgeLexicalChunks(storeId, knowledgeBaseId, chunks);
-      const indexRow = this.database
-        .prepare(
-          "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?",
-        )
-        .get(storeId, knowledgeBaseId);
+      const indexRow = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
       if (indexRow === undefined) {
         throw new StorageValidationError("Candidate knowledge lexical index was not stored");
       }
@@ -12027,11 +12051,7 @@ export class SqliteStorage
     const chunks = validatedCandidateKnowledgeLexicalChunks(record.chunks, scope);
     let result: CandidateKnowledgeLexicalIndexRecord | undefined;
     this.database.transaction(() => {
-      const existingRow = this.database
-        .prepare(
-          "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?",
-        )
-        .get(storeId, knowledgeBaseId);
+      const existingRow = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
       if (existingRow === undefined) {
         throw new StorageConflictError("Candidate knowledge lexical index must be rebuilt first");
       }
@@ -12087,11 +12107,7 @@ export class SqliteStorage
           storeId,
           knowledgeBaseId,
         );
-      const indexRow = this.database
-        .prepare(
-          "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?",
-        )
-        .get(storeId, knowledgeBaseId);
+      const indexRow = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
       if (indexRow === undefined) {
         throw new StorageValidationError("Candidate knowledge lexical index was not stored");
       }
@@ -12150,11 +12166,7 @@ export class SqliteStorage
       indexInput === undefined
         ? undefined
         : validatedCandidateKnowledgeLexicalIndexIdentity(indexInput);
-    const row = this.database
-      .prepare(
-        "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?",
-      )
-      .get(storeId, knowledgeBaseId);
+    const row = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
     if (row === undefined) {
       return {
         status: "not-indexed",
@@ -12271,11 +12283,7 @@ export class SqliteStorage
     const payloadChecksum = checksum(payloadJson);
     let result: CandidateKnowledgeRetrievalTrace | undefined;
     this.database.transaction(() => {
-      const existing = this.database
-        .prepare(
-          "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = ? AND trace_id = ?",
-        )
-        .get(trace.workspaceId, trace.id);
+      const existing = this.database.prepare(traceByIdSql).get(trace.workspaceId, trace.id);
       if (existing !== undefined) {
         if (rowString(existing, "payload_checksum") !== payloadChecksum) {
           throw new StorageConflictError("Candidate knowledge retrieval trace is immutable");
@@ -12313,11 +12321,7 @@ export class SqliteStorage
       "retrieval trace workspaceId",
     );
     const normalizedTraceId = requireSafeLexicalIdentifier(traceId, "retrieval trace id");
-    const row = this.database
-      .prepare(
-        "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = ? AND trace_id = ?",
-      )
-      .get(normalizedWorkspaceId, normalizedTraceId);
+    const row = this.database.prepare(traceByIdSql).get(normalizedWorkspaceId, normalizedTraceId);
     return row === undefined ? undefined : candidateKnowledgeRetrievalTraceFromRow(row);
   }
 
@@ -12347,18 +12351,11 @@ export class SqliteStorage
     ) {
       throw new StorageValidationError("retrieval trace limit is invalid");
     }
-    const rows =
-      operationId === undefined
-        ? this.database
-            .prepare(
-              "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = ? ORDER BY created_at, trace_id LIMIT ?",
-            )
-            .all(normalizedWorkspaceId, limit)
-        : this.database
-            .prepare(
-              "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = ? AND operation_id = ? ORDER BY created_at, trace_id LIMIT ?",
-            )
-            .all(normalizedWorkspaceId, operationId, limit);
+    const operationFilter = operationId === undefined ? "" : " AND operation_id = ?";
+    const parameters = [normalizedWorkspaceId, ...(operationId === undefined ? [] : [operationId])];
+    const rows = this.database
+      .prepare(`${traceSelectSql}${operationFilter} ORDER BY created_at, trace_id LIMIT ?`)
+      .all(...parameters, limit);
     return rows.map((row) => candidateKnowledgeRetrievalTraceFromRow(row));
   }
 

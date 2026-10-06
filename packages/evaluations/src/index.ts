@@ -693,7 +693,12 @@ export function assertNoQualityRegression(comparison: EvaluationComparison): voi
   }
 }
 
-export type RetrievalMode = "lexical" | "vector" | "hybrid";
+export type RetrievalMode =
+  | "lexical"
+  | "term-frequency"
+  | "term-frequency-hybrid"
+  | "semantic"
+  | "semantic-hybrid";
 
 export interface RetrievalBenchmarkCase {
   readonly id: string;
@@ -714,6 +719,8 @@ export interface RetrievalEvaluationMetrics {
   readonly irrelevantContextRatio: number;
   readonly unsupportedClaimCount: number;
   readonly meanReciprocalRank: number;
+  /** Fraction of ground-truth evidence ids present in the retrieved set. */
+  readonly recall: number;
 }
 
 export interface RetrievalBenchmarkReport {
@@ -728,6 +735,7 @@ export interface RetrievalBenchmarkReport {
     readonly irrelevantContextRatioDelta: number;
     readonly unsupportedClaimDelta: number;
     readonly meanReciprocalRankDelta: number;
+    readonly recallDelta: number;
   };
   readonly passed: boolean;
   readonly regressionReasons: readonly string[];
@@ -756,6 +764,9 @@ export function evaluateRetrievalMetrics(
 
   const irrelevantContextRatio =
     retrieved.length === 0 ? 0 : (retrieved.length - relevantRetrieved.length) / retrieved.length;
+
+  const retrievedGroundTruthCount = new Set(relevantRetrieved.map((chunk) => chunk.id)).size;
+  const recall = groundTruthSet.size === 0 ? 1 : retrievedGroundTruthCount / groundTruthSet.size;
 
   const firstRelevantIndex = retrieved.findIndex((chunk) => groundTruthSet.has(chunk.id));
   const meanReciprocalRank = firstRelevantIndex >= 0 ? 1 / (firstRelevantIndex + 1) : 0;
@@ -791,6 +802,7 @@ export function evaluateRetrievalMetrics(
     irrelevantContextRatio,
     unsupportedClaimCount,
     meanReciprocalRank,
+    recall,
   };
 }
 
@@ -798,6 +810,7 @@ export interface BenchmarkRetrievalOptions {
   readonly maxCitationAccuracyDrop?: number;
   readonly maxCoverageDrop?: number;
   readonly maxUnsupportedClaimIncrease?: number;
+  readonly maxRecallDrop?: number;
 }
 
 export async function benchmarkRetrieval(
@@ -821,6 +834,7 @@ export async function benchmarkRetrieval(
   const maxCitationAccuracyDrop = options.maxCitationAccuracyDrop ?? 0.05;
   const maxCoverageDrop = options.maxCoverageDrop ?? 0.05;
   const maxUnsupportedClaimIncrease = options.maxUnsupportedClaimIncrease ?? 0;
+  const maxRecallDrop = options.maxRecallDrop ?? 0.05;
 
   let totalBaselineAcc = 0;
   let totalCandidateAcc = 0;
@@ -832,6 +846,8 @@ export async function benchmarkRetrieval(
   let totalCandidateUnsup = 0;
   let totalBaselineMrr = 0;
   let totalCandidateMrr = 0;
+  let totalBaselineRecall = 0;
+  let totalCandidateRecall = 0;
 
   for (const benchmarkCase of cases) {
     const [baselineResults, candidateResults] = await Promise.all([
@@ -851,6 +867,8 @@ export async function benchmarkRetrieval(
     totalCandidateUnsup += cMetrics.unsupportedClaimCount;
     totalBaselineMrr += bMetrics.meanReciprocalRank;
     totalCandidateMrr += cMetrics.meanReciprocalRank;
+    totalBaselineRecall += bMetrics.recall;
+    totalCandidateRecall += cMetrics.recall;
   }
 
   const n = Math.max(1, cases.length);
@@ -860,6 +878,7 @@ export async function benchmarkRetrieval(
     irrelevantContextRatio: totalBaselineIrr / n,
     unsupportedClaimCount: totalBaselineUnsup / n,
     meanReciprocalRank: totalBaselineMrr / n,
+    recall: totalBaselineRecall / n,
   };
   const candidateMetrics: RetrievalEvaluationMetrics = {
     citationAccuracy: totalCandidateAcc / n,
@@ -867,6 +886,7 @@ export async function benchmarkRetrieval(
     irrelevantContextRatio: totalCandidateIrr / n,
     unsupportedClaimCount: totalCandidateUnsup / n,
     meanReciprocalRank: totalCandidateMrr / n,
+    recall: totalCandidateRecall / n,
   };
 
   const citationAccuracyDelta =
@@ -879,6 +899,7 @@ export async function benchmarkRetrieval(
     candidateMetrics.unsupportedClaimCount - baselineMetrics.unsupportedClaimCount;
   const meanReciprocalRankDelta =
     candidateMetrics.meanReciprocalRank - baselineMetrics.meanReciprocalRank;
+  const recallDelta = candidateMetrics.recall - baselineMetrics.recall;
 
   const regressionReasons: string[] = [];
   if (citationAccuracyDelta < -maxCitationAccuracyDrop) {
@@ -890,6 +911,9 @@ export async function benchmarkRetrieval(
     regressionReasons.push(
       `Requirement coverage dropped by ${Math.abs(requirementCoverageDelta).toFixed(4)}`,
     );
+  }
+  if (recallDelta < -maxRecallDrop) {
+    regressionReasons.push(`Recall dropped by ${Math.abs(recallDelta).toFixed(4)}`);
   }
   if (unsupportedClaimDelta > maxUnsupportedClaimIncrease) {
     regressionReasons.push(`Unsupported claims increased by ${unsupportedClaimDelta.toFixed(2)}`);
@@ -907,6 +931,7 @@ export async function benchmarkRetrieval(
       irrelevantContextRatioDelta,
       unsupportedClaimDelta,
       meanReciprocalRankDelta,
+      recallDelta,
     },
     passed: regressionReasons.length === 0,
     regressionReasons,

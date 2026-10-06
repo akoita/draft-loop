@@ -7,88 +7,7 @@ an independent critic evaluates it, and a human approves the result.
 
 ## Boundaries
 
-```mermaid
-flowchart TB
-    User([Candidate])
-
-    subgraph Adapters["User-facing adapters"]
-        direction LR
-        CLI["CLI"]
-
-        subgraph Desktop["Desktop · Electron trust boundary"]
-            direction LR
-            Renderer["React renderer<br/>bounded state projections"]
-            Bridge["Preload NativeBridge<br/>frozen, allowlisted IPC"]
-            Host["Electron main host<br/>native capabilities"]
-            Renderer -->|"typed commands"| Bridge
-            Bridge -->|"single IPC channel"| Host
-        end
-    end
-
-    subgraph Application["Shared application boundary"]
-        App["Application contracts<br/>commands · queries · use cases"]
-    end
-
-    subgraph Core["Provider-independent product core"]
-        direction LR
-        Orchestrator["Orchestrator<br/>author–critic loop · budgets · recovery"]
-        Domain["Domain + schemas<br/>workflow state · boundary validation"]
-        Knowledge["Ingestion + evidence<br/>normalized sources · provenance"]
-        Quality["Validation + evaluations<br/>deterministic checks · rubric findings"]
-        Artifacts["Artifacts + rendering<br/>approved structured output"]
-        Orchestrator --> Domain
-        Knowledge --> Domain
-        Orchestrator --> Quality
-        Orchestrator --> Artifacts
-    end
-
-    subgraph Infrastructure["Local and provider adapters"]
-        direction LR
-        WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>raw blobs · metadata · local origins · journal<br/>+ exact-version lexical index")]
-        Providers["Provider adapters<br/>data-policy enforcement"]
-        Credentials["Credential store<br/>main-process owned"]
-    end
-
-    subgraph External["Explicit external boundaries"]
-        direction LR
-        Models["Anthropic + OpenAI<br/>or local compatible endpoint"]
-        URL["User-approved URL fetch"]
-        LocalFile["Application-approved<br/>single local file or bounded directory"]
-        Export["Local Markdown · DOCX · PDF"]
-    end
-
-    User --> CLI
-    User --> Renderer
-    CLI --> App
-    Host --> App
-    App --> Orchestrator
-    App --> Knowledge
-    App --> WorkspaceStore
-    Domain --> WorkspaceStore
-    Knowledge --> WorkspaceStore
-    App -->|"explicit CKB commands"| CKBStore
-    CKBStore -->|"exact selected source-version lexical retrieval"| Knowledge
-    Orchestrator --> Providers
-    Host --> Credentials
-    Credentials -.->|"key lookup; never projected back"| Providers
-    Providers -->|"approved transmission only"| Models
-    Host -->|"validated request"| URL
-    URL --> Knowledge
-    LocalFile -->|"explicit approved add or bounded intake"| App
-    Host -->|"approved artifact only"| Export
-
-    classDef ui fill:#e8f1ff,stroke:#2563eb,color:#172554;
-    classDef boundary fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b;
-    classDef core fill:#ecfdf5,stroke:#059669,color:#064e3b;
-    classDef infra fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
-    classDef external fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class CLI,Renderer ui;
-    class Bridge,Host,App boundary;
-    class Orchestrator,Domain,Knowledge,Quality,Artifacts core;
-    class WorkspaceStore,CKBStore,Providers,Credentials infra;
-    class Models,URL,LocalFile,Export external;
-```
+![System boundaries: the candidate uses the CLI or the desktop renderer, which reaches the Electron main host through a frozen preload bridge; both call shared application contracts over a provider-independent core; local stores, provider adapters, and the credential store sit beneath it; and only approved transmissions, validated URL requests, approved local intake, and approved artifacts cross external boundaries.](../assets/system-boundaries.svg)
 
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected to the renderer. Network and
@@ -110,16 +29,17 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 
 ## Package and data ownership
 
-| Boundary                                         | Owns                                                                                               | Does not own                                                         |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `packages/domain` and `packages/schemas`         | Framework-free concepts, workflow states, and Zod validation at persistence/exchange boundaries    | Provider SDKs, storage engines, or UI frameworks                     |
-| `packages/ingestion` and `packages/evidence`     | Approved local/URL intake, extraction, normalized material, provenance, and source references      | Application selection or provider transport                          |
-| `packages/orchestrator`                          | Author–critic sequencing, budgets, pause/stop, recovery, and user-visible run events through ports | Provider-specific SDK calls                                          |
-| `packages/validation` and `packages/evaluations` | Deterministic checks, rubric findings, and structured critique records                             | Proof of truth independent of candidate evidence and human decisions |
-| `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                   | Submission or publishing                                             |
-| `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes and local-only state       | CKB selection, retrieval policy, or UI                               |
-| `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                            | Domain workflow decisions                                            |
-| `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                         | A second domain layer or provider SDKs in the UI                     |
+| Boundary                                         | Owns                                                                                                                                  | Does not own                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `packages/domain` and `packages/schemas`         | Framework-free concepts, workflow states, and Zod validation at persistence/exchange boundaries                                       | Provider SDKs, storage engines, or UI frameworks                        |
+| `packages/ingestion` and `packages/evidence`     | Approved local/URL intake, extraction, normalized material, provenance, and source references                                         | Application selection or provider transport                             |
+| `packages/orchestrator`                          | Author–critic sequencing, budgets, pause/stop, recovery, and user-visible run events through ports                                    | Provider-specific SDK calls                                             |
+| `packages/validation` and `packages/evaluations` | Deterministic checks, rubric findings, and structured critique records                                                                | Proof of truth independent of candidate evidence and human decisions    |
+| `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                                                      | Submission or publishing                                                |
+| `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
+| `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
+| `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
+| `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
 
 ## Key flow
 

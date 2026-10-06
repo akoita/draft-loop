@@ -24,6 +24,7 @@ import {
   resolveProviderAuthModeStartup,
 } from "./provider-auth-mode.js";
 import { createRecentWorkspaceStore } from "./recent-workspaces.js";
+import { applyDesktopEmbeddingModelRoot } from "./semantic-retrieval-host.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -113,6 +114,9 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
+  // Runs started from the desktop resolve the model root from the environment, so they read the
+  // directory the Semantic retrieval controls install into.
+  applyDesktopEmbeddingModelRoot(process.env, app.getPath("userData"));
   const hostErrorLogger = app.isPackaged
     ? createHostErrorLogger(app.getPath("userData"))
     : undefined;

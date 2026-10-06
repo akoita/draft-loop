@@ -79,4 +79,12 @@ export const bridgeCapabilities = [
   "models.profile-support",
   "models.saved-profiles.read",
   "models.saved-profiles.save",
+  "embedding-model.status",
+  "embedding-model.plan-install",
+  "embedding-model.install",
+  "embedding-model.progress",
+  "embedding-model.cancel",
+  "embedding-model.remove",
+  "workspace.retrieval-mode.get",
+  "workspace.retrieval-mode.set",
 ] as const;

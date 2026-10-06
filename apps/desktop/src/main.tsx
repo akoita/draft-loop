@@ -52,6 +52,7 @@ import {
   loadSavedModelProfilesState,
   saveAppliedModelProfiles,
 } from "./saved-model-profiles.js";
+import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { ThemeToggle } from "./theme.js";
 import { WorkspaceCreationForm, workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
@@ -2095,6 +2096,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
               }
             />
+            {hasAnySemanticRetrievalCapability(activePort) ? (
+              <SemanticRetrievalPanel
+                key={`semantic-retrieval-${state.workspaceId}`}
+                workspaceId={state.workspaceId}
+                capabilities={activePort}
+                disabled={
+                  busy || pendingReviewAction !== null || state.execution.status === "running"
+                }
+              />
+            ) : null}
             <WorkspaceModelSummary
               title="Configured model pair"
               author={state.providerTransmissionPreflight.author}

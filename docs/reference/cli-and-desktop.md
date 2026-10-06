@@ -866,6 +866,111 @@ The workspace argument is required. Without a mode the command shows the
 current one. It applies to workspaces with a candidate knowledge selection and
 never starts a run. Both forms accept `--json`.
 
+### Local embedding model
+
+Semantic retrieval ([ADR 0009](../adr/0009-local-semantic-retrieval.md)) uses a
+pinned local Granite Embedding Multilingual R2 model. It is optional and is
+never downloaded implicitly. Two tiers are available:
+
+- `311m` (default): 768 dimensions, about 313 MB.
+- `97m`: 384 dimensions, about 98 MB, for low-resource machines.
+
+```sh
+pnpm --filter @draft-loop/cli start embeddings status --tier 311m --verify
+pnpm --filter @draft-loop/cli start embeddings install --tier 311m
+pnpm --filter @draft-loop/cli start embeddings install --tier 311m --confirm
+pnpm --filter @draft-loop/cli start embeddings install --tier 97m --from ./model-files --confirm
+pnpm --filter @draft-loop/cli start embeddings remove --tier 97m
+```
+
+The commands behave as follows:
+
+- **`status`** reports `absent`, `installing`, `ready`, `corrupt`, or
+  `unsupported-platform`. `--verify` checks SHA-256 checksums as well as sizes.
+  It makes no network calls.
+- **`install` without `--confirm`** prints the approval details and downloads
+  nothing: the Hugging Face source at the pinned revision, each file's size,
+  the license, and the destination.
+- **`install --confirm`** downloads the files into a staging directory, checks
+  every size and checksum, and moves the directory into place in one rename. A
+  failed or cancelled install leaves nothing behind. `--from <dir>` imports the
+  same files from a local directory instead, with the same checks.
+- **`remove`** deletes only that tier's files.
+
+Models are stored in the per-user data directory, outside every knowledge base,
+workspace, and backup. Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
+`--model-dir`, to use another location. The runtime supports Linux x64 and
+arm64, Windows x64 and arm64, and macOS on Apple silicon.
+
+### Retrieval mode
+
+A workspace chooses how its candidate knowledge is searched. The setting is
+stored in `.draft-loop/retrieval-mode.json` beside `workspace.json` and is read
+once when a run starts or resumes.
+
+- `lexical` (the default) uses keyword retrieval only.
+- `semantic` searches by meaning with the [local embedding
+  model](#local-embedding-model) of the chosen tier.
+- `hybrid` fuses keyword and semantic results.
+
+```sh
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace semantic
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --tier 97m
+pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --json
+```
+
+The workspace argument is required. Without a mode the command shows the
+current mode and model tier. `--tier` (`311m` or `97m`) can only be given with a
+mode; when omitted, the saved tier is kept, starting from `311m`. `--model-dir`
+overrides the model directory, as for `embeddings`. Both forms accept `--json`.
+
+For `semantic` and `hybrid`, the command also reports the local model state for
+the tier (a local check, with no network request). When the model is not
+`ready`, it prints the `embeddings install` command to run. The mode is saved
+either way, and nothing is downloaded. The setting never starts a run.
+
+In a run, the mode works as follows:
+
+- **Scope.** The mode applies only to the primary job-requirement query. The
+  contact, chronology, priority, skills, and required-section queries stay
+  lexical, and the provider byte and chunk limits are unchanged.
+- **Sensitivity.** Chunks withheld by [source sensitivity](#source-sensitivity)
+  are removed from semantic and hybrid hits before selection and tracing, as
+  for lexical hits.
+- **Visible fallback.** When the model is absent, corrupt, or unsupported, the
+  runtime fails, or a vector index is stale, the run uses lexical retrieval and
+  says so in its preflight, for example `Retrieval mode: semantic requested;
+  using lexical (model-absent).` It also records a content-free
+  `run.retrieval-mode` audit event and, beside each retrieval trace, a
+  `semantic-unavailable` companion trace with the reason. A run that uses the
+  mode prints it with the indexed chunk count and records `semantic-used`
+  companions with the model identity.
+- **Vectors.** Missing vectors are built from the selected exact source
+  versions when a run starts, which can take a moment on first use.
+
+### Desktop semantic retrieval controls
+
+When a workspace is collecting or stopped, the desktop shows a **Semantic
+retrieval** section under the knowledge store. It uses the same application
+contracts as the `embeddings` and `retrieval mode` commands above.
+
+- **Model status** for the chosen tier (`311m` or `97m`) appears as a badge:
+  not installed, installing, installed, corrupt, or unsupported.
+- **Install** opens an approval step that names the Hugging Face source at the
+  pinned revision, the file sizes, the license, and the destination, shown as
+  "DraftLoop application data" rather than a path. Nothing downloads until you
+  confirm. A progress bar and **Cancel download** follow; a cancelled install
+  keeps nothing. **Remove model** deletes only that tier's files.
+- **Retrieval mode** (lexical, semantic, or hybrid) is saved per workspace. When
+  the mode needs a model that is not installed, the section says that runs fall
+  back to keyword retrieval until it is.
+
+The main process stores models in `models` under the desktop's application data
+directory and sets `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` to it at startup unless you
+already set that variable, so runs started from the desktop read the same
+directory. The renderer never receives this path.
+
 ### Desktop knowledge operations
 
 The desktop exposes the same CKB operations through a native boundary. Renderer

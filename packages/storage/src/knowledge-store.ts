@@ -102,6 +102,10 @@ import type {
   ManagedCandidateKnowledgeFileInventory,
   ManagedCandidateKnowledgeWriteInterruptionBoundary,
 } from "./knowledge-store-types.js";
+import {
+  type CandidateKnowledgeVectorStoragePort,
+  coordinateCandidateKnowledgeVectorPort,
+} from "./knowledge-vector-index.js";
 import { coordinateSourceSensitivityRulesPort } from "./source-sensitivity-rules.js";
 import {
   type StorageWriterLease,
@@ -434,7 +438,9 @@ export interface MoveManagedCandidateKnowledgeDirectoryMemberResult {
   readonly moved: boolean;
 }
 
-export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseStoragePort {
+export interface CandidateKnowledgeStoreHandle
+  extends CandidateKnowledgeBaseStoragePort,
+    CandidateKnowledgeVectorStoragePort {
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
   readonly root: string;
@@ -5373,6 +5379,8 @@ function createHandle(
 ): CandidateKnowledgeStoreHandle {
   const coordinateWrite = <T>(operation: string, callback: () => Promise<T>): Promise<T> =>
     withCandidateKnowledgeStoreWriterLease(root, operation, callback);
+  const invalidateLexical = (knowledgeBaseId: string): Promise<void> =>
+    invalidateCandidateKnowledgeLexicalProjection(storage, descriptor.id, knowledgeBaseId);
   const handle: CandidateKnowledgeStoreHandle = {
     descriptor: Object.freeze({ ...descriptor }),
     root,
@@ -5409,17 +5417,13 @@ function createHandle(
     archiveCandidateKnowledgeBase: (id, archivedAt) =>
       coordinateWrite("ckb-archive", async () => {
         const result = await storage.archiveCandidateKnowledgeBase(id, archivedAt);
-        await invalidateCandidateKnowledgeLexicalProjection(storage, descriptor.id, id);
+        await invalidateLexical(id);
         return result;
       }),
     createCandidateKnowledgeSource: (source, initialVersion) =>
       coordinateWrite("ckb-source-create", async () => {
         const result = await storage.createCandidateKnowledgeSource(source, initialVersion);
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          source.knowledgeBaseId,
-        );
+        await invalidateLexical(source.knowledgeBaseId);
         return result;
       }),
     appendCandidateKnowledgeSourceVersion: (knowledgeBaseId, sourceId, version) =>
@@ -5429,11 +5433,7 @@ function createHandle(
           sourceId,
           version,
         );
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          knowledgeBaseId,
-        );
+        await invalidateLexical(knowledgeBaseId);
         return result;
       }),
     getCandidateKnowledgeSource: (knowledgeBaseId, sourceId) =>
@@ -5668,11 +5668,7 @@ function createHandle(
           sourceId,
           input,
         );
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          knowledgeBaseId,
-        );
+        await invalidateLexical(knowledgeBaseId);
         return Object.freeze({ ...result });
       }),
     retireCandidateKnowledgeDirectoryMember: async (
@@ -5688,14 +5684,14 @@ function createHandle(
           sourceId,
           input,
         );
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          knowledgeBaseId,
-        );
+        await invalidateLexical(knowledgeBaseId);
         return Object.freeze({ ...result });
       }),
     ...coordinateSourceSensitivityRulesPort(storage, coordinateWrite),
+    ...coordinateCandidateKnowledgeVectorPort(
+      storage.candidateKnowledgeVectorIndex,
+      coordinateWrite,
+    ),
     getCandidateKnowledgeRetentionPolicy: async (knowledgeBaseId) =>
       storage.getCandidateKnowledgeRetentionPolicy(knowledgeBaseId),
     setCandidateKnowledgeRetentionPolicy: (knowledgeBaseId, input) =>
@@ -5739,11 +5735,7 @@ function createHandle(
           source,
           version: initialVersion,
         });
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          source.knowledgeBaseId,
-        );
+        await invalidateLexical(source.knowledgeBaseId);
         return result;
       }),
     createManagedCandidateKnowledgeUrlSource: (source, initialVersion) =>
@@ -5753,11 +5745,7 @@ function createHandle(
           source,
           version: initialVersion,
         });
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          source.knowledgeBaseId,
-        );
+        await invalidateLexical(source.knowledgeBaseId);
         return result;
       }),
     appendManagedCandidateKnowledgeUrlVersion: (knowledgeBaseId, sourceId, version) =>
@@ -5768,11 +5756,7 @@ function createHandle(
           sourceId,
           version,
         });
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          knowledgeBaseId,
-        );
+        await invalidateLexical(knowledgeBaseId);
         return result;
       }),
     appendManagedCandidateKnowledgeFileVersion: (knowledgeBaseId, sourceId, version) =>
@@ -5783,11 +5767,7 @@ function createHandle(
           sourceId,
           version,
         });
-        await invalidateCandidateKnowledgeLexicalProjection(
-          storage,
-          descriptor.id,
-          knowledgeBaseId,
-        );
+        await invalidateLexical(knowledgeBaseId);
         return result;
       }),
     rebindManagedCandidateKnowledgeFileOrigin: (knowledgeBaseId, sourceId, input) =>

@@ -54,7 +54,6 @@ import type {
   CandidateKnowledgeSourceUrlProvenanceRecord,
   CandidateKnowledgeSourceVersionRecord,
 } from "@draft-loop/storage";
-import { computeCandidateKnowledgeLexicalManifestChecksum } from "@draft-loop/storage";
 import {
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeDeletionPlan,
@@ -73,7 +72,10 @@ import {
   restoreCandidateKnowledgePortableBackup,
 } from "@draft-loop/storage/knowledge-store";
 import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
-import { deriveCandidateKnowledgeLexicalChunks } from "./candidate-knowledge-source-chunks.js";
+import {
+  type PreparedCandidateKnowledgeLexicalSelection,
+  synchronizeCandidateKnowledgeLexicalSelection,
+} from "./candidate-knowledge-lexical-sync.js";
 import { toKnowledgeSelectionSnapshotEntry } from "./knowledge-selection-entry.js";
 import { monotonicTimestamp } from "./monotonic-timestamp.js";
 
@@ -90,7 +92,6 @@ export type {
 } from "@draft-loop/storage/knowledge-store";
 
 const defaultKnowledgeBaseDisplayName = "Career evidence";
-const candidateKnowledgeLexicalIndexerId = "ingestion-lexical-v1";
 
 export interface InitializeStoreCommand {
   readonly storeRoot: string;
@@ -3863,13 +3864,6 @@ function resolveDependencies(
   };
 }
 
-interface PreparedCandidateKnowledgeLexicalSelection {
-  readonly selection: CreateKnowledgeSelectionSnapshotSelection;
-  readonly entry: KnowledgeSelectionSnapshot["entries"][number];
-  readonly scope: CandidateKnowledgeRetrievalScopeInput;
-  readonly index: CandidateKnowledgeLexicalIndexRecord;
-}
-
 function lexicalReferenceKey(reference: {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -3970,6 +3964,7 @@ export function createCandidateKnowledgeStoreService(
 
   const synchronizeLexicalIndexes = async (
     command: RebuildCandidateKnowledgeLexicalIndexesCommand,
+    reuseCurrent: boolean,
   ): Promise<readonly PreparedCandidateKnowledgeLexicalSelection[]> => {
     try {
       const selectionCommand = normalizeLexicalSelectionCommand(command);
@@ -3980,43 +3975,18 @@ export function createCandidateKnowledgeStoreService(
         const indexed = await useWriterHandle(
           "ckb-lexical-rebuild",
           () => resolved.open(selection.storeRoot),
-          async (handle) => {
-            const entry = snapshot.entries.find(
-              (candidate) =>
-                candidate.storeId === handle.descriptor.id &&
-                candidate.knowledgeBaseId === selection.knowledgeBaseId,
-            );
-            if (entry === undefined) throw lexicalSelectionChangedFailure();
-            const scope = lexicalScopeForEntry(entry);
-            const indexIdentity = {
-              schemaVersion: 1,
-              indexerId: candidateKnowledgeLexicalIndexerId,
-              manifestChecksum: computeCandidateKnowledgeLexicalManifestChecksum(scope),
-            };
-            const chunks = await deriveCandidateKnowledgeLexicalChunks(
+          (handle) =>
+            synchronizeCandidateKnowledgeLexicalSelection({
               handle,
-              entry,
-              resolved.ingestBytes,
-              lexicalIndexFailure,
-            );
-            const index = await handle.rebuildCandidateKnowledgeLexicalIndex({
-              scope,
-              index: indexIdentity,
-              chunks,
+              selection,
+              snapshot,
+              scopeForEntry: lexicalScopeForEntry,
+              ingestBytes: resolved.ingestBytes,
               createdAt,
-            });
-            if (
-              JSON.stringify(index.scope) !== JSON.stringify(scope) ||
-              index.index.schemaVersion !== indexIdentity.schemaVersion ||
-              index.index.indexerId !== indexIdentity.indexerId ||
-              index.index.manifestChecksum !== indexIdentity.manifestChecksum ||
-              index.indexedChunkCount !== chunks.length ||
-              index.stale
-            ) {
-              throw lexicalIndexFailure();
-            }
-            return { selection, entry, scope, index };
-          },
+              reuseCurrent,
+              indexFailure: lexicalIndexFailure,
+              selectionChangedFailure: lexicalSelectionChangedFailure,
+            }),
         );
         prepared.push(indexed);
       }
@@ -4065,7 +4035,7 @@ export function createCandidateKnowledgeStoreService(
       ) {
         throw lexicalRetrievalFailure();
       }
-      const prepared = await synchronizeLexicalIndexes(command);
+      const prepared = await synchronizeLexicalIndexes(command, true);
       const queried: Array<{
         readonly prepared: PreparedCandidateKnowledgeLexicalSelection;
         readonly result: CandidateKnowledgeLexicalRetrievalResult;
@@ -4402,8 +4372,13 @@ export function createCandidateKnowledgeStoreService(
       }
     },
     rebuildCandidateKnowledgeLexicalIndexes: async (command) => {
-      const prepared = await synchronizeLexicalIndexes(command);
-      return Object.freeze(prepared.map(({ index }) => index));
+      const prepared = await synchronizeLexicalIndexes(command, false);
+      return Object.freeze(
+        prepared.map(({ rebuilt }) => {
+          if (rebuilt === undefined) throw lexicalIndexFailure();
+          return rebuilt;
+        }),
+      );
     },
     queryCandidateKnowledge,
     listKnowledgeBases: async (command) => openAndProject(requireStoreRoot(command.storeRoot)),

@@ -12,8 +12,8 @@ import { describe, expect, it } from "vitest";
 import {
   benchmarkRetrieval,
   createHybridRetriever,
-  LocalVectorRetriever,
   type RetrievalBenchmarkCase,
+  TermFrequencyRetriever,
 } from "./index.js";
 
 interface RetrievalFixture {
@@ -96,10 +96,10 @@ describe("production lexical retrieval baseline", () => {
         queryEvidence: (query: string) =>
           storage.queryEvidence(query, { workspaceId: fixture.workspaceId, limit: 3 }),
       };
-      const localVector = new LocalVectorRetriever(corpus);
+      const localVector = new TermFrequencyRetriever(corpus);
       const hybridPort = createHybridRetriever(lexical, localVector);
       const hybrid = {
-        mode: "hybrid" as const,
+        mode: "term-frequency-hybrid" as const,
         queryEvidence: (query: string) => hybridPort.queryEvidence(query, { limit: 3 }),
       };
 
@@ -109,7 +109,7 @@ describe("production lexical retrieval baseline", () => {
       expect(second).toEqual(first);
       expect(first).toEqual({
         baselineMode: "lexical",
-        candidateMode: "hybrid",
+        candidateMode: "term-frequency-hybrid",
         caseCount: 3,
         baselineMetrics: {
           citationAccuracy: 1,
@@ -117,6 +117,7 @@ describe("production lexical retrieval baseline", () => {
           irrelevantContextRatio: 0,
           unsupportedClaimCount: 0,
           meanReciprocalRank: 1,
+          recall: 1,
         },
         candidateMetrics: {
           citationAccuracy: 2 / 3,
@@ -124,6 +125,7 @@ describe("production lexical retrieval baseline", () => {
           irrelevantContextRatio: 1 / 3,
           unsupportedClaimCount: 0,
           meanReciprocalRank: 1,
+          recall: 1,
         },
         deltas: {
           citationAccuracyDelta: -0.33333333333333337,
@@ -131,6 +133,7 @@ describe("production lexical retrieval baseline", () => {
           irrelevantContextRatioDelta: 1 / 3,
           unsupportedClaimDelta: 0,
           meanReciprocalRankDelta: 0,
+          recallDelta: 0,
         },
         passed: false,
         regressionReasons: ["Citation accuracy dropped by 0.3333"],

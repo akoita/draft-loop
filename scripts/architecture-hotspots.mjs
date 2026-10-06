@@ -4,12 +4,12 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 export const hotspotLineLimits = Object.freeze({
-  "packages/application/src/knowledge-base.ts": 6_054,
+  "packages/application/src/knowledge-base.ts": 6_029,
   "packages/application/src/local.ts": 3_293,
   "packages/domain/src/index.ts": 5_606,
   "packages/schemas/src/index.ts": 4_927,
-  "packages/storage/src/index.ts": 14_869,
-  "packages/storage/src/knowledge-store.ts": 5_987,
+  "packages/storage/src/index.ts": 14_866,
+  "packages/storage/src/knowledge-store.ts": 5_967,
 });
 
 function lineCount(content) {
