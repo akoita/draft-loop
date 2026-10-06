@@ -642,3 +642,5 @@ export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";
 export * from "./workspace-model-profile-selection.js";
 export * from "./workspace-model-profile-selection-service.js";
+export * from "./workspace-retrieval-mode.js";
+export * from "./workspace-retrieval-mode-service.js";
