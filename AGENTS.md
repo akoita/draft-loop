@@ -75,6 +75,9 @@ recorded limit in the same change so the reduction cannot regress.
 - `packages/ingestion`, `evidence`, `validation`, `artifacts`, `rendering`,
   `storage`, and `evaluations` each own the narrow concern named by the
   package. Keep dependencies flowing toward domain contracts.
+- `packages/embeddings` owns local text-embedding runtimes and the pinned model
+  manifest behind a provider-independent port. It does not download models or
+  persist vectors.
 - `apps/cli` is an adapter over package APIs, not a second domain layer.
 - `apps/desktop` is a UI shell and must call the same application contracts as the CLI.
 
