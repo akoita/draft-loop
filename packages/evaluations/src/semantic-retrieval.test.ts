@@ -125,7 +125,104 @@ describe("createSemanticRetriever", () => {
   });
 });
 
+describe("createSemanticRetriever relevance floor", () => {
+  const table = { "text a": y, "text b": xy, "text c": x, q: x };
+  const chunks = [chunk("a", "text a"), chunk("b", "text b"), chunk("c", "text c")];
+
+  it("returns fewer than the limit when lower hits fall under the floor", async () => {
+    const retriever = await createSemanticRetriever(fakeEmbedder(table), chunks, {
+      relevanceFloor: { maxMarginFromTop: 0.1, minimumScore: 0 },
+    });
+
+    const results = await retriever.queryEvidence("q", { limit: 3 });
+
+    expect(results.map((result) => result.id)).toEqual(["c"]);
+  });
+
+  it("applies the absolute minimum and can return nothing", async () => {
+    const retriever = await createSemanticRetriever(fakeEmbedder(table), chunks, {
+      relevanceFloor: { maxMarginFromTop: 1, minimumScore: 0.5 },
+    });
+    expect((await retriever.queryEvidence("q", { limit: 3 })).map((result) => result.id)).toEqual([
+      "c",
+      "b",
+    ]);
+
+    const strict = await createSemanticRetriever(fakeEmbedder(table), chunks, {
+      relevanceFloor: { maxMarginFromTop: 1, minimumScore: 1.5 },
+    });
+    await expect(strict.queryEvidence("q", { limit: 3 })).resolves.toEqual([]);
+  });
+
+  it("still applies the limit after the floor", async () => {
+    const retriever = await createSemanticRetriever(fakeEmbedder(table), chunks, {
+      relevanceFloor: { maxMarginFromTop: 1, minimumScore: 0.5 },
+    });
+    const results = await retriever.queryEvidence("q", { limit: 1 });
+    expect(results.map((result) => result.id)).toEqual(["c"]);
+  });
+
+  it("measures the margin from the best hit inside the requested workspace", async () => {
+    const scoped = [chunk("top", "text c", "w2"), chunk("a", "text a"), chunk("b", "text b")];
+    const retriever = await createSemanticRetriever(fakeEmbedder(table), scoped, {
+      relevanceFloor: { maxMarginFromTop: 0.1, minimumScore: 0 },
+    });
+    const results = await retriever.queryEvidence("q", { workspaceId: "w1", limit: 3 });
+    expect(results.map((result) => result.id)).toEqual(["b"]);
+  });
+});
+
 describe("runRetrievalModeComparison", () => {
+  it("records the floor, shrinks semantic results and keeps lexical hits in hybrid mode", async () => {
+    const alpha = chunk("alpha", "Secret alpha corpus sentence.");
+    const beta = chunk("beta", "Secret beta corpus sentence.");
+    const gamma = chunk("gamma", "Secret gamma corpus sentence.");
+    const corpus = [alpha, beta, gamma];
+    const cases: readonly RetrievalBenchmarkCase[] = [
+      {
+        id: "case-1",
+        query: "Secret query one",
+        corpus,
+        groundTruthEvidenceIds: ["alpha", "gamma"],
+      },
+    ];
+    const table = {
+      "Secret alpha corpus sentence.": x,
+      "Secret beta corpus sentence.": xy,
+      "Secret gamma corpus sentence.": z,
+      "Secret query one": x,
+    };
+    const lexical = {
+      queryEvidence: async () => [gamma],
+    };
+    const relevanceFloor = { maxMarginFromTop: 0.1, minimumScore: 0 };
+
+    const floored = await runRetrievalModeComparison({
+      cases,
+      lexical,
+      embedder: fakeEmbedder(table),
+      limit: 3,
+      relevanceFloor,
+    });
+    const unfloored = await runRetrievalModeComparison({
+      cases,
+      lexical,
+      embedder: fakeEmbedder(table),
+      limit: 3,
+    });
+
+    expect(floored.relevanceFloor).toEqual(relevanceFloor);
+    expect(unfloored.relevanceFloor).toBeNull();
+    // Unfloored semantic returns all three chunks; the floor keeps only alpha.
+    expect(unfloored.semantic.candidateMetrics.irrelevantContextRatio).toBeCloseTo(1 / 3);
+    expect(floored.semantic.candidateMetrics.irrelevantContextRatio).toBe(0);
+    expect(floored.semantic.candidateMetrics.recall).toBeCloseTo(0.5);
+    // Hybrid keeps the lexical hit (gamma) and the semantic hit above the floor (alpha) only.
+    expect(floored.semanticHybrid.candidateMetrics.recall).toBe(1);
+    expect(floored.semanticHybrid.candidateMetrics.irrelevantContextRatio).toBe(0);
+    expect(unfloored.semanticHybrid.candidateMetrics.irrelevantContextRatio).toBeCloseTo(1 / 3);
+  });
+
   it("reports lexical versus semantic and semantic-hybrid metrics without chunk or query text", async () => {
     const alpha = chunk("alpha", "Secret alpha corpus sentence.");
     const beta = chunk("beta", "Secret beta corpus sentence.");

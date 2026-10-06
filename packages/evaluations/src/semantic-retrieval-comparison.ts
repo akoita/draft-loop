@@ -1,5 +1,9 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
-import type { EmbeddingModelIdentity, TextEmbedder } from "@draft-loop/embeddings";
+import type {
+  EmbeddingModelIdentity,
+  SemanticRelevanceFloor,
+  TextEmbedder,
+} from "@draft-loop/embeddings";
 
 import {
   benchmarkRetrieval,
@@ -23,6 +27,8 @@ export interface RetrievalModeComparisonInput {
   readonly embedder: TextEmbedder;
   /** Number of chunks every mode may return per query. */
   readonly limit: number;
+  /** Optional relevance floor applied to semantic candidates in both semantic modes. */
+  readonly relevanceFloor?: SemanticRelevanceFloor;
   readonly signal?: AbortSignal;
 }
 
@@ -30,6 +36,8 @@ export interface RetrievalModeComparisonInput {
 export interface RetrievalModeComparisonReport {
   readonly embeddingIdentity: EmbeddingModelIdentity;
   readonly limit: number;
+  /** The floor applied to semantic candidates, or `null` when none was applied. */
+  readonly relevanceFloor: SemanticRelevanceFloor | null;
   readonly caseCount: number;
   readonly documentEmbeddingMs: number;
   readonly meanQueryMs: number;
@@ -54,11 +62,10 @@ export async function runRetrievalModeComparison(
       }
     }
   }
-  const semanticRetriever = await createSemanticRetriever(
-    embedder,
-    [...union.values()],
-    input.signal === undefined ? {} : { signal: input.signal },
-  );
+  const semanticRetriever = await createSemanticRetriever(embedder, [...union.values()], {
+    ...(input.signal === undefined ? {} : { signal: input.signal }),
+    ...(input.relevanceFloor === undefined ? {} : { relevanceFloor: input.relevanceFloor }),
+  });
 
   let queryCount = 0;
   let queryTotalMs = 0;
@@ -93,6 +100,7 @@ export async function runRetrievalModeComparison(
   return {
     embeddingIdentity: embedder.identity,
     limit,
+    relevanceFloor: input.relevanceFloor ?? null,
     caseCount: cases.length,
     documentEmbeddingMs: semanticRetriever.documentEmbeddingMs,
     meanQueryMs: queryCount === 0 ? 0 : queryTotalMs / queryCount,

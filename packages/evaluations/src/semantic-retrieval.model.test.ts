@@ -5,6 +5,8 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
   createOnnxTextEmbedder,
   type GraniteEmbeddingTier,
+  type SemanticRelevanceFloor,
+  semanticRelevanceFloorForIdentity,
   type TextEmbedder,
 } from "@draft-loop/embeddings";
 import { openSqliteStorage } from "@draft-loop/storage";
@@ -66,11 +68,20 @@ function metricsWithinUnitRange(report: RetrievalBenchmarkReport): void {
   }
 }
 
+/** Semantic and hybrid candidates must not be worse than lexical on precision or support. */
+function expectNoPrecisionRegression(report: RetrievalBenchmarkReport): void {
+  const { baselineMetrics: lexical, candidateMetrics: candidate } = report;
+  expect(candidate.citationAccuracy).toBeGreaterThanOrEqual(lexical.citationAccuracy);
+  expect(candidate.irrelevantContextRatio).toBeLessThanOrEqual(lexical.irrelevantContextRatio);
+  expect(candidate.unsupportedClaimCount).toBeLessThanOrEqual(lexical.unsupportedClaimCount);
+}
+
 /** Deterministic part of a report: timings and memory are expected to vary between runs. */
 function stable(report: RetrievalModeComparisonReport) {
   return {
     embeddingIdentity: report.embeddingIdentity,
     limit: report.limit,
+    relevanceFloor: report.relevanceFloor,
     caseCount: report.caseCount,
     semantic: report.semantic,
     semanticHybrid: report.semanticHybrid,
@@ -80,6 +91,7 @@ function stable(report: RetrievalModeComparisonReport) {
 async function compareFixture(
   fixture: RetrievalFixture,
   embedder: TextEmbedder,
+  relevanceFloor: SemanticRelevanceFloor | undefined,
 ): Promise<RetrievalModeComparisonReport> {
   const storage = openSqliteStorage(":memory:");
   try {
@@ -125,7 +137,13 @@ async function compareFixture(
         }),
     };
 
-    return await runRetrievalModeComparison({ cases, lexical, embedder, limit });
+    return await runRetrievalModeComparison({
+      cases,
+      lexical,
+      embedder,
+      limit,
+      ...(relevanceFloor === undefined ? {} : { relevanceFloor }),
+    });
   } finally {
     await storage.close();
   }
@@ -141,12 +159,14 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
         ...(dimensions === undefined ? {} : { dimensions }),
       });
       try {
+        // The pinned default floor for this tier; undefined for truncated (uncalibrated) vectors.
+        const relevanceFloor = semanticRelevanceFloorForIdentity(embedder.identity);
         const semanticFixture = loadFixture("semantic-cases.json");
         const lexicalGuardFixture = loadFixture("cases.json");
 
-        const semanticReport = await compareFixture(semanticFixture, embedder);
-        const semanticRepeat = await compareFixture(semanticFixture, embedder);
-        const guardReport = await compareFixture(lexicalGuardFixture, embedder);
+        const semanticReport = await compareFixture(semanticFixture, embedder, relevanceFloor);
+        const semanticRepeat = await compareFixture(semanticFixture, embedder, relevanceFloor);
+        const guardReport = await compareFixture(lexicalGuardFixture, embedder, relevanceFloor);
 
         expect(stable(semanticRepeat)).toEqual(stable(semanticReport));
         for (const report of [semanticReport, guardReport]) {
@@ -156,6 +176,19 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
         expect(semanticReport.semantic.candidateMetrics.recall).toBeGreaterThanOrEqual(
           semanticReport.semantic.baselineMetrics.recall,
         );
+
+        if (relevanceFloor !== undefined) {
+          expect(guardReport.relevanceFloor).toEqual(relevanceFloor);
+          // Calibrated criteria (#926): no precision or support regression versus lexical on the
+          // lexical-guard cases, and the semantic fixture keeps its recall gain.
+          for (const report of [guardReport, semanticReport]) {
+            expectNoPrecisionRegression(report.semantic);
+            expectNoPrecisionRegression(report.semanticHybrid);
+          }
+          if (tier === "311m") {
+            expect(semanticReport.semantic.candidateMetrics.recall).toBeGreaterThanOrEqual(0.9);
+          }
+        }
 
         if (reportPath !== undefined) {
           mkdirSync(dirname(reportPath), { recursive: true });
