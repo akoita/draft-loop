@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1010" viewBox="0 0 1240 1010" role="img" aria-labelledby="title desc">
+<title id="title">DraftLoop system boundaries</title>
+<desc id="desc">The candidate uses the CLI or the desktop app. In the desktop, the React renderer sends typed commands through a frozen, allowlisted preload bridge over a single IPC channel to the Electron main host. CLI and host call shared application contracts, which drive the orchestrator and ingestion. The orchestrator coordinates domain and schemas, validation and evaluations, artifacts and rendering, and provider adapters. Application, domain and ingestion persist to the SQLite workspace store; explicit CKB commands reach the portable CKB store, which serves exact selected source-version lexical retrieval to ingestion. The host owns the credential store, which provides key lookup to provider adapters and is never projected back. External boundaries: provider adapters send only approved transmissions to Anthropic, OpenAI or a local compatible endpoint; the host makes validated URL fetch requests whose results go to ingestion; approved local files or bounded directories enter through the application; and only approved artifacts are exported locally as Markdown, DOCX or PDF.</desc>
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#8b98a6"/></marker>
+<marker id="ahT" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2fd0b8"/></marker>
+<marker id="ahA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#f0b53c"/></marker>
+<pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#1d232c"/></pattern>
+</defs>
+<rect width="1240" height="1010" rx="24" fill="#0f1319"/>
+<rect width="1240" height="1010" rx="24" fill="url(#dots)"/>
+<g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<text x="40" y="52" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">SYSTEM BOUNDARIES</text>
+<text x="40" y="84" font-size="24" font-weight="700" fill="#f2fbf8">Who may call what, and what crosses each boundary</text>
+<text x="24" y="196" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e">EXTERNAL INPUT</text>
+<text x="1036" y="196" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e">EXTERNAL</text>
+<rect x="244" y="166" width="752" height="174" rx="16" fill="#11151b" fill-opacity="0.8" stroke="#232a33"/>
+<text x="984" y="186" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e" text-anchor="end">USER-FACING ADAPTERS</text>
+<rect x="244" y="354" width="752" height="102" rx="16" fill="#11151b" fill-opacity="0.8" stroke="#232a33"/>
+<text x="330" y="373" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e" text-anchor="start">SHARED APPLICATION BOUNDARY</text>
+<rect x="244" y="480" width="752" height="240" rx="16" fill="#11151b" fill-opacity="0.8" stroke="#232a33"/>
+<text x="262" y="712" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e" text-anchor="start">PROVIDER-INDEPENDENT PRODUCT CORE</text>
+<rect x="244" y="740" width="752" height="164" rx="16" fill="#11151b" fill-opacity="0.8" stroke="#232a33"/>
+<text x="262" y="762" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#6f7d8e" text-anchor="start">LOCAL AND PROVIDER ADAPTERS</text>
+<rect x="435" y="108" width="170" height="40" rx="20" fill="#05231e" stroke="#2fd0b8" stroke-width="1.5"/>
+<text x="520" y="134" font-size="16" font-weight="700" fill="#f2fbf8" text-anchor="middle">Candidate</text>
+<rect x="256" y="244" width="84" height="60" rx="12" fill="#1d232c" stroke="#3b4652" stroke-width="1.5"/>
+<text x="298.0" y="269.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">CLI</text>
+<text x="298.0" y="289.0" font-size="13" fill="#9aa7b4" text-anchor="middle">Commander</text>
+<rect x="356" y="206" width="636" height="124" rx="14" fill="none" stroke="#5b6b9a" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="976" y="226" font-size="11.5" font-weight="700" letter-spacing="1.6" fill="#aab4d4" text-anchor="end">DESKTOP · ELECTRON TRUST BOUNDARY</text>
+<rect x="372" y="238" width="175" height="62" rx="12" fill="#1d232c" stroke="#3b4652" stroke-width="1.5"/>
+<text x="459.5" y="264.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">React renderer</text>
+<text x="459.5" y="284.0" font-size="13" fill="#9aa7b4" text-anchor="middle">bounded state projections</text>
+<rect x="591" y="238" width="180" height="62" rx="12" fill="#1a2030" stroke="#5b6b9a" stroke-width="1.5"/>
+<text x="681.0" y="264.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Preload NativeBridge</text>
+<text x="681.0" y="284.0" font-size="13" fill="#aab4d4" text-anchor="middle">frozen, allowlisted IPC</text>
+<rect x="815" y="238" width="161" height="62" rx="12" fill="#1a2030" stroke="#5b6b9a" stroke-width="1.5"/>
+<text x="895.5" y="264.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Electron main host</text>
+<text x="895.5" y="284.0" font-size="13" fill="#aab4d4" text-anchor="middle">native capabilities</text>
+<rect x="256" y="380" width="728" height="56" rx="12" fill="#1a2030" stroke="#5b6b9a" stroke-width="1.5"/>
+<text x="620.0" y="403.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Application contracts</text>
+<text x="620.0" y="423.0" font-size="13" fill="#aab4d4" text-anchor="middle">commands · queries · use cases</text>
+<rect x="256" y="520" width="344" height="64" rx="12" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+<text x="428.0" y="547.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Orchestrator</text>
+<text x="428.0" y="567.0" font-size="13" fill="#6ae3cf" text-anchor="middle">author–critic loop · budgets · recovery</text>
+<rect x="680" y="520" width="304" height="64" rx="12" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+<text x="832.0" y="547.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Ingestion + evidence</text>
+<text x="832.0" y="567.0" font-size="13" fill="#6ae3cf" text-anchor="middle">normalized sources · provenance</text>
+<rect x="256" y="630" width="210" height="64" rx="12" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+<text x="361.0" y="657.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Validation + evaluations</text>
+<text x="361.0" y="677.0" font-size="13" fill="#6ae3cf" text-anchor="middle">checks · rubric findings</text>
+<rect x="482" y="630" width="180" height="64" rx="12" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+<text x="572.0" y="657.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Artifacts + rendering</text>
+<text x="572.0" y="677.0" font-size="13" fill="#6ae3cf" text-anchor="middle">approved structured output</text>
+<rect x="720" y="630" width="210" height="64" rx="12" fill="#0d1d1b" stroke="#0c7261" stroke-width="1.5"/>
+<text x="825.0" y="657.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Domain + schemas</text>
+<text x="825.0" y="677.0" font-size="13" fill="#6ae3cf" text-anchor="middle">workflow state · validation</text>
+<rect x="256" y="780" width="164" height="68" rx="12" fill="#221a0c" stroke="#7f5205" stroke-width="1.5"/>
+<text x="338.0" y="809.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Provider adapters</text>
+<text x="338.0" y="829.0" font-size="13" fill="#e3b866" text-anchor="middle">data-policy enforcement</text>
+<rect x="470" y="780" width="150" height="68" rx="12" fill="#221a0c" stroke="#7f5205" stroke-width="1.5"/>
+<text x="545.0" y="809.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Credential store</text>
+<text x="545.0" y="829.0" font-size="13" fill="#e3b866" text-anchor="middle">main-process owned</text>
+<rect x="640" y="780" width="160" height="68" rx="12" fill="#221a0c" stroke="#7f5205" stroke-width="1.5"/>
+<text x="720.0" y="799.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Portable CKB store</text>
+<text x="720.0" y="819.0" font-size="13" fill="#e3b866" text-anchor="middle">versioned blobs · journal</text>
+<text x="720.0" y="837.0" font-size="13" fill="#e3b866" text-anchor="middle">exact-version index</text>
+<rect x="816" y="780" width="168" height="68" rx="12" fill="#221a0c" stroke="#7f5205" stroke-width="1.5"/>
+<text x="900.0" y="799.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Workspace store</text>
+<text x="900.0" y="819.0" font-size="13" fill="#e3b866" text-anchor="middle">SQLite · FTS/BM25</text>
+<text x="900.0" y="837.0" font-size="13" fill="#e3b866" text-anchor="middle">run history</text>
+<rect x="24" y="380" width="190" height="68" rx="12" fill="#161a21" stroke="#6f7d8e" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="119.0" y="409.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Local sources</text>
+<text x="119.0" y="429.0" font-size="13" fill="#9aa7b4" text-anchor="middle">single file or bounded dir</text>
+<text x="119" y="470" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="middle">explicit approved add</text>
+<text x="119" y="486" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="middle">or bounded intake</text>
+<rect x="24" y="776" width="190" height="76" rx="12" fill="#161a21" stroke="#6f7d8e" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="119.0" y="799.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Model providers</text>
+<text x="119.0" y="819.0" font-size="13" fill="#9aa7b4" text-anchor="middle">Anthropic · OpenAI</text>
+<text x="119.0" y="837.0" font-size="13" fill="#9aa7b4" text-anchor="middle">or local endpoint</text>
+<text x="119" y="874" font-size="12.5" font-style="italic" fill="#f0b53c" text-anchor="middle">approved transmission only</text>
+<rect x="1036" y="244" width="180" height="60" rx="12" fill="#161a21" stroke="#6f7d8e" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="1126.0" y="269.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">Local export</text>
+<text x="1126.0" y="289.0" font-size="13" fill="#9aa7b4" text-anchor="middle">Markdown · DOCX · PDF</text>
+<text x="1126" y="324" font-size="12.5" font-style="italic" fill="#f0b53c" text-anchor="middle">approved artifact only</text>
+<rect x="1036" y="384" width="180" height="56" rx="12" fill="#161a21" stroke="#6f7d8e" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="1126.0" y="407.0" font-size="15" font-weight="700" fill="#f2fbf8" text-anchor="middle">URL fetch</text>
+<text x="1126.0" y="427.0" font-size="13" fill="#9aa7b4" text-anchor="middle">user-approved</text>
+<text x="1126" y="374" font-size="12.5" font-style="italic" fill="#f0b53c" text-anchor="middle">validated request</text>
+<path d="M435 128 H298 V240" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M520 148 V234" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M547 269 H587" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<text x="569" y="322" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="middle">typed commands</text>
+<path d="M771 269 H811" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<text x="793" y="322" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="middle">single IPC channel</text>
+<path d="M298 304 V376" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M896 300 V376" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M976 262 H1032" fill="none" stroke="#f0b53c" stroke-width="2" marker-end="url(#ahA)"/>
+<path d="M976 288 H1012 V412 H1032" fill="none" stroke="#f0b53c" stroke-width="2" marker-end="url(#ahA)"/>
+<path d="M1012 412 V884 H590 V852" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M214 412 H252" fill="none" stroke="#f0b53c" stroke-width="2" marker-end="url(#ahA)"/>
+<path d="M428 436 V516" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M832 436 V516" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M428 584 V608 H790" fill="none" stroke="#6f7d8e" stroke-width="2"/>
+<path d="M361 608 H428" fill="none" stroke="#6f7d8e" stroke-width="2"/>
+<path d="M361 608 V626" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M572 608 V626" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M790 608 V626" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M850 584 V626" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M256 552 H236 V800 H252" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M256 828 H218" fill="none" stroke="#f0b53c" stroke-width="2" marker-end="url(#ahA)"/>
+<path d="M470 814 H424" fill="none" stroke="#6f7d8e" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#ah)"/>
+<text x="445" y="870" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="middle">key lookup; never projected back</text>
+<path d="M900 694 V776" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M958 584 V776" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M984 424 H998 V812 H988" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M672 436 V776" fill="none" stroke="#0f1319" stroke-width="9"/>
+<path d="M672 436 V776" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<text x="664" y="468" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="end">explicit CKB commands</text>
+<path d="M712 780 V588" fill="none" stroke="#0f1319" stroke-width="9"/>
+<path d="M712 780 V588" fill="none" stroke="#6f7d8e" stroke-width="2" marker-end="url(#ah)"/>
+<text x="722" y="738" font-size="12.5" font-style="italic" fill="#c9d3dc" text-anchor="start">exact source-version retrieval</text>
+<path d="M1126 440 V554 H988" fill="none" stroke="#0f1319" stroke-width="9"/>
+<path d="M1126 440 V554 H988" fill="none" stroke="#f0b53c" stroke-width="2" marker-end="url(#ahA)"/>
+<g font-size="13" fill="#9aa7b4">
+<path d="M40 952 H80" stroke="#8b98a6" stroke-width="2"/><text x="90" y="957">data or control flow</text>
+<path d="M260 952 H300" stroke="#8b98a6" stroke-width="2" stroke-dasharray="3 5"/><text x="310" y="957">lookup only</text>
+<path d="M420 952 H460" stroke="#f0b53c" stroke-width="2"/><text x="470" y="957">crosses an external boundary; requires visible approval</text>
+<rect x="860" y="942" width="34" height="20" rx="5" fill="#161a21" stroke="#6f7d8e" stroke-dasharray="4 3"/><text x="904" y="957">external system or output</text>
+</g>
+</g></svg>
