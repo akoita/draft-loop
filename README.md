@@ -1,4 +1,4 @@
-# DraftLoop
+<h1><img src="docs/assets/draftloop-hero.svg" alt="DraftLoop: job-specific CVs grounded in your own evidence. One AI drafts, another critiques, you decide."></h1>
 
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-24.5.0-339933?logo=node.js&logoColor=white)
@@ -31,22 +31,7 @@ accepted feedback drives bounded revision. The default cross-company pairing is
 Anthropic as author and OpenAI as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
 records DraftLoop's adaptation and controls.
 
-```mermaid
-flowchart LR
-    subgraph Local["Local workspace"]
-        Inputs["Approved job requirements<br/>+ candidate sources"]
-        Gate["Visible provider-transmission<br/>approval"]
-        Author["Grounded author"]
-        Critic["Independent evaluator / critic<br/>+ bounded revision"]
-        Human["Human review<br/>and approval"]
-        Export["Local CV export"]
-        Inputs --> Gate --> Author --> Critic --> Human --> Export
-    end
-    Anthropic["Anthropic<br/>author"]
-    OpenAI["OpenAI<br/>critic"]
-    Author <-->|"approved context"| Anthropic
-    Critic <-->|"approved draft and evidence"| OpenAI
-```
+![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before a local export.](docs/assets/how-draftloop-works.svg)
 
 The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
@@ -130,15 +115,7 @@ pnpm validate
 | Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
 | Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
 
-```mermaid
-flowchart LR
-    UI["CLI / Desktop"] --> Core["Shared application and core<br/>evaluator–optimizer workflow"]
-    Core --> Local["Local SQLite<br/>run history + exports"]
-    Core --> Adapters["Provider adapters"]
-    Adapters --> Anthropic["Approved Anthropic<br/>author route"]
-    Adapters --> OpenAI["Approved OpenAI<br/>critic route"]
-    CKB["Portable CKB component<br/>(basic controls + binding)"] --> Core
-```
+![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)
 
 The portable Candidate Knowledge Base (CKB) component can store approved local
 source versions. CLI and desktop adapters can create, open, list, and inspect
