@@ -53,10 +53,41 @@ the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
 `GEMINI_API_KEY`. The active catalog contains six unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
-choices. A CLI-selected pair is recorded on that run only. It does not change
-workspace model settings, transmission approval, or credentials. Resume uses
-the pair already recorded in run history. Omitting profile options preserves
-the existing workspace-configured behavior.
+choices. A pair passed to `start` is recorded on that run only. It does not
+change workspace model settings, transmission approval, or credentials. Resume
+uses the pair already recorded in run history.
+
+### Applied profile pair
+
+A workspace can keep an applied pair so that new runs do not start without
+profiles after a restart. The pair is stored as exact ids and versions in
+`.draft-loop/model-profile-selection.json`, with the time it was applied.
+
+```sh
+pnpm --filter @draft-loop/cli start model-profiles apply ./workspace --model-preset development-gemini
+pnpm --filter @draft-loop/cli start model-profiles apply ./workspace \
+  --author-profile standard-anthropic-author@1 \
+  --critic-profile standard-openai-critic@2
+pnpm --filter @draft-loop/cli start model-profiles applied ./workspace
+pnpm --filter @draft-loop/cli start model-profiles clear ./workspace
+```
+
+- `apply` takes one preset or both exact references, and refuses a pair that is
+  not registered for its roles or whose company and model differ from the
+  workspace's configured author and critic.
+- `start` without profile options uses the applied pair when it still matches
+  the workspace models. Profiles passed to `start` always win.
+- A saved pair that no longer matches is ignored, and the run preflight says
+  why. With no applied pair the preflight says that no profiles are attached
+  and the run uses the legacy path: provider-default runtime controls and
+  unknown context windows.
+- A corrupt selection file stops `start` before any provider work. Fix it with
+  `apply` or `clear`.
+- Resume never reads the applied pair; it reuses the profiles recorded in the
+  run.
+
+The desktop app uses the same saved pair; saving and displaying it in the
+desktop UI arrives with issue #910.
 
 The opt-in Gemini 3.8 Flash development author is also selectable with
 `--author-profile dev-google-gemini-author@2` and an exact critic profile, or
