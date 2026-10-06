@@ -417,7 +417,7 @@ describe("canonical candidate profile representative-career acceptance", () => {
     }
   });
 
-  it("keeps conflicting and duplicate alternatives visible while omission remains an open blocker", async () => {
+  it("keeps conflicting alternatives visible, merges identical facts, and leaves omission an open blocker", async () => {
     const text = sourceText(issueFactDescriptors);
     const fixture = await createFixture("profile-issues", text);
     const extractor = recordingExtractor((sourceId, source) =>
@@ -454,18 +454,12 @@ describe("canonical candidate profile representative-career acceptance", () => {
       ).toEqual(["Principal Engineer", "Staff Engineer"]);
       expect(
         saved.profile.facts.filter((fact) => fact.category === "project").map((fact) => fact.value),
-      ).toEqual(["Private Offline Migration", "Private Offline Migration"]);
-      expect(
-        new Set(
-          saved.profile.facts.filter((fact) => fact.category === "project").map((fact) => fact.id),
-        ).size,
-      ).toBe(2);
+      ).toEqual(["Private Offline Migration"]);
 
       const issueCodes = saved.profile.issues.map((issue) => issue.code);
-      expect(issueCodes).toEqual(
-        expect.arrayContaining(["conflict-title", "duplicate", "omission"]),
-      );
-      expect(saved.profile.issues).toHaveLength(3);
+      expect(issueCodes).toEqual(expect.arrayContaining(["conflict-title", "omission"]));
+      expect(issueCodes).not.toContain("duplicate");
+      expect(saved.profile.issues).toHaveLength(2);
       expect(saved.profile.issues.every((issue) => issue.status === "open")).toBe(true);
       expect(saved.profile.issues.filter((issue) => issue.code === "omission")).toHaveLength(1);
       expect(saved.profile.issues.find((issue) => issue.code === "omission")).toMatchObject({
@@ -480,13 +474,6 @@ describe("canonical candidate profile representative-career acceptance", () => {
       expect(saved.profile.issues.find((issue) => issue.code === "conflict-title")).toMatchObject({
         status: "open",
         factIds: expect.arrayContaining(roleFactIds),
-      });
-      const projectFactIds = saved.profile.facts
-        .filter((fact) => fact.category === "project")
-        .map((fact) => fact.id);
-      expect(saved.profile.issues.find((issue) => issue.code === "duplicate")).toMatchObject({
-        status: "open",
-        factIds: expect.arrayContaining(projectFactIds),
       });
 
       await expect(

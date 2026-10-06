@@ -76,7 +76,7 @@ describe("canonical candidate profile skill conflict detection", () => {
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
   });
 
-  it("continues to warn about equal unscoped skill values from distinct sources", async () => {
+  it("merges equal unscoped skill values from distinct sources into one fact", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "TypeScript", "b".repeat(64));
     const result = await extract(
@@ -87,13 +87,10 @@ describe("canonical candidate profile skill conflict detection", () => {
       ],
     );
 
-    expect(result.facts).toHaveLength(2);
-    expect(result.issues.filter((issue) => issue.code === "duplicate")).toHaveLength(1);
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]?.provenance).toEqual([first.reference, second.reference]);
+    expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
-    expect(result.issues.find((issue) => issue.code === "duplicate")?.sourceRefs).toEqual([
-      first.reference,
-      second.reference,
-    ]);
   });
 
   it("keeps differing skill collection values even when they share a subject", async () => {
@@ -112,7 +109,7 @@ describe("canonical candidate profile skill conflict detection", () => {
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
   });
 
-  it("keeps duplicate warnings for scoped skills with the same value", async () => {
+  it("merges scoped skills with the same value into one fact", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "TypeScript", "b".repeat(64));
     const result = await extract(
@@ -123,13 +120,10 @@ describe("canonical candidate profile skill conflict detection", () => {
       ],
     );
 
-    expect(result.facts).toHaveLength(2);
-    expect(result.issues.filter((issue) => issue.code === "duplicate")).toHaveLength(1);
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]?.provenance).toEqual([first.reference, second.reference]);
+    expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
-    expect(result.issues.find((issue) => issue.code === "duplicate")?.sourceRefs).toEqual([
-      first.reference,
-      second.reference,
-    ]);
   });
 
   it("preserves provider-proposed conflicts for unscoped skills", async () => {

@@ -236,7 +236,7 @@ describe("unreferenced duplicate candidate fact keys", () => {
     );
   });
 
-  it("retains semantic duplicate and conflict review issues after one extraction request", async () => {
+  it("merges identical facts and keeps the conflict review issue after one extraction request", async () => {
     const output = deepFreeze({
       schemaVersion: 1,
       facts: [
@@ -267,22 +267,15 @@ describe("unreferenced duplicate candidate fact keys", () => {
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
     expect(execute).toHaveBeenCalledTimes(1);
-    expect(result.facts.map(({ value }) => value)).toEqual([
-      "Project Orion",
-      "Project Orion",
-      "Project Atlas",
-    ]);
+    expect(result.facts.map(({ value }) => value)).toEqual(["Project Orion", "Project Atlas"]);
     for (const resultFact of result.facts) {
       expect(resultFact.provenance).toEqual([material().reference]);
     }
-    const duplicate = result.issues.find(({ code }) => code === "duplicate");
+    expect(result.issues.some(({ code }) => code === "duplicate")).toBe(false);
     const conflict = result.issues.find(({ code }) => code === "conflict-value");
-    expect(duplicate?.severity).toBe("warning");
-    expect(duplicate?.status).toBe("open");
-    expect(duplicate?.factIds).toHaveLength(2);
     expect(conflict?.severity).toBe("error");
     expect(conflict?.status).toBe("open");
-    expect(conflict?.factIds).toHaveLength(3);
+    expect(conflict?.factIds).toHaveLength(2);
     expect(output).toEqual(before);
   });
 

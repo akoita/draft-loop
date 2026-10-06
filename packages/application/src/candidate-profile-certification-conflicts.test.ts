@@ -88,7 +88,7 @@ describe("canonical candidate certification conflict detection", () => {
     expect(result.issues.some((issue) => issue.code.startsWith("conflict-"))).toBe(false);
   });
 
-  it("still reports equal unscoped credentials as duplicates across source references", async () => {
+  it("merges equal unscoped credentials across source references into one fact", async () => {
     const first = source("source-a", "AWS Certified Solutions Architect");
     const second = source("source-b", "AWS Certified Solutions Architect");
     const result = await extract(
@@ -107,13 +107,10 @@ describe("canonical candidate certification conflict detection", () => {
       ],
     );
 
-    expect(result.facts).toHaveLength(2);
-    expect(result.issues.filter((issue) => issue.code === "duplicate")).toHaveLength(1);
+    expect(result.facts).toHaveLength(1);
+    expect(result.facts[0]?.provenance).toEqual([first.reference, second.reference]);
+    expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.some((issue) => issue.code.startsWith("conflict-"))).toBe(false);
-    expect(result.issues.find((issue) => issue.code === "duplicate")?.sourceRefs).toEqual([
-      first.reference,
-      second.reference,
-    ]);
   });
 
   it("reports differing values as a conflict when the certifications share a subject", async () => {
