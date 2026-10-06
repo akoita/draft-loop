@@ -13,6 +13,7 @@ import { isEntryPoint } from "./entry-point.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
+import { registerModelProfileSelectionCommands } from "./model-profile-selection-commands.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
@@ -54,9 +55,11 @@ import {
   sourceSensitivityService,
   type WorkspaceDescriptor,
   type WorkspaceEvidenceModeService,
+  type WorkspaceModelProfileSelectionService,
   type WritingPolicyVersionMetadata,
   type WritingPolicyVersionView,
   workspaceEvidenceModeService,
+  workspaceModelProfileSelectionService,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -240,6 +243,8 @@ export interface CliDependencies {
   readonly sensitivityService?: SourceSensitivityService;
   /** The workspace evidence-mode boundary; replaced in tests. */
   readonly evidenceModeService?: WorkspaceEvidenceModeService;
+  /** The workspace applied model-profile boundary; replaced in tests. */
+  readonly modelProfileSelectionService?: WorkspaceModelProfileSelectionService;
   /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
   readonly consentService?: SensitiveKnowledgeConsentService;
   /** Where status lines are written; replaced in tests. */
@@ -1386,7 +1391,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .version(packageJson.version)
     .showHelpAfterError();
 
-  command
+  const modelProfilesCommand = command
     .command("model-profiles")
     .description(
       "Print the content-free JSON catalog and presets; quality is unvalidated and account/provider availability has not been checked",
@@ -1401,6 +1406,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         presets: listModelProfilePresets(),
       });
     });
+  registerModelProfileSelectionCommands(
+    modelProfilesCommand,
+    dependencies.modelProfileSelectionService ?? workspaceModelProfileSelectionService,
+    io,
+  );
 
   command
     .command("init")
@@ -1575,7 +1585,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   command
     .command("start")
     .description(
-      "Start a run with optional exact profile versions pinned to this run; omitted profiles use workspace settings",
+      "Start a run with optional exact profile versions pinned to this run; omitted profiles use the pair applied with `model-profiles apply`, else workspace settings",
     )
     .argument("[workspace]", "workspace directory", ".")
     .option(
@@ -1607,7 +1617,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults. Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated.\n",
+      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles here does not change workspace defaults (use `model-profiles apply` for that). Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;

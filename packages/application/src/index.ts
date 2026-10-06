@@ -639,3 +639,5 @@ export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
 export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";
+export * from "./workspace-model-profile-selection.js";
+export * from "./workspace-model-profile-selection-service.js";
