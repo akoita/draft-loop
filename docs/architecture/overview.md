@@ -29,17 +29,17 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 
 ## Package and data ownership
 
-| Boundary                                         | Owns                                                                                                         | Does not own                                                            |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `packages/domain` and `packages/schemas`         | Framework-free concepts, workflow states, and Zod validation at persistence/exchange boundaries              | Provider SDKs, storage engines, or UI frameworks                        |
-| `packages/ingestion` and `packages/evidence`     | Approved local/URL intake, extraction, normalized material, provenance, and source references                | Application selection or provider transport                             |
-| `packages/orchestrator`                          | Author–critic sequencing, budgets, pause/stop, recovery, and user-visible run events through ports           | Provider-specific SDK calls                                             |
-| `packages/validation` and `packages/evaluations` | Deterministic checks, rubric findings, and structured critique records                                       | Proof of truth independent of candidate evidence and human decisions    |
-| `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                             | Submission or publishing                                                |
-| `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes and local-only state                 | CKB selection, retrieval policy, or UI                                  |
-| `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port | Model download, vector persistence, retrieval policy, or provider calls |
-| `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                      | Domain workflow decisions                                               |
-| `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                   | A second domain layer or provider SDKs in the UI                        |
+| Boundary                                         | Owns                                                                                                                                  | Does not own                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `packages/domain` and `packages/schemas`         | Framework-free concepts, workflow states, and Zod validation at persistence/exchange boundaries                                       | Provider SDKs, storage engines, or UI frameworks                        |
+| `packages/ingestion` and `packages/evidence`     | Approved local/URL intake, extraction, normalized material, provenance, and source references                                         | Application selection or provider transport                             |
+| `packages/orchestrator`                          | Author–critic sequencing, budgets, pause/stop, recovery, and user-visible run events through ports                                    | Provider-specific SDK calls                                             |
+| `packages/validation` and `packages/evaluations` | Deterministic checks, rubric findings, and structured critique records                                                                | Proof of truth independent of candidate evidence and human decisions    |
+| `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                                                      | Submission or publishing                                                |
+| `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
+| `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
+| `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
+| `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
 
 ## Key flow
 
