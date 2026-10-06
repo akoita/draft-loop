@@ -28,6 +28,11 @@ import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profi
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
+import {
+  type CanonicalProfileSourceSensitivityGuard,
+  canonicalProfileQuoteLocatorsByRepresentativeId,
+  dropFactsQuotingExcludedText,
+} from "./canonical-profile-sensitivity-filter.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
@@ -61,6 +66,11 @@ export interface CanonicalCandidateProfileExtractionSource {
 export interface CanonicalCandidateProfileExtractionMaterial
   extends CanonicalCandidateProfileExtractionSource {
   readonly reference: CanonicalCandidateProfileProvenanceReference;
+  /**
+   * Present when `text` is a sensitivity-filtered version of the original source. It stays local:
+   * it is never copied into a provider request and only checks evidence quotes before mapping.
+   */
+  readonly sensitivity?: CanonicalProfileSourceSensitivityGuard;
 }
 
 export interface CanonicalCandidateProfileExtractionRequest {
@@ -509,7 +519,7 @@ export async function processCanonicalCandidateProfileExtraction(
       validated.request.sources,
       validated.references,
     );
-    const { proposal, droppedFacts } = await extractGroundedCanonicalCandidateProfileProposal(
+    const grounded = await extractGroundedCanonicalCandidateProfileProposal(
       port,
       Object.freeze({ ...validated.request, sources: preparedSources.sources }),
       preparedSources.referencesByRepresentativeId,
@@ -518,10 +528,17 @@ export async function processCanonicalCandidateProfileExtraction(
         stage = nextStage;
       },
     );
+    const guarded = dropFactsQuotingExcludedText(
+      grounded.proposal,
+      canonicalProfileQuoteLocatorsByRepresentativeId(
+        input.sources,
+        preparedSources.referencesByRepresentativeId,
+      ),
+    );
     return mapProposal(
-      proposal,
+      guarded.proposal,
       preparedSources.referencesByRepresentativeId,
-      droppedFacts,
+      grounded.droppedFacts + guarded.droppedFacts,
       input.sources,
     );
   } catch (error) {

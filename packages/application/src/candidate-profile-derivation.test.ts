@@ -247,6 +247,7 @@ describe("canonical candidate profile derivation", () => {
     const close = vi.fn(async () => undefined);
     const handle = {
       descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+      getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => undefined),
       readManagedCandidateKnowledgeSourceVersion: vi.fn(async () => ({
         metadata: {
           knowledgeBaseId: "knowledge-1",
@@ -301,6 +302,7 @@ describe("canonical candidate profile derivation", () => {
     const content = "Candidate history";
     const handle = {
       descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+      getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => undefined),
       readManagedCandidateKnowledgeSourceVersion: vi.fn(async () => ({
         metadata: {
           knowledgeBaseId: "knowledge-1",
@@ -349,6 +351,7 @@ describe("canonical candidate profile derivation", () => {
     const close = vi.fn(async () => undefined);
     const handle = {
       descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+      getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => undefined),
       readManagedCandidateKnowledgeSourceVersion: vi.fn(async () => ({
         metadata: {
           knowledgeBaseId: "knowledge-1",
@@ -570,6 +573,7 @@ async function deriveFromSources(
   const createKnowledgeSelectionSnapshot = vi.fn(async () => selected);
   const handle = {
     descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+    getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => undefined),
     readManagedCandidateKnowledgeSourceVersion: vi.fn(
       async (_knowledgeBaseId: string, sourceId: string, versionId: string) => {
         const source = sources.find((candidate) => candidate.sourceId === sourceId);

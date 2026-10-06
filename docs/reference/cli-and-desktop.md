@@ -686,10 +686,19 @@ Markdown sources into three tiers: `normal`, `sensitive`, and `never-share`.
 Rules are saved as immutable versions; every add or remove writes a new
 version, and a knowledge base with no saved version has no rules.
 
-> **Enforcement is not active yet.** These commands only edit and preview
-> rules. Keeping `never-share` sections out of provider requests arrives with
-> [#873](https://github.com/akoita/draft-loop/issues/873), so today the rules
-> have no effect on runs.
+> **Where rules apply.** Canonical profile derivation uses the knowledge base's
+> current rules and sends neither `never-share` nor `sensitive` sections to the
+> provider. `sensitive` will become shareable once a workspace can consent to it
+> ([#892](https://github.com/akoita/draft-loop/issues/892)). Runs are not
+> filtered yet ([#891](https://github.com/akoita/draft-loop/issues/891)), so
+> rules have no effect on them today.
+>
+> Derivation removes excluded sections before extraction and drops any fact
+> whose evidence quote is not found in allowed source text, which is reported in
+> the profile's dropped-fact warning. A source whose sections are all excluded
+> is skipped, with a warning issue on the profile. Markdown only: other sources
+> are sent unchanged. The command result lists the rules version used per
+> knowledge base; the profile file does not store it.
 
 How rules classify a source:
 
