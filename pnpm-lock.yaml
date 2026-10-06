@@ -195,6 +195,9 @@ importers:
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
+      '@draft-loop/embeddings':
+        specifier: workspace:*
+        version: link:../embeddings
       '@draft-loop/schemas':
         specifier: workspace:*
         version: link:../schemas

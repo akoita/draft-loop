@@ -17,6 +17,7 @@
   "dependencies": {
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
+    "@draft-loop/embeddings": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/validation": "workspace:*"
   },
