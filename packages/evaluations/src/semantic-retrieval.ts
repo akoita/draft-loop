@@ -1,5 +1,10 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
-import { cosineSimilarity, type TextEmbedder } from "@draft-loop/embeddings";
+import {
+  applySemanticRelevanceFloor,
+  cosineSimilarity,
+  type SemanticRelevanceFloor,
+  type TextEmbedder,
+} from "@draft-loop/embeddings";
 
 export interface SemanticRetrieverQueryOptions {
   readonly workspaceId?: string;
@@ -23,11 +28,17 @@ const defaultLimit = 20;
  * Every chunk is embedded once with the "document" role; each query is embedded with the "query"
  * role. Results are ordered by cosine similarity (descending), then chunk id (ascending) so ties
  * are deterministic, and `rank` is the negated score to match the lexical rank convention.
+ *
+ * When `relevanceFloor` is given it is applied to the ordered hits before truncation to `limit`,
+ * so fewer than `limit` chunks come back when the lower hits are not plausibly relevant.
  */
 export async function createSemanticRetriever(
   embedder: TextEmbedder,
   chunks: readonly ScoredEvidenceChunk[],
-  options: { readonly signal?: AbortSignal } = {},
+  options: {
+    readonly signal?: AbortSignal;
+    readonly relevanceFloor?: SemanticRelevanceFloor;
+  } = {},
 ): Promise<SemanticRetriever> {
   const startedAt = performance.now();
   const embedOptions = options.signal === undefined ? undefined : { signal: options.signal };
@@ -55,16 +66,22 @@ export async function createSemanticRetriever(
         throw new RangeError("Embedder returned no vector for the query.");
       }
       const limit = queryOptions?.limit ?? defaultLimit;
-      return indexed
+      const ordered = indexed
         .filter(
           ({ chunk }) =>
             queryOptions?.workspaceId === undefined ||
             chunk.workspaceId === queryOptions.workspaceId,
         )
         .map(({ chunk, vector }) => ({ chunk, score: cosineSimilarity(queryVector, vector) }))
-        .sort((a, b) => b.score - a.score || (a.chunk.id < b.chunk.id ? -1 : 1))
-        .slice(0, limit)
-        .map(({ chunk, score }) => ({ ...chunk, rank: -score }));
+        .sort((a, b) => b.score - a.score || (a.chunk.id < b.chunk.id ? -1 : 1));
+      const floored =
+        options.relevanceFloor === undefined
+          ? ordered
+          : applySemanticRelevanceFloor(
+              ordered.map((entry) => ({ ...entry, id: entry.chunk.id })),
+              options.relevanceFloor,
+            );
+      return floored.slice(0, limit).map(({ chunk, score }) => ({ ...chunk, rank: -score }));
     },
   };
 }

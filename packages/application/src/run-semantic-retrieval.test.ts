@@ -190,6 +190,10 @@ describe("run semantic retrieval", () => {
       readonly shareEmbedder?: boolean;
       readonly modelDirectory?: string;
       readonly open?: (storeRoot: string) => Promise<CandidateKnowledgeStoreHandle>;
+      readonly relevanceFloor?: {
+        readonly maxMarginFromTop: number;
+        readonly minimumScore: number;
+      };
     } = {},
     id = workspaceId,
   ): Promise<Run> {
@@ -234,6 +238,9 @@ describe("run semantic retrieval", () => {
           return embedder;
         },
         ...(dependencies.open === undefined ? {} : { open: dependencies.open }),
+        ...(dependencies.relevanceFloor === undefined
+          ? {}
+          : { relevanceFloor: dependencies.relevanceFloor }),
       },
     );
     if (runtime === undefined) throw new Error("Expected candidate knowledge retrieval.");
@@ -440,6 +447,22 @@ describe("run semantic retrieval", () => {
     expect(await companionFor(fixture, trace.id)).toMatchObject({
       outcome: "semantic-unavailable",
       reason: "runtime-failed",
+    });
+  });
+
+  it("keeps the lexical result when the relevance floor rejects every semantic hit", async () => {
+    const fixture = await createFixture();
+    const baseline = await (await openRun(fixture, "lexical")).runtime.inspect(paraphrase);
+    const run = await openRun(fixture, "semantic", {
+      relevanceFloor: { maxMarginFromTop: 0, minimumScore: 1.5 },
+    });
+    const result = await run.runtime.inspect(paraphrase);
+    expect(result.hits).toEqual(baseline.hits);
+    const trace = tracesFor(run, paraphrase)[0] as CandidateKnowledgeRetrievalTraceInput;
+    expect(await companionFor(fixture, trace.id)).toMatchObject({
+      outcome: "semantic-used",
+      reason: null,
+      selectedChunks: [],
     });
   });
 

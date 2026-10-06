@@ -7,7 +7,7 @@ import type {
   CandidateKnowledgeSelectionSnapshot,
 } from "@draft-loop/domain";
 import { createCandidateKnowledgeLexicalHit } from "@draft-loop/domain";
-import type { TextEmbedder } from "@draft-loop/embeddings";
+import type { SemanticRelevanceFloor, TextEmbedder } from "@draft-loop/embeddings";
 import type {
   SemanticRetrievalTraceChunk,
   SemanticRetrievalTraceStoragePort,
@@ -77,6 +77,8 @@ export interface RunSemanticRetrievalOptions {
    */
   readonly shareEmbedder?: boolean;
   readonly open?: (storeRoot: string) => Promise<CandidateKnowledgeStoreHandle>;
+  /** Overrides the model's calibrated relevance floor; injectable for tests. */
+  readonly relevanceFloor?: SemanticRelevanceFloor;
 }
 
 type OpenedEmbedder = Awaited<ReturnType<typeof openLocalTextEmbedder>>;
@@ -447,6 +449,9 @@ export function createRunSemanticRetrieval(
               purpose: request.purpose,
               query,
               limit,
+              ...(options.relevanceFloor === undefined
+                ? {}
+                : { relevanceFloor: options.relevanceFloor }),
             }),
           );
         } catch {
@@ -500,6 +505,20 @@ export function createRunSemanticRetrieval(
           compare(left.knowledgeBaseId, right.knowledgeBaseId) ||
           compare(left.hit.chunkId, right.hit.chunkId),
       );
+      const embeddingIdentity = embeddingStorageIdentity(state.embedder);
+      if (candidates.length === 0) {
+        // The relevance floor rejected every semantic candidate. Keep the lexical result rather
+        // than a silent empty primary query, and record that semantic retrieval ran.
+        return {
+          result: lexical,
+          recordTraces: (_filtered, references) =>
+            appendCompanions(references, () => ({
+              outcome: "semantic-used",
+              embeddingIdentity,
+              selectedChunks: [],
+            })),
+        };
+      }
       const hits = candidates.slice(0, limit).map(({ hit }) => hit);
 
       const diagnostics = lexical.diagnostics.map((diagnostic) => {
@@ -530,7 +549,6 @@ export function createRunSemanticRetrieval(
         hits: Object.freeze(hits),
         diagnostics: Object.freeze(diagnostics),
       });
-      const embeddingIdentity = embeddingStorageIdentity(state.embedder);
       return {
         result,
         recordTraces: (filtered, references) =>

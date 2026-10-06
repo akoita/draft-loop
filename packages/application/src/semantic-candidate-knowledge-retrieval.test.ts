@@ -392,6 +392,103 @@ describe("semantic candidate knowledge retrieval", () => {
     expect(truncated.ok && truncated.hits.map((hit) => hit.chunk.chunkId)).toEqual([tied[0]]);
   });
 
+  it("applies no floor to an embedder without a calibrated floor and reports it", async () => {
+    const fixture = await createFixture(baseTexts);
+    const embedder = createFakeEmbedder();
+    const prepared = await fixture.prepare();
+    await fixture.sync(prepared, embedder);
+
+    const result = await querySemanticCandidateKnowledge({
+      handle: fixture.handle,
+      prepared,
+      embedder,
+      mode: "semantic",
+      purpose: "achievement-recall",
+      query: "kubernetes platform",
+      limit: 3,
+    });
+
+    expect(result.ok && result.relevanceFloor).toBeNull();
+    expect(result.ok && result.hits).toHaveLength(3);
+  });
+
+  it("returns fewer than the limit in semantic mode when hits fall under the floor", async () => {
+    const fixture = await createFixture(baseTexts);
+    const embedder = createFakeEmbedder();
+    const prepared = await fixture.prepare();
+    await fixture.sync(prepared, embedder);
+    const relevanceFloor = { maxMarginFromTop: 0.5, minimumScore: 0.5 };
+
+    const result = await querySemanticCandidateKnowledge({
+      handle: fixture.handle,
+      prepared,
+      embedder,
+      mode: "semantic",
+      purpose: "achievement-recall",
+      query: "kubernetes platform",
+      limit: 3,
+      relevanceFloor,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.relevanceFloor).toEqual(relevanceFloor);
+    expect(result.hits.map((hit) => hit.chunk.text)).toEqual(["kubernetes platform delivery"]);
+    expect(result.hits.map((hit) => hit.vectorRank)).toEqual([1]);
+    expect(result.hits.map((hit) => hit.fusedRank)).toEqual([1]);
+
+    const nothing = await querySemanticCandidateKnowledge({
+      handle: fixture.handle,
+      prepared,
+      embedder,
+      mode: "semantic",
+      purpose: "achievement-recall",
+      query: "kubernetes platform",
+      limit: 3,
+      relevanceFloor: { maxMarginFromTop: 1, minimumScore: 1.5 },
+    });
+    expect(nothing.ok && nothing.hits).toEqual([]);
+  });
+
+  it("keeps lexical hits in hybrid mode and admits semantic-only hits only above the floor", async () => {
+    const fixture = await createFixture(baseTexts);
+    // Lexical "alpha" matches two chunks; the vector query "yankee xray" scores the mixed chunk
+    // highest, the repetitive chunk lower and the unrelated chunk near zero.
+    const embedder = createFakeEmbedder({ rewriteQuery: () => "yankee xray" });
+    const prepared = await fixture.prepare();
+    await fixture.sync(prepared, embedder);
+    const request = {
+      handle: fixture.handle,
+      prepared,
+      embedder,
+      mode: "hybrid" as const,
+      purpose: "achievement-recall" as const,
+      query: "alpha",
+      limit: 3,
+    };
+
+    const floored = await querySemanticCandidateKnowledge({
+      ...request,
+      relevanceFloor: { maxMarginFromTop: 0.05, minimumScore: 0 },
+    });
+
+    expect(floored.ok).toBe(true);
+    if (!floored.ok) return;
+    const byText = (text: string) => floored.hits.find((hit) => hit.chunk.text === text);
+    expect(floored.hits).toHaveLength(2);
+    expect(byText("alpha beta gamma delta yankee")).toMatchObject({ vectorRank: 1, bm25Rank: 2 });
+    // The repetitive chunk fell under the floor on the vector side but stays through BM25.
+    expect(byText("alpha alpha alpha xray")).toMatchObject({
+      vectorRank: null,
+      vectorScore: null,
+      bm25Rank: 1,
+    });
+    expect(byText("kubernetes platform delivery")).toBeUndefined();
+
+    const unfloored = await querySemanticCandidateKnowledge(request);
+    expect(unfloored.ok && unfloored.hits).toHaveLength(3);
+  });
+
   it("scopes hits to the requested exact source versions", async () => {
     const fixture = await createFixture(baseTexts);
     const embedder = createFakeEmbedder();

@@ -4,8 +4,11 @@ import type {
   CandidateKnowledgeRetrievalScopeInput,
 } from "@draft-loop/domain";
 import {
+  applySemanticRelevanceFloor,
   createOnnxTextEmbedder,
   EmbeddingModelUnavailableError,
+  type SemanticRelevanceFloor,
+  semanticRelevanceFloorForIdentity,
   type TextEmbedder,
 } from "@draft-loop/embeddings";
 import type { ingestBytes } from "@draft-loop/ingestion";
@@ -224,6 +227,11 @@ export interface QuerySemanticCandidateKnowledgeRequest {
   readonly purpose: CandidateKnowledgeRetrievalPurpose;
   readonly query: string;
   readonly limit: number;
+  /**
+   * Relevance floor for vector hits. Defaults to the calibrated floor of the embedder's pinned
+   * Granite tier; an embedder without a calibrated floor applies none.
+   */
+  readonly relevanceFloor?: SemanticRelevanceFloor;
   readonly signal?: AbortSignal;
 }
 
@@ -239,11 +247,22 @@ interface FusionEntry {
  * ranking with the lexical BM25 ranking per chunk id by reciprocal rank fusion (k = 60), breaking
  * score ties by chunk id ascending. Lexical hits only join the fusion when the lexical query
  * actually matched; the bounded fallback (arbitrary chunks, no relevance signal) is ignored.
+ *
+ * Vector hits first pass the relevance floor, so `semantic` may return fewer than `limit` hits and
+ * `hybrid` admits semantic-only hits only above the floor; lexical hits always participate. The
+ * floor that was applied is returned so callers can record it.
  */
 export async function querySemanticCandidateKnowledge(
   request: QuerySemanticCandidateKnowledgeRequest,
-): Promise<SemanticResult<{ readonly hits: readonly SemanticCandidateKnowledgeHit[] }>> {
+): Promise<
+  SemanticResult<{
+    readonly hits: readonly SemanticCandidateKnowledgeHit[];
+    readonly relevanceFloor: SemanticRelevanceFloor | null;
+  }>
+> {
   const { handle, embedder, signal, limit } = request;
+  const relevanceFloor =
+    request.relevanceFloor ?? semanticRelevanceFloorForIdentity(embedder.identity) ?? null;
   const { scope } = singleStoreScope(request.prepared);
   const identity = embeddingStorageIdentity(embedder);
   signal?.throwIfAborted();
@@ -270,9 +289,14 @@ export async function querySemanticCandidateKnowledge(
     return { ok: false, reason: "runtime-failed" };
   }
 
+  if (relevanceFloor !== null) {
+    vectorHits = [...applySemanticRelevanceFloor(vectorHits, relevanceFloor)];
+  }
+
   if (request.mode === "semantic") {
     return {
       ok: true,
+      relevanceFloor,
       hits: vectorHits.slice(0, limit).map((hit, index) => ({
         chunk: hit.chunk,
         vectorScore: hit.score,
@@ -326,6 +350,7 @@ export async function querySemanticCandidateKnowledge(
     .slice(0, limit);
   return {
     ok: true,
+    relevanceFloor,
     hits: ordered.map(({ entry }, index) => ({ ...entry, fusedRank: index + 1 })),
   };
 }

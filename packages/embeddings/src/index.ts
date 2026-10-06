@@ -29,6 +29,13 @@ export type {
   TokenizerLike,
 } from "./onnx-text-embedder.js";
 export { createOnnxTextEmbedder, onnxRuntimeIdentity } from "./onnx-text-embedder.js";
+export type { SemanticRelevanceFloor } from "./relevance-floor.js";
+export {
+  applySemanticRelevanceFloor,
+  defaultSemanticRelevanceFloor,
+  defaultSemanticRelevanceFloors,
+  semanticRelevanceFloorForIdentity,
+} from "./relevance-floor.js";
 export type {
   EmbeddingModelIdentity,
   EmbeddingRole,
