@@ -129,8 +129,9 @@ per-user data directory; set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` (or pass
 `--model-dir`) to choose another.
 
 Choose how a workspace searches its knowledge with `retrieval mode`
-(`lexical`, the default, `semantic`, or `hybrid`). Runs do not read the setting
-yet; see the [CLI reference](docs/reference/cli-and-desktop.md#retrieval-mode).
+(`lexical`, the default, `semantic`, or `hybrid`). Runs fall back visibly to
+lexical retrieval when the local model or index is unavailable; see the
+[CLI reference](docs/reference/cli-and-desktop.md#retrieval-mode).
 
 ```sh
 pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic|hybrid] [--tier 311m|97m] [--json]

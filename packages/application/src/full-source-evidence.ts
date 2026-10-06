@@ -8,6 +8,10 @@ import type {
 import type { SqliteStorage } from "@draft-loop/storage";
 
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
+import {
+  type RetrievalModeDecision,
+  retrievalModePreflightLine,
+} from "./run-semantic-retrieval.js";
 import type { EvidenceMode } from "./workspace-evidence-mode.js";
 
 /**
@@ -92,11 +96,14 @@ export function evidenceModePreflightLine(decision: EvidenceModeDecision): strin
 
 export interface EvidenceModeRetrieval {
   readonly evidenceModeDecision: () => Promise<EvidenceModeDecision>;
+  /** Present only when the workspace retrieval mode is semantic or hybrid. */
+  readonly retrievalModeDecision?: () => Promise<RetrievalModeDecision | undefined>;
 }
 
 /**
  * Show the evidence mode in the transmission preflight and keep it in run history as an audit
- * event. Retrieval mode, the default, adds neither a line nor an event.
+ * event. Retrieval mode, the default, adds neither a line nor an event. A semantic or hybrid
+ * retrieval mode adds its own line and `run.retrieval-mode` event, whether or not it could be used.
  */
 export async function announceRunEvidenceMode(
   storage: Pick<SqliteStorage, "appendAuditEvent">,
@@ -107,7 +114,38 @@ export async function announceRunEvidenceMode(
 ): Promise<void> {
   if (retrieval === undefined) return;
   const decision = await retrieval.evidenceModeDecision();
-  if (decision.requestedMode !== "full-source") return;
+  if (decision.requestedMode === "full-source") {
+    await announceEvidenceMode(storage, decision, workspaceId, runId, write);
+  }
+  const retrievalMode = await retrieval.retrievalModeDecision?.();
+  if (retrievalMode === undefined || retrievalMode.requestedMode === "lexical") return;
+  write(retrievalModePreflightLine(retrievalMode));
+  await storage.appendAuditEvent({
+    id: `retrieval-mode:${runId}:${randomUUID()}`,
+    workspaceId,
+    eventType: "run.retrieval-mode",
+    entityType: "run",
+    entityId: runId,
+    payload: {
+      requestedMode: retrievalMode.requestedMode,
+      effectiveMode: retrievalMode.effectiveMode,
+      tier: retrievalMode.tier,
+      embeddedChunkCount: retrievalMode.embeddedChunkCount,
+      ...(retrievalMode.reason === undefined ? {} : { reason: retrievalMode.reason }),
+      ...(retrievalMode.modelId === undefined ? {} : { modelId: retrievalMode.modelId }),
+      ...(retrievalMode.revision === undefined ? {} : { revision: retrievalMode.revision }),
+    },
+    createdAt: new Date().toISOString(),
+  });
+}
+
+async function announceEvidenceMode(
+  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  decision: EvidenceModeDecision,
+  workspaceId: string,
+  runId: string,
+  write: (line: string) => void,
+): Promise<void> {
   write(evidenceModePreflightLine(decision));
   await storage.appendAuditEvent({
     id: `evidence-mode:${runId}:${randomUUID()}`,

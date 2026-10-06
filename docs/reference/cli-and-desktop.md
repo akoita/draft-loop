@@ -894,7 +894,8 @@ arm64, Windows x64 and arm64, and macOS on Apple silicon.
 ### Retrieval mode
 
 A workspace chooses how its candidate knowledge is searched. The setting is
-stored in `.draft-loop/retrieval-mode.json` beside `workspace.json`.
+stored in `.draft-loop/retrieval-mode.json` beside `workspace.json` and is read
+once when a run starts or resumes.
 
 - `lexical` (the default) uses keyword retrieval only.
 - `semantic` searches by meaning with the [local embedding
@@ -918,8 +919,24 @@ the tier (a local check, with no network request). When the model is not
 `ready`, it prints the `embeddings install` command to run. The mode is saved
 either way, and nothing is downloaded. The setting never starts a run.
 
-Runs do not read this setting yet: every run currently uses lexical
-retrieval, whatever the saved mode.
+In a run, the mode works as follows:
+
+- **Scope.** The mode applies only to the primary job-requirement query. The
+  contact, chronology, priority, skills, and required-section queries stay
+  lexical, and the provider byte and chunk limits are unchanged.
+- **Sensitivity.** Chunks withheld by [source sensitivity](#source-sensitivity)
+  are removed from semantic and hybrid hits before selection and tracing, as
+  for lexical hits.
+- **Visible fallback.** When the model is absent, corrupt, or unsupported, the
+  runtime fails, or a vector index is stale, the run uses lexical retrieval and
+  says so in its preflight, for example `Retrieval mode: semantic requested;
+  using lexical (model-absent).` It also records a content-free
+  `run.retrieval-mode` audit event and, beside each retrieval trace, a
+  `semantic-unavailable` companion trace with the reason. A run that uses the
+  mode prints it with the indexed chunk count and records `semantic-used`
+  companions with the model identity.
+- **Vectors.** Missing vectors are built from the selected exact source
+  versions when a run starts, which can take a moment on first use.
 
 ### Desktop knowledge operations
 

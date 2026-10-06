@@ -70,6 +70,12 @@ import {
   requiredSectionQueries,
 } from "./required-section-evidence.js";
 import { timestamp } from "./response-execution.js";
+import {
+  createRunSemanticRetrieval,
+  type RetrievalModeDecision,
+  type RunSemanticRetrievalOptions,
+  type RunSemanticTraceReference,
+} from "./run-semantic-retrieval.js";
 import type { EvidenceMode } from "./workspace-evidence-mode.js";
 
 export interface CandidateKnowledgeRuntimeConfig {
@@ -215,13 +221,19 @@ function mergeDiagnostics(
  * for each configured required section before provider handoff.
  */
 export function candidateKnowledgeRuntimeRetrieval(
-  storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace">,
+  storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace"> &
+    Partial<Pick<SqliteStorage, "candidateKnowledgeSemanticRetrievalTrace">>,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
   /** Withheld-section filter; defaults to the one built from the knowledge base's current rules. */
   exclusions?: CandidateKnowledgeSensitivityExclusions,
   /** `full-source` sends every eligible chunk when it fits the budget; see full-source-evidence. */
   evidenceMode: EvidenceMode = "retrieval",
+  /**
+   * Semantic or hybrid retrieval of the primary job-requirement query; absent means lexical only,
+   * exactly as before. Every other query stays lexical.
+   */
+  semanticOptions?: RunSemanticRetrievalOptions,
 ):
   | (EvidenceModeRetrieval & {
       readonly port: RetrievalPort;
@@ -244,36 +256,79 @@ export function candidateKnowledgeRuntimeRetrieval(
     withheld.filterChunks(await loadAllPinnedSourceReferences(...args));
   const loadPinnedSourceChunks = (hits: readonly CandidateKnowledgeLexicalHit[]) =>
     loadPinnedSourceReferences(hits.map((hit) => hit.metadata.provenance));
+  const lexicalSelections = binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+    storeRoot,
+    knowledgeBaseId,
+  }));
+  const lexicalQuery = (searchText: string, limit: number) =>
+    service.queryCandidateKnowledge({
+      selections: lexicalSelections,
+      ...(binding.combinationApproved === undefined
+        ? {}
+        : { combinationApproved: binding.combinationApproved }),
+      purpose: "achievement-recall",
+      query: searchText,
+      limit,
+    });
+  const semanticTraceStorage = storage.candidateKnowledgeSemanticRetrievalTrace;
+  if (semanticOptions !== undefined && semanticTraceStorage === undefined) {
+    throw new Error("Semantic retrieval requires storage with semantic retrieval traces.");
+  }
+  const semantic =
+    semanticOptions === undefined || semanticTraceStorage === undefined
+      ? undefined
+      : createRunSemanticRetrieval({
+          options: semanticOptions,
+          workspaceId: config.id,
+          entries: binding.entries,
+          currentSnapshot: () =>
+            service.createKnowledgeSelectionSnapshot({
+              selections: lexicalSelections,
+              ...(binding.combinationApproved === undefined
+                ? {}
+                : { combinationApproved: binding.combinationApproved }),
+            }),
+          storage: { candidateKnowledgeSemanticRetrievalTrace: semanticTraceStorage },
+          // A one-chunk lexical query only brings the lexical indexes up to date.
+          ensureLexicalIndex: async () => (await lexicalQuery("", 1)).diagnostics,
+          purpose: "achievement-recall",
+        });
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
-  const rawQuery = (text: string, limit: number): Promise<CandidateKnowledgeRetrievalResult> => {
+  const rawQuery = (
+    text: string,
+    limit: number,
+    primary = false,
+  ): Promise<CandidateKnowledgeRetrievalResult> => {
     const searchText = candidateKnowledgeSearchText(text);
-    const key = JSON.stringify([searchText, limit]);
+    const semanticPrimary = primary && semantic !== undefined;
+    const key = JSON.stringify(
+      semanticPrimary ? [searchText, limit, semantic.mode] : [searchText, limit],
+    );
     const existing = rawCache.get(key);
     if (existing !== undefined) return existing;
     const pending = (async () => {
       const startedAt = Date.now();
       const operationId = `ckb-retrieval-${randomUUID()}`;
-      const result = await withheld.filterResult(
-        await service.queryCandidateKnowledge({
-          selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
-            storeRoot,
-            knowledgeBaseId,
-          })),
-          ...(binding.combinationApproved === undefined
-            ? {}
-            : { combinationApproved: binding.combinationApproved }),
-          purpose: "achievement-recall",
-          query: searchText,
-          limit,
-        }),
-      );
+      const lexical = await lexicalQuery(searchText, limit);
+      const semanticOutcome = semanticPrimary
+        ? await semantic.primaryQuery({ query: searchText, limit, lexical })
+        : undefined;
+      // Withheld chunks are dropped here, before any trace, whichever side produced them.
+      const result = await withheld.filterResult(semanticOutcome?.result ?? lexical);
+      const traceReferences: RunSemanticTraceReference[] = [];
       const createdAt = timestamp();
       const queryChecksum = createHash("sha256").update(searchText, "utf8").digest("hex");
       const latencyMs = Math.max(0, Date.now() - startedAt);
       for (const diagnostic of result.diagnostics) {
+        const traceId = `trace-${randomUUID()}`;
+        traceReferences.push({
+          traceId,
+          storeId: diagnostic.storeId,
+          knowledgeBaseId: diagnostic.knowledgeBaseId,
+        });
         await storage.appendCandidateKnowledgeRetrievalTrace({
-          id: `trace-${randomUUID()}`,
+          id: traceId,
           workspaceId: config.id,
           operationId,
           purpose: "achievement-recall",
@@ -289,6 +344,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           createdAt,
         });
       }
+      await semanticOutcome?.recordTraces(result, traceReferences);
       return result;
     })();
     rawCache.set(key, pending);
@@ -409,7 +465,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           : selectCandidateProductionSkillsEvidence(productionSkillsRawResult);
       const sectionQueries = requiredSectionQueries(config.requiredSections, limit);
       const primaryLimit = Math.max(1, limit - sectionQueries.length);
-      const primary = await rawQuery(text, primaryLimit);
+      const primary = await rawQuery(text, primaryLimit, true);
       const supplements: RequiredSectionSupplement[] = [];
       const rawSupplementResults: CandidateKnowledgeRetrievalResult[] = [];
       const requiredSectionBodyHitsByHeadingId = new Map<string, CandidateKnowledgeLexicalHit>();
@@ -659,6 +715,15 @@ export function candidateKnowledgeRuntimeRetrieval(
 
   return {
     evidenceModeDecision: async () => (await resolveFullSource()).decision,
+    ...(semantic === undefined
+      ? {}
+      : {
+          retrievalModeDecision: async (): Promise<RetrievalModeDecision | undefined> =>
+            // A full-source run sends every chunk, so no retrieval mode applies to it.
+            (await resolveFullSource()).decision.effectiveMode === "full-source"
+              ? undefined
+              : semantic.decision(),
+        }),
     inspect: async (text) => {
       const full = await resolveFullSource();
       return full.decision.effectiveMode === "full-source"
