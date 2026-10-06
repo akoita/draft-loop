@@ -259,7 +259,7 @@ applications.
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
 | Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
 | Now | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | In progress; [v0.8.0-alpha.3 checkpoint](releases/stage-evidence-v0.8.0-alpha.3.md) released with 6/14 execution issues closed | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
-| Now | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Model and runtime selected](evaluation/local-embedding-model-selection.md); implementation not started | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
+| Now | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | Implemented and packaged on all platforms (17/20 issues closed); [evaluation](evaluation/semantic-retrieval-comparison.md) on invented cases only; default-mode decision (#114) open | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1560,8 +1560,8 @@ paraphrase-heavy set, against 0.81–0.92 for local embedding models.
 [ADR 0009](adr/0009-local-semantic-retrieval.md) records the choices:
 
 - **Model.** IBM Granite Embedding Multilingual R2, Apache-2.0: 311M by default
-  and 97M for low-resource machines. EmbeddingGemma 2 is re-evaluated in #923
-  once a released Node runtime supports it.
+  and 97M for low-resource machines. An EmbeddingGemma 2 ONNX export now
+  exists, so its re-evaluation (#923) can run on the same runtime.
 - **Runtime.** CPU-only `onnxruntime-node` in a new `packages/embeddings`
   package behind a model-agnostic port.
 - **Privacy.** The model is installed only on explicit user action with pinned
@@ -1570,18 +1570,28 @@ paraphrase-heavy set, against 0.81–0.92 for local embedding models.
   lexical index, with the same lifecycle rules.
 - **Fallback.** Lexical retrieval remains the default and the visible fallback.
 
-Ordered work is rolled up in [#114](https://github.com/akoita/draft-loop/issues/114):
-runtime #916, vector index #918, real-embedding evaluation #919, model
-install #917, opt-in semantic and hybrid retrieval #920, a relevance
-floor #926, CLI and desktop controls #921, and packaging #922.
+What has shipped, rolled up in [#114](https://github.com/akoita/draft-loop/issues/114):
+
+- **Runtime and model.** An ONNX embedder (#916) and explicit, checksum-pinned
+  model install, status, and removal (#917).
+- **Storage.** An exact-version vector index per CKB (#918, #933). Query-time
+  retrieval reuses a current lexical index (#929).
+- **Retrieval.** A semantic and hybrid engine (#934) and a calibrated
+  relevance floor (#926).
+- **Settings and traces.** A workspace retrieval-mode setting and content-free
+  semantic companion traces (#935).
+- **Runs.** Run wiring for the primary requirement query, with a visible
+  lexical fallback (#936).
+- **Controls and packaging.** CLI and desktop controls (#939, #940), and the
+  packaged CPU-only runtime with installed-app acceptance on Linux, macOS, and
+  Windows (#922).
 
 The [real-embedding comparison](evaluation/semantic-retrieval-comparison.md)
-(#919) raised recall on invented paraphrase and cross-language cases from 0.38
-to 0.97 with the 311M tier, and cut unsupported claims from 0.63 to zero. It
-also halved citation accuracy on exact-term cases, because semantic results
-always fill every slot. Lexical remains the default until the #926 relevance
-floor removes that regression. Semantic requirement coverage (#727) can
-reuse the embedder.
+used invented cases. On paraphrase and cross-language requirements, recall
+rose from 0.38 to 0.97 with the 311M tier and unsupported claims fell from
+0.63 to zero. With the #926 relevance floor, exact-term cases no longer lose
+precision against lexical retrieval. Lexical stays the default until #114
+decides otherwise. Semantic requirement coverage (#727) can reuse the embedder.
 
 **Exit criterion:** Users can install the local model, index selected CKBs, and
 run semantic or hybrid retrieval with visible fallback on every packaged
