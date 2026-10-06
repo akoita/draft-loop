@@ -28,6 +28,10 @@ import {
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
+  type CanonicalProfileSensitivityRulesApplied,
+  filterSourceTextForCanonicalProfile,
+} from "./canonical-profile-sensitivity-filter.js";
+import {
   canonicalProfileUnboundableSourceMessage,
   partitionCanonicalProfileUnboundableSources,
 } from "./canonical-profile-unboundable-sources.js";
@@ -76,10 +80,21 @@ export function canonicalProfileDerivationOptions(
   };
 }
 
+/** The saved profile version plus how sensitivity rules shaped what was sent for extraction. */
+export interface CanonicalCandidateProfileDerivationResult
+  extends CanonicalCandidateProfileVersionRecord {
+  /**
+   * The sensitivity rules version that filtered each knowledge base's sources. Omitted when no
+   * selected knowledge base has rules. The profile schema has no field for this, so it is not
+   * persisted; it is returned from the derivation only.
+   */
+  readonly sensitivityRulesApplied?: readonly CanonicalProfileSensitivityRulesApplied[];
+}
+
 export interface CanonicalCandidateProfileDerivationService {
   readonly deriveCanonicalCandidateProfile: (
     command: DeriveCanonicalCandidateProfileCommand,
-  ) => Promise<CanonicalCandidateProfileVersionRecord>;
+  ) => Promise<CanonicalCandidateProfileDerivationResult>;
 }
 
 export interface CanonicalCandidateProfileDerivationDependencies {
@@ -102,6 +117,9 @@ interface MaterializationResult {
   readonly failedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   readonly oversizedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   readonly unboundableReferences: readonly CanonicalCandidateProfileProvenanceReference[];
+  /** Sources whose every section was excluded by sensitivity rules; they are never extracted. */
+  readonly fullyExcludedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
+  readonly sensitivityRulesApplied: readonly CanonicalProfileSensitivityRulesApplied[];
 }
 
 type NormalizedSourceResult =
@@ -111,6 +129,8 @@ type NormalizedSourceResult =
 
 const sourceNormalizationFailureMessage =
   "Selected candidate knowledge could not be normalized; candidate review is required.";
+const sourceFullyExcludedMessage =
+  "Every section of a selected source is excluded by its knowledge base's sensitivity rules, so it was not used for profile derivation.";
 const sourceTooLargeMessage = `A selected source is longer than the ${maximumCanonicalCandidateProfileExtractionSourceCharacters.toLocaleString(
   "en-US",
 )}-character limit for profile derivation. Split it into smaller files and derive again.`;
@@ -232,6 +252,8 @@ async function materializeSelection(
   const materials: CanonicalCandidateProfileExtractionMaterial[] = [];
   const failedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
   const oversizedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
+  const fullyExcludedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
+  const sensitivityRulesApplied: CanonicalProfileSensitivityRulesApplied[] = [];
   const logicalSelections = new Set<string>();
 
   for (const selection of selections) {
@@ -249,6 +271,19 @@ async function materializeSelection(
           candidate.storeId === storeId && candidate.knowledgeBaseId === selection.knowledgeBaseId,
       );
       if (entry === undefined) throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
+
+      // Fail closed: a store that cannot report its rules must not send unfiltered text.
+      const sensitivityRules = await handle.getCandidateKnowledgeSourceSensitivityRules(
+        entry.knowledgeBaseId,
+      );
+      if (sensitivityRules !== undefined) {
+        sensitivityRulesApplied.push({
+          storeId: entry.storeId,
+          knowledgeBaseId: entry.knowledgeBaseId,
+          rulesVersion: sensitivityRules.version,
+          rulesChecksum: sensitivityRules.checksum,
+        });
+      }
 
       for (const selectedSource of entry.sources) {
         const reference = sourceReference(
@@ -295,12 +330,22 @@ async function materializeSelection(
           continue;
         }
         const { source } = normalized;
+        const filtered = filterSourceTextForCanonicalProfile(
+          source.text,
+          source.mediaType,
+          sensitivityRules?.rules,
+        );
+        if (filtered.status === "fully-excluded") {
+          fullyExcludedReferences.push(reference);
+          continue;
+        }
         materials.push({
           id,
           mediaType: source.mediaType,
           checksum: source.checksum,
-          text: source.text,
+          text: filtered.status === "filtered" ? filtered.text : source.text,
           reference,
+          ...(filtered.status === "filtered" ? { sensitivity: filtered.guard } : {}),
         });
       }
     } finally {
@@ -316,13 +361,16 @@ async function materializeSelection(
     failedReferences,
     oversizedReferences,
     unboundableReferences: unboundable.map((material) => material.reference),
+    fullyExcludedReferences,
+    sensitivityRulesApplied,
   };
 }
 
 function materializationIssue(
-  namespace: "source-normalization-failure" | "source-too-large",
+  namespace: "source-normalization-failure" | "source-too-large" | "source-fully-excluded",
   message: string,
   references: readonly CanonicalCandidateProfileProvenanceReference[],
+  severity: CanonicalCandidateProfileIssue["severity"] = "error",
 ): CanonicalCandidateProfileIssue {
   const uniqueReferences = [
     ...new Map(references.map((reference) => [referenceKey(reference), reference])).entries(),
@@ -333,7 +381,7 @@ function materializationIssue(
   return {
     id: `profile-issue-${digest([namespace, ...uniqueReferences.map(referenceKey)]).slice(0, 32)}`,
     code: "omission",
-    severity: "error",
+    severity,
     status: "open",
     message,
     factIds: [],
@@ -363,7 +411,7 @@ export function createCanonicalCandidateProfileDerivationService(
 
   const deriveCanonicalCandidateProfile = async (
     command: DeriveCanonicalCandidateProfileCommand,
-  ): Promise<CanonicalCandidateProfileVersionRecord> => {
+  ): Promise<CanonicalCandidateProfileDerivationResult> => {
     if (!isRecord(command) || command.allowProviderData !== true) {
       throw new Error(canonicalCandidateProfileDerivationApprovalErrorMessage);
     }
@@ -437,6 +485,16 @@ export function createCanonicalCandidateProfileDerivationService(
                 materialization.unboundableReferences,
               ),
             ]),
+        ...(materialization.fullyExcludedReferences.length === 0
+          ? []
+          : [
+              materializationIssue(
+                "source-fully-excluded",
+                sourceFullyExcludedMessage,
+                materialization.fullyExcludedReferences,
+                "warning",
+              ),
+            ]),
         ...(materialization.failedReferences.length === 0
           ? []
           : [
@@ -470,10 +528,13 @@ export function createCanonicalCandidateProfileDerivationService(
         facts: extracted.facts,
         issues,
       });
-      return await dependencies.persistence.saveCanonicalCandidateProfile(
+      const saved = await dependencies.persistence.saveCanonicalCandidateProfile(
         command.workspaceId,
         profile,
       );
+      return materialization.sensitivityRulesApplied.length === 0
+        ? saved
+        : { ...saved, sensitivityRulesApplied: materialization.sensitivityRulesApplied };
     } catch (error) {
       if (
         command.signal?.aborted === true ||
