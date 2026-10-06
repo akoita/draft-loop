@@ -10,6 +10,7 @@ import packageJson from "../package.json";
 
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
 import { isEntryPoint } from "./entry-point.js";
+import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
@@ -52,8 +53,10 @@ import {
   sensitiveKnowledgeConsentService,
   sourceSensitivityService,
   type WorkspaceDescriptor,
+  type WorkspaceEvidenceModeService,
   type WritingPolicyVersionMetadata,
   type WritingPolicyVersionView,
+  workspaceEvidenceModeService,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -235,6 +238,8 @@ export interface CliDependencies {
   readonly knowledgeService?: CandidateKnowledgeStoreService;
   /** The source-sensitivity rule boundary; replaced in tests. */
   readonly sensitivityService?: SourceSensitivityService;
+  /** The workspace evidence-mode boundary; replaced in tests. */
+  readonly evidenceModeService?: WorkspaceEvidenceModeService;
   /** The workspace sensitive-knowledge consent boundary; replaced in tests. */
   readonly consentService?: SensitiveKnowledgeConsentService;
   /** Where status lines are written; replaced in tests. */
@@ -2753,6 +2758,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     });
 
   registerSensitivityCommands(knowledge, sensitivity, io, consent);
+  registerEvidenceModeCommands(
+    command,
+    dependencies.evidenceModeService ?? workspaceEvidenceModeService,
+    io,
+  );
 
   const lifecycle = knowledge
     .command("lifecycle")

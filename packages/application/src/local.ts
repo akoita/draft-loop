@@ -69,7 +69,6 @@ import {
 import {
   candidateKnowledgeEvidenceChecksum,
   candidateKnowledgeEvidenceSourceId,
-  candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
 import {
   type CandidateKnowledgeSensitivityExclusions,
@@ -94,6 +93,7 @@ import { CliUserError } from "./cli-user-error.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
+import { announceRunEvidenceMode } from "./full-source-evidence.js";
 import type {
   ProviderAuthMode,
   ProviderAuthModeConfiguration,
@@ -154,6 +154,7 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   type BeginStartRunOptions,
   bindRunModelProfiles,
@@ -176,6 +177,12 @@ import {
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
 import { ensureDirectory, ensureFile } from "./workspace-paths.js";
+import {
+  compareWritingPolicySemantics,
+  type UnidentifiedWritingPolicyRule,
+  writingPolicyRuleId,
+  writingPolicyTermIdentity,
+} from "./writing-policy-rule-identity.js";
 
 export type {
   AnthropicClient,
@@ -201,24 +208,6 @@ const writingPolicyFilename = "writing-policy.md";
 const maximumWritingPolicyBytes = 64 * 1024;
 const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
 const recognizedWritingPolicyPunctuation = "‐‑‒–—―‘’“”";
-type WithoutWritingPolicyRuleId<T> = T extends unknown ? Omit<T, "id"> : never;
-type UnidentifiedWritingPolicyRule = WithoutWritingPolicyRuleId<WritingPolicyRule>;
-function compareWritingPolicySemantics(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-function writingPolicyTermIdentity(term: string): string {
-  return term.normalize("NFKC").replace(/\s+/gu, " ").toLowerCase();
-}
-function writingPolicyRuleId(rule: UnidentifiedWritingPolicyRule): string {
-  const semantics =
-    rule.kind === "forbidden-term"
-      ? `forbidden-term\u0000${
-          rule.caseSensitive ? rule.term : writingPolicyTermIdentity(rule.term)
-        }\u0000${String(rule.caseSensitive)}\u0000${String(rule.wholeWord)}`
-      : `forbidden-characters\u0000${rule.characters}`;
-  const digest = createHash("sha256").update(semantics, "utf8").digest("hex").slice(0, 24);
-  return `writing-policy-${digest}`;
-}
 function compileWritingPolicyRules(
   content: string,
   antiFormulaicDefaultsEnabled = true,
@@ -2082,8 +2071,9 @@ async function createRun(
     }
     await saveInputs(storage, config, inputs);
     const withheld = await runSensitivityExclusions(root, config, inputs.context);
-    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(
+    const candidateRetrieval = await openRunCandidateRetrieval(
       storage,
+      root,
       config,
       inputs.context,
       withheld,
@@ -2100,6 +2090,7 @@ async function createRun(
     const runId = `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const runBudget = budget(config);
     writeRunPreflight(config, io.write, runBudget, inputs.context);
+    await announceRunEvidenceMode(storage, candidateRetrieval, config.id, runId, io.write);
     const runEngine = engine(
       storage,
       config,
@@ -2179,8 +2170,9 @@ export async function resumeRun(
     }
     await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
     const withheld = await runSensitivityExclusions(root, config, context);
-    const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(
+    const candidateRetrieval = await openRunCandidateRetrieval(
       storage,
+      root,
       config,
       context,
       withheld,
@@ -2202,6 +2194,7 @@ export async function resumeRun(
       withheld,
     );
     writeRunPreflight(config, io.write, budget(config), context);
+    await announceRunEvidenceMode(storage, candidateRetrieval, config.id, runId, io.write);
     const snapshot = await runEngine.resume(runId, {
       context,
       budget: budget(config),
