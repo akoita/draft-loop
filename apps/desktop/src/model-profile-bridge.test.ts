@@ -5,7 +5,9 @@ import {
   parseModelProfileReferences,
   parseModelProfileSupportInput,
   parseModelProfileSupportResult,
+  parseSavedModelProfilesResult,
   projectModelProfileSupport,
+  projectSavedModelProfiles,
 } from "./model-profile-bridge.js";
 
 const apiKeyModes = { anthropic: "api-key", openai: "api-key" } as const;
@@ -148,6 +150,107 @@ describe("desktop model profile bridge projections", () => {
       invalidPort.execute({
         type: "models.profile-support",
         input: { workspaceId: "workspace-1" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
+  it("validates the saved-profile commands with their real payloads and exact key allowlists", async () => {
+    const references = {
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+
+    expect(
+      validateBridgeCommand({
+        type: "models.saved-profiles.read",
+        input: { workspaceId: "workspace-1" },
+      }),
+    ).toEqual({ type: "models.saved-profiles.read", input: { workspaceId: "workspace-1" } });
+    expect(
+      validateBridgeCommand({
+        type: "models.saved-profiles.save",
+        input: { workspaceId: "workspace-1", modelProfiles: references },
+      }),
+    ).toEqual({
+      type: "models.saved-profiles.save",
+      input: { workspaceId: "workspace-1", modelProfiles: references },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "models.saved-profiles.save",
+        input: { workspaceId: "workspace-1", modelProfiles: null },
+      }),
+    ).toMatchObject({ input: { modelProfiles: null } });
+
+    for (const input of [
+      { workspaceId: "workspace-1", extra: true },
+      { workspaceId: "workspace-1", modelProfiles: null },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "models.saved-profiles.read", input })).toThrow();
+    }
+    for (const input of [
+      { workspaceId: "workspace-1" },
+      { workspaceId: "workspace-1", modelProfiles: undefined },
+      { workspaceId: "workspace-1", modelProfiles: null, appliedAt: "2026-01-01T00:00:00.000Z" },
+      { workspaceId: "workspace-1", modelProfiles: { ...references, extra: true } },
+      { workspaceId: "workspace-1", modelProfiles: { author: references.author } },
+      { modelProfiles: null },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "models.saved-profiles.save", input })).toThrow();
+    }
+  });
+
+  it("parses saved-profile results strictly and pairs a saved pair with its timestamp", () => {
+    const references = {
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+    const saved = projectSavedModelProfiles(
+      "workspace-1",
+      { modelProfiles: references, appliedAt: "2026-01-01T00:00:00.000Z" },
+      "the critic profile is for another model",
+    );
+    expect(saved).toEqual({
+      workspaceId: "workspace-1",
+      modelProfiles: references,
+      appliedAt: "2026-01-01T00:00:00.000Z",
+      ignoredReason: "the critic profile is for another model",
+    });
+    expect(parseSavedModelProfilesResult(saved, "workspace-1")).toEqual(saved);
+    expect(projectSavedModelProfiles("workspace-1", undefined, "ignored")).toEqual({
+      workspaceId: "workspace-1",
+      modelProfiles: null,
+      appliedAt: null,
+      ignoredReason: null,
+    });
+
+    expectInvalid(() => parseSavedModelProfilesResult(saved, "other"));
+    expectInvalid(() => parseSavedModelProfilesResult({ ...saved, extra: 1 }));
+    expectInvalid(() => parseSavedModelProfilesResult({ ...saved, appliedAt: null }));
+    expectInvalid(() =>
+      parseSavedModelProfilesResult({
+        workspaceId: "workspace-1",
+        modelProfiles: null,
+        appliedAt: null,
+        ignoredReason: "orphan",
+      }),
+    );
+    expectInvalid(() => parseSavedModelProfilesResult({ ...saved, ignoredReason: "" }));
+  });
+
+  it("rejects a saved-profile result for another workspace at the capability port", async () => {
+    const result = projectSavedModelProfiles("workspace-1", undefined, undefined);
+    const port = createCapabilityPort({
+      capabilities: ["models.saved-profiles.read", "models.saved-profiles.save"],
+      invoke: async () => ({ ok: true, value: { ...result, workspaceId: "other" } }),
+    });
+    await expect(
+      port.execute({ type: "models.saved-profiles.read", input: { workspaceId: "workspace-1" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    await expect(
+      port.execute({
+        type: "models.saved-profiles.save",
+        input: { workspaceId: "workspace-1", modelProfiles: null },
       }),
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });

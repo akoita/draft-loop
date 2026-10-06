@@ -48,6 +48,8 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "models.list": "Listing provider models",
   "writing-policy.read": "Reading the writing policy",
   "writing-policy.save": "Saving the writing policy",
+  "models.saved-profiles.read": "Reading the saved model profiles",
+  "models.saved-profiles.save": "Saving the model profiles",
   "embedding-model.status": "Checking the local search model",
   "embedding-model.plan-install": "Preparing the local search model download",
   "embedding-model.install": "Installing the local search model",
@@ -114,6 +116,15 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   // many rules, empty or oversized text) for a person and never quotes the
   // text, so the editor can show it as written.
   if (command.type === "writing-policy.save" && error instanceof CliUserError) {
+    return error.message;
+  }
+  // Saving or reading the applied profile pair fails with a fixed sentence that names profiles
+  // and models but no path, so the dialog can say why the pair was not applied.
+  if (
+    (command.type === "models.saved-profiles.save" ||
+      command.type === "models.saved-profiles.read") &&
+    error instanceof CliUserError
+  ) {
     return error.message;
   }
   // A model install failure is worded for a person (checksum, size, network, unsupported

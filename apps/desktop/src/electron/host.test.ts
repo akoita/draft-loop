@@ -1103,6 +1103,200 @@ describe("native host", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
   });
 
+  describe("saved model profile pair", () => {
+    const legacyPair = {
+      author: { id: "legacy-anthropic-author", version: 1 },
+      critic: { id: "legacy-openai-critic", version: 1 },
+    };
+
+    async function openRealWorkspace(models: { authorModel: string; criticModel: string }) {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-saved-profiles-"));
+      await mkdir(join(root, "evidence"));
+      await writeFile(join(root, "job.md"), "Build TypeScript tools.\n", "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Built TypeScript tools.\n", "utf8");
+      await createLocalApplicationDriver().initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true, ...models },
+        { write: () => undefined },
+      );
+      const fixture = service(root);
+      const configured = {
+        ...descriptor(root),
+        author: { company: "anthropic", model: models.authorModel },
+        critic: { company: "openai", model: models.criticModel },
+      };
+      fixture.service.readWorkspace.mockResolvedValue(configured);
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      return { root, host, fixture };
+    }
+
+    it("saves, reads back, and clears the pair through the application functions", async () => {
+      const { root, host } = await openRealWorkspace({
+        authorModel: "claude-sonnet-4-5",
+        criticModel: "gpt-5.6-luna",
+      });
+      try {
+        await expect(
+          host.invoke({
+            type: "models.saved-profiles.read",
+            input: { workspaceId: "workspace-native" },
+          }),
+        ).resolves.toEqual({
+          ok: true,
+          value: {
+            workspaceId: "workspace-native",
+            modelProfiles: null,
+            appliedAt: null,
+            ignoredReason: null,
+          },
+        });
+
+        const saved = await host.invoke({
+          type: "models.saved-profiles.save",
+          input: { workspaceId: "workspace-native", modelProfiles: legacyPair },
+        });
+        expect(saved).toMatchObject({
+          ok: true,
+          value: { modelProfiles: legacyPair, ignoredReason: null },
+        });
+        const onDisk = JSON.parse(
+          await readFile(join(root, ".draft-loop", "model-profile-selection.json"), "utf8"),
+        );
+        expect(onDisk.modelProfiles).toEqual(legacyPair);
+
+        // A later read, as after reopening the workspace or restarting the app.
+        await expect(
+          host.invoke({
+            type: "models.saved-profiles.read",
+            input: { workspaceId: "workspace-native" },
+          }),
+        ).resolves.toMatchObject({
+          ok: true,
+          value: { modelProfiles: legacyPair, ignoredReason: null },
+        });
+
+        await expect(
+          host.invoke({
+            type: "models.saved-profiles.save",
+            input: { workspaceId: "workspace-native", modelProfiles: null },
+          }),
+        ).resolves.toMatchObject({ ok: true, value: { modelProfiles: null, appliedAt: null } });
+        await expect(
+          readFile(join(root, ".draft-loop", "model-profile-selection.json"), "utf8"),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("reports why a saved pair no longer fits the configured models", async () => {
+      const { root, host, fixture } = await openRealWorkspace({
+        authorModel: "claude-sonnet-4-5",
+        criticModel: "gpt-5.6-luna",
+      });
+      try {
+        await host.invoke({
+          type: "models.saved-profiles.save",
+          input: { workspaceId: "workspace-native", modelProfiles: legacyPair },
+        });
+        // The open workspace now reports a different critic than the pair was saved for.
+        fixture.service.reconfigureModels.mockResolvedValue({
+          ...descriptor(root),
+          critic: { company: "openai", model: "gpt-5" },
+        });
+        await host.invoke({
+          type: "workspace.configure-models",
+          input: {
+            workspaceId: "workspace-native",
+            authorCompany: "anthropic",
+            authorModel: "claude-sonnet-4-5",
+            criticCompany: "openai",
+            criticModel: "gpt-5",
+          },
+        });
+
+        const read = await host.invoke({
+          type: "models.saved-profiles.read",
+          input: { workspaceId: "workspace-native" },
+        });
+        expect(read).toMatchObject({
+          ok: true,
+          value: {
+            modelProfiles: legacyPair,
+            ignoredReason: expect.stringContaining("legacy-openai-critic@1"),
+          },
+        });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("refuses a pair that does not match the workspace and an unopened workspace", async () => {
+      const { root, host } = await openRealWorkspace({
+        authorModel: "claude-sonnet-4-5",
+        criticModel: "gpt-5.6-luna",
+      });
+      try {
+        const refused = await host.invoke({
+          type: "models.saved-profiles.save",
+          input: {
+            workspaceId: "workspace-native",
+            modelProfiles: {
+              author: { id: "standard-anthropic-author", version: 1 },
+              critic: { id: "standard-openai-critic", version: 2 },
+            },
+          },
+        });
+        expect(refused).toMatchObject({
+          ok: false,
+          error: {
+            code: "operation-failed",
+            message: expect.stringContaining("The model profiles were not applied"),
+          },
+        });
+        await expect(
+          host.invoke({
+            type: "models.saved-profiles.read",
+            input: { workspaceId: "workspace-native" },
+          }),
+        ).resolves.toMatchObject({ ok: true, value: { modelProfiles: null } });
+        await expect(
+          host.invoke({
+            type: "models.saved-profiles.read",
+            input: { workspaceId: "other-workspace" },
+          }),
+        ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("fails closed with a fixed message when the saved file is corrupt", async () => {
+      const { root, host } = await openRealWorkspace({
+        authorModel: "claude-sonnet-4-5",
+        criticModel: "gpt-5.6-luna",
+      });
+      try {
+        await mkdir(join(root, ".draft-loop"), { recursive: true });
+        await writeFile(join(root, ".draft-loop", "model-profile-selection.json"), "{", "utf8");
+        const read = await host.invoke({
+          type: "models.saved-profiles.read",
+          input: { workspaceId: "workspace-native" },
+        });
+        expect(read).toMatchObject({
+          ok: false,
+          error: { code: "operation-failed", message: expect.stringContaining("unreadable") },
+        });
+        expect(JSON.stringify(read)).not.toContain(root);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("binds an imported opportunity override locally, leaves the global policy untouched, and clears it after dispatch start", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-override-"));
     const root = join(parent, "workspace");

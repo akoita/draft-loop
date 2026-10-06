@@ -15,6 +15,29 @@ export interface ModelProfileSupportResult {
   readonly profiles: readonly ModelProfileRouteSupport[];
 }
 
+export interface SavedModelProfilesReadInput {
+  readonly workspaceId: string;
+}
+
+/** `modelProfiles: null` clears the saved pair. */
+export interface SavedModelProfilesSaveInput {
+  readonly workspaceId: string;
+  readonly modelProfiles: ModelProfileReferences | null;
+}
+
+/**
+ * The pair saved for a workspace. `ignoredReason` is set when the saved pair no longer fits the
+ * workspace's configured models, so new runs ignore it and the person should be told why.
+ */
+export interface SavedModelProfilesResult {
+  readonly workspaceId: string;
+  readonly modelProfiles: ModelProfileReferences | null;
+  readonly appliedAt: string | null;
+  readonly ignoredReason: string | null;
+}
+
+const maximumIgnoredReasonLength = 512;
+
 /** Fixed bridge-boundary failure that safeBridgeError maps to invalid-input. */
 export class ModelProfileBridgeValidationError extends Error {
   readonly code = "invalid-input" as const;
@@ -143,4 +166,73 @@ export function parseModelProfileSupportResult(
     authModes: { anthropic: mode(modes.anthropic), openai: mode(modes.openai) },
     profiles,
   };
+}
+
+export function parseSavedModelProfilesReadInput(value: unknown): SavedModelProfilesReadInput {
+  const input = exactRecord(value, ["workspaceId"]);
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+export function parseSavedModelProfilesSaveInput(value: unknown): SavedModelProfilesSaveInput {
+  const input = exactRecord(value, ["workspaceId", "modelProfiles"]);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    modelProfiles:
+      input.modelProfiles === null ? null : parseModelProfileReferences(input.modelProfiles),
+  };
+}
+
+function nullableText(value: unknown, maximumLength: number): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.trim() === "" || value.length > maximumLength) {
+    return invalidInput();
+  }
+  return value;
+}
+
+export function projectSavedModelProfiles(
+  workspaceId: string,
+  saved: { readonly modelProfiles: ModelProfileReferences; readonly appliedAt: string } | undefined,
+  ignoredReason: string | undefined,
+): SavedModelProfilesResult {
+  return parseSavedModelProfilesResult(
+    {
+      workspaceId,
+      modelProfiles:
+        saved === undefined
+          ? null
+          : {
+              author: {
+                id: saved.modelProfiles.author.id,
+                version: saved.modelProfiles.author.version,
+              },
+              critic: {
+                id: saved.modelProfiles.critic.id,
+                version: saved.modelProfiles.critic.version,
+              },
+            },
+      appliedAt: saved?.appliedAt ?? null,
+      ignoredReason: saved === undefined ? null : (ignoredReason ?? null),
+    },
+    workspaceId,
+  );
+}
+
+export function parseSavedModelProfilesResult(
+  value: unknown,
+  expectedWorkspaceId?: string,
+): SavedModelProfilesResult {
+  const result = exactRecord(value, ["workspaceId", "modelProfiles", "appliedAt", "ignoredReason"]);
+  const workspaceId = identifier(result.workspaceId);
+  if (expectedWorkspaceId !== undefined && workspaceId !== expectedWorkspaceId) {
+    return invalidInput();
+  }
+  const modelProfiles =
+    result.modelProfiles === null ? null : parseModelProfileReferences(result.modelProfiles);
+  const appliedAt = nullableText(result.appliedAt, maximumProfileIdentifierLength);
+  const ignoredReason = nullableText(result.ignoredReason, maximumIgnoredReasonLength);
+  // A pair always carries its timestamp, and only a saved pair can be ignored.
+  if ((modelProfiles === null) !== (appliedAt === null)) return invalidInput();
+  if (modelProfiles === null && ignoredReason !== null) return invalidInput();
+  return { workspaceId, modelProfiles, appliedAt, ignoredReason };
 }

@@ -7,6 +7,7 @@ import { ModelProfileBudget } from "./model-profile-budget.js";
 import {
   type ModelProfileSupportState,
   modelProfileApplyDisabledMessage,
+  modelProfileApplyErrorMessage,
   modelProfileCatalog,
   modelProfileEntryForReference,
   modelProfileNotSupportedMessage,
@@ -23,6 +24,8 @@ interface ModelProfilePickerProps {
   readonly generation: number;
   readonly applied: ModelProfileReferences | null;
   readonly pendingSelectionMessage?: string;
+  /** Why a saved pair is not used, shown while nothing is applied. */
+  readonly savedPairNotice?: string | null;
   readonly support: ModelProfileSupportState;
   readonly disabled: boolean;
   readonly onApply: (references: ModelProfileReferences) => Promise<boolean>;
@@ -148,6 +151,7 @@ export function ModelProfilePicker({
   generation,
   applied,
   pendingSelectionMessage,
+  savedPairNotice = null,
   support,
   disabled,
   onApply,
@@ -239,11 +243,11 @@ export function ModelProfilePicker({
         return;
       }
       if (!appliedSuccessfully) return;
-    } catch {
+    } catch (reason) {
       if (!mountedRef.current || !isContextCurrent(workspaceId, generation)) {
         return;
       }
-      setError("The profile pair could not be applied. Your draft is unchanged.");
+      setError(modelProfileApplyErrorMessage(reason));
     } finally {
       if (mountedRef.current && isContextCurrent(workspaceId, generation)) {
         setSaving(false);
@@ -317,10 +321,17 @@ export function ModelProfilePicker({
         </p>
       ) : null}
       {applied === null ? (
-        <p className="model-profile-picker-applied">
-          {pendingSelectionMessage ??
-            "Applied next-run selection: workspace model settings (legacy path)."}
-        </p>
+        <div className="model-profile-picker-applied">
+          <p>
+            {pendingSelectionMessage ??
+              "Applied next-run selection: workspace model settings (legacy path)."}
+          </p>
+          {savedPairNotice === null ? null : (
+            <p className="model-profile-picker-status" role="status">
+              {savedPairNotice}
+            </p>
+          )}
+        </div>
       ) : (
         <div className="model-profile-picker-applied">
           <strong>Applied next-run profiles</strong>

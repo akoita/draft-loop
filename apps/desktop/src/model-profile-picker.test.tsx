@@ -162,4 +162,32 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain(">Cancel</button>");
     expect(html).not.toContain("Use workspace models");
   });
+
+  it("shows why a saved pair is not used while nothing is applied", () => {
+    const html = renderToStaticMarkup(
+      <ModelProfilePicker
+        workspaceId="workspace-1"
+        generation={2}
+        applied={null}
+        savedPairNotice="The saved profile pair (author a@1; critic b@1) is not used because the critic changed."
+        support={supportState(true)}
+        disabled={false}
+        onApply={async () => true}
+        onRetrySupport={() => undefined}
+        isContextCurrent={() => true}
+      />,
+    );
+
+    expect(html).toContain("Applied next-run selection: workspace model settings (legacy path)");
+    expect(html).toContain("is not used because the critic changed.");
+  });
+
+  it("shows the saved pair as applied with its exact versions after a reopen", () => {
+    const html = renderPicker(supportState(true), economy);
+
+    expect(html).toContain("Applied next-run profiles");
+    expect(html).toContain(`${economy.author.id}@${economy.author.version}`);
+    expect(html).toContain(`${economy.critic.id}@${economy.critic.version}`);
+    expect(html).not.toContain("legacy path");
+  });
 });
