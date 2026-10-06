@@ -10,6 +10,7 @@ import {
   type GraniteModelFile,
   getGraniteEmbeddingModel,
 } from "./model-manifest.js";
+import { loadOnnxRuntime } from "./onnx-runtime-loader.js";
 import type {
   EmbeddingModelIdentity,
   EmbeddingRole,
@@ -71,8 +72,7 @@ const defaultBatchSize = 8;
 const defaultMaxCharacters = 20_000;
 
 const defaultSessionFactory: OnnxSessionFactory = async (modelPath, options) => {
-  const module = await import("onnxruntime-node");
-  const ort = module.default ?? module;
+  const ort = await loadOnnxRuntime();
   const session = await ort.InferenceSession.create(modelPath, {
     intraOpNumThreads: options.intraOpNumThreads,
     interOpNumThreads: 1,

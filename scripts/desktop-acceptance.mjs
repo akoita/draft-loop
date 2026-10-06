@@ -31,6 +31,7 @@ const requiredChecks = Object.freeze([
   "exportDocx",
   "exportPdf",
   "durableHistory",
+  "embeddingRuntime",
 ]);
 
 async function requireFile(filename, label) {

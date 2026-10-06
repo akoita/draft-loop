@@ -2,6 +2,8 @@ import { access, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { arch, platform, release } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 
+import { verifyOnnxRuntime } from "@draft-loop/embeddings";
+
 import type {
   BridgeCommand,
   BridgeResult,
@@ -419,6 +421,7 @@ async function writeAcceptanceEvidence(options: PackagedAcceptanceOptions): Prom
           exportDocx: true,
           exportPdf: true,
           durableHistory: true,
+          embeddingRuntime: (await verifyOnnxRuntime()).ok,
         },
         limitations: [
           "Provider calls use the offline fixture agent path; no live provider request is made.",
