@@ -10,6 +10,14 @@ export {
   getGraniteEmbeddingModel,
   graniteEmbeddingModels,
 } from "./model-manifest.js";
+export type { OnnxRuntimeCheckOptions, OnnxRuntimeCheckResult } from "./onnx-runtime-check.js";
+export { verifyOnnxRuntime } from "./onnx-runtime-check.js";
+export type { OnnxRuntimeLoaderOptions, OnnxRuntimeModule } from "./onnx-runtime-loader.js";
+export {
+  loadOnnxRuntime,
+  loadOnnxRuntimeUncached,
+  OnnxRuntimeUnavailableError,
+} from "./onnx-runtime-loader.js";
 export type {
   FileInspector,
   OnnxFeed,

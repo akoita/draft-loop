@@ -8,6 +8,8 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "electron",
+        // Native module: shipped as an extra resource by forge.config.ts.
+        "onnxruntime-node",
         ...builtinModules,
         ...builtinModules.map((module) => `node:${module}`),
       ],

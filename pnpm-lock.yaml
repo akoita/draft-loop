@@ -81,6 +81,9 @@ importers:
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@draft-loop/embeddings':
+        specifier: workspace:*
+        version: link:../../packages/embeddings
       '@draft-loop/ingestion':
         specifier: workspace:*
         version: link:../../packages/ingestion

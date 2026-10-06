@@ -22,6 +22,7 @@ const completeChecks = Object.freeze({
   exportDocx: true,
   exportPdf: true,
   durableHistory: true,
+  embeddingRuntime: true,
 });
 
 describe("installed-app acceptance evidence", () => {
@@ -36,6 +37,7 @@ describe("installed-app acceptance evidence", () => {
     "inFlightCancellation",
     "restartResume",
     "interruptedRunExplanation",
+    "embeddingRuntime",
   ]) {
     it(`fails closed when ${check} is false or missing`, () => {
       for (const value of [false, undefined]) {
