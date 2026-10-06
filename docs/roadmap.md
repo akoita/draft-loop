@@ -1572,8 +1572,15 @@ paraphrase-heavy set, against 0.81–0.92 for local embedding models.
 
 Ordered work is rolled up in [#114](https://github.com/akoita/draft-loop/issues/114):
 runtime #916, vector index #918, real-embedding evaluation #919, model
-install #917, opt-in semantic and hybrid retrieval #920, CLI and desktop
-controls #921, and packaging #922. Semantic requirement coverage (#727) can
+install #917, opt-in semantic and hybrid retrieval #920, a relevance
+floor #926, CLI and desktop controls #921, and packaging #922.
+
+The [real-embedding comparison](evaluation/semantic-retrieval-comparison.md)
+(#919) raised recall on invented paraphrase and cross-language cases from 0.38
+to 0.97 with the 311M tier, and cut unsupported claims from 0.63 to zero. It
+also halved citation accuracy on exact-term cases, because semantic results
+always fill every slot. Lexical remains the default until the #926 relevance
+floor removes that regression. Semantic requirement coverage (#727) can
 reuse the embedder.
 
 **Exit criterion:** Users can install the local model, index selected CKBs, and

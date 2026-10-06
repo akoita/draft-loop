@@ -21,8 +21,8 @@ export function cosineSimilarity(a: readonly number[], b: readonly number[]): nu
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/** Builds a local term-frequency vector over a fixed vocabulary for privacy-preserving offline retrieval. */
-export class LocalVectorEmbedding {
+/** Vocabulary term-frequency baseline vector (not a learned embedding); offline and deterministic. */
+export class TermFrequencyEmbedding {
   private readonly vocabulary: Map<string, number>;
 
   constructor(corpusTexts: readonly string[]) {
@@ -69,16 +69,16 @@ export class LocalVectorEmbedding {
   }
 }
 
-/** Local vector retriever using deterministic in-memory embeddings. */
-export class LocalVectorRetriever {
-  private readonly embedder: LocalVectorEmbedding;
+/** Term-frequency baseline retriever over in-memory vocabulary vectors (not a learned embedding). */
+export class TermFrequencyRetriever {
+  private readonly embedder: TermFrequencyEmbedding;
   private readonly chunksWithEmbeddings: Array<{
     readonly chunk: ScoredEvidenceChunk;
     readonly embedding: readonly number[];
   }>;
 
   constructor(chunks: readonly ScoredEvidenceChunk[]) {
-    this.embedder = new LocalVectorEmbedding(chunks.map((chunk) => chunk.text));
+    this.embedder = new TermFrequencyEmbedding(chunks.map((chunk) => chunk.text));
     this.chunksWithEmbeddings = chunks.map((chunk) => ({
       chunk,
       embedding: this.embedder.embed(chunk.text),
@@ -140,7 +140,7 @@ export function fuseReciprocalRanks(
     }));
 }
 
-/** Creates a hybrid retriever combining a lexical retriever and vector retriever via RRF. */
+/** Creates a hybrid retriever combining a lexical retriever and a second (term-frequency or semantic) retriever via RRF. */
 export function createHybridRetriever(
   lexicalRetriever: {
     readonly queryEvidence: (

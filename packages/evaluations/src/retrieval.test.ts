@@ -8,10 +8,10 @@ import {
   createHybridRetriever,
   evaluateRetrievalMetrics,
   fuseReciprocalRanks,
-  LocalVectorEmbedding,
-  LocalVectorRetriever,
   type RetrievalBenchmarkCase,
   RetrievalRegressionError,
+  TermFrequencyEmbedding,
+  TermFrequencyRetriever,
 } from "./index.js";
 
 function chunk(id: string, text: string, ordinal = 0, rank = 0): ScoredEvidenceChunk {
@@ -28,7 +28,7 @@ function chunk(id: string, text: string, ordinal = 0, rank = 0): ScoredEvidenceC
   };
 }
 
-describe("Local Vector Embeddings & RRF Hybrid Retrieval", () => {
+describe("Term-frequency baseline & RRF Hybrid Retrieval", () => {
   it("computes cosine similarity accurately", () => {
     expect(cosineSimilarity([1, 0, 0], [1, 0, 0])).toBeCloseTo(1.0);
     expect(cosineSimilarity([1, 0, 0], [0, 1, 0])).toBeCloseTo(0.0);
@@ -37,14 +37,14 @@ describe("Local Vector Embeddings & RRF Hybrid Retrieval", () => {
   });
 
   it("builds deterministic local embeddings and retrieves nearest semantic chunks", async () => {
-    const embedder = new LocalVectorEmbedding(["hello world", "test corpus"]);
+    const embedder = new TermFrequencyEmbedding(["hello world", "test corpus"]);
     expect(embedder.embed("hello")).toHaveLength(4);
 
     const c1 = chunk("c1", "TypeScript backend distributed systems and Node.js microservices");
     const c2 = chunk("c2", "React CSS design system and accessibility");
     const c3 = chunk("c3", "PostgreSQL database indexing and query tuning");
 
-    const retriever = new LocalVectorRetriever([c1, c2, c3]);
+    const retriever = new TermFrequencyRetriever([c1, c2, c3]);
     const results = await retriever.queryEvidence("TypeScript Node.js distributed");
 
     expect(results.length).toBeGreaterThan(0);
@@ -130,7 +130,7 @@ describe("Retrieval Evaluation Benchmark & Quality Gate", () => {
       queryEvidence: async () => [c1, c3],
     };
     const hybrid = {
-      mode: "hybrid" as const,
+      mode: "term-frequency-hybrid" as const,
       queryEvidence: async () => [c1, c2],
     };
 
@@ -148,7 +148,7 @@ describe("Retrieval Evaluation Benchmark & Quality Gate", () => {
       queryEvidence: async () => [c1, c2],
     };
     const regressed = {
-      mode: "vector" as const,
+      mode: "term-frequency" as const,
       queryEvidence: async () => [c3],
     };
 
