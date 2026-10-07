@@ -144,6 +144,10 @@ describe("saturated chronology local source scan", () => {
     vi.spyOn(knowledgeBase, "createCandidateKnowledgeStoreService").mockReturnValue({
       ...service,
       queryCandidateKnowledge,
+      createCandidateKnowledgeQueryBatch: (selection) => ({
+        query: (query) => queryCandidateKnowledge({ ...selection, ...query }),
+        verify: async () => undefined,
+      }),
     });
     return queryCandidateKnowledge;
   }
