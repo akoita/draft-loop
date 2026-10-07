@@ -895,6 +895,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
   const [knowledgePending, setKnowledgePending] = useState(false);
   const knowledgePendingRef = useRef(false);
+  // Bumped when the workspace's knowledge selection or contents change, so the Career evidence
+  // setup card reads the selected base again.
+  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
   const [profilePendingScope, setProfilePendingScope] = useState<{
     readonly workspaceId: string;
     readonly generation: number;
@@ -1313,6 +1316,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       throw new Error("The active workspace changed while refreshing knowledge selection.");
     }
     setState(loaded);
+    setKnowledgeRevision((current) => current + 1);
     return true;
   };
 
@@ -2190,6 +2194,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 });
             },
           })}
+      careerEvidence={{
+        workspaceId: state.workspaceId,
+        capabilities: activePort,
+        revision: knowledgeRevision,
+        disabled:
+          busy ||
+          knowledgePending ||
+          profilePendingForActiveWorkspace ||
+          pendingReviewAction !== null ||
+          state.execution.status === "running",
+        onChanged: (workspaceId) => onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
+        onPendingChange: (workspaceId, pending) =>
+          onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
+      }}
       {...(activePort.getCredentialStatus === undefined
         ? {}
         : { getCredentialStatus: activePort.getCredentialStatus })}
