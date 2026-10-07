@@ -1,10 +1,15 @@
+import { createHash } from "node:crypto";
+
+import { maximumCoverageJudgementRationaleCharacters } from "@draft-loop/validation";
 import { describe, expect, it } from "vitest";
 
 import { promptTemplateVersion } from "./author-adjudication.js";
 import {
+  coverageJudgementInstructionsVersion,
   createCriticAdjudicationPrompt,
   maximumCritiqueFindings,
   maximumCritiqueMessageCharacters,
+  withCoverageJudgementInstructions,
 } from "./critic-adjudication.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
@@ -83,5 +88,34 @@ describe("critic prompt versions", () => {
     expect(() => createCriticAdjudicationPrompt("cli-critic-v4")).toThrow(
       'Unsupported critic prompt template version "cli-critic-v4".',
     );
+  });
+});
+
+describe("pinned critic template bytes", () => {
+  it.each([
+    ["cli-critic-v1", "0df069ec1378fb8e16d384dc81f22fe5effdd364951e69ef7de91ba8bb572112"],
+    ["cli-critic-v2", "0f5e33137ff6bce855c19a02f4b710091b8828061a1762c454b78338f522ea31"],
+    ["cli-critic-v3", "72f004c90469fb44bfa7f5b07c1088c7ae568c9e0b60714e24bee2a6a57e6328"],
+  ])("keeps %s identical to the recorded prompt", (version, sha256) => {
+    expect(createHash("sha256").update(createCriticAdjudicationPrompt(version)).digest("hex")).toBe(
+      sha256,
+    );
+  });
+});
+
+describe("coverage judgement instructions", () => {
+  it("appends the fixed block after the pinned prompt without changing it", () => {
+    const base = createCriticAdjudicationPrompt("cli-critic-v3");
+    const prompt = withCoverageJudgementInstructions(base);
+
+    expect(coverageJudgementInstructionsVersion).toBe("coverage-judgement-v1");
+    expect(prompt.startsWith(`${base}\n\nCoverage judgement (coverage-judgement-v1):`)).toBe(true);
+    expect(prompt).toContain("coverageJudgementRequests");
+    expect(prompt).toContain("Return `satisfied` only when the blocks state the requirement");
+    expect(prompt).toContain("Cite only candidate block ids");
+    expect(prompt).toContain(
+      `${maximumCoverageJudgementRationaleCharacters} characters or fewer, with no reasoning transcript`,
+    );
+    expect(prompt).toContain("degree and organisation-stage requirements are never sent");
   });
 });

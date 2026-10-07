@@ -30,7 +30,6 @@ import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draf
 import {
   type AuthorAgent,
   type CriticAgent,
-  type Critique,
   createOrchestrationEngine,
   createStorageRunStore,
   hasCompletedIndependentCritique,
@@ -39,12 +38,7 @@ import {
   type RunEvent,
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
-import {
-  type JsonObject,
-  type ModelRequest,
-  type ModelResponse,
-  ProviderAdapterError,
-} from "@draft-loop/providers";
+import type { JsonObject, ModelRequest } from "@draft-loop/providers";
 import {
   extensionForFormat,
   type OutputFormat,
@@ -91,6 +85,11 @@ import { canonicalProfileRequest, promptVersion } from "./canonical-profile-prov
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
 import * as criticPrompt from "./critic-adjudication.js";
+import {
+  criticCoverageJudgementParts,
+  invalidCritiqueError,
+  parseCritique,
+} from "./critic-critique-contract.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { announceRunEvidenceMode } from "./full-source-evidence.js";
@@ -1621,79 +1620,6 @@ function budget(config: WorkspaceConfig): RunBudget {
   };
 }
 
-const critiqueOutputSchema: JsonObject = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    findings: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          id: { type: "string" },
-          code: { type: "string" },
-          category: {
-            type: "string",
-            enum: ["format", "factuality", "coverage", "evidence", "quality"],
-          },
-          severity: { type: "string", enum: ["error", "warning"] },
-          message: { type: "string" },
-        },
-        required: ["id", "code", "category", "severity", "message"],
-      },
-    },
-  },
-  required: ["findings"],
-};
-
-function invalidCritiqueError(response: ModelResponse<JsonObject>): ProviderAdapterError {
-  return new ProviderAdapterError(
-    response.provider,
-    "invalid-response",
-    "The critic returned invalid structured findings.",
-    response.providerRequestId === null
-      ? { retryable: true }
-      : { retryable: true, requestId: response.providerRequestId },
-  );
-}
-
-function parseCritique(value: JsonObject): Critique {
-  const findings = value.findings;
-  if (!Array.isArray(findings))
-    throw new CliUserError("The critic returned an invalid findings list.");
-  if (findings.length > criticPrompt.maximumCritiqueFindings) {
-    throw new CliUserError("The critic returned too many findings.");
-  }
-  return {
-    findings: findings.map((finding) => {
-      if (typeof finding !== "object" || finding === null || Array.isArray(finding)) {
-        throw new CliUserError("The critic returned an invalid finding.");
-      }
-      const item = finding as Record<string, unknown>;
-      const required = ["id", "code", "category", "severity", "message"];
-      if (
-        required.some((key) => typeof item[key] !== "string" || (item[key] as string).trim() === "")
-      ) {
-        throw new CliUserError("The critic returned an incomplete finding.");
-      }
-      if ((item.message as string).length > criticPrompt.maximumCritiqueMessageCharacters) {
-        throw new CliUserError("The critic returned an excessively long finding message.");
-      }
-      return {
-        id: item.id as string,
-        code: item.code as string,
-        category: item.category as Critique["findings"][number]["category"],
-        severity: item.severity as Critique["findings"][number]["severity"],
-        message: item.message as string,
-        ...(typeof item.claimId === "string" ? { claimId: item.claimId } : {}),
-        ...(typeof item.sectionId === "string" ? { sectionId: item.sectionId } : {}),
-        ...(typeof item.requirementId === "string" ? { requirementId: item.requirementId } : {}),
-      };
-    }),
-  };
-}
-
 function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
@@ -1753,9 +1679,11 @@ function providerAgents(
       round,
       artifact,
       deterministicFindings,
+      coverageJudgementRequests,
       retrievedEvidence = [],
       signal,
     }) => {
+      const judgement = criticCoverageJudgementParts(coverageJudgementRequests, context, artifact);
       const achievementPlan = createRequirementAchievementPlan(
         context.requirements,
         retrievedEvidence,
@@ -1766,7 +1694,9 @@ function providerAgents(
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
-        systemPrompt: criticPrompt.create(context.modelConfiguration.critic.promptTemplateVersion),
+        systemPrompt: judgement.systemPrompt(
+          criticPrompt.create(context.modelConfiguration.critic.promptTemplateVersion),
+        ),
         input: asJsonObject({
           executionId,
           runId,
@@ -1776,8 +1706,9 @@ function providerAgents(
           achievementPlan,
           artifact: providerArtifactInput.modelFacingArtifactWithEvidenceTable(artifact, context),
           deterministicFindings,
+          ...judgement.input,
         }),
-        outputSchema: critiqueOutputSchema,
+        outputSchema: judgement.outputSchema,
         outputName: "draft_critique",
         maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
         dataPolicy: dataPolicy(criticIdentity.company),
@@ -1786,7 +1717,10 @@ function providerAgents(
       const adapter = await createAdapter(criticIdentity.company, criticIdentity.modelId, "critic");
       const response = await adapter.execute(request);
       try {
-        return responseExecution(response, parseCritique(response.output));
+        return responseExecution(
+          response,
+          parseCritique(response.output, judgement.instructionsVersion),
+        );
       } catch {
         throw invalidCritiqueError(response);
       }
