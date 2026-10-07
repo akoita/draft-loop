@@ -1638,6 +1638,9 @@ problems that block or mislead a normal first run.
   - a workspace without one gets a knowledge base created, with a visible
     one-time import of legacy evidence (#985);
   - the wording is unified everywhere (#986).
+
+  All three have shipped: the desktop, CLI help, and docs say **Career
+  evidence** for the material and **legacy workspace evidence** for the folder.
 - **Pasted job pages are refused ([#979](https://github.com/akoita/draft-loop/issues/979)).**
   Careers pages copied into `job.md` lose their bullet structure, so the #858
   check refuses the run. The fix uses the existing reviewed opportunity brief:

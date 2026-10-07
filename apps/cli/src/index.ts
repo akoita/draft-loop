@@ -2217,7 +2217,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   const knowledgeSource = knowledge
     .command("source")
-    .description("Import, refresh, and inspect candidate knowledge sources");
+    .description("Import, refresh, and inspect career-evidence sources");
   knowledgeSource
     .command("import")
     .description("Import one explicitly selected local source file")
@@ -2570,7 +2570,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   knowledgeSource
     .command("import-url")
-    .description("Import one explicitly approved URL into a local candidate-knowledge store")
+    .description("Import one explicitly approved URL into a local knowledge store")
     .argument("<store-root>", "local candidate-knowledge store directory")
     .argument("<knowledge-base-id>", "opaque knowledge-base id")
     .argument("<url>", "source URL")
@@ -2801,7 +2801,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   const lifecycle = knowledge
     .command("lifecycle")
-    .description("Inspect candidate-knowledge lifecycle state");
+    .description("Inspect career-evidence lifecycle state");
   lifecycle
     .command("readiness")
     .description("Report path-free lifecycle readiness for one knowledge base")
@@ -2817,7 +2817,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   knowledge
     .command("select")
-    .description("Persist an explicit local candidate-knowledge selection for a workspace")
+    .description("Persist the knowledge-base selection a workspace uses for career evidence")
     .argument("<workspace>", "workspace directory")
     .argument("[selection...]", "repeated <store-root> <knowledge-base-id> pairs")
     .option("--approve-combination", "approve combining more than one store/knowledge base")

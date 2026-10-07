@@ -381,7 +381,7 @@ describe("desktop canonical candidate profile", () => {
       const html = renderToStaticMarkup(<ProfileOutcomeFeedback outcome={empty} />);
       expect(html).toContain("profile-outcome-empty");
       expect(html).toContain("This profile version has no facts.");
-      expect(html).toContain("Check that the selected source material");
+      expect(html).toContain("Check that the selected career evidence");
       expect(html).not.toContain('aria-label="Recorded cause"');
 
       const draft = projectCanonicalCandidateProfileOutcome(record(), "profile-1", "profile-1");

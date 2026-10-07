@@ -32,12 +32,12 @@ export function registerEvidenceModeCommands(
 ): void {
   const evidence = root
     .command("evidence")
-    .description("Choose what candidate material a run's author and critic receive");
+    .description("Choose what career evidence a run's author and critic receive");
 
   evidence
     .command("mode")
     .description(
-      `Show or set the workspace evidence mode (${evidenceModes.join(" or ")}); default retrieval`,
+      `Show or set the legacy workspace evidence mode (${evidenceModes.join(" or ")}); default retrieval`,
     )
     .argument("<workspace>", "workspace directory")
     .argument("[mode]", `new mode: ${evidenceModes.join(" or ")}; omit to show the current mode`)

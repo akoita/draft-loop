@@ -207,8 +207,8 @@ function ProfileOutcomeCallout({
       )}
       <p>
         {failed
-          ? "Fix the cause above, then retry. Retrying sends your selected material again and may use provider credits. Renaming the profile does not help."
-          : "Check that the selected source material includes the facts you need, then retry. Retrying sends your selected material again and may use provider credits."}
+          ? "Fix the cause above, then retry. Retrying sends your selected career evidence again and may use provider credits. Renaming the profile does not help."
+          : "Check that the selected career evidence includes the facts you need, then retry. Retrying sends your selected career evidence again and may use provider credits."}
       </p>
     </section>
   );

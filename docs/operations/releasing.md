@@ -25,7 +25,7 @@ but it does not by itself prove that the product outcome was Validated.
   justify a stable channel on their own.
 - Publishing requires an explicit maintainer decision: the workflow is
   manually dispatched and the publish job uses the `release` environment.
-- Candidate source material, workspace databases, provider credentials, and
+- Career evidence, workspace databases, provider credentials, and
   run history are never included in release artifacts or manifests.
 - Each release includes a CycloneDX JSON software bill of materials generated
   from the checked-out dependency tree with a pinned Syft version.

@@ -275,7 +275,7 @@ describe("desktop trust-centered review", () => {
       />,
     );
 
-    expect(html).toContain("Bring your source material into the loop");
+    expect(html).toContain("Bring your career evidence into the loop");
     expect(html).toContain("Add job description");
     expect(html).toContain("Review and fetch source URL");
     expect(html).toContain("Writing policy");
@@ -379,7 +379,7 @@ describe("desktop trust-centered review", () => {
     expect(pendingHtml).toContain("Evidence will be indexed when the review starts");
     expect(fallbackHtml).toContain("No lexical match; 2 bounded fallback excerpts selected");
     expect(activeFallbackHtml).toContain(
-      "No lexical match; using 2 bounded fallback excerpts from candidate material",
+      "No lexical match; using 2 bounded fallback excerpts from career evidence",
     );
   });
 

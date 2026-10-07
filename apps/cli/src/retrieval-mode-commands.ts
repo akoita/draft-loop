@@ -73,7 +73,7 @@ export function registerRetrievalModeCommands(
 ): void {
   const retrieval = root
     .command("retrieval")
-    .description("Choose how a run searches candidate knowledge");
+    .description("Choose how a run searches career evidence");
 
   retrieval
     .command("mode")

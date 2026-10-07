@@ -2735,11 +2735,11 @@ export function ReviewWorkspace({
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               <p className="eyebrow">Before the first run</p>
-              <h2 id="onboarding-title">Bring your source material into the loop</h2>
+              <h2 id="onboarding-title">Bring your career evidence into the loop</h2>
               <p className="onboarding-copy">
-                Add the sources DraftLoop is allowed to use. Your files stay in this workspace.
-                DraftLoop will not invent missing experience or start an agent run until the target
-                job and candidate source material are present.
+                Add the career evidence DraftLoop is allowed to use. Your files stay in this
+                workspace. DraftLoop will not invent missing experience or start an agent run until
+                the target job and career evidence are present.
               </p>
               {errorMessage ? (
                 <div className="error-banner" role="alert">
@@ -3145,9 +3145,9 @@ export function ReviewWorkspace({
                 <strong>Evidence retrieval</strong>
                 <span role="status">
                   {state.setup.retrievalStatus === "matched"
-                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
                     : state.setup.retrievalStatus === "fallback"
-                      ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
+                      ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
                       : state.setup.retrievalStatus === "not-indexed"
                         ? "Candidate material is not indexed; no evidence excerpt was selected"
                         : state.setup.retrievalStatus === "no-query"
@@ -3303,7 +3303,7 @@ export function ReviewWorkspace({
                 <summary className="claims-disclosure-summary" ref={traceabilitySummaryRef}>
                   <span className="claims-disclosure-title">
                     <span className="eyebrow">Traceability</span>
-                    <h2>Claims and candidate sources</h2>
+                    <h2>Claims and career evidence</h2>
                   </span>
                   <span className="subtle">
                     Source links show where wording came from; they do not independently verify it.
