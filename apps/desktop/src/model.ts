@@ -234,6 +234,11 @@ export interface WorkspaceReadiness {
   readonly pendingWritingPolicyOverride?: PendingWritingPolicyOverride | null;
   /** Current reviewed opportunity selection, if one exists. */
   readonly reviewedOpportunity?: OpportunityBriefSelection | null;
+  /**
+   * Why the local parser cannot split the job description into requirements, or `null`. Reported
+   * even when a reviewed brief makes it moot, so starting from the raw job text can be blocked.
+   */
+  readonly jobRequirementProblem?: string | null;
   readonly retrievalStatus: "not-indexed" | "matched" | "fallback" | "no-query" | "unavailable";
   readonly indexedEvidenceChunkCount: number;
   readonly selectedEvidenceChunkCount: number;
@@ -311,6 +316,11 @@ export type ReviewAction =
       readonly type: "start";
       readonly candidateProfile?: CandidateProfileSelection;
       readonly modelProfiles?: ModelProfileReferences;
+      /**
+       * Start from the raw job description even when a reviewed requirements brief exists.
+       * Omit to use the reviewed brief when there is one.
+       */
+      readonly requirementsSource?: "job-description";
     }
   | { readonly type: "resume" }
   | { readonly type: "recover-to-review" }

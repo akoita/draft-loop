@@ -2,11 +2,22 @@ import { meaningfulRequirementTokenCount } from "@draft-loop/validation";
 
 import { CliUserError } from "./cli-user-error.js";
 
-/** A job description the local run cannot split into matchable requirements; fix it and retry. */
+/** The CLI route to a reviewed brief, appended to every raw-job-description refusal. */
+export const opportunityCreateCliHint =
+  "run `draft-loop opportunity create <workspace> --input <manifest> --allow-provider-data`";
+
+/**
+ * A job description the local run cannot split into matchable requirements; fix it and retry.
+ * `message` names the CLI command that creates a reviewed brief; `summary` omits it for surfaces
+ * (such as the desktop) that offer their own action.
+ */
 export class JobRequirementUserError extends CliUserError {
-  constructor(message: string) {
-    super(message);
+  readonly summary: string;
+
+  constructor(summary: string) {
+    super(`${summary.replace(/\.$/u, "")}, or ${opportunityCreateCliHint}.`);
     this.name = "JobRequirementUserError";
+    this.summary = summary;
   }
 }
 

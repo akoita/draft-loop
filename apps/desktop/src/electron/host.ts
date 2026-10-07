@@ -133,6 +133,7 @@ import {
   type OpportunityBriefSelectionInput,
   type OpportunityCreateInput,
   type OpportunityCreateSource,
+  type OpportunityLatestResult,
   type OpportunityRecordResult,
   type ProviderAuthModeProvider,
   type ProviderAuthModeStatus,
@@ -178,6 +179,10 @@ import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { resolveWorkspaceJobDescriptionSource } from "./opportunity-job-description.js";
+import {
+  persistedLatestOpportunityBriefId,
+  projectLatestOpportunity,
+} from "./opportunity-latest.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
@@ -370,6 +375,8 @@ interface ReviewOverrides {
   readonly history: readonly ReviewDecisionHistoryEntry[];
   /** Last exact reviewed opportunity selection, retained only as host state. */
   readonly reviewedOpportunity?: OpportunityBriefSelectionInput;
+  /** The workspace's most recent opportunity brief, so a draft can be resumed after a restart. */
+  readonly latestOpportunityBriefId?: string;
   /** Pending policy identity bound to the exact reviewed opportunity above. */
   readonly pendingWritingPolicyOverride?: PendingWritingPolicyOverride;
 }
@@ -1331,15 +1338,18 @@ async function workspaceReadiness(
   }
   // The run splits the job description into requirements unless a reviewed brief supplies
   // them, so surface the same guard here instead of failing when Start is clicked.
-  let jobRequirementProblem: string | undefined;
-  if (jobDescriptionReady && overrides.reviewedOpportunity === undefined) {
+  let rawJobRequirementProblem: string | undefined;
+  if (jobDescriptionReady) {
     try {
       localJobRequirements(jobDescription);
     } catch (error) {
       if (!(error instanceof JobRequirementUserError)) throw error;
-      jobRequirementProblem = error.message;
+      rawJobRequirementProblem = error.summary;
     }
   }
+  // A reviewed brief supplies the requirements, so the raw refusal only blocks without one.
+  const jobRequirementProblem =
+    overrides.reviewedOpportunity === undefined ? rawJobRequirementProblem : undefined;
   const nextSteps: string[] = [];
   if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
   if (jobRequirementProblem !== undefined) nextSteps.push(jobRequirementProblem);
@@ -1368,6 +1378,7 @@ async function workspaceReadiness(
     writingPolicyHistory,
     pendingWritingPolicyOverride: overrides.pendingWritingPolicyOverride ?? null,
     reviewedOpportunity: overrides.reviewedOpportunity ?? null,
+    jobRequirementProblem: rawJobRequirementProblem ?? null,
     retrievalStatus,
     indexedEvidenceChunkCount,
     selectedEvidenceChunkCount,
@@ -1504,6 +1515,9 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
       }
     }
     const reviewedOpportunity = persistedOpportunitySelection(record.reviewedOpportunity);
+    const latestOpportunityBriefId = persistedLatestOpportunityBriefId(
+      record.latestOpportunityBriefId,
+    );
     const pendingWritingPolicyOverride = persistedPendingWritingPolicyOverride(
       record.pendingWritingPolicyOverride,
     );
@@ -1513,6 +1527,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
       edits: normalizedEdits,
       history: normalizedHistory,
       ...(reviewedOpportunity === undefined ? {} : { reviewedOpportunity }),
+      ...(latestOpportunityBriefId === undefined ? {} : { latestOpportunityBriefId }),
       ...(pendingWritingPolicyOverride === undefined ? {} : { pendingWritingPolicyOverride }),
     };
   } catch {
@@ -1530,6 +1545,9 @@ async function writeOverrides(root: string, overrides: ReviewOverrides): Promise
     ...(overrides.reviewedOpportunity === undefined
       ? {}
       : { reviewedOpportunity: { ...overrides.reviewedOpportunity } }),
+    ...(overrides.latestOpportunityBriefId === undefined
+      ? {}
+      : { latestOpportunityBriefId: overrides.latestOpportunityBriefId }),
     ...(overrides.pendingWritingPolicyOverride === undefined
       ? {}
       : {
@@ -2835,7 +2853,32 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       sources,
       allowProviderData: input.providerTransmissionApproved === true,
     });
+    await rememberLatestOpportunity(workspace.root, record.brief.id);
     return projectOpportunityRecord(workspace.descriptor.id, record);
+  }
+
+  /** Remembers which brief is the workspace's latest so setup can resume it after a restart. */
+  async function rememberLatestOpportunity(root: string, briefId: string): Promise<void> {
+    try {
+      const preferences = await readOverrides(root);
+      if (preferences.latestOpportunityBriefId === briefId) return;
+      await writeOverrides(root, { ...preferences, latestOpportunityBriefId: briefId });
+    } catch (error) {
+      // A non-writable synthetic root keeps the brief usable for this host session only.
+      options.onError?.(error, "opportunity.create");
+    }
+  }
+
+  async function latestOpportunity(
+    input: Extract<BridgeCommand, { type: "opportunity.latest" }>["input"],
+  ): Promise<OpportunityLatestResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const preferences = await readOverrides(workspace.root);
+    const briefId =
+      preferences.latestOpportunityBriefId ?? preferences.reviewedOpportunity?.briefId;
+    if (briefId === undefined) return null;
+    const record = await service.getOpportunity({ root: workspace.root, briefId });
+    return record === undefined ? null : projectLatestOpportunity(workspace.descriptor.id, record);
   }
 
   async function getOpportunity(
@@ -2880,6 +2923,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       expectedVersion: input.expectedVersion,
       patch: input.patch as OpportunityDraftPatch,
     });
+    await rememberLatestOpportunity(workspace.root, record.brief.id);
     const preferences = await readOverrides(workspace.root);
     if (
       preferences.reviewedOpportunity?.briefId === input.briefId &&
@@ -2910,6 +2954,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await writeOverrides(workspace.root, {
         ...withoutPendingWritingPolicyOverride(preferences),
         reviewedOpportunity,
+        latestOpportunityBriefId: record.brief.id,
       });
     } catch (error) {
       // Review remains usable for a host session whose synthetic/test root is
@@ -3441,8 +3486,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           }
         }
         await requireProviderTransmissionAcknowledgement(workspace);
-        const reviewedOpportunity = overrides.reviewedOpportunity;
+        // The person may start from the raw job description instead of the reviewed brief.
+        const fromJobDescription = action.requirementsSource === "job-description";
+        const reviewedOpportunity = fromJobDescription ? undefined : overrides.reviewedOpportunity;
         const pendingWritingPolicyOverride = overrides.pendingWritingPolicyOverride;
+        if (fromJobDescription && pendingWritingPolicyOverride !== undefined) {
+          return fail(
+            "operation-failed",
+            "The selected policy override belongs to the reviewed requirements. Start from the reviewed requirements or remove the override.",
+          );
+        }
         dispatchedSnapshot = await service.begin(
           {
             root: workspace.root,
@@ -5082,6 +5135,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await getOpportunity(command.input) };
         case "opportunity.list":
           return { ok: true, value: await listOpportunityVersions(command.input) };
+        case "opportunity.latest":
+          return { ok: true, value: await latestOpportunity(command.input) };
         case "opportunity.edit":
           return { ok: true, value: await editOpportunity(command.input) };
         case "opportunity.review":

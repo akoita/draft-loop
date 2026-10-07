@@ -50,6 +50,17 @@ import { providerAuthenticationForPair } from "./provider-authentication-summary
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
+  LatestRequirementsBriefView,
+  StartRequirementsSourceView,
+  useLatestOpportunity,
+  withLatestBriefRefresh,
+} from "./start-requirements.js";
+import {
+  isJobRequirementRefusal,
+  jobRequirementsExtractionId,
+  reviewedRequirementsSelection,
+} from "./start-requirements-model.js";
+import {
   startReviewBlockedTooltip,
   startReviewBlockers,
   startReviewBlockersId,
@@ -1297,8 +1308,19 @@ export function ReviewWorkspace({
   getProviderAuthModeStatus,
   onSetProviderAuthMode,
 }: ReviewWorkspaceProps) {
+  const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
+    jobRequirements?.getLatestOpportunity,
+    state.workspaceId,
+    `${state.setup.reviewedOpportunity?.briefId ?? ""}:${state.setup.reviewedOpportunity?.version ?? 0}`,
+  );
+  const requirementsBinding =
+    jobRequirements === undefined
+      ? undefined
+      : withLatestBriefRefresh(jobRequirements, refreshLatestBrief);
   const briefOperations =
-    jobRequirements === undefined ? undefined : briefOperationsOf(jobRequirements);
+    requirementsBinding === undefined ? undefined : briefOperationsOf(requirementsBinding);
+  const [rawJobChoice, setRawJobChoice] = useState<string | null>(null);
+  const [extractionSignal, setExtractionSignal] = useState(0);
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, warnings } = findingSummary;
   const acceptedBlockingFindings = blockingFindings.filter(
@@ -2719,12 +2741,57 @@ export function ReviewWorkspace({
       criticCompany: state.providerTransmissionPreflight.critic.company as ModelCompany,
     });
     const modelKeysReady = authentication.ready;
+    const reviewedRequirements = reviewedRequirementsSelection(
+      latestBrief,
+      state.setup.reviewedOpportunity,
+    );
+    const rawJobKey =
+      reviewedRequirements === null
+        ? null
+        : `${state.workspaceId}:${reviewedRequirements.briefId}:${reviewedRequirements.version}`;
+    const startFromJobDescription = rawJobKey !== null && rawJobChoice === rawJobKey;
     const setupStartBlockers = startReviewBlockers({
       setupReady: state.setup.ready,
       nextSteps: state.setup.nextSteps,
       transmissionReady,
       startDisabledReason,
+      rawJobRequirementProblem: startFromJobDescription
+        ? (state.setup.jobRequirementProblem ?? null)
+        : null,
     });
+    const extractRequirements = () => {
+      setExtractionSignal((value) => value + 1);
+      document
+        .getElementById(jobRequirementsExtractionId)
+        ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    };
+    const renderBlockerAction = () => {
+      if (reviewedRequirements !== null) {
+        return (
+          <button
+            className="button button-quiet"
+            type="button"
+            onClick={() => setRawJobChoice(null)}
+          >
+            Use the reviewed requirements instead
+          </button>
+        );
+      }
+      if (latestBrief?.status === "draft") {
+        return <span className="setup-note">Review the requirements brief above to start.</span>;
+      }
+      if (requirementsBinding?.createOpportunity === undefined) return null;
+      return (
+        <button
+          className="button button-outline"
+          type="button"
+          disabled={requirementsBinding.disabled}
+          onClick={extractRequirements}
+        >
+          Extract requirements into a brief
+        </button>
+      );
+    };
     return (
       <div className="app-frame">
         <SideRail onOpenSources={null} onOpenSettings={() => setSettingsOpen(true)} />
@@ -2804,30 +2871,58 @@ export function ReviewWorkspace({
                   >
                     Review and fetch job URL
                   </button>
-                  {state.setup.jobDescriptionReady &&
-                  !state.setup.reviewedOpportunity &&
-                  jobRequirements?.createOpportunity !== undefined ? (
-                    <JobRequirementsExtraction
-                      key={jobRequirements.workspaceId}
-                      binding={jobRequirements}
+                  {latestBrief != null && requirementsBinding !== undefined ? (
+                    <LatestRequirementsBriefView
+                      latest={latestBrief}
+                      action={
+                        briefOperations === undefined ? null : (
+                          <OpportunityBriefReviewAction
+                            key={`${requirementsBinding.workspaceId}:${latestBrief.briefId}:${latestBrief.version}`}
+                            briefId={latestBrief.briefId}
+                            operations={briefOperations}
+                            disabled={requirementsBinding.disabled}
+                            label={
+                              latestBrief.status === "draft"
+                                ? "Review requirements"
+                                : "View requirements"
+                            }
+                            {...(requirementsBinding.onBriefChanged === undefined
+                              ? {}
+                              : { onBriefChanged: requirementsBinding.onBriefChanged })}
+                          />
+                        )
+                      }
                     />
                   ) : null}
-                  {state.setup.reviewedOpportunity != null &&
-                  jobRequirements !== undefined &&
+                  {latestBrief == null &&
+                  state.setup.jobDescriptionReady &&
+                  !state.setup.reviewedOpportunity &&
+                  requirementsBinding?.createOpportunity !== undefined ? (
+                    <div id={jobRequirementsExtractionId}>
+                      <JobRequirementsExtraction
+                        key={requirementsBinding.workspaceId}
+                        binding={requirementsBinding}
+                        openSignal={extractionSignal}
+                      />
+                    </div>
+                  ) : null}
+                  {latestBrief == null &&
+                  state.setup.reviewedOpportunity != null &&
+                  requirementsBinding !== undefined &&
                   briefOperations !== undefined ? (
                     <div className="job-extraction">
                       <p className="setup-note">
                         Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
                       </p>
                       <OpportunityBriefReviewAction
-                        key={`${jobRequirements.workspaceId}:${state.setup.reviewedOpportunity.version}`}
+                        key={`${requirementsBinding.workspaceId}:${state.setup.reviewedOpportunity.version}`}
                         briefId={state.setup.reviewedOpportunity.briefId}
                         operations={briefOperations}
-                        disabled={jobRequirements.disabled}
+                        disabled={requirementsBinding.disabled}
                         label="View requirements"
-                        {...(jobRequirements.onBriefChanged === undefined
+                        {...(requirementsBinding.onBriefChanged === undefined
                           ? {}
-                          : { onBriefChanged: jobRequirements.onBriefChanged })}
+                          : { onBriefChanged: requirementsBinding.onBriefChanged })}
                       />
                     </div>
                   ) : null}
@@ -2952,6 +3047,15 @@ export function ReviewWorkspace({
               </div>
               {renderProviderTransmissionPreflight()}
               {profilePanel}
+              {reviewedRequirements === null || rawJobKey === null ? null : (
+                <StartRequirementsSourceView
+                  selection={reviewedRequirements}
+                  useJobDescription={startFromJobDescription}
+                  disabled={pendingReviewAction?.action === "start"}
+                  onUseJobDescription={() => setRawJobChoice(rawJobKey)}
+                  onUseReviewed={() => setRawJobChoice(null)}
+                />
+              )}
               <div className="onboarding-footer">
                 <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
                 <span>
@@ -2970,7 +3074,13 @@ export function ReviewWorkspace({
                   aria-describedby={
                     setupStartBlockers.length > 0 ? startReviewBlockersId : undefined
                   }
-                  onClick={() => onAction({ type: "start" })}
+                  onClick={() =>
+                    onAction(
+                      startFromJobDescription
+                        ? { type: "start", requirementsSource: "job-description" }
+                        : { type: "start" },
+                    )
+                  }
                 >
                   {pendingReviewAction?.action === "start"
                     ? "Starting review…"
@@ -2986,7 +3096,12 @@ export function ReviewWorkspace({
                   <strong>To start the review</strong>
                   <ul>
                     {setupStartBlockers.map((blocker) => (
-                      <li key={blocker}>{blocker}</li>
+                      <li key={blocker}>
+                        {blocker}
+                        {isJobRequirementRefusal(blocker, state.setup.jobRequirementProblem) ? (
+                          <div className="start-blocker-action">{renderBlockerAction()}</div>
+                        ) : null}
+                      </li>
                     ))}
                   </ul>
                 </div>

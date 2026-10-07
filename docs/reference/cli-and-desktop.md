@@ -174,6 +174,9 @@ The desktop setup applies the same job-description check before a run when no
 reviewed opportunity brief is selected. A job description with a requirement
 that is too long to match keeps **Start author–critic review** disabled and
 lists that message among its reasons, so the problem appears before you click.
+Next to that reason, **Extract requirements into a brief** opens the extraction
+consent step on the **Target job description** card instead of asking for hand
+edits. The CLI message ends with the `opportunity create` command to run.
 
 ## Desktop workspace navigation
 
@@ -264,6 +267,11 @@ The card shows the draft brief ID, version, requirement and responsibility
 counts, and any open extraction issues. Extraction cannot be cancelled once
 started. The draft cannot start a run until it is reviewed.
 
+The card also shows the workspace's latest brief as "Requirements brief vN
+(draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review
+requirements** after the app restarts; a reviewed brief offers **View
+requirements**. The host remembers only the brief ID for this.
+
 **Review requirements** opens the brief with each requirement's text, priority
 (critical, high, medium or low) and source reference, plus the responsibilities.
 While the version is a draft, edit a requirement's text, change its priority,
@@ -274,6 +282,15 @@ every requirement must cite a source. **Mark reviewed** creates the immutable
 reviewed version once the brief has a role, an employer, at least one
 requirement and no open issues. A reviewed version is read-only; **Edit** and
 **Save as new draft** create a draft successor that must be reviewed again.
+
+When the workspace's latest brief is reviewed, the desktop start panel shows
+"Using reviewed requirements: brief vN · R requirements · C critical" and
+starts the run with that exact version. **Use the raw job description instead**
+starts without the brief; the local parser, including its refusals, then
+applies. If the policy override selected for the run belongs to the reviewed
+brief, starting from the raw job description is refused. A run's preflight
+states the source: "Requirements: reviewed opportunity brief ID vN (R
+requirements)" or "Requirements: job description (unreviewed source units)".
 
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins

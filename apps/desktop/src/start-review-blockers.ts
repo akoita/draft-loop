@@ -4,6 +4,11 @@ export interface StartReviewBlockerInput {
   readonly nextSteps: readonly string[];
   readonly transmissionReady: boolean;
   readonly startDisabledReason: string | null;
+  /**
+   * The local parser's refusal of the raw job description, while the person has chosen to start
+   * from it. A reviewed brief makes the refusal moot, so it is passed only for that choice.
+   */
+  readonly rawJobRequirementProblem?: string | null;
 }
 
 export const startReviewBlockersId = "start-review-blockers";
@@ -19,6 +24,10 @@ export function startReviewBlockers(input: StartReviewBlockerInput): readonly st
   const blockers: string[] = [];
   if (!input.setupReady) {
     blockers.push(...(input.nextSteps.length > 0 ? input.nextSteps : [setupIncompleteFallback]));
+  }
+  const rawProblem = input.rawJobRequirementProblem;
+  if (rawProblem !== null && rawProblem !== undefined && !blockers.includes(rawProblem)) {
+    blockers.push(rawProblem);
   }
   if (!input.transmissionReady) blockers.push(transmissionBlocker);
   if (input.startDisabledReason !== null) blockers.push(input.startDisabledReason);

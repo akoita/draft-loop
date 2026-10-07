@@ -96,7 +96,9 @@ candidate material out of the repository.
 
 List each job requirement as its own bullet line in `job.md`. A run started
 without a reviewed opportunity brief refuses long unbulleted paragraphs, such as
-a pasted web page, before any provider call.
+a pasted web page, before any provider call. In the desktop app, **Extract
+requirements into a brief** turns such a page into reviewable requirements, and
+the start panel shows which requirements a run will use.
 
 For the normal quality gate, run:
 

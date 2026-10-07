@@ -36,6 +36,7 @@ import {
   type NativeBridge,
   type OpportunityCreateInput,
   type OpportunityEditInput,
+  type OpportunityLatestResult,
   type OpportunityListResult,
   type OpportunityRecordResult,
   type ProviderAuthMode,
@@ -133,6 +134,8 @@ export interface DesktopOpportunityCapabilities {
   ) => Promise<OpportunityRecordResult>;
   readonly getOpportunity?: (briefId: string, version?: number) => Promise<OpportunityRecordResult>;
   readonly listOpportunityVersions?: (briefId: string) => Promise<OpportunityListResult>;
+  /** The workspace's most recent opportunity brief (draft or reviewed), or `null` when none. */
+  readonly getLatestOpportunity?: () => Promise<OpportunityLatestResult>;
   readonly editOpportunity?: (
     input: Omit<OpportunityEditInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
@@ -841,6 +844,19 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "opportunity.list",
                 input: { workspaceId: state.workspaceId, briefId },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.latest")
+      ? {
+          getLatestOpportunity: async () => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.latest",
+                input: { workspaceId: state.workspaceId },
               }),
             );
           },

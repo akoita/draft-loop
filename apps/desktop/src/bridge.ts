@@ -1856,6 +1856,7 @@ const workspaceReadinessKeys = [
   "writingPolicyHistory",
   "pendingWritingPolicyOverride",
   "reviewedOpportunity",
+  "jobRequirementProblem",
   "retrievalStatus",
   "indexedEvidenceChunkCount",
   "selectedEvidenceChunkCount",
@@ -2122,6 +2123,11 @@ export interface OpportunityListInput {
   readonly briefId: string;
 }
 
+/** Asks for the workspace's most recent opportunity brief, draft or reviewed. */
+export interface OpportunityLatestInput {
+  readonly workspaceId: string;
+}
+
 export interface OpportunitySourcedTextInput {
   readonly value: string;
   readonly sourceIds: readonly string[];
@@ -2197,6 +2203,7 @@ export interface OpportunityReviewInput {
 
 const opportunityGetKeys = inputKeys<OpportunityGetInput>()(["workspaceId", "briefId", "version"]);
 const opportunityListKeys = inputKeys<OpportunityListInput>()(["workspaceId", "briefId"]);
+const opportunityLatestKeys = inputKeys<OpportunityLatestInput>()(["workspaceId"]);
 const opportunitySourcedTextKeys = inputKeys<OpportunitySourcedTextInput>()(["value", "sourceIds"]);
 const opportunityResponsibilityKeys = inputKeys<OpportunityResponsibilityInput>()([
   "id",
@@ -2321,6 +2328,18 @@ export interface OpportunityListResult {
   readonly versions: readonly OpportunityRecordResult[];
 }
 
+/** Content-free pointer to the workspace's latest brief version; `null` when there is none. */
+export interface OpportunityLatestBrief {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  readonly version: number;
+  readonly status: "draft" | "reviewed";
+  readonly requirementCount: number;
+  readonly criticalCount: number;
+}
+
+export type OpportunityLatestResult = OpportunityLatestBrief | null;
+
 const opportunitySourceResultKeys = resultKeys<OpportunitySourceResult>()([
   "id",
   "kind",
@@ -2386,6 +2405,14 @@ const opportunityListResultKeys = resultKeys<OpportunityListResult>()([
   "workspaceId",
   "briefId",
   "versions",
+]);
+const opportunityLatestResultKeys = resultKeys<OpportunityLatestBrief>()([
+  "workspaceId",
+  "briefId",
+  "version",
+  "status",
+  "requirementCount",
+  "criticalCount",
 ]);
 
 export interface CanonicalCandidateProfileDeriveInput {
@@ -2798,6 +2825,7 @@ export interface BridgeCommandInputMap {
   "opportunity.create": OpportunityCreateInput;
   "opportunity.get": OpportunityGetInput;
   "opportunity.list": OpportunityListInput;
+  "opportunity.latest": OpportunityLatestInput;
   "opportunity.edit": OpportunityEditInput;
   "opportunity.review": OpportunityReviewInput;
   "profile.derive": CanonicalCandidateProfileDeriveInput;
@@ -2891,6 +2919,7 @@ export interface BridgeCommandOutputMap {
   "opportunity.create": OpportunityRecordResult;
   "opportunity.get": OpportunityRecordResult;
   "opportunity.list": OpportunityListResult;
+  "opportunity.latest": OpportunityLatestResult;
   "opportunity.edit": OpportunityRecordResult;
   "opportunity.review": OpportunityRecordResult;
   "profile.derive": CanonicalCandidateProfileRecordResult;
@@ -4018,8 +4047,14 @@ function validateReviewAction(value: unknown): ReviewAction {
       };
     }
     case "start": {
-      if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles"]))
+      if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles", "requirementsSource"]))
         return invalidInput();
+      if (
+        action.requirementsSource !== undefined &&
+        action.requirementsSource !== "job-description"
+      ) {
+        return invalidInput();
+      }
       const candidateProfile =
         action.candidateProfile === undefined
           ? undefined
@@ -4032,6 +4067,9 @@ function validateReviewAction(value: unknown): ReviewAction {
         type: action.type,
         ...(candidateProfile === undefined ? {} : { candidateProfile }),
         ...(modelProfiles === undefined ? {} : { modelProfiles }),
+        ...(action.requirementsSource === undefined
+          ? {}
+          : { requirementsSource: action.requirementsSource }),
       };
     }
     default:
@@ -4419,6 +4457,12 @@ function validateOpportunityListInput(value: unknown): OpportunityListInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, opportunityListKeys)) return invalidInput();
   return { workspaceId: identifier(input.workspaceId), briefId: identifier(input.briefId) };
+}
+
+function validateOpportunityLatestInput(value: unknown): OpportunityLatestInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityLatestKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
 }
 
 function validateOpportunityEditInput(value: unknown): OpportunityEditInput {
@@ -5159,6 +5203,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "opportunity.get", input: validateOpportunityGetInput(command.input) };
     case "opportunity.list":
       return { type: "opportunity.list", input: validateOpportunityListInput(command.input) };
+    case "opportunity.latest":
+      return { type: "opportunity.latest", input: validateOpportunityLatestInput(command.input) };
     case "opportunity.edit":
       return { type: "opportunity.edit", input: validateOpportunityEditInput(command.input) };
     case "opportunity.review":
@@ -6675,6 +6721,12 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
       setupRecord.pendingWritingPolicyOverride === null
         ? setupRecord.pendingWritingPolicyOverride
         : normalizePendingWritingPolicyOverride(setupRecord.pendingWritingPolicyOverride);
+    if (
+      setupRecord.jobRequirementProblem !== undefined &&
+      setupRecord.jobRequirementProblem !== null
+    ) {
+      stringValue(setupRecord.jobRequirementProblem, 600);
+    }
     const reviewedOpportunity =
       setupRecord.reviewedOpportunity === undefined || setupRecord.reviewedOpportunity === null
         ? setupRecord.reviewedOpportunity
@@ -7059,6 +7111,34 @@ function normalizeOpportunityRecordResult(value: unknown): OpportunityRecordResu
   };
 }
 
+function normalizeOpportunityLatestResult(value: unknown): OpportunityLatestResult {
+  if (value === null) return null;
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityLatestResultKeys)) return invalidInput();
+  const requirementCount = result.requirementCount;
+  const criticalCount = result.criticalCount;
+  if (
+    typeof requirementCount !== "number" ||
+    !Number.isSafeInteger(requirementCount) ||
+    requirementCount < 0 ||
+    requirementCount > maximumOpportunityCollectionEntries ||
+    typeof criticalCount !== "number" ||
+    !Number.isSafeInteger(criticalCount) ||
+    criticalCount < 0 ||
+    criticalCount > requirementCount
+  ) {
+    return invalidInput();
+  }
+  return {
+    workspaceId: identifier(result.workspaceId),
+    briefId: identifier(result.briefId),
+    version: opportunityVersion(result.version),
+    status: enumValue(result.status, ["draft", "reviewed"] as const),
+    requirementCount,
+    criticalCount,
+  };
+}
+
 function normalizeOpportunityListResult(value: unknown): OpportunityListResult {
   const result = requireRecord(value);
   if (
@@ -7388,6 +7468,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeOpportunityRecordResult(value);
     case "opportunity.list":
       return normalizeOpportunityListResult(value);
+    case "opportunity.latest":
+      return normalizeOpportunityLatestResult(value);
     case "profile.derive":
     case "profile.get":
     case "profile.edit":

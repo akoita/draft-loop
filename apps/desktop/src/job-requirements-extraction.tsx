@@ -4,6 +4,7 @@ import type {
   OpportunityCreateInput,
   OpportunityEditInput,
   OpportunityIssueResult,
+  OpportunityLatestResult,
   OpportunityRecordResult,
 } from "./bridge.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
@@ -26,6 +27,8 @@ export interface JobRequirementsExtractionBinding {
     briefId: string,
     expectedVersion: number,
   ) => Promise<OpportunityRecordResult>;
+  /** The workspace's latest brief (draft or reviewed); absent when the host cannot report it. */
+  readonly getLatestOpportunity?: () => Promise<OpportunityLatestResult>;
   /** Called after the brief was saved or reviewed, so the workspace can reload its setup state. */
   readonly onBriefChanged?: () => void;
   /** The configured writing model: the one that would receive the job description. */
@@ -252,10 +255,19 @@ export function JobRequirementsExtractionView({
 /** Setup card 01 action: extract reviewable requirements from the workspace's job description. */
 export function JobRequirementsExtraction({
   binding,
+  openSignal = 0,
 }: {
   readonly binding: JobRequirementsExtractionBinding;
+  /** Raising this number opens the consent step, for the start blocker's guided action. */
+  readonly openSignal?: number;
 }) {
   const [phase, setPhase] = useState<JobRequirementsPhase>({ kind: "idle" });
+  const handledSignal = useRef(openSignal);
+  useEffect(() => {
+    if (openSignal === handledSignal.current) return;
+    handledSignal.current = openSignal;
+    setPhase((current) => (current.kind === "idle" ? { kind: "consent" } : current));
+  }, [openSignal]);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;

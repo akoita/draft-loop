@@ -50,6 +50,7 @@ export const bridgeCapabilities = [
   "opportunity.create",
   "opportunity.get",
   "opportunity.list",
+  "opportunity.latest",
   "opportunity.edit",
   "opportunity.review",
   "profile.derive",
