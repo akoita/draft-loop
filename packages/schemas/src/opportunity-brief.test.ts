@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type OpportunityBriefInput,
   opportunityBriefMaximumCollectionEntries,
+  opportunityBriefMaximumExcerptLength,
   opportunityBriefMaximumTextLength,
   opportunityBriefSchema,
   opportunityBriefSourceSchema,
@@ -138,6 +139,44 @@ function requirementAt(index: number) {
 }
 
 describe("opportunity brief schemas", () => {
+  it("keeps optional verbatim excerpts on entries and still parses entries without them", () => {
+    const [firstResponsibility, ...otherResponsibilities] = brief().responsibilities ?? [];
+    const [firstRequirement, ...otherRequirements] = brief().requirements ?? [];
+    const withExcerpts = brief({
+      responsibilities: [
+        { ...firstResponsibility, excerpt: "  You will lead platform reliability.  " },
+        ...otherResponsibilities,
+      ] as OpportunityBriefInput["responsibilities"],
+      requirements: [
+        { ...firstRequirement, excerpt: "Production TypeScript experience" },
+        ...otherRequirements,
+      ] as OpportunityBriefInput["requirements"],
+    });
+    const parsed = opportunityBriefSchema.parse(withExcerpts);
+
+    expect(parsed.responsibilities[0]?.excerpt).toBe("You will lead platform reliability.");
+    expect(parsed.requirements[0]?.excerpt).toBe("Production TypeScript experience");
+    expect(parsed.responsibilities[1]).not.toHaveProperty("excerpt");
+    expect(opportunityBriefSchema.safeParse(brief()).success).toBe(true);
+  });
+
+  it("rejects empty and over-long entry excerpts", () => {
+    const withExcerpt = (excerpt: string) =>
+      brief({ requirements: [{ ...requirementAt(0), excerpt }] });
+
+    expect(opportunityBriefSchema.safeParse(withExcerpt("   ")).success).toBe(false);
+    expect(
+      opportunityBriefSchema.safeParse(
+        withExcerpt("x".repeat(opportunityBriefMaximumExcerptLength)),
+      ).success,
+    ).toBe(true);
+    expect(
+      opportunityBriefSchema.safeParse(
+        withExcerpt("x".repeat(opportunityBriefMaximumExcerptLength + 1)),
+      ).success,
+    ).toBe(false);
+  });
+
   it("accepts a complete multi-source reviewed brief", () => {
     const parsed = opportunityBriefSchema.parse(brief());
 

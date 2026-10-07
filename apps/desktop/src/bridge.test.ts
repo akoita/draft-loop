@@ -298,6 +298,105 @@ describe("workspace model reconfiguration", () => {
     ).toThrow("invalid");
   });
 
+  it("lets an excerpt-bearing brief entry round-trip through the edit validator and the result allowlist", async () => {
+    const excerpt = "Experience with TypeScript is required.";
+    const validated = validateBridgeCommand({
+      type: "opportunity.edit",
+      input: {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: {
+          responsibilities: [
+            {
+              id: "resp-1",
+              text: "Build",
+              sourceIds: ["job-1"],
+              excerpt: "Build platform services",
+            },
+          ],
+          requirements: [
+            { id: "req-1", text: "TS", priority: "high", sourceIds: ["job-1"], excerpt },
+            { id: "req-2", text: "SQL", priority: "low", sourceIds: ["job-1"] },
+          ],
+        },
+      },
+    });
+    expect(validated).toMatchObject({
+      input: {
+        patch: {
+          responsibilities: [{ excerpt: "Build platform services" }],
+          requirements: [{ excerpt }, {}],
+        },
+      },
+    });
+    const requirements = (validated as { input: { patch: { requirements: readonly object[] } } })
+      .input.patch.requirements;
+    expect(requirements[1]).not.toHaveProperty("excerpt");
+
+    for (const bad of ["", "   ", "x".repeat(301), 7]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "opportunity.edit",
+          input: {
+            workspaceId: "workspace-1",
+            briefId: "brief-1",
+            expectedVersion: 1,
+            patch: {
+              requirements: [
+                { id: "req-1", text: "TS", priority: "high", sourceIds: ["job-1"], excerpt: bad },
+              ],
+            },
+          },
+        }),
+      ).toThrow("invalid");
+    }
+
+    const value = {
+      workspaceId: "workspace-1",
+      briefId: "brief-1",
+      version: 1,
+      priorVersion: null,
+      status: "draft",
+      createdAt: "2026-08-28T10:00:00.000Z",
+      reviewedAt: null,
+      checksum: null,
+      sources: [
+        {
+          id: "job-1",
+          kind: "pasted-content",
+          classification: "job-posting",
+          status: "available",
+          checksum: "a".repeat(64),
+          capturedAt: "2026-08-28T10:00:00.000Z",
+        },
+      ],
+      role: null,
+      employer: null,
+      responsibilities: [
+        { id: "resp-1", text: "Build", sourceIds: ["job-1"], excerpt: "Build platform services" },
+      ],
+      requirements: [{ id: "req-1", text: "TS", priority: "high", sourceIds: ["job-1"], excerpt }],
+      priorities: [],
+      candidateInstructions: {
+        tone: null,
+        applicationGoal: null,
+        forbiddenLanguage: [],
+        focusAreas: [],
+      },
+      issues: [],
+    };
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true as const, value }), ["opportunity.get"]),
+    );
+    await expect(
+      port.execute({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-1", briefId: "brief-1" },
+      }),
+    ).resolves.toEqual({ ok: true, value });
+  });
+
   it("dispatches and normalizes only bounded opportunity metadata", async () => {
     const value = {
       workspaceId: "workspace-1",

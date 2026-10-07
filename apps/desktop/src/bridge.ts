@@ -2152,6 +2152,8 @@ export interface OpportunityResponsibilityInput {
   readonly id: string;
   readonly text: string;
   readonly sourceIds: readonly string[];
+  /** Verbatim job-text quotation the entry came from; kept when a reviewer edits the entry. */
+  readonly excerpt?: string;
 }
 
 export interface OpportunityRequirementInput {
@@ -2159,6 +2161,8 @@ export interface OpportunityRequirementInput {
   readonly text: string;
   readonly sourceIds: readonly string[];
   readonly priority: "critical" | "high" | "medium" | "low";
+  /** Verbatim job-text quotation the entry came from; kept when a reviewer edits the entry. */
+  readonly excerpt?: string;
 }
 
 export interface OpportunityPriorityInput {
@@ -2224,12 +2228,14 @@ const opportunityResponsibilityKeys = inputKeys<OpportunityResponsibilityInput>(
   "id",
   "text",
   "sourceIds",
+  "excerpt",
 ]);
 const opportunityRequirementKeys = inputKeys<OpportunityRequirementInput>()([
   "id",
   "text",
   "sourceIds",
   "priority",
+  "excerpt",
 ]);
 const opportunityPriorityKeys = inputKeys<OpportunityPriorityInput>()(["id", "text", "sourceIds"]);
 const opportunityCandidateInstructionsPatchKeys =
@@ -2286,6 +2292,8 @@ export interface OpportunityResponsibilityResult {
   readonly id: string;
   readonly text: string;
   readonly sourceIds: readonly string[];
+  /** Verbatim job-text quotation verified against the cited sources, when one was found. */
+  readonly excerpt?: string;
 }
 
 export interface OpportunityRequirementResult {
@@ -2293,6 +2301,8 @@ export interface OpportunityRequirementResult {
   readonly text: string;
   readonly sourceIds: readonly string[];
   readonly priority: "critical" | "high" | "medium" | "low";
+  /** Verbatim job-text quotation verified against the cited sources, when one was found. */
+  readonly excerpt?: string;
 }
 
 export interface OpportunityPriorityResult {
@@ -2371,12 +2381,14 @@ const opportunityResponsibilityResultKeys = resultKeys<OpportunityResponsibility
   "id",
   "text",
   "sourceIds",
+  "excerpt",
 ]);
 const opportunityRequirementResultKeys = resultKeys<OpportunityRequirementResult>()([
   "id",
   "text",
   "sourceIds",
   "priority",
+  "excerpt",
 ]);
 const opportunityPriorityResultKeys = resultKeys<OpportunityPriorityResult>()([
   "id",
@@ -4163,8 +4175,15 @@ const maximumOpportunityCollectionEntries = 256;
 const maximumCanonicalCandidateProfileVersionCount = 256;
 const maximumOpportunitySourceIds = 64;
 const maximumOpportunityTextLength = 2_000;
+const maximumOpportunityExcerptLength = 300;
 const maximumOpportunityContentLength = 64 * 1024;
 const maximumOpportunityMessageLength = 400;
+
+function optionalOpportunityExcerpt(value: unknown): { readonly excerpt?: string } {
+  return value === undefined
+    ? {}
+    : { excerpt: opportunityTextValue(value, maximumOpportunityExcerptLength) };
+}
 
 function opportunityTextValue(value: unknown, maxLength = maximumOpportunityTextLength): string {
   if (typeof value !== "string" || value.trim().length === 0 || value.length > maxLength) {
@@ -4344,6 +4363,7 @@ function validateOpportunityResponsibilityInput(value: unknown): OpportunityResp
     id: identifier(input.id),
     text: opportunityTextValue(input.text),
     sourceIds: opportunitySourceIds(input.sourceIds),
+    ...optionalOpportunityExcerpt(input.excerpt),
   };
 }
 
@@ -4355,6 +4375,7 @@ function validateOpportunityRequirementInput(value: unknown): OpportunityRequire
     text: opportunityTextValue(input.text),
     priority: enumValue(input.priority, ["critical", "high", "medium", "low"] as const),
     sourceIds: opportunitySourceIds(input.sourceIds),
+    ...optionalOpportunityExcerpt(input.excerpt),
   };
 }
 
@@ -6954,6 +6975,7 @@ function normalizeOpportunityResponsibilityResult(value: unknown): OpportunityRe
     id: identifier(result.id),
     text: opportunityTextValue(result.text),
     sourceIds: opportunitySourceIds(result.sourceIds),
+    ...optionalOpportunityExcerpt(result.excerpt),
   };
 }
 
@@ -6965,6 +6987,7 @@ function normalizeOpportunityRequirementResult(value: unknown): OpportunityRequi
     text: opportunityTextValue(result.text),
     priority: enumValue(result.priority, ["critical", "high", "medium", "low"] as const),
     sourceIds: opportunitySourceIds(result.sourceIds),
+    ...optionalOpportunityExcerpt(result.excerpt),
   };
 }
 

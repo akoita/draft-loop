@@ -101,4 +101,64 @@ describe("opportunity edit and review failures", () => {
       error: { code: "operation-failed", message: opportunityVersionConflictMessage },
     });
   });
+
+  it("projects verified excerpts to the renderer and drops any other fact field", async () => {
+    const entry = (id: string, extra: Record<string, unknown>) => ({
+      id,
+      text: `Fact ${id}`,
+      sourceIds: ["job-1"],
+      ...extra,
+    });
+    const editOpportunity = vi.fn<ApplicationService["editOpportunity"]>(
+      async () =>
+        ({
+          checksum: "c".repeat(64),
+          brief: {
+            id: "brief-1",
+            version: 3,
+            priorVersion: 2,
+            status: "draft",
+            createdAt: "2026-10-07T10:00:00.000Z",
+            reviewedAt: null,
+            sources: [],
+            role: null,
+            employer: null,
+            responsibilities: [entry("resp-1", { excerpt: "You will run it.", hidden: "x" })],
+            requirements: [
+              entry("req-1", { priority: "high", excerpt: "Needs TypeScript." }),
+              entry("req-2", { priority: "low" }),
+            ],
+            priorities: [entry("prio-1", { excerpt: "not projected" })],
+            candidateInstructions: {
+              tone: null,
+              applicationGoal: null,
+              forbiddenLanguage: [],
+              focusAreas: [],
+            },
+            issues: [],
+          },
+        }) as unknown as Awaited<ReturnType<ApplicationService["editOpportunity"]>>,
+    );
+    const { host, workspaceId } = await openWorkspace({ editOpportunity });
+
+    const edited = await host.invoke({
+      type: "opportunity.edit",
+      input: { workspaceId, briefId: "brief-1", expectedVersion: 2, patch },
+    });
+    if (!edited.ok) throw new Error(`Expected an edited brief: ${JSON.stringify(edited)}`);
+    const value = edited.value as {
+      responsibilities: object[];
+      requirements: object[];
+      priorities: object[];
+    };
+    expect(value.responsibilities[0]).toEqual({
+      id: "resp-1",
+      text: "Fact resp-1",
+      sourceIds: ["job-1"],
+      excerpt: "You will run it.",
+    });
+    expect(value.requirements[0]).toMatchObject({ excerpt: "Needs TypeScript." });
+    expect(value.requirements[1]).not.toHaveProperty("excerpt");
+    expect(value.priorities[0]).not.toHaveProperty("excerpt");
+  });
 });

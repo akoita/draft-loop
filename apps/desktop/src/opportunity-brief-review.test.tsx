@@ -137,6 +137,66 @@ describe("listing a draft brief", () => {
   });
 });
 
+describe("job-text excerpts", () => {
+  const excerpt = "Five years of TypeScript are required.";
+  const withExcerpts = record({
+    responsibilities: [
+      {
+        id: "resp-1",
+        text: "Run the deploy pipeline",
+        sourceIds: ["workspace-job-description"],
+        excerpt: "You will run the deploy pipeline.",
+      },
+    ],
+    requirements: [
+      {
+        id: "req-1",
+        text: "Five years of TypeScript",
+        priority: "critical",
+        sourceIds: ["workspace-job-description"],
+        excerpt,
+      },
+      {
+        id: "req-2",
+        text: "Experience with Postgres",
+        priority: "medium",
+        sourceIds: ["workspace-job-description"],
+      },
+    ],
+  });
+
+  it("shows the quotation beneath an entry that has one and nothing for an entry without", () => {
+    const html = view(withExcerpts, createBriefEditState(withExcerpts));
+    expect(html).toContain("From the job text");
+    expect(html).toContain(`<blockquote class="brief-excerpt-quote">${excerpt}</blockquote>`);
+    expect(html).toContain("You will run the deploy pipeline.");
+    expect(html.match(/From the job text/gu)).toHaveLength(2);
+
+    const plain = record();
+    expect(view(plain, createBriefEditState(plain))).not.toContain("From the job text");
+  });
+
+  it("keeps the excerpt through a wording edit and a bridge round-trip", () => {
+    const state = editRequirementText(
+      createBriefEditState(withExcerpts),
+      "req-1",
+      "Five years of production TypeScript",
+    );
+    const patch = buildBriefEditPatch(withExcerpts, state);
+    expect(patch.requirements?.[0]).toMatchObject({
+      text: "Five years of production TypeScript",
+      excerpt,
+    });
+    expect(patch.requirements?.[1]).not.toHaveProperty("excerpt");
+    expect(
+      validateBridgeCommand({
+        type: "opportunity.edit",
+        input: { workspaceId: "workspace-1", briefId: "brief-abc", expectedVersion: 1, patch },
+      }),
+    ).toMatchObject({ input: { patch: { requirements: [{ excerpt }, {}] } } });
+  });
+});
+
 describe("staging edits", () => {
   const rec = record();
 

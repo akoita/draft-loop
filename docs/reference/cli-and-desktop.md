@@ -276,7 +276,13 @@ requirements**. The host remembers only the brief ID for this.
 
 **Review requirements** opens the brief with each requirement's text, priority
 (critical, high, medium or low) and source reference, plus the responsibilities.
-While the version is a draft, edit a requirement's text, change its priority,
+Where the extraction found one, each requirement and responsibility also shows
+the exact job-text quotation it came from under "From the job text". The
+application keeps a quotation only after checking that it appears, ignoring
+whitespace differences, in a source the entry cites and is at most 300
+characters; otherwise it is left out rather than corrected. Briefs saved before
+this check have no quotations and stay valid. Editing a requirement's wording
+keeps its quotation. While the version is a draft, edit a requirement's text, change its priority,
 drop it, restore it, or acknowledge an open issue, then **Save changes** to
 create the next draft version; saving uses the version you read, and a version
 conflict reloads the latest one. Requirements cannot be added by hand, because

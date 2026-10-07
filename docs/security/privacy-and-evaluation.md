@@ -53,6 +53,10 @@ configured author provider for structured extraction. Requests omit URLs,
 paths, provenance objects, and candidate-input material. DraftLoop validates
 the strict response schema and every cited source ID, assigns deterministic
 application IDs, and stores no raw provider request or response in the brief.
+The one exception to "no raw source content" is a short verbatim quotation
+(at most 300 characters) per requirement or responsibility: it is kept only
+after the application confirms it appears in a cited source, and is otherwise
+dropped. Quotations are local brief state like the other extracted facts.
 
 Drafts keep source failures, staleness, partial results, duplicates, and
 contradictions visible. An unavailable source has no fabricated content
