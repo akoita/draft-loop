@@ -11,6 +11,20 @@ import type {
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
 export { alternativeRequirementBranches } from "./alternative-coverage.js";
+export type {
+  AppliedCoverageJudgements,
+  CoverageJudgement,
+  CoverageJudgementRequest,
+  CoverageJudgementSummary,
+  CoverageJudgementVerdict,
+} from "./coverage-judgement.js";
+export {
+  applyCoverageJudgements,
+  coverageJudgementRequestsFrom,
+  coverageJudgementVerdicts,
+  maximumCoverageJudgementRationaleCharacters,
+  maximumCoverageJudgementRequests,
+} from "./coverage-judgement.js";
 export { requiredMaturityQualifiers } from "./maturity-coverage.js";
 export {
   isRequirementCoveredByBlock,
