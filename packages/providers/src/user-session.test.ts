@@ -482,6 +482,13 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       "The user-session provider is not authenticated.",
     ],
     [
+      404,
+      "model not found response",
+      "invalid-request",
+      false,
+      "The Claude session does not offer the selected model. Update the installed claude CLI or choose another model.",
+    ],
+    [
       500,
       "temporary service response",
       "transient",

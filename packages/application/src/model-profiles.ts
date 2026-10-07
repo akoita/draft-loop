@@ -229,6 +229,20 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
   },
   {
+    id: "economy-anthropic-author",
+    version: 2,
+    provider: "anthropic",
+    modelId: "claude-haiku-5-5",
+    tier: "economy",
+    roles: ["author"],
+    runtime: {
+      effort: "medium",
+      maxOutputTokens: 32768,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
+  {
     id: "standard-openai-critic",
     version: 2,
     provider: "openai",

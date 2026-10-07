@@ -4,7 +4,7 @@ import { defaultModelProfileRegistry } from "./model-profiles.js";
 export interface ModelProfileCatalogPricing {
   readonly inputUsdPerMillion: number;
   readonly outputUsdPerMillion: number;
-  readonly maxInputTokens: 200000;
+  readonly maxInputTokens: number;
   readonly scope: "standard-uncached-text-api";
 }
 
@@ -47,10 +47,13 @@ export class ModelProfileCatalogError extends Error {
 interface CatalogMetadata {
   readonly sources: readonly string[];
   readonly apiPricing: Omit<ModelProfileCatalogPricing, "scope" | "maxInputTokens">;
+  /** Overrides the default input-token cap when a lower-priced rate card ends earlier. */
+  readonly maxInputTokens?: number;
   readonly reviewedAt?: string;
 }
 
 const anthropicOverview = "https://platform.claude.com/docs/en/models/overview";
+const anthropicModelsOverview = "https://platform.claude.com/docs/en/about-claude/models/overview";
 const anthropicSonnet55Overview = "https://platform.claude.com/docs/en/models/sonnet-5-5/overview";
 const deepInfraGlmModelApi = "https://deepinfra.com/zai-org/GLM-5.3-Flash/api";
 const deepInfraGlmOverview = "https://deepinfra.com/blog/glm-5-3-flash-deepinfra";
@@ -76,6 +79,13 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     sources: [anthropicSonnet55Overview],
     apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
   },
+  "economy-anthropic-author@2": {
+    sources: [anthropicModelsOverview],
+    apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 },
+    // Haiku 5.5 bills prompts above 100K tokens at a higher rate card that is not modeled.
+    maxInputTokens: 100000,
+    reviewedAt: "2026-10-07",
+  },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],
     apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
@@ -92,8 +102,8 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
 };
 
+const defaultMaxInputTokens = 200000;
 const pricingScope = {
-  maxInputTokens: 200000,
   scope: "standard-uncached-text-api",
 } as const;
 
@@ -102,7 +112,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "economy",
     label: "Economy — unvalidated",
     tier: "economy",
-    author: { id: "economy-anthropic-author", version: 1 },
+    author: { id: "economy-anthropic-author", version: 2 },
     critic: { id: "economy-openai-critic", version: 1 },
   },
   {
@@ -160,6 +170,7 @@ export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
       availabilityStatus: "not-checked",
       apiPricing: {
         ...metadata.apiPricing,
+        maxInputTokens: metadata.maxInputTokens ?? defaultMaxInputTokens,
         ...pricingScope,
       },
     };

@@ -73,7 +73,7 @@ describe("registry-derived model-suggestion preflight", () => {
     expect(plan.rows.filter(({ required }) => required)).toHaveLength(4);
     expect(plan.rows.filter(({ required }) => !required)).toHaveLength(0);
     expect(plan.rows.map(({ provider, modelId, role }) => [provider, modelId, role])).toEqual([
-      ["anthropic", "claude-sonnet-5-5", "author"],
+      ["anthropic", "claude-haiku-5-5", "author"],
       ["openai", "gpt-6-luna", "critic"],
       ["anthropic", "claude-opus-5-5", "author"],
       ["openai", "gpt-6.1-sol", "critic"],

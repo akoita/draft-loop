@@ -168,7 +168,7 @@ describe("preflightAnthropicClaudeAuthorModel", () => {
     );
 
     expect(result.status).toBe("model-unavailable");
-    expect(result.errorCode).toBe("unknown");
+    expect(result.errorCode).toBe("invalid-request");
     expect(result.diagnosticCodes).toContain("claude_terminal_reason_api_error");
   });
 

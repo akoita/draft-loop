@@ -12,7 +12,7 @@ function model(company: ModelSelection["company"], modelId: string) {
 
 describe("canonical candidate profile provider request contract", () => {
   it("raises the output ceiling only for the curated Anthropic API models", () => {
-    for (const modelId of ["claude-sonnet-5-5", "claude-opus-5-5"]) {
+    for (const modelId of ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"]) {
       expect(canonicalProfileRequest(model("anthropic", modelId), "api-key").maxOutputTokens).toBe(
         32768,
       );

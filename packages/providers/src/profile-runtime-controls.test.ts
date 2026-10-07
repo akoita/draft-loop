@@ -186,6 +186,47 @@ describe("profile runtime controls at provider adapters", () => {
     expect(fixture.seen?.thinking).toEqual(expectedThinking);
   });
 
+  it("sends the Haiku 5.5 economy profile without parameters the model rejects", async () => {
+    const selected = selection(
+      profile("anthropic", "author", {
+        id: "economy-anthropic-author",
+        modelId: "claude-haiku-5-5",
+        effort: "medium",
+        maxOutputTokens: 32768,
+        knownMaxOutputTokens: 128000,
+      }),
+    );
+    type Params = Parameters<AnthropicClient["messages"]["create"]>[0];
+    let seen: Params | undefined;
+    const create = vi.fn((parameters: Params) => {
+      seen = parameters;
+      return Promise.resolve({
+        content: [
+          { type: "thinking", thinking: "", signature: "synthetic" },
+          { type: "text", text: '{"answer":"yes"}' },
+        ],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      }) as ReturnType<AnthropicClient["messages"]["create"]>;
+    });
+    const adapter = new AnthropicAdapter({ messages: { create } } as unknown as AnthropicClient, {
+      configuredModel: selected,
+    });
+
+    const response = await adapter.execute(request(selected, 32768));
+
+    expect(response.output).toEqual({ answer: "yes" });
+    expect(seen).toMatchObject({ model: "claude-haiku-5-5", max_tokens: 32768 });
+    expect(seen?.output_config).toEqual({
+      effort: "medium",
+      format: { type: "json_schema", schema },
+    });
+    for (const rejected of ["thinking", "temperature", "top_p", "top_k"]) {
+      expect(seen).not.toHaveProperty(rejected);
+    }
+    expect(seen?.messages).toEqual([{ role: "user", content: expect.any(String) }]);
+  });
+
   it("sends OpenAI reasoning effort and profile output ceiling", async () => {
     const selectedProfile = profile("openai", "critic", {
       effort: "high",

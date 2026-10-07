@@ -466,7 +466,7 @@ rewritten.
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported
 fact will be found. The 32,768-token ceiling applies to API-key requests for
-Claude Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
+Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
 Canonical profile extraction uses a detached GLM profile at the same ceiling
 and requests `reasoning_effort: "none"` to disable reasoning, following
 [DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
@@ -611,20 +611,26 @@ the displayed source. Each catalog entry shows its metadata review date;
 CLI-specific live availability for these suggestions has not been reverified. Economy and
 standard remain the curated pair presets, with a separate development GLM
 preset and a separate development Gemini preset. The active catalog lists
-Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
+Claude Haiku 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
 through DeepInfra, and Gemini 3.8 Flash. GLM's standard uncached API rates are
 $0.15 per million input tokens and $0.50 per million output tokens, reviewed
 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04. Quality is
 unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain
-resolvable but are not offered as current suggestions or presets. All catalog
+resolvable but are not offered as current suggestions or presets; this includes
+the economy author version that used Claude Sonnet 5.5, so saved selections and
+runs still load. All catalog
 quality entries are unvalidated and availability has not been checked; the
 review date documents metadata review, not a live provider probe. Local
 endpoints remain free-text because there are no local server profile IDs.
 
 Catalog price metadata covers the standard, uncached text API at up to 200,000
-input tokens. It excludes cache, tool, batch, regional, and subscription
-pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
-overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
+input tokens, or 100,000 for Claude Haiku 5.5, whose higher rate for longer
+prompts is not modeled; larger prompts leave the estimate unknown. It excludes
+cache, tool, batch, regional, and subscription pricing. Haiku 5.5 sends no
+sampling parameters, thinking budget, or assistant prefill, which the model
+rejects, and the Claude session route reports an unrecognized model with a
+prompt to update the installed `claude` CLI. Sources are the official
+[Anthropic model overview], the [Claude models overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
 DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
 [Gemini API pricing] and [Gemini models] pages.
 
@@ -636,7 +642,7 @@ keeps zero token totals for compatibility. These estimates are adapter results,
 not persisted run totals or invoice amounts.
 
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
-[Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+[Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
 [GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 [GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api

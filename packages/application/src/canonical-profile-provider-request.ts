@@ -13,7 +13,11 @@ export interface CanonicalProfileProviderRequestContract {
 }
 
 const defaultCanonicalProfileOutputTokens = 8192;
-const curatedAnthropicProfileModels = new Set(["claude-sonnet-5-5", "claude-opus-5-5"]);
+const curatedAnthropicProfileModels = new Set([
+  "claude-haiku-5-5",
+  "claude-sonnet-5-5",
+  "claude-opus-5-5",
+]);
 
 const canonicalCandidateProfileExtractionSystemPrompt = [
   "You extract structured canonical candidate profile facts from supplied source records.",

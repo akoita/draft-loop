@@ -107,7 +107,7 @@ describe("registered model suggestions", () => {
       }),
     );
 
-    expect(anthropic).toContain('value="claude-sonnet-5-5"');
+    expect(anthropic).toContain('value="claude-haiku-5-5"');
     expect(anthropic).toContain('value="claude-opus-5-5"');
     expect(anthropic).not.toContain('value="claude-sonnet-4-5"');
     expect(anthropic).not.toContain('value="claude-fable-5-1"');

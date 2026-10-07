@@ -1510,7 +1510,7 @@ describe("desktop workspace setup", () => {
     for (const html of [setup, edit, empty]) {
       expect(html).toContain('list="setup-model-suggestions-author"');
       expect(html).toContain(
-        'value="claude-sonnet-5-5" label="Economy tier · Author profile · registered for Author"',
+        'value="claude-haiku-5-5" label="Economy tier · Author profile · registered for Author"',
       );
       expect(html).toContain(
         'value="gpt-6-luna" label="Economy tier · Critic profile · registered for Critic"',

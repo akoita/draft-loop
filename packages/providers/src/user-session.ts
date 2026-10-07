@@ -648,6 +648,14 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       { ...statusMetadata, retryable: false, diagnostics },
     );
   }
+  if (status === 404) {
+    return new ProviderAdapterError(
+      "anthropic",
+      "invalid-request",
+      "The Claude session does not offer the selected model. Update the installed claude CLI or choose another model.",
+      { ...statusMetadata, retryable: false, diagnostics },
+    );
+  }
   if (status !== undefined && status >= 500) {
     return new ProviderAdapterError(
       "anthropic",

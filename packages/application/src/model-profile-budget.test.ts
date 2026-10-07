@@ -11,7 +11,7 @@ const standard: ModelProfileReferences = {
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy: ModelProfileReferences = {
-  author: { id: "economy-anthropic-author", version: 1 },
+  author: { id: "economy-anthropic-author", version: 2 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 const development: ModelProfileReferences = {
@@ -54,18 +54,14 @@ describe("model profile public API scenario estimates", () => {
     ).toEqual({ status: "available", authorUsd: 0, criticUsd: 0, totalUsd: 0 });
     expect(estimateModelProfileApiScenario(scenario(economy))).toMatchObject({
       status: "available",
-      authorUsd: 0.06,
+      authorUsd: 0.003,
       criticUsd: 0.0015,
-      totalUsd: 0.0615,
+      totalUsd: expect.closeTo(0.0045, 10),
     });
   });
 
   it("accepts the active input-pricing boundary and rejects unsupported limits", () => {
-    const sonnet: ModelProfileReferences = {
-      author: { id: "economy-anthropic-author", version: 1 },
-      critic: standard.critic,
-    };
-    const boundary = scenario(sonnet);
+    const boundary = scenario(standard);
     expect(
       estimateModelProfileApiScenario({
         ...boundary,
@@ -81,6 +77,33 @@ describe("model profile public API scenario estimates", () => {
         reason: "unsupported-pricing-limit",
       });
     }
+  });
+
+  it("keeps Haiku 5.5 estimates known up to 100K input tokens and unknown beyond", () => {
+    const haiku = scenario(economy);
+    expect(
+      estimateModelProfileApiScenario({
+        ...haiku,
+        author: { inputTokens: 100_000, outputTokens: 32_768, calls: 1 },
+      }),
+    ).toMatchObject({ status: "available" });
+    expect(
+      estimateModelProfileApiScenario({
+        ...haiku,
+        author: { inputTokens: 100_001, outputTokens: 0, calls: 1 },
+      }),
+    ).toEqual({ status: "unavailable", reason: "unsupported-pricing-limit" });
+  });
+
+  it("does not price the superseded Sonnet 5.5 economy author version", () => {
+    expect(
+      estimateModelProfileApiScenario(
+        scenario({
+          author: { id: "economy-anthropic-author", version: 1 },
+          critic: standard.critic,
+        }),
+      ),
+    ).toMatchObject({ status: "unavailable" });
   });
 
   it("rejects malformed token counts, empty fields, and excessive planned calls", () => {
