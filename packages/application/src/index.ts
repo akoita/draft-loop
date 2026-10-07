@@ -635,6 +635,7 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export { currentRoundCoverageJudgement } from "./run-output.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";

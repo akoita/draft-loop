@@ -980,6 +980,13 @@ Requirement coverage (round 1):
   [uncovered] req-2 — strict rule — Not covered under the strict degree rule.
 ```
 
+The desktop review panel shows the same assessments in a **Requirement
+coverage** section, chosen the same way as `status`. It lists each requirement
+with a status badge, the basis, the rationale, and the cited draft blocks, which
+jump to the block when it is in the draft, under a summary such as
+`3 judged · 2 satisfied · 1 not satisfied`. The section is hidden when no
+critic judgement was recorded for the round.
+
 ### Desktop semantic retrieval controls
 
 When a workspace is collecting or stopped, the desktop shows a **Semantic

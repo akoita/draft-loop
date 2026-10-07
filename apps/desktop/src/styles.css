@@ -2247,6 +2247,135 @@ input[type="checkbox"] {
   transform: rotate(-90deg);
 }
 
+/* Requirement coverage: one row per requirement. The status is a word in a tag, so colour only
+   reinforces it. */
+.coverage-summary {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.coverage-list,
+.coverage-evidence {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coverage-list {
+  gap: var(--space-3);
+}
+
+.coverage-row {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-inset);
+}
+
+.coverage-status-covered {
+  border-left-color: var(--teal-line);
+}
+
+.coverage-status-needs-judgement {
+  border-left-color: var(--amber-line);
+}
+
+.coverage-status-uncovered {
+  border-left-color: var(--red-line);
+}
+
+.coverage-status-explicit-gap {
+  border-left-color: var(--border-strong);
+}
+
+.coverage-row-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.coverage-requirement {
+  min-width: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.coverage-status-covered .coverage-status {
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+.coverage-status-needs-judgement .coverage-status {
+  color: var(--amber);
+  background: var(--amber-wash);
+}
+
+.coverage-status-uncovered .coverage-status {
+  color: var(--red);
+  background: var(--red-wash);
+}
+
+.coverage-basis {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.coverage-rationale {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.coverage-evidence {
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.coverage-block {
+  display: inline-block;
+  max-width: 100%;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.coverage-block-link {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  color: var(--teal);
+  background: transparent;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.coverage-block-link:hover {
+  color: var(--teal-bright);
+}
+
+.coverage-block-id {
+  color: var(--text-4);
+  font-weight: 400;
+}
+
 .event-list-more {
   margin-top: var(--space-3);
   border: 0;

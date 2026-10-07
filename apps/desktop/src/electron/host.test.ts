@@ -2164,6 +2164,76 @@ describe("native host", () => {
     }
   });
 
+  it("projects the latest same-round critic coverage judgement, or null", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-coverage-"));
+    const critic = (id: string, round: number, rationale: string): Record<string, unknown> => ({
+      id,
+      runId: "run-native",
+      contextSnapshotId: "context-native",
+      round,
+      step: "critic",
+      status: "completed",
+      provider: "openai",
+      modelId: "gpt-5.6",
+      providerRequestId: null,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      estimatedUsd: null,
+      completedAt: "2026-08-12T10:00:01.000Z",
+      coverageJudgement: {
+        instructionsVersion: "coverage-judgement-v1",
+        summary: { judged: 1, satisfied: 1, notSatisfied: 0, invalid: 0, unanswered: 0 },
+        assessments: [
+          {
+            requirementId: "req-1",
+            status: "covered",
+            basis: "judgement",
+            evidence: [{ blockId: "block-1", score: 0.8 }],
+            rationale,
+          },
+        ],
+      },
+    });
+    const withJudgement = service(root, {
+      round: 2,
+      executionHistory: [critic("old", 1, "previous round"), critic("latest", 2, "current round")],
+    });
+    const without = service(root, { executionHistory: [] });
+    try {
+      for (const [fixture, expected] of [
+        [
+          withJudgement,
+          {
+            instructionsVersion: "coverage-judgement-v1",
+            summary: { judged: 1, satisfied: 1, notSatisfied: 0, invalid: 0, unanswered: 0 },
+            assessments: [
+              {
+                requirementId: "req-1",
+                status: "covered",
+                basis: "judgement",
+                evidence: [{ blockId: "block-1" }],
+                rationale: "current round",
+              },
+            ],
+          },
+        ],
+        [without, null],
+      ] as const) {
+        const host = createNativeHost({
+          applicationService: fixture.service,
+          dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        });
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        const review = await host.invoke({ type: "review.load", input: {} });
+        expect(review).toMatchObject({ ok: true, value: { coverage: expected } });
+        expect(JSON.stringify(review)).not.toContain("0.8");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("creates a real workspace without synthetic candidate or job content", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-real-"));
     const root = join(parent, "real-workspace");

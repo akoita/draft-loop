@@ -15,11 +15,12 @@ import { type JSX, useCallback, useState } from "react";
 import type { ReviewEvent } from "./model.js";
 
 /** The review panels a reviewer can fold. The trust strip is a fixed-height summary and stays. */
-export type ReviewPanelId = "progress" | "findings" | "gate";
+export type ReviewPanelId = "progress" | "findings" | "coverage" | "gate";
 
 export const reviewPanelIds: readonly ReviewPanelId[] = Object.freeze([
   "progress",
   "findings",
+  "coverage",
   "gate",
 ] as const);
 
