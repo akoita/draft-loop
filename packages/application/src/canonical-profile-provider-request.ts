@@ -3,6 +3,8 @@ import { isGoogleGeminiAuthorProfile, isGoogleGeminiModel } from "./gemini-devel
 import { isGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
 import { isDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
+import { isMistralAuthorProfile, isMistralModel } from "./mistral-development-profile.js";
+import { isMistralExtractionProfile } from "./mistral-extraction-profile.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
 export const promptVersion = "canonical-candidate-profile-extraction-v6" as const;
@@ -57,6 +59,12 @@ export function canonicalProfileRequest(
     (isGoogleGeminiAuthorProfile(model.profile) || isGoogleGeminiExtractionProfile(model.profile))
       ? model.profile
       : undefined;
+  const mistralProfile =
+    isMistralModel(model.company, model.modelId) &&
+    model.profile !== undefined &&
+    (isMistralAuthorProfile(model.profile) || isMistralExtractionProfile(model.profile))
+      ? model.profile
+      : undefined;
   const isCuratedAnthropicApiModel =
     model.company === "anthropic" &&
     anthropicAuthMode === "api-key" &&
@@ -67,6 +75,7 @@ export function canonicalProfileRequest(
     maxOutputTokens:
       deepInfraGLMProfile?.runtime.maxOutputTokens ??
       googleGeminiProfile?.runtime.maxOutputTokens ??
+      mistralProfile?.runtime.maxOutputTokens ??
       (isCuratedAnthropicApiModel ? 32768 : defaultCanonicalProfileOutputTokens),
   });
 }

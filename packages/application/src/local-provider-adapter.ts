@@ -7,6 +7,8 @@ import {
   createDeepInfraGLMClient,
   createGoogleGeminiAdapter,
   createGoogleGeminiClient,
+  createMistralAdapter,
+  createMistralClient,
   type DeepInfraGLMClient,
   deepInfraGLMModelId,
   type GoogleGeminiClient,
@@ -15,6 +17,9 @@ import {
   type JsonObject,
   type LocalClient,
   LocalModelAdapter,
+  type MistralClient,
+  mistralCompany,
+  mistralLarge4ModelId,
   OpenAIAdapter,
   type OpenAIClient,
   OpenAICodexUserSessionAdapter,
@@ -35,6 +40,7 @@ export interface ProviderClientFactories {
   readonly openai?: (apiKey: string) => OpenAIClient;
   readonly deepinfra?: (apiKey: string) => DeepInfraGLMClient;
   readonly google?: (apiKey: string) => GoogleGeminiClient;
+  readonly mistral?: (apiKey: string) => MistralClient;
   /**
    * Builds the local transport. Receives the workspace's configured endpoint,
    * or `undefined` when the workspace leaves the adapter default in place.
@@ -56,7 +62,16 @@ type ProviderAuthModeConfiguration = Readonly<
 /** Resolve the literal transport company; model lineage remains a separate concern. */
 function providerId(
   model: ModelSelection,
-): "anthropic" | "openai" | "local" | "deepinfra" | "google" {
+): "anthropic" | "openai" | "local" | "deepinfra" | "google" | "mistral" {
+  if (model.company === mistralCompany) {
+    if (model.modelId === mistralLarge4ModelId) return "mistral";
+    throw new ProviderAdapterError(
+      "mistral",
+      "invalid-request",
+      "The configured Mistral model is unsupported.",
+      { retryable: false },
+    );
+  }
   if (model.company === googleGeminiCompany) {
     if (isGoogleGeminiSupportedModelId(model.modelId)) return "google";
     throw new ProviderAdapterError(
@@ -160,6 +175,22 @@ export async function createProviderAdapter(
         outputUsdPerMillionTokens: 3.75,
         cachedInputUsdPerMillionTokens: 0.075,
       },
+    });
+  }
+  if (provider === "mistral") {
+    const apiKey = await resolveCredential("mistral");
+    if (apiKey === undefined || apiKey.trim() === "") {
+      throw new ProviderAdapterError(
+        provider,
+        "authentication",
+        "The Mistral API credential is not configured.",
+        { retryable: false },
+      );
+    }
+    const client = providerClientFactories?.mistral?.(apiKey) ?? createMistralClient(apiKey);
+    return createMistralAdapter<JsonObject, JsonObject>(client, {
+      configuredModel: model,
+      retry: config.retry ?? developmentProviderRetry,
     });
   }
   if (provider === "anthropic") {

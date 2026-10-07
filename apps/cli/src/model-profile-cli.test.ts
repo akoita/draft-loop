@@ -116,6 +116,31 @@ describe("model profile CLI commands", () => {
     ]);
   });
 
+  it("forwards the exact development Mistral author profile with the Luna critic", async () => {
+    const harness = createHarness();
+
+    await harness.invoke(
+      "start",
+      "workspace",
+      "--author-profile",
+      "dev-mistral-author@1",
+      "--critic-profile",
+      "economy-openai-critic@1",
+      "--allow-provider-data",
+    );
+
+    expect(harness.startCommands).toEqual([
+      {
+        root: expect.stringContaining("workspace"),
+        modelProfiles: {
+          author: { id: "dev-mistral-author", version: 1 },
+          critic: { id: "economy-openai-critic", version: 1 },
+        },
+        allowProviderData: true,
+      },
+    ]);
+  });
+
   it("keeps the legacy start command shape when no profile selection is supplied", async () => {
     const harness = createHarness();
 
@@ -174,6 +199,8 @@ describe("model profile CLI commands", () => {
     expect(startHelp?.replace(/\s+/g, " ")).toContain(
       "dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs",
     );
+    expect(startHelp).toContain("MISTRAL_API_KEY");
+    expect(startHelp).toContain("dev-mistral-author@1");
     expect(startHelp).toContain("pinned to this run");
     expect(modelProfilesHelp).toContain("unvalidated");
     expect(modelProfilesHelp).toContain("availability has not been checked");

@@ -3,6 +3,7 @@ import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
 import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
+import { createMistralAuthorProfile } from "./mistral-development-profile.js";
 
 export type ModelProfileRegistryErrorCode =
   | "invalid-profile"
@@ -259,4 +260,5 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
   createDeepInfraGLMAuthorProfile(),
   createGoogleGeminiAuthorProfile(1),
   createGoogleGeminiAuthorProfile(2),
+  createMistralAuthorProfile(),
 ]);

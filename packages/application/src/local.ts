@@ -93,18 +93,17 @@ import {
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { announceRunEvidenceMode } from "./full-source-evidence.js";
-import type {
-  ProviderAuthMode,
-  ProviderAuthModeConfiguration,
-  SupportedModelCompany,
-} from "./glm-provider-routing.js";
 import {
   environmentCredentialResolver,
   isProviderAuthMode,
+  opportunityExtractionMaxOutputTokens,
+  type ProviderAuthMode,
+  type ProviderAuthModeConfiguration,
   providerAuthModes,
   providerDataPolicy,
   resolveProviderAuthMode,
   resolveProviderAuthModes,
+  type SupportedModelCompany,
   supportedModelCompanies,
 } from "./glm-provider-routing.js";
 import type {
@@ -2697,7 +2696,7 @@ export function createProviderOpportunityExtractionPort(
         input: asJsonObject({ sources: request.sources }),
         outputSchema: opportunityExtractionProposalJsonSchema as JsonObject,
         outputName: "opportunity_extraction",
-        maxOutputTokens: 4096,
+        maxOutputTokens: opportunityExtractionMaxOutputTokens(config.authorCompany),
         dataPolicy: providerDataPolicy(
           config.authorCompany,
           options.allowProviderData === true,

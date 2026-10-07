@@ -479,6 +479,8 @@ function providerEndpoint(
       return "https://api.deepinfra.com/v1/openai/chat/completions";
     case "google":
       return "https://generativelanguage.googleapis.com/";
+    case "mistral":
+      return "https://api.mistral.ai/v1/chat/completions";
     case "local":
       return localEndpoint ?? defaultLocalModelEndpoint;
     default:
@@ -2114,7 +2116,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         createApplicationService(
           createLocalApplicationDriver({
             providerAuthModeConfiguration,
-            resolveCredential: (provider) => resolveCredential(credentials, provider),
+            // Mistral key storage is not in the desktop yet, so it never gets a credential.
+            resolveCredential: async (provider) =>
+              provider === "mistral" ? undefined : resolveCredential(credentials, provider),
             ...(options.userSessionRunners === undefined
               ? {}
               : { userSessionRunners: options.userSessionRunners }),

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type { ProviderClientFactories } from "./local-provider-adapter.js";
+import { createMistralAuthorProfile } from "./mistral-development-profile.js";
 import { listModelProfileCatalog } from "./model-profile-catalog.js";
 import {
   buildModelSuggestionPreflightPlan,
@@ -175,6 +176,39 @@ describe("registry-derived model-suggestion preflight", () => {
     expect(resolvedProviders).not.toContain("google");
 
     const invalid = { ...template, profile: { ...geminiEntry.profile, id: "unknown-google" } };
+    expect(() =>
+      buildModelSuggestionPreflightPlan(apiModes, {
+        catalog: [...catalog, invalid] as unknown as typeof catalog,
+      }),
+    ).toThrow("Model-suggestion preflight configuration is invalid.");
+  });
+
+  it("omits only the exact development Mistral profile without creating a Mistral request", async () => {
+    const catalog = listModelProfileCatalog();
+    const template = catalog[0];
+    if (template === undefined) throw new Error("expected a profile catalog");
+    const mistralEntry = { ...template, profile: createMistralAuthorProfile() };
+    const planned = buildModelSuggestionPreflightPlan(apiModes, {
+      catalog: [...catalog, mistralEntry],
+    });
+    expect(JSON.stringify(planned.rows)).not.toContain("mistral");
+
+    const { factories, calls } = apiFactories();
+    const resolvedProviders: string[] = [];
+    const result = await runModelSuggestionPreflight({
+      authModes: apiModes,
+      providerClientFactories: factories,
+      resolveCredential: async (provider) => {
+        resolvedProviders.push(provider);
+        return "test-only-api-key";
+      },
+      planDependencies: { catalog: [...catalog, mistralEntry] },
+    });
+    expect(result.passed).toBe(true);
+    expect(calls).toHaveLength(planned.rows.length);
+    expect(resolvedProviders).not.toContain("mistral");
+
+    const invalid = { ...template, profile: { ...mistralEntry.profile, id: "unknown-mistral" } };
     expect(() =>
       buildModelSuggestionPreflightPlan(apiModes, {
         catalog: [...catalog, invalid] as unknown as typeof catalog,

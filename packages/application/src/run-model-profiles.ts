@@ -22,6 +22,7 @@ import type {
   ProviderCredentialResolver,
   ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
+import { isMistralAuthorProfile } from "./mistral-development-profile.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { requirementsSourcePreflightLine } from "./run-requirements-source.js";
@@ -136,6 +137,10 @@ export function validateProfileRoute(
   }
   if (profile.provider === "google") {
     if (!isGoogleGeminiAuthorProfile(profile)) throw new RunModelProfileError();
+    return;
+  }
+  if (profile.provider === "mistral") {
+    if (!isMistralAuthorProfile(profile)) throw new RunModelProfileError();
     return;
   }
   if (profile.provider !== "anthropic" && profile.provider !== "openai") {

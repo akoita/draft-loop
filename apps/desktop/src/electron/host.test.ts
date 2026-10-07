@@ -2379,6 +2379,46 @@ describe("native host", () => {
     }
   });
 
+  it("records the Mistral destination for the Mistral company", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-mistral-endpoint-"));
+    const fixture = service(root);
+    const mistralWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      author: { company: "mistral", model: "mistral-large-4" },
+    };
+    fixture.service.readWorkspace.mockResolvedValue(mistralWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: mistralWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            author: {
+              company: "mistral",
+              model: "mistral-large-4",
+              endpoint: "https://api.mistral.ai/v1/chat/completions",
+            },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to the adapter default endpoint when a local workspace configures none", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-default-"));
     const fixture = service(root);

@@ -214,6 +214,11 @@ approving or exporting.
   CV quality and account availability are unvalidated. The author is also
   selectable with `--author-company google` in the CLI and in desktop settings.
   This choice does not change defaults or existing workspaces.
+- The opt-in Mistral Large 4 author (`dev-mistral-author@1`, public preview)
+  is selectable from the CLI with `--author-profile` or
+  `--author-company mistral`, and requires the dedicated `MISTRAL_API_KEY`.
+  Its preset and desktop key storage are not available yet, and CV quality is
+  unvalidated.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

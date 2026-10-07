@@ -5,6 +5,8 @@ import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js
 import { createGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import { createDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
+import { createMistralAuthorProfile } from "./mistral-development-profile.js";
+import { createMistralExtractionProfile } from "./mistral-extraction-profile.js";
 
 function model(company: ModelSelection["company"], modelId: string) {
   return { company, modelId };
@@ -122,6 +124,42 @@ describe("canonical candidate profile provider request contract", () => {
     expect(
       canonicalProfileRequest(
         { ...model("zai", "gemini-3.7-flash"), profile: extractionProfile },
+        "api-key",
+      ).maxOutputTokens,
+    ).toBe(8192);
+  });
+
+  it("uses the pinned budget only for exact development Mistral author and extraction profiles", () => {
+    for (const profile of [createMistralAuthorProfile(), createMistralExtractionProfile()]) {
+      expect(
+        canonicalProfileRequest({ ...model("mistral", "mistral-large-4"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(32768);
+    }
+
+    const extractionProfile = createMistralExtractionProfile();
+    for (const profile of [
+      { ...extractionProfile, id: "tampered-profile" },
+      { ...extractionProfile, runtime: { ...extractionProfile.runtime, maxOutputTokens: 8192 } },
+      { ...extractionProfile, runtime: { ...extractionProfile.runtime, effort: "low" as const } },
+    ]) {
+      expect(
+        canonicalProfileRequest({ ...model("mistral", "mistral-large-4"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(8192);
+    }
+    expect(
+      canonicalProfileRequest(model("mistral", "mistral-large-4"), "api-key").maxOutputTokens,
+    ).toBe(8192);
+    expect(
+      canonicalProfileRequest(
+        { ...model("mistral", "other-mistral-model"), profile: extractionProfile },
+        "api-key",
+      ).maxOutputTokens,
+    ).toBe(8192);
+    expect(
+      canonicalProfileRequest(
+        { ...model("google", "mistral-large-4"), profile: extractionProfile },
         "api-key",
       ).maxOutputTokens,
     ).toBe(8192);
