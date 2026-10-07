@@ -43,7 +43,7 @@ export function safeKnowledgeBaseDisplayName(value: string): string {
     /^[a-z][a-z\d+.-]*:/iu.test(trimmed) ||
     /^[a-z]:/iu.test(trimmed)
   ) {
-    return "Candidate knowledge base";
+    return "Knowledge base";
   }
   return trimmed;
 }
@@ -159,18 +159,18 @@ export function KnowledgeBaseList({
                     disabled={disabled}
                     onClick={() => onImport(storeId, knowledgeBase.id, "workspace")}
                   >
-                    Import workspace candidate sources
+                    Import legacy workspace evidence
                   </button>
                 </div>
                 <p className="knowledge-hint">
-                  This imports all supported files from this workspace’s configured candidate-source
-                  directory. It does not select the base automatically. Directory limits can produce
-                  a partial result, and previously imported directories are rejected.
+                  This imports all supported files from this workspace’s legacy evidence directory.
+                  It does not select the base automatically. Directory limits can produce a partial
+                  result, and previously imported directories are rejected.
                 </p>
               </div>
             ) : (
               <p className="knowledge-hint">
-                Workspace candidate-source import is unavailable in this desktop host.
+                Legacy workspace evidence import is unavailable in this desktop host.
               </p>
             )}
           </li>
@@ -344,7 +344,7 @@ export function KnowledgeWorkspace({
         setSelection({ storeId, ids: [knowledgeBaseId] });
       }
       if (refreshed && operationGeneration.current === generation) {
-        setMessage("Candidate knowledge selected for this workspace.");
+        setMessage("Knowledge base selected for this workspace.");
       }
     });
   };
@@ -417,7 +417,7 @@ export function KnowledgeWorkspace({
   if (!supported) {
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
-        <h2 id="candidate-knowledge-heading">Candidate knowledge</h2>
+        <h2 id="candidate-knowledge-heading">Career evidence</h2>
         <p>Knowledge-store selection is unavailable in this desktop host.</p>
       </section>
     );
@@ -431,7 +431,7 @@ export function KnowledgeWorkspace({
   return (
     <section className="panel knowledge-panel" aria-labelledby="candidate-knowledge-heading">
       <div>
-        <p className="eyebrow">Candidate knowledge</p>
+        <p className="eyebrow">Career evidence</p>
         <h2 id="candidate-knowledge-heading">Knowledge store</h2>
       </div>
       <p className="knowledge-copy">

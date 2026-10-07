@@ -74,8 +74,8 @@ export function knowledgeReadinessSummary(result: KnowledgeReadinessResult): str
 export function knowledgeIntakeSummary(result: KnowledgeIntakeResult): string {
   if ("kind" in result) {
     return result.created
-      ? "File import complete. A candidate source was added."
-      : "File import complete. An existing candidate source was reused.";
+      ? "File import complete. A career-evidence source was added."
+      : "File import complete. An existing career-evidence source was reused.";
   }
   const directoryText =
     `Directory import ${result.status}: scanned ${result.scannedEntryCount} entries, ` +

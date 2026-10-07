@@ -246,7 +246,7 @@ describe("one-time legacy evidence import", () => {
     expect(outcome).toMatchObject({
       status: "imported",
       message: expect.stringContaining(
-        "Imported 2 of 4 legacy evidence files. Not imported: 2 files, which stay in the workspace evidence folder. 1 entry skipped as unsupported.",
+        "Imported 2 of 4 legacy evidence files. Not imported: 2 files, which stay in the legacy workspace evidence folder. 1 entry skipped as unsupported.",
       ),
     });
   });

@@ -204,7 +204,7 @@ export function SemanticRetrievalView({
       aria-labelledby="semantic-retrieval-heading"
     >
       <div>
-        <p className="eyebrow">Candidate knowledge</p>
+        <p className="eyebrow">Career evidence</p>
         <h2 id="semantic-retrieval-heading">Semantic retrieval</h2>
       </div>
       <p className="knowledge-copy">

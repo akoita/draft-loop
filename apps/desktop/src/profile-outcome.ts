@@ -128,7 +128,7 @@ export function projectCanonicalCandidateProfileOutcome(
     return {
       kind: "empty",
       message:
-        "This profile version has no facts to review. Check the selected source material before retrying.",
+        "This profile version has no facts to review. Check the selected career evidence before retrying.",
       failureReasons: safeFailureReasons(record.issues),
       retry: record.facts.length === 0,
     };

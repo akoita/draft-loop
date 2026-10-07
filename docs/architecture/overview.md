@@ -57,6 +57,10 @@ chain-of-thought or raw provider payloads.
 
 ## Data and quality contracts
 
+Career evidence is the material a run uses. Runs read the selected knowledge
+base; legacy workspace evidence (the workspace `evidence` folder) is used only
+when none is selected, and the desktop imports it into a new base once.
+
 Retrieval is workspace-scoped behind a provider-independent port. SQLite
 FTS/BM25 is the integrated lexical baseline and supplies selected chunks to live
 author and critic requests. Local vector and hybrid implementations remain

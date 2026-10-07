@@ -241,8 +241,8 @@ if subsequent inspection fails; it does not select a knowledge base or start
 provider execution.
 
 The separate workspace-source intake capability requires an explicit approval
-flag and the current open workspace ID. The host resolves its configured
-candidate-source directory and uses the same bounded directory importer and
+flag and the current open workspace ID. The host resolves its legacy
+workspace evidence directory and uses the same bounded directory importer and
 result projection as picker intake. Active runs and archived target bases
 block this action. Neither the renderer nor the result supplies a path.
 

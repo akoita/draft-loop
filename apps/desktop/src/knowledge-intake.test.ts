@@ -83,10 +83,10 @@ describe("candidate knowledge intake", () => {
       "Readiness: 3 ready, 1 blocked of 4 sources.",
     );
     expect(knowledgeIntakeSummary(fileResult)).toBe(
-      "File import complete. A candidate source was added.",
+      "File import complete. A career-evidence source was added.",
     );
     expect(knowledgeIntakeSummary({ ...fileResult, created: false })).toBe(
-      "File import complete. An existing candidate source was reused.",
+      "File import complete. An existing career-evidence source was reused.",
     );
     expect(knowledgeIntakeSummary(directoryResult)).toContain("Directory import partial");
     expect(knowledgeIntakeSummary(directoryResult)).toContain("Some content may not be available.");

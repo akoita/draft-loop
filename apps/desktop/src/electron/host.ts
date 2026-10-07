@@ -4100,7 +4100,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           ) {
             return fail(
               "permission-denied",
-              "Workspace candidate sources can only be imported before a run or after it stops.",
+              "Legacy workspace evidence can only be imported before a run or after it stops.",
             );
           }
           const storeRoot = await verifiedKnowledgeBaseRoot(

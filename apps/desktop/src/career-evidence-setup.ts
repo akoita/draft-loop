@@ -142,7 +142,7 @@ export async function importLegacyEvidence(input: {
   const counts = `Imported ${result.sourceCount} of ${plural(result.discoveredFileCount, "legacy evidence file")}.`;
   const partial =
     result.status === "partial" || notImported > 0
-      ? ` Not imported: ${plural(notImported, "file")}, which stay in the workspace evidence folder.`
+      ? ` Not imported: ${plural(notImported, "file")}, which stay in the legacy workspace evidence folder.`
       : "";
   const skipped =
     result.skippedEntryCount > 0

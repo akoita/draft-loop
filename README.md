@@ -23,7 +23,7 @@ candidate decides what to approve and export.
 
 ## How DraftLoop works
 
-The workflow keeps the job description and candidate sources in a local
+The workflow keeps the job description and career evidence in a local
 workspace, then applies an evidence-grounded
 [evaluator–optimizer workflow](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/evaluator_optimizer.ipynb):
 an author generates, an independent critic evaluates against a rubric, and
@@ -160,9 +160,14 @@ source versions. CLI and desktop adapters can create, open, list, and inspect
 stores; workspaces can also bind explicit store/base snapshots with drift
 checks. The integrated path synchronizes and queries exact selected source
 versions through each CKB's local lexical index, while legacy workspaces
-without a CKB selection continue to use the workspace evidence path.
+without a CKB selection continue to use the legacy workspace evidence path.
 
-In a collecting or stopped desktop workspace, **Candidate knowledge** can
+Career evidence is the material a run uses. Runs read the selected knowledge
+base; legacy workspace evidence (the workspace `evidence` folder) is used only
+when none is selected. A workspace without a base gets one created, with a
+visible one-time import of its legacy evidence.
+
+In a collecting or stopped desktop workspace, **Career evidence** can
 create or open a local store. Choose **Use this knowledge base** to replace
 the workspace selection with one active base. This clears the selected
 canonical profile so you can review a profile against the new selection.
@@ -170,8 +175,8 @@ Use **Add file** or **Add directory** beside an active base to import local
 material through a native picker. The result reports complete or partial intake
 and source readiness; importing does not select that base for the workspace.
 
-**Import workspace candidate sources** imports all supported files from this
-workspace’s configured candidate-source directory into the chosen base. This
+**Import legacy workspace evidence** imports all supported files from this
+workspace’s legacy evidence directory into the chosen base. This
 requires an explicit action before a run or after it stops. Previously imported
 directories are rejected.
 
@@ -182,7 +187,7 @@ approving or exporting.
 
 ## Trust boundary
 
-- Source material, run history, and exports are local by default.
+- Career evidence, run history, and exports are local by default.
 - A provider receives only context covered by an explicit user approval; the
   workspace shows the provider, model, transmission scope, and retention choice.
 - Independent review is a product constraint: the default author and critic use

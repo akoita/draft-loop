@@ -259,7 +259,7 @@ export function CareerEvidenceCardView({
               placeholder="https://github.com/…"
               value={url}
               onChange={(event) => onUrlChange(event.target.value)}
-              aria-label={inKnowledgeBase ? "Career evidence URL" : "Candidate source URL"}
+              aria-label={inKnowledgeBase ? "Career evidence URL" : "Legacy workspace evidence URL"}
             />
           </label>
           <button

@@ -65,7 +65,7 @@ describe("desktop candidate knowledge workspace", () => {
       />,
     );
 
-    expect(html).toContain('<p class="eyebrow">Candidate knowledge</p>');
+    expect(html).toContain('<p class="eyebrow">Career evidence</p>');
     expect(html).toContain('<h2 id="candidate-knowledge-heading">Knowledge store</h2>');
     expect(html).toContain("Reusable career evidence, kept separate from application material.");
     expect(html).toContain('class="knowledge-store-row"');
@@ -98,7 +98,7 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).toMatch(/class="button button-primary"[^>]*>Use this knowledge base</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Add file</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Add directory</);
-    expect(html).toMatch(/class="button button-outline"[^>]*>Import workspace candidate sources</);
+    expect(html).toMatch(/class="button button-outline"[^>]*>Import legacy workspace evidence</);
   });
 
   it("marks the bases the workspace already uses and disables their select button", () => {
@@ -141,11 +141,11 @@ describe("desktop candidate knowledge workspace", () => {
   it("explains workspace import only when it is supported", () => {
     const supported = renderList({ intake: true, workspace: true });
     expect(supported).toContain("imports all supported files from this workspace");
-    expect(supported).not.toContain("Workspace candidate-source import is unavailable");
+    expect(supported).not.toContain("Legacy workspace evidence import is unavailable");
 
     const unsupported = renderList({ intake: false, workspace: false });
     expect(unsupported).not.toContain("imports all supported files from this workspace");
-    expect(unsupported).toContain("Workspace candidate-source import is unavailable");
+    expect(unsupported).toContain("Legacy workspace evidence import is unavailable");
     expect(unsupported).toContain("File and directory intake is unavailable");
     expect(unsupported).not.toContain("Add file");
     expect(unsupported).toContain("Use this knowledge base");
@@ -159,12 +159,8 @@ describe("desktop candidate knowledge workspace", () => {
 
   it("lists only active bases and avoids rendering path-like names", () => {
     expect(activeKnowledgeBases(store).map(({ id }) => id)).toEqual(["active-1"]);
-    expect(safeKnowledgeBaseDisplayName("/home/candidate/profile.md")).toBe(
-      "Candidate knowledge base",
-    );
-    expect(safeKnowledgeBaseDisplayName("D:\\candidate\\profile.md")).toBe(
-      "Candidate knowledge base",
-    );
+    expect(safeKnowledgeBaseDisplayName("/home/candidate/profile.md")).toBe("Knowledge base");
+    expect(safeKnowledgeBaseDisplayName("D:\\candidate\\profile.md")).toBe("Knowledge base");
     expect(safeKnowledgeBaseDisplayName("Engineering")).toBe("Engineering");
   });
 
@@ -180,7 +176,7 @@ describe("desktop candidate knowledge workspace", () => {
     );
 
     expect(html).toContain("Knowledge-store selection is unavailable");
-    expect(html).toContain("Candidate knowledge");
+    expect(html).toContain("Career evidence");
   });
 
   it("accepts only the exact one-base result before refreshing the same workspace", async () => {

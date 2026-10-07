@@ -1063,9 +1063,9 @@ and keeps paths local.
   profiles, and its evidence is kept.
 
 - **Directory intake.** CLI users choose a local path; the desktop offers a
-  native directory picker or **Import workspace candidate sources**. The latter
+  native directory picker or **Import legacy workspace evidence**. The latter
   requires explicit approval and an open collecting or stopped workspace. Its
-  host resolves the configured candidate-source directory; importing does not
+  host resolves the legacy workspace evidence directory; importing does not
   select a base or start a provider workflow. Complete and partial results
   contain only scan counts and opaque source or version identities; roots,
   filenames, labels, hashes, and content remain local.
