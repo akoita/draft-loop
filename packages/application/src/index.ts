@@ -636,6 +636,7 @@ export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
+export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
