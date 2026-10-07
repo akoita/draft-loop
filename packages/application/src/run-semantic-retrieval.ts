@@ -95,7 +95,13 @@ export function resetRunEmbedderCacheForTests(): void {
   sharedEmbedders.clear();
 }
 
-async function openRunEmbedder(options: RunSemanticRetrievalOptions): Promise<OpenedEmbedder> {
+/** Opens, or reuses, the process-shared embedder for the model directory and tier. */
+export async function openRunEmbedder(
+  options: Pick<
+    RunSemanticRetrievalOptions,
+    "tier" | "modelRoot" | "modelService" | "createEmbedder" | "shareEmbedder"
+  >,
+): Promise<OpenedEmbedder> {
   const open = (service?: Pick<EmbeddingModelService, "status">) =>
     openLocalTextEmbedder({
       modelRoot: options.modelRoot,
