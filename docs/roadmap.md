@@ -1597,7 +1597,11 @@ precision against lexical retrieval.
 default. Semantic and hybrid remain explicit per-workspace choices. The user
 chose this because every quality result so far comes from invented cases. The
 decision is revisited after a consented real-CV observation compares lexical
-and hybrid retrieval. Semantic requirement coverage (#727) can reuse the embedder.
+and hybrid retrieval. The [semantic requirement coverage investigation](evaluation/semantic-requirement-coverage.md)
+(#727) found that embeddings find the right evidence but cannot decide coverage
+alone. Its proposal pairs semantic candidates with critic judgement in ordered
+units #950 to #954, and keeps the deterministic degree and maturity rules as
+gates.
 
 **Exit criterion:** Users can install the local model, index selected CKBs, and
 run semantic or hybrid retrieval with visible fallback on every packaged
