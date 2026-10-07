@@ -28,6 +28,10 @@ import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
+  JobRequirementsExtraction,
+  type JobRequirementsExtractionBinding,
+} from "./job-requirements-extraction.js";
+import {
   type DesktopReviewState,
   type FindingDecision,
   type IndependentReviewView,
@@ -65,6 +69,8 @@ interface ReviewWorkspaceProps {
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   /** Lets the Career evidence card follow, and add to, the workspace's knowledge base. */
   readonly careerEvidence?: CareerEvidenceBinding;
+  /** Lets the Target job description card extract requirements into a draft opportunity brief. */
+  readonly jobRequirements?: JobRequirementsExtractionBinding;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -1276,6 +1282,7 @@ export function ReviewWorkspace({
   onSelectFiles,
   onAddUrl,
   careerEvidence,
+  jobRequirements,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -2793,6 +2800,14 @@ export function ReviewWorkspace({
                   >
                     Review and fetch job URL
                   </button>
+                  {state.setup.jobDescriptionReady &&
+                  !state.setup.reviewedOpportunity &&
+                  jobRequirements?.createOpportunity !== undefined ? (
+                    <JobRequirementsExtraction
+                      key={jobRequirements.workspaceId}
+                      binding={jobRequirements}
+                    />
+                  ) : null}
                 </article>
                 <CareerEvidenceCard
                   setup={state.setup}

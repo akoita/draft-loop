@@ -177,6 +177,7 @@ import { providerSessionModelFeedback } from "../provider-session-model-feedback
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
+import { resolveWorkspaceJobDescriptionSource } from "./opportunity-job-description.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
@@ -2745,11 +2746,24 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function resolveOpportunitySources(
     workspaceId: string,
     inputs: readonly OpportunityCreateSource[],
+    providerTransmissionApproved: boolean,
   ): Promise<readonly OpportunitySourceInput[]> {
     const sources: OpportunitySourceInput[] = [];
     for (const source of inputs) {
       const capturedAt = source.capturedAt === undefined ? {} : { capturedAt: source.capturedAt };
       switch (source.kind) {
+        case "workspace-job-description": {
+          const workspace = workspaceFor(workspaceId);
+          const resolved = await resolveWorkspaceJobDescriptionSource({
+            root: workspace.root,
+            jobDescriptionPath: workspace.descriptor.jobDescriptionPath,
+            source,
+            providerTransmissionApproved,
+          });
+          if (!resolved.ok) return fail(resolved.refusal.code, resolved.refusal.message);
+          sources.push(resolved.source);
+          break;
+        }
         case "approved-url":
           sources.push({
             id: source.id,
@@ -2811,7 +2825,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     input: OpportunityCreateInput,
   ): Promise<OpportunityRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
-    const sources = await resolveOpportunitySources(input.workspaceId, input.sources);
+    const sources = await resolveOpportunitySources(
+      input.workspaceId,
+      input.sources,
+      input.providerTransmissionApproved === true,
+    );
     const record = await service.createOpportunity({
       root: workspace.root,
       sources,

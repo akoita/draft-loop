@@ -253,6 +253,17 @@ pnpm --filter @draft-loop/cli start start ./workspace \
   --allow-provider-data
 ```
 
+In the desktop, the **Target job description** setup card offers **Extract
+requirements** when the workspace has a job description and no reviewed brief
+is selected. It asks for consent first, naming the configured writing model and
+saying that only the job description is sent, never career evidence. **Extract**
+then creates a draft brief from the workspace's own job document with the same
+structured extraction. The host reads that document itself, so no file dialog
+or path is involved, and a document over the 64 KiB limit fails with a message.
+The card shows the draft brief ID, version, requirement and responsibility
+counts, and any open extraction issues. Extraction cannot be cancelled once
+started. The draft cannot start a run until it is reviewed.
+
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins
 the exact immutable versions and their checksums in run context; later edits do
