@@ -264,6 +264,17 @@ The card shows the draft brief ID, version, requirement and responsibility
 counts, and any open extraction issues. Extraction cannot be cancelled once
 started. The draft cannot start a run until it is reviewed.
 
+**Review requirements** opens the brief with each requirement's text, priority
+(critical, high, medium or low) and source reference, plus the responsibilities.
+While the version is a draft, edit a requirement's text, change its priority,
+drop it, restore it, or acknowledge an open issue, then **Save changes** to
+create the next draft version; saving uses the version you read, and a version
+conflict reloads the latest one. Requirements cannot be added by hand, because
+every requirement must cite a source. **Mark reviewed** creates the immutable
+reviewed version once the brief has a role, an employer, at least one
+requirement and no open issues. A reviewed version is read-only; **Edit** and
+**Save as new draft** create a draft successor that must be reviewed again.
+
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins
 the exact immutable versions and their checksums in run context; later edits do

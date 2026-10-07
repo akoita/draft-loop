@@ -113,6 +113,25 @@ describe("Extract requirements card states", () => {
     expect(html).not.toContain("Resolved already.");
   });
 
+  it("offers the review action next to the saved draft, and only then", () => {
+    const summary = summarizeJobRequirements(record());
+    const action = <button type="button">Review requirements</button>;
+    const withAction = renderToStaticMarkup(
+      <JobRequirementsExtractionView
+        phase={{ kind: "done", summary }}
+        writingModel={writingModel}
+        disabled={false}
+        reviewAction={action}
+        onOpen={() => undefined}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(withAction).toContain(">Review requirements<");
+    expect(render({ kind: "done", summary })).not.toContain("Review requirements");
+    expect(render({ kind: "idle" })).not.toContain("Review requirements");
+  });
+
   it("shows a failure with a retry action", () => {
     const html = render({
       kind: "failed",

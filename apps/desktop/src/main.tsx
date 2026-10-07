@@ -2199,6 +2199,31 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         ...(activePort.createOpportunity === undefined
           ? {}
           : { createOpportunity: activePort.createOpportunity }),
+        ...(activePort.getOpportunity === undefined
+          ? {}
+          : { getOpportunity: activePort.getOpportunity }),
+        ...(activePort.editOpportunity === undefined
+          ? {}
+          : { editOpportunity: activePort.editOpportunity }),
+        ...(activePort.reviewOpportunity === undefined
+          ? {}
+          : { reviewOpportunity: activePort.reviewOpportunity }),
+        // The reviewed-brief selection lives in the loaded setup state, so reload it.
+        onBriefChanged: () => {
+          const workspaceId = state.workspaceId;
+          const generation = workspaceGeneration;
+          void activePort
+            .load()
+            .then((loaded) => {
+              if (
+                isCurrentWorkspaceContext(workspaceId, generation) &&
+                loaded.workspaceId === workspaceId
+              ) {
+                setState(loaded);
+              }
+            })
+            .catch(() => undefined);
+        },
         writingModel: state.providerTransmissionPreflight.author,
         disabled:
           busy ||

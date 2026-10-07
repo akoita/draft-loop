@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type {
   OpportunityCreateInput,
+  OpportunityEditInput,
   OpportunityIssueResult,
   OpportunityRecordResult,
 } from "./bridge.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
+import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import type { BriefOperations } from "./opportunity-brief-review-model.js";
 
 /** The host connection that lets setup card 01 extract requirements from the workspace's job text. */
 export interface JobRequirementsExtractionBinding {
@@ -14,9 +17,33 @@ export interface JobRequirementsExtractionBinding {
   readonly createOpportunity?: (
     input: Omit<OpportunityCreateInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
+  /** Read, edit and review the brief; absent when the host cannot, which hides the review dialog. */
+  readonly getOpportunity?: (briefId: string, version?: number) => Promise<OpportunityRecordResult>;
+  readonly editOpportunity?: (
+    input: Omit<OpportunityEditInput, "workspaceId">,
+  ) => Promise<OpportunityRecordResult>;
+  readonly reviewOpportunity?: (
+    briefId: string,
+    expectedVersion: number,
+  ) => Promise<OpportunityRecordResult>;
+  /** Called after the brief was saved or reviewed, so the workspace can reload its setup state. */
+  readonly onBriefChanged?: () => void;
   /** The configured writing model: the one that would receive the job description. */
   readonly writingModel: { readonly company: string; readonly model: string };
   readonly disabled: boolean;
+}
+
+/** The brief operations the review dialog needs, or `undefined` when the host lacks any. */
+export function briefOperationsOf(
+  binding: Pick<
+    JobRequirementsExtractionBinding,
+    "getOpportunity" | "editOpportunity" | "reviewOpportunity"
+  >,
+): BriefOperations | undefined {
+  const { getOpportunity, editOpportunity, reviewOpportunity } = binding;
+  if (getOpportunity === undefined || editOpportunity === undefined) return undefined;
+  if (reviewOpportunity === undefined) return undefined;
+  return { getOpportunity, editOpportunity, reviewOpportunity };
 }
 
 const jobDescriptionSourceId = "workspace-job-description";
@@ -88,6 +115,8 @@ export interface JobRequirementsExtractionViewProps {
   readonly phase: JobRequirementsPhase;
   readonly writingModel: JobRequirementsExtractionBinding["writingModel"];
   readonly disabled: boolean;
+  /** The "Review requirements" action shown once a draft brief was saved. */
+  readonly reviewAction?: ReactNode;
   readonly onOpen: () => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
@@ -97,6 +126,7 @@ export function JobRequirementsExtractionView({
   phase,
   writingModel,
   disabled,
+  reviewAction = null,
   onOpen,
   onConfirm,
   onCancel,
@@ -198,6 +228,7 @@ export function JobRequirementsExtractionView({
           <p className="setup-note">
             This is a draft: it has not been reviewed and cannot start a run yet.
           </p>
+          {reviewAction}
         </div>
       );
     case "failed":
@@ -234,6 +265,7 @@ export function JobRequirementsExtraction({
   }, []);
   const { createOpportunity } = binding;
   if (createOpportunity === undefined) return null;
+  const briefOperations = briefOperationsOf(binding);
 
   const confirm = () => {
     setPhase({ kind: "running" });
@@ -247,6 +279,18 @@ export function JobRequirementsExtraction({
       phase={phase}
       writingModel={binding.writingModel}
       disabled={binding.disabled}
+      reviewAction={
+        briefOperations === undefined || phase.kind !== "done" ? null : (
+          <OpportunityBriefReviewAction
+            briefId={phase.summary.briefId}
+            operations={briefOperations}
+            disabled={binding.disabled}
+            {...(binding.onBriefChanged === undefined
+              ? {}
+              : { onBriefChanged: binding.onBriefChanged })}
+          />
+        )
+      }
       onOpen={() => setPhase({ kind: "consent" })}
       onConfirm={confirm}
       onCancel={() => setPhase({ kind: "idle" })}
