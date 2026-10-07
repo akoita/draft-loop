@@ -207,6 +207,33 @@ describe("run model profile resolution", () => {
     }
   });
 
+  it("accepts only the exact development Mistral profile route", () => {
+    const mistral = defaultModelProfileRegistry.resolve("dev-mistral-author", 1, "author");
+    expect(
+      resolveRunModelProfiles(
+        { author: { id: mistral.id, version: 1 }, critic: { id: "test-critic", version: 1 } },
+        registryFor(mistral),
+        apiKeyRoutes,
+      ).author,
+    ).toEqual(mistral);
+
+    for (const invalid of [
+      { ...mistral, modelId: "another-mistral-model" },
+      { ...mistral, runtime: { ...mistral.runtime, effort: "high" as const } },
+      { ...mistral, runtime: { ...mistral.runtime, thinking: { mode: "disabled" as const } } },
+      { ...mistral, runtime: { ...mistral.runtime, maxOutputTokens: 16384 } },
+      { ...mistral, tier: "standard" as const },
+    ]) {
+      expect(() =>
+        resolveRunModelProfiles(
+          { author: { id: invalid.id, version: 1 }, critic: { id: "test-critic", version: 1 } },
+          registryFor(invalid),
+          apiKeyRoutes,
+        ),
+      ).toThrow(RunModelProfileError);
+    }
+  });
+
   it.each([
     [1, "gemini-3.7-flash"],
     [2, "gemini-3.8-flash"],

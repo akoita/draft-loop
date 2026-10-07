@@ -326,6 +326,7 @@ describe("Google Gemini application route", () => {
       "local",
       "zai",
       "google",
+      "mistral",
     ]);
   });
 

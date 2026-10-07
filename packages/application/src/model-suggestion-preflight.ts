@@ -13,6 +13,7 @@ import {
   type ProviderCredentialResolver,
   type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
+import { isMistralAuthorProfile } from "./mistral-development-profile.js";
 import {
   listModelProfileCatalog,
   listModelProfilePresets,
@@ -181,12 +182,16 @@ export function buildModelSuggestionPreflightPlan(
     }
     const profile = entry.profile as unknown as ModelProfile;
     if (
-      (profile.provider === "zai" || profile.provider === "google") &&
+      (profile.provider === "zai" ||
+        profile.provider === "google" ||
+        profile.provider === "mistral") &&
       Array.isArray(profile.roles) &&
       isRecord(profile.runtime) &&
       isRecord(profile.runtime.thinking) &&
       isRecord(profile.knownLimits) &&
-      (isDeepInfraGLMAuthorProfile(profile) || isGoogleGeminiAuthorProfile(profile))
+      (isDeepInfraGLMAuthorProfile(profile) ||
+        isGoogleGeminiAuthorProfile(profile) ||
+        isMistralAuthorProfile(profile))
     ) {
       continue;
     }

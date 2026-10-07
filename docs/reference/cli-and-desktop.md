@@ -101,6 +101,17 @@ in its model picker and stores the key in its own settings row; see
 author requires the Google key, and Gemini model discovery is manual: enter the
 exact model ID `gemini-3.8-flash`.
 
+The opt-in Mistral Large 4 development author is selectable with
+`--author-profile dev-mistral-author@1` and an exact critic profile, for example
+`economy-openai-critic@1`, or with `--author-company mistral --author-model
+mistral-large-4`. It requires the dedicated `MISTRAL_API_KEY`, which is never
+shared with another provider, and sends candidate material to
+`https://api.mistral.ai/v1/chat/completions`. The model is in public preview and
+exposes no thinking or effort control, so the profile uses provider defaults at a
+32,768-token output ceiling. The `development-mistral` preset, pricing metadata,
+and desktop key storage are not available yet (#1001, #1002), and the desktop
+host supplies no Mistral credential.
+
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
 does not switch authentication modes automatically. Account and provider
@@ -143,7 +154,7 @@ numbers within the safe-integer magnitude; fractional or changing timestamps
 are accepted and are not persisted or used as response identity. Null role or
 tool placeholders are treated as absent; actual tool calls remain rejected.
 
-The DeepInfra GLM and Google Gemini development routes retry temporary overload and
+The DeepInfra GLM, Google Gemini, and Mistral development routes retry temporary overload and
 rate-limit responses up to twice with a short backoff (about 2.5 s, then 5 s) before the
 request fails. Quota, billing, authentication, and invalid-request failures are never retried.
 
@@ -477,7 +488,9 @@ Canonical profile extraction uses a detached GLM profile at the same ceiling
 and requests `reasoning_effort: "none"` to disable reasoning, following
 [DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
 normal GLM author profile keeps `low` reasoning. The Gemini author route uses the same ceiling, with a
-detached extraction profile that sets `thinkingBudget: 0`. These settings make no speed
+detached extraction profile that sets `thinkingBudget: 0`. The Mistral Large 4
+author route uses the same ceiling with a detached extraction profile that keeps
+provider defaults. These settings make no speed
 or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 
