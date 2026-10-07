@@ -23,6 +23,7 @@ import type {
   ProviderAuthModeProvider,
   ProviderAuthModeStatus,
 } from "./bridge.js";
+import { type CareerEvidenceBinding, CareerEvidenceCard } from "./career-evidence-card.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
@@ -62,6 +63,8 @@ interface ReviewWorkspaceProps {
     target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
   ) => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
+  /** Lets the Career evidence card follow, and add to, the workspace's knowledge base. */
+  readonly careerEvidence?: CareerEvidenceBinding;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -1272,6 +1275,7 @@ export function ReviewWorkspace({
   pendingReviewAction = null,
   onSelectFiles,
   onAddUrl,
+  careerEvidence,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -1332,7 +1336,6 @@ export function ReviewWorkspace({
                 ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
                 : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
-  const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
   const readinessOverrideKey = `${state.runId}:${state.artifact.id}:${state.artifact.version}`;
   const [readinessOverrideDraft, setReadinessOverrideDraft] = useState({
@@ -1781,12 +1784,11 @@ export function ReviewWorkspace({
   useModalFocusTrap(settingsOpen, settingsDialogRef, closeSettings);
   useModalFocusTrap(paletteOpen, paletteDialogRef, closePalette);
 
-  const submitUrl = (target: "evidence" | "job-description"): void => {
-    const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
+  const submitUrl = (target: "job-description"): void => {
+    const value = jobUrl.trim();
     if (value === "" || onAddUrl === undefined) return;
     onAddUrl(target, value);
-    if (target === "job-description") setJobUrl("");
-    else setEvidenceUrl("");
+    setJobUrl("");
   };
 
   // The margin and the queue are two views of one set of objects, so every route into a
@@ -2792,64 +2794,16 @@ export function ReviewWorkspace({
                     Review and fetch job URL
                   </button>
                 </article>
-                <article
-                  className={`setup-card${state.setup.evidenceSourceCount > 0 ? " setup-card-ready" : ""}`}
-                >
-                  <div className="setup-card-head">
-                    <span className="setup-number">02</span>
-                    <span
-                      className={`setup-state${state.setup.evidenceSourceCount > 0 ? " setup-state-ready" : ""}`}
-                    >
-                      {state.setup.evidenceSourceCount > 0 ? "Ready" : "Required"}
-                    </span>
-                  </div>
-                  <strong>Candidate source material</strong>
-                  <span>
-                    {state.setup.evidenceSourceCount === 0
-                      ? "Add a CV, portfolio, or other source"
-                      : `${state.setup.evidenceSourceCount} source${state.setup.evidenceSourceCount === 1 ? "" : "s"} ready`}
-                  </span>
-                  {state.setup.evidenceSourceCount > 0 ? (
-                    <span className="setup-retrieval-status" role="status">
-                      {state.setup.retrievalStatus === "matched"
-                        ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
-                        : state.setup.retrievalStatus === "fallback"
-                          ? `No lexical match; ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected`
-                          : state.setup.retrievalStatus === "no-query"
-                            ? "The job description has no searchable role terms"
-                            : state.setup.retrievalStatus === "unavailable"
-                              ? "Retrieval readiness is unavailable"
-                              : "Evidence will be indexed when the review starts"}
-                    </span>
-                  ) : null}
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    disabled={onSelectFiles === undefined}
-                    onClick={() => onSelectFiles?.("evidence")}
-                  >
-                    Add source files
-                  </button>
-                  <label className="url-input-label">
-                    <span>Or provide a public URL</span>
-                    <input
-                      className="url-input"
-                      type="url"
-                      placeholder="https://github.com/…"
-                      value={evidenceUrl}
-                      onChange={(event) => setEvidenceUrl(event.target.value)}
-                      aria-label="Candidate source URL"
-                    />
-                  </label>
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    disabled={onAddUrl === undefined || evidenceUrl.trim() === ""}
-                    onClick={() => submitUrl("evidence")}
-                  >
-                    Review and fetch source URL
-                  </button>
-                </article>
+                <CareerEvidenceCard
+                  setup={state.setup}
+                  knowledge={careerEvidence}
+                  onSelectLegacyFiles={
+                    onSelectFiles === undefined ? undefined : () => onSelectFiles("evidence")
+                  }
+                  onAddLegacyUrl={
+                    onAddUrl === undefined ? undefined : (url) => onAddUrl("evidence", url)
+                  }
+                />
                 <article
                   className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
                 >

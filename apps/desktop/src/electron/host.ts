@@ -1201,6 +1201,11 @@ async function workspaceReadiness(
   root: string,
   service: ApplicationService,
   overrides: ReviewOverrides = emptyOverrides,
+  /**
+   * Source count of the knowledge base the run will use, or undefined when the workspace has
+   * none selected and the run falls back to the legacy workspace evidence folder.
+   */
+  selectedKnowledgeSourceCount?: number,
 ): Promise<WorkspaceReadiness> {
   const jobPath = resolve(root, descriptor.jobDescriptionPath);
   let jobDescriptionReady = false;
@@ -1211,7 +1216,9 @@ async function workspaceReadiness(
   } catch {
     jobDescriptionReady = false;
   }
-  const evidenceSourceCount = await countEvidenceFiles(resolve(root, descriptor.sourceDirectory));
+  const evidenceSourceCount =
+    selectedKnowledgeSourceCount ??
+    (await countEvidenceFiles(resolve(root, descriptor.sourceDirectory)));
   let writingPolicy = safeWritingPolicyMetadata(descriptor.activeWritingPolicy);
   let writingPolicyHistory: WritingPolicyVersionMetadata[] = [];
   if (service.getWritingPolicy !== undefined) {
@@ -1293,7 +1300,11 @@ async function workspaceReadiness(
   let indexedEvidenceChunkCount = 0;
   let selectedEvidenceChunkCount = 0;
   let selectedEvidenceSourceCount = 0;
-  if (jobDescriptionReady && evidenceSourceCount > 0) {
+  if (
+    jobDescriptionReady &&
+    evidenceSourceCount > 0 &&
+    selectedKnowledgeSourceCount === undefined
+  ) {
     try {
       const inspection = await service.inspectEvidenceRetrieval({
         root,
@@ -1321,7 +1332,13 @@ async function workspaceReadiness(
   const nextSteps: string[] = [];
   if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
   if (jobRequirementProblem !== undefined) nextSteps.push(jobRequirementProblem);
-  if (evidenceSourceCount === 0) nextSteps.push("Add at least one candidate evidence source.");
+  if (evidenceSourceCount === 0) {
+    nextSteps.push(
+      selectedKnowledgeSourceCount === undefined
+        ? "Add at least one candidate evidence source."
+        : "Add at least one source to the selected knowledge base.",
+    );
+  }
   if (writingPolicyStatus === "unavailable") {
     nextSteps.push("Replace the configured writing policy before starting a review.");
   }
@@ -2425,6 +2442,33 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       return fail("operation-failed", "The open candidate knowledge store changed unexpectedly.");
     }
     return knowledgeStoreResult(view);
+  }
+
+  /**
+   * Source count across the knowledge bases the run will use, or undefined when the workspace
+   * has none selected. A base that cannot be read counts as empty so setup reports it plainly.
+   */
+  async function selectedKnowledgeSourceCount(root: string): Promise<number | undefined> {
+    let entries: readonly { storeRoot: string; knowledgeBaseId: string }[];
+    try {
+      entries = (await readWorkspaceConfig(root)).candidateKnowledgeSelection?.entries ?? [];
+    } catch {
+      return undefined;
+    }
+    if (entries.length === 0) return undefined;
+    let total = 0;
+    for (const entry of entries) {
+      try {
+        const readiness = await knowledgeService.getKnowledgeBaseLifecycleReadiness({
+          storeRoot: entry.storeRoot,
+          knowledgeBaseId: entry.knowledgeBaseId,
+        });
+        total += readiness.sources.length;
+      } catch {
+        // Counted as empty: the card then asks for a source instead of failing the load.
+      }
+    }
+    return total;
   }
 
   /**
@@ -3585,6 +3629,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       workspace.root,
       service,
       overrides,
+      await selectedKnowledgeSourceCount(workspace.root),
     );
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,
@@ -5101,6 +5146,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             workspace.root,
             service,
             preferences,
+            await selectedKnowledgeSourceCount(workspace.root),
           );
           if (snapshot === undefined) {
             const preflight = await providerTransmissionPreflight(

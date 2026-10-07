@@ -453,6 +453,41 @@ describe("desktop native profile capabilities", () => {
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/(?:[A-Z]:\\|\/home\/|file:\/\/)/u);
   });
 
+  it("imports a URL into a base only with an approved request through the existing command", async () => {
+    const urlResult = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      sourceId: "source-1",
+      kind: "url" as const,
+      versionId: "version-1",
+      version: 1,
+      created: true,
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value: urlResult }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["knowledge.import-url"], invoke }),
+    );
+
+    await expect(
+      port.importCandidateKnowledgeUrl?.("store-1", "knowledge-1", "https://example.com/cv"),
+    ).resolves.toEqual(urlResult);
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      {
+        type: "knowledge.import-url",
+        input: {
+          storeId: "store-1",
+          knowledgeBaseId: "knowledge-1",
+          url: "https://example.com/cv",
+          approved: true,
+        },
+      },
+    ]);
+    const withoutCapability = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: [], invoke }),
+    );
+    expect(withoutCapability.importCandidateKnowledgeUrl).toBeUndefined();
+  });
+
   it("returns native file-picker cancellation as an error rather than an import result", async () => {
     const port = createBridgeReviewPort(
       createNativeCapabilityPort({

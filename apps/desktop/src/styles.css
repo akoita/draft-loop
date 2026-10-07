@@ -3113,6 +3113,15 @@ input[type="checkbox"] {
   color: var(--teal);
 }
 
+.setup-card > .button {
+  min-width: 0;
+  white-space: normal;
+}
+
+.setup-card > span.setup-card-line.setup-card-line {
+  min-height: 0;
+}
+
 .url-input-label {
   display: grid;
   gap: var(--space-1);

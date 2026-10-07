@@ -25,6 +25,7 @@ import {
   type KnowledgeSelectionResult,
   type KnowledgeStoreCreateInput,
   type KnowledgeStoreResult,
+  type KnowledgeUrlImportResult,
   type KnowledgeWorkspaceSourcesImportInput,
   type ModelCandidate,
   type ModelCompany,
@@ -190,6 +191,12 @@ export interface DesktopKnowledgeCapabilities {
     storeId: string,
     knowledgeBaseId: string,
   ) => Promise<KnowledgeDirectoryImportResult>;
+  /** Fetches one public URL into the base; the call is the person's explicit approval. */
+  readonly importCandidateKnowledgeUrl?: (
+    storeId: string,
+    knowledgeBaseId: string,
+    url: string,
+  ) => Promise<KnowledgeUrlImportResult>;
   readonly getCandidateKnowledgeReadiness?: (
     storeId: string,
     knowledgeBaseId: string,
@@ -707,6 +714,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.import-directory",
                 input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.import-url")
+      ? {
+          importCandidateKnowledgeUrl: async (
+            storeId: string,
+            knowledgeBaseId: string,
+            url: string,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.import-url",
+                input: { storeId, knowledgeBaseId, url, approved: true },
               }),
             ),
         }
