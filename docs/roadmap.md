@@ -260,6 +260,7 @@ applications.
 | Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
 | Now | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | In progress; [v0.8.0-alpha.3 checkpoint](releases/stage-evidence-v0.8.0-alpha.3.md) released with 6/14 execution issues closed | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
 | Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
+| Next | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Not started; found in real use on 2026-10-07 | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1623,6 +1624,34 @@ The criterion was met on 2026-10-07. Every packaged platform passes
 installed-app acceptance with the embedding runtime, and #114 recorded a revise
 decision.
 
+### Next — Inputs and setup clarity
+
+Testing `main` with real material on Windows on 2026-10-07 exposed two setup
+problems that block or mislead a normal first run.
+
+- **Two stores of career material ([#983](https://github.com/akoita/draft-loop/issues/983)).**
+  Setup card 02 manages files in the workspace `evidence` folder, while runs
+  read the selected knowledge base whenever one is in use. Semantic retrieval
+  works only on the knowledge base. The fix makes the selected knowledge base
+  the single **Career evidence** concept:
+  - the card is bound to it (#984);
+  - a workspace without one gets a knowledge base created, with a visible
+    one-time import of legacy evidence (#985);
+  - the wording is unified everywhere (#986).
+- **Pasted job pages are refused ([#979](https://github.com/akoita/draft-loop/issues/979)).**
+  Careers pages copied into `job.md` lose their bullet structure, so the #858
+  check refuses the run. The fix uses the existing reviewed opportunity brief:
+  - extract requirements from the workspace job description, after consent
+    (#980);
+  - review and edit them in the desktop (#981);
+  - start from the reviewed brief, with the blocker leading into this flow
+    (#982).
+
+**Exit criterion:** A new user can add career evidence once and see it used by
+the run. A pasted job page can become reviewed requirements and start a review
+without hand-editing files. Existing runs, pinned selections, and legacy
+workspaces stay readable.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -1703,6 +1732,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-07 | Opened Inputs and setup clarity (milestone 24, #979 and #983) after real-material testing on Windows. | Setup gets one career-evidence concept and accepts pasted job pages through reviewed briefs. This comes before Manual parity: review and export. |
 | 2026-10-07 | Completed Local semantic retrieval (milestone 23, 30/30 issues). Requirement coverage now pairs semantic candidates with critic judgement (#727). | Semantic and hybrid retrieval, critic-judged coverage, and requirement-level rationale ship opt-in and local. Representative quality, retrieval and judge alike, still needs a consented real-CV observation. |
 | 2026-10-06 | Decided #114: lexical retrieval stays the default; semantic and hybrid remain opt-in per workspace. | Semantic retrieval ships complete but opt-in. A real-CV comparison of lexical and hybrid is needed before any default change. EmbeddingGemma 2 is evaluated next (#923). |
 | 2026-10-06 | Opened local semantic retrieval (milestone 23) alongside Manual parity: inputs. Granite Embedding Multilingual R2 on CPU-only onnxruntime-node was chosen over EmbeddingGemma 2, which no released Node runtime supports yet ([ADR 0009](adr/0009-local-semantic-retrieval.md), #914). | Retrieval gains a model-agnostic local embedding path with explicit model install and lexical fallback. It targets the #869 excerpt-selection gap; a non-lexical default still requires #919 evidence. |
