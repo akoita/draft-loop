@@ -14,7 +14,14 @@ export type CareerEvidenceStatus =
   | { readonly kind: "loading" }
   /** The host cannot report a knowledge selection (browser or fixture): legacy evidence only. */
   | { readonly kind: "unsupported" }
-  | { readonly kind: "none" }
+  | {
+      readonly kind: "none";
+      /**
+       * Whether the person chose to keep legacy workspace evidence. Absent when the host cannot
+       * create a knowledge base automatically or the choice could not be read: legacy stays.
+       */
+      readonly legacyDeclined?: boolean;
+    }
   /** A base is selected but its saved store could not be opened or read. */
   | { readonly kind: "unavailable" }
   | {
@@ -66,6 +73,27 @@ async function readSemanticLine(
   }
 }
 
+async function readLegacyDecision(
+  capabilities: CareerEvidenceCapabilities,
+  workspaceId: string,
+): Promise<boolean | undefined> {
+  const read = capabilities.getLegacyEvidenceMigration;
+  if (read === undefined) return undefined;
+  try {
+    return (await read(workspaceId)).declined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function noSelectionStatus(
+  capabilities: CareerEvidenceCapabilities,
+  workspaceId: string,
+): Promise<CareerEvidenceStatus> {
+  const legacyDeclined = await readLegacyDecision(capabilities, workspaceId);
+  return legacyDeclined === undefined ? { kind: "none" } : { kind: "none", legacyDeclined };
+}
+
 /** Reads the workspace's selected knowledge base and its readiness through the host port. */
 export async function loadCareerEvidenceStatus(
   capabilities: CareerEvidenceCapabilities,
@@ -78,13 +106,15 @@ export async function loadCareerEvidenceStatus(
   try {
     const current = await readCurrent(workspaceId);
     if (current.store === null) {
-      return current.unavailable === true ? { kind: "unavailable" } : { kind: "none" };
+      return current.unavailable === true
+        ? { kind: "unavailable" }
+        : await noSelectionStatus(capabilities, workspaceId);
     }
     const base = current.store.knowledgeBases.find(
       (candidate) =>
         candidate.state === "active" && current.selectedKnowledgeBaseIds.includes(candidate.id),
     );
-    if (base === undefined) return { kind: "none" };
+    if (base === undefined) return await noSelectionStatus(capabilities, workspaceId);
     const readiness = await readReadiness(current.store.storeId, base.id);
     if (readiness.storeId !== current.store.storeId || readiness.knowledgeBaseId !== base.id) {
       return { kind: "unavailable" };
@@ -153,6 +183,8 @@ export async function addCareerEvidence(input: {
   readonly source: CareerEvidenceSource;
   readonly isCurrent: () => boolean;
   readonly onChanged: (workspaceId: string) => Promise<boolean>;
+  /** Runs once the source is in the base and before the workspace refreshes, e.g. to select it. */
+  readonly afterImport?: () => Promise<void>;
 }): Promise<CareerEvidenceAddOutcome> {
   const { capabilities, target } = input;
   const importFile = capabilities.importCandidateKnowledgeFile;
@@ -170,6 +202,7 @@ export async function addCareerEvidence(input: {
   if (result.storeId !== target.storeId || result.knowledgeBaseId !== target.knowledgeBaseId) {
     throw new Error("Imported source result did not match the selected knowledge base");
   }
+  await input.afterImport?.();
   if (!input.isCurrent()) return { status: "stale" };
 
   let readiness: KnowledgeReadinessResult | null = null;

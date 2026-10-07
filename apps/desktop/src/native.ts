@@ -49,6 +49,10 @@ import {
   type WorkspaceRetrievalModeResult,
   type WritingPolicyReadResult,
 } from "./bridge.js";
+import type {
+  KnowledgeEnsureDefaultResult,
+  WorkspaceEvidenceMigrationResult,
+} from "./career-evidence-contract.js";
 import {
   createFixtureReviewPort,
   type DesktopReviewPort,
@@ -204,6 +208,17 @@ export interface DesktopKnowledgeCapabilities {
   readonly importWorkspaceCandidateSources?: (
     input: KnowledgeWorkspaceSourcesImportInput,
   ) => Promise<KnowledgeDirectoryImportResult>;
+  /** Creates the default store and base in DraftLoop application data when absent; no dialog. */
+  readonly ensureDefaultCandidateKnowledgeBase?: (
+    workspaceId: string,
+  ) => Promise<KnowledgeEnsureDefaultResult>;
+  /** Whether the person chose to keep using legacy workspace evidence for this workspace. */
+  readonly getLegacyEvidenceMigration?: (
+    workspaceId: string,
+  ) => Promise<WorkspaceEvidenceMigrationResult>;
+  readonly declineLegacyEvidenceMigration?: (
+    workspaceId: string,
+  ) => Promise<WorkspaceEvidenceMigrationResult>;
 }
 
 /**
@@ -751,6 +766,39 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.import-workspace-sources",
                 input,
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.ensure-default")
+      ? {
+          ensureDefaultCandidateKnowledgeBase: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.ensure-default",
+                input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.evidence-migration.get")
+      ? {
+          getLegacyEvidenceMigration: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.evidence-migration.get",
+                input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.evidence-migration.decline")
+      ? {
+          declineLegacyEvidenceMigration: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.evidence-migration.decline",
+                input: { workspaceId },
               }),
             ),
         }

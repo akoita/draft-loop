@@ -624,6 +624,7 @@ export {
 export * from "./embedding-model-install.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
+export * from "./legacy-evidence-migration.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
 export { JobRequirementUserError, localJobRequirements } from "./local-requirements.js";
@@ -641,6 +642,7 @@ export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
+export * from "./user-data-root.js";
 export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";
 export * from "./workspace-model-profile-selection.js";

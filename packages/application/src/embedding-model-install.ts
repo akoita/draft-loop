@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, open, readdir, rename, rm, rmdir, stat } from "node:fs/promises";
-import { homedir as osHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   defaultGraniteEmbeddingTier,
@@ -13,6 +12,7 @@ import {
   graniteEmbeddingModels,
 } from "@draft-loop/embeddings";
 import { CliUserError } from "./cli-user-error.js";
+import { defaultDraftLoopDataRoot } from "./user-data-root.js";
 
 /**
  * Explicit install, inspection, and removal of the pinned local embedding model.
@@ -137,21 +137,7 @@ export function defaultEmbeddingModelRoot(
   const env = input.env ?? process.env;
   const override = env[modelRootEnvironmentVariable];
   if (override !== undefined && override !== "") return override;
-  const platform = input.platform ?? process.platform;
-  const home = input.homedir ?? osHomedir();
-  if (platform === "win32") {
-    const base = nonEmpty(env.LOCALAPPDATA) ?? join(home, "AppData", "Local");
-    return join(base, "DraftLoop", "models");
-  }
-  if (platform === "darwin") {
-    return join(home, "Library", "Application Support", "DraftLoop", "models");
-  }
-  const base = nonEmpty(env.XDG_DATA_HOME) ?? join(home, ".local", "share");
-  return join(base, "draft-loop", "models");
-}
-
-function nonEmpty(value: string | undefined): string | undefined {
-  return value === undefined || value === "" ? undefined : value;
+  return join(defaultDraftLoopDataRoot({ ...input, env }), "models");
 }
 
 /** `<modelRoot>/<model name>/<revision>`; the directory the runtime loads the model from. */

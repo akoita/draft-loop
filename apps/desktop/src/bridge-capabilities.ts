@@ -22,6 +22,7 @@ export const bridgeCapabilities = [
   "knowledge.import-file",
   "knowledge.import-directory",
   "knowledge.import-workspace-sources",
+  "knowledge.ensure-default",
   "knowledge.directory-refresh-preview",
   "knowledge.directory-refresh-apply",
   "knowledge.directory-add-members",
@@ -87,4 +88,6 @@ export const bridgeCapabilities = [
   "embedding-model.remove",
   "workspace.retrieval-mode.get",
   "workspace.retrieval-mode.set",
+  "workspace.evidence-migration.get",
+  "workspace.evidence-migration.decline",
 ] as const;
