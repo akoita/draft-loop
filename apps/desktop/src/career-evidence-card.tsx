@@ -31,12 +31,14 @@ export interface CareerEvidenceBinding {
   readonly revision: number;
   readonly disabled: boolean;
   readonly onChanged: (workspaceId: string) => Promise<boolean>;
+  /** Asks the Manage career evidence panel to open its create-or-open form and focus it. */
+  readonly onRequestStoreForm?: () => void;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
 }
 
-export const knowledgeStoreFocusTargetId = "candidate-knowledge-name";
+export const knowledgeStoreFocusTargetId = "candidate-knowledge-heading";
 
-/** Takes the person to the Knowledge store section so they can create or choose a base. */
+/** Takes the person to the Manage career evidence panel, where they can manage or switch the base. */
 export function focusKnowledgeStore(documentRef: Document = document): boolean {
   const target = documentRef.getElementById(knowledgeStoreFocusTargetId);
   if (target === null) return false;
@@ -85,6 +87,8 @@ export interface CareerEvidenceCardViewProps {
   readonly onAddFile: () => void;
   readonly onAddUrl: () => void;
   readonly onChooseKnowledgeBase: () => void;
+  /** Takes the person to the panel that manages the selected base; shown only with a base. */
+  readonly onManage?: () => void;
   /** False when the host offers no way to add files or a URL in the current mode. */
   readonly canAddFile: boolean;
   readonly canAddUrl: boolean;
@@ -109,6 +113,7 @@ export function CareerEvidenceCardView({
   onAddFile,
   onAddUrl,
   onChooseKnowledgeBase,
+  onManage,
   canAddFile,
   canAddUrl,
   automatic = false,
@@ -153,11 +158,16 @@ export function CareerEvidenceCardView({
           {status.semanticLine === null ? null : (
             <span className="setup-card-line">{status.semanticLine}</span>
           )}
+          {onManage === undefined ? null : (
+            <button className="button button-quiet" type="button" onClick={onManage}>
+              Manage
+            </button>
+          )}
         </>
       ) : status.kind === "unavailable" ? (
         <span role="status">
-          The selected knowledge base could not be opened. Open its store in the Knowledge store
-          section below.
+          The selected knowledge base could not be opened. Open its store in the Manage career
+          evidence section below.
         </span>
       ) : status.kind === "none" && mode === "offer" ? (
         <>
@@ -478,8 +488,16 @@ export function CareerEvidenceCard({
       canAddFile={inKnowledgeBase || onSelectLegacyFiles !== undefined}
       canAddUrl={inKnowledgeBase || onAddLegacyUrl !== undefined}
       onChooseKnowledgeBase={() => {
+        knowledge?.onRequestStoreForm?.();
         focusKnowledgeStore();
       }}
+      {...(status.kind === "selected"
+        ? {
+            onManage: () => {
+              focusKnowledgeStore();
+            },
+          }
+        : {})}
       onAddFile={() => {
         if (inKnowledgeBase) addToKnowledgeBase({ kind: "file" });
         else onSelectLegacyFiles?.();

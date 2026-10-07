@@ -898,6 +898,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   // Bumped when the workspace's knowledge selection or contents change, so the Career evidence
   // setup card reads the selected base again.
   const [knowledgeRevision, setKnowledgeRevision] = useState(0);
+  const [storeFormRequest, setStoreFormRequest] = useState(0);
   const [profilePendingScope, setProfilePendingScope] = useState<{
     readonly workspaceId: string;
     readonly generation: number;
@@ -2087,6 +2088,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               key={state.workspaceId}
               workspaceId={state.workspaceId}
               capabilities={activePort}
+              revision={knowledgeRevision}
+              storeFormRequest={storeFormRequest}
               disabled={
                 busy ||
                 profilePendingForActiveWorkspace ||
@@ -2246,6 +2249,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           pendingReviewAction !== null ||
           state.execution.status === "running",
         onChanged: (workspaceId) => onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
+        onRequestStoreForm: () => setStoreFormRequest((current) => current + 1),
         onPendingChange: (workspaceId, pending) =>
           onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
       }}

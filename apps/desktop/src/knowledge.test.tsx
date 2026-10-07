@@ -11,6 +11,7 @@ import {
   savedKnowledgeUnavailableMessage,
   selectCandidateKnowledgeBaseAndRefresh,
 } from "./knowledge.js";
+import { autoCreateHint, differentStoreDisclosureLabel } from "./knowledge-current.js";
 
 const store: KnowledgeStoreResult = {
   storeId: "store-1",
@@ -66,7 +67,9 @@ describe("desktop candidate knowledge workspace", () => {
     );
 
     expect(html).toContain('<p class="eyebrow">Career evidence</p>');
-    expect(html).toContain('<h2 id="candidate-knowledge-heading">Knowledge store</h2>');
+    expect(html).toContain('<h2 id="candidate-knowledge-heading" tabindex="-1">');
+    expect(html).toContain("Manage career evidence");
+    expect(html).not.toContain("Knowledge store</h2>");
     expect(html).toContain("Reusable career evidence, kept separate from application material.");
     expect(html).toContain('class="knowledge-store-row"');
     expect(html).toContain('id="candidate-knowledge-name"');
@@ -74,6 +77,53 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).toMatch(/class="button button-outline"[^>]*>Open knowledge store</);
     expect(html).not.toContain("form-row");
     expect(html).not.toContain("button-row");
+  });
+
+  it("shows the create and open form directly when the host cannot create a base itself", () => {
+    const html = renderToStaticMarkup(
+      <KnowledgeWorkspace
+        workspaceId="workspace-1"
+        capabilities={workspaceCapabilities}
+        disabled={false}
+        onPendingChange={noop}
+        onSelectionSaved={async () => true}
+      />,
+    );
+    expect(html).not.toContain(differentStoreDisclosureLabel);
+    expect(html).not.toContain(autoCreateHint);
+    expect(html).toContain('id="candidate-knowledge-name"');
+  });
+
+  it("points to the Career evidence card and collapses the form when the host creates the base", () => {
+    const html = renderToStaticMarkup(
+      <KnowledgeWorkspace
+        workspaceId="workspace-1"
+        capabilities={{
+          ...workspaceCapabilities,
+          ensureDefaultCandidateKnowledgeBase: async () => ({
+            storeId: "store-1",
+            knowledgeBaseId: "active-1",
+            displayName: "Career evidence",
+            created: true,
+          }),
+          getLegacyEvidenceMigration: async () => ({ workspaceId: "workspace-1", declined: false }),
+          declineLegacyEvidenceMigration: async () => ({
+            workspaceId: "workspace-1",
+            declined: true,
+          }),
+        }}
+        disabled={false}
+        revision={3}
+        onPendingChange={noop}
+        onSelectionSaved={async () => true}
+      />,
+    );
+    expect(html).toContain(autoCreateHint);
+    expect(html).toMatch(
+      /<button[^>]*aria-expanded="false"[^>]*>Use a different knowledge store…</,
+    );
+    expect(html).not.toContain("Create knowledge store");
+    expect(html).not.toContain("Open knowledge store");
   });
 
   it("renders each knowledge base as a card with a Default chip and styled actions", () => {
