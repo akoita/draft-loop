@@ -416,15 +416,18 @@ describe("required-section evidence", () => {
     if (!degree) throw new Error("Missing degree fixture");
     vi.spyOn(knowledgeBase, "createCandidateKnowledgeStoreService").mockReturnValue({
       ...service,
-      queryCandidateKnowledge: async () => ({
-        ...result,
-        hits: Array.from({ length: 4 }, (_, index) => ({
-          ...degree,
-          chunkId: `heading-${index}` as typeof degree.chunkId,
-          text: "Education",
-        })),
-        selectedChunkCount: 4,
-        diagnostics: [],
+      createCandidateKnowledgeQueryBatch: () => ({
+        query: async () => ({
+          ...result,
+          hits: Array.from({ length: 4 }, (_, index) => ({
+            ...degree,
+            chunkId: `heading-${index}` as typeof degree.chunkId,
+            text: "Education",
+          })),
+          selectedChunkCount: 4,
+          diagnostics: [],
+        }),
+        verify: async () => undefined,
       }),
     });
     const saturated = candidateKnowledgeRuntimeRetrieval(

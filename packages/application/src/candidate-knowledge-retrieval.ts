@@ -31,6 +31,7 @@ import {
 } from "./candidate-knowledge-chronology.js";
 import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
 import { candidateKnowledgeSearchText } from "./candidate-knowledge-query.js";
+import type { CandidateKnowledgeQueryBatch } from "./candidate-knowledge-query-batch.js";
 import {
   type CandidateKnowledgeSensitivityExclusions,
   createCandidateKnowledgeSensitivityExclusions,
@@ -295,10 +296,42 @@ export function candidateKnowledgeRuntimeRetrieval(
         });
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
-  const rawQuery = (
+  type RawQuery = (
     text: string,
     limit: number,
-    primary = false,
+    primary?: boolean,
+  ) => Promise<CandidateKnowledgeRetrievalResult>;
+  /**
+   * One retrieval operation shares one synchronized selection: its lexical queries prepare it on the
+   * first miss and `verify` once at the end, so a selection change during the operation still fails
+   * it. A batch never spans operations. Results a failed operation cached are evicted so a later
+   * operation cannot reuse an unverified one.
+   */
+  const runOperation = async <T>(compute: (rawQuery: RawQuery) => Promise<T>): Promise<T> => {
+    const batch = service.createCandidateKnowledgeQueryBatch({
+      selections: lexicalSelections,
+      ...(binding.combinationApproved === undefined
+        ? {}
+        : { combinationApproved: binding.combinationApproved }),
+    });
+    const cachedKeys: string[] = [];
+    try {
+      const result = await compute((text, limit, primary = false) =>
+        rawQuery(batch, cachedKeys, text, limit, primary),
+      );
+      await batch.verify();
+      return result;
+    } catch (error) {
+      for (const key of cachedKeys) rawCache.delete(key);
+      throw error;
+    }
+  };
+  const rawQuery = (
+    batch: CandidateKnowledgeQueryBatch,
+    cachedKeys: string[],
+    text: string,
+    limit: number,
+    primary: boolean,
   ): Promise<CandidateKnowledgeRetrievalResult> => {
     const searchText = candidateKnowledgeSearchText(text);
     const semanticPrimary = primary && semantic !== undefined;
@@ -310,7 +343,11 @@ export function candidateKnowledgeRuntimeRetrieval(
     const pending = (async () => {
       const startedAt = Date.now();
       const operationId = `ckb-retrieval-${randomUUID()}`;
-      const lexical = await lexicalQuery(searchText, limit);
+      const lexical = await batch.query({
+        purpose: "achievement-recall",
+        query: searchText,
+        limit,
+      });
       const semanticOutcome = semanticPrimary
         ? await semantic.primaryQuery({ query: searchText, limit, lexical })
         : undefined;
@@ -348,6 +385,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       return result;
     })();
     rawCache.set(key, pending);
+    cachedKeys.push(key);
     return pending;
   };
 
@@ -355,7 +393,7 @@ export function candidateKnowledgeRuntimeRetrieval(
     const key = JSON.stringify([text, limit]);
     const existing = combinedCache.get(key);
     if (existing !== undefined) return existing;
-    const pending = (async () => {
+    const compute = async (rawQuery: RawQuery) => {
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20) {
         throw new Error("Candidate knowledge provider retrieval limit must be from 1 through 20.");
       }
@@ -673,7 +711,8 @@ export function candidateKnowledgeRuntimeRetrieval(
         ),
       };
       return Object.freeze(result);
-    })();
+    };
+    const pending = runOperation(compute);
     combinedCache.set(key, pending);
     return pending;
   };
