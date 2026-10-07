@@ -5472,3 +5472,81 @@ input[type="checkbox"] {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+
+.job-extraction {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.job-extraction-title {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.job-extraction-model {
+  justify-self: start;
+  max-width: 100%;
+  color: var(--text-2);
+  font-size: var(--text-micro);
+  overflow-wrap: anywhere;
+}
+
+.job-extraction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.job-extraction-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.job-extraction-facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.job-extraction-facts dt {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.job-extraction-facts dd {
+  margin: 0;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.job-extraction-issues {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.job-extraction .button {
+  min-width: 0;
+  white-space: normal;
+}
+
+.job-extraction strong {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 650;
+}

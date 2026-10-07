@@ -2194,6 +2194,19 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 });
             },
           })}
+      jobRequirements={{
+        workspaceId: state.workspaceId,
+        ...(activePort.createOpportunity === undefined
+          ? {}
+          : { createOpportunity: activePort.createOpportunity }),
+        writingModel: state.providerTransmissionPreflight.author,
+        disabled:
+          busy ||
+          knowledgePending ||
+          profilePendingForActiveWorkspace ||
+          pendingReviewAction !== null ||
+          state.execution.status === "running",
+      }}
       careerEvidence={{
         workspaceId: state.workspaceId,
         capabilities: activePort,

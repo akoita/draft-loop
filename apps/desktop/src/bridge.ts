@@ -2011,6 +2011,18 @@ export interface OpportunityCreateLocalFileSource extends OpportunityCreateSourc
   readonly selection: "native-dialog";
 }
 
+/**
+ * The workspace's own configured job document. The host resolves and reads it,
+ * so the renderer sends and receives no path; the document is the target job
+ * posting by definition.
+ */
+export interface OpportunityCreateWorkspaceJobDescriptionSource {
+  readonly id: string;
+  readonly kind: "workspace-job-description";
+  readonly classification: "job-posting";
+  readonly capturedAt?: string;
+}
+
 export interface OpportunityCreatePastedSource extends OpportunityCreateSourceBase {
   readonly kind: "pasted-content";
   readonly content: string;
@@ -2035,8 +2047,12 @@ export interface OpportunityCreateCandidateSource {
 export type OpportunityCreateSource =
   | OpportunityCreateUrlSource
   | OpportunityCreateLocalFileSource
+  | OpportunityCreateWorkspaceJobDescriptionSource
   | OpportunityCreatePastedSource
   | OpportunityCreateCandidateSource;
+
+/** Request-only source kinds; stored sources keep the kinds in `opportunitySourceKinds`. */
+export type OpportunityCreateSourceKind = OpportunitySourceKind | "workspace-job-description";
 
 export interface OpportunityCreateInput {
   readonly workspaceId: string;
@@ -2060,6 +2076,13 @@ const opportunityCreateLocalFileSourceKeys = inputKeys<OpportunityCreateLocalFil
   "kind",
   "selection",
 ]);
+const opportunityCreateWorkspaceJobDescriptionSourceKeys =
+  inputKeys<OpportunityCreateWorkspaceJobDescriptionSource>()([
+    "id",
+    "classification",
+    "capturedAt",
+    "kind",
+  ]);
 const opportunityCreatePastedSourceKeys = inputKeys<OpportunityCreatePastedSource>()([
   "id",
   "classification",
@@ -4161,7 +4184,18 @@ function validateOpportunityCreateSource(value: unknown): OpportunityCreateSourc
   if (typeof source.kind !== "string") return invalidInput();
   const id = identifier(source.id);
   const capturedAt = optionalOpportunityTimestamp(source.capturedAt);
-  switch (source.kind as OpportunitySourceKind) {
+  switch (source.kind as OpportunityCreateSourceKind) {
+    case "workspace-job-description":
+      if (!hasOnlyKeys(source, opportunityCreateWorkspaceJobDescriptionSourceKeys)) {
+        return invalidInput();
+      }
+      if (source.classification !== "job-posting") return invalidInput();
+      return {
+        id,
+        kind: "workspace-job-description",
+        classification: "job-posting",
+        ...(capturedAt === undefined ? {} : { capturedAt }),
+      };
     case "approved-url":
       if (!hasOnlyKeys(source, opportunityCreateUrlSourceKeys)) return invalidInput();
       if (source.approved !== true) return invalidInput();
