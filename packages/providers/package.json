@@ -23,6 +23,7 @@
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@google/genai": "2.24.0",
+    "@mistralai/mistralai": "2.7.0",
     "openai": "7.23.0",
     "zod": "4.4.3"
   }

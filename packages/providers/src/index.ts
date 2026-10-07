@@ -1028,3 +1028,4 @@ export * from "./deepinfra-glm.js";
  */
 export * from "./discovery.js";
 export * from "./google-gemini.js";
+export * from "./mistral.js";
