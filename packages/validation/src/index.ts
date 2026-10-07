@@ -17,6 +17,18 @@ export {
   meaningfulRequirementTokenCount,
   requirementCoverageHeuristic,
 } from "./requirement-coverage.js";
+export type {
+  RequirementCoverageAssessment,
+  RequirementCoverageBasis,
+  RequirementCoverageEvidence,
+  RequirementCoverageStatus,
+} from "./requirement-coverage-assessment.js";
+export {
+  assessRequirementCoverage,
+  requirementCoverageBases,
+  requirementCoverageRationales,
+  requirementCoverageStatuses,
+} from "./requirement-coverage-assessment.js";
 
 export type ValidationSeverity = "error" | "warning";
 
