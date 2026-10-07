@@ -6930,6 +6930,66 @@ describe("candidate knowledge native controls", () => {
     expect(chooseFiles).not.toHaveBeenCalled();
   });
 
+  it("cancels an in-flight extraction, aborting the request and saving no brief", async () => {
+    const root = "/local/opportunity-cancel";
+    const fixture = service(root);
+    let observed: AbortSignal | undefined;
+    fixture.service.createOpportunity.mockImplementation(((request: { signal?: AbortSignal }) => {
+      observed = request.signal;
+      return new Promise((_resolve, reject) => {
+        request.signal?.addEventListener("abort", () => reject(new Error("aborted at /private")));
+      });
+    }) as never);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: vi.fn() },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    const cancel = {
+      type: "opportunity.cancel",
+      input: { workspaceId: "workspace-native" },
+    } as const;
+    const create = {
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-native",
+        providerTransmissionApproved: true,
+        sources: [
+          {
+            id: "pasted-job",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "A job description.",
+          },
+        ],
+      },
+    } as const;
+
+    await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: false } });
+
+    const pending = host.invoke(create);
+    await expect(host.invoke(create)).resolves.toMatchObject({
+      ok: false,
+      error: { message: "Requirements extraction is already running." },
+    });
+    await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: true } });
+    expect(observed?.aborted).toBe(true);
+    await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: false } });
+
+    const result = await pending;
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        capability: "opportunity.create",
+        message: "Extraction cancelled. No brief was saved.",
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain("/private");
+    expect(fixture.service.createOpportunity).toHaveBeenCalledTimes(1);
+    await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: false } });
+  });
+
   it("creates locally without provider approval and reports stale edits safely", async () => {
     const root = "/local/opportunity-approval";
     const fixture = service(root);
@@ -6972,6 +7032,7 @@ describe("candidate knowledge native controls", () => {
         },
       ],
       allowProviderData: false,
+      signal: expect.any(AbortSignal),
     });
 
     const explicitlyUnapproved = await host.invoke({
@@ -7001,6 +7062,7 @@ describe("candidate knowledge native controls", () => {
         },
       ],
       allowProviderData: false,
+      signal: expect.any(AbortSignal),
     });
     expect(chooseFiles).not.toHaveBeenCalled();
 

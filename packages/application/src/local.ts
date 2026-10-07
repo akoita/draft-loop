@@ -2847,26 +2847,25 @@ export function createLocalApplicationDriver(
       const storage = await openStorage(root);
       try {
         await ensureWorkspaceRecord(storage, config.id);
+        const persistence = createOpportunityPersistenceService(storage);
         const draft = await createOpportunityDraft(
           {
             ...(command.id === undefined ? {} : { id: command.id }),
             ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
             sources: command.sources,
           },
-          command.allowProviderData === true
-            ? {
-                now: timestamp,
-                extractor: createProviderOpportunityExtractionPort(config, {
-                  ...providerOpportunityOptions,
-                  allowProviderData: true,
-                }),
-              }
-            : { now: timestamp },
+          {
+            now: timestamp,
+            ...(command.signal === undefined ? {} : { signal: command.signal }),
+            ...(command.allowProviderData === true && {
+              extractor: createProviderOpportunityExtractionPort(config, {
+                ...providerOpportunityOptions,
+                allowProviderData: true,
+              }),
+            }),
+          },
         );
-        return await createOpportunityPersistenceService(storage).saveOpportunityBrief(
-          config.id,
-          draft,
-        );
+        return await persistence.saveOpportunityBrief(config.id, draft);
       } finally {
         await storage.close();
       }

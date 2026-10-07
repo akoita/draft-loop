@@ -240,6 +240,30 @@ describe("desktop native profile capabilities", () => {
     expect(bare.cancelCanonicalCandidateProfileGeneration).toBeUndefined();
   });
 
+  it("sends opportunity.cancel for the loaded workspace and gates it on the capability", async () => {
+    const state = createFixtureReviewState();
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) =>
+      command.type === "review.load"
+        ? { ok: true, value: state }
+        : { ok: true, value: { cancelled: true } },
+    );
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["review.load", "opportunity.cancel"], invoke }),
+    );
+    await expect(port.cancelOpportunityExtraction?.()).resolves.toEqual({ cancelled: true });
+    expect(invoke).toHaveBeenLastCalledWith({
+      type: "opportunity.cancel",
+      input: { workspaceId: state.workspaceId },
+    });
+    const bare = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: async () => ({ ok: true, value: state }),
+      }),
+    );
+    expect(bare.cancelOpportunityExtraction).toBeUndefined();
+  });
+
   it("keeps profile methods capability-gated", async () => {
     const state = createFixtureReviewState();
     const port = createBridgeReviewPort(

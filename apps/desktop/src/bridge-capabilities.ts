@@ -48,6 +48,7 @@ export const bridgeCapabilities = [
   "knowledge.delete-base-preview",
   "knowledge.delete-base",
   "opportunity.create",
+  "opportunity.cancel",
   "opportunity.get",
   "opportunity.list",
   "opportunity.latest",

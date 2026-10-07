@@ -1,11 +1,13 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import type {
-  OpportunityCreateInput,
-  OpportunityEditInput,
-  OpportunityIssueResult,
-  OpportunityLatestResult,
-  OpportunityRecordResult,
+import {
+  type OpportunityCancelResult,
+  type OpportunityCreateInput,
+  type OpportunityEditInput,
+  type OpportunityIssueResult,
+  type OpportunityLatestResult,
+  type OpportunityRecordResult,
+  opportunityExtractionCancelledMessage,
 } from "./bridge.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
@@ -18,6 +20,8 @@ export interface JobRequirementsExtractionBinding {
   readonly createOpportunity?: (
     input: Omit<OpportunityCreateInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
+  /** Aborts the in-flight extraction; absent when the host cannot, which hides the Cancel button. */
+  readonly cancelOpportunityExtraction?: () => Promise<OpportunityCancelResult>;
   /** Read, edit and review the brief; absent when the host cannot, which hides the review dialog. */
   readonly getOpportunity?: (briefId: string, version?: number) => Promise<OpportunityRecordResult>;
   readonly editOpportunity?: (
@@ -101,6 +105,13 @@ export async function runJobRequirementsExtraction(
     });
     return { kind: "done", summary: summarizeJobRequirements(record) };
   } catch (reason: unknown) {
+    // A cancelled extraction is the person's own decision, so the card calmly returns to idle.
+    if (
+      reason instanceof Error &&
+      reason.message.trim() === opportunityExtractionCancelledMessage
+    ) {
+      return { kind: "idle", notice: opportunityExtractionCancelledMessage };
+    }
     const message =
       reason instanceof Error && reason.message.trim() !== "" ? reason.message : failureFallback;
     return { kind: "failed", message };
@@ -108,9 +119,9 @@ export async function runJobRequirementsExtraction(
 }
 
 export type JobRequirementsPhase =
-  | { readonly kind: "idle" }
+  | { readonly kind: "idle"; readonly notice?: string }
   | { readonly kind: "consent" }
-  | { readonly kind: "running" }
+  | { readonly kind: "running"; readonly cancelling?: boolean }
   | { readonly kind: "done"; readonly summary: JobRequirementsSummary }
   | { readonly kind: "failed"; readonly message: string };
 
@@ -123,6 +134,8 @@ export interface JobRequirementsExtractionViewProps {
   readonly onOpen: () => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
+  /** Cancels the running extraction; the Cancel button is shown only when this is provided. */
+  readonly onCancelExtraction?: () => void;
 }
 
 export function JobRequirementsExtractionView({
@@ -133,6 +146,7 @@ export function JobRequirementsExtractionView({
   onOpen,
   onConfirm,
   onCancel,
+  onCancelExtraction,
 }: JobRequirementsExtractionViewProps) {
   const providerName = providerDisplayName(writingModel.company);
   const modelName = modelDisplayName(writingModel.model);
@@ -144,6 +158,11 @@ export function JobRequirementsExtractionView({
             Long or pasted job pages can be split into reviewable requirements with your writing
             model.
           </p>
+          {phase.notice === undefined ? null : (
+            <p className="setup-note" role="status">
+              {phase.notice}
+            </p>
+          )}
           <button
             className="button button-outline"
             type="button"
@@ -192,9 +211,20 @@ export function JobRequirementsExtractionView({
             <strong>Extracting requirements…</strong>
           </div>
           <p className="setup-note">
-            Waiting for {providerName} ({modelName}). Extraction cannot be cancelled once it has
-            started; keep DraftLoop open.
+            Waiting for {providerName} ({modelName}). Cancel to stop the request; nothing is saved
+            unless extraction finishes.
           </p>
+          {onCancelExtraction === undefined ? null : (
+            <button
+              className="button button-quiet"
+              type="button"
+              aria-label="Cancel extraction"
+              disabled={phase.cancelling === true}
+              onClick={onCancelExtraction}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       );
     case "done":
@@ -275,7 +305,7 @@ export function JobRequirementsExtraction({
       mounted.current = false;
     };
   }, []);
-  const { createOpportunity } = binding;
+  const { createOpportunity, cancelOpportunityExtraction } = binding;
   if (createOpportunity === undefined) return null;
   const briefOperations = briefOperationsOf(binding);
 
@@ -283,6 +313,18 @@ export function JobRequirementsExtraction({
     setPhase({ kind: "running" });
     void runJobRequirementsExtraction(createOpportunity).then((outcome) => {
       if (mounted.current) setPhase(outcome);
+    });
+  };
+
+  const cancelExtraction = () => {
+    if (cancelOpportunityExtraction === undefined) return;
+    setPhase((current) =>
+      current.kind === "running" ? { kind: "running", cancelling: true } : current,
+    );
+    // The cancelled create request settles the card; a failed cancel leaves it cancellable.
+    void cancelOpportunityExtraction().catch(() => {
+      if (!mounted.current) return;
+      setPhase((current) => (current.kind === "running" ? { kind: "running" } : current));
     });
   };
 
@@ -306,6 +348,9 @@ export function JobRequirementsExtraction({
       onOpen={() => setPhase({ kind: "consent" })}
       onConfirm={confirm}
       onCancel={() => setPhase({ kind: "idle" })}
+      {...(cancelOpportunityExtraction === undefined
+        ? {}
+        : { onCancelExtraction: cancelExtraction })}
     />
   );
 }

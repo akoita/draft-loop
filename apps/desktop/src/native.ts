@@ -34,6 +34,7 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceResult,
   type NativeBridge,
+  type OpportunityCancelResult,
   type OpportunityCreateInput,
   type OpportunityEditInput,
   type OpportunityLatestResult,
@@ -132,6 +133,8 @@ export interface DesktopOpportunityCapabilities {
   readonly createOpportunity?: (
     input: Omit<OpportunityCreateInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
+  /** Aborts the workspace's in-flight extraction before it saves anything. */
+  readonly cancelOpportunityExtraction?: () => Promise<OpportunityCancelResult>;
   readonly getOpportunity?: (briefId: string, version?: number) => Promise<OpportunityRecordResult>;
   readonly listOpportunityVersions?: (briefId: string) => Promise<OpportunityListResult>;
   /** The workspace's most recent opportunity brief (draft or reviewed), or `null` when none. */
@@ -814,6 +817,19 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "opportunity.create",
                 input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.cancel")
+      ? {
+          cancelOpportunityExtraction: async () => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.cancel",
+                input: { workspaceId: state.workspaceId },
               }),
             );
           },

@@ -276,6 +276,8 @@ export interface CreateOpportunityCommand {
   readonly sources: readonly OpportunitySourceInput[];
   readonly allowProviderData?: boolean;
   readonly createdAt?: string;
+  /** Aborting before the brief is saved stops the provider request and persists nothing. */
+  readonly signal?: AbortSignal;
 }
 
 export interface GetOpportunityCommand {

@@ -264,8 +264,10 @@ then creates a draft brief from the workspace's own job document with the same
 structured extraction. The host reads that document itself, so no file dialog
 or path is involved, and a document over the 64 KiB limit fails with a message.
 The card shows the draft brief ID, version, requirement and responsibility
-counts, and any open extraction issues. Extraction cannot be cancelled once
-started. The draft cannot start a run until it is reviewed.
+counts, and any open extraction issues. While extraction runs, **Cancel**
+aborts the provider request and saves no brief; the card returns to idle with
+"Extraction cancelled. No brief was saved." The draft cannot start a run until
+it is reviewed.
 
 The card also shows the workspace's latest brief as "Requirements brief vN
 (draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review

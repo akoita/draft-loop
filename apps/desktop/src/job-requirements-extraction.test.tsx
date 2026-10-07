@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { type OpportunityCreateInput, validateBridgeCommand } from "./bridge.js";
+import {
+  bridgeCapabilities,
+  type OpportunityCreateInput,
+  opportunityExtractionCancelledMessage,
+  validateBridgeCommand,
+} from "./bridge.js";
 import {
   JobRequirementsExtractionView,
   type JobRequirementsPhase,
@@ -50,7 +55,11 @@ function record(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-function render(phase: JobRequirementsPhase, disabled = false): string {
+function render(
+  phase: JobRequirementsPhase,
+  disabled = false,
+  onCancelExtraction?: () => void,
+): string {
   return renderToStaticMarkup(
     <JobRequirementsExtractionView
       phase={phase}
@@ -59,6 +68,7 @@ function render(phase: JobRequirementsPhase, disabled = false): string {
       onOpen={() => undefined}
       onConfirm={() => undefined}
       onCancel={() => undefined}
+      {...(onCancelExtraction === undefined ? {} : { onCancelExtraction })}
     />,
   );
 }
@@ -87,11 +97,34 @@ describe("Extract requirements card states", () => {
     expect(html).toContain(">Cancel<");
   });
 
-  it("shows progress and says extraction cannot be cancelled once started", () => {
-    const html = render({ kind: "running" });
+  it("shows progress with an enabled Cancel extraction button", () => {
+    const html = render({ kind: "running" }, false, () => undefined);
     expect(html).toContain("Extracting requirements…");
-    expect(html).toContain("cannot be cancelled");
-    expect(html).not.toContain(">Cancel<");
+    expect(html).not.toContain("cannot be cancelled");
+    expect(html).toMatch(
+      /<button(?![^>]*disabled)[^>]*aria-label="Cancel extraction"[^>]*>Cancel</u,
+    );
+  });
+
+  it("disables Cancel while the cancellation is in flight", () => {
+    expect(render({ kind: "running", cancelling: true }, false, () => undefined)).toMatch(
+      /<button[^>]*aria-label="Cancel extraction"[^>]*disabled=""[^>]*>Cancel</u,
+    );
+  });
+
+  it("hides Cancel when the host cannot cancel, and outside a running extraction", () => {
+    expect(render({ kind: "running" })).not.toContain("Cancel extraction");
+    expect(render({ kind: "idle" }, false, () => undefined)).not.toContain("Cancel extraction");
+    expect(render({ kind: "done", summary: summarizeJobRequirements(record()) })).not.toContain(
+      "Cancel extraction",
+    );
+  });
+
+  it("shows the calm cancelled notice on the idle card", () => {
+    const html = render({ kind: "idle", notice: "Extraction cancelled. No brief was saved." });
+    expect(html).toContain("Extraction cancelled. No brief was saved.");
+    expect(html).toContain(">Extract requirements<");
+    expect(html).not.toContain('role="alert"');
   });
 
   it("summarizes the draft brief with counts and open issues only", () => {
@@ -173,6 +206,16 @@ describe("runJobRequirementsExtraction", () => {
     });
   });
 
+  it("returns a cancelled extraction to idle with the calm notice, not a failure", async () => {
+    const outcome = await runJobRequirementsExtraction(async () => {
+      throw new Error(opportunityExtractionCancelledMessage);
+    });
+    expect(outcome).toEqual({
+      kind: "idle",
+      notice: "Extraction cancelled. No brief was saved.",
+    });
+  });
+
   it("falls back to a fixed sentence when the failure has no message", async () => {
     const outcome = await runJobRequirementsExtraction(async () => {
       throw "boom";
@@ -226,5 +269,23 @@ describe("workspace-job-description bridge drift", () => {
         }),
       ).toThrow("invalid");
     }
+  });
+});
+
+describe("opportunity.cancel bridge drift", () => {
+  it("accepts exactly the payload the native API sends", () => {
+    expect(
+      validateBridgeCommand({ type: "opportunity.cancel", input: { workspaceId: "workspace-1" } }),
+    ).toEqual({ type: "opportunity.cancel", input: { workspaceId: "workspace-1" } });
+  });
+
+  it("stays strict about extra keys and a missing workspace", () => {
+    for (const input of [{}, { workspaceId: "workspace-1", briefId: "brief-1" }]) {
+      expect(() => validateBridgeCommand({ type: "opportunity.cancel", input })).toThrow("invalid");
+    }
+  });
+
+  it("is a known capability", () => {
+    expect(bridgeCapabilities).toContain("opportunity.cancel");
   });
 });
