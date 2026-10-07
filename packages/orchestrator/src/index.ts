@@ -38,6 +38,8 @@ import type {
   StoragePort,
 } from "@draft-loop/storage";
 import {
+  type CoverageJudgement,
+  type CoverageJudgementRequest,
   type ValidationCategory,
   type ValidationIssue,
   validateDraftArtifact,
@@ -89,7 +91,11 @@ export interface CritiqueFinding {
 
 export interface Critique {
   readonly findings: readonly CritiqueFinding[];
+  /** Verdicts for the requested coverage judgements; absent until a critic answers them. */
+  readonly coverageJudgements?: readonly CoverageJudgement[];
 }
+
+export type { CoverageJudgement, CoverageJudgementRequest };
 
 /** Durable, provider-independent state for one adjudicated revision request. */
 export interface AdjudicationRuntimeState {
@@ -149,6 +155,8 @@ export interface CriticRequest {
   readonly context: ContextSnapshot;
   readonly artifact: DraftArtifact;
   readonly deterministicFindings: readonly ValidationIssue[];
+  /** Requirements the critic is asked to judge against their candidate blocks. */
+  readonly coverageJudgementRequests?: readonly CoverageJudgementRequest[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
