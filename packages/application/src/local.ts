@@ -29,6 +29,7 @@ import {
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
   type AuthorAgent,
+  type CoverageJudgementPlanner,
   type CriticAgent,
   createOrchestrationEngine,
   createStorageRunStore,
@@ -153,6 +154,7 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import { runEngineTail } from "./run-engine-tail.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   type BeginStartRunOptions,
@@ -1746,6 +1748,7 @@ function engine(
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
   withheld?: CandidateKnowledgeSensitivityExclusions,
+  coverageJudgement?: CoverageJudgementPlanner,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
@@ -1769,6 +1772,7 @@ function engine(
     author: agents.author,
     critic: agents.critic,
     autopilot: config.autopilot === true,
+    ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
     store,
     retrieval: retrieval ?? createChronologyRetrieval(storage, context),
     contextResolver: async (contextSnapshotId) => {
@@ -2034,12 +2038,7 @@ async function createRun(
       options.resolveCredential ?? environmentCredentialResolver,
       options.providerClientFactories,
       providerAuthModeConfiguration,
-      options.userSessionRunners,
-      options.userSessionTimeoutMs,
-      candidateRetrieval?.port,
-      options.authorProposalCaptureDirectory,
-      options.localClaudeCategoryCaptureParent,
-      withheld,
+      ...runEngineTail(options, candidateRetrieval?.port, withheld, root),
     );
     const request = {
       runId,
@@ -2120,12 +2119,7 @@ export async function resumeRun(
       options.resolveCredential ?? environmentCredentialResolver,
       options.providerClientFactories,
       options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
-      options.userSessionRunners,
-      options.userSessionTimeoutMs,
-      candidateRetrieval?.port,
-      options.authorProposalCaptureDirectory,
-      options.localClaudeCategoryCaptureParent,
-      withheld,
+      ...runEngineTail(options, candidateRetrieval?.port, withheld, root),
     );
     writeRunPreflight(config, io.write, budget(config), context);
     await announceRunEvidenceMode(storage, candidateRetrieval, config.id, runId, io.write);

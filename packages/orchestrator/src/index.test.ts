@@ -20,6 +20,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type AgentExecution,
   type AuthorRequest,
+  type CoverageJudgementPlan,
+  type CoverageJudgementPlanner,
   type Critique,
   createOrchestrationEngine,
   createStorageRunStore,
@@ -186,6 +188,7 @@ function engineFixture(
     readonly critic?: (request: unknown) => Promise<AgentExecution<Critique>>;
     readonly store?: InMemoryRunStore;
     readonly now?: () => string;
+    readonly coverageJudgement?: CoverageJudgementPlanner;
     readonly retrieval?: {
       readonly queryEvidence: (
         query: string,
@@ -206,6 +209,7 @@ function engineFixture(
     critic: { execute: critic },
     store,
     now: options.now ?? (() => timestamp),
+    ...(options.coverageJudgement ? { coverageJudgement: options.coverageJudgement } : {}),
     ...(options.retrieval ? { retrieval: options.retrieval as never } : {}),
   });
   return { engine, author, critic, store };
@@ -2197,5 +2201,158 @@ describe("autopilot", () => {
     expect(result).toMatchObject({ state: "awaiting-approval", round: 1 });
     expect(result.latestEvaluation?.ready).toBe(true);
     expect(author).toHaveBeenCalledOnce();
+  });
+});
+
+describe("coverage judgement", () => {
+  const coveragePlan: CoverageJudgementPlan = {
+    assessments: [
+      {
+        requirementId: "requirement-1",
+        status: "needs-judgement",
+        basis: "semantic-candidate",
+        evidence: [{ blockId: "experience-block-1", score: 0.8 }],
+        rationale:
+          "Possibly covered with different wording; needs judgement against the cited blocks.",
+      },
+      {
+        requirementId: "requirement-2",
+        status: "covered",
+        basis: "lexical",
+        evidence: [{ blockId: "summary-block-1" }],
+        rationale: "Covered by deterministic token matching.",
+      },
+    ],
+    requests: [{ requirementId: "requirement-1", candidateBlockIds: ["experience-block-1"] }],
+  };
+  const satisfied = {
+    requirementId: "requirement-1",
+    verdict: "satisfied" as const,
+    citedBlockIds: ["experience-block-1"],
+    rationale: "The block states the required experience.",
+  };
+
+  function judged(
+    planner: CoverageJudgementPlanner | undefined,
+    output: Critique = { findings: [] },
+  ) {
+    return engineFixture({
+      critic: async () => execution(output, "openai", "critic-test"),
+      ...(planner === undefined ? {} : { coverageJudgement: planner }),
+    });
+  }
+
+  it("sends the requests, applies the verdicts and records them with the critic execution", async () => {
+    const planner = { plan: vi.fn(async () => coveragePlan) };
+    const { engine, critic } = judged(planner, {
+      findings: [],
+      coverageJudgements: [satisfied],
+      coverageJudgementInstructionsVersion: "coverage-judgement-v1",
+    });
+
+    const result = await engine.start(request());
+
+    expect(planner.plan).toHaveBeenCalledOnce();
+    expect(critic).toHaveBeenCalledOnce();
+    expect(critic.mock.calls[0]?.[0]).toMatchObject({
+      coverageJudgementRequests: coveragePlan.requests,
+    });
+    const record = result.executionHistory.find((entry) => entry.step === "critic");
+    expect(record?.provider).toBe("openai");
+    expect(record?.modelId).toBe("critic-test");
+    expect(record?.coverageJudgement).toMatchObject({
+      instructionsVersion: "coverage-judgement-v1",
+      summary: { judged: 1, satisfied: 1, notSatisfied: 0, invalid: 0, unanswered: 0 },
+    });
+    expect(record?.coverageJudgement?.assessments).toEqual([
+      {
+        requirementId: "requirement-1",
+        status: "covered",
+        basis: "judgement",
+        evidence: [{ blockId: "experience-block-1", score: 0.8 }],
+        rationale: satisfied.rationale,
+      },
+      coveragePlan.assessments[1],
+    ]);
+  });
+
+  it("emits a content-free event with only the summary counts", async () => {
+    const { engine } = judged(
+      { plan: async () => coveragePlan },
+      { findings: [], coverageJudgements: [satisfied] },
+    );
+
+    await engine.start(request());
+
+    const events = (await engine.events("run-1")).filter(
+      (event) => event.type === "coverage.judged",
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]?.details).toEqual({
+      executionId: "run-1:1:critic:attempt:1",
+      requested: 1,
+      instructionsVersion: null,
+      judged: 1,
+      satisfied: 1,
+      notSatisfied: 0,
+      invalid: 0,
+      unanswered: 0,
+    });
+    expect(JSON.stringify(events[0])).not.toContain(satisfied.rationale);
+  });
+
+  it("records unanswered requests without changing the findings or readiness", async () => {
+    const baseline = await judged(undefined).engine.start(request());
+    const result = await judged({ plan: async () => coveragePlan }).engine.start(request());
+
+    const record = result.executionHistory.find((entry) => entry.step === "critic");
+    expect(record?.coverageJudgement?.summary).toMatchObject({ judged: 0, unanswered: 1 });
+    expect(record?.coverageJudgement?.assessments[0]?.status).toBe("needs-judgement");
+    expect(result.findings).toEqual(baseline.findings);
+    expect(result.state).toBe(baseline.state);
+    expect(result.latestEvaluation).toEqual(baseline.latestEvaluation);
+    expect(result.scoreHistory).toEqual(baseline.scoreHistory);
+  });
+
+  it.each<[string, CoverageJudgementPlanner | undefined]>([
+    ["absent", undefined],
+    ["unavailable", { plan: async () => undefined }],
+    [
+      "throwing",
+      {
+        plan: async () => {
+          throw new Error("planner failed");
+        },
+      },
+    ],
+    ["asking for nothing", { plan: async () => ({ ...coveragePlan, requests: [] }) }],
+  ])(
+    "leaves the critic request and record unchanged when the planner is %s",
+    async (_name, planner) => {
+      const baseline = await judged(undefined).engine.start(request());
+      const { engine, critic } = judged(planner);
+
+      const result = await engine.start(request());
+
+      const sent = critic.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(Object.keys(sent)).not.toContain("coverageJudgementRequests");
+      const record = result.executionHistory.find((entry) => entry.step === "critic");
+      expect(record).not.toHaveProperty("coverageJudgement");
+      expect((await engine.events("run-1")).map((event) => event.type)).not.toContain(
+        "coverage.judged",
+      );
+      expect(result.findings).toEqual(baseline.findings);
+      expect(result.state).toBe(baseline.state);
+    },
+  );
+
+  it("does not consult the planner for the author step", async () => {
+    const planner = { plan: vi.fn(async () => coveragePlan) };
+    const { engine, author } = judged(planner);
+
+    await engine.start(request());
+
+    expect(author).toHaveBeenCalledOnce();
+    expect(planner.plan).toHaveBeenCalledTimes(1);
   });
 });

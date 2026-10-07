@@ -38,8 +38,11 @@ import type {
   StoragePort,
 } from "@draft-loop/storage";
 import {
+  applyCoverageJudgements,
   type CoverageJudgement,
   type CoverageJudgementRequest,
+  type CoverageJudgementSummary,
+  type RequirementCoverageAssessment,
   type ValidationCategory,
   type ValidationIssue,
   validateDraftArtifact,
@@ -93,6 +96,8 @@ export interface Critique {
   readonly findings: readonly CritiqueFinding[];
   /** Verdicts for the requested coverage judgements; absent until a critic answers them. */
   readonly coverageJudgements?: readonly CoverageJudgement[];
+  /** Which coverage-judgement instructions the critic saw; present only when they were sent. */
+  readonly coverageJudgementInstructionsVersion?: string;
 }
 
 export type { CoverageJudgement, CoverageJudgementRequest };
@@ -191,6 +196,34 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly maxAttempts?: number;
   readonly retryable?: boolean;
   readonly adjudicatedRevisionTrace?: AdjudicatedRevisionTrace;
+  /** Judged requirement coverage; present only on a critic execution that was sent requests. */
+  readonly coverageJudgement?: ExecutionCoverageJudgement;
+}
+
+/** Coverage assessments after the critic's verdicts, stored with that critic execution. */
+export interface ExecutionCoverageJudgement {
+  readonly instructionsVersion: string | null;
+  readonly assessments: readonly RequirementCoverageAssessment[];
+  /** Content-free counts only. */
+  readonly summary: CoverageJudgementSummary;
+}
+
+/** The requirement assessments for a draft and the subset the critic is asked to judge. */
+export interface CoverageJudgementPlan {
+  readonly assessments: readonly RequirementCoverageAssessment[];
+  readonly requests: readonly CoverageJudgementRequest[];
+}
+
+/**
+ * Optional port that proposes coverage judgements for the critic step. Returning `undefined` or
+ * throwing leaves the critic request, and the run, exactly as they are without a planner.
+ */
+export interface CoverageJudgementPlanner {
+  readonly plan: (input: {
+    readonly artifact: DraftArtifact;
+    readonly context: ContextSnapshot;
+    readonly signal?: AbortSignal;
+  }) => Promise<CoverageJudgementPlan | undefined>;
 }
 
 export const runFailureStages = [
@@ -279,6 +312,7 @@ export type RunEventType =
   | "step.started"
   | "step.completed"
   | "execution.reused"
+  | "coverage.judged"
   | "provider.failed"
   | "provider.recovered"
   | "budget.exhausted"
@@ -375,6 +409,8 @@ export interface OrchestrationEngineOptions {
    * claim or a blocking factuality finding). Off by default.
    */
   readonly autopilot?: boolean;
+  /** Asks the critic to judge semantic coverage candidates; absent keeps the critic step as is. */
+  readonly coverageJudgement?: CoverageJudgementPlanner;
 }
 
 export interface StorageRunStore extends RunStore {}
@@ -1172,6 +1208,41 @@ function validateOrchestrationRequest(request: OrchestrationRequest): void {
   }
 }
 
+/** The plan only when it asks for judgements; a failing or absent planner changes nothing. */
+async function requestedCoverage(
+  planner: CoverageJudgementPlanner | undefined,
+  input: Parameters<CoverageJudgementPlanner["plan"]>[0],
+): Promise<CoverageJudgementPlan | undefined> {
+  if (planner === undefined) return undefined;
+  try {
+    const plan = await planner.plan(input);
+    return plan !== undefined && plan.requests.length > 0 ? plan : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function judgedCoverage(
+  plan: CoverageJudgementPlan,
+  critique: Critique | undefined,
+): ExecutionCoverageJudgement | undefined {
+  try {
+    const applied = applyCoverageJudgements(
+      plan.assessments,
+      plan.requests,
+      critique?.coverageJudgements ?? [],
+    );
+    return {
+      instructionsVersion: critique?.coverageJudgementInstructionsVersion ?? null,
+      assessments: applied.assessments,
+      summary: applied.summary,
+    };
+  } catch {
+    // A malformed verdict payload must not fail a critic step that otherwise succeeded.
+    return undefined;
+  }
+}
+
 export function createOrchestrationEngine(
   options: OrchestrationEngineOptions,
 ): OrchestrationEngine & OrchestrationPort {
@@ -1487,6 +1558,15 @@ export function createOrchestrationEngine(
             })
         : undefined;
 
+      const coverageRequests =
+        step === "critic"
+          ? await requestedCoverage(options.coverageJudgement, {
+              artifact: snapshot.artifact as DraftArtifact,
+              context,
+              ...(signal === undefined ? {} : { signal }),
+            })
+          : undefined;
+
       const execution =
         step === "critic"
           ? await options.critic.execute({
@@ -1496,6 +1576,9 @@ export function createOrchestrationEngine(
               context,
               artifact: snapshot.artifact as DraftArtifact,
               deterministicFindings: snapshot.findings,
+              ...(coverageRequests === undefined
+                ? {}
+                : { coverageJudgementRequests: coverageRequests.requests }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
               ...(signal === undefined ? {} : { signal }),
             })
@@ -1520,6 +1603,10 @@ export function createOrchestrationEngine(
               execution.output,
               clock(),
             );
+      const coverageJudgement =
+        coverageRequests === undefined
+          ? undefined
+          : judgedCoverage(coverageRequests, execution.output as Critique | undefined);
       const record: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -1541,6 +1628,7 @@ export function createOrchestrationEngine(
         maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
         retryable: false,
         ...(adjudicatedRevisionTrace === undefined ? {} : { adjudicatedRevisionTrace }),
+        ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
       };
       await options.store.saveExecution(record);
       completedExecutionSaved = true;
@@ -1563,6 +1651,14 @@ export function createOrchestrationEngine(
             }),
       };
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
+      if (coverageJudgement !== undefined) {
+        await emit(saved, "coverage.judged", {
+          executionId: id,
+          requested: coverageRequests?.requests.length ?? 0,
+          instructionsVersion: coverageJudgement.instructionsVersion,
+          ...coverageJudgement.summary,
+        });
+      }
       return completeStep(saved, context, record, execution.outputFindings);
     } catch (error) {
       // A completed execution is immutable. If snapshot/event persistence
