@@ -69,6 +69,20 @@ describe("Career evidence setup card", () => {
     expect(html).not.toContain("Semantic search");
   });
 
+  it("offers Manage only when a base is selected and the host wires it", () => {
+    expect(render(selected, { onManage: () => undefined })).toMatch(
+      /<button[^>]*class="button button-quiet"[^>]*>Manage</,
+    );
+    expect(render(selected)).not.toContain(">Manage<");
+    expect(
+      render({ kind: "none", legacyDeclined: false }, { onManage: () => undefined }),
+    ).not.toContain(">Manage<");
+  });
+
+  it("targets the Manage career evidence heading", () => {
+    expect(knowledgeStoreFocusTargetId).toBe("candidate-knowledge-heading");
+  });
+
   it("shows the semantic index line in semantic or hybrid mode", () => {
     const html = render({ ...selected, semanticLine: "Semantic search: model not installed" });
     expect(html).toContain("Semantic search: model not installed");
@@ -145,7 +159,7 @@ describe("Career evidence setup card", () => {
     expect(legacyRetrievalText(setup)).toBe("Evidence will be indexed when the review starts");
   });
 
-  it("scrolls to and focuses the Knowledge store section", () => {
+  it("scrolls to and focuses the Manage career evidence heading", () => {
     const scrollIntoView = vi.fn();
     const focus = vi.fn();
     const documentRef = {

@@ -1067,10 +1067,13 @@ and keeps paths local.
   diagnostics omit roots, labels, filenames, URLs, checksums, and content.
   Archival requires confirmation and cannot target the default CKB.
 
-- **Saved store on reopen.** When a workspace opens, the knowledge panel
-  reopens the store saved with its selection, marks the selected CKB "In use",
-  and shows no path. If the saved location is no longer readable, the panel asks
-  you to open the store again. Only the first saved entry's store is restored.
+- **Saved store on reopen.** When a workspace opens, the **Manage career
+  evidence** panel reopens the store saved with its selection, marks the
+  selected CKB "In use", and shows no path. It reloads when card 02 creates or
+  selects a CKB, and the create-or-open form sits behind **Use a different
+  knowledge store…** (shown directly only when the host cannot create a CKB
+  itself). If the saved location is no longer readable, the panel asks you to
+  open the store again. Only the first saved entry's store is restored.
 
 - **Automatic knowledge base and one-time import.** Setup card 02, **Career
   evidence**, follows the workspace's selected CKB. With none selected and no

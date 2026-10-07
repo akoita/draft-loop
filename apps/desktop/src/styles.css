@@ -3268,6 +3268,20 @@ input[type="checkbox"] {
   gap: var(--space-3);
 }
 
+.knowledge-store-disclosure {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.knowledge-store-disclosure [hidden] {
+  display: none;
+}
+
+.knowledge-store-disclosure > div {
+  justify-self: stretch;
+}
+
 .knowledge-store-actions,
 .knowledge-actions {
   display: flex;

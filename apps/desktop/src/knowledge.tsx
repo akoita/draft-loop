@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
+import { supportsAutomaticKnowledgeBase } from "./career-evidence-setup.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
+import {
+  autoCreateHint,
+  differentStoreDisclosureLabel,
+  isNewStoreFormRequest,
+  knowledgeStoreFormPresentation,
+  reloadStillValid,
+  shouldApplyReloadedKnowledge,
+} from "./knowledge-current.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
   hasWorkspaceSourcesIntakeCapabilities,
@@ -15,6 +24,10 @@ export interface KnowledgeWorkspaceProps {
   readonly workspaceId: string;
   readonly capabilities: DesktopKnowledgeCapabilities;
   readonly disabled: boolean;
+  /** Bumped whenever the workspace's knowledge may have changed elsewhere, such as card 02. */
+  readonly revision?: number;
+  /** Bumped when the person asks, from card 02, to create or choose a store: open and focus the form. */
+  readonly storeFormRequest?: number;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
   readonly onSelectionSaved: (workspaceId: string) => Promise<boolean>;
 }
@@ -214,6 +227,8 @@ export function KnowledgeWorkspace({
   workspaceId,
   capabilities,
   disabled,
+  revision = 0,
+  storeFormRequest = 0,
   onPendingChange,
   onSelectionSaved,
 }: KnowledgeWorkspaceProps) {
@@ -228,6 +243,7 @@ export function KnowledgeWorkspace({
   } | null>(null);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savedUnavailable, setSavedUnavailable] = useState(false);
+  const [formToggled, setFormToggled] = useState<boolean | null>(null);
   const loadCurrent = capabilities.getCurrentCandidateKnowledge;
   const loadCurrentRef = useRef(loadCurrent);
   loadCurrentRef.current = loadCurrent;
@@ -237,6 +253,14 @@ export function KnowledgeWorkspace({
   const userTouched = useRef(false);
   const pendingLatch = useRef(false);
   const operationGeneration = useRef(0);
+  // Mirrors `selection` for the reload effect, and counts events that make an in-flight
+  // reload response stale: the panel's own operations and every newer reload.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const reloadSequence = useRef(0);
+  const handledRevision = useRef(revision);
+  const handledStoreFormRequest = useRef(storeFormRequest);
+  const focusNameWhenShown = useRef(false);
 
   useEffect(() => {
     const generation = ++operationGeneration.current;
@@ -258,6 +282,7 @@ export function KnowledgeWorkspace({
     setSelection(null);
     setSavedUnavailable(false);
     setLoadingSaved(true);
+    reloadSequence.current += 1;
     void load(workspaceId).then(
       (result) => {
         if (operationGeneration.current !== generation) return;
@@ -278,9 +303,65 @@ export function KnowledgeWorkspace({
     );
   }, [workspaceId, hasLoadCurrent]);
 
+  // Follows knowledge changed elsewhere (card 02 creating, selecting or adding to a base) without
+  // remounting. It never starts over an operation of this panel, and a response is dropped when
+  // an operation or a newer reload began after it was requested.
+  useEffect(() => {
+    if (handledRevision.current === revision) return;
+    handledRevision.current = revision;
+    const load = loadCurrentRef.current;
+    if (!hasLoadCurrent || load === undefined || pendingLatch.current) return;
+    const generation = operationGeneration.current;
+    const startedSequence = ++reloadSequence.current;
+    const stillValid = () =>
+      operationGeneration.current === generation &&
+      reloadStillValid({
+        startedSequence,
+        currentSequence: reloadSequence.current,
+        operationInFlight: pendingLatch.current,
+      });
+    void load(workspaceId).then(
+      (result) => {
+        if (!stillValid() || result.store === null) return;
+        const loaded = { storeId: result.store.storeId, ids: result.selectedKnowledgeBaseIds };
+        if (
+          !shouldApplyReloadedKnowledge({
+            userTouched: userTouched.current,
+            shown: selectionRef.current,
+            loaded,
+          })
+        ) {
+          return;
+        }
+        setStore(result.store);
+        setSelection(loaded);
+        setSavedUnavailable(false);
+        setLoadingSaved(false);
+      },
+      () => undefined,
+    );
+  }, [revision, workspaceId, hasLoadCurrent]);
+
+  useEffect(() => {
+    if (!isNewStoreFormRequest(handledStoreFormRequest.current, storeFormRequest)) return;
+    handledStoreFormRequest.current = storeFormRequest;
+    focusNameWhenShown.current = true;
+    setFormToggled(true);
+  }, [storeFormRequest]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-runs when the form may have just appeared, to focus the name field once it exists
+  useEffect(() => {
+    if (!focusNameWhenShown.current) return;
+    const input = document.getElementById("candidate-knowledge-name");
+    if (input === null) return;
+    focusNameWhenShown.current = false;
+    input.focus();
+  }, [storeFormRequest, formToggled, store]);
+
   const perform = async (operation: (generation: number) => Promise<void>) => {
     if (pendingLatch.current || disabled || !supported) return;
     pendingLatch.current = true;
+    reloadSequence.current += 1;
     setPending(true);
     onPendingChange(workspaceId, true);
     setMessage(null);
@@ -293,6 +374,7 @@ export function KnowledgeWorkspace({
       }
     } finally {
       pendingLatch.current = false;
+      reloadSequence.current += 1;
       setPending(false);
       onPendingChange(workspaceId, false);
     }
@@ -417,7 +499,9 @@ export function KnowledgeWorkspace({
   if (!supported) {
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
-        <h2 id="candidate-knowledge-heading">Career evidence</h2>
+        <h2 id="candidate-knowledge-heading" tabIndex={-1}>
+          Career evidence
+        </h2>
         <p>Knowledge-store selection is unavailable in this desktop host.</p>
       </section>
     );
@@ -427,47 +511,62 @@ export function KnowledgeWorkspace({
   const controlsDisabled = disabled || pending;
   const intakeSupported = hasDesktopKnowledgeIntakeCapabilities(capabilities);
   const workspaceSourcesSupported = hasWorkspaceSourcesIntakeCapabilities(capabilities);
+  const autoCreateSupported = supportsAutomaticKnowledgeBase(capabilities);
+  const formPresentation = knowledgeStoreFormPresentation({
+    hasStore: store !== null,
+    autoCreateSupported,
+    savedUnavailable,
+  });
+  const formOpen = formPresentation === "form" || (formToggled ?? formPresentation === "open");
+
+  const storeForm = (
+    <div className="knowledge-store-row">
+      <label className="setup-field" htmlFor="candidate-knowledge-name">
+        <span>New store folder name</span>
+        <input
+          id="candidate-knowledge-name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          disabled={controlsDisabled}
+        />
+      </label>
+      <div className="knowledge-store-actions">
+        <button
+          type="button"
+          className="button button-primary"
+          disabled={controlsDisabled}
+          onClick={createStore}
+        >
+          Create knowledge store
+        </button>
+        <button
+          type="button"
+          className="button button-outline"
+          disabled={controlsDisabled}
+          onClick={openStore}
+        >
+          Open knowledge store
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <section className="panel knowledge-panel" aria-labelledby="candidate-knowledge-heading">
       <div>
         <p className="eyebrow">Career evidence</p>
-        <h2 id="candidate-knowledge-heading">Knowledge store</h2>
+        <h2 id="candidate-knowledge-heading" tabIndex={-1}>
+          Manage career evidence
+        </h2>
       </div>
       <p className="knowledge-copy">
         Reusable career evidence, kept separate from application material. Choosing a base replaces
         this workspace’s current knowledge selection.
       </p>
-      <div className="knowledge-store-row">
-        <label className="setup-field" htmlFor="candidate-knowledge-name">
-          <span>New store folder name</span>
-          <input
-            id="candidate-knowledge-name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            disabled={controlsDisabled}
-          />
-        </label>
-        <div className="knowledge-store-actions">
-          <button
-            type="button"
-            className="button button-primary"
-            disabled={controlsDisabled}
-            onClick={createStore}
-          >
-            Create knowledge store
-          </button>
-          <button
-            type="button"
-            className="button button-outline"
-            disabled={controlsDisabled}
-            onClick={openStore}
-          >
-            Open knowledge store
-          </button>
-        </div>
-      </div>
+      {store === null && autoCreateSupported ? (
+        <p className="knowledge-hint">{autoCreateHint}</p>
+      ) : null}
       {pending ? (
         <p className="knowledge-status" role="status">
           Updating candidate knowledge…
@@ -492,6 +591,24 @@ export function KnowledgeWorkspace({
           onSelect={selectKnowledgeBase}
           onImport={importIntoKnowledgeBase}
         />
+      )}
+      {formPresentation === "form" ? (
+        storeForm
+      ) : (
+        <div className="knowledge-store-disclosure">
+          <button
+            type="button"
+            className="button button-quiet"
+            aria-expanded={formOpen}
+            aria-controls="candidate-knowledge-store-form"
+            onClick={() => setFormToggled(!formOpen)}
+          >
+            {differentStoreDisclosureLabel}
+          </button>
+          <div id="candidate-knowledge-store-form" hidden={!formOpen}>
+            {formOpen ? storeForm : null}
+          </div>
+        </div>
       )}
     </section>
   );
