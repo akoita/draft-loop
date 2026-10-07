@@ -42,10 +42,12 @@ import {
   type CoverageJudgement,
   type CoverageJudgementRequest,
   type CoverageJudgementSummary,
+  judgedCoveredRequirementIds,
   type RequirementCoverageAssessment,
   type ValidationCategory,
   type ValidationIssue,
   validateDraftArtifact,
+  withoutJudgedUncoveredFindings,
 } from "@draft-loop/validation";
 
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
@@ -1770,7 +1772,14 @@ export function createOrchestrationEngine(
         ),
       );
     const critiqueIssues = validateCritique(execution.output);
-    const combined = [...snapshot.findings, ...critiqueIssues, ...execution.output.findings];
+    const judgedIds =
+      execution.coverageJudgement === undefined
+        ? []
+        : judgedCoveredRequirementIds(execution.coverageJudgement.assessments);
+    const combined = withoutJudgedUncoveredFindings(
+      [...snapshot.findings, ...critiqueIssues, ...execution.output.findings],
+      judgedIds,
+    );
     const evaluation = evaluateReadiness(
       snapshot.artifact as DraftArtifact,
       readinessContext(context),
@@ -1779,6 +1788,7 @@ export function createOrchestrationEngine(
         priorScoreHistory: snapshot.scoreHistory,
         findings: combined,
         maxRounds: snapshot.budget.maxRounds,
+        ...(judgedIds.length === 0 ? {} : { coveredRequirementIds: judgedIds }),
       },
     );
     const now = clock();
@@ -2074,21 +2084,23 @@ export function createOrchestrationEngine(
     if (snapshot.artifact === null)
       throw new Error("A draft artifact is required before approval.");
     const now = clock();
-    const currentCritiqueFindings = snapshot.executionHistory
-      .filter(
-        (execution) =>
-          execution.runId === snapshot.runId &&
-          execution.contextSnapshotId === snapshot.contextSnapshotId &&
-          execution.round === snapshot.round &&
-          execution.step === "critic" &&
-          execution.status === "completed" &&
-          structurallyValidCritique(execution.output),
-      )
-      .flatMap((execution) =>
-        executionOutputIsCritique(execution) && execution.output !== undefined
-          ? execution.output.findings
-          : [],
-      );
+    const currentCritiques = snapshot.executionHistory.filter(
+      (execution) =>
+        execution.runId === snapshot.runId &&
+        execution.contextSnapshotId === snapshot.contextSnapshotId &&
+        execution.round === snapshot.round &&
+        execution.step === "critic" &&
+        execution.status === "completed" &&
+        structurallyValidCritique(execution.output),
+    );
+    const currentCritiqueFindings = currentCritiques.flatMap((execution) =>
+      executionOutputIsCritique(execution) && execution.output !== undefined
+        ? execution.output.findings
+        : [],
+    );
+    // The artifact only changes when the round advances, so the latest critic
+    // execution of the current round reviewed exactly this artifact.
+    const coverageAssessments = currentCritiques.at(-1)?.coverageJudgement?.assessments;
     const latestRevisionTrace =
       snapshot.adjudicationRuntime?.trace === null ||
       snapshot.adjudicationRuntime?.trace === undefined
@@ -2098,6 +2110,7 @@ export function createOrchestrationEngine(
       artifact: snapshot.artifact,
       context,
       critiqueFindings: currentCritiqueFindings,
+      ...(coverageAssessments === undefined ? {} : { coverageAssessments }),
       round: snapshot.round,
       budget: snapshot.budget,
       priorScoreHistory: snapshot.scoreHistory,

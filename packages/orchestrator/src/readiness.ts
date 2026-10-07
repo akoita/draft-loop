@@ -26,8 +26,11 @@ import {
 } from "@draft-loop/schemas";
 import {
   type DeterministicValidationContext,
+  judgedCoveredRequirementIds,
+  type RequirementCoverageAssessment,
   type ValidationIssue,
   validateDraftArtifact,
+  withoutJudgedUncoveredFindings,
 } from "@draft-loop/validation";
 import type { CritiqueFinding, RunBudget } from "./index.js";
 
@@ -84,6 +87,11 @@ export interface BuildApplicationReadinessDecisionInput {
   readonly artifact: DraftArtifact;
   readonly context: ContextSnapshot;
   readonly critiqueFindings: readonly CritiqueFinding[];
+  /**
+   * Coverage assessments from the latest critic execution of this artifact's round.
+   * Requirements judged satisfied no longer block as lexically uncovered.
+   */
+  readonly coverageAssessments?: readonly RequirementCoverageAssessment[];
   readonly round: number;
   readonly budget: RunBudget;
   readonly priorScoreHistory: ReadonlyArray<ReadinessEvaluation["scoreVector"]>;
@@ -267,6 +275,7 @@ function readinessEvaluation(
   context: ContextSnapshot,
   deterministicFindings: readonly ValidationIssue[],
   critiqueFindings: readonly CritiqueFinding[],
+  judgedIds: readonly string[],
   input: BuildApplicationReadinessDecisionInput,
 ): ReadinessEvaluation {
   return evaluateReadiness(
@@ -283,6 +292,7 @@ function readinessEvaluation(
       round: input.round,
       priorScoreHistory: input.priorScoreHistory,
       maxRounds: input.budget.maxRounds,
+      ...(judgedIds.length === 0 ? {} : { coveredRequirementIds: judgedIds }),
       findings: [
         ...deterministicFindings.map(asReadinessFinding),
         ...critiqueFindings.map(asReadinessFindingFromCritique),
@@ -300,11 +310,14 @@ export function buildApplicationReadinessStoppingDecision(
   const validation = validateDraftArtifact(input.artifact, validationContext, {
     explicitGapRequirementIds,
   });
+  const judgedIds = judgedCoveredRequirementIds(input.coverageAssessments ?? []);
+  const deterministicIssues = withoutJudgedUncoveredFindings(validation.issues, judgedIds);
   const evaluation = readinessEvaluation(
     input.artifact,
     input.context,
-    validation.issues,
+    deterministicIssues,
     input.critiqueFindings,
+    judgedIds,
     input,
   );
   const independentReview =
@@ -328,7 +341,7 @@ export function buildApplicationReadinessStoppingDecision(
       thresholdResults: evaluation.thresholdResults,
       meetsRubric: evaluation.meetsRubric,
     },
-    deterministicFindings: validation.issues.map((issue, index) =>
+    deterministicFindings: deterministicIssues.map((issue, index) =>
       reportFindingFromValidation(input.artifact, issue, index),
     ),
     criticFindings: input.critiqueFindings.map((finding, index) =>
@@ -345,6 +358,7 @@ export function buildApplicationReadinessStoppingDecision(
       ? {}
       : { latestRevisionTrace: input.latestRevisionTrace }),
     explicitGapRequirementIds,
+    ...(judgedIds.length === 0 ? {} : { coveredRequirementIds: judgedIds }),
     agreements: projectAgreements(report, input.latestRevisionTrace),
     createdAt: input.createdAt,
     deterministicValidationContext: validationContext,

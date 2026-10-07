@@ -25,6 +25,7 @@ export {
   maximumCoverageJudgementRationaleCharacters,
   maximumCoverageJudgementRequests,
 } from "./coverage-judgement.js";
+export { judgedCoveredRequirementIds, withoutJudgedUncoveredFindings } from "./judged-coverage.js";
 export { requiredMaturityQualifiers } from "./maturity-coverage.js";
 export {
   isRequirementCoveredByBlock,
