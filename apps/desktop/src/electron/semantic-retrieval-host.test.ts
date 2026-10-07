@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   createApplicationService,
   createLocalApplicationDriver,
+  defaultEmbeddingModelRoot,
   EmbeddingModelInstallError,
   type EmbeddingModelInstallPlan,
   type EmbeddingModelService,
@@ -321,21 +322,31 @@ describe("semantic retrieval host commands", () => {
 });
 
 describe("desktop embedding model root", () => {
-  it("points runs at userData/models when the environment names no root", () => {
-    const env: Record<string, string | undefined> = {};
-    applyDesktopEmbeddingModelRoot(env, "/data/DraftLoop");
-    expect(env.DRAFT_LOOP_EMBEDDING_MODEL_ROOT).toBe(join("/data/DraftLoop", "models"));
+  it("uses the CLI default root when the environment names none", () => {
+    for (const [platform, homedir, extra] of [
+      ["win32", "C:\\Users\\someone", { LOCALAPPDATA: "C:\\Users\\someone\\AppData\\Local" }],
+      ["darwin", "/Users/someone", {}],
+      ["linux", "/home/someone", {}],
+    ] as const) {
+      const env: Record<string, string | undefined> = { ...extra };
+      applyDesktopEmbeddingModelRoot(env, { platform, homedir });
+      expect(env.DRAFT_LOOP_EMBEDDING_MODEL_ROOT).toBe(
+        defaultEmbeddingModelRoot({ env: { ...extra }, platform, homedir }),
+      );
+    }
 
     const empty: Record<string, string | undefined> = { DRAFT_LOOP_EMBEDDING_MODEL_ROOT: "" };
-    applyDesktopEmbeddingModelRoot(empty, "/data/DraftLoop");
-    expect(empty.DRAFT_LOOP_EMBEDDING_MODEL_ROOT).toBe(join("/data/DraftLoop", "models"));
+    applyDesktopEmbeddingModelRoot(empty, { platform: "linux", homedir: "/home/someone" });
+    expect(empty.DRAFT_LOOP_EMBEDDING_MODEL_ROOT).toBe(
+      join("/home/someone", ".local", "share", "draft-loop", "models"),
+    );
   });
 
   it("preserves a root the person already chose", () => {
     const env: Record<string, string | undefined> = {
       DRAFT_LOOP_EMBEDDING_MODEL_ROOT: "/mnt/models",
     };
-    applyDesktopEmbeddingModelRoot(env, "/data/DraftLoop");
+    applyDesktopEmbeddingModelRoot(env, { platform: "linux", homedir: "/home/someone" });
     expect(env.DRAFT_LOOP_EMBEDDING_MODEL_ROOT).toBe("/mnt/models");
   });
 });

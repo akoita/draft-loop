@@ -902,8 +902,13 @@ The commands behave as follows:
   same files from a local directory instead, with the same checks.
 - **`remove`** deletes only that tier's files.
 
-Models are stored in the per-user data directory, outside every knowledge base,
-workspace, and backup. Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
+Models are stored in one per-user directory shared by the CLI and the desktop,
+outside every knowledge base, workspace, and backup:
+
+- Windows: `%LOCALAPPDATA%\DraftLoop\models`.
+- macOS: `~/Library/Application Support/DraftLoop/models`.
+- Linux: `$XDG_DATA_HOME/draft-loop/models`, or `~/.local/share/draft-loop/models`.
+ Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
 `--model-dir`, to use another location. The runtime supports Linux x64 and
 arm64, Windows x64 and arm64, and macOS on Apple silicon.
 
@@ -1004,10 +1009,11 @@ contracts as the `embeddings` and `retrieval mode` commands above.
   the mode needs a model that is not installed, the section says that runs fall
   back to keyword retrieval until it is.
 
-The main process stores models in `models` under the desktop's application data
-directory and sets `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` to it at startup unless you
-already set that variable, so runs started from the desktop read the same
-directory. The renderer never receives this path.
+The desktop uses the same per-user model directory as the CLI, so a model
+installed from either is found by both. At startup the main process sets
+`DRAFT_LOOP_EMBEDDING_MODEL_ROOT` to that directory unless you already set the
+variable, so runs started from the desktop read it too. The renderer never
+receives this path.
 
 ### Desktop knowledge operations
 

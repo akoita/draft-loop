@@ -116,7 +116,7 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(async () => {
   // Runs started from the desktop resolve the model root from the environment, so they read the
   // directory the Semantic retrieval controls install into.
-  applyDesktopEmbeddingModelRoot(process.env, app.getPath("userData"));
+  applyDesktopEmbeddingModelRoot(process.env);
   const hostErrorLogger = app.isPackaged
     ? createHostErrorLogger(app.getPath("userData"))
     : undefined;
