@@ -58,9 +58,9 @@ describe("semantic requirement coverage investigation fixture (#727)", () => {
     for (const id of ["r15", "r16"]) expect(lexicalOutcome(id)).toBe(true);
   });
 
-  it("reproduces the degree-level false positive outside the strict degree grammar", () => {
-    // "MSc or PhD in Computer Science" is not recognized by the strict degree
-    // rule, so word overlap accepts a block that only states a BSc.
-    expect(lexicalOutcome("r13")).toBe(true);
+  it("rejects a lower degree for a level-qualified degree requirement (#950)", () => {
+    // "MSc or PhD in Computer Science" uses the strict degree rule, so a block
+    // that only states a BSc no longer covers it through word overlap.
+    expect(lexicalOutcome("r13")).toBe(false);
   });
 });

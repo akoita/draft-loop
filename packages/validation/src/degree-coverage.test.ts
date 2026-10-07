@@ -84,13 +84,118 @@ describe("explicit degree alternatives", () => {
     ).toBe(false);
   });
 
-  it("leaves compound, level-specific, and unrelated requirements to existing coverage", () => {
+  it("leaves compound, unrecognised, and unrelated requirements to existing coverage", () => {
     for (const text of [
-      "Master's degree in computer science required",
+      "Master's degree in physics required",
+      "MSc in Computer Science and production experience",
+      "Computer science degree or equivalent experience",
       "Computer science degree and production experience",
       "Python tooling",
     ]) {
       expect(explicitDegreeCoverage(text, [])).toBeUndefined();
     }
+  });
+});
+
+describe("level-qualified degree requirements", () => {
+  const bsc = "BSc in Computer Science";
+  const msc = "MSc in Computer Science";
+  const phd = "PhD in Computer Science, 2016";
+
+  it.each([
+    ["BSc in Computer Science", [bsc, msc, phd], []],
+    ["Bachelor's degree in Computer Science", [bsc, msc, phd], []],
+    ["MSc in Computer Science", [msc, phd], [bsc]],
+    ["Master's degree in Computer Science required", [msc, phd], [bsc]],
+    ["PhD in Computer Science", [phd], [bsc, msc]],
+    ["Doctorate in Computer Science", [phd], [bsc, msc]],
+    ["MSc or PhD in Computer Science", [msc, phd], [bsc]],
+    ["PhD or MSc in Computer Science", [msc, phd], [bsc]],
+    ["Bachelor's or Master's degree in Computer Science", [bsc, msc, phd], []],
+    ["BSc, MSc or PhD in Computer Science", [bsc, msc, phd], []],
+    ["An MSc in Computer Science preferred.", [msc, phd], [bsc]],
+  ] as const)("%s", (requirementText, accepted, rejected) => {
+    for (const text of accepted) {
+      expect(explicitDegreeCoverage(requirementText, [text])).toBe(true);
+    }
+    for (const text of rejected) {
+      expect(explicitDegreeCoverage(requirementText, [text])).toBe(false);
+    }
+  });
+
+  it("accepts the credential spellings of each level", () => {
+    expect(
+      explicitDegreeCoverage("MSc in Computer Science", ["Master of Science in Computer Science"]),
+    ).toBe(true);
+    expect(
+      explicitDegreeCoverage("MSc in Computer Science", [
+        "Doctor of Philosophy in Computer Science",
+      ]),
+    ).toBe(true);
+    expect(
+      explicitDegreeCoverage("MSc in Computer Science", [
+        "Bachelor of Science in Computer Science",
+      ]),
+    ).toBe(false);
+    expect(
+      explicitDegreeCoverage("PhD in Computer Science", ["Master's degree in Computer Science"]),
+    ).toBe(false);
+    expect(
+      explicitDegreeCoverage("Doctorate in Computer Science", ["Doctorate in Computer Science"]),
+    ).toBe(true);
+    expect(
+      explicitDegreeCoverage("Doctorate in Computer Science", ["MSc in Computer Science"]),
+    ).toBe(false);
+  });
+
+  it("counts a generic degree only for a bachelor-minimum requirement", () => {
+    expect(explicitDegreeCoverage("BSc in Computer Science", ["Degree in Computer Science"])).toBe(
+      true,
+    );
+    expect(
+      explicitDegreeCoverage("Bachelor's or Master's degree in Computer Science", [
+        "Degree in Computer Science",
+      ]),
+    ).toBe(true);
+    expect(explicitDegreeCoverage("MSc in Computer Science", ["Degree in Computer Science"])).toBe(
+      false,
+    );
+    expect(
+      explicitDegreeCoverage("MSc or PhD in Computer Science", ["Degree in Computer Science"]),
+    ).toBe(false);
+  });
+
+  it("maps quantitative fields and rejects the wrong subject", () => {
+    expect(
+      explicitDegreeCoverage("PhD in a quantitative field", ["PhD in quantitative field"]),
+    ).toBe(true);
+    expect(
+      explicitDegreeCoverage("PhD in a quantitative field", ["MSc in quantitative field"]),
+    ).toBe(false);
+    expect(explicitDegreeCoverage("MSc or PhD in Computer Science", ["PhD in Mathematics"])).toBe(
+      false,
+    );
+    expect(explicitDegreeCoverage("MSc in Computer Science", ["MSc in quantitative field"])).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    "Pursuing an MSc in Computer Science",
+    "MSc in Computer Science, expected 2027",
+    "MSc in Computer Science; incomplete",
+    "PhD candidate in Computer Science",
+    "Coursework toward a PhD in Computer Science",
+  ])("never counts uncertain wording: %s", (text) => {
+    expect(explicitDegreeCoverage("MSc or PhD in Computer Science", [text])).toBe(false);
+    expect(explicitDegreeCoverage("BSc in Computer Science", [text])).toBe(false);
+  });
+
+  it("does not let a lower degree satisfy a higher level through another clause", () => {
+    expect(
+      explicitDegreeCoverage("MSc or PhD in Computer Science", [
+        "BSc in Computer Science; MSc in Literature",
+      ]),
+    ).toBe(false);
   });
 });

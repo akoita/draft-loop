@@ -16,9 +16,9 @@ contract. It uses invented material only.
 - **Embedding similarity does find the right evidence.** The top-ranked block
   was a correct evidence block for 7 of 7 covered requirements with
   EmbeddingGemma 2 and 6 of 7 with Granite 311M.
-- **A protected rule has a gap.** "MSc or PhD in Computer Science" falls outside
-  the strict degree grammar, so word overlap accepts a block that states only a
-  BSc.
+- **A protected rule had a gap.** "MSc or PhD in Computer Science" fell outside
+  the strict degree grammar, so word overlap accepted a block that states only a
+  BSc. #950 fixed this.
 
 Embeddings should therefore propose evidence, and a judge should decide. The
 deterministic protections must keep deciding degrees, organisation maturity,
@@ -53,8 +53,10 @@ Its assertions record current behaviour, so update them when the rule changes.
 | --- | --- |
 | Correctly covered | r15, r16 |
 | False negative | r1, r2, r3, r4, r5, r6, r7 |
-| Correctly uncovered | r8, r9, r10, r11, r12, r14 |
-| False positive | r13 (BSc accepted for "MSc or PhD") |
+| Correctly uncovered | r8, r9, r10, r11, r12, r13, r14 |
+
+Before #950, r13 was a false positive: the strict degree grammar did not
+recognise "MSc or PhD in Computer Science", so word overlap accepted a BSc.
 
 ### Embedding similarity
 

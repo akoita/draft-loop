@@ -4,10 +4,20 @@ const requirementPattern = new RegExp(
   `^(?:a )?(${subject})(?: or (${subject}))? degree(?: (?:preferred|required))?[.]?$`,
   "u",
 );
+// Level-qualified form, e.g. "MSc or PhD in Computer Science". Levels are ordered;
+// the lowest listed level is the minimum, and no field taxonomy is inferred.
+const level =
+  "(?:bsc|bs|bachelor of science|bachelor's|bachelor|msc|ms|master of science|master's|master|phd|doctor of philosophy|doctorate|doctoral)";
+const requirementSubject = "(computer science|quantitative(?: field| discipline)?)";
+const levelRequirementPattern = new RegExp(
+  `^(?:an? )?(${level}(?:(?:, or |, | or )${level}){0,2})(?: degrees?)? in (?:an? )?${requirementSubject}` +
+    `(?: or (?:an? )?${requirementSubject})?(?: (?:preferred|required))?[.]?$`,
+  "u",
+);
 const credential =
-  "(?:bsc|bs|msc|ms|phd|bachelor of science|master of science|doctor of philosophy|bachelor(?:'s)? degree|master(?:'s)? degree|doctoral degree|degree)";
+  "(?:bsc|bs|msc|ms|phd|bachelor of science|master of science|doctor of philosophy|doctorate|bachelor(?:'s)? degree|master(?:'s)? degree|doctoral degree|degree)";
 const credentialPattern = new RegExp(
-  `^(?:(?:earned|completed|holds) (?:an? )?)?${credential} in (computer science|quantitative(?: field| discipline)?)` +
+  `^(?:(?:earned|completed|holds) (?:an? )?)?(${credential}) in (computer science|quantitative(?: field| discipline)?)` +
     "(?:, [a-z][a-z -]{0,79})?(?:, (?:19|20)[0-9]{2}(?: (?:to|-) (?:19|20)[0-9]{2})?)?[.]?$",
   "u",
 );
@@ -26,6 +36,19 @@ const clauseBoundary = /;|\.(?=\s|$)/u;
 // so `; not completed` stays attached instead of becoming an independent clause.
 const statusFragment =
   /^(?!.*\bin\b)(?=.*\b(?:no|not|never|without|incomplete|unfinished|uncompleted|unearned|pending|expected|expecting|withdrawn|withdrawal|abandoned|dropped|failed|revoked|suspended|ongoing|progress|honorary|honoris)\b).*$/u;
+
+type Level = 1 | 2 | 3;
+
+function levelOf(text: string): Level | undefined {
+  if (/^(?:bsc|bs|bachelor)/u.test(text)) return 1;
+  if (/^(?:msc|ms|master)/u.test(text)) return 2;
+  if (/^(?:phd|doctor)/u.test(text)) return 3;
+  return undefined;
+}
+
+function subjectOf(text: string | undefined): string | undefined {
+  return text?.startsWith("quantitative") ? "quantitative" : text;
+}
 
 function normalize(value: string): string {
   return value
@@ -67,16 +90,31 @@ export function explicitDegreeCoverage(
   requirement: string,
   blocks: readonly string[],
 ): boolean | undefined {
-  const parsed = requirementPattern.exec(normalize(requirement));
-  if (parsed === null) return undefined;
-  const subjects = new Set([parsed[1], parsed[2]]);
+  const normalized = normalize(requirement);
+  const subjectOnly = requirementPattern.exec(normalized);
+  const qualified = subjectOnly === null ? levelRequirementPattern.exec(normalized) : null;
+  if (subjectOnly === null && qualified === null) return undefined;
+  const subjects = new Set(
+    subjectOnly === null
+      ? [subjectOf(qualified?.[2]), subjectOf(qualified?.[3])]
+      : [subjectOnly[1], subjectOnly[2]],
+  );
+  // A subject-only requirement accepts any level; a bare "degree" counts as bachelor.
+  const minimum = Math.min(
+    ...(qualified?.[1] ?? "")
+      .split(/, or |, | or /u)
+      .map((text) => levelOf(text))
+      .filter((value): value is Level => value !== undefined),
+    3,
+  );
+  const required = qualified === null ? 1 : minimum;
   return blocks.some((text) =>
     clauses(text).some((clause) => {
       if (uncertainCredential.test(clause)) return false;
       const degree = credentialPattern.exec(clause);
       if (degree === null) return false;
-      const field = degree[1]?.startsWith("quantitative") ? "quantitative" : degree[1];
-      return subjects.has(field);
+      if (!subjects.has(subjectOf(degree[2]))) return false;
+      return (levelOf(degree[1] ?? "") ?? 1) >= required;
     }),
   );
 }
