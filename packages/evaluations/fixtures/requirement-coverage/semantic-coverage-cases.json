@@ -1,0 +1,169 @@
+{
+  "note": "Invented candidate and requirements. Labels were written before running any matcher.",
+  "blocks": [
+    {
+      "id": "b-summary",
+      "text": "Platform engineer with nine years building and operating payment systems for a growth-stage fintech."
+    },
+    {
+      "id": "b-lead",
+      "text": "Managed a team of six engineers, ran weekly one-on-ones and quarterly performance reviews."
+    },
+    {
+      "id": "b-mentor",
+      "text": "Coached two junior developers to promotion through pairing and code review."
+    },
+    {
+      "id": "b-migration",
+      "text": "Moved the ledger from a monolith to twelve services on Kubernetes with zero customer-facing downtime."
+    },
+    {
+      "id": "b-oncall",
+      "text": "Introduced an on-call rotation and blameless post-mortems after a major outage."
+    },
+    {
+      "id": "b-cost",
+      "text": "Cut monthly cloud spend by 28 percent by rightsizing instances and removing idle resources."
+    },
+    {
+      "id": "b-stakeholders",
+      "text": "Presented quarterly roadmaps to the executive team and aligned product and finance on priorities."
+    },
+    {
+      "id": "b-data",
+      "text": "Built streaming pipelines with Kafka processing two million events per hour."
+    },
+    {
+      "id": "b-security",
+      "text": "Led remediation of findings from an external penetration test and introduced dependency scanning."
+    },
+    {
+      "id": "b-fr",
+      "text": "Animé des ateliers avec les équipes métier pour recueillir les besoins et prioriser la feuille de route."
+    },
+    {
+      "id": "b-course",
+      "text": "Completed an online introductory course on machine learning fundamentals."
+    },
+    {
+      "id": "b-hobby",
+      "text": "Organises a weekend Python study group for teenagers at the local library."
+    },
+    { "id": "b-education", "text": "BSc in Computer Science." },
+    { "id": "b-skills", "text": "Skills: Go, Java, PostgreSQL, Kubernetes, Terraform, Kafka, AWS." }
+  ],
+  "requirements": [
+    {
+      "id": "r1",
+      "kind": "paraphrase",
+      "label": "covered",
+      "evidence": ["b-lead"],
+      "text": "Proven people-management experience, including hiring, growing and retaining a team of software engineers"
+    },
+    {
+      "id": "r2",
+      "kind": "paraphrase",
+      "label": "covered",
+      "evidence": ["b-cost"],
+      "text": "Track record of optimising cloud infrastructure costs"
+    },
+    {
+      "id": "r3",
+      "kind": "paraphrase",
+      "label": "covered",
+      "evidence": ["b-oncall"],
+      "text": "Experience improving operational resilience and incident response practices"
+    },
+    {
+      "id": "r4",
+      "kind": "spread",
+      "label": "covered",
+      "evidence": ["b-migration", "b-skills"],
+      "text": "Hands-on experience decomposing a monolith into microservices and running them on Kubernetes in production"
+    },
+    {
+      "id": "r5",
+      "kind": "spread",
+      "label": "covered",
+      "evidence": ["b-lead", "b-mentor"],
+      "text": "Line management of engineers and mentoring of junior developers"
+    },
+    {
+      "id": "r6",
+      "kind": "cross-language",
+      "label": "covered",
+      "evidence": ["b-fr"],
+      "text": "Run discovery workshops with business stakeholders to gather requirements and prioritise the roadmap"
+    },
+    {
+      "id": "r7",
+      "kind": "paraphrase",
+      "label": "covered",
+      "evidence": ["b-stakeholders"],
+      "text": "Ability to communicate technical strategy to senior leadership"
+    },
+    {
+      "id": "r8",
+      "kind": "gap",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Experience designing and training production machine learning models"
+    },
+    {
+      "id": "r9",
+      "kind": "gap",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Native-level fluency in German"
+    },
+    {
+      "id": "r10",
+      "kind": "gap",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Experience building mobile applications for iOS and Android"
+    },
+    {
+      "id": "r11",
+      "kind": "misleading",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Experience teaching Python to professional engineering teams"
+    },
+    {
+      "id": "r12",
+      "kind": "misleading",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Machine learning engineering experience in production"
+    },
+    {
+      "id": "r13",
+      "kind": "protected-degree",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "MSc or PhD in Computer Science"
+    },
+    {
+      "id": "r14",
+      "kind": "protected-maturity",
+      "label": "uncovered",
+      "evidence": [],
+      "text": "Experience at a seed-stage startup"
+    },
+    {
+      "id": "r15",
+      "kind": "lexical",
+      "label": "covered",
+      "evidence": ["b-data"],
+      "text": "Kafka event streaming experience"
+    },
+    {
+      "id": "r16",
+      "kind": "lexical",
+      "label": "covered",
+      "evidence": ["b-security"],
+      "text": "Experience remediating penetration test findings"
+    }
+  ]
+}
