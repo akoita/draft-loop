@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import {
   createEmbeddingModelService,
   defaultEmbeddingModelRoot,
@@ -28,17 +27,17 @@ const modelRootEnvironmentVariable = "DRAFT_LOOP_EMBEDDING_MODEL_ROOT";
 /**
  * Points runs started from the desktop at the model directory the desktop installs into.
  *
- * The main process owns the root (`<userData>/models`); an explicit
- * `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` is the person's own choice and is preserved. The renderer
- * never receives this path.
+ * The desktop uses the same per-user default as the CLI (`defaultEmbeddingModelRoot`), so a
+ * model installed from either is found by both. An explicit `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` is
+ * the person's own choice and is preserved. The renderer never receives this path.
  */
 export function applyDesktopEmbeddingModelRoot(
   env: Record<string, string | undefined>,
-  userDataPath: string,
+  platform: { readonly platform?: string; readonly homedir?: string } = {},
 ): void {
   const current = env[modelRootEnvironmentVariable];
   if (current !== undefined && current !== "") return;
-  env[modelRootEnvironmentVariable] = join(userDataPath, "models");
+  env[modelRootEnvironmentVariable] = defaultEmbeddingModelRoot({ env, ...platform });
 }
 
 type HostFailure = (code: "operation-failed" | "not-found", message: string) => never;
