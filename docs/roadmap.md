@@ -262,7 +262,7 @@ applications.
 | Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
 | Now | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | In progress; [v0.8.0-alpha.3 checkpoint](releases/stage-evidence-v0.8.0-alpha.3.md) released with 6/14 execution issues closed | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
 | Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
-| Next | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Not started; found in real use on 2026-10-07 | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
+| Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Next | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Not started; opened 2026-10-07 | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -1627,7 +1627,7 @@ The criterion was met on 2026-10-07. Every packaged platform passes
 installed-app acceptance with the embedding runtime, and #114 recorded a revise
 decision.
 
-### Next — Inputs and setup clarity
+### Completed — Inputs and setup clarity
 
 Testing `main` with real material on Windows on 2026-10-07 exposed two setup
 problems that block or mislead a normal first run.
@@ -1653,15 +1653,25 @@ problems that block or mislead a normal first run.
   - start from the reviewed brief, with the blocker leading into this flow
     (#982).
 
+Three follow-ups found while testing also shipped:
+
+- the knowledge panel follows the base card 02 creates, instead of offering a
+  second create/open entry point (#996);
+- requirements extraction can be cancelled while it runs, and nothing is
+  saved (#991);
+- each extracted requirement shows the verified job-text quote it came from
+  (#993).
+
 **Exit criterion:** A new user can add career evidence once and see it used by
 the run. A pasted job page can become reviewed requirements and start a review
 without hand-editing files. Existing runs, pinned selections, and legacy
-workspaces stay readable.
+workspaces stay readable. Every issue has shipped. A real run on the
+Windows install still has to confirm the criterion.
 
 ### Next — Development model providers
 
 Two releases on 2026-10-06 and 2026-10-07 change the development options. This
-stage follows Inputs and setup clarity.
+stage follows the completed Inputs and setup clarity.
 
 - **Claude Haiku 5.5 becomes the economy author ([#998](https://github.com/akoita/draft-loop/issues/998)).**
   At $0.10 / $0.50 per MTok, it is the best cost/quality trade-off for
@@ -1762,6 +1772,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
 | 2026-10-07 | Opened Development model providers (milestone 25, #998–#1002) after Claude Haiku 5.5 and Mistral Large 4 were released. | Claude Haiku 5.5 replaces Sonnet 5.5 as the economy (development) author, with GPT-6 Luna as critic. Mistral Large 4 joins as an opt-in development author. Quality validation stays on the standard pair. |
 | 2026-10-07 | Opened Inputs and setup clarity (milestone 24, #979 and #983) after real-material testing on Windows. | Setup gets one career-evidence concept and accepts pasted job pages through reviewed briefs. This comes before Manual parity: review and export. |
 | 2026-10-07 | Completed Local semantic retrieval (milestone 23, 30/30 issues). Requirement coverage now pairs semantic candidates with critic judgement (#727). | Semantic and hybrid retrieval, critic-judged coverage, and requirement-level rationale ship opt-in and local. Representative quality, retrieval and judge alike, still needs a consented real-CV observation. |
