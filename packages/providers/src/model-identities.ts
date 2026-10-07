@@ -22,3 +22,7 @@ export const googleGeminiSupportedModelIds = [
 export function isGoogleGeminiSupportedModelId(modelId: string): boolean {
   return (googleGeminiSupportedModelIds as readonly string[]).includes(modelId);
 }
+
+export const mistralProvider = "mistral" as const;
+export const mistralCompany = "mistral" as const;
+export const mistralLarge4ModelId = "mistral-large-4" as const;
