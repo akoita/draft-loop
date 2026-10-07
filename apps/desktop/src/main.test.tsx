@@ -1186,6 +1186,7 @@ describe("desktop workspace setup", () => {
     openai: { status: "idle" },
     zai: { status: "idle" },
     google: { status: "idle" },
+    mistral: { status: "idle" },
     local: { status: "idle" },
   };
 
@@ -1521,7 +1522,7 @@ describe("desktop workspace setup", () => {
         "Catalog entries show their review dates; CLI-specific live availability has not been reverified",
       );
       expect(html).toContain("account or plan availability or CV quality");
-      expect(html).toContain("DeepInfra, and Google.");
+      expect(html).toContain("DeepInfra, Google, and Mistral.");
     }
     expect(edit).not.toContain("Workspace name");
     expect(wrongRole).toContain(

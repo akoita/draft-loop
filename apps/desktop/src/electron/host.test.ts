@@ -4075,6 +4075,110 @@ describe("native host", () => {
       }
     });
 
+    it("isolates the Mistral key from other providers across save, replace, remove, and resolve", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-mistral-credentials-"));
+      const filename = join(parent, "credentials.json");
+      const names = {
+        anthropic: "ANTHROPIC_API_KEY",
+        openai: "OPENAI_API_KEY",
+        deepinfra: "DEEPINFRA_API_KEY",
+        google: "GEMINI_API_KEY",
+        mistral: "MISTRAL_API_KEY",
+      } as const;
+      const previous = Object.fromEntries(
+        Object.values(names).map((name) => [name, process.env[name]]),
+      );
+      const environment = {
+        anthropic: `synthetic-anthropic-${crypto.randomUUID()}`,
+        openai: `synthetic-openai-${crypto.randomUUID()}`,
+        deepinfra: `synthetic-deepinfra-${crypto.randomUUID()}`,
+        google: `synthetic-google-env-${crypto.randomUUID()}`,
+        mistral: `synthetic-mistral-env-${crypto.randomUUID()}`,
+      };
+      const appKey = `synthetic-mistral-app-${crypto.randomUUID()}`;
+      const replacement = `synthetic-mistral-replacement-${crypto.randomUUID()}`;
+      const safeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain) => Buffer.from(`mock:${plain}`),
+        decryptString: (encrypted) => encrypted.toString("utf8").replace(/^mock:/u, ""),
+      };
+      for (const provider of Object.keys(names) as (keyof typeof names)[]) {
+        process.env[names[provider]] = environment[provider];
+      }
+      try {
+        const store = createSafeStorageCredentialStore({ safeStorage, filename });
+        const host = createNativeHost({
+          dialogs: { chooseDirectory: async () => undefined, chooseFiles: async () => [] },
+          credentials: store,
+        });
+        const envStatus = await host.invoke({
+          type: "credential.status",
+          input: { provider: "mistral" },
+        });
+        expect(envStatus).toMatchObject({
+          ok: true,
+          value: {
+            provider: "mistral",
+            configured: true,
+            source: "env",
+            protection: "environment",
+          },
+        });
+        expect(JSON.stringify(envStatus)).not.toContain(environment.mistral);
+        expect(await resolveCredential(store, "mistral")).toBe(environment.mistral);
+
+        const saved = await host.invoke({
+          type: "credential.set",
+          input: { provider: "mistral", apiKey: appKey },
+        });
+        expect(saved).toMatchObject({
+          ok: true,
+          value: { provider: "mistral", configured: true, source: "app", protection: "os-backed" },
+        });
+        expect(JSON.stringify(saved)).not.toContain(appKey);
+        expect(await resolveCredential(store, "mistral")).toBe(appKey);
+        expect(await readFile(filename, "utf8")).not.toContain(appKey);
+        // Other providers never see the Mistral key, and keep their own.
+        expect(await resolveCredential(store, "anthropic")).toBe(environment.anthropic);
+        expect(await resolveCredential(store, "openai")).toBe(environment.openai);
+        expect(await resolveCredential(store, "deepinfra")).toBe(environment.deepinfra);
+        expect(await resolveCredential(store, "google")).toBe(environment.google);
+        expect(await store.status("deepinfra")).toMatchObject({ source: "env" });
+
+        // Saving another provider's key leaves the Mistral key untouched.
+        expect(await store.set("deepinfra", "synthetic-other-deepinfra-key")).toBe(true);
+        expect(await resolveCredential(store, "mistral")).toBe(appKey);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+
+        expect(await store.set("mistral", replacement)).toBe(true);
+        const reopened = createSafeStorageCredentialStore({ safeStorage, filename });
+        expect(await resolveCredential(reopened, "mistral")).toBe(replacement);
+        expect(await reopened.status("mistral")).toMatchObject({ source: "app" });
+
+        const removed = await host.invoke({
+          type: "credential.remove",
+          input: { provider: "mistral" },
+        });
+        expect(removed).toMatchObject({
+          ok: true,
+          value: { provider: "mistral", configured: true, source: "env" },
+        });
+        expect(await resolveCredential(store, "mistral")).toBe(environment.mistral);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+        expect(await readFile(filename, "utf8")).not.toContain(replacement);
+
+        delete process.env.MISTRAL_API_KEY;
+        expect(await store.status("mistral")).toMatchObject({ configured: false, source: "none" });
+        expect(await resolveCredential(store, "mistral")).toBeUndefined();
+      } finally {
+        for (const [name, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
     it("discloses Electron basic_text as weak Linux protection", async () => {
       const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-basic-text-"));
       const store = createSafeStorageCredentialStore({
@@ -4537,6 +4641,28 @@ describe("native host", () => {
             "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
         },
       });
+      expect(discoveryFetch).not.toHaveBeenCalled();
+    });
+
+    it("keeps Mistral discovery manual and never falls through to OpenAI discovery", async () => {
+      const discoveryFetch = catalogueFetch({ data: [{ id: "must-not-be-returned" }] });
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "synthetic-openai-key");
+      await credentials.set("mistral", "synthetic-mistral-key");
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "mistral" } });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "capability-unavailable",
+          capability: "models.list",
+          message:
+            "Mistral model discovery is unavailable. Enter the exact model id mistral-large-4.",
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("synthetic-mistral-key");
       expect(discoveryFetch).not.toHaveBeenCalled();
     });
 

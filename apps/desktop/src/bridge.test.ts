@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bridgeCapabilities,
   createCapabilityPort,
+  credentialProviders,
+  modelCompanies,
+  modelDiscoveryProviders,
   type NativeBridge,
   safeBridgeError,
   unavailableResult,
@@ -1349,7 +1352,7 @@ describe("desktop capability bridge", () => {
     expect(() =>
       validateBridgeCommand({
         type: "credential.set",
-        input: { provider: "mistral", apiKey: "synthetic-key" },
+        input: { provider: "mistral-ai", apiKey: "synthetic-key" },
       }),
     ).toThrow("invalid");
     expect(() =>
@@ -1374,6 +1377,113 @@ describe("desktop capability bridge", () => {
     await expect(
       unknownResult.execute({ type: "credential.status", input: { provider: "google" } }),
     ).resolves.toMatchObject({ ok: false });
+  });
+
+  it("accepts Mistral credential operations in the runtime validator and rejects look-alike providers", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { provider: "mistral", configured: true, source: "app", protection: "os-backed" },
+    }));
+    const port = createCapabilityPort(
+      bridge(invoke, ["credential.set", "credential.status", "credential.remove"]),
+    );
+
+    for (const command of [
+      { type: "credential.set", input: { provider: "mistral", apiKey: "synthetic-mistral-key" } },
+      { type: "credential.status", input: { provider: "mistral" } },
+      { type: "credential.remove", input: { provider: "mistral" } },
+    ] as const) {
+      expect(() => validateBridgeCommand(command)).not.toThrow();
+      const result = await port.execute(command);
+      expect(result).toMatchObject({
+        ok: true,
+        value: { provider: "mistral", configured: true, source: "app" },
+      });
+      expect(JSON.stringify(result)).not.toContain("synthetic-mistral-key");
+    }
+    expect(invoke).toHaveBeenCalledTimes(3);
+    // Drift guard: every credential command accepts every declared credential provider.
+    expect(credentialProviders).toContain("mistral");
+    for (const provider of credentialProviders) {
+      expect(() =>
+        validateBridgeCommand({ type: "credential.status", input: { provider } }),
+      ).not.toThrow();
+      expect(() =>
+        validateBridgeCommand({ type: "credential.set", input: { provider, apiKey: "k" } }),
+      ).not.toThrow();
+      expect(() =>
+        validateBridgeCommand({ type: "credential.remove", input: { provider } }),
+      ).not.toThrow();
+    }
+    for (const provider of ["mistral-ai", "mistral-large-4", "Mistral"]) {
+      expect(() =>
+        validateBridgeCommand({ type: "credential.status", input: { provider } }),
+      ).toThrow("invalid");
+    }
+    // Mistral is API-key-only: no provider-managed session preference.
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "mistral" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "provider-auth.set",
+        input: { provider: "mistral", mode: "user-session" },
+      }),
+    ).toThrow("invalid");
+
+    const unknownResult = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            provider: "mistral-ai",
+            configured: true,
+            source: "app",
+            protection: "os-backed",
+          },
+        }),
+        ["credential.status"],
+      ),
+    );
+    await expect(
+      unknownResult.execute({ type: "credential.status", input: { provider: "mistral" } }),
+    ).resolves.toMatchObject({ ok: false });
+  });
+
+  it("accepts Mistral as a workspace company and model-discovery provider", () => {
+    expect(modelCompanies).toContain("mistral");
+    expect(modelDiscoveryProviders).toContain("mistral");
+    expect(validateBridgeCommand({ type: "models.list", input: { provider: "mistral" } })).toEqual({
+      type: "models.list",
+      input: { provider: "mistral" },
+    });
+    const pair = {
+      authorCompany: "mistral",
+      authorModel: "mistral-large-4",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
+    };
+    expect(
+      validateBridgeCommand({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      }),
+    ).toEqual({
+      type: "workspace.configure-models",
+      input: { workspaceId: "ws-1", ...pair },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "mistral-development", mode: "real", ...pair },
+      }),
+    ).toMatchObject({ type: "workspace.create", input: pair });
+    expect(() =>
+      validateBridgeCommand({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair, authorCompany: "mistral-ai" },
+      }),
+    ).toThrow("invalid");
   });
 
   it("strictly validates provider-managed user-session credential status", async () => {

@@ -8,6 +8,7 @@ export interface ProviderAuthenticationSummaryInput {
   readonly openaiMode: ProviderAuthMode;
   readonly deepinfraConfigured?: boolean;
   readonly googleConfigured?: boolean;
+  readonly mistralConfigured?: boolean;
   readonly authorCompany?: ModelCompany;
   readonly criticCompany?: ModelCompany;
 }
@@ -38,6 +39,7 @@ export function providerAuthenticationForPair({
   openaiMode,
   deepinfraConfigured = false,
   googleConfigured = false,
+  mistralConfigured = false,
   authorCompany,
   criticCompany,
 }: ProviderAuthenticationSummaryInput): ProviderAuthenticationSummary {
@@ -77,6 +79,8 @@ export function providerAuthenticationForPair({
         return { ready: deepinfraConfigured, text: "DeepInfra API key" };
       case "google":
         return { ready: googleConfigured, text: "Google Gemini API key" };
+      case "mistral":
+        return { ready: mistralConfigured, text: "Mistral API key" };
       case "local":
         return { ready: true, text: "Local model server (no provider key required)" };
       default:

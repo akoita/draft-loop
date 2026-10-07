@@ -16,6 +16,7 @@ describe("packaged credential acceptance logic", () => {
     const previousOpenai = process.env.OPENAI_API_KEY;
     const previousDeepinfra = process.env.DEEPINFRA_API_KEY;
     const previousGemini = process.env.GEMINI_API_KEY;
+    const previousMistral = process.env.MISTRAL_API_KEY;
     const secrets = {
       anthropic: {
         initial: `anthropic-initial-${randomUUID()}`,
@@ -36,6 +37,11 @@ describe("packaged credential acceptance logic", () => {
         initial: `google-initial-${randomUUID()}`,
         replacement: `google-replacement-${randomUUID()}`,
         environment: `google-environment-${randomUUID()}`,
+      },
+      mistral: {
+        initial: `mistral-initial-${randomUUID()}`,
+        replacement: `mistral-replacement-${randomUUID()}`,
+        environment: `mistral-environment-${randomUUID()}`,
       },
     };
     const safeStorage: SafeStorageAdapter = {
@@ -73,6 +79,7 @@ describe("packaged credential acceptance logic", () => {
           openai: "os-backed",
           deepinfra: "os-backed",
           google: "os-backed",
+          mistral: "os-backed",
         },
         checks: {
           restart: true,
@@ -95,6 +102,8 @@ describe("packaged credential acceptance logic", () => {
       else process.env.DEEPINFRA_API_KEY = previousDeepinfra;
       if (previousGemini === undefined) delete process.env.GEMINI_API_KEY;
       else process.env.GEMINI_API_KEY = previousGemini;
+      if (previousMistral === undefined) delete process.env.MISTRAL_API_KEY;
+      else process.env.MISTRAL_API_KEY = previousMistral;
       await rm(root, { recursive: true, force: true });
     }
   });

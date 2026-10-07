@@ -181,7 +181,13 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = ["anthropic", "openai", "deepinfra", "google"] as const;
+export const credentialProviders = [
+  "anthropic",
+  "openai",
+  "deepinfra",
+  "google",
+  "mistral",
+] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
 
 export const providerAuthModeProviders = ["anthropic", "openai"] as const;
@@ -197,7 +203,7 @@ export type ProviderAuthMode = (typeof providerAuthModes)[number];
  * refuses to build an adapter for any other company, so a company outside this
  * list is invalid input rather than an option this host declined to offer.
  */
-export const modelCompanies = ["anthropic", "openai", "zai", "google", "local"] as const;
+export const modelCompanies = ["anthropic", "openai", "zai", "google", "mistral", "local"] as const;
 export type ModelCompany = (typeof modelCompanies)[number];
 
 /**
@@ -205,7 +211,7 @@ export type ModelCompany = (typeof modelCompanies)[number];
  *
  * Model discovery follows workspace companies rather than credential hosts:
  * `local` has no credential, Z.ai uses DeepInfra as its credential host, and
- * Google uses the Gemini API key. The list is exactly the set of companies
+ * Google uses the Gemini API key, and Mistral its own key. The list is exactly the set of companies
  * accepted for workspace choices.
  */
 export const modelDiscoveryProviders = modelCompanies;
