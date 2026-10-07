@@ -259,7 +259,7 @@ applications.
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
 | Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
 | Now | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | In progress; [v0.8.0-alpha.3 checkpoint](releases/stage-evidence-v0.8.0-alpha.3.md) released with 6/14 execution issues closed | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
-| Now | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | Implemented and packaged on all platforms (17/20 issues closed); [evaluation](evaluation/semantic-retrieval-comparison.md) on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
+| Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1546,7 +1546,7 @@ Product constraints decided with the user:
 reference application with the new inputs, and states which remaining gap
 (critic, stopping rule, or export) to address first.
 
-### Now — Local semantic retrieval
+### Completed — Local semantic retrieval
 
 Add learned local embeddings to CKB retrieval so evidence phrased differently
 from a requirement, or written in another language, can still be found. This
@@ -1599,15 +1599,29 @@ chose this because every quality result so far comes from invented cases. The
 decision is revisited after a consented real-CV observation compares lexical
 and hybrid retrieval. The [semantic requirement coverage investigation](evaluation/semantic-requirement-coverage.md)
 (#727) found that embeddings find the right evidence but cannot decide coverage
-alone. Its proposal pairs semantic candidates with critic judgement in ordered
-units #950 to #954, and keeps the deterministic degree and maturity rules as
-gates.
+alone. Its follow-up is now in place:
+
+- **Degree rule.** A degree-level gap in the strict degree rule is fixed (#950).
+- **Requirement assessments.** Validation produces requirement-level coverage
+  assessments (#951).
+- **Candidates and judgement.** Lexically uncovered, non-protected requirements
+  get semantic candidates (#952), and the critic judges them (#959 to #961).
+- **Readiness.** Readiness counts critic-judged coverage (#966).
+- **Display.** The CLI and desktop show each requirement's status, basis,
+  evidence, and rationale (#971, #972).
+
+The degree and maturity rules stay deterministic gates. Judge quality on real
+material still needs a consented observation.
 
 **Exit criterion:** Users can install the local model, index selected CKBs, and
 run semantic or hybrid retrieval with visible fallback on every packaged
 platform. The roadmap records the #114 enable, revise, or reject decision for
 the default mode from #919 evidence, with no regression on the existing lexical
 cases and no increase in unsupported claims.
+
+The criterion was met on 2026-10-07. Every packaged platform passes
+installed-app acceptance with the embedding runtime, and #114 recorded a revise
+decision.
 
 ### Next — Manual parity: review and export
 
@@ -1689,6 +1703,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-07 | Completed Local semantic retrieval (milestone 23, 30/30 issues). Requirement coverage now pairs semantic candidates with critic judgement (#727). | Semantic and hybrid retrieval, critic-judged coverage, and requirement-level rationale ship opt-in and local. Representative quality, retrieval and judge alike, still needs a consented real-CV observation. |
 | 2026-10-06 | Decided #114: lexical retrieval stays the default; semantic and hybrid remain opt-in per workspace. | Semantic retrieval ships complete but opt-in. A real-CV comparison of lexical and hybrid is needed before any default change. EmbeddingGemma 2 is evaluated next (#923). |
 | 2026-10-06 | Opened local semantic retrieval (milestone 23) alongside Manual parity: inputs. Granite Embedding Multilingual R2 on CPU-only onnxruntime-node was chosen over EmbeddingGemma 2, which no released Node runtime supports yet ([ADR 0009](adr/0009-local-semantic-retrieval.md), #914). | Retrieval gains a model-agnostic local embedding path with explicit model install and lexical fallback. It targets the #869 excerpt-selection gap; a non-lexical default still requires #919 evidence. |
 | 2026-10-05 | Opened the Manual parity stage (#869) with sprint milestone 22 (#870–#878) after a real application showed DraftLoop drafts are accurate but not sendable. | Inputs come first: full eligible source material, sensitivity tiers, default policy, measured against private reference CVs. Model profiles and tiers is closed; default promotion (#683) and broad fixtures (#583) stay separate. |
