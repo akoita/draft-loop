@@ -24,6 +24,7 @@ import type {
   ProviderAuthModeStatus,
 } from "./bridge.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
+import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
   type DesktopReviewState,
@@ -1452,6 +1453,14 @@ export function ReviewWorkspace({
   } = useCollapsedReviewPanels();
   const findingsCollapsed = collapsedPanels.has("findings");
   const gateCollapsed = collapsedPanels.has("gate");
+  const locateDraftBlock = (blockId: string): void => {
+    draftBlockShellRefs.current
+      .get(blockId)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Opening the line moves the caret into it.
+    setEditingBlockId(blockId);
+    draftBlockRefs.current.get(blockId)?.focus();
+  };
   const draftSections = useMemo(
     () => pairDraftSections(state.artifact, state.previousArtifact),
     [state.artifact, state.previousArtifact],
@@ -3922,6 +3931,16 @@ export function ReviewWorkspace({
               </footer>
             </div>
           </section>
+
+          {state.coverage === undefined || state.coverage === null ? null : (
+            <RequirementCoveragePanel
+              coverage={state.coverage}
+              sections={state.artifact.sections}
+              collapsed={collapsedPanels.has("coverage")}
+              onToggle={() => togglePanel("coverage")}
+              onLocateBlock={locateDraftBlock}
+            />
+          )}
 
           <section className="panel approval-panel" aria-label="approval and export">
             <PanelToggle

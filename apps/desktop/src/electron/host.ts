@@ -175,6 +175,7 @@ import {
   type ProviderAuthModePreferenceStore,
 } from "./provider-auth-mode.js";
 import { createRecentWorkspaceStore, type RecentWorkspaceStore } from "./recent-workspaces.js";
+import { reviewCoverage } from "./review-coverage.js";
 import {
   RunModelProfileSelectionError,
   resolveWorkspaceModelProfileSelection,
@@ -1016,6 +1017,7 @@ function reviewState(
     },
     events: reviewEvents(snapshot, overrides, preflight),
     exportPath,
+    coverage: reviewCoverage(snapshot),
     ...(writingPolicy === undefined ? {} : { writingPolicy }),
     setup,
   };

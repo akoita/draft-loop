@@ -34,6 +34,7 @@ import {
 } from "@draft-loop/domain";
 import { normalizeApprovalReadiness } from "./approval-readiness.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
+import { normalizeReviewCoverage } from "./coverage-contract.js";
 import type {
   DesktopReviewState,
   IndependentReviewView,
@@ -1875,6 +1876,7 @@ const desktopReviewStateKeys = [
   "evaluation",
   "events",
   "exportPath",
+  "coverage",
   "writingPolicy",
   "setup",
 ] as const;
@@ -6624,6 +6626,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  const coverage =
+    value.coverage === undefined || value.coverage === null
+      ? value.coverage
+      : (normalizeReviewCoverage(value.coverage) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -6701,6 +6707,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(normalizedSetup === undefined ? {} : { setup: normalizedSetup }),
     ...(normalizedRunPolicy === undefined ? {} : { writingPolicy: normalizedRunPolicy }),
     ...(approvalReadiness === undefined ? {} : { approvalReadiness }),
+    ...(coverage === undefined ? {} : { coverage }),
   } as unknown as DesktopReviewState;
 }
 

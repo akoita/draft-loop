@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
+import type { ReviewCoverageView } from "./coverage-contract.js";
 
 /**
  * Renderer-safe identity for one immutable writing-policy version.
@@ -283,6 +284,8 @@ export interface DesktopReviewState {
   readonly evaluation: ReviewEvaluation;
   readonly events: readonly ReviewEvent[];
   readonly exportPath: string | null;
+  /** The latest same-round critic coverage judgement; null when none was recorded. */
+  readonly coverage?: ReviewCoverageView | null;
   /** Safe effective/base/override policy projection for this run. */
   readonly writingPolicy?: RunWritingPolicyProjection | null;
   readonly setup: WorkspaceReadiness;
