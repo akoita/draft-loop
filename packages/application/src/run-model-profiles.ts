@@ -24,6 +24,7 @@ import type {
 } from "./local-provider-adapter.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
+import { requirementsSourcePreflightLine } from "./run-requirements-source.js";
 
 export type RunProviderAuthMode = "api-key" | "user-session";
 export type RunProviderAuthModeConfiguration = Readonly<
@@ -339,6 +340,7 @@ export function writeRunPreflight(
       context,
     ),
   );
+  if (context !== undefined) write(requirementsSourcePreflightLine(context));
   write(
     `Budget: maxRounds=${runBudget.maxRounds}${runBudget.maxCostUsd === undefined ? "" : `, maxCostUsd=${runBudget.maxCostUsd}`}${runBudget.maxDurationMs === undefined ? "" : `, maxDurationMs=${runBudget.maxDurationMs}`}`,
   );

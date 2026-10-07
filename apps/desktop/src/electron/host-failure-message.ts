@@ -109,7 +109,7 @@ function hasBridgeErrorCode(error: unknown): boolean {
  */
 export function hostFailureMessage(command: BridgeCommand, error: unknown): string | undefined {
   if (error instanceof SourceIngestionUserError) return error.message;
-  if (startsRun(command) && error instanceof JobRequirementUserError) return error.message;
+  if (startsRun(command) && error instanceof JobRequirementUserError) return error.summary;
   if (command.type === "profile.derive") {
     const message = userFixableProfileDerivationMessage(error);
     if (message !== undefined) return message;

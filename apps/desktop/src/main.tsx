@@ -2202,6 +2202,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         ...(activePort.getOpportunity === undefined
           ? {}
           : { getOpportunity: activePort.getOpportunity }),
+        ...(activePort.getLatestOpportunity === undefined
+          ? {}
+          : { getLatestOpportunity: activePort.getLatestOpportunity }),
         ...(activePort.editOpportunity === undefined
           ? {}
           : { editOpportunity: activePort.editOpportunity }),

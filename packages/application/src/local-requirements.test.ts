@@ -68,8 +68,9 @@ it("refuses a pasted web page whose paragraphs are too long to match against CV 
   expect(thrown).toBeInstanceOf(JobRequirementUserError);
   expect(thrown).toBeInstanceOf(CliUserError);
   expect((thrown as Error).message).toMatch(
-    /^Requirement 2 in the job description has 151 words, too long to match against individual CV lines \("Acme builds widgets for logistics teams. skill0 skill1…"\)\. List each requirement on its own bullet line.*reviewed opportunity brief\.$/u,
+    /^Requirement 2 in the job description has 151 words, too long to match against individual CV lines \("Acme builds widgets for logistics teams. skill0 skill1…"\)\. List each requirement on its own bullet line.*reviewed opportunity brief, or run `draft-loop opportunity create <workspace> --input <manifest> --allow-provider-data`\.$/u,
   );
+  expect((thrown as JobRequirementUserError).summary).toMatch(/reviewed opportunity brief\.$/u);
 });
 it("accepts a bulleted job ad", () => {
   expect(
