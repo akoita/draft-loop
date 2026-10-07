@@ -295,20 +295,33 @@ describe("candidate knowledge sensitivity exclusion", () => {
     }
   });
 
-  it("changes nothing without rules and for non-Markdown sources", async () => {
-    const noRules = await createFixture({});
-    const plain = await createFixture({
-      text: "# Compensation\nPlain text heading with a synthetic pay line.\n",
-      fileName: "notes.txt",
-      rules,
-    });
-    for (const fixture of [noRules, plain]) {
-      const filtered = await retrieval(fixture, undefined).runtime.inspect("pay line recovery");
-      const unfiltered = await retrieval(fixture, passThrough).runtime.inspect("pay line recovery");
-      expect(filtered.hits.map(({ text }) => text)).toEqual(
-        unfiltered.hits.map(({ text }) => text),
-      );
-      expect(filtered.hits.length).toBeGreaterThan(0);
+  // Each retrieval runs a dozen real lexical queries, so the two scenarios are separate cases:
+  // together they used most of the per-test timeout.
+  describe("changes nothing", () => {
+    const scenarios = [
+      ["without rules", {}],
+      [
+        "for non-Markdown sources",
+        {
+          text: "# Compensation\nPlain text heading with a synthetic pay line.\n",
+          fileName: "notes.txt",
+          rules,
+        },
+      ],
+    ] as const;
+
+    for (const [name, fixtureOptions] of scenarios) {
+      it(name, async () => {
+        const fixture = await createFixture(fixtureOptions);
+        const filtered = await retrieval(fixture, undefined).runtime.inspect("pay line recovery");
+        const unfiltered = await retrieval(fixture, passThrough).runtime.inspect(
+          "pay line recovery",
+        );
+        expect(filtered.hits.map(({ text }) => text)).toEqual(
+          unfiltered.hits.map(({ text }) => text),
+        );
+        expect(filtered.hits.length).toBeGreaterThan(0);
+      });
     }
   });
 
