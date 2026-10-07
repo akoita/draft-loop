@@ -138,6 +138,10 @@ lexical retrieval when the local model or index is unavailable; see the
 pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic|hybrid] [--tier 311m|97m|eg2-text] [--json]
 ```
 
+When the critic judges requirement coverage, run output prints a
+`Coverage judgement:` summary and `status` lists each requirement's assessment;
+see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requirement-coverage-in-run-output).
+
 ## Technology and architecture
 
 | Area                  | Technology or boundary                                           |

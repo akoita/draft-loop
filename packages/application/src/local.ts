@@ -36,7 +36,6 @@ import {
   hasCompletedIndependentCritique,
   type OrchestrationEngine,
   type RunBudget,
-  type RunEvent,
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest } from "@draft-loop/providers";
@@ -170,6 +169,7 @@ import {
   writeRunPreflight,
 } from "./run-model-profiles.js";
 import { modelConfiguration } from "./run-model-selection.js";
+import { outputCoverageAssessments, outputEvents, outputSnapshot } from "./run-output.js";
 import { runSensitivityExclusions } from "./run-sensitivity-exclusions.js";
 import { excludedSensitivityTiersForWorkspace } from "./sensitive-knowledge-consent.js";
 import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
@@ -1801,37 +1801,6 @@ async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string
   await storage.saveWorkspace(record);
 }
 
-function outputEvents(events: readonly RunEvent[], io: CliIo): void {
-  for (const event of events) {
-    io.write(
-      `event ${event.type}: state=${event.state} round=${event.round}${event.step === null ? "" : ` step=${event.step}`}`,
-    );
-  }
-}
-
-function outputSnapshot(snapshot: RunSnapshot, io: CliIo): void {
-  io.write(
-    `run ${snapshot.runId}: state=${snapshot.state} round=${snapshot.round} approval=${snapshot.approval}`,
-  );
-  io.write(
-    `costUsd=${snapshot.totalCostUsd.toFixed(6)} executions=${snapshot.executionHistory.length}`,
-  );
-  if (snapshot.latestEvaluation !== null) {
-    io.write(
-      `evaluation: ready=${snapshot.latestEvaluation.ready} stop=${snapshot.latestEvaluation.stopReason}`,
-    );
-  }
-  if (snapshot.findings.length > 0) {
-    const errors = snapshot.findings.filter((finding) => finding.severity === "error").length;
-    io.write(`findings: total=${snapshot.findings.length} errors=${errors}`);
-  }
-  if (snapshot.lastError !== null) {
-    io.write(
-      `providerFailure: code=${snapshot.lastError.code} provider=${snapshot.lastError.provider} step=${snapshot.lastError.step} attempt=${snapshot.lastError.attempt}/${snapshot.lastError.maxAttempts} retryable=${snapshot.lastError.retryable}`,
-    );
-  }
-}
-
 function policyIdentity(record: WritingPolicyVersionRecord): {
   readonly version: string;
   readonly checksum: string;
@@ -2282,6 +2251,7 @@ export async function statusRun(
     const snapshot = await runStore.loadRun(runId);
     if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
     outputSnapshot(snapshot, io);
+    outputCoverageAssessments(snapshot, io);
     return snapshot;
   } finally {
     await storage.close();

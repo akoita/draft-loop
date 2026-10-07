@@ -954,6 +954,32 @@ In a run, the mode works as follows:
 - **Vectors.** Missing vectors are built from the selected exact source
   versions when a run starts, which can take a moment on first use.
 
+### Requirement coverage in run output
+
+When the critic is asked to judge requirement coverage, run output replaces the
+generic event line for that step with a count-only summary:
+
+```text
+Coverage judgement: 3 requested, 2 satisfied, 1 not satisfied (coverage-judgement-v1)
+```
+
+Invalid and unanswered counts are added only when they are not zero, and a run
+without an instructions version shows `unversioned`. No line is printed when no
+judgement ran.
+
+`status` also lists each requirement's assessment from the latest completed
+critic execution of the current round, in requirement order. Each row shows the
+status, the basis (`matching wording`, `strict rule`, `semantic candidate (needs
+judgement)`, or `critic judgement`), the rationale, and the cited block ids.
+Requirement and block text is never printed.
+
+```text
+Requirement coverage (round 1):
+  [covered] req-1 — critic judgement — The block shows production Kubernetes work.
+    evidence: block-a, block-b
+  [uncovered] req-2 — strict rule — Not covered under the strict degree rule.
+```
+
 ### Desktop semantic retrieval controls
 
 When a workspace is collecting or stopped, the desktop shows a **Semantic
