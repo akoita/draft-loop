@@ -165,6 +165,11 @@ export function ModelProfileBudget({
   const estimate = useMemo(() => estimateModelProfileApiScenario(input), [input]);
   const authorEntry = catalogEntry(references.author, "author");
   const criticEntry = catalogEntry(references.critic, "critic");
+  const inputTokenLimit = Math.min(
+    ...[authorEntry, criticEntry].flatMap((entry) =>
+      entry === undefined ? [] : [entry.apiPricing.maxInputTokens],
+    ),
+  );
 
   const update = (
     role: "author" | "critic",
@@ -181,9 +186,12 @@ export function ModelProfileBudget({
     <details className="model-profile-budget">
       <summary>Illustrative public API token-cost scenario</summary>
       <p className="model-profile-budget-copy">
-        Public standard uncached text API list rates in USD, up to 200,000 input tokens per call.
-        This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription
-        quota and charges are not estimated.
+        Public standard uncached text API list rates in USD
+        {Number.isFinite(inputTokenLimit)
+          ? `, up to ${inputTokenLimit.toLocaleString("en-US")} input tokens per call`
+          : ""}
+        . This is an explicit example, not a measured forecast, hard cap, or actual bill.
+        Subscription quota and charges are not estimated.
       </p>
       <div className="model-profile-budget-rates">
         <PublicRate entry={authorEntry} profileRole="author" />

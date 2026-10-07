@@ -59,6 +59,20 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("does not change the selected profiles or their runtime budgets");
   });
 
+  it("shows the 100,000 input-token cap and Haiku 5.5 rates for the economy pair", () => {
+    const html = renderBudget(
+      {
+        author: { id: "economy-anthropic-author", version: 2 },
+        critic: { id: "economy-openai-critic", version: 1 },
+      },
+      apiKeyModes,
+    );
+    expect(html).toContain("economy-anthropic-author@2");
+    expect(html).toContain("anthropic/claude-haiku-5-5");
+    expect(html).toContain("up to 100,000 input tokens per call");
+    expect(html).toContain("Combined scenario estimate</dt><dd>$0.004500");
+  });
+
   it("labels the development GLM public rates as DeepInfra documentation", () => {
     const html = renderBudget(development, apiKeyModes);
     expect(html).toContain("dev-deepinfra-glm-author@1");

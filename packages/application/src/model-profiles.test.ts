@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(12);
+    expect(profiles).toHaveLength(13);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
@@ -153,12 +153,26 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       },
     ]);
-    expect(profiles.slice(7, 9)).toEqual([
+    expect(profiles.slice(7, 10)).toEqual([
       {
         id: "economy-anthropic-author",
         version: 1,
         provider: "anthropic",
         modelId: "claude-sonnet-5-5",
+        tier: "economy",
+        roles: ["author"],
+        runtime: {
+          effort: "medium",
+          maxOutputTokens: 32768,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+      },
+      {
+        id: "economy-anthropic-author",
+        version: 2,
+        provider: "anthropic",
+        modelId: "claude-haiku-5-5",
         tier: "economy",
         roles: ["author"],
         runtime: {
@@ -183,7 +197,7 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       },
     ]);
-    expect(profiles[9]).toEqual({
+    expect(profiles[10]).toEqual({
       id: "dev-deepinfra-glm-author",
       version: 1,
       provider: "zai",
@@ -197,7 +211,7 @@ describe("model profile registry", () => {
       },
       knownLimits: { maxOutputTokens: 131072, contextWindowTokens: 1048576 },
     });
-    expect(profiles[10]).toEqual({
+    expect(profiles[11]).toEqual({
       id: "dev-google-gemini-author",
       version: 1,
       provider: "google",
@@ -211,16 +225,16 @@ describe("model profile registry", () => {
       },
       knownLimits: { maxOutputTokens: 65536, contextWindowTokens: 1048576 },
     });
-    expect(profiles[11]).toEqual({
-      ...profiles[10],
+    expect(profiles[12]).toEqual({
+      ...profiles[11],
       version: 2,
       modelId: "gemini-3.8-flash",
     });
     expect(defaultModelProfileRegistry.resolve("dev-google-gemini-author", 1, "author")).toEqual(
-      profiles[10],
+      profiles[11],
     );
     expect(defaultModelProfileRegistry.resolve("dev-google-gemini-author", 2, "author")).toEqual(
-      profiles[11],
+      profiles[12],
     );
     expect(defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author")).toEqual(
       profiles[0],
@@ -232,7 +246,7 @@ describe("model profile registry", () => {
       profiles[3],
     );
     expect(defaultModelProfileRegistry.resolve("standard-openai-critic", 2, "critic")).toEqual(
-      profiles[8],
+      profiles[9],
     );
   });
 

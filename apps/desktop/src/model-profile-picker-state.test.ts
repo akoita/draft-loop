@@ -69,13 +69,13 @@ describe("desktop model profile picker state", () => {
       "development-gemini",
     ]);
     expect(economy).toEqual({
-      author: { id: "economy-anthropic-author", version: 1 },
+      author: { id: "economy-anthropic-author", version: 2 },
       critic: { id: "economy-openai-critic", version: 1 },
     });
     expect(modelProfileEntryForReference(economy.author, "critic")).toBeUndefined();
     expect(workspaceModelsForProfileReferences(economy)).toEqual({
       authorCompany: "anthropic",
-      authorModel: "claude-sonnet-5-5",
+      authorModel: "claude-haiku-5-5",
       criticCompany: "openai",
       criticModel: "gpt-6-luna",
     });

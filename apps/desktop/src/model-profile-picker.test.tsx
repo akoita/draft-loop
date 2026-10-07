@@ -62,7 +62,7 @@ describe("desktop model profile picker rendering", () => {
     const html = renderPicker(supportState(true), economy);
     expect(html).toContain("Applied next-run profiles");
     expect(html).toContain("Choose a model pair");
-    expect(html).toContain("Applied: Economy — Claude Sonnet 5.5 writes, GPT-6 Luna reviews");
+    expect(html).toContain("Applied: Economy — Claude Haiku 5.5 writes, GPT-6 Luna reviews");
     expect(html).toContain("Quality unvalidated; account availability unchecked");
     expect(html).toContain("effort medium; output 32768 tokens; thinking provider-default");
     expect(html).toContain("<summary>Details</summary>");
@@ -88,20 +88,20 @@ describe("desktop model profile picker rendering", () => {
     expect(cards).toContain(">Development — GLM Flash</span>");
     expect(cards).toContain(">Development — Gemini Flash</span>");
     expect(cards).toContain(">Custom pair</span>");
-    expect(cards).toContain("Claude Sonnet 5.5 writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Claude Haiku 5.5 writes · GPT-6 Luna reviews");
     expect(cards).toContain("GLM-5.3 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Gemini 3.8 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Anthropic + OpenAI");
     expect(cards).toContain("Z.ai via DeepInfra + OpenAI");
     expect(cards).toContain("Google + OpenAI");
     expect(cards).toContain(
-      "Writer $2 / $10 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
+      "Writer $0.10 / $0.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
     );
     expect(cards).toContain("Writer $0.75 / $3.75");
     expect(cards).toContain("Unvalidated");
     expect(cards).toContain("Development</span>");
     expect(cards).not.toContain("economy-anthropic-author");
-    expect(cards).not.toContain("claude-sonnet-5-5");
+    expect(cards).not.toContain("claude-haiku-5-5");
     expect(cards).not.toContain("unvalidated");
     expect(cards).not.toContain("Not available with your current sign-in");
   });
@@ -121,7 +121,7 @@ describe("desktop model profile picker rendering", () => {
     expect(html).not.toMatch(/checked="" value="economy"/);
     expect(html).toContain('aria-label="Author profile"');
     expect(html).toContain('aria-label="Critic profile"');
-    expect(html).toContain("economy-anthropic-author@1");
+    expect(html).toContain("economy-anthropic-author@2");
     expect(html).toContain("economy-openai-critic@1");
     const mixed: ModelProfileReferences = {
       author: economy.author,
@@ -131,7 +131,7 @@ describe("desktop model profile picker rendering", () => {
     expect(mixedHtml).toMatch(/checked="" value="custom"/);
     expect(mixedHtml).toContain('aria-label="Author profile"');
     expect(mixedHtml).toContain(
-      "Applied: Custom pair — Claude Sonnet 5.5 writes, GPT-6.1 Sol reviews",
+      "Applied: Custom pair — Claude Haiku 5.5 writes, GPT-6.1 Sol reviews",
     );
   });
 

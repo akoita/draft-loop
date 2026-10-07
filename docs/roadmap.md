@@ -45,19 +45,21 @@ the default pair is cross-company and provider/model identities are recorded.
 
 Model choice balances capability, cost, and the amount of configuration the
 project can maintain. The current scope is two Anthropic authors and two OpenAI
-critics: Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol.
-Representative CV quality has not been validated for these choices.
+critics: Claude Haiku 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol, plus
+opt-in development authors (GLM-5.3 Flash and Gemini 3.8 Flash). Representative
+CV quality has not been validated for these choices.
 
 The current curated choices use two tiers:
 
 | Tier | Pair | Purpose |
 | ---- | ---- | ------- |
-| **Economy** | Claude Sonnet 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
+| **Economy** | Claude Haiku 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
 | **Standard** | Claude Opus 5.5 + GPT-6.1 Sol | Opt-in configuration for more demanding work |
 
 These are configuration choices, not validated CV-quality rankings. Premium
 choices are deferred. Older exact profile versions remain available for
-compatibility with existing selections and saved runs.
+compatibility with existing selections and saved runs; this includes Claude
+Sonnet 5.5, the economy author before Haiku 5.5.
 
 Validation has two levels, and each claim applies only to the models that
 produced it:

@@ -221,6 +221,32 @@ describe("Claude user-session profile controls", () => {
     expect(environment).not.toHaveProperty("CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING");
   });
 
+  it("passes Haiku 5.5 with medium effort and no thinking budget on the session route", async () => {
+    const configured = selection(
+      modelProfile({ modelId: "claude-haiku-5-5", effort: "medium", maxOutputTokens: 32768 }),
+    );
+    let captured:
+      | { args: readonly string[]; env: Readonly<Record<string, string | undefined>> }
+      | undefined;
+    const runner = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
+      captured = { args: [...args], env: { ...options.env } };
+      return successfulResult();
+    });
+    const adapter = new AnthropicClaudeUserSessionAdapter({ configuredModel: configured, runner });
+
+    await adapter.execute(request(configured, { maxOutputTokens: 32768 }));
+
+    const modelIndex = captured?.args.indexOf("--model") ?? -1;
+    expect(captured?.args.slice(modelIndex, modelIndex + 4)).toEqual([
+      "--model",
+      "claude-haiku-5-5",
+      "--effort",
+      "medium",
+    ]);
+    expect(captured?.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("32768");
+    expectControlEnvironmentAbsent(captured?.env ?? {});
+  });
+
   it("uses profile effort for other CLI models and the snapshotted output ceiling", async () => {
     const profile = modelProfile({
       modelId: "claude-other-model",
