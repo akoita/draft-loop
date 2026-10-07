@@ -73,6 +73,17 @@ export interface OpportunityBriefReviewViewProps {
   readonly dialogRef?: RefObject<HTMLDivElement | null>;
 }
 
+/** The verified job-text quotation behind an extracted entry; nothing renders without one. */
+function BriefExcerpt({ excerpt }: { readonly excerpt: string | undefined }) {
+  if (excerpt === undefined) return null;
+  return (
+    <figure className="brief-excerpt">
+      <figcaption className="brief-excerpt-label">From the job text</figcaption>
+      <blockquote className="brief-excerpt-quote">{excerpt}</blockquote>
+    </figure>
+  );
+}
+
 function RequirementRow({
   requirement,
   index,
@@ -116,6 +127,7 @@ function RequirementRow({
       ) : (
         <p className="brief-item-copy">{requirement.text}</p>
       )}
+      <BriefExcerpt excerpt={requirement.excerpt} />
       <p className="brief-source">
         <span>Source</span> {sources.join(", ")}
       </p>
@@ -303,6 +315,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                   {record.responsibilities.map((responsibility) => (
                     <li className="brief-item" key={responsibility.id}>
                       <p className="brief-item-copy">{responsibility.text}</p>
+                      <BriefExcerpt excerpt={responsibility.excerpt} />
                       <p className="brief-source">
                         <span>Source</span>{" "}
                         {responsibility.sourceIds

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type OpportunityExtractionProposal,
   opportunityBriefMaximumCollectionEntries,
+  opportunityBriefMaximumExcerptLength,
   opportunityBriefMaximumTextLength,
   opportunityExtractionProposalJsonSchema,
   opportunityExtractionProposalSchema,
@@ -19,12 +20,19 @@ function proposal(
     schemaVersion: 1,
     role: sourced("Platform Engineer", ["job-source"]),
     employer: sourced("Example Systems", ["job-source"]),
-    responsibilities: [{ text: "Lead platform reliability", sourceIds: ["job-source"] }],
+    responsibilities: [
+      {
+        text: "Lead platform reliability",
+        sourceIds: ["job-source"],
+        excerpt: "You will lead platform reliability.",
+      },
+    ],
     requirements: [
       {
         text: "Production systems experience",
         priority: "critical",
         sourceIds: ["job-source"],
+        excerpt: null,
       },
     ],
     priorities: [{ text: "Operational ownership", sourceIds: ["company-source"] }],
@@ -89,7 +97,9 @@ describe("opportunity extraction proposal schema", () => {
     expect(
       opportunityExtractionProposalSchema.safeParse({
         ...proposal(),
-        responsibilities: [{ text: "Responsibility", sourceIds: ["job-source"], id: "model-id" }],
+        responsibilities: [
+          { text: "Responsibility", sourceIds: ["job-source"], excerpt: null, id: "model-id" },
+        ],
       }).success,
     ).toBe(false);
     expect(
@@ -116,5 +126,37 @@ describe("opportunity extraction proposal schema", () => {
         })),
       }).success,
     ).toBe(false);
+  });
+
+  it("requires an explicit nullable excerpt on responsibilities and requirements", () => {
+    const withoutExcerpt = proposal({
+      responsibilities: [{ text: "Lead", sourceIds: ["job-source"] } as never],
+    });
+    expect(opportunityExtractionProposalSchema.safeParse(withoutExcerpt).success).toBe(false);
+    expect(
+      opportunityExtractionProposalSchema.safeParse(
+        proposal({
+          requirements: [
+            { text: "Skill", priority: "high", sourceIds: ["job-source"], excerpt: null },
+          ],
+        }),
+      ).success,
+    ).toBe(true);
+    const serialized = JSON.stringify(opportunityExtractionProposalJsonSchema);
+    expect(serialized).toContain('"excerpt"');
+    expect(serialized).toContain(`at most ${opportunityBriefMaximumExcerptLength} characters`);
+  });
+
+  it("accepts an over-long proposal excerpt so verification can drop it", () => {
+    const excerpt = "x".repeat(opportunityBriefMaximumExcerptLength + 20);
+    const build = (value: string) =>
+      proposal({
+        responsibilities: [{ text: "Lead", sourceIds: ["job-source"], excerpt: value }],
+      });
+    expect(opportunityExtractionProposalSchema.safeParse(build(excerpt)).success).toBe(true);
+    expect(opportunityExtractionProposalSchema.safeParse(build("")).success).toBe(true);
+    expect(opportunityExtractionProposalSchema.safeParse(build("x".repeat(2_001))).success).toBe(
+      false,
+    );
   });
 });

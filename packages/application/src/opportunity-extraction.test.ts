@@ -37,14 +37,15 @@ function proposal() {
     role: { value: "Platform Engineer", sourceIds: ["job-source"] },
     employer: { value: "Example Systems", sourceIds: ["job-source", "company-source"] },
     responsibilities: [
-      { text: "Lead platform reliability", sourceIds: ["job-source"] },
-      { text: " Lead   platform reliability ", sourceIds: ["job-source"] },
+      { text: "Lead platform reliability", sourceIds: ["job-source"], excerpt: null },
+      { text: " Lead   platform reliability ", sourceIds: ["job-source"], excerpt: null },
     ],
     requirements: [
       {
         text: "Production systems experience",
         priority: "critical" as const,
         sourceIds: ["job-source"],
+        excerpt: null,
       },
     ],
     priorities: [{ text: "Operational ownership", sourceIds: ["company-source"] }],
@@ -137,7 +138,9 @@ describe("opportunity extraction processor", () => {
       },
       async () => ({
         ...proposal(),
-        responsibilities: [{ text: "Private provider output", sourceIds: ["missing-source"] }],
+        responsibilities: [
+          { text: "Private provider output", sourceIds: ["missing-source"], excerpt: null },
+        ],
       }),
       async () => ({ ...proposal(), candidateInstructions: { tone: "candidate instruction" } }),
       async () => ({ ...proposal(), schemaVersion: 2 }),

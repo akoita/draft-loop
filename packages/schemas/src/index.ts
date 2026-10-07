@@ -99,8 +99,6 @@ import {
   opportunityBriefSourceClassifications,
   opportunityBriefSourceStatuses,
   opportunityBriefStatuses,
-  opportunityExtractionContradictionFields,
-  opportunityExtractionSchemaVersion,
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,
@@ -119,6 +117,22 @@ import {
   writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { z } from "zod";
+
+import {
+  opportunityBriefExcerptSchema,
+  opportunityBriefIdSchema,
+  opportunityBriefNonEmptyString,
+  opportunityBriefSourceIdsSchema,
+  opportunityBriefTextSchema,
+} from "./opportunity-brief-fields.js";
+
+export { opportunityBriefMaximumExcerptLength } from "./opportunity-brief-fields.js";
+export {
+  type OpportunityExtractionProposal,
+  opportunityExtractionProposalJsonSchema,
+  opportunityExtractionProposalSchema,
+} from "./opportunity-extraction.js";
+
 import { modelSelectionSchema } from "./model-selection.js";
 
 export type { RenderingLayoutProfileId } from "@draft-loop/domain";
@@ -202,13 +216,6 @@ export const jobRequirementInputSchema = z
 
 export type JobRequirementInput = z.input<typeof jobRequirementInputSchema>;
 
-const opportunityBriefNonEmptyString = z.string().trim().min(1, "must not be empty");
-const opportunityBriefIdSchema = opportunityBriefNonEmptyString.max(
-  opportunityBriefMaximumIdLength,
-);
-const opportunityBriefTextSchema = opportunityBriefNonEmptyString.max(
-  opportunityBriefMaximumTextLength,
-);
 const opportunityBriefChecksumSchema = z
   .string()
   .regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum")
@@ -223,24 +230,6 @@ const opportunityBriefUrlSchema = opportunityBriefNonEmptyString
       return false;
     }
   }, "must be a valid HTTPS URL");
-
-const opportunityBriefSourceIdsSchema = z
-  .array(opportunityBriefIdSchema)
-  .min(1)
-  .max(opportunityBriefMaximumSourceIds)
-  .superRefine((sourceIds, context) => {
-    const seen = new Set<string>();
-    for (const [index, sourceId] of sourceIds.entries()) {
-      if (seen.has(sourceId)) {
-        context.addIssue({
-          code: "custom",
-          path: [index],
-          message: "sourceIds must contain unique source ids",
-        });
-      }
-      seen.add(sourceId);
-    }
-  });
 
 const opportunityBriefApprovedUrlProvenanceSchema = z.strictObject({
   kind: z.literal("approved-url"),
@@ -338,6 +327,7 @@ export const opportunityBriefResponsibilitySchema = z.strictObject({
   id: opportunityBriefIdSchema,
   text: opportunityBriefTextSchema,
   sourceIds: opportunityBriefSourceIdsSchema,
+  excerpt: opportunityBriefExcerptSchema.optional(),
 });
 export type OpportunityBriefResponsibility = z.infer<typeof opportunityBriefResponsibilitySchema>;
 
@@ -346,6 +336,7 @@ export const opportunityBriefRequirementSchema = z.strictObject({
   text: opportunityBriefTextSchema,
   priority: z.enum(requirementPriorities),
   sourceIds: opportunityBriefSourceIdsSchema,
+  excerpt: opportunityBriefExcerptSchema.optional(),
 });
 export type OpportunityBriefRequirement = z.infer<typeof opportunityBriefRequirementSchema>;
 
@@ -652,68 +643,6 @@ export const opportunityBriefSchema = z
 
 export type OpportunityBrief = z.infer<typeof opportunityBriefSchema>;
 export type OpportunityBriefInput = z.input<typeof opportunityBriefSchema>;
-
-const opportunityExtractionSourcedTextSchema = z.strictObject({
-  value: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-
-const opportunityExtractionResponsibilitySchema = z.strictObject({
-  text: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-
-const opportunityExtractionRequirementSchema = z.strictObject({
-  text: opportunityBriefTextSchema,
-  priority: z.enum(requirementPriorities),
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-
-const opportunityExtractionPrioritySchema = z.strictObject({
-  text: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-
-const opportunityExtractionContradictionSourceIdsSchema = opportunityBriefSourceIdsSchema.min(2);
-
-const opportunityExtractionContradictionSchema = z.strictObject({
-  field: z.enum(opportunityExtractionContradictionFields),
-  sourceIds: opportunityExtractionContradictionSourceIdsSchema,
-});
-
-/** Provider-facing opportunity extraction output without application-owned metadata. */
-export const opportunityExtractionProposalSchema = z.strictObject({
-  schemaVersion: z.literal(opportunityExtractionSchemaVersion),
-  role: opportunityExtractionSourcedTextSchema.nullable(),
-  employer: opportunityExtractionSourcedTextSchema.nullable(),
-  responsibilities: z
-    .array(opportunityExtractionResponsibilitySchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-  requirements: z
-    .array(opportunityExtractionRequirementSchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-  priorities: z
-    .array(opportunityExtractionPrioritySchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-  contradictions: z
-    .array(opportunityExtractionContradictionSchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-});
-
-export type OpportunityExtractionProposal = z.infer<typeof opportunityExtractionProposalSchema>;
-
-/** Draft-7 JSON schema for the provider-facing opportunity extraction output. */
-const opportunityExtractionProposalJsonSchemaWithMeta = z.toJSONSchema(
-  opportunityExtractionProposalSchema,
-  { target: "draft-7" },
-);
-
-const {
-  $schema: _opportunityExtractionProposalSchemaMetadata,
-  ...opportunityExtractionProposalJsonSchemaValue
-} = opportunityExtractionProposalJsonSchemaWithMeta;
-
-export const opportunityExtractionProposalJsonSchema = opportunityExtractionProposalJsonSchemaValue;
 
 export const evidenceSourceSchema = z.object({
   id: nonEmptyString,

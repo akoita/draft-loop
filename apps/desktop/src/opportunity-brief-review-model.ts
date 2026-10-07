@@ -37,6 +37,8 @@ export interface RequirementDraft {
   readonly text: string;
   readonly priority: RequirementPriority;
   readonly sourceIds: readonly string[];
+  /** The job-text quotation the requirement came from; editing the wording never changes it. */
+  readonly excerpt?: string;
   readonly dropped: boolean;
 }
 
@@ -145,6 +147,7 @@ export function buildBriefEditPatch(
             text: requirement.text.trim(),
             priority: requirement.priority,
             sourceIds: [...requirement.sourceIds],
+            ...(requirement.excerpt === undefined ? {} : { excerpt: requirement.excerpt }),
           })),
         }
       : {}),

@@ -16,6 +16,8 @@ import {
   opportunityExtractionProposalSchema,
 } from "@draft-loop/schemas";
 
+import { sourceTextIndex, verifiedOpportunityExcerpt } from "./opportunity-excerpt.js";
+
 const extractionClassifications = [
   "job-posting",
   "social-announcement",
@@ -258,6 +260,7 @@ function mapSourcedText(
 
 function mapResponsibilities(
   values: OpportunityExtractionProposal["responsibilities"],
+  sourceText: ReadonlyMap<string, string>,
 ): readonly OpportunityBriefResponsibility[] {
   const seen = new Set<string>();
   const responsibilities: OpportunityBriefResponsibility[] = [];
@@ -265,10 +268,12 @@ function mapResponsibilities(
     const key = semanticKey("responsibility", value.text, value.sourceIds);
     if (seen.has(key)) continue;
     seen.add(key);
+    const excerpt = verifiedOpportunityExcerpt(value.excerpt, value.sourceIds, sourceText);
     responsibilities.push({
       id: generatedEntryId("responsibility", value.text, value.sourceIds),
       text: value.text,
       sourceIds: [...value.sourceIds],
+      ...(excerpt === undefined ? {} : { excerpt }),
     });
   }
   return responsibilities;
@@ -276,6 +281,7 @@ function mapResponsibilities(
 
 function mapRequirements(
   values: OpportunityExtractionProposal["requirements"],
+  sourceText: ReadonlyMap<string, string>,
 ): readonly OpportunityBriefRequirement[] {
   const seen = new Set<string>();
   const requirements: OpportunityBriefRequirement[] = [];
@@ -283,11 +289,13 @@ function mapRequirements(
     const key = semanticKey("requirement", value.text, value.sourceIds, value.priority);
     if (seen.has(key)) continue;
     seen.add(key);
+    const excerpt = verifiedOpportunityExcerpt(value.excerpt, value.sourceIds, sourceText);
     requirements.push({
       id: generatedEntryId("requirement", value.text, value.sourceIds, value.priority),
       text: value.text,
       priority: value.priority,
       sourceIds: [...value.sourceIds],
+      ...(excerpt === undefined ? {} : { excerpt }),
     });
   }
   return requirements;
@@ -346,12 +354,14 @@ function mapContradictions(
 function mapProposal(
   proposal: OpportunityExtractionProposal,
   operationId: string,
+  sources: readonly OpportunityExtractionSource[],
 ): OpportunityExtractionResult {
+  const sourceText = sourceTextIndex(sources);
   return cloneAndFreeze({
     role: mapSourcedText(proposal.role),
     employer: mapSourcedText(proposal.employer),
-    responsibilities: mapResponsibilities(proposal.responsibilities),
-    requirements: mapRequirements(proposal.requirements),
+    responsibilities: mapResponsibilities(proposal.responsibilities, sourceText),
+    requirements: mapRequirements(proposal.requirements, sourceText),
     priorities: mapPriorities(proposal.priorities),
     issues: mapContradictions(proposal.contradictions, operationId),
   });
@@ -368,7 +378,7 @@ export async function processOpportunityExtraction(
       await port.extract(validatedRequest),
     );
     assertCitations(proposal, new Set(validatedRequest.sources.map((source) => source.id)));
-    return mapProposal(proposal, validatedRequest.operationId);
+    return mapProposal(proposal, validatedRequest.operationId, validatedRequest.sources);
   } catch {
     const operationId =
       isRecord(request) && typeof request.operationId === "string"

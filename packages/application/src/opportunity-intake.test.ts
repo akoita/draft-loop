@@ -103,12 +103,19 @@ describe("opportunity intake", () => {
         schemaVersion: 1,
         role: { value: "Platform Engineer", sourceIds: ["job-source"] },
         employer: { value: "Example Systems", sourceIds: ["company-source"] },
-        responsibilities: [{ text: "Lead platform reliability", sourceIds: ["job-source"] }],
+        responsibilities: [
+          {
+            text: "Lead platform reliability",
+            sourceIds: ["job-source"],
+            excerpt: "private job source",
+          },
+        ],
         requirements: [
           {
             text: "Production systems experience",
             priority: "critical",
             sourceIds: ["job-source"],
+            excerpt: null,
           },
         ],
         priorities: [{ text: "Operational ownership", sourceIds: ["company-source"] }],
@@ -165,10 +172,12 @@ describe("opportunity intake", () => {
     expect(draft.employer).toEqual({ value: "Example Systems", sourceIds: ["company-source"] });
     expect(draft.responsibilities[0]).toMatchObject({
       id: expect.stringMatching(/^extraction-responsibility-[a-f0-9]{32}$/u),
+      excerpt: "private job source",
     });
     expect(draft.requirements[0]).toMatchObject({
       id: expect.stringMatching(/^extraction-requirement-[a-f0-9]{32}$/u),
     });
+    expect(draft.requirements[0]).not.toHaveProperty("excerpt");
     expect(draft.priorities[0]).toMatchObject({
       id: expect.stringMatching(/^extraction-priority-[a-f0-9]{32}$/u),
     });
@@ -778,6 +787,7 @@ describe("opportunity intake", () => {
         text: "Production systems experience",
         priority: "critical" as const,
         sourceIds: ["job-source"],
+        excerpt: "Production systems experience required.",
       },
     ];
     const edited = editOpportunityDraft(draft, { role, employer, requirements }, later);

@@ -1640,6 +1640,7 @@ function opportunityFactCollection<
       text: fact.text,
       sourceIds: fact.sourceIds,
       ...(field === "requirements" ? { priority: fact.priority } : {}),
+      ...(field !== "priorities" && fact.excerpt !== undefined ? { excerpt: fact.excerpt } : {}),
     } as OpportunityRecordResult[Value][number];
   }) as OpportunityRecordResult[Value];
 }
