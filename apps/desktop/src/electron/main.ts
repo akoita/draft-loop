@@ -221,6 +221,9 @@ app.whenReady().then(async () => {
     const googleInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_INITIAL;
     const googleReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_REPLACEMENT;
     const googleEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_ENVIRONMENT;
+    const mistralInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_INITIAL;
+    const mistralReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_REPLACEMENT;
+    const mistralEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_ENVIRONMENT;
     if (
       (phase !== "prepare" && phase !== "verify") ||
       evidencePath === undefined ||
@@ -236,7 +239,10 @@ app.whenReady().then(async () => {
       deepinfraEnvironment === undefined ||
       googleInitial === undefined ||
       googleReplacement === undefined ||
-      googleEnvironment === undefined
+      googleEnvironment === undefined ||
+      mistralInitial === undefined ||
+      mistralReplacement === undefined ||
+      mistralEnvironment === undefined
     ) {
       throw new Error("Packaged credential acceptance configuration is incomplete.");
     }
@@ -275,6 +281,11 @@ app.whenReady().then(async () => {
           initial: googleInitial,
           replacement: googleReplacement,
           environment: googleEnvironment,
+        },
+        mistral: {
+          initial: mistralInitial,
+          replacement: mistralReplacement,
+          environment: mistralEnvironment,
         },
       },
     })

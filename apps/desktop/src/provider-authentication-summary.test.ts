@@ -143,6 +143,50 @@ describe("providerAuthenticationSummary", () => {
     ).toEqual({ ready: false, summary: "Configure OpenAI API key for live review" });
   });
 
+  it("bases readiness on the applied Mistral/OpenAI pair and its dedicated Mistral key", () => {
+    const base = {
+      fixtureMode: false,
+      anthropicConfigured: false,
+      openaiConfigured: true,
+      deepinfraConfigured: true,
+      googleConfigured: true,
+      anthropicMode: "api-key",
+      openaiMode: "api-key",
+      authorCompany: "mistral",
+      criticCompany: "openai",
+    } as const;
+    // Other providers' keys never make a Mistral author ready.
+    expect(providerAuthenticationForPair({ ...base, mistralConfigured: false })).toEqual({
+      ready: false,
+      summary: "Configure Mistral API key for live review",
+    });
+    expect(providerAuthenticationForPair(base)).toEqual({
+      ready: false,
+      summary: "Configure Mistral API key for live review",
+    });
+    expect(providerAuthenticationForPair({ ...base, mistralConfigured: true })).toEqual({
+      ready: true,
+      summary: "Mistral API key & OpenAI API key configured",
+    });
+    expect(
+      providerAuthenticationForPair({
+        ...base,
+        mistralConfigured: true,
+        openaiConfigured: false,
+      }),
+    ).toEqual({ ready: false, summary: "Configure OpenAI API key for live review" });
+    expect(
+      providerAuthenticationForPair({
+        ...base,
+        mistralConfigured: false,
+        openaiConfigured: false,
+      }),
+    ).toEqual({
+      ready: false,
+      summary: "Configure Mistral API key and OpenAI API key for live review",
+    });
+  });
+
   it("does not require keys for a local side and fails closed for unsupported identities", () => {
     const local = providerAuthenticationForPair({
       fixtureMode: false,

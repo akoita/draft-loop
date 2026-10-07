@@ -404,7 +404,7 @@ const modelCatalogueCacheTtlMs = 5 * 60_000;
 
 /** Which catalogue to read, with the address already checked for `local`. */
 type ModelDiscoveryTarget =
-  | { readonly provider: "anthropic" | "openai" | "zai" | "google" }
+  | { readonly provider: "anthropic" | "openai" | "zai" | "google" | "mistral" }
   | { readonly provider: "local"; readonly endpoint: string };
 
 interface CachedModelCatalogue {
@@ -2116,9 +2116,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         createApplicationService(
           createLocalApplicationDriver({
             providerAuthModeConfiguration,
-            // Mistral key storage is not in the desktop yet, so it never gets a credential.
-            resolveCredential: async (provider) =>
-              provider === "mistral" ? undefined : resolveCredential(credentials, provider),
+            resolveCredential: (provider) => resolveCredential(credentials, provider),
             ...(options.userSessionRunners === undefined
               ? {}
               : { userSessionRunners: options.userSessionRunners }),
@@ -2255,6 +2253,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         return fail(
           "capability-unavailable",
           "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
+        );
+      }
+      if (target.provider === "mistral") {
+        return fail(
+          "capability-unavailable",
+          "Mistral model discovery is unavailable. Enter the exact model id mistral-large-4.",
         );
       }
       const provider = target.provider;

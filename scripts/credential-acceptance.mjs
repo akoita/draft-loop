@@ -33,6 +33,7 @@ function launch(executable, phase, userData, evidencePath, secrets) {
           OPENAI_API_KEY: secrets.openaiEnvironment,
           DEEPINFRA_API_KEY: secrets.deepinfraEnvironment,
           GEMINI_API_KEY: secrets.googleEnvironment,
+          MISTRAL_API_KEY: secrets.mistralEnvironment,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE: "1",
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_PHASE: phase,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_EVIDENCE: evidencePath,
@@ -49,6 +50,9 @@ function launch(executable, phase, userData, evidencePath, secrets) {
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_INITIAL: secrets.googleInitial,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_REPLACEMENT: secrets.googleReplacement,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_ENVIRONMENT: secrets.googleEnvironment,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_INITIAL: secrets.mistralInitial,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_REPLACEMENT: secrets.mistralReplacement,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_MISTRAL_ENVIRONMENT: secrets.mistralEnvironment,
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -109,6 +113,9 @@ export async function runCredentialAcceptance(executableInput, evidenceInput) {
     googleInitial: canary("google-initial"),
     googleReplacement: canary("google-replacement"),
     googleEnvironment: canary("google-environment"),
+    mistralInitial: canary("mistral-initial"),
+    mistralReplacement: canary("mistral-replacement"),
+    mistralEnvironment: canary("mistral-environment"),
   };
 
   try {

@@ -160,6 +160,7 @@ const modelCompanyLabels: Readonly<Record<ModelCompany, string>> = {
   openai: "OpenAI",
   zai: "Z.ai (DeepInfra)",
   google: "Google (Gemini)",
+  mistral: "Mistral AI",
   local: "Local model server",
 };
 
@@ -745,7 +746,7 @@ export function WorkspaceSetupForm({
           account or plan availability or CV quality. IDs are not guaranteed to work with your
           account, plan, or CLI version. You may type any exact model id. Catalog entries show their
           review dates; CLI-specific live availability has not been reverified. Provider
-          documentation: Anthropic, OpenAI, DeepInfra, and Google.
+          documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral.
         </p>
       ) : null}
       <div className="setup-sides">
@@ -943,6 +944,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     openai: { status: "idle" },
     zai: { status: "idle" },
     google: { status: "idle" },
+    mistral: { status: "idle" },
     local: { status: "idle" },
   });
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
@@ -1524,6 +1526,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         openai: { status: "idle" },
         zai: { status: "idle" },
         google: { status: "idle" },
+        mistral: { status: "idle" },
         local: { status: "idle" },
       });
       setPreview({ status: "idle" });
@@ -1548,6 +1551,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       openai: { status: "idle" },
       zai: { status: "idle" },
       google: { status: "idle" },
+      mistral: { status: "idle" },
       local: { status: "idle" },
     });
     setPreview({ status: "idle" });

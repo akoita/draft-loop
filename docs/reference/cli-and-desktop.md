@@ -108,9 +108,10 @@ mistral-large-4`. It requires the dedicated `MISTRAL_API_KEY`, which is never
 shared with another provider, and sends candidate material to
 `https://api.mistral.ai/v1/chat/completions`. The model is in public preview and
 exposes no thinking or effort control, so the profile uses provider defaults at a
-32,768-token output ceiling. The `development-mistral` preset, pricing metadata,
-and desktop key storage are not available yet (#1001, #1002), and the desktop
-host supplies no Mistral credential.
+32,768-token output ceiling. The desktop stores the key in its own settings row;
+see [Provider credentials](#provider-credentials). The `development-mistral`
+preset and pricing metadata are not available yet (#1002). Mistral model
+discovery is manual: enter the exact model ID `mistral-large-4`.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -139,6 +140,12 @@ Gemini author. The host reads `GEMINI_API_KEY` when no app key is saved. The row
 states that the key sends submitted content to Google and that Gemini API
 free-tier terms let Google use it, so candidate material needs a paid-tier key.
 Google keys are API-key-only and are never shared with another provider.
+
+A separate Mistral API key row works the same way for the Mistral Large 4
+development author. The host reads `MISTRAL_API_KEY` when no app key is saved.
+The row states that the key sends candidate material to Mistral AI
+(`api.mistral.ai`) and that Mistral Large 4 is a public preview. Mistral keys
+are API-key-only and are never shared with another provider.
 
 The renderer receives only whether a key is configured and its storage source
 and protection, never the stored key.

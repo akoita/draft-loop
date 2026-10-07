@@ -641,7 +641,11 @@ const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
   openai: "OpenAI",
   deepinfra: "DeepInfra",
   google: "Google Gemini",
+  mistral: "Mistral",
 };
+
+export const mistralCredentialNote =
+  "This key sends candidate material to Mistral AI (api.mistral.ai). Mistral Large 4 is a public preview.";
 
 export const googleCredentialNote =
   "This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key.";
@@ -1452,6 +1456,9 @@ export function ReviewWorkspace({
   const [googleStatus, setGoogleStatus] = useState<CredentialStatus>(() =>
     emptyCredentialStatus("google"),
   );
+  const [mistralStatus, setMistralStatus] = useState<CredentialStatus>(() =>
+    emptyCredentialStatus("mistral"),
+  );
   const [anthropicAuthModeStatus, setAnthropicAuthModeStatus] = useState<ProviderAuthModeStatus>(
     () => ({
       provider: "anthropic",
@@ -1476,6 +1483,8 @@ export function ReviewWorkspace({
   const [showDeepinfraKey, setShowDeepinfraKey] = useState(false);
   const [googleKeyInput, setGoogleKeyInput] = useState("");
   const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [mistralKeyInput, setMistralKeyInput] = useState("");
+  const [showMistralKey, setShowMistralKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
@@ -1743,6 +1752,9 @@ export function ReviewWorkspace({
     void getCredentialStatus("google")
       .then(setGoogleStatus)
       .catch(() => undefined);
+    void getCredentialStatus("mistral")
+      .then(setMistralStatus)
+      .catch(() => undefined);
   }, [getCredentialStatus]);
 
   useEffect(() => {
@@ -1774,7 +1786,8 @@ export function ReviewWorkspace({
       if (provider === "anthropic") setAnthropicKeyInput("");
       else if (provider === "openai") setOpenaiKeyInput("");
       else if (provider === "deepinfra") setDeepinfraKeyInput("");
-      else setGoogleKeyInput("");
+      else if (provider === "google") setGoogleKeyInput("");
+      else setMistralKeyInput("");
       refreshCredentials();
     } catch (error: unknown) {
       setCredentialFeedback(error instanceof Error ? error.message : "Failed to save API key.");
@@ -2459,8 +2472,8 @@ export function ReviewWorkspace({
             </button>
           </div>
           <p className="modal-copy" id="settings-dialog-copy">
-            Manage API keys for Anthropic, OpenAI, DeepInfra, and Google Gemini. Anthropic and
-            OpenAI also support provider-managed sessions; app keys override their API-key
+            Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic
+            and OpenAI also support provider-managed sessions; app keys override their API-key
             environment variables.
           </p>
           {credentialFeedback ? (
@@ -2524,6 +2537,18 @@ export function ReviewWorkspace({
               onChange={setGoogleKeyInput}
               onSave={() => void handleSaveCredential("google", googleKeyInput)}
               onRemove={() => void handleRemoveCredential("google")}
+            />
+            <CredentialRow
+              title="Mistral API key"
+              placeholder="Mistral API key"
+              note={mistralCredentialNote}
+              status={mistralStatus}
+              value={mistralKeyInput}
+              revealed={showMistralKey}
+              onReveal={setShowMistralKey}
+              onChange={setMistralKeyInput}
+              onSave={() => void handleSaveCredential("mistral", mistralKeyInput)}
+              onRemove={() => void handleRemoveCredential("mistral")}
             />
           </div>
         </div>
@@ -2735,6 +2760,7 @@ export function ReviewWorkspace({
       openaiConfigured: openaiStatus.configured,
       deepinfraConfigured: deepinfraStatus.configured,
       googleConfigured: googleStatus.configured,
+      mistralConfigured: mistralStatus.configured,
       anthropicMode: anthropicAuthModeStatus.activeMode,
       openaiMode: openaiAuthModeStatus.activeMode,
       authorCompany: state.providerTransmissionPreflight.author.company as ModelCompany,
