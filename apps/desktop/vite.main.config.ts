@@ -10,6 +10,9 @@ export default defineConfig({
         "electron",
         // Native module: shipped as an extra resource by forge.config.ts.
         "onnxruntime-node",
+        // Optional Mistral SDK peers, deliberately not shipped: the SDK loads them in a
+        // try/catch, so tracing and telemetry stay off. Bundling fails without them.
+        /^@opentelemetry\//u,
         ...builtinModules,
         ...builtinModules.map((module) => `node:${module}`),
       ],
