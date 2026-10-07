@@ -142,6 +142,27 @@ The units are ordered, and each is one PR:
 5. **Readiness and display.** Count judged coverage in readiness, and show the
    requirement-level rationale in the CLI and desktop (#954).
 
+## Semantic candidates (#952)
+
+`attachSemanticCoverageCandidates` in `packages/application` implements rule 3.
+Only lexically uncovered assessments with basis `lexical` are eligible. A block
+becomes a candidate when it passes the tier's relevance floor, up to three per
+requirement, and the assessment becomes `needs-judgement`. A model without a
+calibrated floor creates no candidates. Judgement (#953) decides every
+candidate; nothing here marks a requirement covered.
+
+Run on this fixture with each model's default floor:
+
+| Model | Covered r1-r7 | Gaps and misleading cases that became candidates |
+| --- | --- | --- |
+| EmbeddingGemma 2 | All seven, labelled block included | r8, r11, r12 (r9, r10 stayed uncovered) |
+| Granite 311M | All seven, labelled block included | r8, r10, r11, r12 (r9 stayed uncovered) |
+
+Granite's r7 candidates include the labelled block only as its second choice.
+Protected r13 and r14 and lexical r15 and r16 are unchanged. The opt-in test
+`semantic-coverage-candidates.model.test.ts` repeats this run with an installed
+model (`DRAFT_LOOP_EMBEDDING_MODEL_DIR`, `DRAFT_LOOP_EMBEDDING_TIER`).
+
 ## Limits
 
 - **Small invented sample.** The fixture has one candidate and sixteen
