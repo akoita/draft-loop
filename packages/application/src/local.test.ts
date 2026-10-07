@@ -2344,6 +2344,57 @@ describe("local application driver", () => {
     }
   });
 
+  it("saves no brief when the driver extraction is aborted", async () => {
+    const root = await providerWorkspace("draft-loop-opportunity-driver-abort-");
+    const controller = new AbortController();
+    const transport = vi.fn(async (_url: string, _init: RequestInit) => {
+      controller.abort();
+      return localCompletion(opportunityExtractionProposal(), "driver-extraction-aborted");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: transport as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen-opportunity-extractor",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        { write: () => undefined },
+      );
+      await expect(
+        driver.createOpportunity({
+          root,
+          id: "brief-driver-aborted",
+          sources: [
+            {
+              id: "job-source",
+              kind: "pasted-content",
+              classification: "job-posting",
+              content: "Example Systems seeks a Platform Engineer.",
+            },
+          ],
+          allowProviderData: true,
+          signal: controller.signal,
+        }),
+      ).rejects.toMatchObject({ name: "AbortError" });
+      expect(transport).toHaveBeenCalledOnce();
+      await expect(
+        driver.getOpportunity({ root, briefId: "brief-driver-aborted" }),
+      ).resolves.toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("uses an Anthropic user session for opportunity extraction without resolving an API key", async () => {
     const root = await providerWorkspace("draft-loop-session-opportunity-extraction-");
     const resolveCredential = vi.fn(async () => {

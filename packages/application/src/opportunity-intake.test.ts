@@ -186,6 +186,46 @@ describe("opportunity intake", () => {
     expect(serialized).not.toContain(candidateText);
   });
 
+  it("throws instead of returning a draft when the signal aborts during extraction", async () => {
+    const controller = new AbortController();
+    const extract = vi.fn(
+      (request: OpportunityExtractionRequest) =>
+        new Promise<never>((_resolve, reject) => {
+          request.signal?.addEventListener("abort", () => reject(new Error("aborted")), {
+            once: true,
+          });
+          controller.abort();
+        }),
+    );
+    const ingestFile = vi.fn(async (source: IngestionSource) =>
+      availableResult(source.path, checksum("job text")),
+    );
+
+    await expect(
+      createOpportunityDraft(
+        {
+          id: "brief-aborted",
+          createdAt: capturedAt,
+          sources: [
+            {
+              id: "job-source",
+              kind: "local-file",
+              classification: "job-posting",
+              path: "/private/job.md",
+            },
+          ],
+        },
+        {
+          dependencies: { ingestFile },
+          extractor: { extract },
+          now: () => capturedAt,
+          signal: controller.signal,
+        },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(extract).toHaveBeenCalledTimes(1);
+  });
+
   it("merges and validates structured candidate instructions without invoking extraction", async () => {
     const extract = vi.fn(async () => {
       throw new Error("extractor should not be called for candidate-only material");

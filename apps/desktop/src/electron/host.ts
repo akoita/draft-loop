@@ -131,10 +131,12 @@ import {
   type ModelsPreviewIndependenceInput,
   type ModelsPreviewIndependenceResult,
   type OpportunityBriefSelectionInput,
+  type OpportunityCancelResult,
   type OpportunityCreateInput,
   type OpportunityCreateSource,
   type OpportunityLatestResult,
   type OpportunityRecordResult,
+  opportunityExtractionCancelledMessage,
   type ProviderAuthModeProvider,
   type ProviderAuthModeStatus,
   providerAuthModeProviders,
@@ -2839,22 +2841,51 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return sources;
   }
 
+  /** One requirements extraction may run per workspace; cancelling aborts its provider request. */
+  const activeOpportunityExtractions = new Map<string, AbortController>();
+
   async function createOpportunity(
     input: OpportunityCreateInput,
   ): Promise<OpportunityRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
-    const sources = await resolveOpportunitySources(
-      input.workspaceId,
-      input.sources,
-      input.providerTransmissionApproved === true,
-    );
-    const record = await service.createOpportunity({
-      root: workspace.root,
-      sources,
-      allowProviderData: input.providerTransmissionApproved === true,
-    });
-    await rememberLatestOpportunity(workspace.root, record.brief.id);
-    return projectOpportunityRecord(workspace.descriptor.id, record);
+    if (activeOpportunityExtractions.has(workspace.descriptor.id)) {
+      return fail("operation-failed", "Requirements extraction is already running.");
+    }
+    const controller = new AbortController();
+    activeOpportunityExtractions.set(workspace.descriptor.id, controller);
+    try {
+      const sources = await resolveOpportunitySources(
+        input.workspaceId,
+        input.sources,
+        input.providerTransmissionApproved === true,
+      );
+      const record = await service.createOpportunity({
+        root: workspace.root,
+        sources,
+        allowProviderData: input.providerTransmissionApproved === true,
+        signal: controller.signal,
+      });
+      await rememberLatestOpportunity(workspace.root, record.brief.id);
+      return projectOpportunityRecord(workspace.descriptor.id, record);
+    } catch (error) {
+      // A cancelled extraction saves nothing, whatever shape the abort took on its way up.
+      if (controller.signal.aborted) {
+        return fail("operation-failed", opportunityExtractionCancelledMessage);
+      }
+      throw error;
+    } finally {
+      activeOpportunityExtractions.delete(workspace.descriptor.id);
+    }
+  }
+
+  function cancelOpportunityExtraction(
+    input: Extract<BridgeCommand, { type: "opportunity.cancel" }>["input"],
+  ): OpportunityCancelResult {
+    const workspace = workspaceFor(input.workspaceId);
+    const controller = activeOpportunityExtractions.get(workspace.descriptor.id);
+    if (controller === undefined || controller.signal.aborted) return { cancelled: false };
+    controller.abort();
+    return { cancelled: true };
   }
 
   /** Remembers which brief is the workspace's latest so setup can resume it after a restart. */
@@ -5131,6 +5162,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "opportunity.create":
           return { ok: true, value: await createOpportunity(command.input) };
+        case "opportunity.cancel":
+          return { ok: true, value: cancelOpportunityExtraction(command.input) };
         case "opportunity.get":
           return { ok: true, value: await getOpportunity(command.input) };
         case "opportunity.list":

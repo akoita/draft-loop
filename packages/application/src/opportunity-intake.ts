@@ -683,6 +683,8 @@ export async function createOpportunityDraft(
           sources: material,
           ...(options.signal === undefined ? {} : { signal: options.signal }),
         });
+  // The extraction port reports failure as an issue, so an abort is checked before a brief exists.
+  options.signal?.throwIfAborted();
 
   return buildOpportunityBrief({
     schemaVersion: 1,

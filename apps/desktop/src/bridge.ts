@@ -2111,6 +2111,21 @@ const opportunityCreateKeys = inputKeys<OpportunityCreateInput>()([
   "providerTransmissionApproved",
 ]);
 
+/** Cancels the workspace's in-flight requirements extraction; nothing is saved. */
+export interface OpportunityCancelInput {
+  readonly workspaceId: string;
+}
+
+export interface OpportunityCancelResult {
+  readonly cancelled: boolean;
+}
+
+/** The fixed message a cancelled extraction reports; the renderer shows it as a status, not a failure. */
+export const opportunityExtractionCancelledMessage = "Extraction cancelled. No brief was saved.";
+
+const opportunityCancelKeys = inputKeys<OpportunityCancelInput>()(["workspaceId"]);
+const opportunityCancelResultKeys = resultKeys<OpportunityCancelResult>()(["cancelled"]);
+
 export interface OpportunityGetInput {
   readonly workspaceId: string;
   readonly briefId: string;
@@ -2823,6 +2838,7 @@ export interface BridgeCommandInputMap {
   "knowledge.delete-base-preview": KnowledgeBaseDeletionPreviewInput;
   "knowledge.delete-base": KnowledgeBaseDeletionInput;
   "opportunity.create": OpportunityCreateInput;
+  "opportunity.cancel": OpportunityCancelInput;
   "opportunity.get": OpportunityGetInput;
   "opportunity.list": OpportunityListInput;
   "opportunity.latest": OpportunityLatestInput;
@@ -2917,6 +2933,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.delete-base-preview": KnowledgeBaseDeletionPlanResult;
   "knowledge.delete-base": KnowledgeBaseDeletionResult;
   "opportunity.create": OpportunityRecordResult;
+  "opportunity.cancel": OpportunityCancelResult;
   "opportunity.get": OpportunityRecordResult;
   "opportunity.list": OpportunityListResult;
   "opportunity.latest": OpportunityLatestResult;
@@ -4305,6 +4322,12 @@ function validateOpportunityCreateInput(value: unknown): OpportunityCreateInput 
   };
 }
 
+function validateOpportunityCancelInput(value: unknown): OpportunityCancelInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityCancelKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
 function validateOpportunitySourcedTextInput(value: unknown): OpportunitySourcedTextInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, opportunitySourcedTextKeys)) return invalidInput();
@@ -5198,6 +5221,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "opportunity.create",
         input: validateOpportunityCreateInput(command.input),
+      };
+    case "opportunity.cancel":
+      return {
+        type: "opportunity.cancel",
+        input: validateOpportunityCancelInput(command.input),
       };
     case "opportunity.get":
       return { type: "opportunity.get", input: validateOpportunityGetInput(command.input) };
@@ -7228,6 +7256,12 @@ function normalizeCanonicalCandidateProfileProgressResult(
   return { active, completedCalls, plannedCalls };
 }
 
+function normalizeOpportunityCancelResult(value: unknown): OpportunityCancelResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityCancelResultKeys)) return invalidInput();
+  return { cancelled: booleanValue(result.cancelled) };
+}
+
 function normalizeCanonicalCandidateProfileCancelResult(
   value: unknown,
 ): CanonicalCandidateProfileCancelResult {
@@ -7466,6 +7500,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "opportunity.edit":
     case "opportunity.review":
       return normalizeOpportunityRecordResult(value);
+    case "opportunity.cancel":
+      return normalizeOpportunityCancelResult(value);
     case "opportunity.list":
       return normalizeOpportunityListResult(value);
     case "opportunity.latest":

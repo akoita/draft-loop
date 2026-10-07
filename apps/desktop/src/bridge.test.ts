@@ -1936,6 +1936,32 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates opportunity.cancel at runtime and normalizes its result", async () => {
+    const cancel = {
+      type: "opportunity.cancel" as const,
+      input: { workspaceId: "workspace-1" },
+    };
+    expect(validateBridgeCommand(cancel)).toEqual(cancel);
+    expect(bridgeCapabilities).toContain("opportunity.cancel");
+    for (const input of [{}, { workspaceId: "workspace-1", briefId: "brief-1" }, "workspace-1"]) {
+      expect(() => validateBridgeCommand({ type: "opportunity.cancel", input })).toThrow("invalid");
+    }
+    const respond = (value: unknown) =>
+      createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), ["opportunity.cancel"]),
+      ).execute(cancel);
+    await expect(respond({ cancelled: false })).resolves.toEqual({
+      ok: true,
+      value: { cancelled: false },
+    });
+    for (const malformed of [{}, { cancelled: "true" }, { cancelled: true, path: "/private" }]) {
+      await expect(respond(malformed)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("normalizes canonical profile results while rejecting malformed lineage and leaked fields", async () => {
     const record = canonicalCandidateProfileResult();
     const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
