@@ -12,6 +12,8 @@ import {
   createApplicationService,
   createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
+  declineLegacyEvidenceMigration,
+  defaultCandidateKnowledgeStoreRoot,
   defaultLocalModelEndpoint,
   defaultWritingPolicyContent,
   describeModelProfileSelectionMismatch,
@@ -27,6 +29,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
   type ProviderUserSessionRunners,
+  readLegacyEvidenceMigration,
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   type WorkspaceDescriptor,
@@ -147,6 +150,10 @@ import {
   type WorkspaceCreateInput,
 } from "../bridge.js";
 import type {
+  KnowledgeEnsureDefaultResult,
+  WorkspaceEvidenceMigrationResult,
+} from "../career-evidence-contract.js";
+import type {
   DesktopReviewState,
   FindingDecision,
   IndependentReviewView,
@@ -167,6 +174,7 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
@@ -325,6 +333,8 @@ export interface NativeHostOptions {
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
   readonly providerAuthModePreference?: ProviderAuthModePreferenceStore;
   readonly recentWorkspaces?: RecentWorkspaceStore;
+  /** Where the automatic knowledge store lives; defaults to DraftLoop application data. */
+  readonly defaultKnowledgeStoreRoot?: string;
   /** Replaces the local embedding model service; tests inject a fake. */
   readonly embeddingModelService?: EmbeddingModelService;
   /** Replaces the workspace retrieval-mode service; tests inject a fake. */
@@ -2116,6 +2126,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     fail,
   });
   const knowledgeStoreRoots = new Map<string, string>();
+  const defaultKnowledgeStoreRoot =
+    options.defaultKnowledgeStoreRoot ?? defaultCandidateKnowledgeStoreRoot();
+  let ensuringDefaultKnowledgeBase: ReturnType<typeof ensureDefaultKnowledgeBase> | undefined;
   const backgroundRuns = new Map<string, BackgroundRun>();
   const reviewedOpportunityCache = new Map<string, OpportunityBriefSelectionInput>();
 
@@ -3789,6 +3802,43 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 : { description: command.input.description }),
             }),
           };
+        case "knowledge.ensure-default": {
+          workspaceFor(command.input.workspaceId);
+          // One in-flight call at a time, so a double click cannot initialize the store twice.
+          ensuringDefaultKnowledgeBase ??= ensureDefaultKnowledgeBase({
+            knowledgeService,
+            storeRoot: defaultKnowledgeStoreRoot,
+          }).finally(() => {
+            ensuringDefaultKnowledgeBase = undefined;
+          });
+          const ensured = await ensuringDefaultKnowledgeBase;
+          knowledgeStoreRoots.set(ensured.view.store.id, defaultKnowledgeStoreRoot);
+          const result: KnowledgeEnsureDefaultResult = {
+            storeId: ensured.view.store.id,
+            knowledgeBaseId: ensured.knowledgeBaseId,
+            displayName: ensured.displayName,
+            created: ensured.created,
+          };
+          return { ok: true, value: result };
+        }
+        case "workspace.evidence-migration.get": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const record = await readLegacyEvidenceMigration(workspace.root);
+          const result: WorkspaceEvidenceMigrationResult = {
+            workspaceId: workspace.descriptor.id,
+            declined: record.declined,
+          };
+          return { ok: true, value: result };
+        }
+        case "workspace.evidence-migration.decline": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const record = await declineLegacyEvidenceMigration(workspace.root);
+          const result: WorkspaceEvidenceMigrationResult = {
+            workspaceId: workspace.descriptor.id,
+            declined: record.declined,
+          };
+          return { ok: true, value: result };
+        }
         case "knowledge.open":
           return { ok: true, value: await chooseKnowledgeStore("open") };
         case "knowledge.list": {

@@ -8,6 +8,7 @@ import type {
 import type { SqliteStorage } from "@draft-loop/storage";
 
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
+import { legacyEvidencePreflightLine } from "./legacy-evidence-migration.js";
 import {
   type RetrievalModeDecision,
   retrievalModePreflightLine,
@@ -112,7 +113,10 @@ export async function announceRunEvidenceMode(
   runId: string,
   write: (line: string) => void,
 ): Promise<void> {
-  if (retrieval === undefined) return;
+  if (retrieval === undefined) {
+    write(legacyEvidencePreflightLine);
+    return;
+  }
   const decision = await retrieval.evidenceModeDecision();
   if (decision.requestedMode === "full-source") {
     await announceEvidenceMode(storage, decision, workspaceId, runId, write);

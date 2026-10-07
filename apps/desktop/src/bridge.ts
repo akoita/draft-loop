@@ -34,6 +34,16 @@ import {
 } from "@draft-loop/domain";
 import { normalizeApprovalReadiness } from "./approval-readiness.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
+import {
+  type KnowledgeEnsureDefaultInput,
+  type KnowledgeEnsureDefaultResult,
+  knowledgeEnsureDefaultKeys,
+  knowledgeEnsureDefaultResultKeys,
+  type WorkspaceEvidenceMigrationInput,
+  type WorkspaceEvidenceMigrationResult,
+  workspaceEvidenceMigrationKeys,
+  workspaceEvidenceMigrationResultKeys,
+} from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
 import type {
   DesktopReviewState,
@@ -81,7 +91,6 @@ import {
   parseRecentWorkspacesListInput,
   parseRecentWorkspacesListResult,
 } from "./recent-workspaces.js";
-
 import {
   type EmbeddingModelCancelResult,
   type EmbeddingModelInstallInput,
@@ -2738,6 +2747,7 @@ export interface BridgeCommandInputMap {
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.import-workspace-sources": KnowledgeWorkspaceSourcesImportInput;
+  "knowledge.ensure-default": KnowledgeEnsureDefaultInput;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
   "knowledge.directory-add-members": KnowledgeDirectoryAddMembersInput;
@@ -2803,6 +2813,8 @@ export interface BridgeCommandInputMap {
   "embedding-model.remove": EmbeddingModelTierInput;
   "workspace.retrieval-mode.get": WorkspaceRetrievalModeGetInput;
   "workspace.retrieval-mode.set": WorkspaceRetrievalModeSetInput;
+  "workspace.evidence-migration.get": WorkspaceEvidenceMigrationInput;
+  "workspace.evidence-migration.decline": WorkspaceEvidenceMigrationInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -2828,6 +2840,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.import-workspace-sources": KnowledgeDirectoryImportResult;
+  "knowledge.ensure-default": KnowledgeEnsureDefaultResult;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
   "knowledge.directory-add-members": KnowledgeDirectoryAddMembersResult;
@@ -2893,6 +2906,8 @@ export interface BridgeCommandOutputMap {
   "embedding-model.remove": EmbeddingModelStatusResult;
   "workspace.retrieval-mode.get": WorkspaceRetrievalModeResult;
   "workspace.retrieval-mode.set": WorkspaceRetrievalModeResult;
+  "workspace.evidence-migration.get": WorkspaceEvidenceMigrationResult;
+  "workspace.evidence-migration.decline": WorkspaceEvidenceMigrationResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -4768,6 +4783,18 @@ function validateWorkspaceRetrievalModeSetInput(value: unknown): WorkspaceRetrie
   };
 }
 
+function validateKnowledgeEnsureDefaultInput(value: unknown): KnowledgeEnsureDefaultInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeEnsureDefaultKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+function validateWorkspaceEvidenceMigrationInput(value: unknown): WorkspaceEvidenceMigrationInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceEvidenceMigrationKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
 /** The pinned model pages live on one host; anything else is not a model source. */
 function embeddingModelSourceUrl(value: unknown): string {
   const result = stringValue(value, 300);
@@ -4849,6 +4876,28 @@ function normalizeWorkspaceRetrievalModeResult(value: unknown): WorkspaceRetriev
     mode: enumValue(result.mode, retrievalModes),
     modelTier: enumValue(result.modelTier, embeddingModelTiers),
     ...(updatedAt === undefined ? {} : { updatedAt }),
+  };
+}
+
+function normalizeKnowledgeEnsureDefaultResult(value: unknown): KnowledgeEnsureDefaultResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeEnsureDefaultResultKeys)) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    displayName: displayName(result.displayName),
+    created: booleanValue(result.created),
+  };
+}
+
+function normalizeWorkspaceEvidenceMigrationResult(
+  value: unknown,
+): WorkspaceEvidenceMigrationResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, workspaceEvidenceMigrationResultKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(result.workspaceId),
+    declined: booleanValue(result.declined),
   };
 }
 
@@ -4944,6 +4993,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.import-workspace-sources",
         input: validateKnowledgeWorkspaceSourcesImportInput(command.input),
+      };
+    case "knowledge.ensure-default":
+      return {
+        type: "knowledge.ensure-default",
+        input: validateKnowledgeEnsureDefaultInput(command.input),
       };
     case "knowledge.directory-refresh-preview":
       return {
@@ -5215,6 +5269,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "workspace.retrieval-mode.set",
         input: validateWorkspaceRetrievalModeSetInput(command.input),
+      };
+    case "workspace.evidence-migration.get":
+      return {
+        type: "workspace.evidence-migration.get",
+        input: validateWorkspaceEvidenceMigrationInput(command.input),
+      };
+    case "workspace.evidence-migration.decline":
+      return {
+        type: "workspace.evidence-migration.decline",
+        input: validateWorkspaceEvidenceMigrationInput(command.input),
       };
   }
 }
@@ -7326,6 +7390,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "knowledge.import-directory":
     case "knowledge.import-workspace-sources":
       return normalizeKnowledgeDirectoryImportResult(value);
+    case "knowledge.ensure-default":
+      return normalizeKnowledgeEnsureDefaultResult(value);
     case "knowledge.directory-refresh-preview":
       return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
     case "knowledge.directory-refresh-apply":
@@ -7404,6 +7470,9 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "workspace.retrieval-mode.get":
     case "workspace.retrieval-mode.set":
       return normalizeWorkspaceRetrievalModeResult(value);
+    case "workspace.evidence-migration.get":
+    case "workspace.evidence-migration.decline":
+      return normalizeWorkspaceEvidenceMigrationResult(value);
   }
 }
 

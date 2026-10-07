@@ -1033,6 +1033,17 @@ and keeps paths local.
   and shows no path. If the saved location is no longer readable, the panel asks
   you to open the store again. Only the first saved entry's store is restored.
 
+- **Automatic knowledge base and one-time import.** Setup card 02, **Career
+  evidence**, follows the workspace's selected CKB. With none selected and no
+  legacy `evidence` files, the first added file or URL creates a default CKB
+  ("Career evidence") in DraftLoop application data, imports into it, and selects
+  it; the card says so without showing a path. With legacy files and no CKB, the
+  card offers a one-time **Import legacy evidence** (files are copied, never
+  moved) and reports how many were imported or left behind. **Keep using legacy
+  evidence** is saved in `.draft-loop/legacy-evidence-migration.json`; such
+  workspaces stay on the legacy path, and each run's preflight prints
+  `Career evidence: legacy workspace evidence (no knowledge base selected)`.
+
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
   returns only opaque source and version identities. URL intake requires
   approval and applies the shared HTTPS and network-safety checks without
