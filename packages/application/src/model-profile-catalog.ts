@@ -21,7 +21,8 @@ export type ModelProfilePresetId =
   | "economy"
   | "standard"
   | "development-glm"
-  | "development-gemini";
+  | "development-gemini"
+  | "development-mistral";
 
 export interface ModelProfilePreset {
   readonly id: ModelProfilePresetId;
@@ -60,6 +61,8 @@ const deepInfraGlmOverview = "https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 
 const googleGeminiPricing = "https://ai.google.dev/gemini-api/docs/pricing";
 const googleGeminiModels = "https://ai.google.dev/gemini-api/docs/models";
+
+const mistralLarge4Model = "https://docs.mistral.ai/models/mistral-large-4";
 
 function openAIModelPage(modelId: string): string {
   return `https://developers.openai.com/api/docs/models/${modelId}`;
@@ -100,6 +103,12 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     apiPricing: { inputUsdPerMillion: 0.75, outputUsdPerMillion: 3.75 },
     reviewedAt: "2026-10-04",
   },
+  // Standard list rates; the temporary launch discount on the same page is not modeled.
+  "dev-mistral-author@1": {
+    sources: [mistralLarge4Model],
+    apiPricing: { inputUsdPerMillion: 1.36, outputUsdPerMillion: 4.18 },
+    reviewedAt: "2026-10-08",
+  },
 };
 
 const defaultMaxInputTokens = 200000;
@@ -134,6 +143,13 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     label: "Development — Gemini Flash — unvalidated",
     tier: "economy",
     author: { id: "dev-google-gemini-author", version: 2 },
+    critic: { id: "economy-openai-critic", version: 1 },
+  },
+  {
+    id: "development-mistral",
+    label: "Development — Mistral Large 4 (preview) — unvalidated",
+    tier: "economy",
+    author: { id: "dev-mistral-author", version: 1 },
     critic: { id: "economy-openai-critic", version: 1 },
   },
 ];

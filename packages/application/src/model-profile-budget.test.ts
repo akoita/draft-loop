@@ -4,6 +4,7 @@ import {
   estimateModelProfileApiScenario,
   type ModelProfileApiScenarioInput,
 } from "./model-profile-budget.js";
+import { listModelProfileCatalog } from "./model-profile-catalog.js";
 
 const apiKeyModes = { anthropic: "api-key", openai: "api-key" } as const;
 const standard: ModelProfileReferences = {
@@ -21,6 +22,11 @@ const development: ModelProfileReferences = {
 
 const geminiDevelopment: ModelProfileReferences = {
   author: { id: "dev-google-gemini-author", version: 2 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
+
+const mistralDevelopment: ModelProfileReferences = {
+  author: { id: "dev-mistral-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 
@@ -209,6 +215,34 @@ describe("model profile public API scenario estimates", () => {
     expect(
       estimateModelProfileApiScenario({
         ...geminiAndOpenAi,
+        authModes: { anthropic: "api-key", openai: "user-session" },
+      }),
+    ).toEqual({ status: "unavailable", reason: "subscription-billing" });
+  });
+
+  it("estimates the opt-in Mistral pair at standard rates and checks subscription billing only for OpenAI", () => {
+    const mistralAndOpenAi = {
+      ...scenario(mistralDevelopment),
+      authModes: { anthropic: "user-session", openai: "api-key" } as const,
+    };
+    const entry = listModelProfileCatalog().find(
+      ({ profile }) => profile.id === "dev-mistral-author",
+    );
+    expect(entry?.apiPricing).toMatchObject({
+      inputUsdPerMillion: 1.36,
+      outputUsdPerMillion: 4.18,
+      maxInputTokens: 200000,
+    });
+    // Standard rates, not the temporary launch discount.
+    expect(estimateModelProfileApiScenario(mistralAndOpenAi)).toEqual({
+      status: "available",
+      authorUsd: 0.03556,
+      criticUsd: 0.0015,
+      totalUsd: 0.03706,
+    });
+    expect(
+      estimateModelProfileApiScenario({
+        ...mistralAndOpenAi,
         authModes: { anthropic: "api-key", openai: "user-session" },
       }),
     ).toEqual({ status: "unavailable", reason: "subscription-billing" });

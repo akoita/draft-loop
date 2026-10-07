@@ -22,6 +22,7 @@ describe("model profile catalog", () => {
       "standard-openai-critic@2",
       "dev-deepinfra-glm-author@1",
       "dev-google-gemini-author@2",
+      "dev-mistral-author@1",
     ]);
     for (const entry of catalog) {
       expect(entry).toMatchObject({
@@ -40,6 +41,7 @@ describe("model profile catalog", () => {
       const developmentReviewDates: Record<string, string> = {
         "dev-deepinfra-glm-author": "2026-10-02",
         "dev-google-gemini-author": "2026-10-04",
+        "dev-mistral-author": "2026-10-08",
         "economy-anthropic-author": "2026-10-07",
       };
       expect(entry.reviewedAt).toBe(developmentReviewDates[entry.profile.id] ?? "2026-09-30");
@@ -59,6 +61,7 @@ describe("model profile catalog", () => {
       "standard-openai-critic@2": [2, 10],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
       "dev-google-gemini-author@2": [0.75, 3.75],
+      "dev-mistral-author@1": [1.36, 4.18],
     });
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
@@ -89,6 +92,22 @@ describe("model profile catalog", () => {
         runtime: { effort: "low", maxOutputTokens: 32768, thinking: { mode: "provider-default" } },
       },
     });
+    expect(byId.get("dev-mistral-author@1")?.sources).toEqual([
+      "https://docs.mistral.ai/models/mistral-large-4",
+    ]);
+    expect(byId.get("dev-mistral-author@1")).toMatchObject({
+      profile: {
+        provider: "mistral",
+        modelId: "mistral-large-4",
+        roles: ["author"],
+        runtime: {
+          effort: "provider-default",
+          maxOutputTokens: 32768,
+          thinking: { mode: "provider-default" },
+        },
+      },
+      apiPricing: { maxInputTokens: 200000 },
+    });
     expect(catalog.filter(({ profile }) => profile.id === "economy-openai-critic")).toHaveLength(1);
     expect(byId.get("dev-deepinfra-glm-author@1")).toMatchObject({
       profile: {
@@ -112,7 +131,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(6);
+    expect(next).toHaveLength(7);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -129,7 +148,7 @@ describe("model profile catalog", () => {
     ).toEqual(["author"]);
   });
 
-  it("lists opt-in economy, standard, and development GLM and Gemini exact, role-safe presets", () => {
+  it("lists opt-in economy, standard, and development GLM, Gemini, and Mistral exact, role-safe presets", () => {
     const presets = listModelProfilePresets();
 
     expect(presets).toEqual([
@@ -159,6 +178,13 @@ describe("model profile catalog", () => {
         label: "Development — Gemini Flash — unvalidated",
         tier: "economy",
         author: { id: "dev-google-gemini-author", version: 2 },
+        critic: { id: "economy-openai-critic", version: 1 },
+      },
+      {
+        id: "development-mistral",
+        label: "Development — Mistral Large 4 (preview) — unvalidated",
+        tier: "economy",
+        author: { id: "dev-mistral-author", version: 1 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
     ]);

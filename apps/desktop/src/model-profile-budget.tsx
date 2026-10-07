@@ -125,7 +125,9 @@ function PublicRate({
         ? "OpenAI"
         : profile.provider === "google"
           ? "Google"
-          : "DeepInfra";
+          : profile.provider === "mistral"
+            ? "Mistral"
+            : "DeepInfra";
   return (
     <div className="model-profile-budget-rate">
       <strong>

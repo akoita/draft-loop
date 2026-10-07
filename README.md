@@ -217,8 +217,11 @@ approving or exporting.
 - The opt-in Mistral Large 4 author (`dev-mistral-author@1`, public preview)
   is selectable from the CLI with `--author-profile` or
   `--author-company mistral`, and requires the dedicated `MISTRAL_API_KEY`.
-  Its preset and desktop key storage are not available yet, and CV quality is
-  unvalidated.
+  The opt-in `development-mistral` preset pairs it with the GPT-6 Luna critic.
+  Pricing metadata uses standard $1.36/$4.18 per million input/output rates
+  reviewed on 2026-10-08, without Mistral's temporary launch discount. The
+  model takes 20-40 seconds per call, desktop key storage is not available yet,
+  and CV quality is unvalidated.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

@@ -15,6 +15,7 @@ const modelNames: Readonly<Record<string, string>> = {
   "zai-org/GLM-5.3-Flash": "GLM-5.3 Flash",
   "gemini-3.7-flash": "Gemini 3.7 Flash",
   "gemini-3.8-flash": "Gemini 3.8 Flash",
+  "mistral-large-4": "Mistral Large 4 (preview)",
 };
 
 const providerNames: Readonly<Record<string, string>> = {
@@ -22,6 +23,7 @@ const providerNames: Readonly<Record<string, string>> = {
   openai: "OpenAI",
   zai: "Z.ai via DeepInfra",
   google: "Google",
+  mistral: "Mistral",
   local: "Local model",
 };
 
