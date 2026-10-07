@@ -17,7 +17,11 @@ import {
   independentReadinessReportSchema,
   type ReadinessDimensionAgreement,
 } from "@draft-loop/schemas";
-import { type DeterministicValidationContext, validateDraftArtifact } from "@draft-loop/validation";
+import {
+  type DeterministicValidationContext,
+  validateDraftArtifact,
+  withoutJudgedUncoveredFindings,
+} from "@draft-loop/validation";
 
 export interface ApplicationReadinessStoppingLoopContext {
   readonly round: number;
@@ -32,6 +36,8 @@ interface ApplicationReadinessStoppingDecisionInputBase {
   readonly report: IndependentReadinessReport;
   readonly latestRevisionTrace?: AdjudicatedRevisionTrace;
   readonly explicitGapRequirementIds?: readonly string[];
+  /** Requirements a critic judged satisfied; their lexical uncovered check is not a blocker. */
+  readonly coveredRequirementIds?: readonly string[];
   readonly agreements: readonly ReadinessDimensionAgreement[];
   readonly createdAt: string;
 }
@@ -95,6 +101,7 @@ function assertCanonicalInputKeys(input: EvaluateApplicationReadinessStoppingDec
     "report",
     "latestRevisionTrace",
     "explicitGapRequirementIds",
+    "coveredRequirementIds",
     "agreements",
     "createdAt",
     "deterministicValidationContext",
@@ -399,7 +406,9 @@ export function evaluateApplicationReadinessStoppingDecision(
   const validation = validateDraftArtifact(artifact, input.deterministicValidationContext, {
     explicitGapRequirementIds: input.explicitGapRequirementIds ?? [],
   });
-  const deterministicChecks = projectDeterministicChecks(validation.issues);
+  const deterministicChecks = projectDeterministicChecks(
+    withoutJudgedUncoveredFindings(validation.issues, input.coveredRequirementIds ?? []),
+  );
   const parsedAgreements = applicationReadinessStoppingDecisionSchema.shape.agreements.parse(
     input.agreements,
   );

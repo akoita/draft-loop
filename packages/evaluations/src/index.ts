@@ -57,6 +57,8 @@ export interface ReadinessFinding {
 
 export interface ReadinessEvaluationOptions {
   readonly explicitGapRequirementIds?: readonly string[];
+  /** Requirements a critic judged satisfied; counted as covered unless an explicit gap. */
+  readonly coveredRequirementIds?: readonly string[];
   readonly round?: number;
   readonly priorScoreHistory?: ReadinessScoreHistory;
   readonly findings?: readonly ReadinessFinding[];
@@ -150,22 +152,33 @@ function weightedCoverage(
   artifact: DraftArtifact,
   requirements: ReadinessEvaluationContext["requirements"],
   explicitGapIds: ReadonlySet<string>,
-): { readonly score: number; readonly covered: number; readonly total: number } {
+  judgedCoveredIds: ReadonlySet<string> = new Set(),
+): {
+  readonly score: number;
+  readonly covered: number;
+  readonly judged: number;
+  readonly total: number;
+} {
   let coveredWeight = 0;
   let totalWeight = 0;
   let covered = 0;
+  let judged = 0;
   for (const requirement of requirements) {
     const weight =
       requirement.priority === "critical" ? 2 : requirement.priority === "high" ? 1.5 : 1;
     totalWeight += weight;
-    if (!explicitGapIds.has(requirement.id) && isRequirementCoveredByBlock(requirement, artifact)) {
+    if (explicitGapIds.has(requirement.id)) continue;
+    const lexical = isRequirementCoveredByBlock(requirement, artifact);
+    if (lexical || judgedCoveredIds.has(requirement.id)) {
       coveredWeight += weight;
       covered += 1;
+      if (!lexical) judged += 1;
     }
   }
   return {
     score: totalWeight === 0 ? 0 : clampScore(coveredWeight / totalWeight),
     covered,
+    judged,
     total: requirements.length,
   };
 }
@@ -362,7 +375,12 @@ export function evaluateReadiness(
       Object.freeze({ ...finding }),
     ),
   ) as readonly ReadinessFinding[];
-  const coverage = weightedCoverage(artifact, context.requirements, explicitGapIds);
+  const coverage = weightedCoverage(
+    artifact,
+    context.requirements,
+    explicitGapIds,
+    new Set(options.coveredRequirementIds ?? []),
+  );
   const evidence = backedClaimRatio(artifact);
   const duplicate = duplicateRatio(artifact);
   const format = formatScore(artifact, context.outputConstraints);
@@ -381,7 +399,10 @@ export function evaluateReadiness(
     {
       dimension: "relevance",
       score: coverage.score,
-      rationale: `${coverage.covered} of ${coverage.total} requirements matched by deterministic coverage within individual blocks`,
+      rationale:
+        coverage.judged === 0
+          ? `${coverage.covered} of ${coverage.total} requirements matched by deterministic coverage within individual blocks`
+          : `${coverage.covered} of ${coverage.total} requirements covered: ${coverage.covered - coverage.judged} by deterministic coverage within individual blocks and ${coverage.judged} by critic judgement of semantic candidates`,
     },
     {
       dimension: "evidence",
