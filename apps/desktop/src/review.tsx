@@ -28,6 +28,7 @@ import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
+  briefOperationsOf,
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
 } from "./job-requirements-extraction.js";
@@ -44,6 +45,7 @@ import {
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
+import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
@@ -1295,6 +1297,8 @@ export function ReviewWorkspace({
   getProviderAuthModeStatus,
   onSetProviderAuthMode,
 }: ReviewWorkspaceProps) {
+  const briefOperations =
+    jobRequirements === undefined ? undefined : briefOperationsOf(jobRequirements);
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, warnings } = findingSummary;
   const acceptedBlockingFindings = blockingFindings.filter(
@@ -2807,6 +2811,25 @@ export function ReviewWorkspace({
                       key={jobRequirements.workspaceId}
                       binding={jobRequirements}
                     />
+                  ) : null}
+                  {state.setup.reviewedOpportunity != null &&
+                  jobRequirements !== undefined &&
+                  briefOperations !== undefined ? (
+                    <div className="job-extraction">
+                      <p className="setup-note">
+                        Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
+                      </p>
+                      <OpportunityBriefReviewAction
+                        key={`${jobRequirements.workspaceId}:${state.setup.reviewedOpportunity.version}`}
+                        briefId={state.setup.reviewedOpportunity.briefId}
+                        operations={briefOperations}
+                        disabled={jobRequirements.disabled}
+                        label="View requirements"
+                        {...(jobRequirements.onBriefChanged === undefined
+                          ? {}
+                          : { onBriefChanged: jobRequirements.onBriefChanged })}
+                      />
+                    </div>
                   ) : null}
                 </article>
                 <CareerEvidenceCard

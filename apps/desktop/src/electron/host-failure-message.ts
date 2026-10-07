@@ -2,11 +2,13 @@ import {
   CliUserError,
   EmbeddingModelInstallError,
   JobRequirementUserError,
+  opportunityBriefVersionStaleErrorMessage,
   SourceIngestionUserError,
 } from "@draft-loop/application";
 
 import type { BridgeCommand, BridgeErrorCode } from "../bridge.js";
 import type { ReviewAction } from "../model.js";
+import { opportunityVersionConflictMessage } from "../opportunity-brief-review-model.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 
 const bridgeErrorCodes: ReadonlySet<string> = new Set([
@@ -135,6 +137,14 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   // The retrieval-mode file's own validation message names the setting, never a path.
   if (command.type.startsWith("workspace.retrieval-mode.") && error instanceof CliUserError) {
     return error.message;
+  }
+  // A stale brief version is the one opportunity failure a person can act on: reload and retry.
+  if (
+    (command.type === "opportunity.edit" || command.type === "opportunity.review") &&
+    error instanceof Error &&
+    error.message === opportunityBriefVersionStaleErrorMessage
+  ) {
+    return opportunityVersionConflictMessage;
   }
   if (hasBridgeErrorCode(error)) return undefined;
   return `${describeDesktopOperation(command)} failed with an unexpected error.`;
