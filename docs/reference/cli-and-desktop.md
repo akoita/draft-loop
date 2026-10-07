@@ -28,8 +28,8 @@ controls, or CV quality.
 
 The paid validation cohort remains limited to the required Economy and Standard
 Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in DeepInfra GLM and Google Gemini development author profiles are
-omitted from this cohort; listing a development preset does not add a provider
+The exact opt-in DeepInfra GLM, Google Gemini, and Mistral development author
+profiles are omitted from this cohort; listing a development preset does not add a provider
 to release checks.
 
 ```sh
@@ -38,6 +38,7 @@ pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-mistral
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
   --critic-profile standard-openai-critic@2
@@ -50,7 +51,9 @@ pairs. The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
 requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
 the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
-`GEMINI_API_KEY`. The active catalog contains six unique exact
+`GEMINI_API_KEY`. The separate `development-mistral` opt-in pair uses the Mistral
+Large 4 (public preview) author and the GPT-6 Luna critic; it requires
+`MISTRAL_API_KEY`. The active catalog contains seven unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
 choices. A pair passed to `start` is recorded on that run only. It does not
@@ -108,10 +111,20 @@ mistral-large-4`. It requires the dedicated `MISTRAL_API_KEY`, which is never
 shared with another provider, and sends candidate material to
 `https://api.mistral.ai/v1/chat/completions`. The model is in public preview and
 exposes no thinking or effort control, so the profile uses provider defaults at a
-32,768-token output ceiling. The desktop stores the key in its own settings row;
-see [Provider credentials](#provider-credentials). The `development-mistral`
-preset and pricing metadata are not available yet (#1002). Mistral model
-discovery is manual: enter the exact model ID `mistral-large-4`.
+32,768-token output ceiling. The `development-mistral` preset pairs it with the
+GPT-6 Luna critic in the CLI (`--model-preset development-mistral`) and in the
+desktop model picker, where it is labeled "Mistral Large 4 (preview)". The
+desktop stores the key in its own settings row; see
+[Provider credentials](#provider-credentials). Mistral model discovery is
+manual: enter the exact model ID `mistral-large-4`.
+
+A live check found that the model writes about 2-4K output tokens even for
+short structured tasks and takes 20-40 seconds per call, so expect slower runs
+than with the other development authors. Review Mistral's
+[data-training controls](https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training)
+and
+[Zero Data Retention terms](https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr)
+before sending candidate material; the roadmap's model strategy summarizes them.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -636,11 +649,15 @@ You can still enter any exact model ID, and successful live discovery remains
 the displayed source. Each catalog entry shows its metadata review date;
 CLI-specific live availability for these suggestions has not been reverified. Economy and
 standard remain the curated pair presets, with a separate development GLM
-preset and a separate development Gemini preset. The active catalog lists
+preset, a separate development Gemini preset, and a separate development
+Mistral preset. The active catalog lists
 Claude Haiku 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
-through DeepInfra, and Gemini 3.8 Flash. GLM's standard uncached API rates are
-$0.15 per million input tokens and $0.50 per million output tokens, reviewed
-2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04. Quality is
+through DeepInfra, Gemini 3.8 Flash, and Mistral Large 4. GLM's standard uncached
+API rates are $0.15 per million input tokens and $0.50 per million output tokens,
+reviewed 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04; Mistral
+Large 4's are $1.36 and $4.18, reviewed 2026-10-08, without Mistral's temporary
+launch discount, with the 1M-token context window from Mistral's model page.
+Quality is
 unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain
 resolvable but are not offered as current suggestions or presets; this includes
 the economy author version that used Claude Sonnet 5.5, so saved selections and
@@ -658,7 +675,7 @@ rejects, and the Claude session route reports an unrecognized model with a
 prompt to update the installed `claude` CLI. Sources are the official
 [Anthropic model overview], the [Claude models overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
 DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
-[Gemini API pricing] and [Gemini models] pages.
+[Gemini API pricing] and [Gemini models] pages, and the Mistral [Mistral Large 4 model page].
 
 OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
 token details alongside input/output totals. A rate estimate accounts for
@@ -675,6 +692,7 @@ not persisted run totals or invoice amounts.
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 [Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
 [Gemini models]: https://ai.google.dev/gemini-api/docs/models
+[Mistral Large 4 model page]: https://docs.mistral.ai/models/mistral-large-4
 
 ## Writing policies
 

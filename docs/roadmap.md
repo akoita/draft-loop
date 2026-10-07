@@ -46,7 +46,7 @@ the default pair is cross-company and provider/model identities are recorded.
 Model choice balances capability, cost, and the amount of configuration the
 project can maintain. The current scope is two Anthropic authors and two OpenAI
 critics: Claude Haiku 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol, plus
-opt-in development authors (GLM-5.3 Flash and Gemini 3.8 Flash). Representative
+opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
 CV quality has not been validated for these choices.
 
 The current curated choices use two tiers:
@@ -93,6 +93,17 @@ The opt-in `development-gemini` preset pairs it with the GPT-6 Luna critic in
 the CLI and desktop. Default pairs and representative quality claims are
 unchanged. Free-tier Gemini API terms may allow Google to use submitted content,
 so candidate material needs a paid-tier key.
+
+The opt-in `development-mistral` preset pairs Mistral Large 4 (public preview)
+with the GPT-6 Luna critic. Mistral says that
+[free-mode API content may be used for training](https://help.mistral.ai/en/articles/347617-do-you-use-my-user-data-to-train-your-artificial-intelligence-models),
+that pay-as-you-go customers can
+[opt out of training](https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training),
+and that
+[Zero Data Retention](https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr)
+is available only on pay-as-you-go for stateless calls such as chat completions,
+by request and at Mistral's discretion. Use a pay-as-you-go key and review these
+terms before sending candidate material.
 
 Current cost-reporting work preserves validated OpenAI cached-input,
 cache-write, and reasoning-output counts in adapter results. Estimates use

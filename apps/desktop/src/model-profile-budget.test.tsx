@@ -23,6 +23,10 @@ const geminiDevelopment: ModelProfileReferences = {
   author: { id: "dev-google-gemini-author", version: 2 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
+const mistralDevelopment: ModelProfileReferences = {
+  author: { id: "dev-mistral-author", version: 1 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
 const apiKeyModes: RunProviderAuthModeConfiguration = {
   anthropic: "api-key",
   openai: "api-key",
@@ -87,6 +91,15 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("google/gemini-3.8-flash");
     expect(html).toContain("$0.75/1M input · $3.75/1M output");
     expect(html).toContain("Official Google model/pricing documentation");
+  });
+
+  it("labels the development Mistral public rates and estimates the pair", () => {
+    const html = renderBudget(mistralDevelopment, apiKeyModes);
+    expect(html).toContain("dev-mistral-author@1");
+    expect(html).toContain("mistral/mistral-large-4");
+    expect(html).toContain("$1.36/1M input · $4.18/1M output");
+    expect(html).toContain("2026-10-08 · Official Mistral model/pricing documentation");
+    expect(html).toContain("Combined scenario estimate</dt><dd>$");
   });
 
   it("shows public rates but no combined estimate for subscription or unknown authentication", () => {

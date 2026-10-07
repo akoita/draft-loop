@@ -22,7 +22,7 @@ export function createMistralAuthorProfile(): ModelProfile {
       maxOutputTokens: 32768,
       thinking: { mode: "provider-default" },
     },
-    knownLimits: { maxOutputTokens: 65536 },
+    knownLimits: { maxOutputTokens: 65536, contextWindowTokens: 1000000 },
   };
 }
 
@@ -40,6 +40,6 @@ export function isMistralAuthorProfile(profile: ModelProfile | undefined): profi
     profile.runtime.maxOutputTokens === 32768 &&
     profile.runtime.thinking.mode === "provider-default" &&
     profile.knownLimits.maxOutputTokens === 65536 &&
-    profile.knownLimits.contextWindowTokens === undefined
+    profile.knownLimits.contextWindowTokens === 1000000
   );
 }

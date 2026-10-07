@@ -87,17 +87,21 @@ describe("desktop model profile picker rendering", () => {
     expect(cards).toContain(">Standard</span>");
     expect(cards).toContain(">Development — GLM Flash</span>");
     expect(cards).toContain(">Development — Gemini Flash</span>");
+    expect(cards).toContain(">Development — Mistral Large 4 (preview)</span>");
     expect(cards).toContain(">Custom pair</span>");
     expect(cards).toContain("Claude Haiku 5.5 writes · GPT-6 Luna reviews");
     expect(cards).toContain("GLM-5.3 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Gemini 3.8 Flash writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Mistral Large 4 (preview) writes · GPT-6 Luna reviews");
     expect(cards).toContain("Anthropic + OpenAI");
     expect(cards).toContain("Z.ai via DeepInfra + OpenAI");
     expect(cards).toContain("Google + OpenAI");
+    expect(cards).toContain("Mistral + OpenAI");
     expect(cards).toContain(
       "Writer $0.10 / $0.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
     );
     expect(cards).toContain("Writer $0.75 / $3.75");
+    expect(cards).toContain("Writer $1.36 / $4.18");
     expect(cards).toContain("Unvalidated");
     expect(cards).toContain("Development</span>");
     expect(cards).not.toContain("economy-anthropic-author");

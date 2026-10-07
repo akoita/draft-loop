@@ -242,7 +242,7 @@ describe("model profile registry", () => {
         maxOutputTokens: 32768,
         thinking: { mode: "provider-default" },
       },
-      knownLimits: { maxOutputTokens: 65536 },
+      knownLimits: { maxOutputTokens: 65536, contextWindowTokens: 1000000 },
     });
     expect(defaultModelProfileRegistry.resolve("dev-mistral-author", 1, "author")).toEqual(
       profiles[13],

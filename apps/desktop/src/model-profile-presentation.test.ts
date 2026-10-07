@@ -13,6 +13,8 @@ describe("model profile presentation", () => {
     expect(modelDisplayName("claude-sonnet-5-5")).toBe("Claude Sonnet 5.5");
     expect(modelDisplayName("gpt-6.1-sol")).toBe("GPT-6.1 Sol");
     expect(modelDisplayName("zai-org/GLM-5.3-Flash")).toBe("GLM-5.3 Flash");
+    expect(modelDisplayName("mistral-large-4")).toBe("Mistral Large 4 (preview)");
+    expect(providerDisplayName("mistral")).toBe("Mistral");
     expect(modelDisplayName("unknown-model")).toBe("unknown-model");
     expect(providerDisplayName("zai")).toBe("Z.ai via DeepInfra");
     expect(providerDisplayName("openai")).toBe("OpenAI");
@@ -43,6 +45,7 @@ describe("model profile presentation", () => {
     expect(modelProfilePresets.filter(isDevelopmentPreset).map(({ id }) => id)).toEqual([
       "development-glm",
       "development-gemini",
+      "development-mistral",
     ]);
   });
 });

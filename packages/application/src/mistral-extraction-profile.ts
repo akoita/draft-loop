@@ -28,6 +28,6 @@ export function isMistralExtractionProfile(
     profile.runtime.maxOutputTokens === 32768 &&
     profile.runtime.thinking.mode === "provider-default" &&
     profile.knownLimits.maxOutputTokens === 65536 &&
-    profile.knownLimits.contextWindowTokens === undefined
+    profile.knownLimits.contextWindowTokens === 1000000
   );
 }

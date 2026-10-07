@@ -61,6 +61,11 @@ describe("model profile CLI commands", () => {
       author: { id: "dev-google-gemini-author", version: 2 },
       critic: { id: "economy-openai-critic", version: 1 },
     },
+    {
+      modelPreset: "development-mistral",
+      author: { id: "dev-mistral-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    },
   ] as const)(
     "forwards only the exact $modelPreset preset references to start",
     async ({ modelPreset, author, critic }) => {
@@ -199,6 +204,7 @@ describe("model profile CLI commands", () => {
     expect(startHelp?.replace(/\s+/g, " ")).toContain(
       "dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs",
     );
+    expect(startHelp).toContain("development-mistral");
     expect(startHelp).toContain("MISTRAL_API_KEY");
     expect(startHelp).toContain("dev-mistral-author@1");
     expect(startHelp).toContain("pinned to this run");

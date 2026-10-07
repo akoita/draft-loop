@@ -67,6 +67,7 @@ describe("desktop model profile picker state", () => {
       "standard",
       "development-glm",
       "development-gemini",
+      "development-mistral",
     ]);
     expect(economy).toEqual({
       author: { id: "economy-anthropic-author", version: 2 },
