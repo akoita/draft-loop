@@ -275,7 +275,9 @@ applications.
 | Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
 | Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
+| Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Not started; opened 2026-10-08 | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
+| Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1715,6 +1717,32 @@ or over a Claude subscription session where the account allows Claude Code.
 both the Haiku 5.5 economy pair and the Mistral development pair. Every issue
 has shipped; full reviews on both pairs are still pending.
 
+### Next — Any-format career intake
+
+Candidates will never provide career evidence in one format. A CV, a
+LinkedIn export, a performance review, loose notes and a transcript each
+need different interpretation. Taking whatever they provide, structuring it
+into one verified career record, and feeding retrieval from that record is a
+core part of DraftLoop's value.
+
+Real use on 2026-10-08 showed the gap. One ~200K-character career file was
+split by size into 27 sequential calls, and a single slow call timed out and
+lost all the work. The rules stay unchanged: never invent, keep an exact
+quote for every fact, flag conflicts, and stay local by default. The ordered
+issues ([#1029](https://github.com/akoita/draft-loop/issues/1029)):
+
+1. stream Mistral responses with an idle timeout (#1022);
+2. run extraction parts in parallel and keep completed parts (#1023);
+3. size windows to the model (#1024);
+4. split along the source's structure, such as headings and sections (#1025);
+5. extract only new or changed sources (#1026);
+6. recognise each source's kind and guide extraction (#1027);
+7. retrieve verified profile facts first (#1028).
+
+**Exit criterion:** A mixed-format knowledge base is structured in minutes.
+Re-adding one source re-processes only that source, and review runs retrieve
+verified facts first.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -1723,6 +1751,22 @@ critic agreement or the person's decision; pause and resume when a
 subscription session reaches its limit; a professional two-page DOCX/PDF
 export; and an observation across all four references. Issues are created
 after the #878 stage decision.
+
+### Later — Guided career interview
+
+DraftLoop should help candidates tell their career story, not only accept
+files ([#1030](https://github.com/akoita/draft-loop/issues/1030)):
+
+- **Questions.** It reads the career record and asks about gaps such as
+  dates, scope, outcomes and metrics. It asks a few questions per session,
+  over several sessions, at the candidate's pace.
+- **Evidence.** Each answer is saved as candidate-provided evidence, so facts
+  cite the candidate's own words.
+- **Voice.** Voice input uses local speech-to-text, so audio never leaves the
+  machine.
+
+This stage starts after Any-format career intake, because the interview
+needs the structured career record to know what to ask.
 
 ### Later — Production-ready beta
 
@@ -1796,6 +1840,7 @@ issues retain implementation chronology.
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
+| 2026-10-08 | Opened Any-format career intake (milestone 26, #1022–#1029) and Guided career interview (milestone 27, #1030). | Interpreting and structuring career evidence in any format becomes the next stage, ahead of Manual parity: review and export. A guided, multi-session interview with local voice input follows it. |
 | 2026-10-08 | Completed Development model providers (milestone 25, 11/11 issues) in code. | Claude Haiku 5.5 is the economy author, and Mistral Large 4 is an opt-in development author in the CLI and desktop. Mistral extraction passed a live check; full reviews on both pairs are pending. |
 | 2026-10-07 | Opened Development model providers (milestone 25, #998–#1002) after Claude Haiku 5.5 and Mistral Large 4 were released. | Claude Haiku 5.5 replaces Sonnet 5.5 as the economy (development) author, with GPT-6 Luna as critic. Mistral Large 4 joins as an opt-in development author. Quality validation stays on the standard pair. |
 | 2026-10-07 | Opened Inputs and setup clarity (milestone 24, #979 and #983) after real-material testing on Windows. | Setup gets one career-evidence concept and accepts pasted job pages through reviewed briefs. This comes before Manual parity: review and export. |
