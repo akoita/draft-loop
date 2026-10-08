@@ -53,22 +53,29 @@ function selection(): ModelSelection {
 }
 
 function mistralClient(output: JsonObject) {
-  const complete = vi.fn<MistralClient["chat"]["complete"]>(async () => ({
-    id: "mistral-test-response",
-    object: "chat.completion",
-    created: 1,
-    model: mistralLarge4ModelId,
-    usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150 },
-    choices: [
-      {
-        index: 0,
-        message: { role: "assistant", content: JSON.stringify(output) },
-        finishReason: "stop",
-      },
-    ],
-  }));
-  const client: MistralClient = { chat: { complete } };
-  return { client, complete };
+  const event = {
+    data: {
+      id: "mistral-test-response",
+      object: "chat.completion.chunk",
+      created: 1,
+      model: mistralLarge4ModelId,
+      usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150 },
+      choices: [
+        {
+          index: 0,
+          delta: { role: "assistant", content: JSON.stringify(output) },
+          finishReason: "stop",
+        },
+      ],
+    },
+  };
+  const stream = vi.fn<MistralClient["chat"]["stream"]>(async () =>
+    (async function* () {
+      yield event;
+    })(),
+  );
+  const client: MistralClient = { chat: { stream } };
+  return { client, stream };
 }
 
 async function contextForRun(root: string, contextSnapshotId: string): Promise<ContextSnapshot> {
@@ -89,7 +96,7 @@ describe("Mistral application route", () => {
 
   it("uses only the dedicated Mistral credential and profile controls", async () => {
     const model = selection();
-    const { client, complete } = mistralClient({ answer: "ready" });
+    const { client, stream } = mistralClient({ answer: "ready" });
     const resolveCredential = vi.fn<ProviderCredentialResolver>(async (provider) =>
       provider === "mistral" ? "synthetic-mistral-key" : "wrong-provider-key",
     );
@@ -119,7 +126,7 @@ describe("Mistral application route", () => {
     expect(resolveCredential.mock.calls).toEqual([["mistral"]]);
     expect(factory).toHaveBeenCalledOnce();
     expect(factory).toHaveBeenCalledWith("synthetic-mistral-key");
-    expect(complete.mock.calls[0]?.[0]).toMatchObject({
+    expect(stream.mock.calls[0]?.[0]).toMatchObject({
       model: mistralLarge4ModelId,
       maxTokens: 32768,
     });
@@ -257,7 +264,7 @@ describe("Mistral application route", () => {
       ],
       issues: [],
     };
-    const { client, complete } = mistralClient(proposal);
+    const { client, stream } = mistralClient(proposal);
     const driver = createLocalApplicationDriver();
     const resolveCredential = vi.fn<ProviderCredentialResolver>(async (provider) =>
       provider === "mistral" ? "synthetic-mistral-key" : undefined,
@@ -291,7 +298,7 @@ describe("Mistral application route", () => {
         port.extract({ operationId: "mistral-extraction", sources: [source] }),
       ).resolves.toEqual(proposal);
       expect(resolveCredential.mock.calls).toEqual([["mistral"]]);
-      expect(complete.mock.calls[0]?.[0]).toMatchObject({
+      expect(stream.mock.calls[0]?.[0]).toMatchObject({
         model: mistralLarge4ModelId,
         maxTokens: 32768,
       });
@@ -314,7 +321,7 @@ describe("Mistral application route", () => {
       priorities: [],
       contradictions: [],
     };
-    const { client, complete } = mistralClient(proposal);
+    const { client, stream } = mistralClient(proposal);
     const driver = createLocalApplicationDriver();
     try {
       await mkdir(join(root, "evidence"), { recursive: true });
@@ -351,7 +358,7 @@ describe("Mistral application route", () => {
           },
         ],
       });
-      expect(complete.mock.calls[0]?.[0]).toMatchObject({
+      expect(stream.mock.calls[0]?.[0]).toMatchObject({
         model: mistralLarge4ModelId,
         maxTokens: 16384,
       });

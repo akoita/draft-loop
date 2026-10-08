@@ -3,7 +3,7 @@ import type { ModelSelection } from "@draft-loop/domain";
 import { modelSelectionSchema } from "@draft-loop/schemas";
 import { Mistral } from "@mistralai/mistralai";
 import type { RequestOptions } from "@mistralai/mistralai/lib/sdks.js";
-import type { ChatCompletionRequest } from "@mistralai/mistralai/models/components";
+import type { ChatCompletionStreamRequest } from "@mistralai/mistralai/models/components";
 import { summarizeDeepInfraOutputIssues } from "./deepinfra-output-diagnostics.js";
 import {
   assertDataExposureAllowed,
@@ -17,6 +17,13 @@ import {
   ProviderAdapterError,
   type RetryOptions,
 } from "./index.js";
+import {
+  canceledError,
+  collectMistralStream,
+  createMistralStreamWatchdog,
+  failResponse,
+  isRecord,
+} from "./mistral-stream.js";
 import { mistralCompany, mistralLarge4ModelId, mistralProvider } from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import {
@@ -29,18 +36,26 @@ export { mistralCompany, mistralLarge4ModelId, mistralProvider };
 /** The only endpoint host the adapter talks to; no custom base URL is accepted. */
 export const mistralBaseUrl = "https://api.mistral.ai";
 
-const defaultTimeoutMs = 300_000;
+/** No chunk for this long fails the attempt; steady progress never does. */
+const defaultIdleTimeoutMs = 90_000;
+/** Generous per-attempt cap for a slow but progressing answer. */
+const defaultTotalTimeoutMs = 1_800_000;
 const maxSupportedTimeoutMs = 2_147_483_647;
 const defaultMaxOutputTokens = 4096;
 const maxOutputTokens = 65_536;
-const maximumOutputBytes = 8 * 1024 * 1024;
 
 type MistralRequestOptions = Pick<RequestOptions, "signal" | "retries" | "timeoutMs">;
 
-/** The only SDK surface the adapter uses; tests and callers inject this narrow shape. */
+/**
+ * The only SDK surface the adapter uses; tests and callers inject this narrow shape.
+ * `stream` resolves to an async iterable of `{ data: CompletionChunk }` events.
+ */
 export interface MistralClient {
   readonly chat: {
-    complete(request: ChatCompletionRequest, options?: MistralRequestOptions): PromiseLike<unknown>;
+    stream(
+      request: ChatCompletionStreamRequest,
+      options?: MistralRequestOptions,
+    ): PromiseLike<AsyncIterable<unknown>>;
   };
 }
 
@@ -48,7 +63,10 @@ export interface MistralAdapterOptions {
   readonly configuredModel: ModelSelection;
   readonly pricing?: ModelPricing;
   readonly retry?: RetryOptions;
-  readonly timeoutMs?: number;
+  /** Longest wait without any streamed event before the attempt fails. */
+  readonly idleTimeoutMs?: number;
+  /** Longest total duration of one attempt, however steadily it progresses. */
+  readonly totalTimeoutMs?: number;
 }
 
 function invalidRequest(message: string, code: string): ProviderAdapterError {
@@ -58,8 +76,8 @@ function invalidRequest(message: string, code: string): ProviderAdapterError {
   });
 }
 
-function checkedTimeout(value: number | undefined): number {
-  const timeout = value ?? defaultTimeoutMs;
+function checkedTimeout(value: number | undefined, fallback: number): number {
+  const timeout = value ?? fallback;
   if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > maxSupportedTimeoutMs) {
     throw invalidRequest("The Mistral request timeout is invalid.", "invalid_timeout");
   }
@@ -168,27 +186,6 @@ function compileOutputSchema(schema: JsonSchema): CompiledOutputSchema {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function failResponse(
-  message: string,
-  code: string,
-  failureStage:
-    | "transport-parsing"
-    | "response-schema-validation"
-    | "output-token-budget-exceeded" = "transport-parsing",
-  diagnosticCounts?: readonly { readonly code: string; readonly count: number }[],
-): ProviderAdapterError {
-  return new ProviderAdapterError(mistralProvider, "invalid-response", message, {
-    retryable: false,
-    failureStage,
-    diagnostics: [{ code, path: "response" }],
-    ...(diagnosticCounts === undefined ? {} : { diagnosticCounts }),
-  });
-}
-
 function malformedResponse(): ProviderAdapterError {
   return failResponse("Mistral returned a malformed response.", "malformed_response");
 }
@@ -219,25 +216,22 @@ function sha256(value: JsonValue): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
-function canceledError(): ProviderAdapterError {
-  return new ProviderAdapterError(
-    mistralProvider,
-    "cancelled",
-    "The Mistral request was cancelled.",
-    { retryable: false },
-  );
-}
-
-function timeoutError(): ProviderAdapterError {
-  return new ProviderAdapterError(mistralProvider, "timeout", "The Mistral request timed out.", {
-    retryable: true,
-    diagnostics: [{ code: "request_timeout", path: "request" }],
-  });
-}
-
 /** Mistral error bodies are inspected for a category only; they are never copied. */
 function errorBody(error: unknown): string {
   return isRecord(error) && typeof error.body === "string" ? error.body : "";
+}
+
+const interruptedStreamMessage =
+  /terminated|incomplete json segment|unexpected end of (?:json|data|stream)|premature close|socket hang up|other side closed|econnreset/iu;
+
+function errorMessage(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 3 && isRecord(current); depth += 1) {
+    if (typeof current.message === "string") parts.push(current.message);
+    current = current.cause;
+  }
+  return parts.join(" ");
 }
 
 function normalizeMistralError(error: unknown): ProviderAdapterError {
@@ -279,7 +273,25 @@ function normalizeMistralError(error: unknown): ProviderAdapterError {
       },
     );
   }
-  if (status === undefined && name === "ResponseValidationError") return malformedResponse();
+  if (
+    status === undefined &&
+    (name === "ResponseValidationError" || name === "SDKValidationError" || name === "ZodError")
+  ) {
+    return malformedResponse();
+  }
+  // A body cut off mid-stream surfaces as a plain transport error; it is a temporary failure,
+  // so classify it as retryable without exposing its text.
+  if (status === undefined && interruptedStreamMessage.test(errorMessage(error))) {
+    return new ProviderAdapterError(
+      mistralProvider,
+      "transient",
+      "Mistral ended the response stream early.",
+      {
+        retryable: true,
+        diagnostics: [{ code: "stream_interrupted", path: "response.stream" }],
+      },
+    );
+  }
   if (status === undefined && name === "ConnectionError") {
     return new ProviderAdapterError(mistralProvider, "transient", "Unable to reach Mistral.", {
       retryable: true,
@@ -287,103 +299,6 @@ function normalizeMistralError(error: unknown): ProviderAdapterError {
     });
   }
   return normalizeProviderError(mistralProvider, error);
-}
-
-/**
- * Run one attempt under a deadline and the caller's abort signal.
- * The race also settles a transport that ignores the signal.
- */
-async function withinDeadline<Value>(
-  start: (signal: AbortSignal) => PromiseLike<Value>,
-  options: { readonly externalSignal: AbortSignal | undefined; readonly timeoutMs: number },
-): Promise<Value> {
-  if (options.externalSignal?.aborted) throw canceledError();
-  const controller = new AbortController();
-  let timedOut = false;
-  let rejectDeadline: (error: ProviderAdapterError) => void = () => undefined;
-  const deadline = new Promise<never>((_resolve, reject) => {
-    rejectDeadline = reject;
-  });
-  // The losing branch must never surface as an unhandled rejection.
-  deadline.catch(() => undefined);
-  const onExternalAbort = () => {
-    controller.abort();
-    rejectDeadline(canceledError());
-  };
-  options.externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-    rejectDeadline(timeoutError());
-  }, options.timeoutMs);
-  try {
-    return await Promise.race([Promise.resolve(start(controller.signal)), deadline]);
-  } catch (error) {
-    throw timedOut ? timeoutError() : error;
-  } finally {
-    clearTimeout(timer);
-    options.externalSignal?.removeEventListener("abort", onExternalAbort);
-    controller.abort();
-  }
-}
-
-function isExpectedServedModel(value: unknown, modelId: string): value is string {
-  return typeof value === "string" && (value === modelId || value.startsWith(`${modelId}-`));
-}
-
-interface MistralCompletion {
-  readonly text: string;
-  readonly finishReason: string;
-  readonly responseId: string | undefined;
-  readonly usage: unknown;
-}
-
-function messageText(content: unknown): string {
-  if (content === undefined || content === null) return "";
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) throw malformedResponse();
-  let text = "";
-  for (const chunk of content as unknown[]) {
-    if (!isRecord(chunk)) throw malformedResponse();
-    // Reasoning chunks are never stored or mixed into the answer.
-    if (chunk.type === "thinking") continue;
-    if ((chunk.type === undefined || chunk.type === "text") && typeof chunk.text === "string") {
-      text += chunk.text;
-      continue;
-    }
-    throw malformedResponse();
-  }
-  return text;
-}
-
-function readCompletion(response: unknown, modelId: string): MistralCompletion {
-  if (!isRecord(response) || !Array.isArray(response.choices) || response.choices.length !== 1) {
-    throw malformedResponse();
-  }
-  if (!isExpectedServedModel(response.model, modelId)) {
-    throw failResponse(
-      "Mistral returned a response from an unexpected model.",
-      "unexpected_response_model",
-    );
-  }
-  const choice: unknown = response.choices[0];
-  if (!isRecord(choice) || typeof choice.finishReason !== "string") throw malformedResponse();
-  const message = choice.message;
-  if (message !== undefined && !isRecord(message)) throw malformedResponse();
-  if (isRecord(message) && Array.isArray(message.toolCalls) && message.toolCalls.length > 0) {
-    throw malformedResponse();
-  }
-  const text = isRecord(message) ? messageText(message.content) : "";
-  if (Buffer.byteLength(text, "utf8") > maximumOutputBytes) {
-    throw failResponse("Mistral returned an oversized structured response.", "output_too_large");
-  }
-  return {
-    text,
-    finishReason: choice.finishReason,
-    responseId:
-      typeof response.id === "string" && response.id.trim() !== "" ? response.id : undefined,
-    usage: response.usage,
-  };
 }
 
 function mistralUsage(value: unknown): unknown {
@@ -404,14 +319,16 @@ export class MistralAdapter<
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
   private readonly retry: RetryOptions;
-  private readonly timeoutMs: number;
+  private readonly idleTimeoutMs: number;
+  private readonly totalTimeoutMs: number;
 
   constructor(client: MistralClient, options: MistralAdapterOptions) {
     this.client = client;
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
     this.retry = checkedRetryOptions(options.retry);
-    this.timeoutMs = checkedTimeout(options.timeoutMs);
+    this.idleTimeoutMs = checkedTimeout(options.idleTimeoutMs, defaultIdleTimeoutMs);
+    this.totalTimeoutMs = checkedTimeout(options.totalTimeoutMs, defaultTotalTimeoutMs);
   }
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
@@ -429,7 +346,7 @@ export class MistralAdapter<
       throw invalidRequest("The request input cannot be serialized as JSON.", "invalid_input_json");
     }
 
-    const chatRequest: ChatCompletionRequest = {
+    const chatRequest: ChatCompletionStreamRequest = {
       model: controls.modelId,
       messages: [
         { role: "system", content: request.systemPrompt },
@@ -437,7 +354,7 @@ export class MistralAdapter<
       ],
       maxTokens: controls.outputTokens,
       n: 1,
-      stream: false,
+      stream: true,
       responseFormat: {
         type: "json_schema",
         jsonSchema: {
@@ -451,13 +368,24 @@ export class MistralAdapter<
     const startedAt = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
     return executeWithRetry(async () => {
+      if (request.signal?.aborted) throw canceledError();
+      const watchdog = createMistralStreamWatchdog({
+        externalSignal: request.signal,
+        idleTimeoutMs: this.idleTimeoutMs,
+        totalTimeoutMs: this.totalTimeoutMs,
+      });
       try {
-        const raw = await withinDeadline(
-          (signal) =>
-            this.client.chat.complete(chatRequest, { signal, retries: { strategy: "none" } }),
-          { externalSignal: request.signal, timeoutMs: this.timeoutMs },
+        const events = await watchdog.run(
+          this.client.chat.stream(chatRequest, {
+            signal: watchdog.signal,
+            retries: { strategy: "none" },
+          }),
         );
-        const completion = readCompletion(raw, controls.modelId);
+        watchdog.touch();
+        const completion = await collectMistralStream(events, {
+          watchdog,
+          expectedModelId: controls.modelId,
+        });
         if (completion.finishReason === "length") {
           throw failResponse(
             "Mistral reached the output-token limit before completing the structured response.",
@@ -500,6 +428,8 @@ export class MistralAdapter<
         } satisfies ModelResponse<Output>;
       } catch (error) {
         throw normalizeMistralError(error);
+      } finally {
+        watchdog.dispose();
       }
     }, this.retry);
   }

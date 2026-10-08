@@ -120,7 +120,9 @@ manual: enter the exact model ID `mistral-large-4`.
 
 A live check found that the model writes about 2-4K output tokens even for
 short structured tasks and takes 20-40 seconds per call, so expect slower runs
-than with the other development authors. Review Mistral's
+than with the other development authors. Responses stream, so a long answer
+fails only after 90 seconds without any data or at a 30-minute cap per attempt,
+not at a fixed five-minute deadline. Review Mistral's
 [data-training controls](https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training)
 and
 [Zero Data Retention terms](https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr)
