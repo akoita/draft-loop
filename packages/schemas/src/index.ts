@@ -1,7 +1,6 @@
 import type {
   ApplicationReadinessStoppingDecisionStopReason,
   CandidateKnowledgeSelectionSnapshotInput,
-  CanonicalCandidateProfileInput as CanonicalCandidateProfileDomainInput,
   RenderingLayoutProfileId,
   RenderingQaLimitationCode,
 } from "@draft-loop/domain";
@@ -24,7 +23,6 @@ import {
   candidateKnowledgeRetrievalSchemaVersion,
   candidateKnowledgeRetrievalStatuses,
   candidateKnowledgeRetrievalTraceSchemaVersion,
-  candidateKnowledgeSelectionLifecycleObservationStatuses,
   candidateKnowledgeSelectionSnapshotSchemaVersion,
   candidateKnowledgeSourceKinds,
   candidateKnowledgeSourceRetirementReasons,
@@ -48,7 +46,6 @@ import {
   createCandidateKnowledgeRetrievalScope,
   createCandidateKnowledgeRetrievalTrace,
   createCandidateKnowledgeSelectionSnapshot,
-  createCanonicalCandidateProfile,
   deriveModelLineage,
   independentReadinessReportFindingOrigins,
   independentReadinessReportInputAssessmentStatuses,
@@ -66,17 +63,7 @@ import {
   maximumCandidateKnowledgeRetrievalQueryLength,
   maximumCandidateKnowledgeRetrievalScopeSourceCount,
   maximumCandidateKnowledgeRetrievalTraceOperationIdLength,
-  maximumCanonicalCandidateProfileFactCount,
-  maximumCanonicalCandidateProfileFactIdLength,
-  maximumCanonicalCandidateProfileFieldLength,
   maximumCanonicalCandidateProfileIdLength,
-  maximumCanonicalCandidateProfileIssueCount,
-  maximumCanonicalCandidateProfileIssueFactReferenceCount,
-  maximumCanonicalCandidateProfileIssueMessageLength,
-  maximumCanonicalCandidateProfileIssueSourceReferenceCount,
-  maximumCanonicalCandidateProfileProvenanceCount,
-  maximumCanonicalCandidateProfileSubjectIdLength,
-  maximumCanonicalCandidateProfileValueLength,
   maximumIndependenceOverrideRationaleLength,
   maximumWritingPolicyCharactersLength,
   maximumWritingPolicyPreferenceListEntries,
@@ -133,13 +120,14 @@ export {
   opportunityExtractionProposalSchema,
 } from "./opportunity-extraction.js";
 
+import { candidateKnowledgeSelectionLifecycleRevisionSchema } from "./candidate-knowledge-selection-lifecycle.js";
 import { modelSelectionSchema } from "./model-selection.js";
+import { nonEmptyString, strictTimestampSchema } from "./schema-primitives.js";
 
 export type { RenderingLayoutProfileId } from "@draft-loop/domain";
+export * from "./canonical-candidate-profile.js";
 export type { ModelSelection } from "./model-selection.js";
 export { modelSelectionSchema } from "./model-selection.js";
-
-const nonEmptyString = z.string().trim().min(1, "must not be empty");
 
 const checksumSchema = z
   .string()
@@ -159,15 +147,6 @@ const timestampSchema = nonEmptyString.refine(
     !Number.isNaN(Date.parse(value)),
   "must be a valid ISO timestamp",
 );
-
-const strictTimestampSchema = z
-  .string()
-  .refine(
-    (value) =>
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
-      !Number.isNaN(Date.parse(value)),
-    "must be a valid ISO timestamp",
-  );
 
 export const workspaceInputSchema = z.object({
   jobDescription: nonEmptyString,
@@ -2299,42 +2278,6 @@ export type CandidateKnowledgePortableBackupRestoreResult = z.infer<
   typeof candidateKnowledgePortableBackupRestoreResultSchema
 >;
 
-const candidateKnowledgeSelectionLifecycleObservationSchema = z.object({
-  observedVersionId: nonEmptyString,
-  status: z.enum(candidateKnowledgeSelectionLifecycleObservationStatuses),
-  checkedAt: strictTimestampSchema,
-  lastRefreshedVersionId: nonEmptyString.nullable(),
-  lastRefreshedAt: strictTimestampSchema.nullable(),
-  stale: z.boolean(),
-});
-
-const candidateKnowledgeSelectionLifecycleRetirementSchema = z.object({
-  retiredAt: strictTimestampSchema,
-  reason: z.literal("user-requested"),
-});
-
-const candidateKnowledgeSelectionLifecycleDirectorySchema = z.object({
-  directoryId: nonEmptyString,
-  rootRevision: z.number().finite().int().positive(),
-  rootBoundAt: strictTimestampSchema,
-  memberRevision: z.number().finite().int().positive(),
-  memberBoundAt: strictTimestampSchema,
-});
-
-const candidateKnowledgeSelectionLifecycleRevisionSchema = z.object({
-  knowledgeBaseState: candidateKnowledgeBaseStateSchema,
-  knowledgeBaseArchivedAt: strictTimestampSchema.nullable(),
-  versionId: nonEmptyString,
-  version: z.number().finite().int().positive(),
-  createdAt: strictTimestampSchema,
-  managed: z.boolean(),
-  originBoundAt: strictTimestampSchema.nullable(),
-  observation: candidateKnowledgeSelectionLifecycleObservationSchema.nullable(),
-  retirement: candidateKnowledgeSelectionLifecycleRetirementSchema.nullable(),
-  provenanceFetchedAt: strictTimestampSchema.nullable(),
-  directory: candidateKnowledgeSelectionLifecycleDirectorySchema.nullable(),
-});
-
 const candidateKnowledgeSelectionSnapshotSourceSchema = z.object({
   sourceId: nonEmptyString,
   versionId: nonEmptyString,
@@ -2365,345 +2308,6 @@ export type CandidateKnowledgeSelectionSnapshotSchemaInput = z.input<
 export type CandidateKnowledgeSelectionSnapshotSchemaOutput = z.output<
   typeof candidateKnowledgeSelectionSnapshotSchema
 >;
-
-/*
- * The legacy selection schema intentionally remains permissive for old
- * context snapshots. A canonical profile, however, must not silently strip a
- * path, URL, or other unknown selection field before provenance validation,
- * so it uses a strict copy of the same selection shape.
- */
-const canonicalCandidateProfileSelectionObservationSchema =
-  candidateKnowledgeSelectionLifecycleObservationSchema.strict();
-const canonicalCandidateProfileSelectionRetirementSchema =
-  candidateKnowledgeSelectionLifecycleRetirementSchema.strict();
-const canonicalCandidateProfileSelectionDirectorySchema =
-  candidateKnowledgeSelectionLifecycleDirectorySchema.strict();
-const canonicalCandidateProfileSelectionRevisionSchema =
-  candidateKnowledgeSelectionLifecycleRevisionSchema
-    .extend({
-      observation: canonicalCandidateProfileSelectionObservationSchema.nullable(),
-      retirement: canonicalCandidateProfileSelectionRetirementSchema.nullable(),
-      directory: canonicalCandidateProfileSelectionDirectorySchema.nullable(),
-    })
-    .strict();
-
-const canonicalCandidateProfileSelectionSchema = z
-  .strictObject({
-    schemaVersion: z.literal(candidateKnowledgeSelectionSnapshotSchemaVersion).optional(),
-    capturedAt: strictTimestampSchema,
-    entries: z
-      .array(
-        z.strictObject({
-          storeId: nonEmptyString,
-          knowledgeBaseId: nonEmptyString,
-          sources: z
-            .array(
-              z.strictObject({
-                sourceId: nonEmptyString,
-                versionId: nonEmptyString,
-                lifecycleRevision: canonicalCandidateProfileSelectionRevisionSchema,
-              }),
-            )
-            .min(1),
-        }),
-      )
-      .min(1),
-  })
-  .transform((selection) =>
-    createCandidateKnowledgeSelectionSnapshot(
-      selection as unknown as CandidateKnowledgeSelectionSnapshotInput,
-    ),
-  );
-
-const canonicalCandidateProfileIdSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileIdLength,
-);
-const canonicalCandidateProfileFactIdSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileFactIdLength,
-);
-const canonicalCandidateProfileSubjectIdSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileSubjectIdLength,
-);
-const canonicalCandidateProfileFieldSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileFieldLength,
-);
-const canonicalCandidateProfileValueSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileValueLength,
-);
-const canonicalCandidateProfileIssueMessageSchema = nonEmptyString.max(
-  maximumCanonicalCandidateProfileIssueMessageLength,
-);
-
-export const canonicalCandidateProfileStatusSchema = z.enum(canonicalCandidateProfileStatuses);
-export const canonicalCandidateProfileFactCategorySchema = z.enum(
-  canonicalCandidateProfileFactCategories,
-);
-export const canonicalCandidateProfileProvenanceKindSchema = z.enum(
-  canonicalCandidateProfileProvenanceKinds,
-);
-export const canonicalCandidateProfileIssueCodeSchema = z.enum(canonicalCandidateProfileIssueCodes);
-export const canonicalCandidateProfileIssueSeveritySchema = z.enum(
-  canonicalCandidateProfileIssueSeverities,
-);
-export const canonicalCandidateProfileIssueStatusSchema = z.enum(
-  canonicalCandidateProfileIssueStatuses,
-);
-
-const canonicalCandidateProfileExtractionOpaqueIdentifierPattern =
-  /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/u;
-const canonicalCandidateProfileExtractionOpaqueIdentifierSchema = nonEmptyString
-  .max(maximumCanonicalCandidateProfileIdLength)
-  .regex(
-    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
-    "must be a safe opaque identifier",
-  );
-const canonicalCandidateProfileExtractionFactKeySchema =
-  canonicalCandidateProfileFactIdSchema.regex(
-    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
-    "must be a safe opaque identifier",
-  );
-const canonicalCandidateProfileExtractionSubjectKeySchema =
-  canonicalCandidateProfileSubjectIdSchema.regex(
-    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
-    "must be a safe opaque identifier",
-  );
-
-const canonicalCandidateProfileExtractionEvidenceSchema = z.strictObject({
-  sourceId: canonicalCandidateProfileExtractionOpaqueIdentifierSchema,
-  quote: canonicalCandidateProfileValueSchema,
-});
-
-const canonicalCandidateProfileExtractionFactEvidenceSchema = z
-  .array(canonicalCandidateProfileExtractionEvidenceSchema)
-  .min(1)
-  .max(maximumCanonicalCandidateProfileProvenanceCount)
-  .superRefine((evidence, context) => {
-    const seen = new Set<string>();
-    for (const [index, item] of evidence.entries()) {
-      const tuple = JSON.stringify([item.sourceId, item.quote]);
-      if (seen.has(tuple)) {
-        context.addIssue({
-          code: "custom",
-          path: [index],
-          message: "evidence must contain unique sourceId/quote tuples",
-        });
-      }
-      seen.add(tuple);
-    }
-  });
-
-const canonicalCandidateProfileExtractionFactSchema = z.strictObject({
-  key: canonicalCandidateProfileExtractionFactKeySchema,
-  category: canonicalCandidateProfileFactCategorySchema,
-  subjectKey: canonicalCandidateProfileExtractionSubjectKeySchema.optional(),
-  field: canonicalCandidateProfileFieldSchema,
-  value: canonicalCandidateProfileValueSchema,
-  evidence: canonicalCandidateProfileExtractionFactEvidenceSchema,
-});
-
-const canonicalCandidateProfileExtractionIssueSchema = z.strictObject({
-  code: canonicalCandidateProfileIssueCodeSchema,
-  factKeys: z
-    .array(canonicalCandidateProfileExtractionFactKeySchema)
-    .max(maximumCanonicalCandidateProfileIssueFactReferenceCount),
-  sourceIds: z
-    .array(canonicalCandidateProfileExtractionOpaqueIdentifierSchema)
-    .max(maximumCanonicalCandidateProfileIssueSourceReferenceCount),
-});
-
-const canonicalCandidateProfileExtractionConflictCodes = new Set([
-  "conflict-date",
-  "conflict-title",
-  "conflict-duration",
-  "conflict-metric",
-  "conflict-value",
-  "duplicate",
-]);
-
-/** Provider-facing canonical profile extraction output without application metadata. */
-export const canonicalCandidateProfileExtractionProposalSchema = z
-  .strictObject({
-    schemaVersion: z.literal(canonicalCandidateProfileExtractionSchemaVersion),
-    facts: z
-      .array(canonicalCandidateProfileExtractionFactSchema)
-      .max(maximumCanonicalCandidateProfileFactCount),
-    issues: z
-      .array(canonicalCandidateProfileExtractionIssueSchema)
-      .max(maximumCanonicalCandidateProfileIssueCount),
-  })
-  .superRefine((proposal, context) => {
-    const factKeys = new Set<string>();
-    for (const [index, fact] of proposal.facts.entries()) {
-      if (factKeys.has(fact.key)) {
-        context.addIssue({
-          code: "custom",
-          path: ["facts", index, "key"],
-          message: "fact keys must be unique",
-        });
-      }
-      factKeys.add(fact.key);
-    }
-
-    for (const [issueIndex, issue] of proposal.issues.entries()) {
-      const issueFactKeys = new Set<string>();
-      for (const [factKeyIndex, factKey] of issue.factKeys.entries()) {
-        if (issueFactKeys.has(factKey)) {
-          context.addIssue({
-            code: "custom",
-            path: ["issues", issueIndex, "factKeys", factKeyIndex],
-            message: "factKeys must contain unique fact keys",
-          });
-        }
-        issueFactKeys.add(factKey);
-        if (!factKeys.has(factKey)) {
-          context.addIssue({
-            code: "custom",
-            path: ["issues", issueIndex, "factKeys", factKeyIndex],
-            message: "factKeys must reference proposal facts",
-          });
-        }
-      }
-
-      const issueSourceIds = new Set<string>();
-      for (const [sourceIdIndex, sourceId] of issue.sourceIds.entries()) {
-        if (issueSourceIds.has(sourceId)) {
-          context.addIssue({
-            code: "custom",
-            path: ["issues", issueIndex, "sourceIds", sourceIdIndex],
-            message: "sourceIds must contain unique source ids",
-          });
-        }
-        issueSourceIds.add(sourceId);
-      }
-
-      if (
-        canonicalCandidateProfileExtractionConflictCodes.has(issue.code) &&
-        issue.factKeys.length < 2
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: ["issues", issueIndex, "factKeys"],
-          message: "conflict and duplicate issues require at least two fact keys",
-        });
-      }
-    }
-  });
-
-export type CanonicalCandidateProfileExtractionProposal = z.infer<
-  typeof canonicalCandidateProfileExtractionProposalSchema
->;
-
-/** Draft-7 JSON schema for provider-facing canonical profile extraction output. */
-const canonicalCandidateProfileExtractionProposalJsonSchemaWithMeta = z.toJSONSchema(
-  canonicalCandidateProfileExtractionProposalSchema,
-  { target: "draft-7" },
-);
-
-const {
-  $schema: _canonicalCandidateProfileExtractionProposalSchemaMetadata,
-  ...canonicalCandidateProfileExtractionProposalJsonSchemaValue
-} = canonicalCandidateProfileExtractionProposalJsonSchemaWithMeta;
-
-export const canonicalCandidateProfileExtractionProposalJsonSchema =
-  canonicalCandidateProfileExtractionProposalJsonSchemaValue;
-
-export const canonicalCandidateProfileProvenanceReferenceSchema = z.strictObject({
-  storeId: canonicalCandidateProfileIdSchema,
-  knowledgeBaseId: canonicalCandidateProfileIdSchema,
-  sourceId: canonicalCandidateProfileIdSchema,
-  versionId: canonicalCandidateProfileIdSchema,
-  kind: canonicalCandidateProfileProvenanceKindSchema,
-});
-export type CanonicalCandidateProfileProvenanceReference = z.infer<
-  typeof canonicalCandidateProfileProvenanceReferenceSchema
->;
-export type CanonicalCandidateProfileSourceReference = CanonicalCandidateProfileProvenanceReference;
-
-export const canonicalCandidateProfileFactSchema = z.strictObject({
-  id: canonicalCandidateProfileFactIdSchema,
-  category: canonicalCandidateProfileFactCategorySchema,
-  subjectId: canonicalCandidateProfileSubjectIdSchema.optional(),
-  field: canonicalCandidateProfileFieldSchema,
-  value: canonicalCandidateProfileValueSchema,
-  provenance: z
-    .array(canonicalCandidateProfileProvenanceReferenceSchema)
-    .min(1)
-    .max(maximumCanonicalCandidateProfileProvenanceCount),
-});
-export type CanonicalCandidateProfileFact = z.infer<typeof canonicalCandidateProfileFactSchema>;
-
-export const canonicalCandidateProfileIssueSchema = z.strictObject({
-  id: canonicalCandidateProfileFactIdSchema,
-  code: canonicalCandidateProfileIssueCodeSchema,
-  severity: canonicalCandidateProfileIssueSeveritySchema,
-  status: canonicalCandidateProfileIssueStatusSchema,
-  message: canonicalCandidateProfileIssueMessageSchema,
-  factIds: z
-    .array(canonicalCandidateProfileFactIdSchema)
-    .max(maximumCanonicalCandidateProfileIssueFactReferenceCount)
-    .default([]),
-  sourceRefs: z
-    .array(canonicalCandidateProfileProvenanceReferenceSchema)
-    .max(maximumCanonicalCandidateProfileIssueSourceReferenceCount)
-    .default([]),
-});
-export type CanonicalCandidateProfileIssue = z.infer<typeof canonicalCandidateProfileIssueSchema>;
-
-const canonicalCandidateProfileVersionSchema = z
-  .number()
-  .finite()
-  .int()
-  .positive()
-  .refine(Number.isSafeInteger, "must be a safe integer");
-
-/**
- * Strict persisted profile shape. The transform delegates cross-field
- * provenance, lineage, review, and canonical-order checks to the framework-
- * free domain boundary and returns the deeply immutable representation.
- */
-export const canonicalCandidateProfileSchema = z
-  .strictObject({
-    schemaVersion: z
-      .literal(canonicalCandidateProfileSchemaVersion)
-      .default(canonicalCandidateProfileSchemaVersion),
-    id: canonicalCandidateProfileIdSchema,
-    version: canonicalCandidateProfileVersionSchema,
-    parentVersion: canonicalCandidateProfileVersionSchema.nullable(),
-    status: canonicalCandidateProfileStatusSchema,
-    createdAt: strictTimestampSchema,
-    updatedAt: strictTimestampSchema,
-    reviewedAt: strictTimestampSchema.optional(),
-    candidateKnowledgeSelection: canonicalCandidateProfileSelectionSchema.optional(),
-    facts: z
-      .array(canonicalCandidateProfileFactSchema)
-      .max(maximumCanonicalCandidateProfileFactCount),
-    issues: z
-      .array(canonicalCandidateProfileIssueSchema)
-      .max(maximumCanonicalCandidateProfileIssueCount)
-      .default([]),
-  })
-  .transform((profile) =>
-    createCanonicalCandidateProfile(profile as unknown as CanonicalCandidateProfileDomainInput),
-  );
-
-export type CanonicalCandidateProfileSchemaInput = z.input<typeof canonicalCandidateProfileSchema>;
-export type CanonicalCandidateProfileSchemaOutput = z.output<
-  typeof canonicalCandidateProfileSchema
->;
-export type CanonicalCandidateProfile = CanonicalCandidateProfileSchemaOutput;
-export type CanonicalCandidateProfileInput = CanonicalCandidateProfileSchemaInput;
-
-/** Serialize a validated profile without exposing a separate persistence shape. */
-export function serializeCanonicalCandidateProfile(profile: unknown): string {
-  return JSON.stringify(canonicalCandidateProfileSchema.parse(profile));
-}
-
-/** Reload a canonical profile through the same strict, immutable boundary. */
-export function parseCanonicalCandidateProfile(
-  serialized: string,
-): CanonicalCandidateProfileSchemaOutput {
-  return canonicalCandidateProfileSchema.parse(JSON.parse(serialized));
-}
 
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),
@@ -4029,7 +3633,7 @@ const canonicalCandidateProfileReferenceChecksumSchema = z
   .regex(/^[a-f0-9]{64}$/u, "must be a lowercase SHA-256 checksum");
 
 export const canonicalCandidateProfileReferenceSchema = z.strictObject({
-  profileId: canonicalCandidateProfileIdSchema,
+  profileId: nonEmptyString.max(maximumCanonicalCandidateProfileIdLength),
   version: z
     .number()
     .finite()

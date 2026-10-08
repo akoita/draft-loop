@@ -323,6 +323,42 @@ describe("canonical candidate profile persistence service", () => {
     expect(storage.getLatestCanonicalCandidateProfile).toHaveBeenCalledTimes(2);
   });
 
+  it("carries the extraction identity into edit and review versions", async () => {
+    const { storage } = createMemoryStorage();
+    const service = createCanonicalCandidateProfilePersistenceService(storage);
+    const extraction = {
+      company: "mistral",
+      modelId: "synthetic-model",
+      promptTemplateVersion: "synthetic-extraction-v1",
+      extractionProfile: { id: "synthetic-extraction-profile", version: 2 },
+    };
+    const initial = await service.saveCanonicalCandidateProfile(
+      "workspace-1",
+      profile({ extraction }),
+    );
+    const edited = await service.editLatestCanonicalCandidateProfile({
+      workspaceId: "workspace-1",
+      profileId: initial.profile.id,
+      expectedVersion: 1,
+      updatedAt: editedAt,
+      patch: { issues: [] },
+    });
+    const reviewed = await service.reviewLatestCanonicalCandidateProfile({
+      workspaceId: "workspace-1",
+      profileId: initial.profile.id,
+      expectedVersion: 2,
+      reviewedAt,
+    });
+
+    expect(initial.profile.extraction).toEqual(extraction);
+    expect(edited.profile.extraction).toEqual(extraction);
+    expect(reviewed.profile.extraction).toEqual(extraction);
+    expect(
+      (await service.getLatestCanonicalCandidateProfile("workspace-1", initial.profile.id))?.profile
+        .extraction,
+    ).toEqual(extraction);
+  });
+
   it("rejects empty or unknown patches and stale or missing optimistic operations", async () => {
     const { storage } = createMemoryStorage();
     const service = createCanonicalCandidateProfilePersistenceService(storage);
