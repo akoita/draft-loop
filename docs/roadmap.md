@@ -277,6 +277,7 @@ applications.
 | Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
 | Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Not started; opened 2026-10-08 | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
+| Next | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Not started; opened 2026-10-08 | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -1744,6 +1745,30 @@ issues ([#1029](https://github.com/akoita/draft-loop/issues/1029)):
 Re-adding one source re-processes only that source, and review runs retrieve
 verified facts first.
 
+### Next — Candidate home and applications
+
+Real use on 2026-10-08 showed that a workspace holds one job, so a second
+application meant a new workspace and a regenerated profile. Decided the same
+day ([ADR 0010](adr/0010-workspace-as-candidate-home.md)): a workspace is the
+candidate's home. Career evidence, one reviewed career profile, the writing
+policy and default models live once, and each job application lives inside
+it. The ordered issues ([#1059](https://github.com/akoita/draft-loop/issues/1059)):
+
+1. an application record holding a job source, briefs, runs and exports (#1054);
+2. a Home dashboard with the Applications list as the landing page (#1055);
+3. a New application flow: job, reviewed requirements, reviewed profile,
+   review (#1056);
+4. profile freshness and reuse across applications (#1057);
+5. import of existing per-job workspaces (#1058).
+
+This stage follows the profile-extraction fixes in Any-format career intake.
+It comes ahead of that stage's remaining issues (#1027, #1028), because a fast,
+reusable profile needs a journey that reuses it.
+
+**Exit criterion:** Two applications for different jobs come from one
+workspace and one reviewed profile without regenerating it, and existing
+per-job workspaces can be imported.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -1841,6 +1866,7 @@ issues retain implementation chronology.
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
+| 2026-10-08 | Opened Candidate home and applications (milestone 28, #1054–#1059) and accepted ADR 0010: a workspace is the candidate's home with many applications. | One reviewed career profile per candidate is reused across job applications. Home with an Applications list becomes the landing page. This comes ahead of #1027 and #1028. |
 | 2026-10-08 | Opened Any-format career intake (milestone 26, #1022–#1029) and Guided career interview (milestone 27, #1030). | Interpreting and structuring career evidence in any format becomes the next stage, ahead of Manual parity: review and export. A guided, multi-session interview with local voice input follows it. |
 | 2026-10-08 | Completed Development model providers (milestone 25, 11/11 issues) in code. | Claude Haiku 5.5 is the economy author, and Mistral Large 4 is an opt-in development author in the CLI and desktop. Mistral extraction passed a live check; full reviews on both pairs are pending. |
 | 2026-10-07 | Opened Development model providers (milestone 25, #998–#1002) after Claude Haiku 5.5 and Mistral Large 4 were released. | Claude Haiku 5.5 replaces Sonnet 5.5 as the economy (development) author, with GPT-6 Luna as critic. Mistral Large 4 joins as an opt-in development author. Quality validation stays on the standard pair. |
