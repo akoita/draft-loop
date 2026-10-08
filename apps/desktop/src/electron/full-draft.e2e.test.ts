@@ -391,7 +391,12 @@ describe("full real-mode native host draft workflow", () => {
       const created = resultValue<{ readonly workspace: { readonly id: string } }>(
         await host.invoke({
           type: "workspace.create",
-          input: { name: "sanitized-workspace", mode: "real" },
+          input: {
+            name: "sanitized-workspace",
+            mode: "real",
+            authorModel: "claude-sonnet-4-5",
+            criticModel: "gpt-5.6-luna",
+          },
         }),
       );
       const workspaceId = created.workspace.id;

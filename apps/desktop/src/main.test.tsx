@@ -1739,9 +1739,20 @@ describe("desktop workspace setup", () => {
     expect(workspaceSetupBlocker({ ...named, name: "  " }, { status: "idle" })).toBe(
       "Name the workspace before creating it.",
     );
-    expect(workspaceSetupBlocker(initialWorkspaceSetupDraft, { status: "idle" })).toBe(
-      "Name an author model and a critic model before creating the workspace.",
-    );
+    // The form starts on the economy pair, so it can be created as-is.
+    expect(workspaceSetupBlocker(initialWorkspaceSetupDraft, { status: "idle" })).toBeNull();
+    expect(initialWorkspaceSetupDraft).toMatchObject({
+      authorCompany: "anthropic",
+      authorModel: "claude-haiku-5-5",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
+    });
+    expect(
+      workspaceSetupBlocker(
+        { ...initialWorkspaceSetupDraft, authorModel: "", criticModel: "" },
+        { status: "idle" },
+      ),
+    ).toBe("Name an author model and a critic model before creating the workspace.");
     expect(workspaceSetupBlocker(named, { status: "idle" })).toBeNull();
     expect(workspaceSetupBlocker({ ...named, maxRounds: 0 }, { status: "idle" })).toBe(
       "Choose a maximum round count between 1 and 20.",

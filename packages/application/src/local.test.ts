@@ -400,8 +400,8 @@ describe("local application driver", () => {
         { write: () => undefined },
       );
 
-      expect(workspace.author).toEqual({ company: "anthropic", model: "claude-sonnet-4-5" });
-      expect(workspace.critic).toEqual({ company: "openai", model: "gpt-5.6-luna" });
+      expect(workspace.author).toEqual({ company: "anthropic", model: "claude-haiku-5-5" });
+      expect(workspace.critic).toEqual({ company: "openai", model: "gpt-6-luna" });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

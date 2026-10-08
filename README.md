@@ -196,8 +196,9 @@ approving or exporting.
   different provider companies, and their identities are recorded.
 - Model profiles offer economy (Claude Haiku 5.5 with GPT-6 Luna) and standard
   (Claude Opus 5.5 with GPT-6.1 Sol) pair choices. These exact profiles are
-  unvalidated. Existing workspace settings change only when a user explicitly
-  applies a different pair, and saved run records remain unchanged. The labels
+  unvalidated. New workspaces default to economy; existing workspace settings
+  change only when a user explicitly applies a different pair, and saved run
+  records remain unchanged. The labels
   do not establish provider availability or CV quality. See the
   [roadmap](docs/roadmap.md#model-strategy).
 - The opt-in `development-glm` preset adds the Z.ai

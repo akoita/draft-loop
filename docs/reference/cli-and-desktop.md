@@ -62,6 +62,12 @@ uses the pair already recorded in run history.
 
 ### Applied profile pair
 
+A workspace created without an explicit model choice, from `init` or the desktop,
+gets the economy pair (Claude Haiku 5.5 author, GPT-6 Luna critic) with
+`economy-anthropic-author@2` and `economy-openai-critic@1` already applied, as if
+Economy had been chosen. The desktop's new-workspace form starts on that pair.
+An explicit model or pair wins, and existing workspaces keep their stored models.
+
 A workspace can keep an applied pair so that new runs do not start without
 profiles after a restart. The pair is stored as exact ids and versions in
 `.draft-loop/model-profile-selection.json`, with the time it was applied.
