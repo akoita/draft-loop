@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import type { ApplicationSummaryView } from "./application-contract.js";
 
 import {
   type BridgeCommand,
@@ -279,7 +280,23 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
     readonly clearRecentWorkspaces?: () => Promise<void>;
     /** Renames the open workspace and resolves with the stored name. */
     readonly renameWorkspace?: (workspaceId: string, name: string) => Promise<string>;
-  };
+  } & DesktopApplicationCapabilities;
+
+/** Job applications inside the open workspace (ADR 0010), present when the host offers them. */
+export interface DesktopApplicationCapabilities {
+  readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
+  /** Creates an application from pasted job text and resolves with its summary. */
+  readonly createApplication?: (
+    workspaceId: string,
+    name: string,
+    jobText: string,
+  ) => Promise<ApplicationSummaryView>;
+  /**
+   * Scopes later loads and run starts to one application, or back to the workspace-wide view with
+   * `null`. Opening another workspace clears the scope.
+   */
+  readonly selectApplication?: (applicationId: string | null) => void;
+}
 
 /**
  * Fills `workspace.create` in from a form's strings.
@@ -353,8 +370,13 @@ function unwrap<Value>(result: BridgeResult<Value>): Value {
 }
 
 export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopSetupPort {
+  // The application the review is scoped to; every load and run start carries it.
+  let applicationId: string | undefined;
   const load = async (): Promise<DesktopReviewState> => {
-    const result = await capabilityPort.execute({ type: "review.load", input: {} });
+    const result = await capabilityPort.execute({
+      type: "review.load",
+      input: applicationId === undefined ? {} : { applicationId },
+    });
     return unwrap(result);
   };
   const ensureRun = async (workspaceId: string): Promise<DesktopReviewState> => {
@@ -376,6 +398,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: { selection: "native-dialog" },
         }),
       );
+      applicationId = undefined;
       return refresh();
     },
     createWorkspace: async (name, selection) => {
@@ -385,8 +408,31 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: workspaceCreateInput(name, selection),
         }),
       );
+      applicationId = undefined;
       return refresh();
     },
+    ...(capabilityPort.hasCapability("application.list")
+      ? {
+          selectApplication: (selected: string | null) => {
+            applicationId = selected ?? undefined;
+          },
+          listApplications: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({ type: "application.list", input: { workspaceId } }),
+            ).applications,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.create")
+      ? {
+          createApplication: async (workspaceId: string, name: string, jobText: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.create",
+                input: { workspaceId, name, jobText },
+              }),
+            ).application,
+        }
+      : {}),
     ...(capabilityPort.hasCapability("workspace.configure-models")
       ? {
           configureModels: async (
@@ -439,6 +485,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       ? {
           openRecentWorkspace: async (id: string) => {
             unwrap(await capabilityPort.execute({ type: "workspace.recent-open", input: { id } }));
+            applicationId = undefined;
             return refresh();
           },
         }
@@ -465,6 +512,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       const result = unwrap(
         await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "demo" } }),
       );
+      applicationId = undefined;
       return ensureRun(result.workspace.id);
     },
     selectFiles: async (target) => {
@@ -501,7 +549,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
       const result = await capabilityPort.execute({
         type: "review.dispatch",
-        input: { workspaceId: state.workspaceId, runId: state.runId, action },
+        input: {
+          workspaceId: state.workspaceId,
+          runId: state.runId,
+          action,
+          ...(applicationId === undefined ? {} : { applicationId }),
+        },
       });
       return unwrap(result);
     },

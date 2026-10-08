@@ -224,6 +224,45 @@ edits. The CLI message ends with the `opportunity create` command to run.
 
 ## Desktop workspace navigation
 
+### Home
+
+Opening or creating a workspace lands on **Home**, never on the last review.
+Home shows what the workspace holds once for the candidate, then its
+applications:
+
+- **Header.** The workspace name, with **Rename** and **Close workspace**.
+- **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
+  (generation saved no facts), or Not yet generated. **Manage profile** opens
+  the existing profile workflow. A slot beside the status is reserved for
+  profile freshness.
+- **Career evidence.** The selected knowledge base, its source count and
+  readiness, or an empty state with **Add career evidence**. **Manage evidence**
+  opens the existing knowledge panel.
+- **Applications.** One card per application with its name, status (Drafting,
+  In review, Approved, Exported), last activity and run count, most recent
+  first. A workspace with nothing but its default application says so and points
+  to **New application**.
+- **Workspace settings.** The configured model pair with **Change models**, and
+  the writing policy editor.
+
+**New application** asks for a name and the pasted job description, creates the
+application, and opens it. Choosing a card opens that application.
+
+An application screen is the existing review and setup screen scoped to that
+application: runs started there belong to it, and a created application starts
+from its own job text. **← Home** beside its name returns to Home. Provider
+authentication, retrieval mode and the career evidence setup cards remain on
+the application screen as well as behind Manage on Home. Focus moves to the
+screen's location line when a screen opens, so the change is announced.
+
+The bridge exposes `application.list`, `application.get` and
+`application.create`. Results carry the name, job source kind, status,
+timestamps, run, brief and export counts, and the latest run id, never a path,
+URL or job text. `review.load`, `review.dispatch` and `run.start` accept an
+optional `applicationId`.
+
+### Closing and reopening
+
 Use **Close workspace** to return to the create/open screen. Saved workspace
 files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.

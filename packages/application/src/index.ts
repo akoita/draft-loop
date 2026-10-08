@@ -513,6 +513,12 @@ export interface ApplicationDriver {
 }
 
 export interface ApplicationService extends ApplicationDriver {
+  /** The application service always offers applications (ADR 0010), unlike a bare driver. */
+  readonly createApplication: (command: CreateApplicationCommand) => Promise<ApplicationView>;
+  readonly listApplications: (
+    command: ListApplicationsCommand,
+  ) => Promise<readonly ApplicationView[]>;
+  readonly getApplication: (command: GetApplicationCommand) => Promise<ApplicationView | undefined>;
   readonly requestAdjudicatedRevision: (
     command: RequestAdjudicatedRevisionCommand,
     io?: ApplicationIo,

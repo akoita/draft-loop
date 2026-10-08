@@ -38,6 +38,9 @@ const reviewActionLabels: Readonly<Record<ReviewAction["type"], string>> = {
 
 const capabilityLabels: Readonly<Record<string, string>> = {
   "profile.derive": "Generating the candidate profile",
+  "application.list": "Listing the applications",
+  "application.get": "Reading the application",
+  "application.create": "Creating the application",
   "run.status": "Reading the review status",
   "run.start": "Starting the review",
   "run.pause": "Pausing the review",
@@ -118,6 +121,10 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   // many rules, empty or oversized text) for a person and never quotes the
   // text, so the editor can show it as written.
   if (command.type === "writing-policy.save" && error instanceof CliUserError) {
+    return error.message;
+  }
+  // Creating an application fails with a fixed sentence about the name or the pasted job text.
+  if (command.type === "application.create" && error instanceof CliUserError) {
     return error.message;
   }
   // Saving or reading the applied profile pair fails with a fixed sentence that names profiles

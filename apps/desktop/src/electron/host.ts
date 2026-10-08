@@ -184,6 +184,14 @@ import {
   workspaceFolderName,
 } from "../workspace-name.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
+import {
+  type ApplicationScope,
+  createApplicationSummary,
+  listApplicationSummaries,
+  projectApplication,
+  resolveApplicationScope,
+  scopeSetupToApplication,
+} from "./host-applications.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { serializeKnowledgeStoreReads } from "./knowledge-store-reads.js";
@@ -3524,14 +3532,42 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  /** The application a request is scoped to; a missing one is a not-found answer. */
+  async function requireApplicationScope(
+    root: string,
+    applicationId: string | undefined,
+  ): Promise<ApplicationScope | undefined> {
+    const scope = await resolveApplicationScope(service, root, applicationId);
+    if (scope === null) return fail("not-found", "The requested application was not found.");
+    return scope;
+  }
+
+  /** The newest run, workspace-wide or within the application the request is scoped to. */
+  async function latestSnapshot(
+    root: string,
+    scope: ApplicationScope | undefined,
+  ): Promise<RunSnapshot | undefined> {
+    if (scope === undefined) return service.status({ root });
+    if (scope.latestRunId === undefined) return undefined;
+    return service.status({ root, runId: scope.latestRunId });
+  }
+
+  function scopedSetup(
+    setup: WorkspaceReadiness,
+    scope: ApplicationScope | undefined,
+  ): WorkspaceReadiness {
+    return scope?.created === true ? scopeSetupToApplication(setup, scope.application) : setup;
+  }
+
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     let workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
     const currentSnapshot =
       input.action.type === "acknowledge-provider-transmission" ||
       input.action.type === "set-autopilot"
         ? undefined
         : input.action.type === "start"
-          ? await service.status({ root: workspace.root })
+          ? await latestSnapshot(workspace.root, scope)
           : await loadSnapshot(workspace, input.runId);
     let overrides = await reconcileReviewPreferences(
       workspace,
@@ -3597,8 +3633,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         await requireProviderTransmissionAcknowledgement(workspace);
         // The person may start from the raw job description instead of the reviewed brief.
         const fromJobDescription = action.requirementsSource === "job-description";
-        const reviewedOpportunity = fromJobDescription ? undefined : overrides.reviewedOpportunity;
-        const pendingWritingPolicyOverride = overrides.pendingWritingPolicyOverride;
+        // A created application starts from its own job text: the workspace's reviewed brief and
+        // policy override belong to the default application.
+        const reviewedOpportunity =
+          fromJobDescription || scope?.created === true ? undefined : overrides.reviewedOpportunity;
+        const pendingWritingPolicyOverride =
+          scope?.created === true ? undefined : overrides.pendingWritingPolicyOverride;
         if (fromJobDescription && pendingWritingPolicyOverride !== undefined) {
           return fail(
             "operation-failed",
@@ -3609,6 +3649,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           {
             root: workspace.root,
             allowProviderData: true,
+            ...(input.applicationId === undefined ? {} : { applicationId: input.applicationId }),
             ...(reviewedOpportunity === undefined ? {} : { opportunityBrief: reviewedOpportunity }),
             ...(action.candidateProfile === undefined
               ? {}
@@ -3817,12 +3858,15 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           : { runId: input.runId }),
       }));
     overrides = await reconcileReviewPreferences(workspace, overrides, "review.dispatch");
-    const setup = await workspaceReadiness(
-      workspace.descriptor,
-      workspace.root,
-      service,
-      overrides,
-      await selectedKnowledgeSourceCount(workspace.root),
+    const setup = scopedSetup(
+      await workspaceReadiness(
+        workspace.descriptor,
+        workspace.root,
+        service,
+        overrides,
+        await selectedKnowledgeSourceCount(workspace.root),
+      ),
+      scope,
     );
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,
@@ -3876,6 +3920,45 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
         case "workspace.recent-open":
           return { ok: true, value: await openRecentWorkspace(command.input.id) };
+        case "application.list": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              applications: await listApplicationSummaries(service, workspace.root),
+            },
+          };
+        }
+        case "application.get": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const scope = await requireApplicationScope(workspace.root, command.input.applicationId);
+          if (scope === undefined) {
+            return fail("not-found", "The requested application was not found.");
+          }
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: projectApplication(scope.application),
+            },
+          };
+        }
+        case "application.create": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: await createApplicationSummary(
+                service,
+                workspace.root,
+                command.input.name,
+                command.input.jobText,
+              ),
+            },
+          };
+        }
         case "workspace.rename":
           return {
             ok: true,
@@ -5302,6 +5385,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           const startCommand = {
             root: workspace.root,
             allowProviderData: false,
+            ...(command.input.applicationId === undefined
+              ? {}
+              : { applicationId: command.input.applicationId }),
             ...(command.input.opportunityBrief === undefined
               ? {}
               : { opportunityBrief: command.input.opportunityBrief }),
@@ -5378,21 +5464,28 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               : workspaceFor(command.input.workspaceId);
           if (selectedWorkspace === undefined) return fail("not-found", "Open a workspace first.");
           const workspace = await refreshWorkspaceDescriptor(selectedWorkspace);
-          const snapshot = await service.status({
-            root: workspace.root,
-            ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
-          });
+          const scope = await requireApplicationScope(workspace.root, command.input.applicationId);
+          const snapshot =
+            scope !== undefined && command.input.runId === undefined
+              ? await latestSnapshot(workspace.root, scope)
+              : await service.status({
+                  root: workspace.root,
+                  ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
+                });
           const preferences = await reconcileReviewPreferences(
             workspace,
             await readOverrides(workspace.root),
             "review.load",
           );
-          const setup = await workspaceReadiness(
-            workspace.descriptor,
-            workspace.root,
-            service,
-            preferences,
-            await selectedKnowledgeSourceCount(workspace.root),
+          const setup = scopedSetup(
+            await workspaceReadiness(
+              workspace.descriptor,
+              workspace.root,
+              service,
+              preferences,
+              await selectedKnowledgeSourceCount(workspace.root),
+            ),
+            scope,
           );
           if (snapshot === undefined) {
             const preflight = await providerTransmissionPreflight(

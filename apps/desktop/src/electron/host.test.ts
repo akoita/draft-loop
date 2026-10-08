@@ -505,6 +505,11 @@ function service(
       readRunWritingPolicy: vi.fn<NonNullable<ApplicationService["readRunWritingPolicy"]>>(
         async () => undefined,
       ),
+      createApplication: vi.fn<ApplicationService["createApplication"]>(async () => {
+        throw new Error("application fixture method was not configured");
+      }),
+      listApplications: vi.fn<ApplicationService["listApplications"]>(async () => []),
+      getApplication: vi.fn<ApplicationService["getApplication"]>(async () => undefined),
     } satisfies ApplicationService,
     snapshot,
   };

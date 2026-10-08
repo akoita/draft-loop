@@ -138,6 +138,9 @@ function harness(record?: IndependentReviewRecord): Harness {
       return record;
     },
     readRunWritingPolicy: async () => undefined,
+    createApplication: unreachable("createApplication"),
+    listApplications: unreachable("listApplications"),
+    getApplication: unreachable("getApplication"),
   };
   return {
     service,
