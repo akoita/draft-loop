@@ -412,6 +412,7 @@ describe("desktop native profile capabilities", () => {
       versionId: "version-1",
       version: 1,
       created: true,
+      outcome: "added" as const,
     };
     const directoryResult = {
       storeId: "store-1",

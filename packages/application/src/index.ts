@@ -626,6 +626,7 @@ export {
 export * from "./embedding-model-install.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
+export * from "./knowledge-source-dedupe.js";
 export * from "./legacy-evidence-migration.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";

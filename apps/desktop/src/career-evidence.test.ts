@@ -223,6 +223,41 @@ describe("adding career evidence", () => {
     });
   });
 
+  const addFile = (result: Record<string, unknown>) =>
+    addCareerEvidence({
+      capabilities: {
+        importCandidateKnowledgeFile: async () => ({ ...fileResult, ...result }),
+        getCandidateKnowledgeReadiness: async () => readiness({ sourceCount: 1, readyCount: 1 }),
+      },
+      workspaceId: "workspace-1",
+      target,
+      displayName: "Career evidence",
+      source: { kind: "file" },
+      isCurrent: () => true,
+      onChanged: async () => true,
+    });
+
+  it("says a file is already in Career evidence when the host reports identical content", async () => {
+    await expect(addFile({ created: false, outcome: "already-present" })).resolves.toEqual({
+      status: "added",
+      message: "Already in Career evidence. 1 source, 1 ready.",
+    });
+  });
+
+  it("says a changed file became a new version of its source, not a second source", async () => {
+    await expect(addFile({ version: 2, outcome: "new-version" })).resolves.toEqual({
+      status: "added",
+      message: "Added a new version of that file to Career evidence. 1 source, 1 ready.",
+    });
+  });
+
+  it("reports a brand-new file as added", async () => {
+    await expect(addFile({ outcome: "added" })).resolves.toEqual({
+      status: "added",
+      message: "Added to Career evidence. 1 source, 1 ready.",
+    });
+  });
+
   it("imports a URL into the selected base only through the knowledge port", async () => {
     const importCandidateKnowledgeUrl = vi.fn(async () => ({
       ...target,
@@ -254,7 +289,7 @@ describe("adding career evidence", () => {
     expect(importCandidateKnowledgeFile).not.toHaveBeenCalled();
     expect(outcome).toEqual({
       status: "added",
-      message: "That source was already in Engineering. 1 source, 1 ready.",
+      message: "Already in Engineering. 1 source, 1 ready.",
     });
   });
 

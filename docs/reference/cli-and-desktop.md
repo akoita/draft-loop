@@ -1153,9 +1153,15 @@ and keeps paths local.
   `Career evidence: legacy workspace evidence (no knowledge base selected)`.
 
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
-  returns only opaque source and version identities. URL intake requires
-  approval and applies the shared HTTPS and network-safety checks without
-  returning the URL or its content.
+  returns only opaque source and version identities, plus whether the file was
+  `added`, appended as a `new-version`, or `already-present`. The CKB is shared
+  by every workspace, so an active source with identical content is not added
+  again and card 02 says "Already in Career evidence". A changed file whose
+  remembered origin matches an active source becomes a new version of it.
+  Retired sources never count. The CLI's plain file import does not check; use
+  `knowledge source duplicates` there. URL intake requires approval and applies
+  the shared HTTPS and network-safety checks without returning the URL or its
+  content.
 
 - **Versions, status, and refresh.** Appending a file version preserves its
   origin binding and reports whether the managed bytes created a version or

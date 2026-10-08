@@ -3232,6 +3232,55 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("passes the per-file add outcome through and rejects an unknown or inconsistent one", async () => {
+    const input = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      selection: "native-dialog",
+    } as const;
+    const base = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      sourceId: "source-1",
+      kind: "file",
+      versionId: "version-1",
+      version: 1,
+    } as const;
+    const executeWith = (value: unknown) =>
+      createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), ["knowledge.import-file"]),
+      ).execute({ type: "knowledge.import-file", input });
+
+    for (const accepted of [
+      { created: true, outcome: "added" },
+      { created: true, outcome: "new-version" },
+      { created: false, outcome: "already-present" },
+    ]) {
+      await expect(executeWith({ ...base, ...accepted })).resolves.toEqual({
+        ok: true,
+        value: { ...base, ...accepted },
+      });
+    }
+    // Hosts that predate the field stay valid.
+    await expect(executeWith({ ...base, created: true })).resolves.toEqual({
+      ok: true,
+      value: { ...base, created: true },
+    });
+
+    for (const rejected of [
+      { created: true, outcome: "duplicate" },
+      { created: true, outcome: "already-present" },
+      { created: false, outcome: "added" },
+      { created: false, outcome: "new-version" },
+      { created: true, outcome: "added", sourcePath: "/private/resume.md" },
+    ]) {
+      await expect(executeWith({ ...base, ...rejected })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("validates bounded path-free candidate-knowledge directory intake", async () => {
     const input = {
       storeId: "store-1",
