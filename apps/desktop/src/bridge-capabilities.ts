@@ -12,6 +12,7 @@ export const bridgeCapabilities = [
   "application.list",
   "application.get",
   "application.create",
+  "application.import",
   "knowledge.create",
   "knowledge.open",
   "knowledge.list",

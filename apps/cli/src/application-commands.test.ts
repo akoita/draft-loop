@@ -212,4 +212,53 @@ describe("application CLI", () => {
       expect.objectContaining({ id: "brief-1", applicationId: "app-1" }),
     );
   });
+
+  it("imports another workspace as an application and refuses it twice", async () => {
+    const target = await setup();
+    const source = await setup();
+    await source.service.start(
+      { root: source.root, allowProviderData: false },
+      { write: () => undefined },
+    );
+    const before = await readFile(join(source.root, ".draft-loop", "history.sqlite"));
+
+    await target.run("application", "import", target.root, "--from", source.root);
+
+    expect(target.lines[0]).toBe("application imported:");
+    expect(target.lines[1]).toMatch(
+      /^imported-[0-9a-f]{12} {2}Synthetic Platform Engineer {2}\[in-review\] {2}runs=1 briefs=0 exports=0/u,
+    );
+    expect(target.lines[2]).toBe(
+      "Copied 1 runs, 0 brief versions and 0 exports; the source workspace was not changed.",
+    );
+    expect(await readFile(join(source.root, ".draft-loop", "history.sqlite"))).toEqual(before);
+
+    await expect(
+      target.run("application", "import", target.root, "--from", source.root),
+    ).rejects.toThrow(/already imported/u);
+    await expect(
+      target.run("application", "import", target.root, "--from", target.root),
+    ).rejects.toThrow(/cannot be imported into itself/u);
+  });
+
+  it("imports with a custom name and prints JSON", async () => {
+    const target = await setup();
+    const source = await setup();
+
+    await target.run(
+      "application",
+      "import",
+      target.root,
+      "--from",
+      source.root,
+      "--name",
+      "Hc4 — Platform",
+      "--json",
+    );
+
+    expect(JSON.parse(target.lines[0] ?? "")).toMatchObject({
+      application: { name: "Hc4 — Platform", status: "drafting" },
+      counts: { runs: 0, briefs: 0, briefVersions: 0, exports: 0, skippedExports: 0 },
+    });
+  });
 });

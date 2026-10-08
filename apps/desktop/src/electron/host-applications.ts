@@ -1,6 +1,6 @@
 import type { ApplicationService, ApplicationView } from "@draft-loop/application";
 
-import type { ApplicationSummaryView } from "../application-contract.js";
+import type { ApplicationImportCounts, ApplicationSummaryView } from "../application-contract.js";
 
 /**
  * Host-side projection of job applications (ADR 0010).
@@ -58,6 +58,34 @@ export async function createApplicationSummary(
         : { kind: "pasted-text", text: job.jobText },
   });
   return projectApplication(created);
+}
+
+/**
+ * Imports the workspace at `sourceRoot` as an application of `root`. The source path comes from
+ * the native folder picker and stays in the host; only the path-free summary and counts return.
+ */
+export async function importApplicationSummary(
+  service: ApplicationService,
+  root: string,
+  sourceRoot: string,
+  name: string | undefined,
+): Promise<{
+  readonly application: ApplicationSummaryView;
+  readonly imported: ApplicationImportCounts;
+}> {
+  if (service.importApplication === undefined) {
+    throw new Error("This application service cannot import workspaces.");
+  }
+  const result = await service.importApplication({
+    root,
+    sourceRoot,
+    ...(name === undefined ? {} : { name }),
+  });
+  const { runs, briefs, briefVersions, exports, skippedExports } = result.counts;
+  return {
+    application: projectApplication(result.application),
+    imported: { runs, briefs, briefVersions, exports, skippedExports },
+  };
 }
 
 /** An application a request is scoped to, with the run the review should open on. */

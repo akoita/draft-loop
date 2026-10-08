@@ -58,6 +58,31 @@ export interface ApplicationCreateInput {
   readonly jobUrlApproved?: boolean;
 }
 
+/**
+ * Imports another workspace as an application. The host shows the native folder picker, so no
+ * path crosses the bridge in either direction.
+ */
+export interface ApplicationImportInput {
+  readonly workspaceId: string;
+  readonly selection?: "native-dialog";
+}
+
+/** What an import copied, as content-free counts. */
+export interface ApplicationImportCounts {
+  readonly runs: number;
+  readonly briefs: number;
+  readonly briefVersions: number;
+  readonly exports: number;
+  /** Completed exports whose file was missing in the source, so they were not imported. */
+  readonly skippedExports: number;
+}
+
+export interface ApplicationImportResult {
+  readonly workspaceId: string;
+  readonly application: ApplicationSummaryView;
+  readonly imported: ApplicationImportCounts;
+}
+
 export interface ApplicationListResult {
   readonly workspaceId: string;
   /** The default application first, then created applications, oldest first. */
@@ -81,6 +106,22 @@ export const applicationListKeys = exactKeys<ApplicationListInput>()(["workspace
 export const applicationGetKeys = exactKeys<ApplicationGetInput>()([
   "workspaceId",
   "applicationId",
+]);
+export const applicationImportKeys = exactKeys<ApplicationImportInput>()([
+  "workspaceId",
+  "selection",
+]);
+const importCountsKeys = exactKeys<ApplicationImportCounts>()([
+  "runs",
+  "briefs",
+  "briefVersions",
+  "exports",
+  "skippedExports",
+]);
+const importResultKeys = exactKeys<ApplicationImportResult>()([
+  "workspaceId",
+  "application",
+  "imported",
 ]);
 export const applicationCreateKeys = exactKeys<ApplicationCreateInput>()([
   "workspaceId",
@@ -225,4 +266,35 @@ export function normalizeApplicationRecordResult(
   const application = normalizeApplicationSummary(raw.application);
   if (workspaceId === undefined || application === undefined) return undefined;
   return { workspaceId, application };
+}
+
+export function normalizeApplicationImportResult(
+  value: unknown,
+): ApplicationImportResult | undefined {
+  const raw = record(value);
+  if (raw === undefined || !onlyKeys(raw, importResultKeys)) return undefined;
+  const workspaceId = identifier(raw.workspaceId);
+  const application = normalizeApplicationSummary(raw.application);
+  const counts = record(raw.imported);
+  if (workspaceId === undefined || application === undefined) return undefined;
+  if (counts === undefined || !onlyKeys(counts, importCountsKeys)) return undefined;
+  const runs = count(counts.runs);
+  const briefs = count(counts.briefs);
+  const briefVersions = count(counts.briefVersions);
+  const exports = count(counts.exports);
+  const skippedExports = count(counts.skippedExports);
+  if (
+    runs === undefined ||
+    briefs === undefined ||
+    briefVersions === undefined ||
+    exports === undefined ||
+    skippedExports === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    workspaceId,
+    application,
+    imported: { runs, briefs, briefVersions, exports, skippedExports },
+  };
 }

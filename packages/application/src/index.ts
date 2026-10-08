@@ -24,10 +24,12 @@ import type {
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
   CreateApplicationCommand,
   GetApplicationCommand,
+  ImportedApplicationView,
   ListApplicationsCommand,
 } from "./workspace-applications.js";
 
@@ -518,6 +520,10 @@ export interface ApplicationDriver {
   readonly getApplication?: (
     command: GetApplicationCommand,
   ) => Promise<ApplicationView | undefined>;
+  /** Imports another workspace as an application of this one; the source is left untouched. */
+  readonly importApplication?: (
+    command: ImportApplicationCommand,
+  ) => Promise<ImportedApplicationView>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -663,6 +669,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       }),
     getApplication: async (command) =>
       requireApplicationApi(driver.getApplication)({ ...command, root: requireRoot(command.root) }),
+    importApplication: async (command) =>
+      requireApplicationApi(driver.importApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
   };
   return Object.freeze(service);
 }
@@ -705,6 +716,7 @@ export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
 export * from "./user-data-root.js";
+export * from "./workspace-application-import.js";
 export * from "./workspace-applications.js";
 export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";

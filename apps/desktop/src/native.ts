@@ -1,5 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
-import type { ApplicationSummaryView } from "./application-contract.js";
+import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
 
 import {
   type BridgeCommand,
@@ -301,6 +301,13 @@ export interface DesktopApplicationCapabilities {
     job: string | { readonly url: string },
   ) => Promise<ApplicationSummaryView>;
   /**
+   * Imports another workspace as an application. The host shows the native folder picker, so the
+   * renderer never sends or receives a path; a cancelled picker rejects with `permission-denied`.
+   */
+  readonly importApplication?: (
+    workspaceId: string,
+  ) => Promise<Pick<ApplicationImportResult, "application" | "imported">>;
+  /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
    * `null`. Opening another workspace clears the scope.
    */
@@ -450,6 +457,19 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 },
               }),
             ).application,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.import")
+      ? {
+          importApplication: async (workspaceId: string) => {
+            const { application, imported } = unwrap(
+              await capabilityPort.execute({
+                type: "application.import",
+                input: { workspaceId, selection: "native-dialog" },
+              }),
+            );
+            return { application, imported };
+          },
         }
       : {}),
     ...(capabilityPort.hasCapability("workspace.configure-models")
