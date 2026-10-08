@@ -1021,9 +1021,9 @@ export async function initWorkspace(
     ...(options.maxWords === undefined ? {} : { maxWords: options.maxWords }),
     ...(options.maxCharacters === undefined ? {} : { maxCharacters: options.maxCharacters }),
     authorCompany: options.authorCompany?.trim() || "anthropic",
-    authorModel: options.authorModel?.trim() || "claude-sonnet-4-5",
+    authorModel: options.authorModel?.trim() || "claude-haiku-5-5",
     criticCompany: options.criticCompany?.trim() || "openai",
-    criticModel: options.criticModel?.trim() || "gpt-5.6-luna",
+    criticModel: options.criticModel?.trim() || "gpt-6-luna",
     ...(options.authorLineage?.trim() ? { authorLineage: options.authorLineage.trim() } : {}),
     ...(options.criticLineage?.trim() ? { criticLineage: options.criticLineage.trim() } : {}),
     ...(options.independenceOverrideRationale?.trim()

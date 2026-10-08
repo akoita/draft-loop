@@ -119,10 +119,11 @@ export interface WorkspaceSetupDraft {
 
 export const initialWorkspaceSetupDraft: WorkspaceSetupDraft = Object.freeze({
   name: "draft-loop-workspace",
+  // The economy pair is the default development pair; creating with it applies the Economy preset.
   authorCompany: "anthropic",
-  authorModel: "",
+  authorModel: "claude-haiku-5-5",
   criticCompany: "openai",
-  criticModel: "",
+  criticModel: "gpt-6-luna",
   localEndpoint: "",
   independenceOverrideRationale: "",
   maxRounds: 3,

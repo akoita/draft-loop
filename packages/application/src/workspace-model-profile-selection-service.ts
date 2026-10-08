@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { withEconomyDefaultSelection } from "./default-model-selection.js";
 import type { ApplicationService, ModelProfileReferences } from "./index.js";
 import { readWorkspace } from "./local.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
@@ -57,7 +58,7 @@ export function withSavedModelProfiles<Service extends ApplicationService>(
   options: { readonly registry?: ModelProfileRegistry } = {},
 ): Service {
   return {
-    ...service,
+    ...withEconomyDefaultSelection(service, options),
     start: async (command, io) => {
       const write = (line: string): void => io?.write(line);
       if (command.modelProfiles !== undefined) {

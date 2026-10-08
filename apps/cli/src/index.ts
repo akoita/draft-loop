@@ -1441,10 +1441,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option(
       "--author-model <model>",
       "exact author model id; development GLM Flash is zai-org/GLM-5.3-Flash and development Gemini is gemini-3.8-flash (gemini-3.7-flash stays accepted for existing runs), and development Mistral is mistral-large-4",
-      "claude-sonnet-4-5",
+      "claude-haiku-5-5",
     )
     .option("--critic-company <company>", "critic provider company", "openai")
-    .option("--critic-model <model>", "exact critic model id", "gpt-5.6-luna")
+    .option("--critic-model <model>", "exact critic model id", "gpt-6-luna")
     .option(
       "--author-lineage <lineage>",
       "weights the author descends from; defaults to <company>:<model>",
