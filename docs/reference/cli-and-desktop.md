@@ -542,11 +542,11 @@ tokens.
 For more than 65,536 UTF-16 text units across one to four unique prepared
 sources, extraction proactively makes one call per source up to the window size
 and divides each larger source into contiguous windows of at most that size. The
-window size is three quarters of the call's output-token budget divided by 1.9
-(the measured output tokens per character of dense career text), clamped to
-8,192 to 32,768 UTF-16 units: 8,192 for the 8,192-token routes and 12,934 at
-the 32,768-token ceiling. The plan uses at most 96 calls and is declined if it would
-exceed that cap.
+window size is three quarters of the call's output-token budget divided by 3
+(the planning ratio of output tokens per character of dense career text; Mistral
+Large 4 measured at least 2.8), clamped to 8,192 to 32,768 UTF-16 units. Both the
+8,192-token routes and the 32,768-token ceiling therefore use 8,192-unit windows.
+The plan uses at most 96 calls and is declined if it would exceed that cap.
 
 Markdown sources are cut at ATX headings (`#` to `######`, outside fenced code)
 and whole sections are packed into windows in document order. A section larger
@@ -567,15 +567,25 @@ Each planned call sends only its own source, or only its window text with the
 source ID, media type, and the window's UTF-16 offsets and source length. Other
 sources and windows are never included. Each result is grounded as it arrives. A
 call that fails grounding gets at most one replacement for that same call with
-fixed diagnostic counts, so a successful plan makes at most 192 calls. After a second
+fixed diagnostic counts, so a plan without output-limit splits makes at most 192 calls. After a second
 failure, only that call's ungrounded facts are dropped and counted toward the
 single warning above; planned extractions never make the full-corpus replacement.
 
-Planned calls run four at a time by default and are combined in plan order, so the result
-matches a sequential run. A call that still fails is retried once alone after
-the others finish; if it fails again the whole extraction fails and no partial
-profile is saved. While the host stays open, completed calls are kept in memory
-so a user retry re-runs only the failed ones.
+Planned calls run four at a time by default (eight for Mistral) and are combined
+in plan order, so the result matches a sequential run. A call that still fails is
+retried once alone after the others finish; if it fails again the whole
+extraction fails and no partial profile is saved. While the host stays open,
+completed calls are kept in memory so a user retry re-runs only the failed ones.
+
+When a planned call fails with an output-token limit, it is not retried
+unchanged. Its window is split into two contiguous halves, cut at the Markdown
+heading nearest the middle, else the newline nearest the middle, else the exact
+middle, and each half is extracted on its own with its original source offsets
+and the parent's heading path. Halves split again up to three levels and never
+below 1,000 characters. The splits count toward the 96-call cap. A window that
+still overflows at those limits, or would exceed the cap, fails the extraction
+with the output-limit message and is not retried. Progress still counts the
+original planned calls, and a user retry reuses the halves already extracted.
 
 Cross-source conflicts and duplicates for planned extractions come from local
 detection over the aggregated facts, which depends on consistent subject naming
