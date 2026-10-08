@@ -5,6 +5,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import {
   type ApplicationIo,
   type ApplicationService,
+  type ApplicationView,
   activateWritingPolicyContent,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
@@ -183,14 +184,26 @@ import {
   normalizeWorkspaceDisplayName,
   workspaceFolderName,
 } from "../workspace-name.js";
+import {
+  type ApplicationBriefPreference,
+  applicationBriefPreference,
+  applicationHoldsBrief,
+  newestApplicationBriefId,
+  overridesForApplication,
+  persistedApplicationBriefPreferences,
+  withApplicationBriefPreference,
+} from "./application-briefs.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import {
+  type ApplicationReadinessScope,
   type ApplicationScope,
+  applicationJobUrl,
+  applicationReadinessScope,
   createApplicationSummary,
   listApplicationSummaries,
   projectApplication,
   resolveApplicationScope,
-  scopeSetupToApplication,
+  urlJobBriefStep,
 } from "./host-applications.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
@@ -394,6 +407,8 @@ interface ReviewOverrides {
   readonly reviewedOpportunity?: OpportunityBriefSelectionInput;
   /** The workspace's most recent opportunity brief, so a draft can be resumed after a restart. */
   readonly latestOpportunityBriefId?: string;
+  /** Each created application's own latest and reviewed brief; the default keeps the pair above. */
+  readonly applicationBriefs?: readonly ApplicationBriefPreference[];
   /** The person's own name for the workspace; the folder name is used when absent. */
   readonly workspaceName?: string;
   /** Pending policy identity bound to the exact reviewed opportunity above. */
@@ -1248,16 +1263,26 @@ async function workspaceReadiness(
    * none selected and the run falls back to the legacy workspace evidence folder.
    */
   selectedKnowledgeSourceCount?: number,
+  /** Set for a created application: readiness then reads that application's job, not job.md. */
+  applicationScope?: ApplicationReadinessScope,
 ): Promise<WorkspaceReadiness> {
-  const jobPath = resolve(root, descriptor.jobDescriptionPath);
+  const jobRelativePath =
+    applicationScope === undefined
+      ? descriptor.jobDescriptionPath
+      : applicationScope.jobDescriptionPath;
   let jobDescriptionReady = false;
   let jobDescription = "";
-  try {
-    jobDescription = (await readFile(jobPath, "utf8")).trim();
-    jobDescriptionReady = jobDescription.length > 0;
-  } catch {
-    jobDescriptionReady = false;
+  if (jobRelativePath !== undefined) {
+    try {
+      jobDescription = (await readFile(resolve(root, jobRelativePath), "utf8")).trim();
+      jobDescriptionReady = jobDescription.length > 0;
+    } catch {
+      jobDescriptionReady = false;
+    }
   }
+  // A URL job has no text until requirements are extracted and reviewed: the brief supplies it.
+  const briefSuppliesJob =
+    applicationScope?.jobFromUrl === true && overrides.reviewedOpportunity !== undefined;
   const evidenceSourceCount =
     selectedKnowledgeSourceCount ??
     (await countEvidenceFiles(resolve(root, descriptor.sourceDirectory)));
@@ -1375,7 +1400,11 @@ async function workspaceReadiness(
   const jobRequirementProblem =
     overrides.reviewedOpportunity === undefined ? rawJobRequirementProblem : undefined;
   const nextSteps: string[] = [];
-  if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
+  if (!jobDescriptionReady && !briefSuppliesJob) {
+    nextSteps.push(
+      applicationScope?.jobFromUrl === true ? urlJobBriefStep : "Add a target job description.",
+    );
+  }
   if (jobRequirementProblem !== undefined) nextSteps.push(jobRequirementProblem);
   if (evidenceSourceCount === 0) {
     nextSteps.push(
@@ -1395,7 +1424,7 @@ async function workspaceReadiness(
   }
   return {
     fixtureMode: descriptor.fixtureMode,
-    jobDescriptionReady,
+    jobDescriptionReady: jobDescriptionReady || briefSuppliesJob,
     evidenceSourceCount,
     writingPolicyStatus,
     writingPolicy: writingPolicy ?? null,
@@ -1410,7 +1439,7 @@ async function workspaceReadiness(
     requiredSections: [...descriptor.requiredSections],
     autopilot: descriptor.autopilot === true,
     ready:
-      jobDescriptionReady &&
+      (jobDescriptionReady || briefSuppliesJob) &&
       jobRequirementProblem === undefined &&
       evidenceSourceCount > 0 &&
       writingPolicyStatus !== "unavailable" &&
@@ -1542,6 +1571,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
     const latestOpportunityBriefId = persistedLatestOpportunityBriefId(
       record.latestOpportunityBriefId,
     );
+    const applicationBriefs = persistedApplicationBriefPreferences(record.applicationBriefs);
     const storedWorkspaceName = normalizeWorkspaceDisplayName(record.workspaceName);
     const pendingWritingPolicyOverride = persistedPendingWritingPolicyOverride(
       record.pendingWritingPolicyOverride,
@@ -1553,6 +1583,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
       history: normalizedHistory,
       ...(reviewedOpportunity === undefined ? {} : { reviewedOpportunity }),
       ...(latestOpportunityBriefId === undefined ? {} : { latestOpportunityBriefId }),
+      ...(applicationBriefs.length === 0 ? {} : { applicationBriefs }),
       ...(storedWorkspaceName === undefined ? {} : { workspaceName: storedWorkspaceName }),
       ...(pendingWritingPolicyOverride === undefined ? {} : { pendingWritingPolicyOverride }),
     };
@@ -1574,6 +1605,9 @@ async function writeOverrides(root: string, overrides: ReviewOverrides): Promise
     ...(overrides.latestOpportunityBriefId === undefined
       ? {}
       : { latestOpportunityBriefId: overrides.latestOpportunityBriefId }),
+    ...(overrides.applicationBriefs === undefined || overrides.applicationBriefs.length === 0
+      ? {}
+      : { applicationBriefs: overrides.applicationBriefs.map((entry) => ({ ...entry })) }),
     ...(overrides.workspaceName === undefined ? {} : { workspaceName: overrides.workspaceName }),
     ...(overrides.pendingWritingPolicyOverride === undefined
       ? {}
@@ -2852,6 +2886,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     workspaceId: string,
     inputs: readonly OpportunityCreateSource[],
     providerTransmissionApproved: boolean,
+    application?: ApplicationView,
   ): Promise<readonly OpportunitySourceInput[]> {
     const sources: OpportunitySourceInput[] = [];
     for (const source of inputs) {
@@ -2859,9 +2894,32 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       switch (source.kind) {
         case "workspace-job-description": {
           const workspace = workspaceFor(workspaceId);
+          // A created application reads its own job: the approved URL, or its stored text.
+          const jobUrl = application === undefined ? undefined : applicationJobUrl(application);
+          if (jobUrl !== undefined) {
+            if (!providerTransmissionApproved) {
+              return fail(
+                "permission-denied",
+                "Approve fetching the job page and sending it to the writing model before extracting requirements.",
+              );
+            }
+            sources.push({
+              id: source.id,
+              kind: "approved-url",
+              classification: source.classification,
+              url: jobUrl,
+              approved: true,
+              ...capturedAt,
+            });
+            break;
+          }
           const resolved = await resolveWorkspaceJobDescriptionSource({
             root: workspace.root,
-            jobDescriptionPath: workspace.descriptor.jobDescriptionPath,
+            jobDescriptionPath:
+              (application === undefined
+                ? undefined
+                : applicationReadinessScope(application).jobDescriptionPath) ??
+              workspace.descriptor.jobDescriptionPath,
             source,
             providerTransmissionApproved,
           });
@@ -2933,6 +2991,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     input: OpportunityCreateInput,
   ): Promise<OpportunityRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
+    const application = scope?.created === true ? scope.application : undefined;
     if (activeOpportunityExtractions.has(workspace.descriptor.id)) {
       return fail("operation-failed", "Requirements extraction is already running.");
     }
@@ -2943,14 +3003,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         input.workspaceId,
         input.sources,
         input.providerTransmissionApproved === true,
+        application,
       );
       const record = await service.createOpportunity({
         root: workspace.root,
         sources,
         allowProviderData: input.providerTransmissionApproved === true,
         signal: controller.signal,
+        ...(application === undefined ? {} : { applicationId: application.id }),
       });
-      await rememberLatestOpportunity(workspace.root, record.brief.id);
+      await rememberLatestOpportunity(workspace.root, record.brief.id, application?.id);
       return projectOpportunityRecord(workspace.descriptor.id, record);
     } catch (error) {
       // A cancelled extraction saves nothing, whatever shape the abort took on its way up.
@@ -2974,9 +3036,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   }
 
   /** Remembers which brief is the workspace's latest so setup can resume it after a restart. */
-  async function rememberLatestOpportunity(root: string, briefId: string): Promise<void> {
+  async function rememberLatestOpportunity(
+    root: string,
+    briefId: string,
+    applicationId?: string,
+  ): Promise<void> {
     try {
       const preferences = await readOverrides(root);
+      if (applicationId !== undefined) {
+        const stored = applicationBriefPreference(preferences.applicationBriefs, applicationId);
+        if (stored?.latestOpportunityBriefId === briefId) return;
+        await writeOverrides(root, {
+          ...preferences,
+          applicationBriefs: withApplicationBriefPreference(preferences.applicationBriefs, {
+            ...stored,
+            applicationId,
+            latestOpportunityBriefId: briefId,
+          }),
+        });
+        return;
+      }
       if (preferences.latestOpportunityBriefId === briefId) return;
       await writeOverrides(root, { ...preferences, latestOpportunityBriefId: briefId });
     } catch (error) {
@@ -2989,9 +3068,25 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     input: Extract<BridgeCommand, { type: "opportunity.latest" }>["input"],
   ): Promise<OpportunityLatestResult> {
     const workspace = workspaceFor(input.workspaceId);
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
     const preferences = await readOverrides(workspace.root);
-    const briefId =
-      preferences.latestOpportunityBriefId ?? preferences.reviewedOpportunity?.briefId;
+    let briefId: string | undefined;
+    if (scope?.created === true) {
+      // A created application has its own latest brief, never the workspace's.
+      const stored = applicationBriefPreference(
+        preferences.applicationBriefs,
+        scope.application.id,
+      );
+      briefId =
+        stored?.latestOpportunityBriefId ??
+        stored?.reviewedOpportunity?.briefId ??
+        newestApplicationBriefId(scope.application);
+      if (briefId !== undefined && !applicationHoldsBrief(scope.application, briefId)) {
+        return null;
+      }
+    } else {
+      briefId = preferences.latestOpportunityBriefId ?? preferences.reviewedOpportunity?.briefId;
+    }
     if (briefId === undefined) return null;
     const record = await service.getOpportunity({ root: workspace.root, briefId });
     return record === undefined ? null : projectLatestOpportunity(workspace.descriptor.id, record);
@@ -3033,15 +3128,29 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     input: Extract<BridgeCommand, { type: "opportunity.edit" }>["input"],
   ): Promise<OpportunityRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
+    const application = await requireApplicationBrief(scope, input.briefId);
     const record = await service.editOpportunity({
       root: workspace.root,
       briefId: input.briefId,
       expectedVersion: input.expectedVersion,
       patch: input.patch as OpportunityDraftPatch,
     });
-    await rememberLatestOpportunity(workspace.root, record.brief.id);
+    await rememberLatestOpportunity(workspace.root, record.brief.id, application?.id);
     const preferences = await readOverrides(workspace.root);
-    if (
+    if (application !== undefined) {
+      const stored = applicationBriefPreference(preferences.applicationBriefs, application.id);
+      if (
+        stored?.reviewedOpportunity?.briefId === input.briefId &&
+        stored.reviewedOpportunity.version !== record.brief.version
+      ) {
+        const { reviewedOpportunity: _stale, ...kept } = stored;
+        await writeOverrides(workspace.root, {
+          ...preferences,
+          applicationBriefs: withApplicationBriefPreference(preferences.applicationBriefs, kept),
+        });
+      }
+    } else if (
       preferences.reviewedOpportunity?.briefId === input.briefId &&
       preferences.reviewedOpportunity.version !== record.brief.version
     ) {
@@ -3055,6 +3164,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     input: Extract<BridgeCommand, { type: "opportunity.review" }>["input"],
   ): Promise<OpportunityRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
+    const application = await requireApplicationBrief(scope, input.briefId);
     const record = await service.reviewOpportunity({
       root: workspace.root,
       briefId: input.briefId,
@@ -3064,14 +3175,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       briefId: record.brief.id,
       version: record.brief.version,
     };
-    reviewedOpportunityCache.set(workspace.root, reviewedOpportunity);
     const preferences = await readOverrides(workspace.root);
     try {
-      await writeOverrides(workspace.root, {
-        ...withoutPendingWritingPolicyOverride(preferences),
-        reviewedOpportunity,
-        latestOpportunityBriefId: record.brief.id,
-      });
+      if (application !== undefined) {
+        // The application's reviewed brief is its own; the workspace's pair is left untouched.
+        await writeOverrides(workspace.root, {
+          ...preferences,
+          applicationBriefs: withApplicationBriefPreference(preferences.applicationBriefs, {
+            applicationId: application.id,
+            latestOpportunityBriefId: record.brief.id,
+            reviewedOpportunity,
+          }),
+        });
+      } else {
+        reviewedOpportunityCache.set(workspace.root, reviewedOpportunity);
+        await writeOverrides(workspace.root, {
+          ...withoutPendingWritingPolicyOverride(preferences),
+          reviewedOpportunity,
+          latestOpportunityBriefId: record.brief.id,
+        });
+      }
     } catch (error) {
       // Review remains usable for a host session whose synthetic/test root is
       // not writable; real workspaces persist the binding for restart.
@@ -3552,11 +3675,84 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return service.status({ root, runId: scope.latestRunId });
   }
 
-  function scopedSetup(
-    setup: WorkspaceReadiness,
+  /** The created application a brief request is for; its edits cannot reach another's brief. */
+  async function requireApplicationBrief(
     scope: ApplicationScope | undefined,
-  ): WorkspaceReadiness {
-    return scope?.created === true ? scopeSetupToApplication(setup, scope.application) : setup;
+    briefId: string,
+  ): Promise<ApplicationView | undefined> {
+    if (scope?.created !== true) return undefined;
+    if (!applicationHoldsBrief(scope.application, briefId)) {
+      return fail("not-found", "The requested opportunity was not found in this application.");
+    }
+    return scope.application;
+  }
+
+  /**
+   * A created application's own brief pair, checked against the stored records: a reviewed brief
+   * that was edited or is missing no longer counts.
+   */
+  async function applicationBriefsFor(
+    workspace: ActiveWorkspace,
+    application: ApplicationView,
+    preferences: ReviewOverrides,
+  ): Promise<ApplicationBriefPreference> {
+    const stored = applicationBriefPreference(preferences.applicationBriefs, application.id);
+    let reviewed = stored?.reviewedOpportunity;
+    if (reviewed !== undefined) {
+      try {
+        const latest = await service.getOpportunity({
+          root: workspace.root,
+          briefId: reviewed.briefId,
+        });
+        if (
+          latest === undefined ||
+          latest.brief.status !== "reviewed" ||
+          latest.brief.version !== reviewed.version ||
+          !applicationHoldsBrief(application, reviewed.briefId)
+        ) {
+          reviewed = undefined;
+        }
+      } catch {
+        reviewed = undefined;
+      }
+    }
+    return {
+      applicationId: application.id,
+      ...(stored?.latestOpportunityBriefId === undefined
+        ? {}
+        : { latestOpportunityBriefId: stored.latestOpportunityBriefId }),
+      ...(reviewed === undefined ? {} : { reviewedOpportunity: reviewed }),
+    };
+  }
+
+  /**
+   * Readiness for the workspace, or for a created application: its own job and its own reviewed
+   * brief drive it, so nothing from the workspace's job file or brief leaks in.
+   */
+  async function setupFor(
+    workspace: ActiveWorkspace,
+    scope: ApplicationScope | undefined,
+    overrides: ReviewOverrides,
+  ): Promise<WorkspaceReadiness> {
+    const knowledgeSourceCount = await selectedKnowledgeSourceCount(workspace.root);
+    if (scope?.created !== true) {
+      return workspaceReadiness(
+        workspace.descriptor,
+        workspace.root,
+        service,
+        overrides,
+        knowledgeSourceCount,
+      );
+    }
+    const briefs = await applicationBriefsFor(workspace, scope.application, overrides);
+    return workspaceReadiness(
+      workspace.descriptor,
+      workspace.root,
+      service,
+      overridesForApplication(overrides, briefs),
+      knowledgeSourceCount,
+      applicationReadinessScope(scope.application),
+    );
   }
 
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
@@ -3633,10 +3829,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         await requireProviderTransmissionAcknowledgement(workspace);
         // The person may start from the raw job description instead of the reviewed brief.
         const fromJobDescription = action.requirementsSource === "job-description";
-        // A created application starts from its own job text: the workspace's reviewed brief and
-        // policy override belong to the default application.
-        const reviewedOpportunity =
-          fromJobDescription || scope?.created === true ? undefined : overrides.reviewedOpportunity;
+        // A created application starts from its own reviewed brief, or its own job text when it
+        // has none: the workspace's reviewed brief and policy override belong to the default one.
+        const reviewedOpportunity = fromJobDescription
+          ? undefined
+          : scope?.created === true
+            ? (await applicationBriefsFor(workspace, scope.application, overrides))
+                .reviewedOpportunity
+            : overrides.reviewedOpportunity;
         const pendingWritingPolicyOverride =
           scope?.created === true ? undefined : overrides.pendingWritingPolicyOverride;
         if (fromJobDescription && pendingWritingPolicyOverride !== undefined) {
@@ -3858,16 +4058,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           : { runId: input.runId }),
       }));
     overrides = await reconcileReviewPreferences(workspace, overrides, "review.dispatch");
-    const setup = scopedSetup(
-      await workspaceReadiness(
-        workspace.descriptor,
-        workspace.root,
-        service,
-        overrides,
-        await selectedKnowledgeSourceCount(workspace.root),
-      ),
-      scope,
-    );
+    const setup = await setupFor(workspace, scope, overrides);
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,
       workspace.root,
@@ -3954,7 +4145,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 service,
                 workspace.root,
                 command.input.name,
-                command.input.jobText,
+                command.input.jobUrl === undefined
+                  ? { jobText: command.input.jobText ?? "" }
+                  : { jobUrl: command.input.jobUrl },
               ),
             },
           };
@@ -5477,16 +5670,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             await readOverrides(workspace.root),
             "review.load",
           );
-          const setup = scopedSetup(
-            await workspaceReadiness(
-              workspace.descriptor,
-              workspace.root,
-              service,
-              preferences,
-              await selectedKnowledgeSourceCount(workspace.root),
-            ),
-            scope,
-          );
+          const setup = await setupFor(workspace, scope, preferences);
           if (snapshot === undefined) {
             const preflight = await providerTransmissionPreflight(
               workspace.descriptor,

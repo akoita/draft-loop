@@ -14,10 +14,11 @@ import {
 import type { DesktopProfileCapabilities } from "./native.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
-/** What the workspace window shows: Home, the profile and evidence screen, or one application. */
+/** What the workspace window shows: Home, the profile screen, the New application flow, or one application. */
 export type WorkspaceView =
   | { readonly kind: "home" }
   | { readonly kind: "profile" }
+  | { readonly kind: "new-application" }
   | {
       readonly kind: "application";
       readonly applicationId: string;
@@ -27,6 +28,7 @@ export type WorkspaceView =
 
 export const homeView: WorkspaceView = Object.freeze({ kind: "home" });
 export const profileView: WorkspaceView = Object.freeze({ kind: "profile" });
+export const newApplicationView: WorkspaceView = Object.freeze({ kind: "new-application" });
 
 export function applicationView(applicationId: string, name: string): WorkspaceView {
   return { kind: "application", applicationId, name };
@@ -293,26 +295,4 @@ export function applicationsByActivity(
 /** True when the list holds nothing but the application a workspace is always read as. */
 export function onlyDefaultApplication(applications: readonly ApplicationSummaryView[]): boolean {
   return applications.every((application) => application.isDefault);
-}
-
-// -- New application ------------------------------------------------------------------------
-
-export interface NewApplicationDraft {
-  readonly name: string;
-  readonly jobText: string;
-}
-
-export const emptyNewApplicationDraft: NewApplicationDraft = Object.freeze({
-  name: "",
-  jobText: "",
-});
-
-export const newApplicationNameMessage = "Name the application, for example a company and role.";
-export const newApplicationJobTextMessage = "Paste the job description to work from.";
-
-/** The first thing wrong with the draft, in the order the fields appear; null when it is valid. */
-export function newApplicationProblem(draft: NewApplicationDraft): string | null {
-  if (draft.name.trim() === "") return newApplicationNameMessage;
-  if (draft.jobText.trim() === "") return newApplicationJobTextMessage;
-  return null;
 }

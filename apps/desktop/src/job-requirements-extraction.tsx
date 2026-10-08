@@ -37,6 +37,8 @@ export interface JobRequirementsExtractionBinding {
   readonly onBriefChanged?: () => void;
   /** The configured writing model: the one that would receive the job description. */
   readonly writingModel: { readonly company: string; readonly model: string };
+  /** The job is an approved web address: extraction fetches the page before sending its text. */
+  readonly jobFromUrl?: boolean;
   readonly disabled: boolean;
 }
 
@@ -128,6 +130,7 @@ export type JobRequirementsPhase =
 export interface JobRequirementsExtractionViewProps {
   readonly phase: JobRequirementsPhase;
   readonly writingModel: JobRequirementsExtractionBinding["writingModel"];
+  readonly jobFromUrl?: boolean;
   readonly disabled: boolean;
   /** The "Review requirements" action shown once a draft brief was saved. */
   readonly reviewAction?: ReactNode;
@@ -141,6 +144,7 @@ export interface JobRequirementsExtractionViewProps {
 export function JobRequirementsExtractionView({
   phase,
   writingModel,
+  jobFromUrl = false,
   disabled,
   reviewAction = null,
   onOpen,
@@ -178,15 +182,17 @@ export function JobRequirementsExtractionView({
         <section className="job-extraction" aria-label="Extract requirements consent">
           <p className="job-extraction-title">Send the job description to the writing model?</p>
           <p className="setup-note">
-            Extract sends this workspace&apos;s job description to {providerName} ({modelName}) to
-            draft an opportunity brief.
+            {jobFromUrl
+              ? `Extract fetches the job page you approved for this application, then sends its text to ${providerName} (${modelName}) to draft an opportunity brief.`
+              : `Extract sends this workspace's job description to ${providerName} (${modelName}) to draft an opportunity brief.`}
           </p>
           <code className="job-extraction-model">
             {writingModel.company}/{writingModel.model}
           </code>
           <p className="setup-note">
-            Only the job description is sent. Your career evidence is not sent. Nothing is sent
-            until you choose Extract.
+            {jobFromUrl
+              ? "Only that page's text is sent. Your career evidence is not sent. Nothing is fetched or sent until you choose Extract."
+              : "Only the job description is sent. Your career evidence is not sent. Nothing is sent until you choose Extract."}
           </p>
           <div className="job-extraction-actions">
             <button
@@ -332,6 +338,7 @@ export function JobRequirementsExtraction({
     <JobRequirementsExtractionView
       phase={phase}
       writingModel={binding.writingModel}
+      {...(binding.jobFromUrl === true ? { jobFromUrl: true } : {})}
       disabled={binding.disabled}
       reviewAction={
         briefOperations === undefined || phase.kind !== "done" ? null : (

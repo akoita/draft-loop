@@ -285,11 +285,14 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
 /** Job applications inside the open workspace (ADR 0010), present when the host offers them. */
 export interface DesktopApplicationCapabilities {
   readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
-  /** Creates an application from pasted job text and resolves with its summary. */
+  /**
+   * Creates an application and resolves with its summary. The job is pasted text, or `{ url }`:
+   * a job page the person approved fetching, read only when requirements are extracted.
+   */
   readonly createApplication?: (
     workspaceId: string,
     name: string,
-    jobText: string,
+    job: string | { readonly url: string },
   ) => Promise<ApplicationSummaryView>;
   /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
@@ -424,11 +427,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(capabilityPort.hasCapability("application.create")
       ? {
-          createApplication: async (workspaceId: string, name: string, jobText: string) =>
+          createApplication: async (
+            workspaceId: string,
+            name: string,
+            job: string | { readonly url: string },
+          ) =>
             unwrap(
               await capabilityPort.execute({
                 type: "application.create",
-                input: { workspaceId, name, jobText },
+                input: {
+                  workspaceId,
+                  name,
+                  ...(typeof job === "string"
+                    ? { jobText: job }
+                    : { jobUrl: job.url, jobUrlApproved: true as const }),
+                },
               }),
             ).application,
         }
@@ -882,7 +895,11 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             return unwrap(
               await capabilityPort.execute({
                 type: "opportunity.create",
-                input: { workspaceId: state.workspaceId, ...input },
+                input: {
+                  workspaceId: state.workspaceId,
+                  ...input,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                },
               }),
             );
           },
@@ -938,7 +955,10 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             return unwrap(
               await capabilityPort.execute({
                 type: "opportunity.latest",
-                input: { workspaceId: state.workspaceId },
+                input: {
+                  workspaceId: state.workspaceId,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                },
               }),
             );
           },
@@ -951,7 +971,11 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             return unwrap(
               await capabilityPort.execute({
                 type: "opportunity.edit",
-                input: { workspaceId: state.workspaceId, ...input },
+                input: {
+                  workspaceId: state.workspaceId,
+                  ...input,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                },
               }),
             );
           },
@@ -964,7 +988,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             return unwrap(
               await capabilityPort.execute({
                 type: "opportunity.review",
-                input: { workspaceId: state.workspaceId, briefId, expectedVersion },
+                input: {
+                  workspaceId: state.workspaceId,
+                  briefId,
+                  expectedVersion,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                },
               }),
             );
           },

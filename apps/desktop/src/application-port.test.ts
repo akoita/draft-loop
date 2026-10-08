@@ -108,4 +108,59 @@ describe("application scope in the desktop review port", () => {
     await port.openRecentWorkspace?.("123e4567-e89b-12d3-a456-426614174000");
     expect(invoke).toHaveBeenLastCalledWith({ type: "review.load", input: {} });
   });
+
+  it("creates an application from an approved URL", async () => {
+    const { port, invoke, state } = portWith([...bridgeCapabilities]);
+    await port.createApplication?.(state.workspaceId, "Acme", {
+      url: "https://jobs.example.test/1",
+    });
+    expect(invoke).toHaveBeenCalledWith({
+      type: "application.create",
+      input: {
+        workspaceId: state.workspaceId,
+        name: "Acme",
+        jobUrl: "https://jobs.example.test/1",
+        jobUrlApproved: true,
+      },
+    });
+  });
+
+  it("scopes brief commands to the opened application", async () => {
+    const { port, invoke, state } = portWith([...bridgeCapabilities]);
+    const sources = [
+      {
+        id: "workspace-job-description",
+        kind: "workspace-job-description",
+        classification: "job-posting",
+      },
+    ] as const;
+    const called = () => invoke.mock.calls.at(-1)?.[0];
+
+    await port.createOpportunity?.({ sources }).catch(() => undefined);
+    expect(called()?.input).not.toHaveProperty("applicationId");
+    port.selectApplication?.("app-1");
+    await port.createOpportunity?.({ sources }).catch(() => undefined);
+    expect(called()).toMatchObject({
+      type: "opportunity.create",
+      input: { applicationId: "app-1" },
+    });
+    await port.getLatestOpportunity?.().catch(() => undefined);
+    expect(called()).toMatchObject({
+      type: "opportunity.latest",
+      input: { applicationId: "app-1" },
+    });
+    await port
+      .editOpportunity?.({ briefId: "brief-1", expectedVersion: 1, patch: {} })
+      .catch(() => undefined);
+    expect(called()).toMatchObject({ type: "opportunity.edit", input: { applicationId: "app-1" } });
+    await port.reviewOpportunity?.("brief-1", 1).catch(() => undefined);
+    expect(called()).toMatchObject({
+      type: "opportunity.review",
+      input: { applicationId: "app-1" },
+    });
+    port.selectApplication?.(null);
+    await port.getLatestOpportunity?.().catch(() => undefined);
+    expect(called()?.input).not.toHaveProperty("applicationId");
+    expect(state.workspaceId).toBeTruthy();
+  });
 });

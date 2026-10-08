@@ -149,4 +149,67 @@ describe("application CLI", () => {
     );
     expect(start.mock.calls[1]?.[0]).not.toHaveProperty("applicationId");
   });
+
+  it("creates an opportunity brief bound to an application", async () => {
+    const { root, lines, run } = await setup();
+    await run("application", "create", root, "--name", "Beta", "--job-text", "Design interfaces.");
+    const id = /^app-[0-9a-f]{12}/u.exec(lines[1] ?? "")?.[0] ?? "";
+    const input = join(root, "opportunity.json");
+    await writeFile(
+      input,
+      JSON.stringify({
+        id: "beta-brief",
+        sources: [
+          {
+            id: "guidance",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.",
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    await run("opportunity", "create", root, "--input", input, "--application", id);
+
+    lines.length = 0;
+    await run("application", "list", root, "--json");
+    const [defaultApplication, application] = JSON.parse(lines[0] ?? "");
+    expect(defaultApplication.briefs).toHaveLength(0);
+    expect(application.briefs).toHaveLength(1);
+    expect(application.briefs[0]).toMatchObject({ briefId: "beta-brief" });
+  });
+
+  it("passes --application to opportunity create and omits it by default", async () => {
+    const createOpportunity = vi.fn(async (_command: Record<string, unknown>) => ({}) as never);
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-application-cli-"));
+    directories.push(root);
+    const input = join(root, "opportunity.json");
+    await writeFile(input, JSON.stringify({ id: "brief-1", sources: [] }), "utf8");
+    const cli = createCli({
+      service: { createOpportunity } as unknown as ApplicationService,
+      io: { write: () => undefined },
+    });
+    cli.exitOverride();
+
+    await cli.parseAsync(["node", "dl", "opportunity", "create", "ws", "--input", input]);
+    await cli.parseAsync([
+      "node",
+      "dl",
+      "opportunity",
+      "create",
+      "ws",
+      "--input",
+      input,
+      "--application",
+      "app-1",
+    ]);
+
+    expect(createOpportunity.mock.calls[0]?.[0]).not.toHaveProperty("applicationId");
+    expect(createOpportunity).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ id: "brief-1", applicationId: "app-1" }),
+    );
+  });
 });

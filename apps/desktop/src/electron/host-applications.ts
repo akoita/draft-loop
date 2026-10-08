@@ -1,7 +1,6 @@
 import type { ApplicationService, ApplicationView } from "@draft-loop/application";
 
 import type { ApplicationSummaryView } from "../application-contract.js";
-import type { WorkspaceReadiness } from "../model.js";
 
 /**
  * Host-side projection of job applications (ADR 0010).
@@ -47,12 +46,16 @@ export async function createApplicationSummary(
   service: ApplicationService,
   root: string,
   name: string,
-  jobText: string,
+  job: { readonly jobText: string } | { readonly jobUrl: string },
 ): Promise<ApplicationSummaryView> {
   const created = await service.createApplication({
     root,
     name,
-    jobSource: { kind: "pasted-text", text: jobText },
+    // The URL is stored with the person's approval to fetch it; nothing is fetched here.
+    jobSource:
+      "jobUrl" in job
+        ? { kind: "approved-url", url: job.jobUrl, approved: true }
+        : { kind: "pasted-text", text: job.jobText },
   });
   return projectApplication(created);
 }
@@ -85,42 +88,39 @@ export async function resolveApplicationScope(
   };
 }
 
-const jobStepPatterns = [/job description/iu, /role content/iu];
+/** Where a created application's readiness reads its job from. */
+export interface ApplicationReadinessScope {
+  /** The stored job document (relative to the workspace or absolute); undefined for a URL job. */
+  readonly jobDescriptionPath: string | undefined;
+  /** True when the job is a URL: only an extracted and reviewed brief supplies its text. */
+  readonly jobFromUrl: boolean;
+}
+
+export const urlJobBriefStep =
+  "Extract and review requirements from this application's job posting before starting.";
 
 /**
- * Readiness for an application other than the default one. The workspace-level readiness reads
- * the workspace's own job file and reviewed brief, which belong to the default application, so a
- * created application is ready on its stored job text and starts from it, not from that brief.
+ * Readiness of a created application is computed from its own job and its own reviewed brief, not
+ * the workspace's `job.md` and brief, which belong to the default application.
  */
-export function scopeSetupToApplication(
-  setup: WorkspaceReadiness,
-  application: ApplicationView,
-): WorkspaceReadiness {
-  const jobReady = application.jobSource.kind !== "approved-url";
-  const nextSteps = setup.nextSteps.filter(
-    (step) =>
-      step !== setup.jobRequirementProblem &&
-      !jobStepPatterns.some((pattern) => pattern.test(step)),
-  );
-  if (!jobReady) {
-    nextSteps.unshift(
-      "Create and review an opportunity brief for this application's job posting before starting.",
-    );
-  }
-  const retrievalStatus =
-    setup.retrievalStatus === "no-query" ? "not-indexed" : setup.retrievalStatus;
+export function applicationReadinessScope(application: ApplicationView): ApplicationReadinessScope {
+  const source = application.jobSource;
   return {
-    ...setup,
-    jobDescriptionReady: jobReady,
-    reviewedOpportunity: null,
-    pendingWritingPolicyOverride: null,
-    jobRequirementProblem: null,
-    retrievalStatus,
-    nextSteps,
-    ready:
-      jobReady &&
-      setup.evidenceSourceCount > 0 &&
-      setup.writingPolicyStatus !== "unavailable" &&
-      retrievalStatus !== "unavailable",
+    jobDescriptionPath:
+      source.kind === "pasted-text"
+        ? source.storedPath
+        : source.kind === "local-file"
+          ? source.path
+          : undefined,
+    jobFromUrl: source.kind === "approved-url",
   };
+}
+
+/**
+ * The approved URL a created application's job points at, for the host only: it is handed to the
+ * extraction as an approved-url source and never crosses the bridge.
+ */
+export function applicationJobUrl(application: ApplicationView): string | undefined {
+  const source = application.jobSource;
+  return source.kind === "approved-url" && source.approved ? source.url : undefined;
 }

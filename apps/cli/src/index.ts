@@ -1853,6 +1853,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .requiredOption("--input <path>", "JSON file containing id and sources")
     .option("--allow-provider-data", "explicitly approve structured provider extraction")
+    .option("--application <id>", "bind the brief to this application (see `application list`)")
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const input = await readJsonObject(options.input as string, "Opportunity input");
       if (typeof input.id !== "string" || !Array.isArray(input.sources)) {
@@ -1863,6 +1864,9 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         id: input.id,
         sources: input.sources as OpportunitySourceInput[],
         ...(typeof input.createdAt === "string" ? { createdAt: input.createdAt } : {}),
+        ...(options.application === undefined
+          ? {}
+          : { applicationId: options.application as string }),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
       writeJson(io, record);

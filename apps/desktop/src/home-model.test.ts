@@ -12,7 +12,7 @@ import {
   homeView,
   isHomeView,
   loadHomeProfileStatus,
-  newApplicationProblem,
+  newApplicationView,
   onlyDefaultApplication,
   profileStatusPresentation,
   profileView,
@@ -51,6 +51,11 @@ describe("workspace navigation", () => {
     });
     expect(isHomeView(applicationView("app-1", "Acme"))).toBe(false);
     expect(isHomeView(profileView)).toBe(false);
+  });
+
+  it("opens the guided New application flow as its own view", () => {
+    expect(newApplicationView).toEqual({ kind: "new-application" });
+    expect(isHomeView(newApplicationView)).toBe(false);
   });
 });
 
@@ -239,13 +244,5 @@ describe("application list wording", () => {
     ]);
     expect(onlyDefaultApplication([old])).toBe(true);
     expect(onlyDefaultApplication([old, recent])).toBe(false);
-  });
-});
-
-describe("new application draft", () => {
-  it("asks for a name, then the job text", () => {
-    expect(newApplicationProblem({ name: " ", jobText: "x" })).toMatch(/Name/u);
-    expect(newApplicationProblem({ name: "Acme", jobText: " \n" })).toMatch(/job description/u);
-    expect(newApplicationProblem({ name: "Acme", jobText: "x" })).toBeNull();
   });
 });

@@ -161,3 +161,86 @@ describe("application scope on existing commands", () => {
     ).toThrow();
   });
 });
+
+describe("application-scoped opportunity commands", () => {
+  const source = {
+    id: "workspace-job-description",
+    kind: "workspace-job-description",
+    classification: "job-posting",
+  };
+  const commands = [
+    {
+      type: "opportunity.create",
+      input: {
+        workspaceId: "w",
+        sources: [source],
+        providerTransmissionApproved: true,
+        applicationId: "app-1",
+      },
+    },
+    { type: "opportunity.latest", input: { workspaceId: "w", applicationId: "app-1" } },
+    {
+      type: "opportunity.edit",
+      input: {
+        workspaceId: "w",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: { issues: [] },
+        applicationId: "app-1",
+      },
+    },
+    {
+      type: "opportunity.review",
+      input: { workspaceId: "w", briefId: "brief-1", expectedVersion: 1, applicationId: "app-1" },
+    },
+  ] as const;
+
+  it("accepts an application id on create, latest, edit and review unchanged", () => {
+    for (const command of commands) {
+      expect(validateBridgeCommand(command)).toEqual(command);
+    }
+  });
+
+  it("still accepts the same commands without an application id", () => {
+    for (const { type, input } of commands) {
+      const { applicationId: _omitted, ...workspaceLevel } = input;
+      expect(validateBridgeCommand({ type, input: workspaceLevel })).toEqual({
+        type,
+        input: workspaceLevel,
+      });
+    }
+  });
+
+  it("rejects an unsafe application id", () => {
+    for (const { type, input } of commands) {
+      expect(() =>
+        validateBridgeCommand({ type, input: { ...input, applicationId: "../escape" } }),
+      ).toThrow();
+    }
+  });
+});
+
+describe("application.create job source", () => {
+  const base = { workspaceId: "w", name: "Acme" };
+
+  it("accepts an approved URL in place of pasted text", () => {
+    const create = {
+      type: "application.create",
+      input: { ...base, jobUrl: "https://jobs.example.test/1", jobUrlApproved: true },
+    };
+    expect(validateBridgeCommand(create)).toEqual(create);
+  });
+
+  it("requires approval and exactly one job source", () => {
+    for (const input of [
+      { ...base, jobUrl: "https://jobs.example.test/1" },
+      { ...base, jobUrl: "https://jobs.example.test/1", jobUrlApproved: false },
+      { ...base, jobUrl: "https://jobs.example.test/1", jobUrlApproved: true, jobText: "x" },
+      { ...base, jobText: "x", jobUrlApproved: true },
+      { ...base, jobUrl: "javascript:alert(1)", jobUrlApproved: true },
+      base,
+    ]) {
+      expect(() => validateBridgeCommand({ type: "application.create", input })).toThrow();
+    }
+  });
+});

@@ -2118,6 +2118,8 @@ export interface OpportunityCreateInput {
   readonly sources: readonly OpportunityCreateSource[];
   /** Enables provider transmission only when explicitly set to true. */
   readonly providerTransmissionApproved?: boolean;
+  /** The application the brief belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
 }
 
 const opportunityCreateUrlSourceKeys = inputKeys<OpportunityCreateUrlSource>()([
@@ -2167,6 +2169,7 @@ const opportunityCreateKeys = inputKeys<OpportunityCreateInput>()([
   "workspaceId",
   "sources",
   "providerTransmissionApproved",
+  "applicationId",
 ]);
 
 /** Cancels the workspace's in-flight requirements extraction; nothing is saved. */
@@ -2196,9 +2199,10 @@ export interface OpportunityListInput {
   readonly briefId: string;
 }
 
-/** Asks for the workspace's most recent opportunity brief, draft or reviewed. */
+/** Asks for the most recent opportunity brief of an application (default: the workspace's). */
 export interface OpportunityLatestInput {
   readonly workspaceId: string;
+  readonly applicationId?: string;
 }
 
 export interface OpportunitySourcedTextInput {
@@ -2269,6 +2273,8 @@ export interface OpportunityEditInput {
   /** The latest version the editor read; stale writes are rejected by the app. */
   readonly expectedVersion: number;
   readonly patch: OpportunityEditPatch;
+  /** The application the brief belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
 }
 
 export interface OpportunityReviewInput {
@@ -2276,11 +2282,13 @@ export interface OpportunityReviewInput {
   readonly briefId: string;
   /** The latest version the reviewer read; stale reviews are rejected by the app. */
   readonly expectedVersion: number;
+  /** The application the brief belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
 }
 
 const opportunityGetKeys = inputKeys<OpportunityGetInput>()(["workspaceId", "briefId", "version"]);
 const opportunityListKeys = inputKeys<OpportunityListInput>()(["workspaceId", "briefId"]);
-const opportunityLatestKeys = inputKeys<OpportunityLatestInput>()(["workspaceId"]);
+const opportunityLatestKeys = inputKeys<OpportunityLatestInput>()(["workspaceId", "applicationId"]);
 const opportunitySourcedTextKeys = inputKeys<OpportunitySourcedTextInput>()(["value", "sourceIds"]);
 const opportunityResponsibilityKeys = inputKeys<OpportunityResponsibilityInput>()([
   "id",
@@ -2325,11 +2333,13 @@ const opportunityEditKeys = inputKeys<OpportunityEditInput>()([
   "briefId",
   "expectedVersion",
   "patch",
+  "applicationId",
 ]);
 const opportunityReviewKeys = inputKeys<OpportunityReviewInput>()([
   "workspaceId",
   "briefId",
   "expectedVersion",
+  "applicationId",
 ]);
 
 export interface OpportunitySourceResult {
@@ -4232,9 +4242,17 @@ function validateApplicationGetInput(value: unknown): ApplicationGetInput {
 function validateApplicationCreateInput(value: unknown): ApplicationCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, applicationCreateKeys)) return invalidInput();
+  const workspaceId = identifier(input.workspaceId);
+  const name = stringValue(input.name, 240);
+  // Exactly one job source, and a URL only with the person's approval to fetch it.
+  if (input.jobUrl !== undefined) {
+    if (input.jobText !== undefined || input.jobUrlApproved !== true) return invalidInput();
+    return { workspaceId, name, jobUrl: urlValue(input.jobUrl), jobUrlApproved: true };
+  }
+  if (input.jobUrlApproved !== undefined) return invalidInput();
   return {
-    workspaceId: identifier(input.workspaceId),
-    name: stringValue(input.name, 240),
+    workspaceId,
+    name,
     jobText: proseValue(input.jobText, maximumApplicationJobTextLength),
   };
 }
@@ -4466,10 +4484,12 @@ function validateOpportunityCreateInput(value: unknown): OpportunityCreateInput 
   const providerTransmissionApproved = optionalBooleanValue(input.providerTransmissionApproved);
   const sources = input.sources.map(validateOpportunityCreateSource);
   if (new Set(sources.map((source) => source.id)).size !== sources.length) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     workspaceId: identifier(input.workspaceId),
     sources,
     ...(providerTransmissionApproved === undefined ? {} : { providerTransmissionApproved }),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
 }
 
@@ -4638,27 +4658,35 @@ function validateOpportunityListInput(value: unknown): OpportunityListInput {
 function validateOpportunityLatestInput(value: unknown): OpportunityLatestInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, opportunityLatestKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId) };
+  const applicationId = optionalIdentifier(input.applicationId);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    ...(applicationId === undefined ? {} : { applicationId }),
+  };
 }
 
 function validateOpportunityEditInput(value: unknown): OpportunityEditInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, opportunityEditKeys)) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     workspaceId: identifier(input.workspaceId),
     briefId: identifier(input.briefId),
     expectedVersion: opportunityVersion(input.expectedVersion),
     patch: validateOpportunityEditPatch(input.patch),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
 }
 
 function validateOpportunityReviewInput(value: unknown): OpportunityReviewInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, opportunityReviewKeys)) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     workspaceId: identifier(input.workspaceId),
     briefId: identifier(input.briefId),
     expectedVersion: opportunityVersion(input.expectedVersion),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
 }
 

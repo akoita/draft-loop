@@ -13,10 +13,12 @@ import { HomeScreen, ProfileScreen, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
   homeView,
+  newApplicationView,
   profileView,
   type WorkspaceView,
   workspaceEntryView,
 } from "./home-model.js";
+import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import type {
   CandidateProfileSelection,
@@ -52,6 +54,7 @@ import {
   type DesktopSetupPort,
   type WorkspaceModelSelection,
 } from "./native.js";
+import { NewApplicationFlow } from "./new-application-flow.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import { RecentWorkspaces } from "./recent-workspaces-ui.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
@@ -1591,6 +1594,68 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       });
   };
 
+  /** Scopes the window to the application the New application flow just created. */
+  const onApplicationCreated = (application: ApplicationSummaryView) => {
+    if (state === null) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    activePort.selectApplication?.(application.id);
+    void activePort
+      .load()
+      .then((loaded) => {
+        if (
+          isCurrentWorkspaceContext(workspaceId, generation) &&
+          loaded.workspaceId === workspaceId
+        ) {
+          setState(loaded);
+          setLoadedApplicationId(application.id);
+        }
+      })
+      .catch(() => undefined);
+  };
+
+  /**
+   * Starts the first review of a new application from its reviewed brief and the selected
+   * reviewed profile, then opens the application's review. Rejects with the message to show.
+   */
+  const startNewApplication = async (
+    application: ApplicationSummaryView,
+    acknowledgeFingerprint: string | null,
+  ): Promise<void> => {
+    if (state === null) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    const profile = selectedCandidateProfile;
+    if (profile === null) throw new Error(candidateProfileStartBlockerMessage);
+    if (knowledgePendingRef.current) throw new Error(candidateKnowledgePendingBlockerMessage);
+    try {
+      let current = state;
+      if (acknowledgeFingerprint !== null) {
+        current = await activePort.dispatch(current, {
+          type: "acknowledge-provider-transmission",
+          fingerprint: acknowledgeFingerprint,
+        });
+      }
+      const next = await activePort.dispatch(
+        current,
+        reviewActionWithModelProfiles(
+          { type: "start", candidateProfile: profile },
+          selectedModelProfiles?.refs ?? null,
+        ),
+      );
+      if (!isCurrentWorkspaceContext(workspaceId, generation) || next.workspaceId !== workspaceId) {
+        return;
+      }
+      setImportError(null);
+      setState(next);
+      setLoadedApplicationId(application.id);
+      setView(applicationView(application.id, application.name));
+    } catch (reason: unknown) {
+      if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+      throw reason;
+    }
+  };
+
   const openProfileScreen = (focusEvidence: boolean) => {
     focusEvidenceOnOpen.current = focusEvidence;
     setView(profileView);
@@ -2220,6 +2285,51 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const homeAvailable = activePort.listApplications !== undefined;
   const applicationOpen = homeAvailable && view.kind === "application";
 
+  const jobRequirementsBinding: JobRequirementsExtractionBinding = {
+    workspaceId: state.workspaceId,
+    ...(activePort.createOpportunity === undefined
+      ? {}
+      : { createOpportunity: activePort.createOpportunity }),
+    ...(activePort.cancelOpportunityExtraction === undefined
+      ? {}
+      : { cancelOpportunityExtraction: activePort.cancelOpportunityExtraction }),
+    ...(activePort.getOpportunity === undefined
+      ? {}
+      : { getOpportunity: activePort.getOpportunity }),
+    ...(activePort.getLatestOpportunity === undefined
+      ? {}
+      : { getLatestOpportunity: activePort.getLatestOpportunity }),
+    ...(activePort.editOpportunity === undefined
+      ? {}
+      : { editOpportunity: activePort.editOpportunity }),
+    ...(activePort.reviewOpportunity === undefined
+      ? {}
+      : { reviewOpportunity: activePort.reviewOpportunity }),
+    // The reviewed-brief selection lives in the loaded setup state, so reload it.
+    onBriefChanged: () => {
+      const workspaceId = state.workspaceId;
+      const generation = workspaceGeneration;
+      void activePort
+        .load()
+        .then((loaded) => {
+          if (
+            isCurrentWorkspaceContext(workspaceId, generation) &&
+            loaded.workspaceId === workspaceId
+          ) {
+            setState(loaded);
+          }
+        })
+        .catch(() => undefined);
+    },
+    writingModel: state.providerTransmissionPreflight.author,
+    disabled:
+      busy ||
+      knowledgePending ||
+      profilePendingForActiveWorkspace ||
+      pendingReviewAction !== null ||
+      state.execution.status === "running",
+  };
+
   if (homeAvailable && view.kind === "home") {
     return (
       <HomeScreen
@@ -2233,6 +2343,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         applicationCapabilities={activePort}
         errorMessage={importError}
         disabled={modelSettingsDisabled}
+        {...(activePort.createApplication === undefined
+          ? {}
+          : { onNewApplication: () => setView(newApplicationView) })}
         onOpenApplication={openApplication}
         onManageProfile={() => openProfileScreen(false)}
         onManageEvidence={() => openProfileScreen(true)}
@@ -2251,6 +2364,40 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             </div>
           </>
         }
+      />
+    );
+  }
+
+  const createApplication = activePort.createApplication;
+  if (homeAvailable && view.kind === "new-application" && createApplication !== undefined) {
+    return (
+      <NewApplicationFlow
+        workspaceId={state.workspaceId}
+        workspaceTitle={workspaceTitleNode}
+        workspaceNavigation={workspaceNavigationNode}
+        errorMessage={importError}
+        createApplication={(name, job) => createApplication(state.workspaceId, name, job)}
+        onCreated={onApplicationCreated}
+        requirements={jobRequirementsBinding}
+        profileCapabilities={activePort}
+        selectedProfile={selectedCandidateProfile}
+        onSelectProfile={onCandidateProfileSelectionChange}
+        onManageProfile={() => openProfileScreen(false)}
+        modelPair={
+          <WorkspaceModelSummary
+            title="Configured model pair"
+            author={state.providerTransmissionPreflight.author}
+            critic={state.providerTransmissionPreflight.critic}
+            appliedProfiles={selectedModelProfiles?.refs ?? null}
+            profileWarning={modelProfileWarningText}
+          />
+        }
+        preflight={state.providerTransmissionPreflight}
+        startDisabledReason={
+          knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason
+        }
+        onStart={startNewApplication}
+        onHome={goHome}
       />
     );
   }
@@ -2364,50 +2511,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 });
             },
           })}
-      jobRequirements={{
-        workspaceId: state.workspaceId,
-        ...(activePort.createOpportunity === undefined
-          ? {}
-          : { createOpportunity: activePort.createOpportunity }),
-        ...(activePort.cancelOpportunityExtraction === undefined
-          ? {}
-          : { cancelOpportunityExtraction: activePort.cancelOpportunityExtraction }),
-        ...(activePort.getOpportunity === undefined
-          ? {}
-          : { getOpportunity: activePort.getOpportunity }),
-        ...(activePort.getLatestOpportunity === undefined
-          ? {}
-          : { getLatestOpportunity: activePort.getLatestOpportunity }),
-        ...(activePort.editOpportunity === undefined
-          ? {}
-          : { editOpportunity: activePort.editOpportunity }),
-        ...(activePort.reviewOpportunity === undefined
-          ? {}
-          : { reviewOpportunity: activePort.reviewOpportunity }),
-        // The reviewed-brief selection lives in the loaded setup state, so reload it.
-        onBriefChanged: () => {
-          const workspaceId = state.workspaceId;
-          const generation = workspaceGeneration;
-          void activePort
-            .load()
-            .then((loaded) => {
-              if (
-                isCurrentWorkspaceContext(workspaceId, generation) &&
-                loaded.workspaceId === workspaceId
-              ) {
-                setState(loaded);
-              }
-            })
-            .catch(() => undefined);
-        },
-        writingModel: state.providerTransmissionPreflight.author,
-        disabled:
-          busy ||
-          knowledgePending ||
-          profilePendingForActiveWorkspace ||
-          pendingReviewAction !== null ||
-          state.execution.status === "running",
-      }}
+      jobRequirements={jobRequirementsBinding}
       careerEvidence={{
         workspaceId: state.workspaceId,
         capabilities: activePort,

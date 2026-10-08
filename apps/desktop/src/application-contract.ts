@@ -44,11 +44,18 @@ export interface ApplicationGetInput {
   readonly applicationId: string;
 }
 
-/** Creates an application from pasted job text; the host stores the text inside the workspace. */
+/**
+ * Creates an application from pasted job text or from an approved job URL; give exactly one of
+ * them. The host stores pasted text inside the workspace. A URL is stored with the approval and
+ * fetched only when requirements are extracted, behind the extraction's own consent step.
+ */
 export interface ApplicationCreateInput {
   readonly workspaceId: string;
   readonly name: string;
-  readonly jobText: string;
+  readonly jobText?: string;
+  readonly jobUrl?: string;
+  /** Must be `true` with a `jobUrl`: the person approved fetching that page. */
+  readonly jobUrlApproved?: boolean;
 }
 
 export interface ApplicationListResult {
@@ -79,6 +86,8 @@ export const applicationCreateKeys = exactKeys<ApplicationCreateInput>()([
   "workspaceId",
   "name",
   "jobText",
+  "jobUrl",
+  "jobUrlApproved",
 ]);
 const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "id",
