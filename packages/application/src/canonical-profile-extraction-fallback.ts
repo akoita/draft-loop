@@ -50,7 +50,7 @@ import { CliUserError } from "./cli-user-error.js";
 const maximumFocusedSourceCount = 4;
 const outputName = "canonical_candidate_profile_extraction";
 const focusInstructions =
-  "This is a bounded focused extraction call. Extract all supported facts from the source whose ID is input.extractionFocusSourceId. Keep every supplied source available as conflict context; include facts from another source only when they are grounded counterfacts needed for a conflict or duplicate issue that includes a fact from the focused source. Use concise exact contiguous evidence quotes containing the entire fact value and necessary factual context, rather than repeating unrelated surrounding paragraphs. Preserve the same evidence, unique-key, and schema rules. Do not invent counterfacts.";
+  "This is a bounded focused extraction call. Extract all supported entry-level facts (one fact per source entry, keeping its numbers and context together) from the source whose ID is input.extractionFocusSourceId. Keep every supplied source available as conflict context; include facts from another source only when they are grounded counterfacts needed for a conflict or duplicate issue that includes a fact from the focused source. Use concise exact contiguous evidence quotes containing the entire fact value and necessary factual context, rather than repeating unrelated surrounding paragraphs. Preserve the same evidence, unique-key, and schema rules. Do not invent counterfacts.";
 
 export interface CanonicalProfileExtractionExecutor {
   readonly execute: (request: ModelRequest<JsonObject>) => Promise<ModelResponse<JsonObject>>;
