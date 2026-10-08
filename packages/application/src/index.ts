@@ -17,6 +17,10 @@ import type {
   OpportunityBriefVersionRecord,
 } from "@draft-loop/storage";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
+import type {
+  CandidateProfileFreshness,
+  CandidateProfileFreshnessCommand,
+} from "./candidate-profile-freshness.js";
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
@@ -470,6 +474,10 @@ export interface ApplicationDriver {
   readonly listCanonicalCandidateProfileVersions: (
     command: ListCanonicalCandidateProfileVersionsCommand,
   ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
+  /** Whether the profile is current with the career evidence; offered by the local driver. */
+  readonly getCandidateProfileFreshness?: (
+    command: CandidateProfileFreshnessCommand,
+  ) => Promise<CandidateProfileFreshness>;
   readonly editCanonicalCandidateProfile: (
     command: EditCanonicalCandidateProfileCommand,
   ) => Promise<CanonicalCandidateProfileVersionRecord>;
@@ -615,6 +623,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.getCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
     listCanonicalCandidateProfileVersions: async (command) =>
       driver.listCanonicalCandidateProfileVersions({ ...command, root: requireRoot(command.root) }),
+    getCandidateProfileFreshness: async (command) =>
+      requireApplicationApi(driver.getCandidateProfileFreshness)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
     editCanonicalCandidateProfile: async (command) =>
       driver.editCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
     reviewCanonicalCandidateProfile: async (command) =>
@@ -657,6 +670,7 @@ export function createApplicationService(driver: ApplicationDriver): Application
 export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
 export * from "./candidate-profile-extraction.js";
+export * from "./candidate-profile-freshness.js";
 export * from "./candidate-profile-persistence.js";
 export type {
   CanonicalProfileExtractionProgress,

@@ -238,8 +238,9 @@ applications:
   pages, with the current step marked.
 - **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
   (generation saved no facts), or Not yet generated. **Manage profile** opens
-  the Career profile page. A slot beside the status is reserved for profile
-  freshness.
+  the Career profile page. A freshness line under the status says whether the
+  profile is current with the career evidence; see
+  [Profile freshness](#profile-freshness).
 - **Career evidence.** The selected knowledge base, its source count and
   readiness, or an empty state with **Add career evidence**. **Manage evidence**
   opens the Career evidence page.
@@ -249,6 +250,31 @@ applications:
   to **New application**.
 - **Workspace settings.** The configured model pair with **Change models**, and
   the writing policy editor.
+
+#### Profile freshness
+
+The Career profile card carries one line. Where the card's own button does not
+already cover it, the line adds an action that opens the Career profile page.
+Home never starts generation itself.
+
+| Line | When | Action |
+|---|---|---|
+| Up to date with your career evidence | The newest version is reviewed and its recorded evidence selection matches the current one. | None |
+| Career evidence changed: 2 new, 1 updated source | Sources were added, replaced by a new version, or retired since that version. Counts show new, updated and retired sources. | **Update profile** |
+| Draft version N awaiting your review | The newest version is an unreviewed draft. | None; the card's **Review profile** button acts |
+| Not generated yet | No version exists. | None; the card's **Generate profile** button acts |
+
+Nothing is shown while the profile is loading, unreadable or a failed
+generation, or when the evidence selection cannot be read.
+
+The application layer computes this as `getCandidateProfileFreshness`
+(`candidate-profile-freshness.ts`), and the desktop bridge exposes it as the
+read-only `profile.freshness` command. A source is the same source across
+versions, matched by knowledge store, base and source id, so a new version of a
+source counts as updated rather than as one new and one retired. The answer is
+a state and counts only: no source names, ids, text or paths. Home asks the host
+only when the newest version is reviewed, because it already knows the other
+two states from the saved profile list.
 
 Two pages sit behind the cards, each with **← Home**, a one-sentence intro and a
 link to the other page:

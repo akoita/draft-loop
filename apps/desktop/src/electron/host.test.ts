@@ -7600,6 +7600,56 @@ describe("candidate knowledge native controls", () => {
     expect(chooseFiles).not.toHaveBeenCalled();
   });
 
+  it("answers profile freshness with a state and counts, never paths or source names", async () => {
+    const root = "/local/profile-freshness";
+    const fixture = service(root);
+    const freshness = vi.fn(async () => ({
+      state: "update-available" as const,
+      version: 3,
+      newSourceCount: 2,
+      changedSourceCount: 1,
+      removedSourceCount: 0,
+    }));
+    const host = createNativeHost({
+      applicationService: { ...fixture.service, getCandidateProfileFreshness: freshness },
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const answer = await host.invoke({
+      type: "profile.freshness",
+      input: { workspaceId: "workspace-native", profileId: "profile-native" },
+    });
+
+    expect(answer).toEqual({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        state: "update-available",
+        version: 3,
+        reviewedVersion: null,
+        newSourceCount: 2,
+        changedSourceCount: 1,
+        removedSourceCount: 0,
+      },
+    });
+    expect(freshness).toHaveBeenCalledWith({ root, profileId: "profile-native" });
+    expect(JSON.stringify(answer)).not.toContain(root);
+
+    const without = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await without.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    await expect(
+      without.invoke({
+        type: "profile.freshness",
+        input: { workspaceId: "workspace-native", profileId: "profile-native" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { state: "unavailable", version: null } });
+  });
+
   it("fails closed on malformed canonical profile history and stale errors", async () => {
     const root = "/local/profile-safety";
     const fixture = service(root);

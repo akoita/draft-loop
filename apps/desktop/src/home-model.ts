@@ -123,20 +123,30 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
   }
 }
 
+/** The newest saved profile of the workspace, classified, with its id for follow-up reads. */
+export interface HomeProfileReading {
+  readonly status: HomeProfileStatus;
+  /** Present when a saved profile exists. */
+  readonly profileId?: string;
+}
+
 /**
  * Reads the newest saved profile and classifies it. Generation failures are saved as an empty
  * draft with the recorded cause, so the version itself is read to tell "failed" from "draft".
  */
-export async function loadHomeProfileStatus(
+export async function readHomeProfile(
   capabilities: DesktopProfileCapabilities,
   workspaceId: string,
-): Promise<HomeProfileStatus> {
+): Promise<HomeProfileReading> {
   const listSummaries = capabilities.listCanonicalCandidateProfileSummaries;
-  if (listSummaries === undefined) return { kind: "unsupported" };
+  if (listSummaries === undefined) return { status: { kind: "unsupported" } };
   try {
     const newest = (await listSummaries(workspaceId))[0];
-    if (newest === undefined) return { kind: "none" };
-    if (newest.status === "reviewed") return { kind: "reviewed", version: newest.latestVersion };
+    if (newest === undefined) return { status: { kind: "none" } };
+    const { profileId } = newest;
+    if (newest.status === "reviewed") {
+      return { status: { kind: "reviewed", version: newest.latestVersion }, profileId };
+    }
     const read = capabilities.getCanonicalCandidateProfile;
     if (read !== undefined) {
       const record = await read(newest.profileId, newest.latestVersion);
@@ -146,13 +156,20 @@ export async function loadHomeProfileStatus(
         newest.profileId,
       );
       if (outcome.kind === "extraction-failure") {
-        return { kind: "failed", version: newest.latestVersion };
+        return { status: { kind: "failed", version: newest.latestVersion }, profileId };
       }
     }
-    return { kind: "draft", version: newest.latestVersion };
+    return { status: { kind: "draft", version: newest.latestVersion }, profileId };
   } catch {
-    return { kind: "unavailable" };
+    return { status: { kind: "unavailable" } };
   }
+}
+
+export async function loadHomeProfileStatus(
+  capabilities: DesktopProfileCapabilities,
+  workspaceId: string,
+): Promise<HomeProfileStatus> {
+  return (await readHomeProfile(capabilities, workspaceId)).status;
 }
 
 // -- Career evidence -------------------------------------------------------------------------

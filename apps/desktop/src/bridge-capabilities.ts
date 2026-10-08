@@ -63,6 +63,7 @@ export const bridgeCapabilities = [
   "profile.cancel",
   "profile.get",
   "profile.list",
+  "profile.freshness",
   "profile.edit",
   "profile.review",
   "profile.catalog",

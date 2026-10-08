@@ -65,17 +65,23 @@ function candidateSourceKey(
 }
 
 /** Source versions are immutable, so the version number and creation time pin the content. */
+export function sourceRevisionSignature(
+  source: CandidateKnowledgeSelectionSnapshot["entries"][number]["sources"][number],
+): string {
+  return JSON.stringify([
+    source.lifecycleRevision.version,
+    source.lifecycleRevision.createdAt,
+    source.lifecycleRevision.managed,
+  ]);
+}
+
 function snapshotRevisions(snapshot: CandidateKnowledgeSelectionSnapshot): Map<string, string> {
   const revisions = new Map<string, string>();
   for (const entry of snapshot.entries) {
     for (const source of entry.sources) {
       revisions.set(
         candidateSourceKey(entry.storeId, entry.knowledgeBaseId, source.sourceId, source.versionId),
-        JSON.stringify([
-          source.lifecycleRevision.version,
-          source.lifecycleRevision.createdAt,
-          source.lifecycleRevision.managed,
-        ]),
+        sourceRevisionSignature(source),
       );
     }
   }
