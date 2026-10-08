@@ -1,7 +1,7 @@
 import { maximumCanonicalCandidateProfileFactCount } from "@draft-loop/domain";
 import { type JsonObject, type ModelRequest, ProviderAdapterError } from "@draft-loop/providers";
 import type { CanonicalCandidateProfileExtractionProposal } from "@draft-loop/schemas";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type CanonicalCandidateProfileExtractionInput,
@@ -12,6 +12,7 @@ import { CandidateProfileGroundingError } from "./candidate-profile-grounding-di
 import { canonicalProfileBoundedCallInstructions } from "./canonical-profile-extraction-bounded-calls.js";
 import {
   type CanonicalProfileExtractionExecutor,
+  clearCanonicalProfileExtractionPartCache,
   executeCanonicalProfileExtractionWithFallback,
 } from "./canonical-profile-extraction-fallback.js";
 import { planCanonicalProfileExtractionCalls } from "./canonical-profile-extraction-plan.js";
@@ -34,7 +35,13 @@ const controls = {
   systemPrompt: "Original extraction prompt.",
   maxOutputTokens: 8192,
   dataPolicy,
+  // Existing scenarios assume calls run one after another; concurrency has its own tests.
+  concurrency: 1,
 };
+
+beforeEach(() => {
+  clearCanonicalProfileExtractionPartCache();
+});
 
 function source(id: string, text: string) {
   return { id, mediaType: "text/plain", checksum: "a".repeat(64), text };
@@ -1091,7 +1098,7 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect((result as unknown as { readonly facts: readonly unknown[] }).facts).toEqual([]);
   });
 
-  it("stops after one failed replacement for a planned call and returns nothing", async () => {
+  it("fails after one failed replacement and one planner retry for each planned call", async () => {
     const first = source("source-a", "TypeScript\n".repeat(5_000));
     const second = source("source-b", "React\n".repeat(5_000));
     const { calls, executor } = executorFor(() =>
@@ -1114,7 +1121,10 @@ describe("canonical profile extraction output-limit fallback", () => {
         controls,
       ),
     ).rejects.toBeInstanceOf(CandidateProfileGroundingError);
-    expect(calls).toHaveLength(2);
+    // Every part fails twice (initial and replacement), then again on the single planner retry.
+    expect(calls).toHaveLength(
+      (planCanonicalProfileExtractionCalls([first, second])?.length ?? 0) * 4,
+    );
   });
 
   it("keeps grounded facts, drops ungrounded ones across planned calls, and never makes a full-corpus request", async () => {
@@ -1293,7 +1303,7 @@ describe("canonical profile extraction output-limit fallback", () => {
   });
 
   it.each(["malformed", "truncation", "timeout"] as const)(
-    "discards earlier proactive batches after a later %s failure",
+    "fails the whole extraction after a later %s failure and one planner retry, returning no partial facts",
     async (failureKind) => {
       const first = material("source-a", "TypeScript\n".repeat(5_000));
       const second = material("source-b", "React\n".repeat(5_000));
@@ -1324,7 +1334,9 @@ describe("canonical profile extraction output-limit fallback", () => {
         input([first, second]),
       );
 
-      expect(calls).toHaveLength(2);
+      // The first part succeeds once; every other part is run, then retried once, and still fails.
+      const plannedCount = planCanonicalProfileExtractionCalls([first, second])?.length ?? 0;
+      expect(calls).toHaveLength(2 * plannedCount - 1);
       expect(result.facts).toEqual([]);
       expect(result.issues).toHaveLength(1);
       expect(JSON.stringify(result)).not.toContain("private timeout detail");

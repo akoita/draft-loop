@@ -4015,7 +4015,8 @@ describe("canonical candidate profile application API", () => {
         }),
       ).rejects.toThrow();
       expect(transport).toHaveBeenCalledTimes(2);
-      expect(cancelledProgress).toEqual([0, 1]);
+      // Parts run concurrently, so the first call is still in flight when the second aborts.
+      expect(cancelledProgress).toEqual([0]);
       await expect(
         driver.getCanonicalCandidateProfile({ root, profileId: "profile-progress-cancelled" }),
       ).resolves.toBeUndefined();

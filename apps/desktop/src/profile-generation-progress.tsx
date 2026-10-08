@@ -26,7 +26,8 @@ export function formatProfileGenerationPart(
 ): string | null {
   if (progress === undefined || progress.plannedCalls < 1) return null;
   if (progress.completedCalls >= progress.plannedCalls) return "Finishing…";
-  return `Part ${Math.max(progress.completedCalls, 0) + 1} of ${progress.plannedCalls}`;
+  // Parts run in parallel, so report finished parts rather than a "current" part.
+  return `${Math.max(progress.completedCalls, 0)} of ${progress.plannedCalls} parts done`;
 }
 
 /**
