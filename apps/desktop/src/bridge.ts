@@ -1140,6 +1140,13 @@ export interface KnowledgePortableBackupRestoreResult {
   readonly integrity: "integrity-verified-not-authenticity";
 }
 
+/**
+ * What adding a file did to the knowledge base: made a new source, appended a new version to the
+ * source the file came from, or found the same content already held and wrote nothing.
+ */
+export const knowledgeFileIntakeOutcomes = ["added", "new-version", "already-present"] as const;
+export type KnowledgeFileIntakeOutcome = (typeof knowledgeFileIntakeOutcomes)[number];
+
 export interface KnowledgeFileImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1148,6 +1155,8 @@ export interface KnowledgeFileImportResult {
   readonly versionId: string;
   readonly version: number;
   readonly created: boolean;
+  /** Absent from hosts that predate duplicate detection; `created` then tells new from reused. */
+  readonly outcome?: KnowledgeFileIntakeOutcome;
 }
 
 export interface KnowledgeDirectoryImportSourceResult {
@@ -1626,6 +1635,7 @@ const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
   "versionId",
   "version",
   "created",
+  "outcome",
 ]);
 const knowledgeDirectoryImportSourceResultKeys = resultKeys<KnowledgeDirectoryImportSourceResult>()(
   ["sourceId", "versionId", "version", "created"],
@@ -5984,6 +5994,13 @@ function normalizeKnowledgeFileWriteResult(value: unknown): KnowledgeFileImportR
   if (!hasOnlyKeys(result, knowledgeFileWriteResultKeys)) return invalidInput();
   const version = finiteInteger(result.version, 1_000_000);
   if (version === 0) return invalidInput();
+  const created = booleanValue(result.created);
+  const outcome =
+    result.outcome === undefined
+      ? undefined
+      : enumValue(result.outcome, knowledgeFileIntakeOutcomes);
+  // Nothing is written exactly when the content was already present.
+  if (outcome !== undefined && (outcome === "already-present") === created) return invalidInput();
   return {
     storeId: identifier(result.storeId),
     knowledgeBaseId: identifier(result.knowledgeBaseId),
@@ -5991,7 +6008,8 @@ function normalizeKnowledgeFileWriteResult(value: unknown): KnowledgeFileImportR
     kind: enumValue(result.kind, ["file"] as const),
     versionId: identifier(result.versionId),
     version,
-    created: booleanValue(result.created),
+    created,
+    ...(outcome === undefined ? {} : { outcome }),
   };
 }
 

@@ -79,6 +79,16 @@ describe("Career evidence setup card", () => {
     ).not.toContain(">Manage<");
   });
 
+  it("shows the already-in-Career-evidence notice after an identical file is added again", () => {
+    const html = render(
+      { ...selected, displayName: "Career evidence" },
+      { message: "Already in Career evidence. 3 sources, 3 ready." },
+    );
+    expect(html).toContain("Already in Career evidence. 3 sources, 3 ready.");
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain('role="alert"');
+  });
+
   it("targets the Manage career evidence heading", () => {
     expect(knowledgeStoreFocusTargetId).toBe("candidate-knowledge-heading");
   });

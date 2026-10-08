@@ -20,6 +20,7 @@ import {
   type EmbeddingModelService,
   environmentCredentialResolver,
   type IndependentReviewRecord,
+  importKnowledgeFileWithoutDuplicates,
   isLoopbackEndpoint,
   JobRequirementUserError,
   localJobRequirements,
@@ -4185,14 +4186,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           if (sourcePath === undefined) {
             return fail("permission-denied", "Candidate knowledge file intake was cancelled.");
           }
-          const imported = await knowledgeService.importKnowledgeSourceFile({
-            storeRoot: root,
-            knowledgeBaseId: command.input.knowledgeBaseId,
-            sourcePath: resolve(sourcePath),
-            ...(command.input.displayName === undefined
-              ? {}
-              : { displayName: command.input.displayName }),
-          });
+          // The same file added from another workspace must not become a second source.
+          const { outcome, result: imported } = await importKnowledgeFileWithoutDuplicates(
+            knowledgeService,
+            {
+              storeRoot: root,
+              knowledgeBaseId: command.input.knowledgeBaseId,
+              sourcePath: resolve(sourcePath),
+              ...(command.input.displayName === undefined
+                ? {}
+                : { displayName: command.input.displayName }),
+            },
+          );
           const version = imported.versions.at(-1);
           if (
             imported.source.knowledgeBaseId !== command.input.knowledgeBaseId ||
@@ -4213,6 +4218,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             versionId: version.id,
             version: version.version,
             created: imported.created,
+            outcome,
           };
           return { ok: true, value: result };
         }

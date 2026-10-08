@@ -165,6 +165,18 @@ export type CareerEvidenceSource =
   | { readonly kind: "file" }
   | { readonly kind: "url"; readonly url: string };
 
+/** Says what adding the source did: new source, new version of one, or already there. */
+function careerEvidenceAddLead(
+  result: KnowledgeIntakeResult | KnowledgeUrlImportResult,
+  displayName: string,
+): string {
+  const outcome = "outcome" in result ? result.outcome : undefined;
+  if (outcome === "new-version") return `Added a new version of that file to ${displayName}.`;
+  const created =
+    outcome !== undefined ? outcome === "added" : !("created" in result) || result.created;
+  return created ? `Added to ${displayName}.` : `Already in ${displayName}.`;
+}
+
 export type CareerEvidenceAddOutcome =
   | { readonly status: "stale" }
   | { readonly status: "added"; readonly message: string };
@@ -224,10 +236,7 @@ export async function addCareerEvidence(input: {
   }
   if (!input.isCurrent()) return { status: "stale" };
 
-  const created = "created" in result ? result.created : true;
-  const lead = created
-    ? `Added to ${input.displayName}.`
-    : `That source was already in ${input.displayName}.`;
+  const lead = careerEvidenceAddLead(result, input.displayName);
   const counts =
     readiness === null
       ? " Readiness could not be checked."
