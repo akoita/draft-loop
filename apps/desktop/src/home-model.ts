@@ -14,9 +14,10 @@ import {
 import type { DesktopProfileCapabilities } from "./native.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
-/** What the workspace window shows: Home, the profile screen, the New application flow, or one application. */
+/** What the workspace window shows: Home, a career page, the New application flow, or one application. */
 export type WorkspaceView =
   | { readonly kind: "home" }
+  | { readonly kind: "evidence" }
   | { readonly kind: "profile" }
   | { readonly kind: "new-application" }
   | {
@@ -27,6 +28,7 @@ export type WorkspaceView =
     };
 
 export const homeView: WorkspaceView = Object.freeze({ kind: "home" });
+export const evidenceView: WorkspaceView = Object.freeze({ kind: "evidence" });
 export const profileView: WorkspaceView = Object.freeze({ kind: "profile" });
 export const newApplicationView: WorkspaceView = Object.freeze({ kind: "new-application" });
 

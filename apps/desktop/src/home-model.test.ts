@@ -9,6 +9,7 @@ import {
   applicationsByActivity,
   applicationView,
   evidencePresentation,
+  evidenceView,
   homeView,
   isHomeView,
   loadHomeProfileStatus,
@@ -51,6 +52,13 @@ describe("workspace navigation", () => {
     });
     expect(isHomeView(applicationView("app-1", "Acme"))).toBe(false);
     expect(isHomeView(profileView)).toBe(false);
+  });
+
+  it("keeps Career evidence and Career profile as two separate views", () => {
+    expect(evidenceView).toEqual({ kind: "evidence" });
+    expect(profileView).toEqual({ kind: "profile" });
+    expect(evidenceView).not.toEqual(profileView);
+    expect(isHomeView(evidenceView)).toBe(false);
   });
 
   it("opens the guided New application flow as its own view", () => {

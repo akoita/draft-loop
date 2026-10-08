@@ -5981,6 +5981,52 @@ input[type="checkbox"] {
   line-height: 1.55;
 }
 
+.home-card-subtitle {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* "Career evidence → Career profile → Applications": a compact strip with the current step marked. */
+.career-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.career-flow-step[aria-current="step"] {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.career-flow-arrow {
+  margin-right: var(--space-2);
+  color: var(--text-4);
+}
+
+.career-page-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.career-page-intro {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
 .home-card-actions {
   display: flex;
   flex-wrap: wrap;

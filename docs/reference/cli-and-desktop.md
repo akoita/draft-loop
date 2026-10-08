@@ -231,19 +231,35 @@ Home shows what the workspace holds once for the candidate, then its
 applications:
 
 - **Header.** The workspace name, with **Rename** and **Close workspace**.
+- **Flow strip.** "Career evidence → Career profile → Applications" shows how
+  the pieces relate: evidence is the raw material you provide, the profile is
+  the verified record DraftLoop extracts from it and you review once, and every
+  application reuses the reviewed version. The strip also tops both career
+  pages, with the current step marked.
 - **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
   (generation saved no facts), or Not yet generated. **Manage profile** opens
-  the existing profile workflow. A slot beside the status is reserved for
-  profile freshness.
+  the Career profile page. A slot beside the status is reserved for profile
+  freshness.
 - **Career evidence.** The selected knowledge base, its source count and
   readiness, or an empty state with **Add career evidence**. **Manage evidence**
-  opens the existing knowledge panel.
+  opens the Career evidence page.
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
   first. A workspace with nothing but its default application says so and points
   to **New application**.
 - **Workspace settings.** The configured model pair with **Change models**, and
   the writing policy editor.
+
+Two pages sit behind the cards, each with **← Home**, a one-sentence intro and a
+link to the other page:
+
+- **Career evidence page.** The knowledge panel (sources, add file, add
+  directory, store) and the retrieval mode and embedding model.
+- **Career profile page.** The profile workflow: generate or update, review
+  facts, saved profiles, version history and Re-extract all sources.
+
+The configured model pair is shown under Workspace settings on Home, not on
+these pages.
 
 Choosing a card opens that application. **New application** opens a guided
 flow, described next.
