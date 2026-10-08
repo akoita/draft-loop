@@ -603,9 +603,30 @@ conflicts remain visible for skills and certifications.
 Exact duplicate source contents are sent once per bounded group while every
 original source version remains attached to facts as local provenance.
 
+### Incremental derivation
+
+Derivation extracts only new or changed sources. It reuses the facts of
+unchanged source versions from the latest profile version, then recomputes
+duplicates, conflicts, and omissions over the merged facts. Reuse needs both of
+these conditions:
+
+- The latest version records the same extraction route (provider, model, prompt,
+  and extraction profile). Older versions without a recorded route are
+  extracted in full.
+- The source version is unchanged since that version, its knowledge base has no
+  sensitivity rules, and no earlier extraction error cites it.
+
+A fact is kept only when every source it cites is unchanged; the others are
+extracted again. When nothing changed, derivation makes no provider call and
+still saves a new version. The result reports `reusedSourceCount` and
+`extractedSourceCount`. Pass `--full-extraction`, or tick **Re-extract all
+sources** in the desktop, to extract every source again.
+
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
   --profile-id default-profile --allow-provider-data
+pnpm --filter @draft-loop/cli start profile derive ./workspace \
+  --profile-id default-profile --allow-provider-data --full-extraction
 pnpm --filter @draft-loop/cli start profile get ./workspace \
   --profile-id default-profile
 pnpm --filter @draft-loop/cli start profile edit ./workspace \

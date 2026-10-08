@@ -484,6 +484,63 @@ function mapProposal(
   return cloneAndFreeze({ facts, issues });
 }
 
+export interface ReconcileCanonicalCandidateProfileFactsInput {
+  /** Verified facts kept from an earlier profile version; they survive merges with new facts. */
+  readonly reusedFacts: readonly CanonicalCandidateProfileFact[];
+  /** Earlier-version issues that still hold, kept as they are. */
+  readonly carriedIssues: readonly CanonicalCandidateProfileIssue[];
+  /** Facts and issues from extracting only the new or changed sources. */
+  readonly extracted: CanonicalCandidateProfileExtractionResult;
+}
+
+/**
+ * Merge reused facts with newly extracted ones and recompute duplicate, conflict, and omission
+ * issues over the merged set. Issues the new extraction derived from its own facts alone are
+ * discarded; model-proposed and failure issues are kept with fact references following merges.
+ */
+export function reconcileCanonicalCandidateProfileFacts(
+  input: ReconcileCanonicalCandidateProfileFactsInput,
+): CanonicalCandidateProfileExtractionResult {
+  const derivedFromNewFactsOnly = new Set(
+    detectedIssues(input.extracted.facts).map((issue) => issue.id),
+  );
+  const { facts, aliasOf } = mergeIdenticalProfileFacts(
+    [...input.reusedFacts, ...input.extracted.facts],
+    maximumCanonicalCandidateProfileProvenanceCount,
+  );
+  if (facts.length > maximumCanonicalCandidateProfileFactCount) {
+    throw new CandidateProfileProposalValidationError([
+      { code: "profile_too_many_facts", count: 1 },
+    ]);
+  }
+  const carriedExtractionIssues = input.extracted.issues
+    .filter((issue) => !derivedFromNewFactsOnly.has(issue.id))
+    .map((issue) => {
+      const factIds = [...new Set(issue.factIds.map((id) => aliasOf.get(id) ?? id))];
+      return factIds.length === issue.factIds.length &&
+        factIds.every((id, index) => id === issue.factIds[index])
+        ? issue
+        : buildIssue(
+            issue.code,
+            factIds,
+            issue.sourceRefs,
+            undefined,
+            issue.severity,
+            issue.message,
+          );
+    });
+  const issues = uniqueSorted(
+    [...carriedExtractionIssues, ...input.carriedIssues, ...detectedIssues(facts)],
+    (issue) => issue.id,
+  );
+  if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
+    throw new CandidateProfileProposalValidationError([
+      { code: "profile_too_many_issues", count: 1 },
+    ]);
+  }
+  return cloneAndFreeze({ facts, issues });
+}
+
 function droppedFactsMessage(count: number): string {
   return `${count} extracted fact${count === 1 ? " was" : "s were"} dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.`;
 }

@@ -399,9 +399,14 @@ describe("canonical candidate profile representative-career acceptance", () => {
           fixture.workspace.id,
           "representative-career",
         );
-        expect(restarted).toEqual(saved);
+        const { reusedSourceCount, extractedSourceCount, ...stored } = saved;
+        expect({ reusedSourceCount, extractedSourceCount }).toEqual({
+          reusedSourceCount: 0,
+          extractedSourceCount: 1,
+        });
+        expect(restarted).toEqual(stored);
         expect(restarted === undefined ? undefined : JSON.stringify(restarted)).toBe(
-          JSON.stringify(saved),
+          JSON.stringify(stored),
         );
         expect(
           restarted === undefined

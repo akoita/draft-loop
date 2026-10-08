@@ -7308,6 +7308,39 @@ describe("candidate knowledge native controls", () => {
       await expect(host.invoke(progress)).resolves.toEqual({ ok: true, value: { active: false } });
     });
 
+    it("passes full extraction on and projects the reused and extracted source counts", async () => {
+      const { fixture, host } = await openHost();
+      fixture.service.deriveCanonicalCandidateProfile.mockResolvedValue({
+        ...(canonicalCandidateProfileRecord() as object),
+        reusedSourceCount: 3,
+        extractedSourceCount: 1,
+      } as never);
+
+      const incremental = await host.invoke(deriveCommand);
+      expect(fixture.service.deriveCanonicalCandidateProfile.mock.calls[0]?.[0]).not.toHaveProperty(
+        "fullExtraction",
+      );
+      expect(incremental).toMatchObject({
+        ok: true,
+        value: { reusedSourceCount: 3, extractedSourceCount: 1 },
+      });
+
+      await host.invoke({
+        type: "profile.derive",
+        input: { ...deriveCommand.input, fullExtraction: true },
+      });
+      expect(fixture.service.deriveCanonicalCandidateProfile.mock.calls[1]?.[0]).toMatchObject({
+        fullExtraction: true,
+      });
+
+      fixture.service.deriveCanonicalCandidateProfile.mockResolvedValue({
+        ...(canonicalCandidateProfileRecord() as object),
+        reusedSourceCount: -1,
+        extractedSourceCount: 1,
+      } as never);
+      await expect(host.invoke(deriveCommand)).resolves.toMatchObject({ ok: false });
+    });
+
     it("reports active without counts before the first report", async () => {
       const { fixture, host } = await openHost();
       let release: () => void = () => undefined;

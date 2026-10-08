@@ -26,7 +26,9 @@ import {
   type CanonicalCandidateProfileExtractionPort,
   maximumCanonicalCandidateProfileExtractionSourceCharacters,
   processCanonicalCandidateProfileExtraction,
+  reconcileCanonicalCandidateProfileFacts,
 } from "./candidate-profile-extraction.js";
+import { planIncrementalCanonicalProfileExtraction } from "./candidate-profile-incremental.js";
 import { candidateProfileSourceTooLargeMessage } from "./candidate-profile-input-error.js";
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
@@ -68,15 +70,23 @@ export interface DeriveCanonicalCandidateProfileCommand {
    * and `sensitive`); a workspace that allowed sensitive sections passes its own set.
    */
   readonly excludedSensitivityTiers?: ReadonlySet<SourceSensitivityTier>;
+  /**
+   * Extract every selected source again. By default only new or changed sources are extracted and
+   * the facts of unchanged source versions are reused from the latest profile version.
+   */
+  readonly fullExtraction?: boolean;
 }
 
 /** Optional derivation fields forwarded from the selection binding and the caller's command. */
 export function canonicalProfileDerivationOptions(
   binding: { readonly combinationApproved?: boolean },
-  command: Pick<DeriveCanonicalCandidateProfileCommand, "createdAt" | "signal" | "onProgress">,
+  command: Pick<
+    DeriveCanonicalCandidateProfileCommand,
+    "createdAt" | "signal" | "onProgress" | "fullExtraction"
+  >,
 ): Pick<
   DeriveCanonicalCandidateProfileCommand,
-  "combinationApproved" | "createdAt" | "signal" | "onProgress"
+  "combinationApproved" | "createdAt" | "signal" | "onProgress" | "fullExtraction"
 > {
   return {
     ...(binding.combinationApproved === undefined
@@ -85,6 +95,7 @@ export function canonicalProfileDerivationOptions(
     ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
     ...(command.signal === undefined ? {} : { signal: command.signal }),
     ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
+    ...(command.fullExtraction === undefined ? {} : { fullExtraction: command.fullExtraction }),
   };
 }
 
@@ -97,6 +108,10 @@ export interface CanonicalCandidateProfileDerivationResult
    * persisted; it is returned from the derivation only.
    */
   readonly sensitivityRulesApplied?: readonly CanonicalProfileSensitivityRulesApplied[];
+  /** Selected source versions whose facts came from the latest profile version unchanged. */
+  readonly reusedSourceCount: number;
+  /** Selected source versions sent for extraction in this derivation. */
+  readonly extractedSourceCount: number;
 }
 
 export interface CanonicalCandidateProfileDerivationService {
@@ -466,15 +481,34 @@ export function createCanonicalCandidateProfileDerivationService(
         throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
       }
 
-      const extracted =
-        materialization.materials.length === 0
+      const plan = planIncrementalCanonicalProfileExtraction({
+        latest: await dependencies.persistence.getLatestCanonicalCandidateProfile(
+          command.workspaceId,
+          command.profileId,
+        ),
+        identity: dependencies.extractionIdentity,
+        fullExtraction: command.fullExtraction === true,
+        snapshot,
+        materials: materialization.materials,
+        filteredKnowledgeBases: materialization.sensitivityRulesApplied,
+      });
+      const freshlyExtracted =
+        plan.materials.length === 0
           ? { facts: [], issues: [] }
           : await processCanonicalCandidateProfileExtraction(dependencies.extractor, {
               operationId: operationId(command.profileId, snapshot),
-              sources: materialization.materials,
+              sources: plan.materials,
               allowProviderData: true,
               ...(command.signal === undefined ? {} : { signal: command.signal }),
               ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
+            });
+      const extracted =
+        plan.reusedSourceCount === 0
+          ? freshlyExtracted
+          : reconcileCanonicalCandidateProfileFacts({
+              reusedFacts: plan.reusedFacts,
+              carriedIssues: plan.carriedIssues,
+              extracted: freshlyExtracted,
             });
       const issues = [
         ...extracted.issues,
@@ -546,9 +580,14 @@ export function createCanonicalCandidateProfileDerivationService(
         command.workspaceId,
         profile,
       );
-      return materialization.sensitivityRulesApplied.length === 0
-        ? saved
-        : { ...saved, sensitivityRulesApplied: materialization.sensitivityRulesApplied };
+      return {
+        ...saved,
+        ...(materialization.sensitivityRulesApplied.length === 0
+          ? {}
+          : { sensitivityRulesApplied: materialization.sensitivityRulesApplied }),
+        reusedSourceCount: plan.reusedSourceCount,
+        extractedSourceCount: plan.extractedSourceCount,
+      };
     } catch (error) {
       if (
         command.signal?.aborted === true ||

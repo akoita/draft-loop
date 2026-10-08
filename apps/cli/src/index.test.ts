@@ -935,6 +935,15 @@ describe("draft-loop canonical candidate profile commands", () => {
       "candidate-profile",
       "--allow-provider-data",
     );
+    await invoke(
+      "profile",
+      "derive",
+      "workspace",
+      "--profile-id",
+      "candidate-profile",
+      "--allow-provider-data",
+      "--full-extraction",
+    );
 
     expect(deriveCommands).toEqual([
       {
@@ -946,6 +955,12 @@ describe("draft-loop canonical candidate profile commands", () => {
         root: resolve("workspace"),
         profileId: "candidate-profile",
         allowProviderData: true,
+      },
+      {
+        root: resolve("workspace"),
+        profileId: "candidate-profile",
+        allowProviderData: true,
+        fullExtraction: true,
       },
     ]);
   });

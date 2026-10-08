@@ -1752,7 +1752,14 @@ function projectOpportunityRecord(workspaceId: string, value: unknown): Opportun
   };
 }
 
-const canonicalCandidateProfileRecordKeys = new Set(["workspaceId", "profile", "checksum"]);
+const canonicalCandidateProfileRecordKeys = new Set([
+  "workspaceId",
+  "profile",
+  "checksum",
+  "reusedSourceCount",
+  "extractedSourceCount",
+  "sensitivityRulesApplied",
+]);
 const canonicalCandidateProfileKeys = new Set([
   "schemaVersion",
   "id",
@@ -2051,7 +2058,27 @@ function projectCanonicalCandidateProfileRecord(
     checksum: value.checksum,
     facts,
     issues,
+    ...projectCanonicalCandidateProfileSourceCounts(value),
   };
+}
+
+/** Both counts of a fresh derivation, or neither; anything else is a malformed host answer. */
+function projectCanonicalCandidateProfileSourceCounts(
+  value: Record<string, unknown>,
+): Pick<CanonicalCandidateProfileRecordResult, "reusedSourceCount" | "extractedSourceCount"> {
+  const { reusedSourceCount, extractedSourceCount } = value;
+  if (reusedSourceCount === undefined && extractedSourceCount === undefined) return {};
+  if (
+    typeof reusedSourceCount !== "number" ||
+    typeof extractedSourceCount !== "number" ||
+    !Number.isSafeInteger(reusedSourceCount) ||
+    !Number.isSafeInteger(extractedSourceCount) ||
+    reusedSourceCount < 0 ||
+    extractedSourceCount < 0
+  ) {
+    return canonicalCandidateProfileFailure();
+  }
+  return { reusedSourceCount, extractedSourceCount };
 }
 
 function statusResult(
@@ -3071,6 +3098,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         root: workspace.root,
         profileId: input.profileId,
         allowProviderData: input.providerTransmissionApproved === true,
+        ...(input.fullExtraction === true ? { fullExtraction: true } : {}),
         signal: entry.controller.signal,
         onProgress: (progress) => {
           entry.completedCalls = progress.completedCalls;

@@ -2137,6 +2137,58 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("accepts full extraction on profile.derive and the source counts on its result", async () => {
+    // The interface, the validator allowlist and the result allowlist each name these fields.
+    const derive = {
+      type: "profile.derive" as const,
+      input: { workspaceId: "workspace-1", profileId: "profile-1", fullExtraction: true },
+    };
+    expect(validateBridgeCommand(derive)).toEqual(derive);
+    expect(() =>
+      validateBridgeCommand({
+        ...derive,
+        input: { ...derive.input, fullExtraction: "yes" },
+      }),
+    ).toThrow("invalid");
+
+    const record = {
+      workspaceId: "workspace-1",
+      profileId: "profile-1",
+      version: 1,
+      parentVersion: null,
+      status: "draft",
+      createdAt: "2026-08-28T08:00:00.000Z",
+      updatedAt: "2026-08-28T08:00:00.000Z",
+      reviewedAt: null,
+      checksum: "a".repeat(64),
+      facts: [],
+      issues: [],
+    };
+    const respond = (value: unknown) =>
+      createCapabilityPort(bridge(async () => ({ ok: true, value }), ["profile.derive"])).execute(
+        derive,
+      );
+    await expect(
+      respond({ ...record, reusedSourceCount: 3, extractedSourceCount: 1 }),
+    ).resolves.toEqual({
+      ok: true,
+      value: { ...record, reusedSourceCount: 3, extractedSourceCount: 1 },
+    });
+    await expect(respond(record)).resolves.toEqual({ ok: true, value: record });
+    for (const drifted of [
+      { ...record, reusedSourceCount: 3 },
+      { ...record, reusedSourceCount: -1, extractedSourceCount: 1 },
+      { ...record, reusedSourceCount: 1.5, extractedSourceCount: 1 },
+      { ...record, reusedSourceCount: "3", extractedSourceCount: 1 },
+      { ...record, reusedSourceCount: 1, extractedSourceCount: 1, sourcePaths: ["/private"] },
+    ]) {
+      await expect(respond(drifted)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("validates and normalizes profile progress and cancel commands at runtime", async () => {
     const progress = {
       type: "profile.progress" as const,

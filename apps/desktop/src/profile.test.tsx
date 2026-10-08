@@ -17,6 +17,7 @@ import {
   ProfileGenerationAction,
   ProfileOutcomeFeedback,
   ProfileWorkspace,
+  profileSourceReuseSummary,
   SavedProfilePicker,
   safeCanonicalCandidateProfileText,
 } from "./profile.js";
@@ -481,6 +482,26 @@ describe("desktop canonical candidate profile", () => {
     expect(idle).toContain("Derive profile");
     expect(idle).not.toContain("Working…");
     expect(idle).not.toContain("Generating…");
+  });
+
+  it("offers re-extraction only where the caller handles it and summarizes source reuse", () => {
+    const outcome = projectCanonicalCandidateProfileOutcome(null, "profile-1", null);
+    const render = (extra: { onFullExtractionChange?: (value: boolean) => void }) =>
+      renderToStaticMarkup(
+        <ProfileGenerationAction
+          outcome={outcome}
+          profileIdValid
+          providerTransmissionApproved
+          busy={false}
+          onApprovalChange={() => undefined}
+          onDerive={() => undefined}
+          {...extra}
+        />,
+      );
+    expect(render({})).not.toContain("Re-extract all sources");
+    expect(render({ onFullExtractionChange: () => undefined })).toContain("Re-extract all sources");
+    expect(profileSourceReuseSummary(3, 1)).toBe("Reused 3 unchanged sources; extracted 1.");
+    expect(profileSourceReuseSummary(1, 0)).toBe("Reused 1 unchanged source; extracted 0.");
   });
 
   it("disables review for empty facts and for open warning issues", () => {
