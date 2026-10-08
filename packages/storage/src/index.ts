@@ -26,7 +26,6 @@ import {
   type RetrievalOptions,
   type RetrievalPort,
   type ScoredEvidenceChunk,
-  validateWritingPolicyInput,
   type WorkflowState,
   type WritingPolicy,
   workflowStates,
@@ -48,8 +47,8 @@ import {
   type OpportunityBrief,
   opportunityBriefSchema,
   type WritingPolicyInput,
-  writingPolicySchema,
 } from "@draft-loop/schemas";
+import * as applicationStore from "./application-store.js";
 import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
 import {
@@ -104,6 +103,7 @@ import {
   readEvidenceSource,
 } from "./chronology-evidence.js";
 import { evidenceQueryTerms, preferMultiTermEvidenceHits } from "./evidence-retrieval-precision.js";
+import { validatedWritingPolicy } from "./writing-policy-validation.js";
 
 export type {
   CandidateKnowledgeRetentionClass,
@@ -1327,7 +1327,7 @@ export class StorageUnavailableError extends Error {
   }
 }
 
-export const storageSchemaVersion = 29 as const;
+export const storageSchemaVersion = 30 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3298,6 +3298,7 @@ const migrations: readonly Migration[] = [
   sourceSensitivityRulesMigration,
   vectorIndex.candidateKnowledgeVectorIndexMigration,
   semanticTrace.semanticRetrievalTraceMigration,
+  applicationStore.applicationMigration,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3364,48 +3365,6 @@ function validatedOpportunityBrief(value: unknown): OpportunityBrief {
     throw new StorageValidationError("Opportunity brief data is invalid.");
   }
   return parsed.data;
-}
-
-function validatedWritingPolicy(value: unknown): WritingPolicy {
-  const parsed = writingPolicySchema.safeParse(value);
-  if (!parsed.success) {
-    throw new StorageValidationError("Writing policy data is invalid.");
-  }
-  const domainValidation = validateWritingPolicyInput(parsed.data);
-  if (!domainValidation.valid) {
-    throw new StorageValidationError("Writing policy data is invalid.");
-  }
-  const normalizedChecksum = parsed.data.checksum.toLowerCase();
-  if (checksum(parsed.data.content) !== normalizedChecksum) {
-    throw new StorageValidationError("The writing policy content checksum is invalid.");
-  }
-  const preferences = parsed.data.preferences;
-  return {
-    schemaVersion: parsed.data.schemaVersion,
-    content: parsed.data.content,
-    checksum: normalizedChecksum,
-    version: parsed.data.version,
-    ...(parsed.data.rules === undefined ? {} : { rules: parsed.data.rules }),
-    ...(preferences === undefined
-      ? {}
-      : {
-          preferences: {
-            ...(preferences.tone === undefined ? {} : { tone: preferences.tone }),
-            ...(preferences.spellingLocale === undefined
-              ? {}
-              : { spellingLocale: preferences.spellingLocale }),
-            ...(preferences.verbosity === undefined ? {} : { verbosity: preferences.verbosity }),
-            ...(preferences.pageTarget === undefined ? {} : { pageTarget: preferences.pageTarget }),
-            ...(preferences.sectionOrder === undefined
-              ? {}
-              : { sectionOrder: preferences.sectionOrder }),
-            ...(preferences.emphasisAreas === undefined
-              ? {}
-              : { emphasisAreas: preferences.emphasisAreas }),
-          },
-        }),
-    lineage: parsed.data.lineage ?? { kind: "workspace" },
-  };
 }
 
 function validatedCanonicalCandidateProfile(value: unknown): CanonicalCandidateProfile {
@@ -4185,6 +4144,11 @@ export class SqliteStorage
     return semanticTrace.createSemanticRetrievalTraceStorage(this.database, () =>
       this.ensureOpen(),
     );
+  }
+
+  /** Applications and their run and brief bindings; also available on read-only stores. */
+  public get applications() {
+    return applicationStore.createApplicationStorage(this.database, () => this.ensureOpen());
   }
 
   public constructor(filename: string, options: SqliteStorageOpenOptions = {}) {

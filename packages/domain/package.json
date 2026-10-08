@@ -14,6 +14,10 @@
     "./source-sensitivity": {
       "types": "./src/source-sensitivity.ts",
       "import": "./src/source-sensitivity.ts"
+    },
+    "./application": {
+      "types": "./src/application.ts",
+      "import": "./src/application.ts"
     }
   },
   "files": [

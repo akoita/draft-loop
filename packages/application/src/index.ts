@@ -20,6 +20,12 @@ import type { CanonicalCandidateProfileDerivationResult } from "./candidate-prof
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type {
+  ApplicationView,
+  CreateApplicationCommand,
+  GetApplicationCommand,
+  ListApplicationsCommand,
+} from "./workspace-applications.js";
 
 export type {
   EvidenceRetrievalInspection,
@@ -210,6 +216,8 @@ export interface StartRunCommand {
   readonly candidateProfile?: CandidateProfileSelection;
   /** Exact immutable policy history version for a reviewed opportunity override. */
   readonly writingPolicyOverrideChecksum?: string;
+  /** The application the run belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
 }
 
 export interface ModelProfileReference {
@@ -279,6 +287,8 @@ export interface CreateOpportunityCommand {
   readonly createdAt?: string;
   /** Aborting before the brief is saved stops the provider request and persists nothing. */
   readonly signal?: AbortSignal;
+  /** The application the brief belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
 }
 
 export interface GetOpportunityCommand {
@@ -492,6 +502,14 @@ export interface ApplicationDriver {
   readonly readRunWritingPolicy?: (
     command: ReadRunWritingPolicyCommand,
   ) => Promise<RunWritingPolicyProjection | undefined>;
+  /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
+  readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
+  readonly listApplications?: (
+    command: ListApplicationsCommand,
+  ) => Promise<readonly ApplicationView[]>;
+  readonly getApplication?: (
+    command: GetApplicationCommand,
+  ) => Promise<ApplicationView | undefined>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -506,6 +524,12 @@ const defaultIo: ApplicationIo = { write: () => undefined };
 function requireRoot(root: string): string {
   if (root.trim() === "") throw new Error("Application workspace root is required.");
   return root;
+}
+
+function requireApplicationApi<Method>(method: Method | undefined): Method {
+  if (method === undefined)
+    throw new Error("This application driver does not support applications.");
+  return method;
 }
 
 function normalizeIo(io: ApplicationIo | undefined): ApplicationIo {
@@ -608,6 +632,18 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunWritingPolicy === undefined
         ? undefined
         : driver.readRunWritingPolicy({ ...command, root: requireRoot(command.root) }),
+    createApplication: async (command) =>
+      requireApplicationApi(driver.createApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    listApplications: async (command) =>
+      requireApplicationApi(driver.listApplications)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    getApplication: async (command) =>
+      requireApplicationApi(driver.getApplication)({ ...command, root: requireRoot(command.root) }),
   };
   return Object.freeze(service);
 }
@@ -649,6 +685,7 @@ export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
 export * from "./source-sensitivity-service.js";
 export * from "./user-data-root.js";
+export * from "./workspace-applications.js";
 export * from "./workspace-evidence-mode.js";
 export * from "./workspace-evidence-mode-service.js";
 export * from "./workspace-model-profile-selection.js";

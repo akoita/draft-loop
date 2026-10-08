@@ -35,6 +35,8 @@ export type RunProviderAuthModeConfiguration = Readonly<
 /** Options shared by begin, start, and resume; profile references are start-only. */
 export interface RunOptions {
   readonly runId?: string;
+  /** The application the run belongs to; omitted means the workspace's default application. */
+  readonly applicationId?: string;
   readonly allowProviderData?: boolean;
   readonly opportunityBrief?: OpportunityBriefSelection;
   readonly candidateProfile?: CandidateProfileSelection;
@@ -75,9 +77,11 @@ export function projectStartRunOptions(
     | "candidateProfile"
     | "modelProfiles"
     | "writingPolicyOverrideChecksum"
+    | "applicationId"
   >,
 ): BeginStartRunOptions {
   return {
+    ...(command.applicationId === undefined ? {} : { applicationId: command.applicationId }),
     ...(command.allowProviderData === undefined
       ? {}
       : { allowProviderData: command.allowProviderData }),

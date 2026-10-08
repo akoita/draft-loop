@@ -7,7 +7,7 @@ import {
 } from "@draft-loop/application/model-profile-catalog";
 import { Command } from "commander";
 import packageJson from "../package.json";
-
+import { registerApplicationCommands } from "./application-commands.js";
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
 import {
   type EmbeddingModelServiceFactory,
@@ -1626,6 +1626,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       "exact reviewed candidate profile version",
       positiveIntegerOption,
     )
+    .option(
+      "--application <id>",
+      "run for this application (see `application list`); omitted means the default application built from job.md",
+    )
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
@@ -1660,6 +1664,9 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       await service.start({
         root: workspaceRoot(workspace),
         ...(modelProfiles === undefined ? {} : { modelProfiles }),
+        ...(options.application === undefined
+          ? {}
+          : { applicationId: options.application as string }),
         ...(hasBriefId
           ? {
               opportunityBrief: {
@@ -2791,6 +2798,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       ((modelRoot) => createEmbeddingModelService({ modelRoot })),
     io,
   );
+  registerApplicationCommands(command, service, io);
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,

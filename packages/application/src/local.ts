@@ -49,7 +49,6 @@ import {
   contextSnapshotSchema,
   opportunityExtractionProposalJsonSchema,
 } from "@draft-loop/schemas";
-import { redactText } from "@draft-loop/security";
 import {
   type CanonicalCandidateProfileVersionRecord,
   type EvidenceChunkRecord,
@@ -174,6 +173,7 @@ import { modelConfiguration } from "./run-model-selection.js";
 import { outputCoverageAssessments, outputEvents, outputSnapshot } from "./run-output.js";
 import { runSensitivityExclusions } from "./run-sensitivity-exclusions.js";
 import { excludedSensitivityTiersForWorkspace } from "./sensitive-knowledge-consent.js";
+import { resolveRunApplication, withWorkspaceApplications } from "./workspace-applications.js";
 import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
 import {
   assertModelCompaniesMatch,
@@ -1873,6 +1873,7 @@ async function createRun(
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
   let config = await readWorkspace(root);
+  const application = await resolveRunApplication(root, config, options);
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
   const resolvedModelProfiles = resolveRequestedRunModelProfiles(
@@ -1894,7 +1895,7 @@ async function createRun(
     options.opportunityBrief === undefined &&
     options.candidateProfile === undefined &&
     (config.writingPolicyChecksum === undefined || precompiledPolicy !== undefined)
-      ? await prepareInputs(root, config, undefined, precompiledPolicy)
+      ? await prepareInputs(root, application.withJob(config), undefined, precompiledPolicy)
       : undefined;
   const storage = await openStorage(root);
   try {
@@ -1953,7 +1954,7 @@ async function createRun(
       legacyInputs ??
       (await prepareInputs(
         root,
-        config,
+        application.withJob(config),
         opportunityRecord,
         effectivePolicy,
         candidateProfileReference,
@@ -1997,6 +1998,7 @@ async function createRun(
       `retrieval: status=${retrieval.status} indexedChunks=${retrieval.indexedChunkCount} selectedChunks=${retrieval.selectedChunkCount} selectedSources=${retrieval.selectedSourceCount}`,
     );
     const runId = `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    await application.bind(storage, config.id, runId);
     const runBudget = budget(config);
     writeRunPreflight(config, io.write, runBudget, inputs.context);
     await announceRunEvidenceMode(storage, candidateRetrieval, config.id, runId, io.write);
@@ -2785,7 +2787,7 @@ export function createLocalApplicationDriver(
       ? {}
       : { localClaudeCategoryCaptureParent: options.localClaudeCategoryCaptureParent }),
   };
-  return {
+  const driver: ApplicationDriver = {
     initialize: async (command, io) =>
       await workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
     readWorkspace: async (root) => workspaceDescriptor(resolve(root), await readWorkspace(root)),
@@ -3057,6 +3059,7 @@ export function createLocalApplicationDriver(
     readIndependentReview: async (command) => readRunIndependentReview(command.root, command.runId),
     readRunWritingPolicy: async (command) => readRunWritingPolicy(command),
   };
+  return withWorkspaceApplications(driver, { readWorkspace });
 }
 
 function pilotReportMarkdown(report: PilotReport): string {
@@ -3172,17 +3175,4 @@ export async function runPilot(
   return { report, reportPath };
 }
 
-export function safeErrorMessage(error: unknown): string {
-  if (error instanceof CliUserError) return error.message;
-  if (error instanceof Error) {
-    const redacted = redactText(error.message).value;
-    return redacted.length > 0 && redacted.length <= 240
-      ? redacted
-      : "The command could not be completed.";
-  }
-  return "The command could not be completed.";
-}
-
-export function workspaceRoot(value: string | undefined): string {
-  return resolve(value ?? process.cwd());
-}
+export { safeErrorMessage, workspaceRoot } from "./workspace-process.js";
