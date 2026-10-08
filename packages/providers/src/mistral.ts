@@ -119,7 +119,11 @@ function resolveSelectionControls(
   configured: ModelSelection,
   requested: ModelSelection,
   requestedMaxTokens: number | undefined,
-): { readonly modelId: string; readonly outputTokens: number } {
+): {
+  readonly modelId: string;
+  readonly outputTokens: number;
+  readonly reasoningEffort?: "none";
+} {
   const configuredData = modelSelectionSchema.safeParse(configured);
   const requestedData = modelSelectionSchema.safeParse(requested);
   if (
@@ -141,6 +145,7 @@ function resolveSelectionControls(
 
   const profile = requestedData.data.profile;
   let outputTokens = requestedMaxTokens ?? defaultMaxOutputTokens;
+  let reasoningEffort: "none" | undefined;
   if (profile !== undefined) {
     if (profile.provider !== mistralCompany || profile.modelId !== mistralLarge4ModelId) {
       throw invalidRequest(
@@ -148,9 +153,12 @@ function resolveSelectionControls(
         "profile_mismatch",
       );
     }
+    // Only provider-default (send nothing) and disabled thinking (`reasoningEffort: "none"`)
+    // are supported; the API accepts only `none` and `high`, and `low` returns 400.
     if (
-      profile.runtime.thinking.mode !== "provider-default" ||
-      profile.runtime.effort !== "provider-default"
+      profile.runtime.effort !== "provider-default" ||
+      (profile.runtime.thinking.mode !== "provider-default" &&
+        profile.runtime.thinking.mode !== "disabled")
     ) {
       throw invalidRequest(
         "This Mistral model does not support the selected thinking or effort control.",
@@ -167,12 +175,17 @@ function resolveSelectionControls(
       );
     }
     outputTokens = profile.runtime.maxOutputTokens;
+    if (profile.runtime.thinking.mode === "disabled") reasoningEffort = "none";
   }
 
   if (!Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > maxOutputTokens) {
     throw invalidRequest("The output-token budget is invalid.", "invalid_output_token_budget");
   }
-  return { modelId: requestedData.data.modelId, outputTokens };
+  return {
+    modelId: requestedData.data.modelId,
+    outputTokens,
+    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+  };
 }
 
 function compileOutputSchema(schema: JsonSchema): CompiledOutputSchema {
@@ -353,6 +366,9 @@ export class MistralAdapter<
         { role: "user", content: serializedInput },
       ],
       maxTokens: controls.outputTokens,
+      ...(controls.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: controls.reasoningEffort }),
       n: 1,
       stream: true,
       responseFormat: {

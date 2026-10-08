@@ -239,6 +239,51 @@ describe("Mistral adapter", () => {
     expect(strict.stream).not.toHaveBeenCalled();
   });
 
+  it("sends reasoningEffort none only for a disabled-thinking profile", async () => {
+    const profileWith = (
+      thinking: NonNullable<ModelSelection["profile"]>["runtime"]["thinking"],
+      effort: NonNullable<ModelSelection["profile"]>["runtime"]["effort"] = "provider-default",
+    ): NonNullable<ModelSelection["profile"]> => ({
+      id: "mistral-profile",
+      version: 1,
+      provider: mistralCompany,
+      modelId: mistralLarge4ModelId,
+      tier: "economy",
+      roles: ["author"],
+      runtime: { effort, maxOutputTokens: 8192, thinking },
+      knownLimits: { maxOutputTokens: 65_536, contextWindowTokens: 1_000_000 },
+    });
+
+    const disabled = selection({ profile: profileWith({ mode: "disabled" }) });
+    const extraction = harness(async () => completion(), { configuredModel: disabled });
+    await extraction.adapter.execute(request({ model: disabled }));
+    expect(extraction.stream.mock.calls[0]?.[0]).toMatchObject({
+      reasoningEffort: "none",
+      maxTokens: 8192,
+    });
+
+    const providerDefault = selection({ profile: profileWith({ mode: "provider-default" }) });
+    const author = harness(async () => completion(), { configuredModel: providerDefault });
+    await author.adapter.execute(request({ model: providerDefault }));
+    expect(author.stream.mock.calls[0]?.[0]).not.toHaveProperty("reasoningEffort");
+
+    const noProfile = harness(async () => completion());
+    await noProfile.adapter.execute(request());
+    expect(noProfile.stream.mock.calls[0]?.[0]).not.toHaveProperty("reasoningEffort");
+
+    for (const unsupported of [
+      profileWith({ mode: "disabled" }, "low"),
+      profileWith({ mode: "disabled" }, "high"),
+      profileWith({ mode: "budgeted", maxTokens: 1024 }),
+    ]) {
+      const model = selection({ profile: unsupported });
+      const strict = harness(async () => completion(), { configuredModel: model });
+      const error = await rejection(strict.adapter.execute(request({ model })));
+      expect(error.code).toBe("invalid-request");
+      expect(strict.stream).not.toHaveBeenCalled();
+    }
+  });
+
   it("rejects a mismatched model or policy before any transport call", async () => {
     const { adapter, stream } = harness(async () => completion());
     const model = await rejection(
