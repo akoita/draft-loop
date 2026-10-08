@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   isNewStoreFormRequest,
   knowledgeStoreFormPresentation,
+  reloadedKnowledgeAction,
   reloadStillValid,
   shouldApplyReloadedKnowledge,
+  showAutoCreateHint,
 } from "./knowledge-current.js";
 
 const created = { storeId: "default-store", ids: ["career-evidence"] };
@@ -50,6 +52,75 @@ describe("reloading the current knowledge base after a change elsewhere", () => 
     ).toBe(false);
     expect(
       reloadStillValid({ startedSequence: 2, currentSequence: 2, operationInFlight: true }),
+    ).toBe(false);
+  });
+});
+
+const sharedStore = { storeId: "shared-store" };
+
+describe("reloading a workspace bound to the shared store", () => {
+  it("applies the shared base the panel did not show before", () => {
+    expect(
+      reloadedKnowledgeAction({
+        userTouched: false,
+        shown: null,
+        loaded: { store: sharedStore, selectedKnowledgeBaseIds: ["career-evidence"] },
+      }),
+    ).toBe("apply");
+  });
+
+  it("says the saved selection could not be read instead of showing nothing", () => {
+    expect(
+      reloadedKnowledgeAction({
+        userTouched: false,
+        shown: null,
+        loaded: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      }),
+    ).toBe("mark-unavailable");
+  });
+
+  it("keeps what is shown when a reload cannot read the store", () => {
+    expect(
+      reloadedKnowledgeAction({
+        userTouched: true,
+        shown: { storeId: "shared-store", ids: ["career-evidence"] },
+        loaded: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      }),
+    ).toBe("ignore");
+  });
+
+  it("ignores a reload of a workspace with no saved selection", () => {
+    expect(
+      reloadedKnowledgeAction({
+        userTouched: false,
+        shown: null,
+        loaded: { store: null, selectedKnowledgeBaseIds: [] },
+      }),
+    ).toBe("ignore");
+  });
+
+  it("keeps the store the person opened when the selection is unchanged", () => {
+    expect(
+      reloadedKnowledgeAction({
+        userTouched: true,
+        shown: { storeId: "shared-store", ids: ["career-evidence"] },
+        loaded: { store: sharedStore, selectedKnowledgeBaseIds: ["career-evidence"] },
+      }),
+    ).toBe("ignore");
+  });
+
+  it("does not point to card 02 when a saved selection could not be read", () => {
+    expect(
+      showAutoCreateHint({ hasStore: false, autoCreateSupported: true, savedUnavailable: false }),
+    ).toBe(true);
+    expect(
+      showAutoCreateHint({ hasStore: false, autoCreateSupported: true, savedUnavailable: true }),
+    ).toBe(false);
+    expect(
+      showAutoCreateHint({ hasStore: true, autoCreateSupported: true, savedUnavailable: false }),
+    ).toBe(false);
+    expect(
+      showAutoCreateHint({ hasStore: false, autoCreateSupported: false, savedUnavailable: false }),
     ).toBe(false);
   });
 });

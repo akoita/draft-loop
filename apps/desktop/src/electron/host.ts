@@ -186,6 +186,7 @@ import {
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
+import { serializeKnowledgeStoreReads } from "./knowledge-store-reads.js";
 import { resolveWorkspaceJobDescriptionSource } from "./opportunity-job-description.js";
 import {
   persistedLatestOpportunityBriefId,
@@ -2146,18 +2147,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         ),
       ),
     );
-  const knowledgeService =
+  const knowledgeService = serializeKnowledgeStoreReads(
     options.knowledgeService ??
-    createCandidateKnowledgeStoreService({
-      ingestUrl: (url, ingestionOptions) =>
-        ingestUrl(url, {
-          ...ingestionOptions,
-          ...(options.urlFetcher === undefined ? {} : { fetcher: options.urlFetcher }),
-          ...(options.urlHostnameResolver === undefined
-            ? {}
-            : { resolveHostname: options.urlHostnameResolver }),
-        }),
-    });
+      createCandidateKnowledgeStoreService({
+        ingestUrl: (url, ingestionOptions) =>
+          ingestUrl(url, {
+            ...ingestionOptions,
+            ...(options.urlFetcher === undefined ? {} : { fetcher: options.urlFetcher }),
+            ...(options.urlHostnameResolver === undefined
+              ? {}
+              : { resolveHostname: options.urlHostnameResolver }),
+          }),
+      }),
+  );
   const modelProfileSelection =
     options.modelProfileSelectionService ?? workspaceModelProfileSelectionService;
   let active: ActiveWorkspace | undefined;
