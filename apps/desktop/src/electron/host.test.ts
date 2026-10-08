@@ -1542,15 +1542,19 @@ describe("native host", () => {
   });
 
   it.each([
-    canonicalCandidateProfileDerivationApprovalErrorMessage,
-    canonicalCandidateProfileDerivationErrorMessage,
-    canonicalCandidateProfileSelectionStaleErrorMessage,
-  ])("shows the user-fixable profile derivation reason %s", async (message) => {
+    ...[
+      canonicalCandidateProfileDerivationApprovalErrorMessage,
+      canonicalCandidateProfileDerivationErrorMessage,
+      canonicalCandidateProfileSelectionStaleErrorMessage,
+      "The configured candidate knowledge selection is no longer valid.",
+    ].flatMap((message) => [
+      [message, new CliUserError(message)] as const,
+      [message, new Error(message)] as const,
+    ]),
+  ])("shows the user-fixable profile derivation reason %s", async (message, error) => {
     const root = "/local/profile-derivation-error-workspace";
     const fixture = service(root);
-    fixture.service.deriveCanonicalCandidateProfile.mockRejectedValueOnce(
-      new CliUserError(message),
-    );
+    fixture.service.deriveCanonicalCandidateProfile.mockRejectedValueOnce(error);
     const host = createNativeHost({
       applicationService: fixture.service,
       dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
@@ -1574,7 +1578,7 @@ describe("native host", () => {
 
   it.each([
     ["an unlisted application user error", new CliUserError("Knowledge missing at /private/kb.")],
-    ["a plain error", new Error(canonicalCandidateProfileDerivationErrorMessage)],
+    ["a plain error with other text", new Error("Failed reading /private/kb/profile.json.")],
   ])("keeps %s from profile derivation generic", async (_label, error) => {
     const root = "/local/profile-derivation-error-workspace";
     const fixture = service(root);

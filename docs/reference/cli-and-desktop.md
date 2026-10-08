@@ -210,6 +210,9 @@ only when it is fixed, path-free and user-fixable, such as a job description
 whose requirements are too long or an unreadable source file. Any other failure
 names the action that failed, for example "Starting the review failed with an
 unexpected error.", and never its private error text.
+Profile generation shows its fixed derivation messages (approval required,
+selection changed or no longer valid, profile could not be derived) the same
+way, whether the application raised them as user errors or plain errors.
 
 The desktop setup applies the same job-description check before a run when no
 reviewed opportunity brief is selected. A job description with a requirement
@@ -604,7 +607,11 @@ the existing schema and source-grounding checks before any facts are saved.
 
 One profile holds at most 2,048 facts and 1,024 review issues. When the
 aggregated calls exceed either bound, nothing is saved and the guidance names
-the bound and asks for fewer or smaller sources.
+the bound and asks for fewer or smaller sources. When an incremental
+generation would exceed a bound after merging reused and new facts, the
+generation is recorded as a failed profile version with an error issue ("The
+profile would have more than 2,048 facts. Remove or split sources and try
+again.") instead of ending in an unexpected error.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full
