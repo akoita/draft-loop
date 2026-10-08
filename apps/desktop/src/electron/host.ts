@@ -201,6 +201,7 @@ import {
   applicationJobUrl,
   applicationReadinessScope,
   createApplicationSummary,
+  importApplicationSummary,
   listApplicationSummaries,
   projectApplication,
   resolveApplicationScope,
@@ -4162,6 +4163,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                   ? { jobText: command.input.jobText ?? "" }
                   : { jobUrl: command.input.jobUrl },
               ),
+            },
+          };
+        }
+        case "application.import": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const sourceRoot = await options.dialogs.chooseDirectory("open");
+          if (sourceRoot === undefined) {
+            return fail("permission-denied", "Choosing a workspace to import was cancelled.");
+          }
+          const storedName = (await readOverrides(resolve(sourceRoot))).workspaceName;
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              ...(await importApplicationSummary(
+                service,
+                workspace.root,
+                resolve(sourceRoot),
+                storedName,
+              )),
             },
           };
         }

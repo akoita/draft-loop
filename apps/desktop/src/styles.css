@@ -5966,6 +5966,17 @@ input[type="checkbox"] {
   gap: var(--space-3);
 }
 
+.home-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.home-import-success {
+  color: var(--text-1);
+}
+
 .home-card-headline {
   margin: 0;
   color: var(--text-1);

@@ -244,3 +244,55 @@ describe("application.create job source", () => {
     }
   });
 });
+
+describe("application.import", () => {
+  const counts = { runs: 1, briefs: 1, briefVersions: 3, exports: 1, skippedExports: 0 };
+  const result = { workspaceId: "workspace-1", application, imported: counts };
+
+  it("is advertised and accepts only the workspace id and the native-dialog selection", () => {
+    expect(bridgeCapabilities).toContain("application.import");
+    for (const input of [
+      { workspaceId: "workspace-1" },
+      { workspaceId: "workspace-1", selection: "native-dialog" },
+    ]) {
+      expect(validateBridgeCommand({ type: "application.import", input })).toEqual({
+        type: "application.import",
+        input,
+      });
+    }
+  });
+
+  it("never accepts a path from the renderer", () => {
+    for (const input of [
+      {},
+      { workspaceId: "w", path: "/home/me/other-workspace" },
+      { workspaceId: "w", sourceRoot: "/home/me/other-workspace" },
+      { workspaceId: "w", selection: "/home/me/other-workspace" },
+      { workspaceId: "../x" },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "application.import", input })).toThrow();
+    }
+  });
+
+  it("accepts a real result unchanged and rejects extra, missing or malformed fields", async () => {
+    const command = {
+      type: "application.import",
+      input: { workspaceId: "workspace-1", selection: "native-dialog" },
+    } as const;
+    await expect(portReturning(result).execute(command)).resolves.toEqual({
+      ok: true,
+      value: result,
+    });
+    const { skippedExports: _omitted, ...withoutSkipped } = counts;
+    for (const bad of [
+      { ...result, sourcePath: "/home/me/other-workspace" },
+      { ...result, imported: { ...counts, path: "/x" } },
+      { ...result, imported: withoutSkipped },
+      { ...result, imported: { ...counts, runs: -1 } },
+      { ...result, application: { ...application, jobPath: "/home/me/job.md" } },
+      { workspaceId: "workspace-1", application },
+    ]) {
+      await expect(portReturning(bad).execute(command)).resolves.toMatchObject({ ok: false });
+    }
+  });
+});

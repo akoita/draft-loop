@@ -247,7 +247,9 @@ applications:
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
   first. A workspace with nothing but its default application says so and points
-  to **New application**.
+  to **New application**. Beside it, **Import from another workspace** opens a
+  folder picker and imports a workspace made for one job as an application (see
+  [Importing a workspace](#importing-a-workspace)).
 - **Workspace settings.** The configured model pair with **Change models**, and
   the writing policy editor.
 
@@ -330,11 +332,14 @@ Each created application keeps its own latest and reviewed brief, and an edit
 or review of another application's brief is refused. Without an `applicationId`
 the default application keeps the workspace's own latest and reviewed brief.
 
-The bridge exposes `application.list`, `application.get` and
-`application.create`. `application.create` takes the job as `jobText`, or as a
-`jobUrl` with `jobUrlApproved: true`. Results carry the name, job source kind,
+The bridge exposes `application.list`, `application.get`,
+`application.create` and `application.import`. `application.create` takes the job
+as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
+takes only the workspace id: the host shows the folder picker, so no path crosses
+the bridge in either direction. Results carry the name, job source kind,
 status, timestamps, run, brief and export counts, and the latest run id, never a
-path, URL or job text. `review.load`, `review.dispatch` and `run.start` accept an
+path, URL or job text. An import also returns content-free counts of what it
+copied. `review.load`, `review.dispatch` and `run.start` accept an
 optional `applicationId`.
 
 ### Closing and reopening
@@ -444,10 +449,49 @@ pnpm --filter @draft-loop/cli start start ./workspace --application app-01234567
   that application. Without the option the brief belongs to the default
   application.
 - **Service only.** The application service (`createApplication`,
-  `listApplications`, `getApplication`) also accepts an approved URL as a job
+  `listApplications`, `getApplication`, `importApplication`) also accepts an approved URL as a job
   source. A URL application
   starts a run only with a reviewed opportunity brief, and a brief belonging to
   another application is refused.
+
+### Importing a workspace
+
+Before applications, one workspace held one job. **Import from another
+workspace** on Home, or `application import` in the CLI, brings such a workspace
+into the current one as a new application:
+
+```sh
+pnpm --filter @draft-loop/cli start application import ./home-workspace \
+  --from ./hc4 --name "Hc4, Platform Engineer"
+```
+
+- **Name.** Defaults to the source workspace's display name in the desktop, then
+  to the job's first Markdown heading, then to the folder name.
+- **What is copied.** The job description (stored in this workspace like pasted
+  text), every opportunity brief version, every run with its rounds, executions,
+  findings, decisions, artifact versions, snapshots and event log, and each
+  completed export with its file (copied to `exports/<application id>/`). The
+  application's status is derived from them as usual.
+- **Ids.** Run, brief, export, artifact and context ids and brief versions are
+  kept exactly. Runs are written with this workspace's id, so they read as its
+  own; the workspace id inside a stored snapshot is rewritten and nothing else.
+  The pinned profile and brief references inside a run stay as they were, as
+  history. If an id already exists in this workspace, the import is refused
+  before anything is written; ids embed a timestamp or a UUID, so this only
+  happens for a copied workspace folder.
+- **Source.** Opened read only and never changed. Only its default application is
+  imported, that is the runs and briefs that belong to no application.
+- **Not imported.** Profiles (this workspace's own profile stays the one reused),
+  evidence sources and chunks, writing policy versions, and desktop review
+  overrides. A completed export whose file is missing is skipped and counted.
+- **Idempotency.** The application id is derived from the source workspace id and
+  the import is recorded as an `application.imported` audit event. Importing the
+  same source again is refused ("already imported"). An interrupted import leaves
+  its runs inside the new application, never in the default one, and running it
+  again resumes it.
+- **Refusals.** A folder that is not a DraftLoop workspace, the current
+  workspace itself, and a workspace without a job description are refused with a
+  sentence that names no path.
 
 ## Opportunity briefs
 

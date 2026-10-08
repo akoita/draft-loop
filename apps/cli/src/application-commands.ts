@@ -8,6 +8,12 @@ import {
   workspaceRoot,
 } from "./workflow.js";
 
+interface ImportOptions {
+  readonly from: string;
+  readonly name?: string;
+  readonly json?: boolean;
+}
+
 interface CreateOptions {
   readonly name: string;
   readonly jobFile?: string;
@@ -29,7 +35,7 @@ function requireApplicationApi<Method>(method: Method | undefined): Method {
 }
 
 /**
- * Registers `application list` and `application create`. An application is one job inside the
+ * Registers `application list`, `application create` and `application import`. An application is one job inside the
  * workspace; the workspace's own `job.md` is always listed as the default application.
  */
 export function registerApplicationCommands(
@@ -39,7 +45,7 @@ export function registerApplicationCommands(
 ): void {
   const application = root
     .command("application")
-    .description("List and create the job applications inside a workspace");
+    .description("List, create and import the job applications inside a workspace");
 
   application
     .command("list")
@@ -89,5 +95,37 @@ export function registerApplicationCommands(
       io.write("application created:");
       writeApplication(io, created);
       io.write(`Start a run with: draft-loop start ${workspace} --application ${created.id}`);
+    });
+
+  application
+    .command("import")
+    .description(
+      "Import another workspace as an application: its job, briefs, runs and exports. The source is not changed and profiles are not merged",
+    )
+    .argument("[workspace]", "workspace directory that receives the application", ".")
+    .requiredOption("--from <path>", "the workspace directory to import")
+    .option("--name <name>", "display name; defaults to the job heading, then the folder name")
+    .option("--json", "print machine-readable JSON")
+    .action(async (workspace: string, options: ImportOptions) => {
+      const imported = await requireApplicationApi(service.importApplication)({
+        root: workspaceRoot(workspace),
+        sourceRoot: workspaceRoot(options.from),
+        ...(options.name === undefined ? {} : { name: options.name }),
+      });
+      if (options.json === true) {
+        io.write(JSON.stringify(imported));
+        return;
+      }
+      const { counts } = imported;
+      io.write("application imported:");
+      writeApplication(io, imported.application);
+      io.write(
+        `Copied ${counts.runs} runs, ${counts.briefVersions} brief versions and ${counts.exports} exports; the source workspace was not changed.`,
+      );
+      if (counts.skippedExports > 0) {
+        io.write(
+          `${counts.skippedExports} completed exports were not imported because their files were missing.`,
+        );
+      }
     });
 }

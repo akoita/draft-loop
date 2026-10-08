@@ -42,6 +42,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "application.list": "Listing the applications",
   "application.get": "Reading the application",
   "application.create": "Creating the application",
+  "application.import": "Importing the workspace as an application",
   "run.status": "Reading the review status",
   "run.start": "Starting the review",
   "run.pause": "Pausing the review",
@@ -125,7 +126,10 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
     return error.message;
   }
   // Creating an application fails with a fixed sentence about the name or the pasted job text.
-  if (command.type === "application.create" && error instanceof CliUserError) {
+  if (
+    (command.type === "application.create" || command.type === "application.import") &&
+    error instanceof CliUserError
+  ) {
     return error.message;
   }
   // Saving or reading the applied profile pair fails with a fixed sentence that names profiles

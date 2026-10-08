@@ -20,12 +20,18 @@ import type {
   ApplicationRunSummary,
   ApplicationStoragePort,
 } from "@draft-loop/storage/application-store";
+import { defaultApplicationName } from "./application-name.js";
 import {
   type CandidateProfileFreshnessSelection,
   withCandidateProfileFreshness,
 } from "./candidate-profile-freshness.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { ApplicationDriver, CreateOpportunityCommand } from "./index.js";
+import {
+  type ImportApplicationCommand,
+  type ImportApplicationCounts,
+  importApplicationFromWorkspace,
+} from "./workspace-application-import.js";
 
 const historyDirectory = ".draft-loop";
 const historyFilename = "history.sqlite";
@@ -37,6 +43,12 @@ export interface ApplicationView extends Application {
   readonly briefs: readonly ApplicationBriefSummary[];
   readonly runs: readonly ApplicationRunSummary[];
   readonly exports: readonly ApplicationExportSummary[];
+}
+
+/** An application created by importing another workspace, with what the import copied. */
+export interface ImportedApplicationView {
+  readonly application: ApplicationView;
+  readonly counts: ImportApplicationCounts;
 }
 
 export type ApplicationJobSourceInput =
@@ -117,20 +129,6 @@ async function readJobText(path: string, label: string): Promise<string> {
   const text = (await readFile(path, "utf8")).trim();
   if (text === "") throw new CliUserError(`${label} is empty: ${path}`);
   return text;
-}
-
-/**
- * A display name for the legacy application: its first Markdown heading. A pasted web page often
- * starts with navigation text, so without a heading the name stays generic.
- */
-function defaultApplicationName(jobText: string | undefined): string {
-  const heading = jobText?.split(/\r?\n/u).find((line) => /^ {0,3}#{1,6}\s+\S/u.test(line)) ?? "";
-  const name = heading
-    .replace(/^[\s#]+/u, "")
-    .trim()
-    .slice(0, applicationNameMaxLength)
-    .trim();
-  return name === "" ? "Default application" : name;
 }
 
 async function describeApplication(
@@ -437,6 +435,16 @@ export function withWorkspaceApplications(
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),
+    importApplication: async (command: ImportApplicationCommand) => {
+      const imported = await importApplicationFromWorkspace(command, dependencies);
+      const application = await service.get({
+        root: command.root,
+        applicationId: imported.applicationId,
+      });
+      if (application === undefined)
+        throw new CliUserError("The application could not be read back.");
+      return { application, counts: imported.counts };
+    },
     createOpportunity: async (command: CreateOpportunityCommand) => {
       const { applicationId } = command;
       if (applicationId === undefined || applicationId === defaultApplicationId) {

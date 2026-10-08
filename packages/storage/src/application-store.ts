@@ -4,6 +4,10 @@ import {
   applicationIdSchema,
   applicationJobSourceSchema,
 } from "@draft-loop/schemas/application";
+import {
+  type ApplicationImportReadsPort,
+  createApplicationImportReads,
+} from "./application-import-reads.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
 /**
@@ -109,7 +113,7 @@ export interface ApplicationBriefSummary {
   readonly createdAt: string;
 }
 
-export interface ApplicationStoragePort {
+export interface ApplicationStoragePort extends ApplicationImportReadsPort {
   /** A second application with the same id is a conflict; the default id is reserved. */
   readonly insertApplication: (input: ApplicationStoreInput) => Promise<ApplicationStoreRecord>;
   readonly getApplication: (
@@ -237,6 +241,7 @@ export function createApplicationStorage(
   };
 
   return {
+    ...createApplicationImportReads(database, ensureOpen),
     insertApplication: async (input) => {
       ensureOpen();
       requireIdentifier(input.workspaceId, "workspace id");

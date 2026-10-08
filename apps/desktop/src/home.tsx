@@ -2,6 +2,12 @@ import { type ReactNode, type RefObject, useEffect, useRef, useState } from "rea
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import {
+  type ApplicationImportNotice,
+  applicationImportErrorNotice,
+  applicationImportExplanation,
+  applicationImportSuccessNotice,
+} from "./application-import-model.js";
+import {
   type CareerEvidenceCapabilities,
   type CareerEvidenceStatus,
   loadCareerEvidenceStatus,
@@ -247,6 +253,12 @@ export interface HomeViewProps {
   readonly settings?: ReactNode;
   /** Present when the host can create applications. */
   readonly onNewApplication?: () => void;
+  /** Present when the host can import another workspace as an application. */
+  readonly onImportApplication?: () => void;
+  /** True while the folder picker or the import is running. */
+  readonly importing?: boolean;
+  /** The outcome of the last import: what it copied, or why it was refused. */
+  readonly importNotice?: ApplicationImportNotice | null;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
@@ -266,6 +278,9 @@ export function HomeView({
   profileFreshness,
   settings,
   onNewApplication,
+  onImportApplication,
+  importing = false,
+  importNotice = null,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
@@ -339,17 +354,44 @@ export function HomeView({
           <section className="panel home-applications" aria-labelledby="home-applications-title">
             <div className="home-section-head">
               <h2 id="home-applications-title">Applications</h2>
-              {onNewApplication === undefined ? null : (
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={disabled}
-                  onClick={onNewApplication}
-                >
-                  New application
-                </button>
-              )}
+              <div className="home-section-actions">
+                {onImportApplication === undefined ? null : (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    disabled={disabled || importing}
+                    aria-describedby="home-import-explanation"
+                    onClick={onImportApplication}
+                  >
+                    {importing ? "Importing…" : "Import from another workspace"}
+                  </button>
+                )}
+                {onNewApplication === undefined ? null : (
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={disabled}
+                    onClick={onNewApplication}
+                  >
+                    New application
+                  </button>
+                )}
+              </div>
             </div>
+            {onImportApplication === undefined ? null : (
+              <p className="home-card-copy" id="home-import-explanation">
+                {applicationImportExplanation}
+              </p>
+            )}
+            {importNotice === null ? null : importNotice.kind === "error" ? (
+              <div className="error-banner" role="alert">
+                <p>{importNotice.message}</p>
+              </div>
+            ) : (
+              <p className="home-card-copy home-import-success" role="status">
+                {importNotice.message}
+              </p>
+            )}
             <ApplicationsList state={applications} now={now} onOpen={onOpenApplication} />
           </section>
 
@@ -416,6 +458,42 @@ export function HomeScreen({
   const evidenceRef = useRef(evidenceCapabilities);
   evidenceRef.current = evidenceCapabilities;
   const listApplications = applicationCapabilities.listApplications;
+  const importApplication = applicationCapabilities.importApplication;
+  const [importing, setImporting] = useState(false);
+  const [importNotice, setImportNotice] = useState<ApplicationImportNotice | null>(null);
+  const [applicationsRevision, setApplicationsRevision] = useState(0);
+  const importRun = useRef(0);
+
+  // A different workspace never inherits the previous one's import outcome.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the workspace id is the trigger.
+  useEffect(() => {
+    importRun.current += 1;
+    setImporting(false);
+    setImportNotice(null);
+  }, [workspaceId]);
+
+  const runImport =
+    importApplication === undefined
+      ? undefined
+      : () => {
+          const run = ++importRun.current;
+          setImporting(true);
+          setImportNotice(null);
+          importApplication(workspaceId)
+            .then((result) => {
+              if (run !== importRun.current) return;
+              setImportNotice(
+                applicationImportSuccessNotice(result.application.name, result.imported),
+              );
+              setApplicationsRevision((revision) => revision + 1);
+            })
+            .catch((error: unknown) => {
+              if (run === importRun.current) setImportNotice(applicationImportErrorNotice(error));
+            })
+            .finally(() => {
+              if (run === importRun.current) setImporting(false);
+            });
+        };
 
   useEffect(() => {
     let active = true;
@@ -459,6 +537,7 @@ export function HomeScreen({
     };
   }, [workspaceId, evidenceRevision]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `applicationsRevision` re-reads the list after an import.
   useEffect(() => {
     if (listApplications === undefined) {
       setApplications({ status: "unavailable" });
@@ -476,7 +555,7 @@ export function HomeScreen({
     return () => {
       active = false;
     };
-  }, [workspaceId, listApplications]);
+  }, [workspaceId, listApplications, applicationsRevision]);
 
   const freshnessLine = profileFreshnessPresentation(profile, freshness);
   return (
@@ -503,6 +582,9 @@ export function HomeScreen({
           })}
       {...(settings === undefined ? {} : { settings })}
       {...(onNewApplication === undefined ? {} : { onNewApplication })}
+      {...(runImport === undefined ? {} : { onImportApplication: runImport })}
+      importing={importing}
+      importNotice={importNotice}
       onOpenApplication={onOpenApplication}
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}

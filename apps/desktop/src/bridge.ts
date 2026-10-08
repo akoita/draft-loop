@@ -35,13 +35,17 @@ import {
 import {
   type ApplicationCreateInput,
   type ApplicationGetInput,
+  type ApplicationImportInput,
+  type ApplicationImportResult,
   type ApplicationListInput,
   type ApplicationListResult,
   type ApplicationRecordResult,
   applicationCreateKeys,
   applicationGetKeys,
+  applicationImportKeys,
   applicationListKeys,
   maximumApplicationJobTextLength,
+  normalizeApplicationImportResult,
   normalizeApplicationListResult,
   normalizeApplicationRecordResult,
 } from "./application-contract.js";
@@ -2902,6 +2906,7 @@ export interface BridgeCommandInputMap {
   "application.list": ApplicationListInput;
   "application.get": ApplicationGetInput;
   "application.create": ApplicationCreateInput;
+  "application.import": ApplicationImportInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3002,6 +3007,7 @@ export interface BridgeCommandOutputMap {
   "application.list": ApplicationListResult;
   "application.get": ApplicationRecordResult;
   "application.create": ApplicationRecordResult;
+  "application.import": ApplicationImportResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4270,6 +4276,18 @@ function validateApplicationCreateInput(value: unknown): ApplicationCreateInput 
   };
 }
 
+function validateApplicationImportInput(value: unknown): ApplicationImportInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationImportKeys)) return invalidInput();
+  const workspaceId = identifier(input.workspaceId);
+  const selection = nativeDialogSelection(input.selection);
+  return selection === undefined ? { workspaceId } : { workspaceId, selection };
+}
+
+function normalizeApplicationImport(value: unknown): ApplicationImportResult {
+  return normalizeApplicationImportResult(value) ?? invalidInput();
+}
+
 function normalizeApplicationList(value: unknown): ApplicationListResult {
   return normalizeApplicationListResult(value) ?? invalidInput();
 }
@@ -5251,6 +5269,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "application.get", input: validateApplicationGetInput(command.input) };
     case "application.create":
       return { type: "application.create", input: validateApplicationCreateInput(command.input) };
+    case "application.import":
+      return { type: "application.import", input: validateApplicationImportInput(command.input) };
     case "workspace.recent-clear":
       return {
         type: "workspace.recent-clear",
@@ -7739,6 +7759,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.get":
     case "application.create":
       return normalizeApplicationRecord(value);
+    case "application.import":
+      return normalizeApplicationImport(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
     case "writing-policy.read":

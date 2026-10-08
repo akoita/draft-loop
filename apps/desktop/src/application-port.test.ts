@@ -31,6 +31,16 @@ function portWith(capabilities: readonly string[]) {
     if (command.type === "application.create") {
       return { ok: true, value: { workspaceId: state.workspaceId, application } };
     }
+    if (command.type === "application.import") {
+      return {
+        ok: true,
+        value: {
+          workspaceId: state.workspaceId,
+          application,
+          imported: { runs: 1, briefs: 0, briefVersions: 0, exports: 0, skippedExports: 0 },
+        },
+      };
+    }
     return { ok: false, error: { code: "capability-unavailable", message: command.type } };
   });
   const port = createBridgeReviewPort(
@@ -44,6 +54,7 @@ describe("application scope in the desktop review port", () => {
     const without = portWith(["review.load"]).port;
     expect(without.listApplications).toBeUndefined();
     expect(without.createApplication).toBeUndefined();
+    expect(without.importApplication).toBeUndefined();
     expect(without.selectApplication).toBeUndefined();
     const withApplications = portWith([...bridgeCapabilities]).port;
     expect(withApplications.listApplications).toBeDefined();
@@ -60,6 +71,18 @@ describe("application scope in the desktop review port", () => {
     expect(invoke).toHaveBeenCalledWith({
       type: "application.create",
       input: { workspaceId: state.workspaceId, name: "Acme", jobText: "Job text" },
+    });
+  });
+
+  it("imports through the bridge with the native folder picker and sends no path", async () => {
+    const { port, invoke, state } = portWith([...bridgeCapabilities]);
+    await expect(port.importApplication?.(state.workspaceId)).resolves.toEqual({
+      application,
+      imported: { runs: 1, briefs: 0, briefVersions: 0, exports: 0, skippedExports: 0 },
+    });
+    expect(invoke).toHaveBeenCalledWith({
+      type: "application.import",
+      input: { workspaceId: state.workspaceId, selection: "native-dialog" },
     });
   });
 
