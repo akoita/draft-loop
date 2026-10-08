@@ -7,6 +7,11 @@ import {
   loadCareerEvidenceStatus,
 } from "./career-evidence.js";
 import {
+  CareerFlowStrip,
+  careerEvidenceCardSubtitle,
+  careerProfileCardSubtitle,
+} from "./career-flow.js";
+import {
   applicationActivityText,
   applicationRunText,
   applicationStatusLabel,
@@ -72,6 +77,7 @@ function Chip({ tone, children }: { readonly tone: HomeTone; readonly children: 
 function SummaryCard({
   id,
   title,
+  subtitle,
   presentation,
   headline,
   children,
@@ -79,6 +85,8 @@ function SummaryCard({
 }: {
   readonly id: string;
   readonly title: string;
+  /** One line saying what the card is, consistent with the intro of the page it opens. */
+  readonly subtitle: string;
   readonly presentation: Pick<HomeStatusPresentation, "chip" | "tone">;
   readonly headline?: string;
   readonly children?: ReactNode;
@@ -90,6 +98,7 @@ function SummaryCard({
         <h2 id={id}>{title}</h2>
         <Chip tone={presentation.tone}>{presentation.chip}</Chip>
       </div>
+      <p className="home-card-subtitle">{subtitle}</p>
       {headline === undefined ? null : <p className="home-card-headline">{headline}</p>}
       {children}
       <div className="home-card-actions">{action}</div>
@@ -248,28 +257,14 @@ export function HomeView({
             </div>
           )}
 
+          <CareerFlowStrip current="applications" />
+
           <div className="home-summary">
-            <SummaryCard
-              id="home-profile-title"
-              title="Career profile"
-              presentation={profilePresentation}
-              action={
-                <button
-                  className="button button-outline"
-                  type="button"
-                  disabled={disabled || profile.kind === "unsupported"}
-                  onClick={onManageProfile}
-                >
-                  {profilePresentation.action}
-                </button>
-              }
-            >
-              <p className="home-card-copy">{profilePresentation.description}</p>
-              {profileFreshness}
-            </SummaryCard>
+            {/* Evidence first, matching the Career evidence → Career profile → Applications flow. */}
             <SummaryCard
               id="home-evidence-title"
               title="Career evidence"
+              subtitle={careerEvidenceCardSubtitle}
               presentation={evidenceView}
               headline={evidenceView.headline}
               action={
@@ -286,6 +281,25 @@ export function HomeView({
               {evidenceView.detail === "" ? null : (
                 <p className="home-card-copy">{evidenceView.detail}</p>
               )}
+            </SummaryCard>
+            <SummaryCard
+              id="home-profile-title"
+              title="Career profile"
+              subtitle={careerProfileCardSubtitle}
+              presentation={profilePresentation}
+              action={
+                <button
+                  className="button button-outline"
+                  type="button"
+                  disabled={disabled || profile.kind === "unsupported"}
+                  onClick={onManageProfile}
+                >
+                  {profilePresentation.action}
+                </button>
+              }
+            >
+              <p className="home-card-copy">{profilePresentation.description}</p>
+              {profileFreshness}
             </SummaryCard>
           </div>
 
@@ -432,44 +446,5 @@ export function HomeScreen({
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}
     />
-  );
-}
-
-// -- Profile and evidence screen -------------------------------------------------------------
-
-/** The screen Manage profile and Manage evidence open: the existing panels, with a way back. */
-export function ProfileScreen({
-  workspaceTitle,
-  workspaceNavigation,
-  errorMessage,
-  onHome,
-  children,
-}: {
-  readonly workspaceTitle: ReactNode;
-  readonly workspaceNavigation: ReactNode;
-  readonly errorMessage: string | null;
-  readonly onHome: () => void;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div className="app-frame">
-      <main className="app-shell app-shell-single">
-        <div className="main-column">
-          <header className="home-header">
-            <div className="home-header-identity">
-              <WorkspaceLocation current="Career profile and evidence" onHome={onHome} />
-              {workspaceTitle}
-            </div>
-            <div className="home-header-actions">{workspaceNavigation}</div>
-          </header>
-          {errorMessage === null ? null : (
-            <div className="error-banner" role="alert">
-              <p>{errorMessage}</p>
-            </div>
-          )}
-          <div className="home-profile-screen">{children}</div>
-        </div>
-      </main>
-    </div>
   );
 }

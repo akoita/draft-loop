@@ -8,10 +8,11 @@ import {
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
-import { focusKnowledgeStore } from "./career-evidence-card.js";
-import { HomeScreen, ProfileScreen, WorkspaceLocation } from "./home.js";
+import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
+import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
+  evidenceView,
   homeView,
   newApplicationView,
   profileView,
@@ -905,7 +906,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   // Opening a workspace lands on Home; an application's review is one screen inside it.
   const [view, setView] = useState<WorkspaceView>(workspaceEntryView);
   const [loadedApplicationId, setLoadedApplicationId] = useState<string | null>(null);
-  const focusEvidenceOnOpen = useRef(false);
   const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
@@ -1656,17 +1656,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
   };
 
-  const openProfileScreen = (focusEvidence: boolean) => {
-    focusEvidenceOnOpen.current = focusEvidence;
-    setView(profileView);
-  };
-
-  // The evidence panel lives on the profile screen; focus it once that screen has opened.
-  useEffect(() => {
-    if (view.kind !== "profile" || !focusEvidenceOnOpen.current) return;
-    focusEvidenceOnOpen.current = false;
-    focusKnowledgeStore();
-  }, [view]);
+  const openProfileScreen = () => setView(profileView);
+  const openEvidenceScreen = () => setView(evidenceView);
 
   const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
     const settings = workspaceModelSettingsDraft(workspace);
@@ -2223,35 +2214,64 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     />
   );
 
-  const profileAndEvidencePanels = (
-    <>
-      <KnowledgeWorkspace
-        key={state.workspaceId}
-        workspaceId={state.workspaceId}
-        capabilities={activePort}
-        revision={knowledgeRevision}
-        storeFormRequest={storeFormRequest}
+  const knowledgePanel = (
+    <KnowledgeWorkspace
+      key={state.workspaceId}
+      workspaceId={state.workspaceId}
+      capabilities={activePort}
+      revision={knowledgeRevision}
+      storeFormRequest={storeFormRequest}
+      disabled={
+        busy ||
+        profilePendingForActiveWorkspace ||
+        pendingReviewAction !== null ||
+        state.execution.status === "running"
+      }
+      onPendingChange={(workspaceId, pending) =>
+        onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
+      }
+      onSelectionSaved={(workspaceId) =>
+        onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
+      }
+    />
+  );
+
+  const retrievalPanel = hasAnySemanticRetrievalCapability(activePort) ? (
+    <SemanticRetrievalPanel
+      key={`semantic-retrieval-${state.workspaceId}`}
+      workspaceId={state.workspaceId}
+      capabilities={activePort}
+      disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+    />
+  ) : null;
+
+  const profilePanel =
+    profileCapabilities === null ? null : (
+      <fieldset
         disabled={
+          knowledgePending ||
           busy ||
-          profilePendingForActiveWorkspace ||
           pendingReviewAction !== null ||
           state.execution.status === "running"
         }
-        onPendingChange={(workspaceId, pending) =>
-          onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
-        }
-        onSelectionSaved={(workspaceId) =>
-          onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
-        }
-      />
-      {hasAnySemanticRetrievalCapability(activePort) ? (
-        <SemanticRetrievalPanel
-          key={`semantic-retrieval-${state.workspaceId}`}
+        className="profile-knowledge-lock"
+      >
+        <ProfileWorkspace
+          key={`${state.workspaceId}:${profileResetEpoch}`}
           workspaceId={state.workspaceId}
-          capabilities={activePort}
-          disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+          capabilities={profileCapabilities}
+          selectedProfile={selectedCandidateProfile}
+          onSelectionChange={onCandidateProfileSelectionChange}
+          onPendingChange={profilePendingChange}
         />
-      ) : null}
+      </fieldset>
+    );
+
+  // The application screen keeps the combined panels, with the model pair between them.
+  const profileAndEvidencePanels = (
+    <>
+      {knowledgePanel}
+      {retrievalPanel}
       <WorkspaceModelSummary
         title="Configured model pair"
         author={state.providerTransmissionPreflight.author}
@@ -2259,26 +2279,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         appliedProfiles={selectedModelProfiles?.refs ?? null}
         profileWarning={modelProfileWarningText}
       />
-      {profileCapabilities === null ? null : (
-        <fieldset
-          disabled={
-            knowledgePending ||
-            busy ||
-            pendingReviewAction !== null ||
-            state.execution.status === "running"
-          }
-          className="profile-knowledge-lock"
-        >
-          <ProfileWorkspace
-            key={`${state.workspaceId}:${profileResetEpoch}`}
-            workspaceId={state.workspaceId}
-            capabilities={profileCapabilities}
-            selectedProfile={selectedCandidateProfile}
-            onSelectionChange={onCandidateProfileSelectionChange}
-            onPendingChange={profilePendingChange}
-          />
-        </fieldset>
-      )}
+      {profilePanel}
     </>
   );
 
@@ -2347,8 +2348,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           ? {}
           : { onNewApplication: () => setView(newApplicationView) })}
         onOpenApplication={openApplication}
-        onManageProfile={() => openProfileScreen(false)}
-        onManageEvidence={() => openProfileScreen(true)}
+        onManageProfile={openProfileScreen}
+        onManageEvidence={openEvidenceScreen}
         settings={
           <>
             <WorkspaceModelSummary
@@ -2382,7 +2383,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         profileCapabilities={activePort}
         selectedProfile={selectedCandidateProfile}
         onSelectProfile={onCandidateProfileSelectionChange}
-        onManageProfile={() => openProfileScreen(false)}
+        onManageProfile={openProfileScreen}
         modelPair={
           <WorkspaceModelSummary
             title="Configured model pair"
@@ -2402,16 +2403,30 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
-  if (homeAvailable && view.kind === "profile") {
+  if (homeAvailable && view.kind === "evidence") {
     return (
-      <ProfileScreen
+      <CareerEvidencePage
         workspaceTitle={workspaceTitleNode}
         workspaceNavigation={workspaceNavigationNode}
         errorMessage={importError}
         onHome={goHome}
-      >
-        {profileAndEvidencePanels}
-      </ProfileScreen>
+        knowledge={knowledgePanel}
+        retrieval={retrievalPanel}
+        {...(profileCapabilities === null ? {} : { onManageProfile: openProfileScreen })}
+      />
+    );
+  }
+
+  if (homeAvailable && view.kind === "profile") {
+    return (
+      <CareerProfilePage
+        workspaceTitle={workspaceTitleNode}
+        workspaceNavigation={workspaceNavigationNode}
+        errorMessage={importError}
+        onHome={goHome}
+        workflow={profilePanel}
+        onManageEvidence={openEvidenceScreen}
+      />
     );
   }
 

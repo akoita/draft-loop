@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
-import { HomeView, type HomeViewProps, ProfileScreen, WorkspaceLocation } from "./home.js";
+import { careerEvidenceCardSubtitle, careerProfileCardSubtitle } from "./career-flow.js";
+import { HomeView, type HomeViewProps, WorkspaceLocation } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
 
 const now = new Date("2026-10-08T12:00:00.000Z");
@@ -86,6 +87,23 @@ describe("Home dashboard", () => {
     const html = render();
     expect(html).toContain("Engineering · 5 sources");
     expect(html).toContain("Manage evidence");
+  });
+
+  it("gives each card a one-line subtitle that matches its page intro", () => {
+    const html = render();
+    expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle}</p>`);
+    expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle}</p>`);
+    expect(html).toContain("raw material");
+    expect(html).toContain("verified record");
+  });
+
+  it("shows the evidence, profile and applications flow with Applications current", () => {
+    const html = render();
+    expect(html).toContain('aria-label="Career flow"');
+    expect(html).toMatch(
+      /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Applications<\/li>/u,
+    );
+    expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
   });
 
   it("shows the empty evidence state with an add action", () => {
@@ -180,21 +198,5 @@ describe("workspace location", () => {
     expect(html).toContain("Home</button>");
     expect(html).toContain("←");
     expect(html).toContain("Acme — Backend Lead");
-  });
-
-  it("wraps the profile and evidence panels with a way back", () => {
-    const html = renderToStaticMarkup(
-      <ProfileScreen
-        workspaceTitle={<h1>Job search 2026</h1>}
-        workspaceNavigation={null}
-        errorMessage={null}
-        onHome={() => undefined}
-      >
-        <p>Panels</p>
-      </ProfileScreen>,
-    );
-    expect(html).toContain("Career profile and evidence");
-    expect(html).toContain("Home</button>");
-    expect(html).toContain("Panels");
   });
 });
