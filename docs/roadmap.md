@@ -44,22 +44,23 @@ the default pair is cross-company and provider/model identities are recorded.
 ### Model strategy
 
 Model choice balances capability, cost, and the amount of configuration the
-project can maintain. The current scope is two Anthropic authors and two OpenAI
-critics: Claude Haiku 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol, plus
-opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
+project can maintain. The current scope is three Anthropic authors and two OpenAI
+critics: Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and
+GPT-6.1 Sol, plus opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
 CV quality has not been validated for these choices.
 
-The current curated choices use two tiers:
+The current curated choices use three tiers:
 
 | Tier | Pair | Purpose |
 | ---- | ---- | ------- |
 | **Economy** | Claude Haiku 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
+| **Balanced** | Claude Sonnet 5.5 + GPT-6.1 Sol | Middle-cost configuration |
 | **Standard** | Claude Opus 5.5 + GPT-6.1 Sol | Opt-in configuration for more demanding work |
 
 These are configuration choices, not validated CV-quality rankings. Premium
 choices are deferred. Older exact profile versions remain available for
-compatibility with existing selections and saved runs; this includes Claude
-Sonnet 5.5, the economy author before Haiku 5.5.
+compatibility with existing selections and saved runs. The Sonnet 5.5 profile,
+the economy author before Haiku 5.5, is reused as the Balanced author.
 
 Validation has two levels, and each claim applies only to the models that
 produced it:
@@ -74,7 +75,7 @@ The evaluation proceeds **step by step**:
 
 1. Make the basic scenario work end to end on the economy pair.
 2. Validate quality on the standard pair (Opus 5.5 and GPT-6.1 Sol).
-3. Reconsider premium choices only after the four current choices are validated.
+3. Reconsider premium choices only after the current curated choices are validated.
 
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
