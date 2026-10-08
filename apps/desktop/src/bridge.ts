@@ -32,6 +32,19 @@ import {
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
+import {
+  type ApplicationCreateInput,
+  type ApplicationGetInput,
+  type ApplicationListInput,
+  type ApplicationListResult,
+  type ApplicationRecordResult,
+  applicationCreateKeys,
+  applicationGetKeys,
+  applicationListKeys,
+  maximumApplicationJobTextLength,
+  normalizeApplicationListResult,
+  normalizeApplicationRecordResult,
+} from "./application-contract.js";
 import { normalizeApprovalReadiness } from "./approval-readiness.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import {
@@ -832,6 +845,8 @@ export interface RunStartInput {
   readonly candidateProfile?: CandidateProfileSelectionInput;
   /** Optional exact lowercase SHA-256 writing-policy override identity. */
   readonly writingPolicyOverrideChecksum?: string;
+  /** The application the run belongs to; omitted means the default application. */
+  readonly applicationId?: string;
 }
 
 export interface OpportunityBriefSelectionInput {
@@ -857,6 +872,7 @@ const runStartKeys = inputKeys<RunStartInput>()([
   "opportunityBrief",
   "candidateProfile",
   "writingPolicyOverrideChecksum",
+  "applicationId",
 ]);
 
 export interface RunLifecycleInput {
@@ -869,17 +885,26 @@ const runLifecycleKeys = inputKeys<RunLifecycleInput>()(["workspaceId", "runId"]
 export interface ReviewLoadInput {
   readonly workspaceId?: string;
   readonly runId?: string;
+  /** Scopes the review to one application; omitted means the workspace's latest run. */
+  readonly applicationId?: string;
 }
 
-const reviewLoadKeys = inputKeys<ReviewLoadInput>()(["workspaceId", "runId"]);
+const reviewLoadKeys = inputKeys<ReviewLoadInput>()(["workspaceId", "runId", "applicationId"]);
 
 export interface ReviewDispatchInput {
   readonly workspaceId: string;
   readonly runId: string;
   readonly action: ReviewAction;
+  /** The application a started run belongs to; omitted means the default application. */
+  readonly applicationId?: string;
 }
 
-const reviewDispatchKeys = inputKeys<ReviewDispatchInput>()(["workspaceId", "runId", "action"]);
+const reviewDispatchKeys = inputKeys<ReviewDispatchInput>()([
+  "workspaceId",
+  "runId",
+  "action",
+  "applicationId",
+]);
 
 export interface FileSelectInput {
   readonly workspaceId: string;
@@ -2853,6 +2878,9 @@ export interface BridgeCommandInputMap {
   "workspace.recent-open": RecentWorkspaceOpenInput;
   "workspace.recent-clear": RecentWorkspacesClearInput;
   "workspace.rename": WorkspaceRenameInput;
+  "application.list": ApplicationListInput;
+  "application.get": ApplicationGetInput;
+  "application.create": ApplicationCreateInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -2949,6 +2977,9 @@ export interface BridgeCommandOutputMap {
   "workspace.recent-open": WorkspaceResult;
   "workspace.recent-clear": RecentWorkspacesClearResult;
   "workspace.rename": WorkspaceRenameResult;
+  "application.list": ApplicationListResult;
+  "application.get": ApplicationRecordResult;
+  "application.create": ApplicationRecordResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4052,11 +4083,13 @@ function validateRunStartInput(value: unknown): RunStartInput {
     input.writingPolicyOverrideChecksum === undefined
       ? undefined
       : writingPolicyChecksumValue(input.writingPolicyOverrideChecksum);
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     workspaceId: identifier(input.workspaceId),
     ...(opportunityBrief === undefined ? {} : { opportunityBrief }),
     ...(candidateProfile === undefined ? {} : { candidateProfile }),
     ...(writingPolicyOverrideChecksum === undefined ? {} : { writingPolicyOverrideChecksum }),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
 }
 
@@ -4074,9 +4107,11 @@ function validateReviewLoadInput(value: unknown): ReviewLoadInput {
   if (!hasOnlyKeys(input, reviewLoadKeys)) return invalidInput();
   const workspaceId = optionalIdentifier(input.workspaceId);
   const runId = optionalIdentifier(input.runId);
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     ...(workspaceId === undefined ? {} : { workspaceId }),
     ...(runId === undefined ? {} : { runId }),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
 }
 
@@ -4170,11 +4205,46 @@ function validateReviewAction(value: unknown): ReviewAction {
 function validateReviewDispatchInput(value: unknown): ReviewDispatchInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, reviewDispatchKeys)) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
   return {
     workspaceId: identifier(input.workspaceId),
     runId: identifier(input.runId),
     action: validateReviewAction(input.action),
+    ...(applicationId === undefined ? {} : { applicationId }),
   };
+}
+
+function validateApplicationListInput(value: unknown): ApplicationListInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationListKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+function validateApplicationGetInput(value: unknown): ApplicationGetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationGetKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+  };
+}
+
+function validateApplicationCreateInput(value: unknown): ApplicationCreateInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationCreateKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    name: stringValue(input.name, 240),
+    jobText: proseValue(input.jobText, maximumApplicationJobTextLength),
+  };
+}
+
+function normalizeApplicationList(value: unknown): ApplicationListResult {
+  return normalizeApplicationListResult(value) ?? invalidInput();
+}
+
+function normalizeApplicationRecord(value: unknown): ApplicationRecordResult {
+  return normalizeApplicationRecordResult(value) ?? invalidInput();
 }
 
 function validateFileSelectInput(value: unknown): FileSelectInput {
@@ -5125,6 +5195,12 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       };
     case "workspace.rename":
       return { type: "workspace.rename", input: validateWorkspaceRenameInput(command.input) };
+    case "application.list":
+      return { type: "application.list", input: validateApplicationListInput(command.input) };
+    case "application.get":
+      return { type: "application.get", input: validateApplicationGetInput(command.input) };
+    case "application.create":
+      return { type: "application.create", input: validateApplicationCreateInput(command.input) };
     case "workspace.recent-clear":
       return {
         type: "workspace.recent-clear",
@@ -7603,6 +7679,11 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesClearResult(value);
     case "workspace.rename":
       return normalizeWorkspaceRenameResult(value);
+    case "application.list":
+      return normalizeApplicationList(value);
+    case "application.get":
+    case "application.create":
+      return normalizeApplicationRecord(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
     case "writing-policy.read":

@@ -1,12 +1,22 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import type { ApplicationSummaryView } from "./application-contract.js";
 import {
   type CredentialProvider,
   type ModelCompany,
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
+import { focusKnowledgeStore } from "./career-evidence-card.js";
+import { HomeScreen, ProfileScreen, WorkspaceLocation } from "./home.js";
+import {
+  applicationView,
+  homeView,
+  profileView,
+  type WorkspaceView,
+  workspaceEntryView,
+} from "./home-model.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import type {
   CandidateProfileSelection,
@@ -889,6 +899,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
+  // Opening a workspace lands on Home; an application's review is one screen inside it.
+  const [view, setView] = useState<WorkspaceView>(workspaceEntryView);
+  const [loadedApplicationId, setLoadedApplicationId] = useState<string | null>(null);
+  const focusEvidenceOnOpen = useRef(false);
   const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
@@ -1403,6 +1417,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setView(workspaceEntryView());
+      setLoadedApplicationId(null);
       setState(loaded);
       if (openModelEditor && activePort.configureModels !== undefined) {
         try {
@@ -1444,6 +1460,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setProfilePendingScope(null);
       setError(null);
       setImportError(null);
+      setView(workspaceEntryView());
+      setLoadedApplicationId(null);
       setState(loaded);
     } catch {
       setWorkspaceRecoveryError("The workspace was not opened. Choose a workspace and try again.");
@@ -1500,6 +1518,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       profilePendingScopeRef.current = null;
       requestedCompanies.current.clear();
 
+      setView(workspaceEntryView());
+      setLoadedApplicationId(null);
       setState(null);
       setWorkspaceSetupVisible(true);
       setWorkspaceCloseConfirmationOpen(false);
@@ -1538,6 +1558,50 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setModelSettingsError(null);
     });
   };
+
+  const goHome = () => setView(homeView);
+
+  /** Scopes the review to one application and loads its latest run, or its empty setup. */
+  const openApplication = (application: ApplicationSummaryView) => {
+    if (state === null) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+    activePort.selectApplication?.(application.id);
+    setImportError(null);
+    setLoadedApplicationId(null);
+    setView(applicationView(application.id, application.name));
+    void activePort
+      .load()
+      .then((loaded) => {
+        if (
+          !isCurrentWorkspaceContext(workspaceId, generation) ||
+          loaded.workspaceId !== workspaceId
+        ) {
+          return;
+        }
+        setState(loaded);
+        setLoadedApplicationId(application.id);
+      })
+      .catch((reason: unknown) => {
+        if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+        if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+        setView(homeView);
+        setImportError(messageOf(reason, "The application could not be opened."));
+      });
+  };
+
+  const openProfileScreen = (focusEvidence: boolean) => {
+    focusEvidenceOnOpen.current = focusEvidence;
+    setView(profileView);
+  };
+
+  // The evidence panel lives on the profile screen; focus it once that screen has opened.
+  useEffect(() => {
+    if (view.kind !== "profile" || !focusEvidenceOnOpen.current) return;
+    focusEvidenceOnOpen.current = false;
+    focusKnowledgeStore();
+  }, [view]);
 
   const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
     const settings = workspaceModelSettingsDraft(workspace);
@@ -2024,6 +2088,202 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   }
 
   const renameWorkspace = activePort.renameWorkspace;
+  const workspaceTitleNode = (
+    <WorkspaceTitle
+      key={state.workspaceId}
+      name={state.workspaceName ?? state.workspaceId}
+      {...(renameWorkspace === undefined
+        ? {}
+        : {
+            onRename: async (name: string) => {
+              const stored = await renameWorkspace(state.workspaceId, name);
+              setState((current) =>
+                current === null || current.workspaceId !== state.workspaceId
+                  ? current
+                  : { ...current, workspaceName: stored },
+              );
+            },
+          })}
+    />
+  );
+
+  const modelSettingsButton =
+    activePort.configureModels === undefined ? undefined : (
+      <button
+        className="button button-quiet"
+        type="button"
+        disabled={modelSettingsDisabled}
+        onClick={openModelSettings}
+      >
+        Change models
+      </button>
+    );
+
+  const writingPolicyNode =
+    activePort.readWritingPolicy === undefined ||
+    activePort.saveWritingPolicy === undefined ? undefined : (
+      <WritingPolicyEditAction
+        key={`${state.workspaceId}:${workspaceGeneration}`}
+        workspaceId={state.workspaceId}
+        disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+        readPolicy={activePort.readWritingPolicy}
+        savePolicy={async (workspaceId, content) => {
+          const generation = workspaceGeneration;
+          try {
+            const loaded = await activePort.saveWritingPolicy?.(workspaceId, content);
+            if (
+              loaded !== undefined &&
+              isCurrentWorkspaceContext(workspaceId, generation) &&
+              loaded.workspaceId === workspaceId
+            ) {
+              setState(loaded);
+            }
+          } catch (reason: unknown) {
+            // A lost workspace sends the person to recovery; anything else is the
+            // application's own message about the policy, shown inside the editor.
+            if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+            throw reason;
+          }
+        }}
+      />
+    );
+
+  const workspaceNavigationNode = (
+    <WorkspaceNavigation
+      closeDisabledReason={closeDisabledReason}
+      confirmationOpen={workspaceCloseConfirmationOpen}
+      onRequestClose={requestWorkspaceClose}
+      onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
+      onConfirmClose={closeWorkspace}
+    />
+  );
+
+  const profileAndEvidencePanels = (
+    <>
+      <KnowledgeWorkspace
+        key={state.workspaceId}
+        workspaceId={state.workspaceId}
+        capabilities={activePort}
+        revision={knowledgeRevision}
+        storeFormRequest={storeFormRequest}
+        disabled={
+          busy ||
+          profilePendingForActiveWorkspace ||
+          pendingReviewAction !== null ||
+          state.execution.status === "running"
+        }
+        onPendingChange={(workspaceId, pending) =>
+          onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
+        }
+        onSelectionSaved={(workspaceId) =>
+          onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
+        }
+      />
+      {hasAnySemanticRetrievalCapability(activePort) ? (
+        <SemanticRetrievalPanel
+          key={`semantic-retrieval-${state.workspaceId}`}
+          workspaceId={state.workspaceId}
+          capabilities={activePort}
+          disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+        />
+      ) : null}
+      <WorkspaceModelSummary
+        title="Configured model pair"
+        author={state.providerTransmissionPreflight.author}
+        critic={state.providerTransmissionPreflight.critic}
+        appliedProfiles={selectedModelProfiles?.refs ?? null}
+        profileWarning={modelProfileWarningText}
+      />
+      {profileCapabilities === null ? null : (
+        <fieldset
+          disabled={
+            knowledgePending ||
+            busy ||
+            pendingReviewAction !== null ||
+            state.execution.status === "running"
+          }
+          className="profile-knowledge-lock"
+        >
+          <ProfileWorkspace
+            key={`${state.workspaceId}:${profileResetEpoch}`}
+            workspaceId={state.workspaceId}
+            capabilities={profileCapabilities}
+            selectedProfile={selectedCandidateProfile}
+            onSelectionChange={onCandidateProfileSelectionChange}
+            onPendingChange={profilePendingChange}
+          />
+        </fieldset>
+      )}
+    </>
+  );
+
+  const homeAvailable = activePort.listApplications !== undefined;
+  const applicationOpen = homeAvailable && view.kind === "application";
+
+  if (homeAvailable && view.kind === "home") {
+    return (
+      <HomeScreen
+        workspaceId={state.workspaceId}
+        workspaceTitle={workspaceTitleNode}
+        workspaceNavigation={workspaceNavigationNode}
+        profileCapabilities={activePort}
+        evidenceCapabilities={activePort}
+        evidenceRevision={knowledgeRevision}
+        legacyEvidenceSourceCount={state.setup.evidenceSourceCount}
+        applicationCapabilities={activePort}
+        errorMessage={importError}
+        disabled={modelSettingsDisabled}
+        onOpenApplication={openApplication}
+        onManageProfile={() => openProfileScreen(false)}
+        onManageEvidence={() => openProfileScreen(true)}
+        settings={
+          <>
+            <WorkspaceModelSummary
+              title="Configured model pair"
+              author={state.providerTransmissionPreflight.author}
+              critic={state.providerTransmissionPreflight.critic}
+              appliedProfiles={selectedModelProfiles?.refs ?? null}
+              profileWarning={modelProfileWarningText}
+            />
+            <div className="home-settings-actions">
+              {modelSettingsButton}
+              {writingPolicyNode}
+            </div>
+          </>
+        }
+      />
+    );
+  }
+
+  if (homeAvailable && view.kind === "profile") {
+    return (
+      <ProfileScreen
+        workspaceTitle={workspaceTitleNode}
+        workspaceNavigation={workspaceNavigationNode}
+        errorMessage={importError}
+        onHome={goHome}
+      >
+        {profileAndEvidencePanels}
+      </ProfileScreen>
+    );
+  }
+
+  if (
+    applicationOpen &&
+    view.kind === "application" &&
+    loadedApplicationId !== view.applicationId
+  ) {
+    return (
+      <main className="boot-shell">
+        <section className="panel boot-panel boot-panel-quiet">
+          <p className="boot-loading" role="status" aria-live="polite">
+            Opening {view.name}…
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <ReviewWorkspace
       state={state}
@@ -2034,139 +2294,21 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       pendingReviewAction={pendingReviewAction}
       startDisabledReason={profileStartDisabledReason}
       workspaceTitle={
-        <WorkspaceTitle
-          key={state.workspaceId}
-          name={state.workspaceName ?? state.workspaceId}
-          {...(renameWorkspace === undefined
-            ? {}
-            : {
-                onRename: async (name: string) => {
-                  const stored = await renameWorkspace(state.workspaceId, name);
-                  setState((current) =>
-                    current === null || current.workspaceId !== state.workspaceId
-                      ? current
-                      : { ...current, workspaceName: stored },
-                  );
-                },
-              })}
-        />
+        applicationOpen && view.kind === "application" ? (
+          <div className="application-title">
+            <WorkspaceLocation current={view.name} onHome={goHome} asHeading />
+          </div>
+        ) : (
+          workspaceTitleNode
+        )
       }
-      {...(activePort.configureModels === undefined
-        ? {}
-        : {
-            modelSettingsAction: (
-              <button
-                className="button button-quiet"
-                type="button"
-                disabled={modelSettingsDisabled}
-                onClick={openModelSettings}
-              >
-                Change models
-              </button>
-            ),
-          })}
-      {...(activePort.readWritingPolicy === undefined || activePort.saveWritingPolicy === undefined
-        ? {}
-        : {
-            writingPolicyAction: (
-              <WritingPolicyEditAction
-                key={`${state.workspaceId}:${workspaceGeneration}`}
-                workspaceId={state.workspaceId}
-                disabled={
-                  busy || pendingReviewAction !== null || state.execution.status === "running"
-                }
-                readPolicy={activePort.readWritingPolicy}
-                savePolicy={async (workspaceId, content) => {
-                  const generation = workspaceGeneration;
-                  try {
-                    const loaded = await activePort.saveWritingPolicy?.(workspaceId, content);
-                    if (
-                      loaded !== undefined &&
-                      isCurrentWorkspaceContext(workspaceId, generation) &&
-                      loaded.workspaceId === workspaceId
-                    ) {
-                      setState(loaded);
-                    }
-                  } catch (reason: unknown) {
-                    // A lost workspace sends the person to recovery; anything else is the
-                    // application's own message about the policy, shown inside the editor.
-                    if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
-                    throw reason;
-                  }
-                }}
-              />
-            ),
-          })}
-      workspaceNavigationAction={
-        <WorkspaceNavigation
-          closeDisabledReason={closeDisabledReason}
-          confirmationOpen={workspaceCloseConfirmationOpen}
-          onRequestClose={requestWorkspaceClose}
-          onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
-          onConfirmClose={closeWorkspace}
-        />
-      }
+      {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
+      {...(writingPolicyNode === undefined ? {} : { writingPolicyAction: writingPolicyNode })}
+      workspaceNavigationAction={workspaceNavigationNode}
       profilePanel={
-        state.state === "collecting" || state.state === "stopped" ? (
-          <>
-            <KnowledgeWorkspace
-              key={state.workspaceId}
-              workspaceId={state.workspaceId}
-              capabilities={activePort}
-              revision={knowledgeRevision}
-              storeFormRequest={storeFormRequest}
-              disabled={
-                busy ||
-                profilePendingForActiveWorkspace ||
-                pendingReviewAction !== null ||
-                state.execution.status === "running"
-              }
-              onPendingChange={(workspaceId, pending) =>
-                onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
-              }
-              onSelectionSaved={(workspaceId) =>
-                onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
-              }
-            />
-            {hasAnySemanticRetrievalCapability(activePort) ? (
-              <SemanticRetrievalPanel
-                key={`semantic-retrieval-${state.workspaceId}`}
-                workspaceId={state.workspaceId}
-                capabilities={activePort}
-                disabled={
-                  busy || pendingReviewAction !== null || state.execution.status === "running"
-                }
-              />
-            ) : null}
-            <WorkspaceModelSummary
-              title="Configured model pair"
-              author={state.providerTransmissionPreflight.author}
-              critic={state.providerTransmissionPreflight.critic}
-              appliedProfiles={selectedModelProfiles?.refs ?? null}
-              profileWarning={modelProfileWarningText}
-            />
-            {profileCapabilities === null ? null : (
-              <fieldset
-                disabled={
-                  knowledgePending ||
-                  busy ||
-                  pendingReviewAction !== null ||
-                  state.execution.status === "running"
-                }
-                className="profile-knowledge-lock"
-              >
-                <ProfileWorkspace
-                  key={`${state.workspaceId}:${profileResetEpoch}`}
-                  workspaceId={state.workspaceId}
-                  capabilities={profileCapabilities}
-                  selectedProfile={selectedCandidateProfile}
-                  onSelectionChange={onCandidateProfileSelectionChange}
-                  onPendingChange={profilePendingChange}
-                />
-              </fieldset>
-            )}
-          </>
-        ) : undefined
+        state.state === "collecting" || state.state === "stopped"
+          ? profileAndEvidencePanels
+          : undefined
       }
       {...(activePort.selectFiles === undefined
         ? {}
