@@ -433,6 +433,14 @@ blocker codes it covers are bound to that exact artifact and recorded in the run
 history, and export accepts only that recorded override. This keeps a review
 finishable at the round limit, when **Request revision** is unavailable.
 
+Extraction produces entry-level facts: one fact per achievement bullet, degree,
+certification, language, or skill group, with its numbers and context kept
+together in the value and the exact source text of that entry as evidence. An
+entry is not split into separate project, metric, or technology facts, and
+achievement facts do not repeat the employer, role title, or dates. Each
+employment keeps separate employer, role title, and date facts that share one
+subject.
+
 Facts with the same category, subject, field, and value found in several places
 (for example the same skill in different sections of one source) are merged into
 one fact that keeps all their sources. A possible-duplicate warning remains only
@@ -1074,9 +1082,9 @@ outside every knowledge base, workspace, and backup:
 - Windows: `%LOCALAPPDATA%\DraftLoop\models`.
 - macOS: `~/Library/Application Support/DraftLoop/models`.
 - Linux: `$XDG_DATA_HOME/draft-loop/models`, or `~/.local/share/draft-loop/models`.
- Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
-`--model-dir`, to use another location. The runtime supports Linux x64 and
-arm64, Windows x64 and arm64, and macOS on Apple silicon.
+  Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
+  `--model-dir`, to use another location. The runtime supports Linux x64 and
+  arm64, Windows x64 and arm64, and macOS on Apple silicon.
 
 ### Retrieval mode
 
@@ -1117,7 +1125,7 @@ In a run, the mode works as follows:
 - **Visible fallback.** When the model is absent, corrupt, or unsupported, the
   runtime fails, or a vector index is stale, the run uses lexical retrieval and
   says so in its preflight, for example `Retrieval mode: semantic requested;
-  using lexical (model-absent).` It also records a content-free
+using lexical (model-absent).` It also records a content-free
   `run.retrieval-mode` audit event and, beside each retrieval trace, a
   `semantic-unavailable` companion trace with the reason. A run that uses the
   mode prints it with the indexed chunk count and records `semantic-used`
