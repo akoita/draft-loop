@@ -9,6 +9,9 @@ const outputName = "canonical_candidate_profile_extraction";
 export const canonicalProfileBoundedCallInstructions =
   "This is one bounded extraction call. input.sources contains one complete source, or one contiguous window of a longer source described by input.extractionWindow using UTF-16 offsets into the original source. Other sources and windows are extracted by separate calls, and conflicts and duplicates across them are detected locally. Extract every supported fact whose evidence is in the supplied text. Propose conflict or duplicate issues only between facts grounded in the supplied text; never invent counterfacts for material that is not supplied. Every evidence quote must be exact contiguous text from the supplied text and must contain the entire fact value. Preserve all existing evidence, key, and schema rules.";
 
+const headingPathInstructions =
+  "When input.extractionWindow.headingPath is present, it lists the headings that enclose the supplied text, outermost first. Use it only as context for who, where, and when; it is not part of the source text, so never quote it as evidence and never take a fact value from it.";
+
 export const groundingCorrectionInstructions = [
   "This is one bounded corrective extraction request after local evidence-grounding diagnostics.",
   "Return a complete replacement proposal using all supplied source records; no prior proposal is included, so do not refer to one.",
@@ -50,6 +53,7 @@ export function buildBoundedCallRequest(
               start: window.start,
               end: window.end,
               sourceLength: source.text.length,
+              ...(window.headingPath === undefined ? {} : { headingPath: window.headingPath }),
             },
           }),
       ...(groundingRecovery === undefined ? {} : { groundingRecovery }),
@@ -61,6 +65,7 @@ export function buildBoundedCallRequest(
     systemPrompt: [
       controls.systemPrompt,
       canonicalProfileBoundedCallInstructions,
+      ...(window?.headingPath === undefined ? [] : [headingPathInstructions]),
       ...(groundingRecovery === undefined ? [] : [groundingCorrectionInstructions]),
     ].join(" "),
     input,

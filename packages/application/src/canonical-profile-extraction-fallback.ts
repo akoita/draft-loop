@@ -366,7 +366,10 @@ export async function executeCanonicalProfileExtractionWithFallback(
   controls: CanonicalProfileExtractionControls,
 ): Promise<JsonObject> {
   throwIfAborted(request.signal);
-  const plannedCalls = planCanonicalProfileExtractionCalls(request.sources);
+  const plannedCalls = planCanonicalProfileExtractionCalls(
+    request.sources,
+    controls.maxOutputTokens,
+  );
   // No request may carry more than the unplanned bound of one source: only planned windows may.
   if (
     hasCanonicalProfileSourceAboveUnplannedBound(request.sources) &&

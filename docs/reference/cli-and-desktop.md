@@ -532,10 +532,20 @@ or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 
 For more than 65,536 UTF-16 text units across one to four unique prepared
-sources, extraction proactively makes one call per source up to 8,192 UTF-16
-units and divides each larger source into contiguous windows of at most 8,192
-units. The plan uses at most 96 calls and is declined if it would exceed that
-cap.
+sources, extraction proactively makes one call per source up to the window size
+and divides each larger source into contiguous windows of at most that size. The
+window size is three quarters of the call's output-token budget divided by 1.9
+(the measured output tokens per character of dense career text), clamped to
+8,192 to 32,768 UTF-16 units: 8,192 for the 8,192-token routes and 12,934 at
+the 32,768-token ceiling. The plan uses at most 96 calls and is declined if it would
+exceed that cap.
+
+Markdown sources are cut at ATX headings (`#` to `######`, outside fenced code)
+and whole sections are packed into windows in document order. A section larger
+than one window is split by size, and each piece also carries its heading path
+(for example `Experience > Senior Engineer at X`) as context that is never
+quotable. Text without Markdown headings is cut by size alone. Ingestion strips
+heading markup from HTML and DOCX, so those sources are cut by size alone.
 
 One source may be up to 524,288 characters, the same bound as the whole
 selection, and is extracted in these bounded windows without manual splitting.
