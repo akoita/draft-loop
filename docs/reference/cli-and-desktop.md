@@ -245,20 +245,54 @@ applications:
 - **Workspace settings.** The configured model pair with **Change models**, and
   the writing policy editor.
 
-**New application** asks for a name and the pasted job description, creates the
-application, and opens it. Choosing a card opens that application.
+Choosing a card opens that application. **New application** opens a guided
+flow, described next.
 
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
-from its own job text. **← Home** beside its name returns to Home. Provider
+from its own reviewed brief, or from its own job text when it has none.
+**← Home** beside its name returns to Home. Provider
 authentication, retrieval mode and the career evidence setup cards remain on
 the application screen as well as behind Manage on Home. Focus moves to the
 screen's location line when a screen opens, so the change is announced.
 
+### New application
+
+The flow has four steps, and **← Home** leaves it at any point. The application
+exists from step 1, so it appears on Home as Drafting and can be resumed there.
+
+1. **Name and job.** Paste the job text, or give a job page address and approve
+   fetching it. The address is stored with that approval and fetched only when
+   requirements are extracted in step 2.
+2. **Requirements.** **Extract requirements** asks for consent, naming the
+   writing model and what is sent (for a web address, that the page is fetched
+   first). Then **Review requirements** opens the brief review. Continue is
+   available once the application's brief is reviewed.
+3. **Career profile.** The workspace's latest reviewed profile is selected for
+   you, and earlier reviewed versions can be picked instead. Nothing is
+   generated here. With no reviewed profile, the step says so and offers
+   **Manage profile**.
+4. **Start review.** A summary of the application, brief version, profile
+   version and model pair, plus the provider-transmission confirmation when it
+   is still required. **Start review** opens the application's review once the
+   run has begun. After approval and export, Home lists the application as
+   Exported.
+
+A second application reuses the same reviewed profile and has its own brief. A
+per-application model override is not offered yet; runs use the workspace's
+model pair.
+
+Briefs belong to applications. `opportunity.create`, `opportunity.latest`,
+`opportunity.edit` and `opportunity.review` accept an optional `applicationId`.
+Each created application keeps its own latest and reviewed brief, and an edit
+or review of another application's brief is refused. Without an `applicationId`
+the default application keeps the workspace's own latest and reviewed brief.
+
 The bridge exposes `application.list`, `application.get` and
-`application.create`. Results carry the name, job source kind, status,
-timestamps, run, brief and export counts, and the latest run id, never a path,
-URL or job text. `review.load`, `review.dispatch` and `run.start` accept an
+`application.create`. `application.create` takes the job as `jobText`, or as a
+`jobUrl` with `jobUrlApproved: true`. Results carry the name, job source kind,
+status, timestamps, run, brief and export counts, and the latest run id, never a
+path, URL or job text. `review.load`, `review.dispatch` and `run.start` accept an
 optional `applicationId`.
 
 ### Closing and reopening
@@ -364,9 +398,12 @@ pnpm --filter @draft-loop/cli start start ./workspace --application app-01234567
   in the workspace at `.draft-loop/applications/<id>/job.md`.
 - **Runs.** `start --application <id>` reads that application's job and binds
   the run to it. Without the option the run belongs to the default application.
+- **Briefs.** `opportunity create --application <id>` binds the new brief to
+  that application. Without the option the brief belongs to the default
+  application.
 - **Service only.** The application service (`createApplication`,
   `listApplications`, `getApplication`) also accepts an approved URL as a job
-  source, and `createOpportunity` takes an `applicationId`. A URL application
+  source. A URL application
   starts a run only with a reviewed opportunity brief, and a brief belonging to
   another application is refused.
 
@@ -382,6 +419,8 @@ extraction.
 ```sh
 pnpm --filter @draft-loop/cli start opportunity create ./workspace \
   --input ./opportunity.json --allow-provider-data
+pnpm --filter @draft-loop/cli start opportunity create ./workspace \
+  --input ./opportunity.json --application app-0123456789ab
 pnpm --filter @draft-loop/cli start opportunity get ./workspace \
   --brief-id target-role
 pnpm --filter @draft-loop/cli start opportunity edit ./workspace \

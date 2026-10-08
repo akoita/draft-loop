@@ -97,6 +97,23 @@ describe("Extract requirements card states", () => {
     expect(html).toContain(">Cancel<");
   });
 
+  it("names the page fetch in the consent for an application whose job is a web address", () => {
+    const html = renderToStaticMarkup(
+      <JobRequirementsExtractionView
+        phase={{ kind: "consent" }}
+        writingModel={writingModel}
+        jobFromUrl
+        disabled={false}
+        onOpen={() => undefined}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(html).toContain("fetches the job page you approved");
+    expect(html).toContain("Nothing is fetched or sent until you choose Extract");
+    expect(html).toContain("career evidence is not sent");
+  });
+
   it("shows progress with an enabled Cancel extraction button", () => {
     const html = render({ kind: "running" }, false, () => undefined);
     expect(html).toContain("Extracting requirements…");

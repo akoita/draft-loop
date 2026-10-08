@@ -1,11 +1,4 @@
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import {
@@ -19,15 +12,12 @@ import {
   applicationStatusLabel,
   applicationStatusTone,
   applicationsByActivity,
-  emptyNewApplicationDraft,
   evidencePresentation,
   type HomeApplicationsState,
   type HomeProfileStatus,
   type HomeStatusPresentation,
   type HomeTone,
   loadHomeProfileStatus,
-  type NewApplicationDraft,
-  newApplicationProblem,
   onlyDefaultApplication,
   profileStatusPresentation,
 } from "./home-model.js";
@@ -215,12 +205,9 @@ export interface HomeViewProps {
   readonly settings?: ReactNode;
   /** Present when the host can create applications. */
   readonly onNewApplication?: () => void;
-  readonly newApplicationButtonRef?: RefObject<HTMLButtonElement | null>;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
-  /** The New application dialog, when open. */
-  readonly dialog?: ReactNode;
 }
 
 /** The landing page of an open workspace: what it holds once, and the applications inside it. */
@@ -237,11 +224,9 @@ export function HomeView({
   profileFreshness,
   settings,
   onNewApplication,
-  newApplicationButtonRef,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
-  dialog,
 }: HomeViewProps) {
   const profilePresentation = profileStatusPresentation(profile);
   const evidenceView = evidencePresentation(evidence, legacyEvidenceSourceCount);
@@ -309,7 +294,6 @@ export function HomeView({
               <h2 id="home-applications-title">Applications</h2>
               {onNewApplication === undefined ? null : (
                 <button
-                  ref={newApplicationButtonRef}
                   className="button button-primary"
                   type="button"
                   disabled={disabled}
@@ -332,146 +316,6 @@ export function HomeView({
           )}
         </div>
       </main>
-      {dialog}
-    </div>
-  );
-}
-
-// -- New application dialog -----------------------------------------------------------------
-
-interface NewApplicationDialogProps {
-  readonly draft: NewApplicationDraft;
-  readonly busy: boolean;
-  readonly errorMessage: string | null;
-  readonly onDraftChange: (draft: NewApplicationDraft) => void;
-  readonly onSubmit: () => void;
-  readonly onCancel: () => void;
-}
-
-const focusableSelector =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** A minimal start: a name and the pasted job text. The guided flow arrives with #1056. */
-export function NewApplicationDialog({
-  draft,
-  busy,
-  errorMessage,
-  onDraftChange,
-  onSubmit,
-  onCancel,
-}: NewApplicationDialogProps) {
-  const dialogRef = useRef<HTMLElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    nameRef.current?.focus();
-  }, []);
-
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    // The review's keyboard shortcuts must not fire while this dialog is open.
-    event.stopPropagation();
-    if (event.key === "Escape") {
-      event.preventDefault();
-      if (!busy) onCancel();
-      return;
-    }
-    if (event.key !== "Tab") return;
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (first === undefined || last === undefined) {
-      event.preventDefault();
-      dialog.focus();
-    } else if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
-  const problem = newApplicationProblem(draft);
-  return (
-    <div className="modal-backdrop">
-      <section
-        ref={dialogRef}
-        className="modal-card new-application-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="new-application-title"
-        tabIndex={-1}
-        onKeyDown={onKeyDown}
-      >
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!busy && problem === null) onSubmit();
-          }}
-        >
-          <div className="modal-header">
-            <div>
-              <p className="eyebrow">Applications</p>
-              <h2 id="new-application-title">New application</h2>
-            </div>
-          </div>
-          <p className="modal-copy">
-            Name the role and paste its job description. DraftLoop reuses your career profile and
-            evidence, and keeps this application's drafts and exports together.
-          </p>
-          <label className="new-application-field">
-            <span>Name</span>
-            <input
-              ref={nameRef}
-              type="text"
-              value={draft.name}
-              maxLength={120}
-              disabled={busy}
-              placeholder="Company and role"
-              onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
-            />
-          </label>
-          <label className="new-application-field">
-            <span>Job description</span>
-            <textarea
-              value={draft.jobText}
-              rows={10}
-              disabled={busy}
-              placeholder="Paste the job description"
-              onChange={(event) => onDraftChange({ ...draft, jobText: event.target.value })}
-            />
-          </label>
-          {errorMessage === null ? null : (
-            <p className="setup-blocker" role="alert">
-              {errorMessage}
-            </p>
-          )}
-          <div className="new-application-actions">
-            <button
-              className="button button-outline"
-              type="button"
-              disabled={busy}
-              onClick={onCancel}
-            >
-              Cancel
-            </button>
-            <button
-              className="button button-primary"
-              type="submit"
-              disabled={busy || problem !== null}
-              aria-describedby={problem === null ? undefined : "new-application-problem"}
-            >
-              {busy ? "Creating…" : "Create application"}
-            </button>
-          </div>
-          {problem === null ? null : (
-            <p className="subtle" id="new-application-problem">
-              {problem}
-            </p>
-          )}
-        </form>
-      </section>
     </div>
   );
 }
@@ -492,15 +336,11 @@ export interface HomeScreenProps {
   readonly disabled: boolean;
   readonly profileFreshness?: ReactNode;
   readonly settings?: ReactNode;
+  /** Opens the guided New application flow; absent when the host cannot create applications. */
+  readonly onNewApplication?: () => void;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
-}
-
-function createFailureText(reason: unknown): string {
-  return reason instanceof Error && reason.message.trim() !== ""
-    ? reason.message
-    : "The application could not be created.";
 }
 
 export function HomeScreen({
@@ -516,6 +356,7 @@ export function HomeScreen({
   disabled,
   profileFreshness,
   settings,
+  onNewApplication,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
@@ -523,18 +364,11 @@ export function HomeScreen({
   const [profile, setProfile] = useState<HomeProfileStatus>({ kind: "loading" });
   const [evidence, setEvidence] = useState<CareerEvidenceStatus>({ kind: "loading" });
   const [applications, setApplications] = useState<HomeApplicationsState>({ status: "loading" });
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [draft, setDraft] = useState<NewApplicationDraft>(emptyNewApplicationDraft);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const newApplicationButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogWasOpen = useRef(false);
   const profileRef = useRef(profileCapabilities);
   profileRef.current = profileCapabilities;
   const evidenceRef = useRef(evidenceCapabilities);
   evidenceRef.current = evidenceCapabilities;
   const listApplications = applicationCapabilities.listApplications;
-  const createApplication = applicationCapabilities.createApplication;
 
   useEffect(() => {
     let active = true;
@@ -580,31 +414,6 @@ export function HomeScreen({
     };
   }, [workspaceId, listApplications]);
 
-  // Focus returns to the button that opened the dialog when it closes without creating.
-  useEffect(() => {
-    if (dialogOpen) dialogWasOpen.current = true;
-    else if (dialogWasOpen.current) {
-      dialogWasOpen.current = false;
-      newApplicationButtonRef.current?.focus();
-    }
-  }, [dialogOpen]);
-
-  const submit = async () => {
-    if (createApplication === undefined || creating) return;
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const created = await createApplication(workspaceId, draft.name.trim(), draft.jobText);
-      setDialogOpen(false);
-      setDraft(emptyNewApplicationDraft);
-      onOpenApplication(created);
-    } catch (reason: unknown) {
-      setCreateError(createFailureText(reason));
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
     <HomeView
       workspaceTitle={workspaceTitle}
@@ -618,30 +427,10 @@ export function HomeScreen({
       disabled={disabled}
       {...(profileFreshness === undefined ? {} : { profileFreshness })}
       {...(settings === undefined ? {} : { settings })}
-      {...(createApplication === undefined
-        ? {}
-        : {
-            onNewApplication: () => {
-              setCreateError(null);
-              setDialogOpen(true);
-            },
-          })}
-      newApplicationButtonRef={newApplicationButtonRef}
+      {...(onNewApplication === undefined ? {} : { onNewApplication })}
       onOpenApplication={onOpenApplication}
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}
-      dialog={
-        dialogOpen ? (
-          <NewApplicationDialog
-            draft={draft}
-            busy={creating}
-            errorMessage={createError}
-            onDraftChange={setDraft}
-            onSubmit={() => void submit()}
-            onCancel={() => setDialogOpen(false)}
-          />
-        ) : null
-      }
     />
   );
 }

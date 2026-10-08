@@ -3,13 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
-import {
-  HomeView,
-  type HomeViewProps,
-  NewApplicationDialog,
-  ProfileScreen,
-  WorkspaceLocation,
-} from "./home.js";
+import { HomeView, type HomeViewProps, ProfileScreen, WorkspaceLocation } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
 
 const now = new Date("2026-10-08T12:00:00.000Z");
@@ -202,47 +196,5 @@ describe("workspace location", () => {
     expect(html).toContain("Career profile and evidence");
     expect(html).toContain("Home</button>");
     expect(html).toContain("Panels");
-  });
-});
-
-describe("New application dialog", () => {
-  const props = {
-    draft: { name: "", jobText: "" },
-    busy: false,
-    errorMessage: null,
-    onDraftChange: () => undefined,
-    onSubmit: () => undefined,
-    onCancel: () => undefined,
-  };
-
-  it("is a modal dialog labelled by its heading", () => {
-    const html = renderToStaticMarkup(<NewApplicationDialog {...props} />);
-    expect(html).toContain('role="dialog"');
-    expect(html).toContain('aria-modal="true"');
-    expect(html).toContain('aria-labelledby="new-application-title"');
-    expect(html).toMatch(/<h2 id="new-application-title">New application<\/h2>/u);
-  });
-
-  it("blocks creation until the name and job text are present, and says why", () => {
-    const empty = renderToStaticMarkup(<NewApplicationDialog {...props} />);
-    expect(empty).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/u);
-    expect(empty).toContain("Name the application");
-    const ready = renderToStaticMarkup(
-      <NewApplicationDialog {...props} draft={{ name: "Acme", jobText: "Role text" }} />,
-    );
-    expect(ready).not.toMatch(/<button[^>]*type="submit"[^>]*disabled=""/u);
-  });
-
-  it("shows a creation failure as an alert and a busy state", () => {
-    const html = renderToStaticMarkup(
-      <NewApplicationDialog
-        {...props}
-        draft={{ name: "Acme", jobText: "Role text" }}
-        errorMessage="The pasted job description is empty."
-        busy
-      />,
-    );
-    expect(html).toContain('role="alert"');
-    expect(html).toContain("Creating…");
   });
 });
