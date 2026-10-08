@@ -16,6 +16,7 @@ import type {
   CanonicalCandidateProfileVersionRecord,
   OpportunityBriefVersionRecord,
 } from "@draft-loop/storage";
+import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
@@ -316,6 +317,8 @@ export interface DeriveCanonicalCandidateProfileCommand {
   readonly signal?: AbortSignal;
   /** Receives content-free progress for bounded multi-call extractions. */
   readonly onProgress?: CanonicalProfileExtractionProgressListener;
+  /** Extract every source again instead of only new or changed ones. */
+  readonly fullExtraction?: boolean;
 }
 
 export interface GetCanonicalCandidateProfileCommand {
@@ -450,7 +453,7 @@ export interface ApplicationDriver {
   ) => Promise<OpportunityBriefVersionRecord>;
   readonly deriveCanonicalCandidateProfile: (
     command: DeriveCanonicalCandidateProfileCommand,
-  ) => Promise<CanonicalCandidateProfileVersionRecord>;
+  ) => Promise<CanonicalCandidateProfileDerivationResult>;
   readonly getCanonicalCandidateProfile: (
     command: GetCanonicalCandidateProfileCommand,
   ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;

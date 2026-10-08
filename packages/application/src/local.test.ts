@@ -3766,15 +3766,21 @@ describe("canonical candidate profile application API", () => {
       const restarted = createLocalApplicationDriver({
         providerClientFactories: { local: providerFactory },
       });
+      // Source counts describe one derivation and are not persisted with the version.
+      const { reusedSourceCount, extractedSourceCount, ...stored } = first;
+      expect({ reusedSourceCount, extractedSourceCount }).toEqual({
+        reusedSourceCount: 0,
+        extractedSourceCount: 1,
+      });
       await expect(
         restarted.getCanonicalCandidateProfile({ root, profileId: "profile-1", version: 1 }),
-      ).resolves.toEqual(first);
+      ).resolves.toEqual(stored);
       await expect(
         restarted.getCanonicalCandidateProfile({ root, profileId: "profile-1" }),
-      ).resolves.toEqual(first);
+      ).resolves.toEqual(stored);
       await expect(
         restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
-      ).resolves.toEqual([first]);
+      ).resolves.toEqual([stored]);
       expect(providerFactory).not.toHaveBeenCalled();
 
       const alternateStoreRoot = join(root, "alternate-candidate-store");
@@ -3807,7 +3813,7 @@ describe("canonical candidate profile application API", () => {
       ).rejects.toThrow("not bound to the current candidate knowledge selection");
       await expect(
         restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
-      ).resolves.toEqual([first]);
+      ).resolves.toEqual([stored]);
       await restarted.configureKnowledgeSelection(
         {
           root,
@@ -3868,7 +3874,7 @@ describe("canonical candidate profile application API", () => {
       ).resolves.toEqual(reviewed);
       await expect(
         restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
-      ).resolves.toEqual([first, edited, reviewed]);
+      ).resolves.toEqual([stored, edited, reviewed]);
       expect(providerFactory).not.toHaveBeenCalled();
 
       await restarted.configureKnowledgeSelection(

@@ -158,9 +158,12 @@ describe("canonical candidate profile derivation", () => {
         status: "draft",
         createdAt: saved.profile.createdAt,
       });
-      expect(await storage.getLatestCanonicalCandidateProfile(workspace.id, "profile-1")).toEqual(
-        refreshed,
-      );
+      expect(await storage.getLatestCanonicalCandidateProfile(workspace.id, "profile-1")).toEqual({
+        workspaceId: refreshed.workspaceId,
+        profile: refreshed.profile,
+        checksum: refreshed.checksum,
+      });
+      expect(refreshed).toMatchObject({ reusedSourceCount: 0, extractedSourceCount: 1 });
       expect(JSON.stringify(saved)).not.toContain(sourcePath);
       expect(JSON.stringify(saved)).not.toContain(storeRoot);
       expect(JSON.stringify(extract.mock.calls)).not.toContain(sourcePath);

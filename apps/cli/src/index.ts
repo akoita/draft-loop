@@ -1938,11 +1938,16 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .requiredOption("--profile-id <id>", "canonical candidate profile id")
     .option("--allow-provider-data", "explicitly approve structured provider extraction")
+    .option(
+      "--full-extraction",
+      "extract every source again instead of reusing facts from unchanged source versions",
+    )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const record = await service.deriveCanonicalCandidateProfile({
         root: workspaceRoot(workspace),
         profileId: options.profileId as string,
         allowProviderData: boolOption(options, "allowProviderData"),
+        ...(boolOption(options, "fullExtraction") ? { fullExtraction: true } : {}),
       });
       writeJson(io, record);
     });

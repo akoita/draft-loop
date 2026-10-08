@@ -2480,6 +2480,8 @@ export interface CanonicalCandidateProfileDeriveInput {
   readonly profileId: string;
   /** Enables provider transmission only when explicitly set to true. */
   readonly providerTransmissionApproved?: boolean;
+  /** Extract every source again instead of only new or changed ones. */
+  readonly fullExtraction?: boolean;
 }
 
 export interface CanonicalCandidateProfileProgressInput {
@@ -2570,6 +2572,7 @@ const canonicalCandidateProfileDeriveKeys = inputKeys<CanonicalCandidateProfileD
   "workspaceId",
   "profileId",
   "providerTransmissionApproved",
+  "fullExtraction",
 ]);
 const canonicalCandidateProfileProgressKeys = inputKeys<CanonicalCandidateProfileProgressInput>()([
   "workspaceId",
@@ -2676,6 +2679,10 @@ export interface CanonicalCandidateProfileRecordResult {
   readonly checksum: string;
   readonly facts: readonly CanonicalCandidateProfileFactResult[];
   readonly issues: readonly CanonicalCandidateProfileIssueResult[];
+  /** Present on a freshly derived version: source versions whose facts were reused. */
+  readonly reusedSourceCount?: number;
+  /** Present on a freshly derived version: source versions sent for extraction. */
+  readonly extractedSourceCount?: number;
 }
 
 export interface CanonicalCandidateProfileListResult {
@@ -2716,6 +2723,8 @@ const canonicalCandidateProfileRecordResultKeys =
     "checksum",
     "facts",
     "issues",
+    "reusedSourceCount",
+    "extractedSourceCount",
   ]);
 const canonicalCandidateProfileListResultKeys = resultKeys<CanonicalCandidateProfileListResult>()([
   "workspaceId",
@@ -4225,6 +4234,7 @@ function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
 const maximumOpportunitySourceCount = 128;
 const maximumOpportunityCollectionEntries = 256;
 const maximumCanonicalCandidateProfileVersionCount = 256;
+const maximumCanonicalCandidateProfileSourceCount = 100_000;
 const maximumOpportunitySourceIds = 64;
 const maximumOpportunityTextLength = 2_000;
 const maximumOpportunityExcerptLength = 300;
@@ -4738,10 +4748,12 @@ function validateCanonicalCandidateProfileDeriveInput(
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, canonicalCandidateProfileDeriveKeys)) return invalidInput();
   const providerTransmissionApproved = optionalBooleanValue(input.providerTransmissionApproved);
+  const fullExtraction = optionalBooleanValue(input.fullExtraction);
   return {
     workspaceId: identifier(input.workspaceId),
     profileId: canonicalCandidateProfileIdentifier(input.profileId),
     ...(providerTransmissionApproved === undefined ? {} : { providerTransmissionApproved }),
+    ...(fullExtraction === undefined ? {} : { fullExtraction }),
   };
 }
 
@@ -7356,6 +7368,31 @@ function normalizeCanonicalCandidateProfileCancelResult(
   return { cancelled: booleanValue(result.cancelled) };
 }
 
+/** Both counts or neither: they describe one derivation and never appear alone. */
+function normalizeCanonicalCandidateProfileSourceCounts(
+  result: Record<string, unknown>,
+): Pick<CanonicalCandidateProfileRecordResult, "reusedSourceCount" | "extractedSourceCount"> {
+  if (result.reusedSourceCount === undefined && result.extractedSourceCount === undefined) {
+    return {};
+  }
+  const [reusedSourceCount, extractedSourceCount] = [
+    result.reusedSourceCount,
+    result.extractedSourceCount,
+  ];
+  if (
+    typeof reusedSourceCount !== "number" ||
+    typeof extractedSourceCount !== "number" ||
+    !Number.isSafeInteger(reusedSourceCount) ||
+    !Number.isSafeInteger(extractedSourceCount) ||
+    reusedSourceCount < 0 ||
+    extractedSourceCount < 0 ||
+    reusedSourceCount + extractedSourceCount > maximumCanonicalCandidateProfileSourceCount
+  ) {
+    return invalidInput();
+  }
+  return { reusedSourceCount, extractedSourceCount };
+}
+
 function normalizeCanonicalCandidateProfileRecordResult(
   value: unknown,
   expectedWorkspaceId?: string,
@@ -7409,6 +7446,7 @@ function normalizeCanonicalCandidateProfileRecordResult(
   for (const issue of issues) {
     if (issue.factIds.some((factId) => !factIds.has(factId))) return invalidInput();
   }
+  const sourceCounts = normalizeCanonicalCandidateProfileSourceCounts(result);
   return {
     workspaceId,
     profileId,
@@ -7421,6 +7459,7 @@ function normalizeCanonicalCandidateProfileRecordResult(
     checksum: canonicalCandidateProfileChecksum(result.checksum),
     facts,
     issues,
+    ...sourceCounts,
   };
 }
 

@@ -242,7 +242,9 @@ export function ProfileGenerationAction({
   providerTransmissionApproved,
   busy,
   generating = false,
+  fullExtraction = false,
   onApprovalChange,
+  onFullExtractionChange,
   onDerive,
 }: {
   readonly outcome: CanonicalCandidateProfileOutcome;
@@ -250,7 +252,10 @@ export function ProfileGenerationAction({
   readonly providerTransmissionApproved: boolean;
   readonly busy: boolean;
   readonly generating?: boolean;
+  readonly fullExtraction?: boolean;
   readonly onApprovalChange: (approved: boolean) => void;
+  /** Offers the re-extraction choice only when provided. */
+  readonly onFullExtractionChange?: (fullExtraction: boolean) => void;
   readonly onDerive: () => void;
 }) {
   return (
@@ -264,6 +269,17 @@ export function ProfileGenerationAction({
         />
         <span>I approve sending selected candidate material to the configured provider.</span>
       </label>
+      {onFullExtractionChange === undefined ? null : (
+        <label className="profile-approval-label">
+          <input
+            type="checkbox"
+            checked={fullExtraction}
+            disabled={busy}
+            onChange={(event) => onFullExtractionChange(event.target.checked)}
+          />
+          <span>Re-extract all sources</span>
+        </label>
+      )}
       <button
         className="button button-primary"
         type="button"
@@ -287,6 +303,11 @@ export function ProfileGenerationAction({
       ) : null}
     </>
   );
+}
+
+/** One content-free line telling how a generation split unchanged and re-extracted sources. */
+export function profileSourceReuseSummary(reused: number, extracted: number): string {
+  return `Reused ${reused} unchanged source${reused === 1 ? "" : "s"}; extracted ${extracted}.`;
 }
 
 function latestVersionOf(
@@ -816,6 +837,13 @@ export function ProfileWorkspace({
     [],
   );
   const [providerTransmissionApproved, setProviderTransmissionApproved] = useState(false);
+  const [fullExtraction, setFullExtraction] = useState(false);
+  const [sourceReuse, setSourceReuse] = useState<{
+    readonly profileId: string;
+    readonly version: number;
+    readonly reused: number;
+    readonly extracted: number;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
@@ -1233,6 +1261,8 @@ export function ProfileWorkspace({
     if (!isCanonicalCandidateProfileId(normalizedProfileId) || !providerTransmissionApproved)
       return;
     setProviderTransmissionApproved(false);
+    setFullExtraction(false);
+    setSourceReuse(null);
     generatingProfileIdRef.current = normalizedProfileId;
     setGenerationProgress(undefined);
     setCancelRequested(false);
@@ -1242,7 +1272,16 @@ export function ProfileWorkspace({
         const derived = await capabilities.deriveCanonicalCandidateProfile({
           profileId: normalizedProfileId,
           providerTransmissionApproved: true,
+          ...(fullExtraction ? { fullExtraction: true } : {}),
         });
+        if (derived.reusedSourceCount !== undefined && derived.extractedSourceCount !== undefined) {
+          setSourceReuse({
+            profileId: derived.profileId,
+            version: derived.version,
+            reused: derived.reusedSourceCount,
+            extracted: derived.extractedSourceCount,
+          });
+        }
         const refreshed = await refresh(normalizedProfileId, derived.version);
         refreshCatalog();
         return refreshed;
@@ -1444,9 +1483,20 @@ export function ProfileWorkspace({
           providerTransmissionApproved={providerTransmissionApproved}
           busy={busy}
           generating={generationStartedAt !== null}
+          fullExtraction={fullExtraction}
           onApprovalChange={setProviderTransmissionApproved}
+          onFullExtractionChange={setFullExtraction}
           onDerive={derive}
         />
+        {!busy &&
+        sourceReuse !== null &&
+        record !== null &&
+        record.profileId === sourceReuse.profileId &&
+        record.version === sourceReuse.version ? (
+          <p className="profile-note">
+            {profileSourceReuseSummary(sourceReuse.reused, sourceReuse.extracted)}
+          </p>
+        ) : null}
       </div>
       <div
         className={
