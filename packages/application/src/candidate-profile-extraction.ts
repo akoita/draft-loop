@@ -23,8 +23,17 @@ import {
   type CandidateProfileExtractionStage,
   candidateProfileExtractionFailureMessage,
 } from "./candidate-profile-extraction-errors.js";
-import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
+import {
+  canonicalCandidateProfileSourceContentKey,
+  prepareCanonicalCandidateProfileExtractionSources,
+} from "./candidate-profile-extraction-sources.js";
 import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
+import {
+  CandidateProfileInputError,
+  candidateProfileSourceEmptyMessage,
+  candidateProfileSourceTooLargeMessage,
+  candidateProfileTotalTooLargeMessage,
+} from "./candidate-profile-input-error.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
@@ -168,6 +177,7 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
   }
 
   let characterCount = 0;
+  const countedContent = new Set<string>();
   const ids = new Set<string>();
   const references = new Map<string, CanonicalCandidateProfileProvenanceReference>();
   const sources: CanonicalCandidateProfileExtractionSource[] = [];
@@ -184,11 +194,15 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
       source.mediaType.length > maximumCanonicalCandidateProfileValueLength ||
       typeof source.checksum !== "string" ||
       !checksumPattern.test(source.checksum) ||
-      typeof source.text !== "string" ||
-      source.text.trim().length === 0 ||
-      source.text.length > maximumCanonicalCandidateProfileExtractionSourceCharacters
+      typeof source.text !== "string"
     ) {
       throw new Error("The canonical candidate profile extraction source is invalid.");
+    }
+    if (source.text.trim().length === 0) {
+      throw new CandidateProfileInputError(candidateProfileSourceEmptyMessage());
+    }
+    if (source.text.length > maximumCanonicalCandidateProfileExtractionSourceCharacters) {
+      throw new CandidateProfileInputError(candidateProfileSourceTooLargeMessage());
     }
     const reference = canonicalCandidateProfileProvenanceReferenceSchema.parse(source.reference);
     if (!isOpaqueCandidateReference(reference)) {
@@ -196,7 +210,15 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
     }
     ids.add(source.id);
     references.set(source.id, reference);
-    characterCount += source.text.length;
+    const contentKey = canonicalCandidateProfileSourceContentKey({
+      mediaType: source.mediaType.trim(),
+      checksum: source.checksum,
+      text: source.text,
+    });
+    if (!countedContent.has(contentKey)) {
+      countedContent.add(contentKey);
+      characterCount += source.text.length;
+    }
     sources.push(
       Object.freeze({
         id: source.id,
@@ -207,7 +229,7 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
     );
   }
   if (characterCount > maximumCanonicalCandidateProfileExtractionCharacters) {
-    throw new Error("The canonical candidate profile extraction input exceeds the size limit.");
+    throw new CandidateProfileInputError(candidateProfileTotalTooLargeMessage(characterCount));
   }
   return {
     request: Object.freeze({

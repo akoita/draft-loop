@@ -17,6 +17,13 @@ export interface PreparedCanonicalCandidateProfileExtractionSources {
   readonly sourceTextsByRepresentativeId: ReadonlyMap<string, string>;
 }
 
+/** Identity of one exact provider input; the size check and deduplication must agree on it. */
+export function canonicalCandidateProfileSourceContentKey(
+  source: Pick<CanonicalCandidateProfileExtractionSource, "mediaType" | "checksum" | "text">,
+): string {
+  return JSON.stringify([source.mediaType, source.checksum, source.text]);
+}
+
 /** Deduplicate exact provider inputs while retaining every local source reference. */
 export function prepareCanonicalCandidateProfileExtractionSources(
   sources: readonly CanonicalCandidateProfileExtractionSource[],
@@ -26,7 +33,7 @@ export function prepareCanonicalCandidateProfileExtractionSources(
   const groups: SourceGroup[] = [];
 
   for (const source of sources) {
-    const key = JSON.stringify([source.mediaType, source.checksum, source.text]);
+    const key = canonicalCandidateProfileSourceContentKey(source);
     const contentGroups = groupsByContent.get(key) ?? [];
     let group = contentGroups.at(-1);
     if (
