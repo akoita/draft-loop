@@ -84,12 +84,15 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain('value="custom"');
     const cards = html.slice(html.indexOf("<fieldset"), html.indexOf("</fieldset>"));
     expect(cards).toContain(">Economy</span>");
+    expect(cards).toContain(">Balanced</span>");
     expect(cards).toContain(">Standard</span>");
     expect(cards).toContain(">Development — GLM Flash</span>");
     expect(cards).toContain(">Development — Gemini Flash</span>");
     expect(cards).toContain(">Development — Mistral Large 4 (preview)</span>");
     expect(cards).toContain(">Custom pair</span>");
     expect(cards).toContain("Claude Haiku 5.5 writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Claude Sonnet 5.5 writes · GPT-6.1 Sol reviews");
+    expect(cards).toContain("Writer $2 / $10 · Reviewer $2 / $10");
     expect(cards).toContain("GLM-5.3 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Gemini 3.8 Flash writes · GPT-6 Luna reviews");
     expect(cards).toContain("Mistral Large 4 (preview) writes · GPT-6 Luna reviews");

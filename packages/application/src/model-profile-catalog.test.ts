@@ -18,8 +18,9 @@ describe("model profile catalog", () => {
     expect(catalog.map(({ profile }) => `${profile.id}@${profile.version}`)).toEqual([
       "economy-anthropic-author@2",
       "economy-openai-critic@1",
-      "standard-anthropic-author@1",
+      "economy-anthropic-author@1",
       "standard-openai-critic@2",
+      "standard-anthropic-author@1",
       "dev-deepinfra-glm-author@1",
       "dev-google-gemini-author@2",
       "dev-mistral-author@1",
@@ -38,13 +39,15 @@ describe("model profile catalog", () => {
       });
       expect(entry.sources.length).toBeGreaterThan(0);
       expect(entry.sources.every((source) => source.startsWith("https://"))).toBe(true);
-      const developmentReviewDates: Record<string, string> = {
-        "dev-deepinfra-glm-author": "2026-10-02",
-        "dev-google-gemini-author": "2026-10-04",
-        "dev-mistral-author": "2026-10-08",
-        "economy-anthropic-author": "2026-10-07",
+      const reviewDates: Record<string, string> = {
+        "dev-deepinfra-glm-author@1": "2026-10-02",
+        "dev-google-gemini-author@2": "2026-10-04",
+        "dev-mistral-author@1": "2026-10-08",
+        "economy-anthropic-author@2": "2026-10-07",
       };
-      expect(entry.reviewedAt).toBe(developmentReviewDates[entry.profile.id] ?? "2026-09-30");
+      expect(entry.reviewedAt).toBe(
+        reviewDates[`${entry.profile.id}@${entry.profile.version}`] ?? "2026-09-30",
+      );
     }
 
     expect(
@@ -57,8 +60,9 @@ describe("model profile catalog", () => {
     ).toEqual({
       "economy-anthropic-author@2": [0.1, 0.5],
       "economy-openai-critic@1": [0.1, 0.5],
-      "standard-anthropic-author@1": [4, 20],
+      "economy-anthropic-author@1": [2, 10],
       "standard-openai-critic@2": [2, 10],
+      "standard-anthropic-author@1": [4, 20],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
       "dev-google-gemini-author@2": [0.75, 3.75],
       "dev-mistral-author@1": [1.36, 4.18],
@@ -66,7 +70,11 @@ describe("model profile catalog", () => {
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
     ]);
-    expect(byId.get("economy-anthropic-author@1")).toBeUndefined();
+    expect(byId.get("economy-anthropic-author@1")).toMatchObject({
+      profile: { provider: "anthropic", modelId: "claude-sonnet-5-5", roles: ["author"] },
+      sources: ["https://platform.claude.com/docs/en/models/sonnet-5-5/overview"],
+      apiPricing: { maxInputTokens: 200000 },
+    });
     expect(
       defaultModelProfileRegistry.resolve("economy-anthropic-author", 1, "author").modelId,
     ).toBe("claude-sonnet-5-5");
@@ -131,7 +139,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(7);
+    expect(next).toHaveLength(8);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -148,7 +156,7 @@ describe("model profile catalog", () => {
     ).toEqual(["author"]);
   });
 
-  it("lists opt-in economy, standard, and development GLM, Gemini, and Mistral exact, role-safe presets", () => {
+  it("lists opt-in economy, balanced, standard, and development GLM, Gemini, and Mistral exact, role-safe presets", () => {
     const presets = listModelProfilePresets();
 
     expect(presets).toEqual([
@@ -158,6 +166,13 @@ describe("model profile catalog", () => {
         tier: "economy",
         author: { id: "economy-anthropic-author", version: 2 },
         critic: { id: "economy-openai-critic", version: 1 },
+      },
+      {
+        id: "balanced",
+        label: "Balanced — unvalidated",
+        tier: "standard",
+        author: { id: "economy-anthropic-author", version: 1 },
+        critic: { id: "standard-openai-critic", version: 2 },
       },
       {
         id: "standard",

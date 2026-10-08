@@ -64,6 +64,7 @@ describe("desktop model profile picker state", () => {
   it("resolves role-safe presets and maps exact profiles to workspace destinations", () => {
     expect(modelProfilePresets.map(({ id }) => id)).toEqual([
       "economy",
+      "balanced",
       "standard",
       "development-glm",
       "development-gemini",

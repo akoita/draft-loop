@@ -15,6 +15,10 @@ const standard: ModelProfileReferences = {
   author: { id: "standard-anthropic-author", version: 1 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
+const balanced: ModelProfileReferences = {
+  author: { id: "economy-anthropic-author", version: 1 },
+  critic: { id: "standard-openai-critic", version: 2 },
+};
 const development: ModelProfileReferences = {
   author: { id: "dev-deepinfra-glm-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
@@ -91,6 +95,15 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("google/gemini-3.8-flash");
     expect(html).toContain("$0.75/1M input · $3.75/1M output");
     expect(html).toContain("Official Google model/pricing documentation");
+  });
+
+  it("estimates the Balanced pair with Sonnet 5.5 and GPT-6.1 Sol rates", () => {
+    const html = renderBudget(balanced, apiKeyModes);
+    expect(html).toContain("economy-anthropic-author@1");
+    expect(html).toContain("anthropic/claude-sonnet-5-5");
+    expect(html).toContain("standard-openai-critic@2");
+    expect(html).toContain("$2/1M input · $10/1M output");
+    expect(html).toContain("Combined scenario estimate</dt><dd>$");
   });
 
   it("labels the development Mistral public rates and estimates the pair", () => {

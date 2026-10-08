@@ -15,6 +15,10 @@ const economy: ModelProfileReferences = {
   author: { id: "economy-anthropic-author", version: 2 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
+const balanced: ModelProfileReferences = {
+  author: { id: "economy-anthropic-author", version: 1 },
+  critic: { id: "standard-openai-critic", version: 2 },
+};
 const development: ModelProfileReferences = {
   author: { id: "dev-deepinfra-glm-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
@@ -101,15 +105,13 @@ describe("model profile public API scenario estimates", () => {
     ).toEqual({ status: "unavailable", reason: "unsupported-pricing-limit" });
   });
 
-  it("does not price the superseded Sonnet 5.5 economy author version", () => {
-    expect(
-      estimateModelProfileApiScenario(
-        scenario({
-          author: { id: "economy-anthropic-author", version: 1 },
-          critic: standard.critic,
-        }),
-      ),
-    ).toMatchObject({ status: "unavailable" });
+  it("estimates the Balanced pair at Sonnet 5.5 and GPT-6.1 Sol rates", () => {
+    expect(estimateModelProfileApiScenario(scenario(balanced))).toEqual({
+      status: "available",
+      authorUsd: 0.06,
+      criticUsd: 0.03,
+      totalUsd: 0.09,
+    });
   });
 
   it("rejects malformed token counts, empty fields, and excessive planned calls", () => {

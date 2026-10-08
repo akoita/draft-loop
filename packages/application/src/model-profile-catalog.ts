@@ -19,6 +19,7 @@ export interface ModelProfileCatalogEntry {
 
 export type ModelProfilePresetId =
   | "economy"
+  | "balanced"
   | "standard"
   | "development-glm"
   | "development-gemini"
@@ -123,6 +124,13 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     tier: "economy",
     author: { id: "economy-anthropic-author", version: 2 },
     critic: { id: "economy-openai-critic", version: 1 },
+  },
+  {
+    id: "balanced",
+    label: "Balanced — unvalidated",
+    tier: "standard",
+    author: { id: "economy-anthropic-author", version: 1 },
+    critic: { id: "standard-openai-critic", version: 2 },
   },
   {
     id: "standard",

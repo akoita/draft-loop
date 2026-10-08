@@ -47,6 +47,11 @@ describe("model profile CLI commands", () => {
       critic: { id: "economy-openai-critic", version: 1 },
     },
     {
+      modelPreset: "balanced",
+      author: { id: "economy-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    },
+    {
       modelPreset: "standard",
       author: { id: "standard-anthropic-author", version: 1 },
       critic: { id: "standard-openai-critic", version: 2 },
@@ -195,6 +200,7 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("--author-profile <id@version>");
     expect(startHelp).toContain("--critic-profile <id@version>");
     expect(startHelp).toContain("unvalidated");
+    expect(startHelp?.replace(/\s+/g, " ")).toContain("economy, balanced and standard");
     expect(startHelp).toContain("development-glm");
     expect(startHelp).toContain("DEEPINFRA_API_KEY");
     expect(startHelp).toContain("development-gemini");
