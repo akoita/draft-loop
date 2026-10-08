@@ -3,6 +3,11 @@ export interface CanonicalProfileExtractionTextWindow {
   readonly start: number;
   readonly end: number;
   readonly text: string;
+  /**
+   * Titles of the enclosing headings when the window was cut inside a larger section. This is
+   * context only: it is not a quotable part of the source text and never changes the offsets.
+   */
+  readonly headingPath?: readonly string[];
 }
 
 export interface CanonicalProfileExtractionSectionFocus {
