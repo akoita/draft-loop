@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   type CandidateKnowledgeSelectionSnapshot,
+  type CanonicalCandidateProfileExtractionIdentity,
   canonicalCandidateProfileFactCategories,
   maximumCanonicalCandidateProfileIdLength,
   maximumCanonicalCandidateProfileIssueCount,
@@ -110,6 +111,8 @@ export interface CanonicalCandidateProfileDerivationDependencies {
     "getLatestCanonicalCandidateProfile" | "saveCanonicalCandidateProfile"
   >;
   readonly extractor: CanonicalCandidateProfileExtractionPort;
+  /** The model and prompt behind `extractor`; recorded on every derived profile version. */
+  readonly extractionIdentity?: CanonicalCandidateProfileExtractionIdentity;
   readonly knowledgeService?: Pick<
     CandidateKnowledgeStoreService,
     "createKnowledgeSelectionSnapshot"
@@ -533,6 +536,9 @@ export function createCanonicalCandidateProfileDerivationService(
         createdAt: latest?.profile.createdAt ?? createdAt,
         updatedAt: createdAt,
         candidateKnowledgeSelection: snapshot,
+        ...(dependencies.extractionIdentity === undefined
+          ? {}
+          : { extraction: dependencies.extractionIdentity }),
         facts: extracted.facts,
         issues,
       });

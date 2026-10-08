@@ -13,6 +13,7 @@ import {
 import { openSqliteStorage } from "@draft-loop/storage";
 import { openCandidateKnowledgeStore } from "@draft-loop/storage/knowledge-store";
 import { describe, expect, it, vi } from "vitest";
+import { promptVersion } from "./canonical-profile-provider-request.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
   CliUserError,
@@ -3736,6 +3737,11 @@ describe("canonical candidate profile application API", () => {
         parentVersion: null,
         status: "draft",
         facts: [expect.objectContaining({ value: "Ada Lovelace" })],
+        extraction: {
+          company: "local",
+          modelId: "profile-extractor",
+          promptTemplateVersion: promptVersion,
+        },
       });
       expect(first.profile.issues.length).toBeGreaterThan(0);
       expect(JSON.stringify(first)).not.toContain(storeRoot);

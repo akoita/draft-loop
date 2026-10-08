@@ -78,10 +78,13 @@ import type {
   CanonicalCandidateProfileExtractionPort,
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
+import {
+  canonicalProfileExtractionIdentity,
+  canonicalProfileExtractionModel,
+} from "./candidate-profile-extraction-identity.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
-import { canonicalExtractionProfileFor } from "./canonical-extraction-profile.js";
 import { executeCanonicalProfileExtractionWithFallback } from "./canonical-profile-extraction-fallback.js";
-import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
+import { canonicalProfileRequest } from "./canonical-profile-provider-request.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
 import * as criticPrompt from "./critic-adjudication.js";
@@ -2716,14 +2719,7 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
 ): CanonicalCandidateProfileExtractionPort {
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
-  const extractionProfile = canonicalExtractionProfileFor(config.authorCompany, config.authorModel);
-  const model: ModelSelection = {
-    company: config.authorCompany,
-    modelId: config.authorModel,
-    role: "author",
-    promptTemplateVersion: promptVersion,
-    ...(extractionProfile === undefined ? {} : { profile: extractionProfile }),
-  };
+  const model = canonicalProfileExtractionModel(config.authorCompany, config.authorModel);
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({
     extract: async (request: CanonicalCandidateProfileExtractionRequest) => {
@@ -2949,6 +2945,9 @@ export function createLocalApplicationDriver(
             ...providerOpportunityOptions,
             allowProviderData: true,
           }),
+          extractionIdentity: canonicalProfileExtractionIdentity(
+            canonicalProfileExtractionModel(config.authorCompany, config.authorModel),
+          ),
           now: timestamp,
         });
         return await derivation.deriveCanonicalCandidateProfile({
