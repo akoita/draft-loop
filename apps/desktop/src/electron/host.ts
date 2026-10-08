@@ -1815,6 +1815,8 @@ const canonicalCandidateProfileKeys = new Set([
   "updatedAt",
   "reviewedAt",
   "candidateKnowledgeSelection",
+  // Which model and prompt extracted the facts; checked by the application, not sent to the window.
+  "extraction",
   "facts",
   "issues",
 ]);

@@ -7277,6 +7277,26 @@ describe("candidate knowledge native controls", () => {
       return { fixture, host };
     }
 
+    it("returns a profile that records which model and prompt extracted it", async () => {
+      const { fixture, host } = await openHost();
+      const record = canonicalCandidateProfileRecord() as { profile: Record<string, unknown> };
+      record.profile.extraction = {
+        company: "mistral",
+        modelId: "mistral-large-4",
+        promptTemplateVersion: "canonical-candidate-profile-extraction-v7",
+        extractionProfile: { id: "dev-mistral-extraction", version: 2 },
+      };
+      fixture.service.deriveCanonicalCandidateProfile.mockResolvedValue(record as never);
+
+      const derived = await host.invoke(deriveCommand);
+
+      expect(derived).toMatchObject({
+        ok: true,
+        value: { profileId: "profile-native", version: 1 },
+      });
+      expect(JSON.stringify(derived)).not.toContain("extraction-v7");
+    });
+
     it("mirrors reported counts while a derive is pending and clears them afterwards", async () => {
       const { fixture, host } = await openHost();
       let release: () => void = () => undefined;
