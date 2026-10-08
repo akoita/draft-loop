@@ -20,6 +20,10 @@ import type {
   ApplicationRunSummary,
   ApplicationStoragePort,
 } from "@draft-loop/storage/application-store";
+import {
+  type CandidateProfileFreshnessSelection,
+  withCandidateProfileFreshness,
+} from "./candidate-profile-freshness.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { ApplicationDriver, CreateOpportunityCommand } from "./index.js";
 
@@ -65,9 +69,12 @@ export interface WorkspaceApplicationService {
 }
 
 export interface WorkspaceApplicationDependencies {
-  readonly readWorkspace: (
-    root: string,
-  ) => Promise<{ readonly id: string; readonly jobDescriptionPath: string }>;
+  readonly readWorkspace: (root: string) => Promise<{
+    readonly id: string;
+    readonly jobDescriptionPath: string;
+    /** Lets the home services compare the profile with the career evidence. */
+    readonly candidateKnowledgeSelection?: CandidateProfileFreshnessSelection;
+  }>;
   readonly now?: () => string;
 }
 
@@ -417,15 +424,15 @@ export async function resolveRunApplication(
 }
 
 /**
- * Adds the application methods to a driver and binds a created opportunity brief to its
- * application. Other driver methods pass through unchanged.
+ * Adds the application methods and the profile freshness read to a driver, and binds a created
+ * opportunity brief to its application. Other driver methods pass through unchanged.
  */
 export function withWorkspaceApplications(
   driver: ApplicationDriver,
   dependencies: WorkspaceApplicationDependencies,
 ): ApplicationDriver {
   const service = createWorkspaceApplicationService(dependencies);
-  return {
+  const withApplications: ApplicationDriver = {
     ...driver,
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
@@ -454,4 +461,5 @@ export function withWorkspaceApplications(
       return record;
     },
   };
+  return withCandidateProfileFreshness(withApplications, dependencies);
 }

@@ -22,12 +22,18 @@ import {
   type HomeProfileStatus,
   type HomeStatusPresentation,
   type HomeTone,
-  loadHomeProfileStatus,
   onlyDefaultApplication,
   profileStatusPresentation,
+  readHomeProfile,
 } from "./home-model.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
+import {
+  loadProfileFreshness,
+  type ProfileFreshnessPresentation,
+  profileFreshnessPresentation,
+} from "./profile-freshness.js";
+import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
 /** Focus lands on the location line of a screen when it opens, so assistive technology says where. */
 function useFocusOnOpen(ref: RefObject<HTMLElement | null>): void {
@@ -103,6 +109,33 @@ function SummaryCard({
       {children}
       <div className="home-card-actions">{action}</div>
     </section>
+  );
+}
+
+/** One compact line saying whether the reviewed profile is current; its action opens the profile. */
+export function ProfileFreshnessNote({
+  presentation,
+  disabled = false,
+  onAction,
+}: {
+  readonly presentation: ProfileFreshnessPresentation;
+  readonly disabled?: boolean;
+  readonly onAction: () => void;
+}) {
+  return (
+    <div className={`home-freshness home-freshness-${presentation.tone}`}>
+      <p className="home-freshness-text">{presentation.text}</p>
+      {presentation.action === undefined ? null : (
+        <button
+          className="button button-quiet home-freshness-action"
+          type="button"
+          disabled={disabled}
+          onClick={onAction}
+        >
+          {presentation.action}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -208,7 +241,7 @@ export interface HomeViewProps {
   readonly errorMessage?: string | null;
   /** Disables navigation while a workspace operation is running. */
   readonly disabled?: boolean;
-  /** Where the profile freshness (up to date or update available) will appear. */
+  /** The profile freshness line (up to date, update available, review pending, not generated). */
   readonly profileFreshness?: ReactNode;
   /** The workspace-level settings: model pair, writing policy. */
   readonly settings?: ReactNode;
@@ -348,7 +381,6 @@ export interface HomeScreenProps {
   readonly applicationCapabilities: DesktopApplicationCapabilities;
   readonly errorMessage: string | null;
   readonly disabled: boolean;
-  readonly profileFreshness?: ReactNode;
   readonly settings?: ReactNode;
   /** Opens the guided New application flow; absent when the host cannot create applications. */
   readonly onNewApplication?: () => void;
@@ -368,7 +400,6 @@ export function HomeScreen({
   applicationCapabilities,
   errorMessage,
   disabled,
-  profileFreshness,
   settings,
   onNewApplication,
   onOpenApplication,
@@ -376,6 +407,8 @@ export function HomeScreen({
   onManageEvidence,
 }: HomeScreenProps) {
   const [profile, setProfile] = useState<HomeProfileStatus>({ kind: "loading" });
+  const [reviewedProfileId, setReviewedProfileId] = useState<string | undefined>(undefined);
+  const [freshness, setFreshness] = useState<ProfileFreshnessResult | undefined>(undefined);
   const [evidence, setEvidence] = useState<CareerEvidenceStatus>({ kind: "loading" });
   const [applications, setApplications] = useState<HomeApplicationsState>({ status: "loading" });
   const profileRef = useRef(profileCapabilities);
@@ -386,13 +419,30 @@ export function HomeScreen({
 
   useEffect(() => {
     let active = true;
-    void loadHomeProfileStatus(profileRef.current, workspaceId).then((loaded) => {
-      if (active) setProfile(loaded);
+    void readHomeProfile(profileRef.current, workspaceId).then((loaded) => {
+      if (!active) return;
+      setProfile(loaded.status);
+      setReviewedProfileId(loaded.status.kind === "reviewed" ? loaded.profileId : undefined);
     });
     return () => {
       active = false;
     };
   }, [workspaceId]);
+
+  // Only a reviewed profile can be stale; the other states are known from the status alone. The
+  // evidence revision re-reads it after the career evidence changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `evidenceRevision` re-reads freshness after the knowledge changes; the capabilities go through a ref.
+  useEffect(() => {
+    setFreshness(undefined);
+    if (reviewedProfileId === undefined) return;
+    let active = true;
+    void loadProfileFreshness(profileRef.current, workspaceId, reviewedProfileId).then((read) => {
+      if (active) setFreshness(read);
+    });
+    return () => {
+      active = false;
+    };
+  }, [workspaceId, reviewedProfileId, evidenceRevision]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `evidenceRevision` re-reads the base after the knowledge changes; the capabilities go through a ref so a new object never refetches.
   useEffect(() => {
@@ -428,6 +478,7 @@ export function HomeScreen({
     };
   }, [workspaceId, listApplications]);
 
+  const freshnessLine = profileFreshnessPresentation(profile, freshness);
   return (
     <HomeView
       workspaceTitle={workspaceTitle}
@@ -439,7 +490,17 @@ export function HomeScreen({
       now={new Date()}
       errorMessage={errorMessage}
       disabled={disabled}
-      {...(profileFreshness === undefined ? {} : { profileFreshness })}
+      {...(freshnessLine === undefined
+        ? {}
+        : {
+            profileFreshness: (
+              <ProfileFreshnessNote
+                presentation={freshnessLine}
+                disabled={disabled}
+                onAction={onManageProfile}
+              />
+            ),
+          })}
       {...(settings === undefined ? {} : { settings })}
       {...(onNewApplication === undefined ? {} : { onNewApplication })}
       onOpenApplication={onOpenApplication}

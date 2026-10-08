@@ -41,6 +41,7 @@ import {
   type OpportunityLatestResult,
   type OpportunityListResult,
   type OpportunityRecordResult,
+  type ProfileFreshnessResult,
   type ProviderAuthMode,
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
@@ -182,6 +183,11 @@ export interface DesktopProfileCapabilities {
   readonly listCanonicalCandidateProfileSummaries?: (
     workspaceId: string,
   ) => Promise<readonly SavedCanonicalCandidateProfileSummary[]>;
+  /** Whether a saved profile is current with the career evidence, as counts only. */
+  readonly getCandidateProfileFreshness?: (
+    workspaceId: string,
+    profileId: string,
+  ) => Promise<ProfileFreshnessResult>;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -1068,6 +1074,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               }),
             );
           },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.freshness")
+      ? {
+          getCandidateProfileFreshness: async (workspaceId: string, profileId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "profile.freshness",
+                input: { workspaceId, profileId },
+              }),
+            ),
         }
       : {}),
     ...(capabilityPort.hasCapability("profile.catalog")

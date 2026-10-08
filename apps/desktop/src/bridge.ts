@@ -90,6 +90,12 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogInput,
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
+import {
+  normalizeProfileFreshnessResult,
+  type ProfileFreshnessInput,
+  type ProfileFreshnessResult,
+  profileFreshnessInputKeys,
+} from "./profile-freshness-contract.js";
 import type {
   RecentWorkspaceOpenInput,
   RecentWorkspacesClearInput,
@@ -157,6 +163,11 @@ export type {
   ReviewedCanonicalCandidateProfileCatalogResult,
   SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
+export type {
+  ProfileFreshnessInput,
+  ProfileFreshnessResult,
+  ProfileFreshnessState,
+} from "./profile-freshness-contract.js";
 export type {
   EmbeddingModelCancelResult,
   EmbeddingModelInstallInput,
@@ -2942,6 +2953,7 @@ export interface BridgeCommandInputMap {
   "profile.cancel": CanonicalCandidateProfileCancelInput;
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
+  "profile.freshness": ProfileFreshnessInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
   "profile.review": CanonicalCandidateProfileReviewInput;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogInput;
@@ -3041,6 +3053,7 @@ export interface BridgeCommandOutputMap {
   "profile.cancel": CanonicalCandidateProfileCancelResult;
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
+  "profile.freshness": ProfileFreshnessResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
   "profile.review": CanonicalCandidateProfileRecordResult;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogResult;
@@ -4901,6 +4914,15 @@ function validateCanonicalCandidateProfileListInput(
   };
 }
 
+function validateProfileFreshnessInput(value: unknown): ProfileFreshnessInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, profileFreshnessInputKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
 function validateCanonicalCandidateProfileEditPatch(
   value: unknown,
 ): CanonicalCandidateProfileEditPatchInput {
@@ -5455,6 +5477,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "profile.list",
         input: validateCanonicalCandidateProfileListInput(command.input),
+      };
+    case "profile.freshness":
+      return {
+        type: "profile.freshness",
+        input: validateProfileFreshnessInput(command.input),
       };
     case "profile.edit":
       return {
@@ -7757,6 +7784,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeCanonicalCandidateProfileCancelResult(value);
     case "profile.list":
       return normalizeCanonicalCandidateProfileListResult(value);
+    case "profile.freshness":
+      return normalizeProfileFreshnessResult(value) ?? invalidInput();
     case "profile.catalog":
       return parseReviewedCanonicalCandidateProfileCatalogResult(value, command.input.workspaceId);
     case "knowledge.readiness":

@@ -38,6 +38,7 @@ const reviewActionLabels: Readonly<Record<ReviewAction["type"], string>> = {
 
 const capabilityLabels: Readonly<Record<string, string>> = {
   "profile.derive": "Generating the candidate profile",
+  "profile.freshness": "Checking the career profile against the career evidence",
   "application.list": "Listing the applications",
   "application.get": "Reading the application",
   "application.create": "Creating the application",

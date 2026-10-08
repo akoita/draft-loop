@@ -139,6 +139,7 @@ import {
   type OpportunityLatestResult,
   type OpportunityRecordResult,
   opportunityExtractionCancelledMessage,
+  type ProfileFreshnessResult,
   type ProviderAuthModeProvider,
   type ProviderAuthModeStatus,
   providerAuthModeProviders,
@@ -214,6 +215,7 @@ import {
   projectLatestOpportunity,
 } from "./opportunity-latest.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
+import { projectProfileFreshness } from "./profile-freshness.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
   type ProviderAuthModePreferenceStore,
@@ -3335,6 +3337,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  async function readCandidateProfileFreshness(
+    input: Extract<BridgeCommand, { type: "profile.freshness" }>["input"],
+  ): Promise<ProfileFreshnessResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const freshness = await service.getCandidateProfileFreshness?.({
+      root: workspace.root,
+      profileId: input.profileId,
+    });
+    return projectProfileFreshness(workspace.descriptor.id, input.profileId, freshness);
+  }
+
   async function listReviewedCanonicalCandidateProfiles(
     input: Extract<BridgeCommand, { type: "profile.catalog" }>["input"],
   ): Promise<ReviewedCanonicalCandidateProfileCatalogResult> {
@@ -5550,6 +5563,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await getCanonicalCandidateProfile(command.input) };
         case "profile.list":
           return { ok: true, value: await listCanonicalCandidateProfileVersions(command.input) };
+        case "profile.freshness":
+          return { ok: true, value: await readCandidateProfileFreshness(command.input) };
         case "profile.catalog":
           return { ok: true, value: await listReviewedCanonicalCandidateProfiles(command.input) };
         case "profile.edit":
