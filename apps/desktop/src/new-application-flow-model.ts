@@ -95,6 +95,9 @@ export function requirementsReviewed(latest: OpportunityLatestResult | undefined
 export function requirementsStatusText(latest: OpportunityLatestResult | undefined): string {
   if (latest === undefined) return "Checking for a saved brief…";
   if (latest === null) return "No requirements yet. Extract them from the job to review them.";
+  if (latest.status === "draft" && latest.requirementCount === 0) {
+    return `Version ${latest.version} is a draft with no requirements. Extract again, or paste the job text instead.`;
+  }
   const count = `${latest.requirementCount} requirement${latest.requirementCount === 1 ? "" : "s"}`;
   return latest.status === "reviewed"
     ? `Version ${latest.version} is reviewed (${count}). Runs for this application start from it.`

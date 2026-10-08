@@ -120,6 +120,13 @@ describe("requirements step", () => {
     expect(render(brief("reviewed"))).toContain("Version 2 is reviewed");
     expect(render(null)).toContain("extraction card");
   });
+
+  it("explains a draft with no requirements and still holds Continue", () => {
+    const html = render({ ...brief("draft"), requirementCount: 0, criticalCount: 0 });
+    expect(html).toContain("Version 2 is a draft with no requirements");
+    expect(html).toContain("paste the job text");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue/u);
+  });
 });
 
 describe("career profile step", () => {

@@ -24,12 +24,27 @@ import type {
   OpportunityBriefSource,
   OpportunityBriefSourcedText,
 } from "@draft-loop/schemas";
+import { CliUserError } from "./cli-user-error.js";
 import { buildOpportunityBrief } from "./opportunity-brief.js";
 import {
   type OpportunityExtractionPort,
   type OpportunityExtractionSource,
   processOpportunityExtraction,
 } from "./opportunity-extraction.js";
+
+/** Fewest characters of job text a web page or saved page must yield before extraction runs. */
+export const minimumJobPageTextCharacters = 400;
+
+export const opportunityJobPageUnreadableMessage =
+  "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead.";
+
+/** A job page yielded too little text to extract from; nothing was sent and no brief was saved. */
+export class OpportunityJobPageUnreadableError extends CliUserError {
+  constructor() {
+    super(opportunityJobPageUnreadableMessage);
+    this.name = "OpportunityJobPageUnreadableError";
+  }
+}
 
 /** Maximum raw text accepted from a pasted or candidate-input source. */
 export const maximumOpportunityIntakeContentBytes = 64 * 1024;
@@ -549,6 +564,18 @@ function extractionMaterialFor(
   };
 }
 
+/** A fetched or saved job page whose text, after reading its JobPosting data, is too short. */
+function jobPageIsUnreadable(
+  input: OpportunitySourceInput,
+  result: IngestionResult | undefined,
+): boolean {
+  if (input.kind !== "approved-url" && input.kind !== "local-file") return false;
+  if (input.classification !== "job-posting") return false;
+  const source = result?.source;
+  if (source === null || source === undefined || source.mediaType !== "text/html") return false;
+  return source.text.trim().length < minimumJobPageTextCharacters;
+}
+
 function extractionOperationId(
   briefId: string,
   version: number,
@@ -600,13 +627,20 @@ async function safelyIngest(
       const ingestUrl = dependencies?.ingestUrl ?? defaultIngestUrl;
       return await ingestUrl(input.url, {
         ...options.urlIngestionOptions,
+        ...(input.classification === "job-posting" ? { preferJobPostingData: true } : {}),
         approved: input.approved,
         approval: input.approved,
       });
     }
     if (input.kind === "local-file") {
       const ingestFile = dependencies?.ingestFile ?? defaultIngestFile;
-      return await ingestFile({ path: input.path }, options.fileIngestionOptions);
+      return await ingestFile(
+        { path: input.path },
+        {
+          ...options.fileIngestionOptions,
+          ...(input.classification === "job-posting" ? { preferJobPostingData: true } : {}),
+        },
+      );
     }
   } catch {
     return { source: null, issues: [] };
@@ -668,6 +702,13 @@ export async function createOpportunityDraft(
       issues.push(issueForDuplicate([firstSourceId, source.id]));
     }
   }
+
+  // A job page that gives no readable job text would otherwise become an empty brief.
+  sourcesInput.forEach((sourceInput, index) => {
+    if (jobPageIsUnreadable(sourceInput, sourceResults[index]?.result)) {
+      throw new OpportunityJobPageUnreadableError();
+    }
+  });
 
   const candidate = mergeCandidateInstructions(sourcesInput);
   const extractionSources = sourcesInput.flatMap((sourceInput, index) => {
