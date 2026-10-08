@@ -290,6 +290,47 @@ pnpm --filter @draft-loop/cli start autopilot off ./workspace
 The setting applies from the next run action, including **Request revision** on
 a run already awaiting approval.
 
+## Applications
+
+A workspace is the candidate's home, and each job is an *application* inside
+it ([ADR 0010](../adr/0010-workspace-as-candidate-home.md)). An application has
+a name, a job source, and its own opportunity briefs, runs and exports. Its
+status is derived from them, never stored:
+
+| Status      | Meaning                                                          |
+| ----------- | ---------------------------------------------------------------- |
+| `drafting`  | No run yet, or every run is still collecting, ingesting or drafting |
+| `in-review` | A run is past drafting, including paused, stopped or out of budget |
+| `approved`  | A run was approved                                               |
+| `exported`  | An export completed                                              |
+
+An existing workspace is read as one **default** application (id `default`)
+built from its configured `job.md`, named after that file's first Markdown
+heading, or "Default application" when it has none. Its existing runs, briefs
+and exports belong to it, and listing it writes nothing. A run or brief with no application
+also belongs to the default application.
+
+```sh
+pnpm --filter @draft-loop/cli start application list ./workspace
+pnpm --filter @draft-loop/cli start application create ./workspace \
+  --name "Acme, Staff Engineer" --job-file ./acme.md
+pnpm --filter @draft-loop/cli start application create ./workspace \
+  --name "Beta, Designer" --job-text "Paste the job description here"
+pnpm --filter @draft-loop/cli start start ./workspace --application app-0123456789ab
+```
+
+- **Name.** Trimmed, 1 to 120 characters. Add `--json` to either command for
+  machine-readable output.
+- **Job file.** `--job-file` is referenced, not copied. `--job-text` is stored
+  in the workspace at `.draft-loop/applications/<id>/job.md`.
+- **Runs.** `start --application <id>` reads that application's job and binds
+  the run to it. Without the option the run belongs to the default application.
+- **Service only.** The application service (`createApplication`,
+  `listApplications`, `getApplication`) also accepts an approved URL as a job
+  source, and `createOpportunity` takes an `applicationId`. A URL application
+  starts a run only with a reviewed opportunity brief, and a brief belonging to
+  another application is refused.
+
 ## Opportunity briefs
 
 The `opportunity` command group creates and reloads one durable brief, lists

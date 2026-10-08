@@ -18,6 +18,10 @@
     "./evidence-retrieval-precision": {
       "types": "./src/evidence-retrieval-precision.ts",
       "import": "./src/evidence-retrieval-precision.ts"
+    },
+    "./application-store": {
+      "types": "./src/application-store.ts",
+      "import": "./src/application-store.ts"
     }
   },
   "files": [

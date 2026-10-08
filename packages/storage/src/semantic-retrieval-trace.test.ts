@@ -345,7 +345,7 @@ describe("semantic retrieval trace companion", () => {
   });
 
   it("applies migration 29 to an existing v28 database without touching v1 traces", async () => {
-    expect(storageSchemaVersion).toBe(29);
+    expect(storageSchemaVersion).toBe(30);
     await storage.candidateKnowledgeSemanticRetrievalTrace.appendSemanticRetrievalTrace(used);
     storage.close();
 
@@ -362,7 +362,7 @@ describe("semantic retrieval trace companion", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(29);
+    expect(storage.appliedMigrationVersions()).toContain(29);
     await expect(
       storage.getCandidateKnowledgeRetrievalTrace(workspaceId, traceId),
     ).resolves.toMatchObject({ id: traceId, selectedChunks: [{ chunkId: "chunk-a1" }] });
