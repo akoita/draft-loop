@@ -5,6 +5,7 @@ import {
 } from "@draft-loop/domain";
 import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
+import { CandidateProfileInputError } from "./candidate-profile-input-error.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import { deepInfraProfileTransportFailureMessage } from "./candidate-profile-transport-guidance.js";
 
@@ -283,6 +284,9 @@ export function candidateProfileExtractionFailureMessage(
   }
   if (stage === "grounding" && error instanceof CandidateProfileGroundingError) {
     return groundingFailureMessage(error) ?? stageFailureMessages[stage];
+  }
+  if (stage === "input-preparation" && error instanceof CandidateProfileInputError) {
+    return error.userMessage;
   }
   return stageFailureMessages[stage];
 }

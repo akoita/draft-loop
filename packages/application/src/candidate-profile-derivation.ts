@@ -26,6 +26,7 @@ import {
   maximumCanonicalCandidateProfileExtractionSourceCharacters,
   processCanonicalCandidateProfileExtraction,
 } from "./candidate-profile-extraction.js";
+import { candidateProfileSourceTooLargeMessage } from "./candidate-profile-input-error.js";
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
@@ -137,9 +138,7 @@ const sourceNormalizationFailureMessage =
   "Selected candidate knowledge could not be normalized; candidate review is required.";
 const sourceFullyExcludedMessage =
   "Every section of a selected source is excluded by its knowledge base's sensitivity rules, so it was not used for profile derivation.";
-const sourceTooLargeMessage = `A selected source is longer than the ${maximumCanonicalCandidateProfileExtractionSourceCharacters.toLocaleString(
-  "en-US",
-)}-character limit for profile derivation. Split it into smaller files and derive again.`;
+const sourceTooLargeMessage = candidateProfileSourceTooLargeMessage();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
