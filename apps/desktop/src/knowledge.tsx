@@ -8,8 +8,9 @@ import {
   differentStoreDisclosureLabel,
   isNewStoreFormRequest,
   knowledgeStoreFormPresentation,
+  reloadedKnowledgeAction,
   reloadStillValid,
-  shouldApplyReloadedKnowledge,
+  showAutoCreateHint,
 } from "./knowledge-current.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
@@ -322,19 +323,20 @@ export function KnowledgeWorkspace({
       });
     void load(workspaceId).then(
       (result) => {
-        if (!stillValid() || result.store === null) return;
-        const loaded = { storeId: result.store.storeId, ids: result.selectedKnowledgeBaseIds };
-        if (
-          !shouldApplyReloadedKnowledge({
-            userTouched: userTouched.current,
-            shown: selectionRef.current,
-            loaded,
-          })
-        ) {
+        if (!stillValid()) return;
+        const action = reloadedKnowledgeAction({
+          userTouched: userTouched.current,
+          shown: selectionRef.current,
+          loaded: result,
+        });
+        if (action === "mark-unavailable") {
+          setSavedUnavailable(true);
+          setLoadingSaved(false);
           return;
         }
+        if (action === "ignore" || result.store === null) return;
         setStore(result.store);
-        setSelection(loaded);
+        setSelection({ storeId: result.store.storeId, ids: result.selectedKnowledgeBaseIds });
         setSavedUnavailable(false);
         setLoadingSaved(false);
       },
@@ -564,7 +566,7 @@ export function KnowledgeWorkspace({
         Reusable career evidence, kept separate from application material. Choosing a base replaces
         this workspace’s current knowledge selection.
       </p>
-      {store === null && autoCreateSupported ? (
+      {showAutoCreateHint({ hasStore: store !== null, autoCreateSupported, savedUnavailable }) ? (
         <p className="knowledge-hint">{autoCreateHint}</p>
       ) : null}
       {pending ? (

@@ -33,6 +33,38 @@ export function shouldApplyReloadedKnowledge(input: {
   return !sameSelection(input.shown, input.loaded);
 }
 
+/**
+ * What the panel does with a reloaded current-knowledge answer.
+ *
+ * - `apply`: show the loaded store and selection.
+ * - `mark-unavailable`: the workspace has a saved selection but its store could not be read, and
+ *   the panel shows nothing; say so instead of the "add career evidence" hint, which would claim
+ *   no base exists while card 02 may still report one.
+ * - `ignore`: keep what is shown. This is a reload with no saved selection, or a failed read
+ *   while a store is already shown.
+ */
+export function reloadedKnowledgeAction(input: {
+  readonly userTouched: boolean;
+  readonly shown: ShownKnowledgeSelection | null;
+  readonly loaded: {
+    readonly store: { readonly storeId: string } | null;
+    readonly selectedKnowledgeBaseIds: readonly string[];
+    readonly unavailable?: true;
+  };
+}): "apply" | "mark-unavailable" | "ignore" {
+  const { loaded } = input;
+  if (loaded.store === null) {
+    return loaded.unavailable === true && input.shown === null ? "mark-unavailable" : "ignore";
+  }
+  return shouldApplyReloadedKnowledge({
+    userTouched: input.userTouched,
+    shown: input.shown,
+    loaded: { storeId: loaded.store.storeId, ids: loaded.selectedKnowledgeBaseIds },
+  })
+    ? "apply"
+    : "ignore";
+}
+
 /** Whether a reload response may still be applied, given what happened since it started. */
 export function reloadStillValid(input: {
   readonly startedSequence: number;
@@ -54,6 +86,18 @@ export const differentStoreDisclosureLabel = "Use a different knowledge store…
 
 export const autoCreateHint =
   "Add career evidence from the Career evidence card above to create your knowledge base.";
+
+/**
+ * Whether the panel points to card 02 for creating a base. It must not when the workspace has a
+ * saved selection that could not be read, because a base then exists and the hint would deny it.
+ */
+export function showAutoCreateHint(input: {
+  readonly hasStore: boolean;
+  readonly autoCreateSupported: boolean;
+  readonly savedUnavailable: boolean;
+}): boolean {
+  return !input.hasStore && input.autoCreateSupported && !input.savedUnavailable;
+}
 
 /**
  * How the create-or-open form is offered.

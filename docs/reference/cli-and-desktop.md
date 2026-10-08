@@ -1138,8 +1138,10 @@ and keeps paths local.
   selected CKB "In use", and shows no path. It reloads when card 02 creates or
   selects a CKB, and the create-or-open form sits behind **Use a different
   knowledge store…** (shown directly only when the host cannot create a CKB
-  itself). If the saved location is no longer readable, the panel asks you to
-  open the store again. Only the first saved entry's store is restored.
+  itself). The panel and card 02 read the store one after another, so a store
+  shared with another workspace shows the same CKB in both. If the saved
+  location is no longer readable, the panel asks you to open the store again,
+  also after a reload. Only the first saved entry's store is restored.
 
 - **Automatic knowledge base and one-time import.** Setup card 02, **Career
   evidence**, follows the workspace's selected CKB. With none selected and no
