@@ -238,6 +238,7 @@ describe("Mistral application route", () => {
       createMistralExtractionProfile(),
     );
     expect(createMistralExtractionProfile().id).toBe("dev-mistral-extraction");
+    expect(createMistralExtractionProfile().version).toBe(2);
     expect(canonicalExtractionProfileFor("mistral", "another-mistral-model")).toBeUndefined();
     expect(canonicalExtractionProfileFor("google", mistralLarge4ModelId)).toBeUndefined();
     expect(canonicalExtractionProfileFor("openai", "gpt-6-luna")).toBeUndefined();
@@ -301,6 +302,7 @@ describe("Mistral application route", () => {
       expect(stream.mock.calls[0]?.[0]).toMatchObject({
         model: mistralLarge4ModelId,
         maxTokens: 32768,
+        reasoningEffort: "none",
       });
     } finally {
       await rm(root, { recursive: true, force: true });

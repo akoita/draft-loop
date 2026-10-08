@@ -534,8 +534,9 @@ and requests `reasoning_effort: "none"` to disable reasoning, following
 [DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
 normal GLM author profile keeps `low` reasoning. The Gemini author route uses the same ceiling, with a
 detached extraction profile that sets `thinkingBudget: 0`. The Mistral Large 4
-author route uses the same ceiling with a detached extraction profile that keeps
-provider defaults. These settings make no speed
+author route uses the same ceiling with a detached extraction profile that sends
+`reasoningEffort: "none"`, so extraction runs without reasoning to save time and
+output budget; the review-run author keeps provider defaults. These settings make no speed
 or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 

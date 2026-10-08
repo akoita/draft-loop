@@ -5,11 +5,23 @@ import { createMistralAuthorProfile } from "./mistral-development-profile.js";
 export const mistralExtractionProfileId = "dev-mistral-extraction" as const;
 
 /**
- * A detached profile for canonical extraction. Mistral Large 4 exposes no thinking or effort
- * control, so it differs from the author profile only by identity.
+ * A detached profile for canonical extraction with reasoning disabled. The adapter maps disabled
+ * thinking to `reasoningEffort: "none"`, because default high-effort reasoning spends minutes and
+ * most of the output budget on discarded reasoning. Version 2 separates these outputs from the
+ * version 1 provider-default profile for incremental reuse.
  */
 export function createMistralExtractionProfile(): ModelProfile {
-  return { ...createMistralAuthorProfile(), id: mistralExtractionProfileId };
+  const authorProfile = createMistralAuthorProfile();
+  return {
+    ...authorProfile,
+    id: mistralExtractionProfileId,
+    version: 2,
+    runtime: {
+      ...authorProfile.runtime,
+      effort: "provider-default",
+      thinking: { mode: "disabled" },
+    },
+  };
 }
 
 export function isMistralExtractionProfile(
@@ -18,7 +30,7 @@ export function isMistralExtractionProfile(
   if (profile === undefined) return false;
   return (
     profile.id === mistralExtractionProfileId &&
-    profile.version === 1 &&
+    profile.version === 2 &&
     profile.provider === mistralCompany &&
     profile.modelId === mistralLarge4ModelId &&
     profile.tier === "economy" &&
@@ -26,7 +38,7 @@ export function isMistralExtractionProfile(
     profile.roles[0] === "author" &&
     profile.runtime.effort === "provider-default" &&
     profile.runtime.maxOutputTokens === 32768 &&
-    profile.runtime.thinking.mode === "provider-default" &&
+    profile.runtime.thinking.mode === "disabled" &&
     profile.knownLimits.maxOutputTokens === 65536 &&
     profile.knownLimits.contextWindowTokens === 1000000
   );
