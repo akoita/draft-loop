@@ -22,11 +22,13 @@ import {
 import {
   type CanonicalProfileExtractionPartCache,
   createCanonicalProfileExtractionPartCache,
+  defaultCanonicalProfileExtractionConcurrencyFor,
   runCanonicalProfileExtractionParts,
 } from "./canonical-profile-extraction-parts.js";
 import {
   type CanonicalProfileExtractionPlannedCall,
   planCanonicalProfileExtractionCalls,
+  proactivePlanMaximumCallCount,
 } from "./canonical-profile-extraction-plan.js";
 import { reportCanonicalProfileExtractionProgress } from "./canonical-profile-extraction-progress.js";
 import {
@@ -35,6 +37,10 @@ import {
   canonicalProfileExtractionSectionFocusInstructions,
   planCanonicalProfileExtractionTextWindows,
 } from "./canonical-profile-extraction-sections.js";
+import {
+  maximumCanonicalProfileExtractionSplitDepth,
+  splitCanonicalProfileExtractionWindow,
+} from "./canonical-profile-extraction-split.js";
 import {
   canonicalProfileUnboundableSourceMessage,
   hasCanonicalProfileSourceAboveUnplannedBound,
@@ -55,7 +61,7 @@ export interface CanonicalProfileExtractionControls {
   readonly systemPrompt: string;
   readonly maxOutputTokens: number;
   readonly dataPolicy: ModelRequest<JsonObject>["dataPolicy"];
-  /** Planned parts run at once; defaults to 4 and is never below 1. */
+  /** Planned parts run at once; defaults to 8 for Mistral and 4 otherwise, never below 1. */
   readonly concurrency?: number;
   /** Completed-part cache for retry reuse; defaults to one shared for the host's lifetime. */
   readonly partCache?: CanonicalProfileExtractionPartCache<CanonicalProfileExtractionPlannedPartEntry>;
@@ -229,17 +235,43 @@ function aggregateBatches(
   }
 }
 
-/** A planned part's accepted model batch, kept so a retry can replay it without a provider call. */
-export interface CanonicalProfileExtractionPlannedPartEntry {
+/** A window's accepted model batch, kept so a retry can replay it without a provider call. */
+export interface CanonicalProfileExtractionPlannedLeafEntry {
   readonly batch: CanonicalCandidateProfileExtractionProposal;
   readonly groundingRecovery?: CanonicalCandidateProfileExtractionRequest["groundingRecovery"];
 }
 
+/** A window that overflowed the output limit and was halved; a retry splits it again at once. */
+export interface CanonicalProfileExtractionPlannedSplitEntry {
+  readonly split: true;
+}
+
+/** What the part cache keeps per window: an accepted batch, or the decision to split it. */
+export type CanonicalProfileExtractionPlannedPartEntry =
+  | CanonicalProfileExtractionPlannedLeafEntry
+  | CanonicalProfileExtractionPlannedSplitEntry;
+
 type PlannedPartEntry = CanonicalProfileExtractionPlannedPartEntry;
 
-interface PlannedPartRun {
+interface LeafRun {
   readonly result: CanonicalCandidateProfileExtractionProposal;
+  readonly entry: CanonicalProfileExtractionPlannedLeafEntry;
+}
+
+interface PlannedPartRun {
+  /** One accepted batch per leaf window, in document order. */
+  readonly result: readonly CanonicalCandidateProfileExtractionProposal[];
   readonly entry: PlannedPartEntry;
+}
+
+/** Shared by every part of one planned extraction, including the windows made by splitting. */
+interface PlannedRunState {
+  readonly cache: CanonicalProfileExtractionPartCache<PlannedPartEntry>;
+  readonly plannedCount: number;
+  /** Keys of windows split during this run; the plan's call cap counts them. */
+  readonly splitKeys: Set<string>;
+  /** Every key this run wrote, so a successful run can drop them all. */
+  readonly touchedKeys: Set<string>;
 }
 
 const sharedPlannedPartCache = createCanonicalProfileExtractionPartCache<PlannedPartEntry>();
@@ -304,8 +336,8 @@ async function executePlannedCall(
   request: CanonicalCandidateProfileExtractionRequest,
   controls: CanonicalProfileExtractionControls,
   plannedCall: CanonicalProfileExtractionPlannedCall,
-  cached: PlannedPartEntry | undefined,
-): Promise<PlannedPartRun> {
+  cached: CanonicalProfileExtractionPlannedLeafEntry | undefined,
+): Promise<LeafRun> {
   throwIfAborted(request.signal);
   if (cached !== undefined) {
     return {
@@ -359,6 +391,76 @@ function plannedPartKey(
   ]);
 }
 
+/**
+ * Run one window, and halve it after an output-limit failure. Halves keep exact offsets into the
+ * source and run one after the other, each with its own grounding recovery, down to the split
+ * depth and size limits or the plan's call cap; past those the output-limit failure stands. A
+ * halved window is cached as a split decision so a user retry reuses its cached halves instead of
+ * repeating the overflowing request.
+ */
+async function executePlannedWindow(
+  executor: CanonicalProfileExtractionExecutor,
+  request: CanonicalCandidateProfileExtractionRequest,
+  controls: CanonicalProfileExtractionControls,
+  plannedCall: CanonicalProfileExtractionPlannedCall,
+  cached: PlannedPartEntry | undefined,
+  depth: number,
+  state: PlannedRunState,
+): Promise<PlannedPartRun> {
+  throwIfAborted(request.signal);
+  const key = plannedPartKey(request, controls, plannedCall);
+  const splitEntry: PlannedPartEntry = { split: true };
+  const replayedSplit = cached !== undefined && "split" in cached;
+  if (cached === undefined || !("split" in cached)) {
+    try {
+      const leaf = await executePlannedCall(executor, request, controls, plannedCall, cached);
+      return { result: [leaf.result], entry: leaf.entry };
+    } catch (error) {
+      throwIfAborted(request.signal);
+      if (!isOutputLimitFailure(error)) throw error;
+    }
+  }
+
+  const source = request.sources.find((candidate) => candidate.id === plannedCall.sourceId);
+  if (source === undefined) throw outputLimitFailure(controls.model.company);
+  const window = plannedCall.window ?? { start: 0, end: source.text.length, text: source.text };
+  const halves =
+    depth >= maximumCanonicalProfileExtractionSplitDepth
+      ? null
+      : splitCanonicalProfileExtractionWindow(window);
+  // A split replayed from the cache was already admitted; a new one must fit under the call cap.
+  const exceedsCallCap =
+    !replayedSplit &&
+    !state.splitKeys.has(key) &&
+    state.plannedCount + state.splitKeys.size + 1 > proactivePlanMaximumCallCount;
+  if (halves === null || exceedsCallCap) throw outputLimitFailure(controls.model.company);
+  state.splitKeys.add(key);
+  state.cache.set(key, splitEntry);
+  state.touchedKeys.add(key);
+
+  const results: CanonicalCandidateProfileExtractionProposal[] = [];
+  for (const half of halves) {
+    const halfCall: CanonicalProfileExtractionPlannedCall = {
+      sourceId: plannedCall.sourceId,
+      window: half,
+    };
+    const halfKey = plannedPartKey(request, controls, halfCall);
+    const run = await executePlannedWindow(
+      executor,
+      request,
+      controls,
+      halfCall,
+      state.cache.get(halfKey),
+      depth + 1,
+      state,
+    );
+    state.cache.set(halfKey, run.entry);
+    state.touchedKeys.add(halfKey);
+    results.push(...run.result);
+  }
+  return { result: results, entry: splitEntry };
+}
+
 /** Retry only explicit output-token truncation with bounded, source-focused batches. */
 export async function executeCanonicalProfileExtractionWithFallback(
   executor: CanonicalProfileExtractionExecutor,
@@ -389,19 +491,31 @@ export async function executeCanonicalProfileExtractionWithFallback(
 
   if (plannedCalls !== null) {
     reportCanonicalProfileExtractionProgress(request.onProgress, 0, plannedCalls.length);
-    const batches = await runCanonicalProfileExtractionParts({
+    const cache = controls.partCache ?? sharedPlannedPartCache;
+    const state: PlannedRunState = {
+      cache,
+      plannedCount: plannedCalls.length,
+      splitKeys: new Set(),
+      touchedKeys: new Set(),
+    };
+    const parts = await runCanonicalProfileExtractionParts({
       parts: plannedCalls,
       keyOf: (plannedCall) => plannedPartKey(request, controls, plannedCall),
       run: (plannedCall, cached) =>
-        executePlannedCall(executor, request, controls, plannedCall, cached),
-      cache: controls.partCache ?? sharedPlannedPartCache,
+        executePlannedWindow(executor, request, controls, plannedCall, cached, 0, state),
+      cache,
       ...(controls.concurrency === undefined ? {} : { concurrency: controls.concurrency }),
+      defaultConcurrency: defaultCanonicalProfileExtractionConcurrencyFor(controls.model.company),
+      // A window that still overflows after splitting would only overflow again on a retry.
+      shouldRetry: (error) => !isOutputLimitFailure(error),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
       onCompleted: (completed, total) =>
         reportCanonicalProfileExtractionProgress(request.onProgress, completed, total),
     });
+    // The extraction succeeded, so nothing it cached is needed for a retry.
+    for (const key of state.touchedKeys) cache.delete(key);
 
-    const aggregate = aggregateBatches(batches, controls.model.company);
+    const aggregate = aggregateBatches(parts.flat(), controls.model.company);
     throwIfAborted(request.signal);
     return aggregate as unknown as JsonObject;
   }

@@ -170,7 +170,8 @@ describe("canonical profile extraction structure windows", () => {
     expect(canonicalProfileExtractionWindowCharacters(0)).toBe(8_192);
     expect(canonicalProfileExtractionWindowCharacters(8_192)).toBe(8_192);
     expect(canonicalProfileExtractionWindowCharacters(16_384)).toBe(8_192);
-    expect(canonicalProfileExtractionWindowCharacters(32_768)).toBe(12_934);
+    expect(canonicalProfileExtractionWindowCharacters(32_768)).toBe(8_192);
+    expect(canonicalProfileExtractionWindowCharacters(65_536)).toBe(16_384);
     expect(canonicalProfileExtractionWindowCharacters(1_000_000)).toBe(32_768);
   });
 
@@ -180,13 +181,13 @@ describe("canonical profile extraction structure windows", () => {
     ).join("");
     const source = [{ id: "source-a", text }];
     const small = planCanonicalProfileExtractionCalls(source);
-    const large = planCanonicalProfileExtractionCalls(source, 32_768);
+    const large = planCanonicalProfileExtractionCalls(source, 65_536);
 
     expect(planCanonicalProfileExtractionCalls(source, 8_192)).toEqual(small);
     expect(small).toHaveLength(12);
     expect(large).toHaveLength(6);
     const windows = large?.flatMap((call) => (call.window === undefined ? [] : [call.window]));
-    expectContiguous(text, windows ?? [], 12_934);
+    expectContiguous(text, windows ?? [], 16_384);
     expect(windows?.some((window) => window.end - window.start > 8_192)).toBe(true);
   });
 
@@ -228,15 +229,15 @@ describe("canonical profile extraction structure windows", () => {
     expect(planCanonicalProfileExtractionCalls(huge)).toBeNull();
   });
 
-  it("plans a 200K-character, 36-section document in half the calls at the 32K budget", () => {
+  it("plans a 200K-character, 36-section document in half the calls at a 64K-token budget", () => {
     const text = Array.from({ length: 36 }, (_, index) =>
       section(`# Section ${index}`, 5_500, `Doc${index}`),
     ).join("");
     expect(text.length).toBeGreaterThan(195_000);
     const before = planCanonicalProfileExtractionCalls([{ id: "source-a", text }]);
-    const after = planCanonicalProfileExtractionCalls([{ id: "source-a", text }], 32_768);
+    const after = planCanonicalProfileExtractionCalls([{ id: "source-a", text }], 65_536);
     expect(after).not.toBeNull();
-    // Two whole sections fit each 12,934-character window; none is cut.
+    // Two whole sections fit each 16,384-character window; none is cut.
     expect(after?.length).toBe(18);
     expect(after?.length).toBeLessThan(before?.length ?? 0);
   });

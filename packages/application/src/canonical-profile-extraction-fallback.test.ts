@@ -1302,7 +1302,7 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it.each(["malformed", "truncation", "timeout"] as const)(
+  it.each(["malformed", "timeout"] as const)(
     "fails the whole extraction after a later %s failure and one planner retry, returning no partial facts",
     async (failureKind) => {
       const first = material("source-a", "TypeScript\n".repeat(5_000));
@@ -1323,7 +1323,6 @@ describe("canonical profile extraction output-limit fallback", () => {
         if (failureKind === "malformed") {
           return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
         }
-        if (failureKind === "truncation") throw providerTruncation();
         throw new ProviderAdapterError("anthropic", "timeout", "private timeout detail");
       });
       const result = await processCanonicalCandidateProfileExtraction(

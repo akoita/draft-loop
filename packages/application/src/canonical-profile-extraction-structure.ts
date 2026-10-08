@@ -3,7 +3,7 @@ import { planCanonicalProfileExtractionSizeWindows } from "./canonical-profile-e
 
 const maximumHeadingTitleLength = 200;
 
-interface MarkdownHeading {
+export interface MarkdownHeading {
   readonly offset: number;
   readonly level: number;
   readonly title: string;
@@ -20,7 +20,7 @@ const fenceClosing = /^ {0,3}(`{3,}|~{3,})[ \t]*$/u;
 const atxHeading = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/u;
 
 /** ATX headings at line start, skipping fenced code blocks. Offsets are line starts. */
-function findMarkdownHeadings(text: string): readonly MarkdownHeading[] {
+export function findMarkdownHeadings(text: string): readonly MarkdownHeading[] {
   const headings: MarkdownHeading[] = [];
   let fence: { readonly character: string; readonly length: number } | undefined;
   let lineStart = 0;
