@@ -61,17 +61,17 @@ describe("ProfileGenerationProgress part progress", () => {
       />,
     );
 
-  it("names the part in progress and hides it from assistive technology", () => {
+  it("counts finished parts and hides the count from assistive technology", () => {
     const html = render({ completedCalls: 1, plannedCalls: 4 });
     expect(html).toContain(
-      '<span class="profile-generation-part" aria-hidden="true">Part 2 of 4</span>',
+      '<span class="profile-generation-part" aria-hidden="true">1 of 4 parts done</span>',
     );
-    expect(render({ completedCalls: 0, plannedCalls: 3 })).toContain("Part 1 of 3");
+    expect(render({ completedCalls: 0, plannedCalls: 3 })).toContain("0 of 3 parts done");
   });
 
   it("says it is finishing once every planned call has completed", () => {
     expect(render({ completedCalls: 4, plannedCalls: 4 })).toContain("Finishing…");
-    expect(render({ completedCalls: 4, plannedCalls: 4 })).not.toContain("Part ");
+    expect(render({ completedCalls: 4, plannedCalls: 4 })).not.toContain("parts done");
   });
 
   it("shows no part label without reported counts", () => {

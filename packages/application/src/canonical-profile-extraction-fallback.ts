@@ -20,6 +20,11 @@ import {
   groundingCorrectionInstructions,
 } from "./canonical-profile-extraction-bounded-calls.js";
 import {
+  type CanonicalProfileExtractionPartCache,
+  createCanonicalProfileExtractionPartCache,
+  runCanonicalProfileExtractionParts,
+} from "./canonical-profile-extraction-parts.js";
+import {
   type CanonicalProfileExtractionPlannedCall,
   planCanonicalProfileExtractionCalls,
 } from "./canonical-profile-extraction-plan.js";
@@ -50,6 +55,10 @@ export interface CanonicalProfileExtractionControls {
   readonly systemPrompt: string;
   readonly maxOutputTokens: number;
   readonly dataPolicy: ModelRequest<JsonObject>["dataPolicy"];
+  /** Planned parts run at once; defaults to 4 and is never below 1. */
+  readonly concurrency?: number;
+  /** Completed-part cache for retry reuse; defaults to one shared for the host's lifetime. */
+  readonly partCache?: CanonicalProfileExtractionPartCache<CanonicalProfileExtractionPlannedPartEntry>;
 }
 
 function outputLimitFailure(
@@ -220,7 +229,27 @@ function aggregateBatches(
   }
 }
 
-async function executePlannedBatch(
+/** A planned part's accepted model batch, kept so a retry can replay it without a provider call. */
+export interface CanonicalProfileExtractionPlannedPartEntry {
+  readonly batch: CanonicalCandidateProfileExtractionProposal;
+  readonly groundingRecovery?: CanonicalCandidateProfileExtractionRequest["groundingRecovery"];
+}
+
+type PlannedPartEntry = CanonicalProfileExtractionPlannedPartEntry;
+
+interface PlannedPartRun {
+  readonly result: CanonicalCandidateProfileExtractionProposal;
+  readonly entry: PlannedPartEntry;
+}
+
+const sharedPlannedPartCache = createCanonicalProfileExtractionPartCache<PlannedPartEntry>();
+
+/** Drop every part kept for retry reuse; for tests and hosts that release memory deliberately. */
+export function clearCanonicalProfileExtractionPartCache(): void {
+  sharedPlannedPartCache.clear();
+}
+
+async function fetchPlannedBatch(
   executor: CanonicalProfileExtractionExecutor,
   request: CanonicalCandidateProfileExtractionRequest,
   controls: CanonicalProfileExtractionControls,
@@ -241,7 +270,14 @@ async function executePlannedBatch(
     throw error;
   }
   throwIfAborted(request.signal);
-  const batch = parseBatch(response.output, controls.model.company);
+  return parseBatch(response.output, controls.model.company);
+}
+
+function groundPlannedBatch(
+  request: CanonicalCandidateProfileExtractionRequest,
+  batch: CanonicalCandidateProfileExtractionProposal,
+  groundingRecovery?: CanonicalCandidateProfileExtractionRequest["groundingRecovery"],
+): CanonicalCandidateProfileExtractionProposal {
   if (request.groundProposal === undefined) return batch;
   try {
     return request.groundProposal(batch);
@@ -260,24 +296,67 @@ async function executePlannedBatch(
 
 /**
  * Run one planned call, with at most one replacement for that same call after a grounding failure.
- * A second failure drops only the ungrounded facts when the request supplies a filter.
+ * A second failure drops only the ungrounded facts when the request supplies a filter. A cached
+ * entry is replayed through the same local grounding without calling the provider.
  */
 async function executePlannedCall(
   executor: CanonicalProfileExtractionExecutor,
   request: CanonicalCandidateProfileExtractionRequest,
   controls: CanonicalProfileExtractionControls,
   plannedCall: CanonicalProfileExtractionPlannedCall,
-): Promise<CanonicalCandidateProfileExtractionProposal> {
+  cached: PlannedPartEntry | undefined,
+): Promise<PlannedPartRun> {
+  throwIfAborted(request.signal);
+  if (cached !== undefined) {
+    return {
+      result: groundPlannedBatch(request, cached.batch, cached.groundingRecovery),
+      entry: cached,
+    };
+  }
+  const batch = await fetchPlannedBatch(executor, request, controls, plannedCall);
   try {
-    return await executePlannedBatch(executor, request, controls, plannedCall);
+    return { result: groundPlannedBatch(request, batch), entry: { batch } };
   } catch (error) {
     throwIfAborted(request.signal);
     if (!(error instanceof CandidateProfileGroundingError)) throw error;
     const groundingRecovery = Object.freeze(
       error.diagnosticCounts.map(({ code, count }) => Object.freeze({ code, count })),
     );
-    return executePlannedBatch(executor, request, controls, plannedCall, groundingRecovery);
+    const replacement = await fetchPlannedBatch(
+      executor,
+      request,
+      controls,
+      plannedCall,
+      groundingRecovery,
+    );
+    return {
+      result: groundPlannedBatch(request, replacement, groundingRecovery),
+      entry: { batch: replacement, groundingRecovery },
+    };
   }
+}
+
+/**
+ * Identify a part by its content and the settings that shape its result, not by operation id,
+ * because the operation id changes with every snapshot and would never match on a user retry.
+ */
+function plannedPartKey(
+  request: CanonicalCandidateProfileExtractionRequest,
+  controls: CanonicalProfileExtractionControls,
+  plannedCall: CanonicalProfileExtractionPlannedCall,
+): string {
+  const source = request.sources.find((candidate) => candidate.id === plannedCall.sourceId);
+  return JSON.stringify([
+    plannedCall.sourceId,
+    source?.checksum,
+    source?.text.length,
+    plannedCall.window?.start,
+    plannedCall.window?.end,
+    controls.model,
+    controls.systemPrompt,
+    controls.maxOutputTokens,
+    request.groundProposal !== undefined,
+  ]);
 }
 
 /** Retry only explicit output-token truncation with bounded, source-focused batches. */
@@ -306,12 +385,18 @@ export async function executeCanonicalProfileExtractionWithFallback(
   }
 
   if (plannedCalls !== null) {
-    const batches: CanonicalCandidateProfileExtractionProposal[] = [];
     reportCanonicalProfileExtractionProgress(request.onProgress, 0, plannedCalls.length);
-    for (const [index, plannedCall] of plannedCalls.entries()) {
-      batches.push(await executePlannedCall(executor, request, controls, plannedCall));
-      reportCanonicalProfileExtractionProgress(request.onProgress, index + 1, plannedCalls.length);
-    }
+    const batches = await runCanonicalProfileExtractionParts({
+      parts: plannedCalls,
+      keyOf: (plannedCall) => plannedPartKey(request, controls, plannedCall),
+      run: (plannedCall, cached) =>
+        executePlannedCall(executor, request, controls, plannedCall, cached),
+      cache: controls.partCache ?? sharedPlannedPartCache,
+      ...(controls.concurrency === undefined ? {} : { concurrency: controls.concurrency }),
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      onCompleted: (completed, total) =>
+        reportCanonicalProfileExtractionProgress(request.onProgress, completed, total),
+    });
 
     const aggregate = aggregateBatches(batches, controls.model.company);
     throwIfAborted(request.signal);

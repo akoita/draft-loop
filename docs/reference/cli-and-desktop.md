@@ -469,8 +469,9 @@ the existing provider-data approval must be granted again before selected
 material is sent, and a hint says so while the approval box is unticked.
 
 While a profile is generating, the desktop shows a spinner, an elapsed timer,
-and, once the plan is known, which part is running (for example **Part 2 of 4**,
-then **Finishing…**); it does not estimate completion time. The button reads
+and, once the plan is known, how many parts are done (for example **1 of 4
+parts done**, then **Finishing…**); parts run in parallel, and it does not
+estimate completion time. The button reads
 **Generating…**. Large knowledge bases are processed in parts and can take
 several minutes, so keep DraftLoop open. **Cancel generation** stops further
 provider calls and saves nothing.
@@ -548,9 +549,15 @@ Each planned call sends only its own source, or only its window text with the
 source ID, media type, and the window's UTF-16 offsets and source length. Other
 sources and windows are never included. Each result is grounded as it arrives. A
 call that fails grounding gets at most one replacement for that same call with
-fixed diagnostic counts, so a plan makes at most 192 calls. After a second
+fixed diagnostic counts, so a successful plan makes at most 192 calls. After a second
 failure, only that call's ungrounded facts are dropped and counted toward the
 single warning above; planned extractions never make the full-corpus replacement.
+
+Planned calls run four at a time by default and are combined in plan order, so the result
+matches a sequential run. A call that still fails is retried once alone after
+the others finish; if it fails again the whole extraction fails and no partial
+profile is saved. While the host stays open, completed calls are kept in memory
+so a user retry re-runs only the failed ones.
 
 Cross-source conflicts and duplicates for planned extractions come from local
 detection over the aggregated facts, which depends on consistent subject naming
