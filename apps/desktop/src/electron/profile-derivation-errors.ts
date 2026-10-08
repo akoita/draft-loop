@@ -1,5 +1,4 @@
 import {
-  CliUserError,
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
   canonicalCandidateProfileSelectionStaleErrorMessage,
@@ -7,10 +6,15 @@ import {
 
 // Fixed, path-free application messages a user can act on. Only these exact
 // strings may cross the bridge; any other derivation failure stays generic.
+// The derivation service throws the first three as plain errors, and the
+// workspace layer throws the last as a user error, so the message identifies
+// them, not the error class. Profile size limits are not thrown: the
+// application records them as a failed profile version with a clear cause.
 const userFixableProfileDerivationMessages: ReadonlySet<string> = new Set([
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
   canonicalCandidateProfileSelectionStaleErrorMessage,
+  "The configured candidate knowledge selection is no longer valid.",
 ]);
 
 /**
@@ -19,9 +23,7 @@ const userFixableProfileDerivationMessages: ReadonlySet<string> = new Set([
  * message.
  */
 export function userFixableProfileDerivationMessage(error: unknown): string | undefined {
-  const isUserError =
-    error instanceof CliUserError || (error instanceof Error && error.name === "CliUserError");
-  if (!isUserError || !userFixableProfileDerivationMessages.has(error.message)) {
+  if (!(error instanceof Error) || !userFixableProfileDerivationMessages.has(error.message)) {
     return undefined;
   }
   return error.message;

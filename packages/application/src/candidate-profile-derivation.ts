@@ -22,6 +22,11 @@ import {
 
 import { buildCanonicalCandidateProfile } from "./candidate-profile.js";
 import {
+  type CandidateProfileCapacityLimit,
+  candidateProfileCapacityFailureMessage,
+  candidateProfileCapacityLimitOf,
+} from "./candidate-profile-capacity-failure.js";
+import {
   type CanonicalCandidateProfileExtractionMaterial,
   type CanonicalCandidateProfileExtractionPort,
   maximumCanonicalCandidateProfileExtractionSourceCharacters,
@@ -392,7 +397,11 @@ async function materializeSelection(
 }
 
 function materializationIssue(
-  namespace: "source-normalization-failure" | "source-too-large" | "source-fully-excluded",
+  namespace:
+    | "source-normalization-failure"
+    | "source-too-large"
+    | "source-fully-excluded"
+    | "profile-capacity",
   message: string,
   references: readonly CanonicalCandidateProfileProvenanceReference[],
   severity: CanonicalCandidateProfileIssue["severity"] = "error",
@@ -502,15 +511,21 @@ export function createCanonicalCandidateProfileDerivationService(
               ...(command.signal === undefined ? {} : { signal: command.signal }),
               ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
             });
-      const extracted =
-        plan.reusedSourceCount === 0
-          ? freshlyExtracted
-          : reconcileCanonicalCandidateProfileFacts({
-              reusedFacts: plan.reusedFacts,
-              carriedIssues: plan.carriedIssues,
-              extracted: freshlyExtracted,
-            });
-      const issues = [
+      let capacityLimit: CandidateProfileCapacityLimit | undefined;
+      let extracted = freshlyExtracted;
+      if (plan.reusedSourceCount > 0) {
+        try {
+          extracted = reconcileCanonicalCandidateProfileFacts({
+            reusedFacts: plan.reusedFacts,
+            carriedIssues: plan.carriedIssues,
+            extracted: freshlyExtracted,
+          });
+        } catch (error) {
+          capacityLimit = candidateProfileCapacityLimitOf(error);
+          if (capacityLimit === undefined) throw error;
+        }
+      }
+      let issues = [
         ...extracted.issues,
         ...(materialization.oversizedReferences.length === 0
           ? []
@@ -550,8 +565,31 @@ export function createCanonicalCandidateProfileDerivationService(
               ),
             ]),
       ];
-      if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
-        throw new Error(canonicalCandidateProfileDerivationErrorMessage);
+      if (
+        capacityLimit === undefined &&
+        issues.length > maximumCanonicalCandidateProfileIssueCount
+      ) {
+        capacityLimit = "issues";
+      }
+      if (capacityLimit !== undefined) {
+        // Record a failed generation like any other extraction failure instead of throwing.
+        extracted = { facts: [], issues: [] };
+        issues = [
+          materializationIssue(
+            "profile-capacity",
+            candidateProfileCapacityFailureMessage(capacityLimit),
+            snapshot.entries.flatMap((entry) =>
+              entry.sources.map((source) =>
+                sourceReference(
+                  entry.storeId,
+                  entry.knowledgeBaseId,
+                  source.sourceId,
+                  source.versionId,
+                ),
+              ),
+            ),
+          ),
+        ];
       }
       const finalSnapshot =
         await knowledgeService.createKnowledgeSelectionSnapshot(selectionCommand);
