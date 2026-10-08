@@ -277,6 +277,8 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
     readonly listRecentWorkspaces?: () => Promise<readonly RecentWorkspaceSummary[]>;
     readonly openRecentWorkspace?: (id: string) => Promise<DesktopReviewState>;
     readonly clearRecentWorkspaces?: () => Promise<void>;
+    /** Renames the open workspace and resolves with the stored name. */
+    readonly renameWorkspace?: (workspaceId: string, name: string) => Promise<string>;
   };
 
 /**
@@ -446,6 +448,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           clearRecentWorkspaces: async () => {
             unwrap(await capabilityPort.execute({ type: "workspace.recent-clear", input: {} }));
           },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.rename")
+      ? {
+          renameWorkspace: async (workspaceId: string, name: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.rename",
+                input: { workspaceId, name },
+              }),
+            ).name,
         }
       : {}),
     createDemoWorkspace: async (name) => {

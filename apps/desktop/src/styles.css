@@ -735,6 +735,56 @@ input[type="checkbox"] {
   white-space: nowrap;
 }
 
+.workspace-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.workspace-title h1 {
+  flex: 0 1 auto;
+}
+
+.workspace-title-action {
+  flex: none;
+  padding-block: 2px;
+  font-size: var(--text-xs);
+}
+
+.workspace-title-edit {
+  position: relative;
+}
+
+.workspace-title-edit input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  max-width: 22rem;
+  padding-block: 4px;
+}
+
+.workspace-title-edit .button {
+  flex: none;
+  padding-block: 3px;
+  font-size: var(--text-xs);
+}
+
+/* The spine has a fixed height, so a validation message floats under the field
+   instead of growing the header. */
+.workspace-title-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  white-space: normal;
+}
+
 .spine-identity-meta {
   display: flex;
   align-items: center;
@@ -5232,6 +5282,11 @@ input[type="checkbox"] {
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: left;
+}
+
+.recent-workspace-location {
+  color: var(--text-3);
+  font-size: var(--text-xs);
 }
 
 .recent-workspace-open time {

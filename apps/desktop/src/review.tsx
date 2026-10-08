@@ -89,6 +89,8 @@ interface ReviewWorkspaceProps {
   readonly startDisabledReason?: string | null;
   /** Optional native model-settings action shown in the workspace header. */
   readonly modelSettingsAction?: ReactNode;
+  /** Replaces the plain workspace heading, e.g. with one that can be renamed. */
+  readonly workspaceTitle?: ReactNode;
   /** Optional workspace navigation shown in the workspace header. */
   readonly workspaceNavigationAction?: ReactNode;
   /** Profile controls rendered in the collecting/setup workspace. */
@@ -1304,6 +1306,7 @@ export function ReviewWorkspace({
   startDisabledReason = null,
   modelSettingsAction,
   workspaceNavigationAction,
+  workspaceTitle,
   profilePanel,
   writingPolicyAction,
   getCredentialStatus,
@@ -1312,6 +1315,7 @@ export function ReviewWorkspace({
   getProviderAuthModeStatus,
   onSetProviderAuthMode,
 }: ReviewWorkspaceProps) {
+  const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
     jobRequirements?.getLatestOpportunity,
     state.workspaceId,
@@ -2826,7 +2830,7 @@ export function ReviewWorkspace({
           <div className="main-column">
             <header className="spine">
               <div className="spine-identity">
-                <h1 title={state.workspaceId}>{state.workspaceId}</h1>
+                {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
                 <div className="spine-identity-meta">
                   <span className="state-pill state-collecting">Collecting inputs</span>
                 </div>
@@ -3155,7 +3159,7 @@ export function ReviewWorkspace({
         <div className="main-column">
           <header className="spine">
             <div className="spine-identity">
-              <h1 title={state.workspaceId}>{state.workspaceId}</h1>
+              {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
               <div className="spine-identity-meta">
                 <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
                 <span className="meta-chip">Round {state.round}</span>

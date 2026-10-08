@@ -500,6 +500,66 @@ describe("recent workspace bridge contracts", () => {
   });
 });
 
+describe("workspace rename bridge contract", () => {
+  it("is an advertised capability whose validator accepts exactly workspaceId and name", () => {
+    expect(bridgeCapabilities).toContain("workspace.rename");
+    expect(
+      validateBridgeCommand({
+        type: "workspace.rename",
+        input: { workspaceId: "workspace-1", name: "  Mergify — Staff Engineer " },
+      }),
+    ).toEqual({
+      type: "workspace.rename",
+      input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+    });
+    for (const input of [
+      { workspaceId: "workspace-1" },
+      { workspaceId: "workspace-1", name: "x", path: "/private" },
+      { workspaceId: "workspace-1", name: "a/b" },
+      { workspaceId: "workspace-1", name: "a\\b" },
+      { workspaceId: "workspace-1", name: "bad\nname" },
+      { workspaceId: "workspace-1", name: "   " },
+      { workspaceId: "workspace-1", name: "x".repeat(81) },
+      { name: "No workspace" },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "workspace.rename", input })).toThrow();
+    }
+  });
+
+  it("returns only the stored name and rejects drifted results", async () => {
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: { name: "Mergify — Staff Engineer" } })),
+    );
+    await expect(
+      port.execute({
+        type: "workspace.rename",
+        input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+      }),
+    ).resolves.toEqual({ ok: true, value: { name: "Mergify — Staff Engineer" } });
+    const drifted = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: { name: "ok", path: "/private" } })),
+    );
+    await expect(
+      drifted.execute({
+        type: "workspace.rename",
+        input: { workspaceId: "workspace-1", name: "ok" },
+      }),
+    ).resolves.toMatchObject({ ok: false });
+  });
+
+  it("lets workspace.create take a display name but still refuses separators", () => {
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "Équipe Données — 2026", mode: "real" },
+      }),
+    ).toMatchObject({ input: { name: "Équipe Données — 2026" } });
+    expect(() =>
+      validateBridgeCommand({ type: "workspace.create", input: { name: "../escape" } }),
+    ).toThrow();
+  });
+});
+
 describe("desktop capability bridge", () => {
   it("accepts allowlisted commands and rejects unknown or extra fields", () => {
     expect(

@@ -513,7 +513,7 @@ function service(
 describe("native host", () => {
   it("records created workspaces, reopens them by opaque id, and clears history only", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-recent-host-"));
-    const expectedRoot = join(parent, "Saved workspace");
+    const expectedRoot = join(parent, "saved-workspace");
     const fixture = service(expectedRoot);
     fixture.service.initialize.mockImplementation(async () => descriptor(expectedRoot));
     fixture.service.readWorkspace = vi.fn<ApplicationService["readWorkspace"]>(async (root) =>
@@ -613,6 +613,7 @@ describe("native host", () => {
       remember: async () => {
         throw new Error("private path write failure");
       },
+      rename: async () => undefined,
       clear: async () => undefined,
     };
     const host = createNativeHost({
