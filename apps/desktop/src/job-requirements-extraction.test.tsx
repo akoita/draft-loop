@@ -182,6 +182,26 @@ describe("Extract requirements card states", () => {
     expect(render({ kind: "idle" })).not.toContain("Review requirements");
   });
 
+  it("says plainly when no requirements were found and offers no review of an empty brief", () => {
+    const summary = summarizeJobRequirements(record({ requirements: [], responsibilities: [] }));
+    const html = renderToStaticMarkup(
+      <JobRequirementsExtractionView
+        phase={{ kind: "done", summary }}
+        writingModel={writingModel}
+        disabled={false}
+        reviewAction={<button type="button">Review requirements</button>}
+        onOpen={() => undefined}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(html).toContain("No requirements were found in this job text");
+    expect(html).toContain("paste the job text");
+    expect(html).toContain(">Extract again<");
+    expect(html).not.toContain("Review requirements");
+    expect(html).not.toContain("Draft brief saved");
+  });
+
   it("shows a failure with a retry action", () => {
     const html = render({
       kind: "failed",

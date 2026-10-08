@@ -2,6 +2,7 @@ import {
   CliUserError,
   EmbeddingModelInstallError,
   JobRequirementUserError,
+  OpportunityJobPageUnreadableError,
   opportunityBriefVersionStaleErrorMessage,
   SourceIngestionUserError,
 } from "@draft-loop/application";
@@ -114,6 +115,10 @@ function hasBridgeErrorCode(error: unknown): boolean {
  */
 export function hostFailureMessage(command: BridgeCommand, error: unknown): string | undefined {
   if (error instanceof SourceIngestionUserError) return error.message;
+  // An unreadable job page fails with a fixed sentence that tells the person to paste the text.
+  if (command.type === "opportunity.create" && error instanceof OpportunityJobPageUnreadableError) {
+    return error.message;
+  }
   if (startsRun(command) && error instanceof JobRequirementUserError) return error.summary;
   if (command.type === "profile.derive") {
     const message = userFixableProfileDerivationMessage(error);

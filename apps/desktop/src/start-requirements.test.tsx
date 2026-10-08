@@ -73,6 +73,18 @@ describe("setup card 01 latest brief", () => {
     expect(latestBriefNote(draft)).toContain("cannot start a run until you review it");
   });
 
+  it("says no requirements were found instead of offering to review an empty draft", () => {
+    const html = renderToStaticMarkup(
+      <LatestRequirementsBriefView
+        latest={{ ...draft, requirementCount: 0, criticalCount: 0 }}
+        action={<button type="button">Review requirements</button>}
+      />,
+    );
+    expect(html).toContain("No requirements were found in this job text");
+    expect(html).toContain("Extract again, or paste the job text");
+    expect(html).not.toContain("Review requirements");
+  });
+
   it("offers a reviewed brief for viewing and says runs start from it", () => {
     expect(latestBriefTitle(reviewed)).toBe("Requirements brief v3 (reviewed)");
     expect(latestBriefNote(reviewed)).toBe(

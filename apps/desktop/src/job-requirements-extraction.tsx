@@ -12,6 +12,7 @@ import {
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";
+import { noRequirementsFoundNote, noRequirementsFoundTitle } from "./start-requirements-model.js";
 
 /** The host connection that lets setup card 01 extract requirements from the workspace's job text. */
 export interface JobRequirementsExtractionBinding {
@@ -234,6 +235,31 @@ export function JobRequirementsExtractionView({
         </div>
       );
     case "done":
+      if (phase.summary.requirementCount === 0) {
+        return (
+          <div className="job-extraction" role="status">
+            <p className="job-extraction-title">{noRequirementsFoundTitle}</p>
+            <p className="setup-note">{noRequirementsFoundNote}</p>
+            {phase.summary.issues.length === 0 ? null : (
+              <ul className="job-extraction-issues">
+                {phase.summary.issues.map((issue) => (
+                  <li key={issue.id}>
+                    <strong>{issueLabel(issue)}:</strong> {issue.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={disabled}
+              onClick={onOpen}
+            >
+              Extract again
+            </button>
+          </div>
+        );
+      }
       return (
         <div className="job-extraction" role="status">
           <p className="job-extraction-title">Draft brief saved</p>

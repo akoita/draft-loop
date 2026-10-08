@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { OpportunityLatestResult } from "./bridge.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import {
+  isEmptyDraftBrief,
   latestBriefNote,
   latestBriefTitle,
   type ReviewedRequirementsSelection,
@@ -91,7 +92,7 @@ export function LatestRequirementsBriefView({ latest, action }: LatestRequiremen
     <div className="job-extraction" data-testid="latest-requirements-brief">
       <p className="job-extraction-title">{latestBriefTitle(latest)}</p>
       <p className="setup-note">{latestBriefNote(latest)}</p>
-      {action}
+      {isEmptyDraftBrief(latest) ? null : action}
     </div>
   );
 }

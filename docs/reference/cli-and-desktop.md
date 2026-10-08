@@ -311,7 +311,9 @@ exists from step 1, so it appears on Home as Drafting and can be resumed there.
 2. **Requirements.** **Extract requirements** asks for consent, naming the
    writing model and what is sent (for a web address, that the page is fetched
    first). Then **Review requirements** opens the brief review. Continue is
-   available once the application's brief is reviewed.
+   available once the application's brief is reviewed. If no requirements were
+   found, the step says so and offers **Extract again** instead of a review;
+   pasting the job text into the application is the alternative.
 3. **Career profile.** The workspace's latest reviewed profile is selected for
    you, and earlier reviewed versions can be picked instead. Nothing is
    generated here. With no reviewed profile, the step says so and offers
@@ -531,6 +533,21 @@ counts, and any open extraction issues. While extraction runs, **Cancel**
 aborts the provider request and saves no brief; the card returns to idle with
 "Extraction cancelled. No brief was saved." The draft cannot start a run until
 it is reviewed.
+
+For a job page address or saved job page, extraction reads only that page:
+
+- **JobPosting data first.** When the page carries schema.org `JobPosting`
+  data, which most job boards publish for search engines, DraftLoop reads the
+  job from it: the title and company as a heading, then the description with
+  its headings and list items kept. This is what makes pages rendered by
+  JavaScript readable. No other address is fetched.
+- **Too little text.** A page that yields under 400 characters of job text
+  fails before anything is sent to a provider, and no brief is saved: "DraftLoop
+  could not read enough job text from this page. It may show the job only with
+  JavaScript. Paste the job text instead."
+- **No requirements found.** If extraction returns no requirements, the card
+  says "No requirements were found in this job text" and offers **Extract
+  again** instead of a review.
 
 The card also shows the workspace's latest brief as "Requirements brief vN
 (draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review

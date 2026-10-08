@@ -50,6 +50,16 @@ export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelecti
 export const rawJobDescriptionLabel =
   "Using the raw job description (unreviewed source units), not the reviewed requirements.";
 
+/** What an extraction that found nothing says, so a person is never offered an empty brief to review. */
+export const noRequirementsFoundTitle = "No requirements were found in this job text";
+export const noRequirementsFoundNote =
+  "Nothing was found to review. Extract again, or paste the job text into the application instead.";
+
+/** A draft that holds no requirements: there is nothing to review, only a retry or a paste. */
+export function isEmptyDraftBrief(latest: OpportunityLatestBrief): boolean {
+  return latest.status === "draft" && latest.requirementCount === 0;
+}
+
 /** "Requirements brief v2 (draft)" for the setup card. */
 export function latestBriefTitle(latest: OpportunityLatestBrief): string {
   return `Requirements brief v${latest.version} (${latest.status})`;
@@ -57,6 +67,7 @@ export function latestBriefTitle(latest: OpportunityLatestBrief): string {
 
 /** What the person can do with the latest brief, stated for the setup card. */
 export function latestBriefNote(latest: OpportunityLatestBrief): string {
+  if (isEmptyDraftBrief(latest)) return `${noRequirementsFoundTitle}. ${noRequirementsFoundNote}`;
   const counts = `${plural(latest.requirementCount, "requirement")}, ${latest.criticalCount} critical.`;
   return latest.status === "draft"
     ? `${counts} A draft cannot start a run until you review it.`

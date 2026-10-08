@@ -6,6 +6,8 @@ import { isIP } from "node:net";
 import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
+import { decodeHtmlEntities } from "./html-text.js";
+import { extractJobPostingText } from "./job-posting-json-ld.js";
 import { PdfTextLayoutCollector } from "./pdf-text-layout.js";
 
 export const supportedMediaTypes = [
@@ -137,6 +139,8 @@ export interface NormalizedSource {
   /** Exact response bytes for approved URL intake; absent for local-file intake. */
   readonly urlResponseBytes?: Uint8Array;
   readonly text: string;
+  /** Where HTML text came from; absent for the page's visible text. */
+  readonly textOrigin?: "job-posting-json-ld";
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
   readonly url?: UrlProvenance;
@@ -168,6 +172,11 @@ export interface BinarySourceExtractor {
 export interface IngestionOptions {
   readonly maxChunkCharacters?: number;
   readonly maxSourceBytes?: number;
+  /**
+   * Prefer the page's schema.org `JobPosting` JSON-LD over its visible text when an HTML page
+   * carries one. Job pages rendered by JavaScript show almost no text without it.
+   */
+  readonly preferJobPostingData?: boolean;
   readonly extractors?: readonly BinarySourceExtractor[];
   /** @internal Test seam for changing a local source between its read and final validation. */
   readonly afterSourceRead?: () => void | Promise<void>;
@@ -400,35 +409,6 @@ function hasInvalidPdfExtractedText(text: string): boolean {
   return /(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â[\u0080-\u00bf]{2}|ð[\u0080-\u00bf]{3}|ï»¿|ï¿½)/u.test(
     text,
   );
-}
-
-function decodeHtmlEntities(text: string): string {
-  const namedEntities: Readonly<Record<string, string>> = {
-    amp: "&",
-    apos: "'",
-    gt: ">",
-    laquo: "«",
-    ldquo: "“",
-    lt: "<",
-    nbsp: " ",
-    ndash: "–",
-    quot: '"',
-    rdquo: "”",
-    rsquo: "’",
-    shy: "-",
-  };
-
-  return text.replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]+);/gi, (entity, value: string) => {
-    if (value.toLowerCase().startsWith("#x")) {
-      const codePoint = Number.parseInt(value.slice(2), 16);
-      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
-    }
-    if (value.startsWith("#")) {
-      const codePoint = Number.parseInt(value.slice(1), 10);
-      return Number.isNaN(codePoint) ? entity : String.fromCodePoint(codePoint);
-    }
-    return namedEntities[value.toLowerCase()] ?? entity;
-  });
 }
 
 function extractHtml(text: string): string {
@@ -1419,7 +1399,11 @@ async function extractSource(
   bytes: Uint8Array,
   sourceChecksum: string,
   options: IngestionOptions,
-): Promise<{ readonly text: string; readonly issues: readonly IngestionIssue[] }> {
+): Promise<{
+  readonly text: string;
+  readonly textOrigin?: "job-posting-json-ld";
+  readonly issues: readonly IngestionIssue[];
+}> {
   if (mediaType === "text/plain" || mediaType === "text/markdown") {
     try {
       return {
@@ -1434,7 +1418,10 @@ async function extractSource(
   if (mediaType === "text/html") {
     try {
       const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-      return { text: extractHtml(decoded), issues: [] };
+      const posting = options.preferJobPostingData === true ? extractJobPostingText(decoded) : null;
+      return posting === null
+        ? { text: extractHtml(decoded), issues: [] }
+        : { text: normalizeText(posting), textOrigin: "job-posting-json-ld", issues: [] };
     } catch {
       return { text: "", issues: [safeErrorMessage("parse", source.path)] };
     }
@@ -1553,6 +1540,9 @@ async function normalizeIngestedBytes(
       sizeBytes: bytes.byteLength,
       ...(retainUrlResponseBytes ? { urlResponseBytes: new Uint8Array(bytes) } : {}),
       text,
+      ...(extracted.textOrigin === undefined || text.length === 0
+        ? {}
+        : { textOrigin: extracted.textOrigin }),
       chunks: createChunks(
         text,
         source.path,
