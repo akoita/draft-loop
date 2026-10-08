@@ -7,6 +7,11 @@ export interface RecentWorkspaceSummary {
   readonly id: string;
   readonly name: string;
   readonly lastOpenedAt: string;
+  /**
+   * Name of the folder that contains the workspace, present only when another
+   * recent workspace has the same display name. Never a path.
+   */
+  readonly location?: string;
 }
 
 export interface RecentWorkspacesListInput {
@@ -118,13 +123,14 @@ export function parseRecentWorkspacesListResult(value: unknown): RecentWorkspace
   }
   const workspaces = result.workspaces.map((candidate) => {
     const item = record(candidate);
-    if (!exactKeys(item, ["id", "name", "lastOpenedAt"])) {
+    if (!exactKeys(item, ["id", "name", "lastOpenedAt", "location"])) {
       throw new Error("Invalid recent workspace result.");
     }
     return {
       id: safeId(item.id),
       name: safeName(item.name),
       lastOpenedAt: isoTimestamp(item.lastOpenedAt),
+      ...(item.location === undefined ? {} : { location: safeName(item.location) }),
     };
   });
   if (new Set(workspaces.map(({ id }) => id)).size !== workspaces.length) {

@@ -26,6 +26,36 @@ describe("recent workspace store", () => {
     expect(after.filter(({ name }) => name === "Renamed workspace")).toHaveLength(1);
   });
 
+  it("adds only the parent folder name to entries whose display names collide", async () => {
+    const store = createRecentWorkspaceStore();
+    await store.remember("draft-loop-workspace", "/home/me/hc5/draft-loop-workspace", time(1));
+    await store.remember("draft-loop-workspace", "/home/me/hc6/draft-loop-workspace", time(2));
+    await store.remember("Mergify — Staff Engineer", "/home/me/hc5/mergify", time(3));
+    const listed = await store.list();
+    expect(listed.map(({ name, location }) => [name, location])).toEqual([
+      ["Mergify — Staff Engineer", undefined],
+      ["draft-loop-workspace", "hc6"],
+      ["draft-loop-workspace", "hc5"],
+    ]);
+    expect(JSON.stringify(listed)).not.toContain("/home/me");
+    expect("location" in (listed[0] ?? {})).toBe(false);
+  });
+
+  it("renames the entry for a path in place and rejects invalid names", async () => {
+    const store = createRecentWorkspaceStore();
+    const first = await store.remember("one", "/tmp/rename-one", time(1));
+    await store.remember("two", "/tmp/rename-two", time(2));
+    await store.rename("/tmp/./rename-one", "Mergify — Staff Engineer");
+    expect(await store.list()).toEqual([
+      expect.objectContaining({ name: "two" }),
+      { id: first.id, name: "Mergify — Staff Engineer", lastOpenedAt: first.lastOpenedAt },
+    ]);
+    await store.rename("/tmp/not-remembered", "Ignored");
+    expect(await store.list()).toHaveLength(2);
+    await expect(store.rename("/tmp/rename-one", "a/b")).rejects.toThrow();
+    await expect(store.rename("/tmp/rename-one", "  padded ")).rejects.toThrow();
+  });
+
   it("compares canonical paths case-insensitively on Windows", async () => {
     const store = createRecentWorkspaceStore({ platform: "win32" });
     const first = await store.remember("Workspace", "/tmp/LocalWorkspace", time(1));

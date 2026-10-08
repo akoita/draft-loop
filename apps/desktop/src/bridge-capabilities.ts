@@ -8,6 +8,7 @@ export const bridgeCapabilities = [
   "workspace.recent-list",
   "workspace.recent-open",
   "workspace.recent-clear",
+  "workspace.rename",
   "knowledge.create",
   "knowledge.open",
   "knowledge.list",

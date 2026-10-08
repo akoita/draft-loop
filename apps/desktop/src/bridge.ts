@@ -115,6 +115,7 @@ import {
   workspaceRetrievalModeResultKeys,
   workspaceRetrievalModeSetKeys,
 } from "./semantic-retrieval-contract.js";
+import { normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
 // depend on renderer contracts do not need to import the model module.
@@ -709,6 +710,21 @@ const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
   "requiredSections",
   "maxRounds",
 ]);
+
+/** Renames the open workspace. Only the display name changes, never the folder. */
+export interface WorkspaceRenameInput {
+  readonly workspaceId: string;
+  readonly name: string;
+}
+
+const workspaceRenameKeys = inputKeys<WorkspaceRenameInput>()(["workspaceId", "name"]);
+
+export interface WorkspaceRenameResult {
+  /** The trimmed name that was stored. */
+  readonly name: string;
+}
+
+const workspaceRenameResultKeys = resultKeys<WorkspaceRenameResult>()(["name"]);
 
 /**
  * The models an already-created workspace should use from its next run.
@@ -1874,6 +1890,7 @@ const workspaceReadinessKeys = [
 ] as const;
 const desktopReviewStateKeys = [
   "workspaceId",
+  "workspaceName",
   "runId",
   "state",
   "execution",
@@ -2816,6 +2833,7 @@ export interface BridgeCommandInputMap {
   "workspace.recent-list": RecentWorkspacesListInput;
   "workspace.recent-open": RecentWorkspaceOpenInput;
   "workspace.recent-clear": RecentWorkspacesClearInput;
+  "workspace.rename": WorkspaceRenameInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -2911,6 +2929,7 @@ export interface BridgeCommandOutputMap {
   "workspace.recent-list": RecentWorkspacesListResult;
   "workspace.recent-open": WorkspaceResult;
   "workspace.recent-clear": RecentWorkspacesClearResult;
+  "workspace.rename": WorkspaceRenameResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -3859,6 +3878,23 @@ function validateKnowledgeBaseDeletionInput(value: unknown): KnowledgeBaseDeleti
   };
 }
 
+/** A person's name for a workspace, trimmed; the bounds live in `workspace-name.ts`. */
+function workspaceDisplayName(value: unknown): string {
+  return normalizeWorkspaceDisplayName(value) ?? invalidInput();
+}
+
+function validateWorkspaceRenameInput(value: unknown): WorkspaceRenameInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceRenameKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId), name: workspaceDisplayName(input.name) };
+}
+
+function normalizeWorkspaceRenameResult(value: unknown): WorkspaceRenameResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, workspaceRenameResultKeys)) return invalidInput();
+  return { name: workspaceDisplayName(result.name) };
+}
+
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
@@ -3877,7 +3913,7 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const requiredSections = optionalSectionTitles(input.requiredSections);
   const maxRounds = optionalMaxRounds(input.maxRounds);
   return {
-    name: workspaceName(input.name),
+    name: workspaceDisplayName(input.name),
     ...(mode === undefined ? {} : { mode }),
     ...(authorCompany === undefined ? {} : { authorCompany }),
     ...(authorModel === undefined ? {} : { authorModel }),
@@ -5065,6 +5101,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "workspace.recent-open",
         input: parseRecentWorkspaceOpenInput(command.input),
       };
+    case "workspace.rename":
+      return { type: "workspace.rename", input: validateWorkspaceRenameInput(command.input) };
     case "workspace.recent-clear":
       return {
         type: "workspace.recent-clear",
@@ -6734,6 +6772,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  if (value.workspaceName !== undefined) workspaceDisplayName(value.workspaceName);
   const setup = value.setup;
   let normalizedSetup: Record<string, unknown> | undefined;
   if (setup !== undefined) {
@@ -7505,6 +7544,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesListResult(value);
     case "workspace.recent-clear":
       return parseRecentWorkspacesClearResult(value);
+    case "workspace.rename":
+      return normalizeWorkspaceRenameResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
     case "writing-policy.read":

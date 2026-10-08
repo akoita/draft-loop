@@ -270,6 +270,8 @@ export interface ReviewExecutionView {
 
 export interface DesktopReviewState {
   readonly workspaceId: string;
+  /** The person's name for the workspace, or its folder name when none was set. */
+  readonly workspaceName?: string;
   readonly runId: string;
   readonly state: ReviewRunState;
   readonly execution: ReviewExecutionView;

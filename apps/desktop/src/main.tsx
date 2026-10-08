@@ -74,6 +74,7 @@ import {
   isWorkspaceContextLost,
   WorkspaceRecovery,
 } from "./workspace-recovery.js";
+import { WorkspaceTitle } from "./workspace-title.js";
 import { WritingPolicyEditAction } from "./writing-policy-editor.js";
 import "./styles.css";
 
@@ -2021,6 +2022,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
+  const renameWorkspace = activePort.renameWorkspace;
   return (
     <ReviewWorkspace
       state={state}
@@ -2030,6 +2032,24 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       errorMessage={importError}
       pendingReviewAction={pendingReviewAction}
       startDisabledReason={profileStartDisabledReason}
+      workspaceTitle={
+        <WorkspaceTitle
+          key={state.workspaceId}
+          name={state.workspaceName ?? state.workspaceId}
+          {...(renameWorkspace === undefined
+            ? {}
+            : {
+                onRename: async (name: string) => {
+                  const stored = await renameWorkspace(state.workspaceId, name);
+                  setState((current) =>
+                    current === null || current.workspaceId !== state.workspaceId
+                      ? current
+                      : { ...current, workspaceName: stored },
+                  );
+                },
+              })}
+        />
+      }
       {...(activePort.configureModels === undefined
         ? {}
         : {

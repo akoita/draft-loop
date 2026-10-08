@@ -177,6 +177,11 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import {
+  invalidWorkspaceNameMessage,
+  normalizeWorkspaceDisplayName,
+  workspaceFolderName,
+} from "../workspace-name.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
@@ -379,6 +384,8 @@ interface ReviewOverrides {
   readonly reviewedOpportunity?: OpportunityBriefSelectionInput;
   /** The workspace's most recent opportunity brief, so a draft can be resumed after a restart. */
   readonly latestOpportunityBriefId?: string;
+  /** The person's own name for the workspace; the folder name is used when absent. */
+  readonly workspaceName?: string;
   /** Pending policy identity bound to the exact reviewed opportunity above. */
   readonly pendingWritingPolicyOverride?: PendingWritingPolicyOverride;
 }
@@ -1006,6 +1013,7 @@ function reviewState(
   const evaluation = snapshot.latestEvaluation;
   return {
     workspaceId: descriptor.id,
+    workspaceName: overrides.workspaceName ?? workspaceName(descriptor.root),
     runId: snapshot.runId,
     state: runState(snapshot),
     execution: reviewExecution(descriptor, snapshot, executionRunning),
@@ -1049,9 +1057,11 @@ function emptyReviewState(
   descriptor: WorkspaceDescriptor,
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
+  overrides: ReviewOverrides,
 ): DesktopReviewState {
   return {
     workspaceId: descriptor.id,
+    workspaceName: overrides.workspaceName ?? workspaceName(descriptor.root),
     runId: "pending",
     state: "collecting",
     execution: {
@@ -1522,6 +1532,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
     const latestOpportunityBriefId = persistedLatestOpportunityBriefId(
       record.latestOpportunityBriefId,
     );
+    const storedWorkspaceName = normalizeWorkspaceDisplayName(record.workspaceName);
     const pendingWritingPolicyOverride = persistedPendingWritingPolicyOverride(
       record.pendingWritingPolicyOverride,
     );
@@ -1532,6 +1543,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
       history: normalizedHistory,
       ...(reviewedOpportunity === undefined ? {} : { reviewedOpportunity }),
       ...(latestOpportunityBriefId === undefined ? {} : { latestOpportunityBriefId }),
+      ...(storedWorkspaceName === undefined ? {} : { workspaceName: storedWorkspaceName }),
       ...(pendingWritingPolicyOverride === undefined ? {} : { pendingWritingPolicyOverride }),
     };
   } catch {
@@ -1552,6 +1564,7 @@ async function writeOverrides(root: string, overrides: ReviewOverrides): Promise
     ...(overrides.latestOpportunityBriefId === undefined
       ? {}
       : { latestOpportunityBriefId: overrides.latestOpportunityBriefId }),
+    ...(overrides.workspaceName === undefined ? {} : { workspaceName: overrides.workspaceName }),
     ...(overrides.pendingWritingPolicyOverride === undefined
       ? {}
       : {
@@ -1567,10 +1580,18 @@ async function writeOverrides(root: string, overrides: ReviewOverrides): Promise
   await writeFile(overridesPath(root), `${JSON.stringify(persisted, null, 2)}\n`, "utf8");
 }
 
-function workspaceResult(descriptor: WorkspaceDescriptor): {
+/** The stored display name when there is one, else the folder name. */
+async function displayNameFor(root: string): Promise<string> {
+  return (await readOverrides(root)).workspaceName ?? workspaceName(root);
+}
+
+async function workspaceResult(
+  descriptor: WorkspaceDescriptor,
+  root: string = descriptor.root,
+): Promise<{
   workspace: { id: string; name: string };
-} {
-  return { workspace: { id: descriptor.id, name: workspaceName(descriptor.root) } };
+}> {
+  return { workspace: { id: descriptor.id, name: await displayNameFor(root) } };
 }
 
 function opportunityRecordObject(value: unknown): {
@@ -2688,9 +2709,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     mode: "real" | "demo" = "demo",
     models: WorkspaceModelConfiguration = {},
   ): Promise<{ workspace: { id: string; name: string } }> {
+    const displayName = normalizeWorkspaceDisplayName(name);
+    if (displayName === undefined) return fail("operation-failed", invalidWorkspaceNameMessage);
     const parent = await options.dialogs.chooseDirectory("create");
     if (parent === undefined) return fail("permission-denied", "Workspace creation was cancelled.");
-    const root = resolve(parent, name);
+    const root = resolve(parent, workspaceFolderName(displayName));
     try {
       await mkdir(root);
       await mkdir(join(root, "evidence"));
@@ -2732,7 +2755,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         io(),
       );
       active = { descriptor, root };
-      await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
+      await writeOverrides(root, { ...(await readOverrides(root)), workspaceName: displayName });
+      await recentWorkspaces.remember(displayName, root).catch(() => undefined);
       return workspaceResult(descriptor);
     } catch (error) {
       return fail(
@@ -2747,8 +2771,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (root === undefined) return fail("permission-denied", "Workspace opening was cancelled.");
     const descriptor = await service.readWorkspace(resolve(root));
     active = { descriptor, root: resolve(root) };
-    await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
-    return workspaceResult(descriptor);
+    const result = await workspaceResult(descriptor, resolve(root));
+    await recentWorkspaces.remember(result.workspace.name, root).catch(() => undefined);
+    return result;
   }
 
   async function openRecentWorkspace(
@@ -2768,8 +2793,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       );
     }
     active = { descriptor, root };
-    await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
-    return workspaceResult(descriptor);
+    const result = await workspaceResult(descriptor, root);
+    await recentWorkspaces.remember(result.workspace.name, root).catch(() => undefined);
+    return result;
+  }
+
+  async function renameWorkspace(workspaceId: string, name: string): Promise<{ name: string }> {
+    const workspace = workspaceFor(workspaceId);
+    const displayName = normalizeWorkspaceDisplayName(name);
+    if (displayName === undefined) return fail("operation-failed", invalidWorkspaceNameMessage);
+    await writeOverrides(workspace.root, {
+      ...(await readOverrides(workspace.root)),
+      workspaceName: displayName,
+    });
+    await recentWorkspaces.rename(workspace.root, displayName).catch(() => undefined);
+    return { name: displayName };
   }
 
   async function resolveOpportunitySources(
@@ -3761,7 +3799,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       requireProviderPreflight,
       providerAuthModeConfiguration,
     );
-    if (snapshot === undefined) return emptyReviewState(workspace.descriptor, setup, preflight);
+    if (snapshot === undefined) {
+      return emptyReviewState(workspace.descriptor, setup, preflight, overrides);
+    }
     return reviewState(
       workspace.descriptor,
       snapshot,
@@ -3805,6 +3845,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
         case "workspace.recent-open":
           return { ok: true, value: await openRecentWorkspace(command.input.id) };
+        case "workspace.rename":
+          return {
+            ok: true,
+            value: await renameWorkspace(command.input.workspaceId, command.input.name),
+          };
         case "workspace.recent-clear":
           await recentWorkspaces.clear();
           return { ok: true, value: { cleared: true } };
@@ -5322,7 +5367,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             );
             return {
               ok: true,
-              value: emptyReviewState(workspace.descriptor, setup, preflight),
+              value: emptyReviewState(workspace.descriptor, setup, preflight, preferences),
             };
           }
           const preflight = await providerTransmissionPreflight(

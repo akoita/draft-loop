@@ -53,6 +53,9 @@ export function RecentWorkspacesView({
                 onClick={() => onOpen(workspace.id)}
               >
                 <span>{workspace.name}</span>
+                {workspace.location === undefined ? null : (
+                  <span className="recent-workspace-location">in {workspace.location}</span>
+                )}
                 <time dateTime={workspace.lastOpenedAt}>
                   Last opened {new Date(workspace.lastOpenedAt).toLocaleString()}
                 </time>

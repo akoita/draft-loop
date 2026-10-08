@@ -219,8 +219,22 @@ The start page lists the ten most recently opened local workspaces. Select an
 entry to reopen it, or clear the recent list; clearing history leaves workspace
 files untouched. The native **Open workspace** picker remains available.
 
-Creating a workspace asks only for its name and maximum review rounds. After a
-real workspace is created, choose **Presets** or **Custom** in the model editor.
+Entries show the workspace's display name. When two or more entries share a
+name, each also shows the name of its parent folder ("in hc5") so they can be
+told apart; the full path never reaches the interface.
+
+Creating a workspace asks only for its name and maximum review rounds. The name
+is the workspace's display name and may contain spaces and accents (1 to 80
+characters, no slashes or control characters). The folder is a lowercase ASCII
+slug of it, or `draft-loop-workspace` when nothing safe remains.
+
+Use **Rename** beside the workspace name in the header to change the display
+name later. Enter saves, Escape cancels, and an invalid name shows a message.
+The name is stored in `.draft-loop/review-overrides.json` (`workspaceName`) and
+in the recent list; the folder and `workspace.json` are unchanged. A workspace
+without a stored name shows its folder name.
+
+After a real workspace is created, choose **Presets** or **Custom** in the model editor.
 Opening an existing workspace keeps its current model pair; canceling the editor
 does not change that pair. Apply a preset or save custom settings to replace the
 pair used for future runs.

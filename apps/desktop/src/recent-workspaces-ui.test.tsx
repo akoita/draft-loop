@@ -11,6 +11,11 @@ const workspaces = [
   },
 ];
 
+const candidate = {
+  id: "123e4567-e89b-12d3-a456-426614174000",
+  lastOpenedAt: "2026-10-03T10:00:00.000Z",
+};
+
 function elements(node: ReactNode): ReactElement[] {
   if (!isValidElement(node)) return [];
   const children = (node as ReactElement<{ readonly children?: ReactNode }>).props.children;
@@ -42,6 +47,31 @@ describe("recent workspace start-page controls", () => {
     if (open === undefined) throw new Error("Expected a recent workspace button.");
     open.props.onClick();
     expect(onOpen).toHaveBeenCalledWith(workspaces[0]?.id);
+  });
+
+  it("shows the parent folder name only for entries that carry a location", () => {
+    const markup = renderToStaticMarkup(
+      RecentWorkspacesView({
+        workspaces: [
+          { ...candidate, name: "draft-loop-workspace", location: "hc5" },
+          {
+            id: "223e4567-e89b-12d3-a456-426614174000",
+            name: "Mergify — Staff Engineer",
+            lastOpenedAt: "2026-10-04T10:00:00.000Z",
+          },
+        ],
+        busy: false,
+        loadState: "ready",
+        errorMessage: null,
+        statusMessage: null,
+        openingId: null,
+        onOpen: () => undefined,
+        onClear: () => undefined,
+      }),
+    );
+    expect(markup).toContain("in hc5");
+    expect(markup.match(/recent-workspace-location/gu)).toHaveLength(1);
+    expect(markup).toContain("Mergify — Staff Engineer");
   });
 
   it("disables selection while busy and gives fixed loading, empty, and failure feedback", () => {

@@ -7,6 +7,7 @@ import {
   maximumRecentWorkspaces,
   type RecentWorkspaceSummary,
 } from "../recent-workspaces.js";
+import { normalizeWorkspaceDisplayName } from "../workspace-name.js";
 
 const maximumStoreBytes = 64 * 1024;
 const maximumStoredPathLength = 4_096;
@@ -24,6 +25,8 @@ export interface RecentWorkspaceStore {
   list(): Promise<readonly RecentWorkspaceSummary[]>;
   resolvePath(id: string): Promise<string | undefined>;
   remember(name: string, path: string, openedAt?: string): Promise<RecentWorkspaceSummary>;
+  /** Renames the entry for a path, keeping its place in the list. Unknown paths are ignored. */
+  rename(path: string, name: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -53,6 +56,29 @@ function safeDisplayName(value: string, path: string): string {
   const primary = valid(primaryCandidate);
   const fallback = valid(basename(path));
   return primary !== "" ? primary : fallback !== "" ? fallback : "Workspace";
+}
+
+/**
+ * Marks entries whose name collides with another entry's by adding the name of
+ * their containing folder. Only that one folder name leaves the store.
+ */
+function summaries(entries: readonly StoredRecentWorkspace[]): RecentWorkspaceSummary[] {
+  const counts = new Map<string, number>();
+  for (const { name } of entries) {
+    const key = name.toLocaleLowerCase("en-US");
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return entries.map(({ id, name, path, lastOpenedAt }) => {
+    const summary = { id, name, lastOpenedAt };
+    if ((counts.get(name.toLocaleLowerCase("en-US")) ?? 0) < 2) return summary;
+    const location = basename(dirname(path)).slice(0, maximumRecentWorkspaceNameLength).trim();
+    return location === "" ||
+      location === "." ||
+      location === ".." ||
+      hasUnsafeNameCharacters(location)
+      ? summary
+      : { ...summary, location };
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -145,10 +171,18 @@ function store(persistence: TextPersistence, platform: NodeJS.Platform): RecentW
   };
 
   return {
-    list: () =>
-      serialize(async () =>
-        (await readEntries()).map(({ id, name, lastOpenedAt }) => ({ id, name, lastOpenedAt })),
-      ),
+    list: () => serialize(async () => summaries(await readEntries())),
+    rename: (path, name) =>
+      serialize(async () => {
+        if (normalizeWorkspaceDisplayName(name) !== name) {
+          throw new Error("Invalid recent workspace record.");
+        }
+        const entries = await readEntries();
+        const key = pathIdentity(path, platform);
+        const target = entries.find((entry) => pathIdentity(entry.path, platform) === key);
+        if (target === undefined || target.name === name) return;
+        await persist(entries.map((entry) => (entry === target ? { ...entry, name } : entry)));
+      }),
     resolvePath: (id) =>
       serialize(async () => (await readEntries()).find((entry) => entry.id === id)?.path),
     remember: (name, path, openedAt = new Date().toISOString()) =>

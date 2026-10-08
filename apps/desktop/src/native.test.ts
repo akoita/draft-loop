@@ -645,6 +645,31 @@ describe("desktop recent workspace capabilities", () => {
     expect(port.listRecentWorkspaces).toBeDefined();
   });
 
+  it("exposes renaming only when the host advertises workspace.rename", async () => {
+    const withRename = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load", "workspace.rename"],
+        invoke: async (command) => {
+          expect(command).toEqual({
+            type: "workspace.rename",
+            input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+          });
+          return { ok: true, value: { name: "Mergify — Staff Engineer" } };
+        },
+      }),
+    );
+    await expect(
+      withRename.renameWorkspace?.("workspace-1", "Mergify — Staff Engineer"),
+    ).resolves.toBe("Mergify — Staff Engineer");
+    const without = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: async () => ({ ok: true, value: {} }),
+      }),
+    );
+    expect(without.renameWorkspace).toBeUndefined();
+  });
+
   it("does not expose recent workspace actions when the host does not advertise them", () => {
     const port = createBridgeReviewPort(
       createNativeCapabilityPort({

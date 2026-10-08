@@ -44,4 +44,18 @@ describe("recent workspace renderer contracts", () => {
     ).toThrow();
     expect(() => parseRecentWorkspacesClearResult({ cleared: true, path: "/private" })).toThrow();
   });
+
+  it("accepts a location that is a bare folder name and rejects separators or extra keys", () => {
+    expect(
+      parseRecentWorkspacesListResult({ workspaces: [{ ...entry, location: "hc5" }] }),
+    ).toEqual({ workspaces: [{ ...entry, location: "hc5" }] });
+    for (const location of ["/home/me/hc5", "a/b", "a\\b", "", " hc5", 5]) {
+      expect(() =>
+        parseRecentWorkspacesListResult({ workspaces: [{ ...entry, location }] }),
+      ).toThrow();
+    }
+    expect(() =>
+      parseRecentWorkspacesListResult({ workspaces: [{ ...entry, locationPath: "hc5" }] }),
+    ).toThrow();
+  });
 });
