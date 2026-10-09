@@ -186,7 +186,14 @@ tool placeholders are treated as absent; actual tool calls remain rejected.
 
 The DeepInfra GLM, Google Gemini, and Mistral development routes retry temporary overload and
 rate-limit responses up to twice with a short backoff (about 2.5 s, then 5 s) before the
-request fails. Quota, billing, authentication, and invalid-request failures are never retried.
+request fails. Mistral also retries a reply that was cut off or unreadable (a stream that ends
+without a finish reason, empty or invalid JSON output, or a malformed stream). Quota, billing,
+authentication, and invalid-request failures are never retried, and neither are Mistral schema
+mismatches, output or context limits, refusals, or an unexpected model.
+
+When a provider reply is rejected as invalid, the saved extraction issue ends with
+`Reason: <code>`, a fixed diagnostic code such as `incomplete_stream`; provider text is never
+shown.
 
 ## Desktop diagnostics
 

@@ -159,14 +159,14 @@ describe("candidate profile extraction failure guidance", () => {
       "The provider response did not match the required candidate profile format. Retry or check the configured model.",
     );
     expect(wrongProvider).toBe(
-      "The provider returned an invalid extraction response. Retry or check the configured model.",
+      "The provider returned an invalid extraction response. Retry or check the configured model. Reason: stream_role.",
     );
   });
 
   it("uses sanitized fallback guidance for unrecognized DeepInfra diagnostics", () => {
     const guidance = candidateProfileExtractionFailureMessage(
       new ProviderAdapterError("deepinfra", "invalid-response", "private response detail", {
-        diagnostics: [{ code: "unknown_private_code", path: "private/path" }],
+        diagnostics: [{ code: "Unknown Private/Code", path: "private/path" }],
       }),
       "provider",
     );
@@ -174,7 +174,65 @@ describe("candidate profile extraction failure guidance", () => {
     expect(guidance).toBe(
       "The provider returned an invalid extraction response. Retry or check the configured model.",
     );
+    expect(guidance).not.toContain("rivate");
+  });
+
+  it("names the adapter's fixed reason code in the generic invalid-response guidance", () => {
+    const guidance = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("mistral", "invalid-response", "private response detail", {
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "incomplete_stream", path: "response" }],
+      }),
+      "provider",
+    );
+
+    expect(guidance).toBe(
+      "The provider returned an invalid extraction response. Retry or check the configured model. Reason: incomplete_stream.",
+    );
     expect(guidance).not.toContain("private");
+  });
+
+  it("uses the specific malformed-stream reason when it is safe", () => {
+    const guidance = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("mistral", "invalid-response", "private response detail", {
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "malformed_stream", path: "response" }],
+        diagnosticCounts: [{ code: "stream_content_type", count: 1 }],
+      }),
+      "provider",
+    );
+    const unsafeSpecific = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("mistral", "invalid-response", "private", {
+        diagnostics: [{ code: "malformed_stream", path: "response" }],
+        diagnosticCounts: [{ code: "Private/Reason", count: 1 }],
+      }),
+      "provider",
+    );
+
+    expect(guidance).toContain(" Reason: stream_content_type.");
+    expect(guidance).not.toContain("malformed_stream");
+    expect(unsafeSpecific).toMatch(/ Reason: malformed_stream\.$/u);
+    expect(unsafeSpecific).not.toContain("Private");
+  });
+
+  it.each([
+    ["an uppercase code", "Incomplete_Stream"],
+    ["a path-like code", "private/source/path"],
+    ["a code with spaces", "reason with spaces"],
+    ["a leading digit", "1_reason"],
+    ["an over-long code", `a${"b".repeat(64)}`],
+    ["an empty code", ""],
+  ])("omits the reason suffix for %s", (_label, code) => {
+    const guidance = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("mistral", "invalid-response", "private", {
+        diagnostics: [{ code, path: "response" }],
+      }),
+      "provider",
+    );
+
+    expect(guidance).toBe(
+      "The provider returned an invalid extraction response. Retry or check the configured model.",
+    );
   });
 
   it("summarizes only bounded allowlisted DeepInfra schema counts", () => {
@@ -378,7 +436,7 @@ describe("candidate profile extraction failure guidance", () => {
     );
 
     expect(guidance).toBe(
-      "The provider returned an invalid extraction response. Retry or check the configured model.",
+      "The provider returned an invalid extraction response. Retry or check the configured model. Reason: malformed_stream.",
     );
   });
 
