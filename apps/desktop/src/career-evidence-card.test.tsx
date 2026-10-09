@@ -9,6 +9,7 @@ import {
   focusKnowledgeStore,
   knowledgeStoreFocusTargetId,
   legacyRetrievalText,
+  parseSourceUrls,
 } from "./career-evidence-card.js";
 
 const setup = {
@@ -84,12 +85,17 @@ describe("Career evidence setup card", () => {
     expect(render(selected)).not.toContain(">Add folder<");
     expect(render({ kind: "none" }, withFolder)).not.toContain(">Add folder<");
     expect(render({ kind: "unsupported" }, withFolder)).not.toContain(">Add folder<");
-    expect(
-      render({ kind: "none", legacyDeclined: false }, { ...withFolder, automatic: true }),
-    ).toContain(">Add folder<");
+    expect(render({ kind: "none" }, { ...withFolder, automatic: true })).toContain(">Add folder<");
     expect(render(selected, { ...withFolder, pending: true })).toMatch(
       /<button[^>]*disabled=""[^>]*>Add folder</,
     );
+  });
+
+  it("splits typed URLs on lines and spaces, dropping blanks and repeats", () => {
+    expect(parseSourceUrls("")).toEqual([]);
+    expect(
+      parseSourceUrls("  https://a.example \n\n https://b.example https://a.example\t"),
+    ).toEqual(["https://a.example", "https://b.example"]);
   });
 
   it("shows the already-in-Career-evidence notice after an identical file is added again", () => {

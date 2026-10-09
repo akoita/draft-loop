@@ -3,39 +3,26 @@ import {
   type CareerEvidenceAddOutcome,
   type CareerEvidenceCapabilities,
   type CareerEvidenceSource,
-  type CareerEvidenceStatus,
 } from "./career-evidence.js";
 import { defaultKnowledgeStoreDestinationLabel } from "./career-evidence-contract.js";
 
 /**
  * What the Career evidence card does while the workspace has no knowledge base selected.
  *
- * - `first-add`: no legacy evidence either, so the first add creates and selects a base.
- * - `offer`: legacy evidence exists, so the person is offered a one-time import.
- * - `legacy`: the person declined, or the host cannot create a base, so legacy evidence stays.
+ * - `first-add`: the first add creates and selects a base.
+ * - `legacy`: the host cannot create a base, so adds go to legacy workspace evidence.
  */
-export type NoSelectionMode = "first-add" | "offer" | "legacy";
+export type NoSelectionMode = "first-add" | "legacy";
 
 export function supportsAutomaticKnowledgeBase(capabilities: CareerEvidenceCapabilities): boolean {
   return (
     capabilities.ensureDefaultCandidateKnowledgeBase !== undefined &&
-    capabilities.selectCandidateKnowledgeBase !== undefined &&
-    capabilities.getLegacyEvidenceMigration !== undefined &&
-    capabilities.declineLegacyEvidenceMigration !== undefined
+    capabilities.selectCandidateKnowledgeBase !== undefined
   );
 }
 
-export function noSelectionMode(input: {
-  readonly status: Extract<CareerEvidenceStatus, { kind: "none" }>;
-  readonly legacyEvidenceSourceCount: number;
-  readonly automatic: boolean;
-}): NoSelectionMode {
-  if (!input.automatic || input.status.legacyDeclined !== false) return "legacy";
-  return input.legacyEvidenceSourceCount > 0 ? "offer" : "first-add";
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+export function noSelectionMode(automatic: boolean): NoSelectionMode {
+  return automatic ? "first-add" : "legacy";
 }
 
 function createdNotice(displayName: string, created: boolean): string {
@@ -86,71 +73,5 @@ export async function addFirstCareerEvidence(input: {
   return {
     status: "added",
     message: `${createdNotice(displayName, base.created)} ${outcome.message}`,
-  };
-}
-
-export type LegacyImportOutcome =
-  | { readonly status: "stale" }
-  | { readonly status: "nothing-imported"; readonly message: string }
-  | { readonly status: "imported"; readonly message: string };
-
-/**
- * The one-time import of the workspace's legacy evidence files into the default base.
- *
- * The person has just approved it by pressing Import. Legacy files are copied, never moved, and
- * the base is selected only when at least one source was imported.
- */
-export async function importLegacyEvidence(input: {
-  readonly capabilities: CareerEvidenceCapabilities;
-  readonly workspaceId: string;
-  readonly safeName: (displayName: string) => string;
-  readonly isCurrent: () => boolean;
-  readonly onChanged: (workspaceId: string) => Promise<boolean>;
-}): Promise<LegacyImportOutcome> {
-  const { ensure, select } = requireAutomatic(input.capabilities);
-  const importSources = input.capabilities.importWorkspaceCandidateSources;
-  if (importSources === undefined) throw new Error("Importing legacy evidence is unavailable");
-  const base = await ensure(input.workspaceId);
-  const target = { storeId: base.storeId, knowledgeBaseId: base.knowledgeBaseId };
-  const displayName = input.safeName(base.displayName);
-  const result = await importSources({
-    workspaceId: input.workspaceId,
-    ...target,
-    approved: true,
-  });
-  if (result.storeId !== target.storeId || result.knowledgeBaseId !== target.knowledgeBaseId) {
-    throw new Error("Imported source result did not match the knowledge base");
-  }
-  if (!input.isCurrent()) return { status: "stale" };
-  const notImported = Math.max(0, result.discoveredFileCount - result.sourceCount);
-  if (result.sourceCount === 0) {
-    return {
-      status: "nothing-imported",
-      message:
-        `No legacy evidence file could be imported (${plural(result.discoveredFileCount, "file")} found). ` +
-        "Nothing changed: runs keep using legacy workspace evidence.",
-    };
-  }
-  await select(input.workspaceId, target);
-  let refreshFailed = false;
-  try {
-    if (!(await input.onChanged(input.workspaceId))) return { status: "stale" };
-  } catch {
-    refreshFailed = true;
-  }
-  if (!input.isCurrent()) return { status: "stale" };
-  const counts = `Imported ${result.sourceCount} of ${plural(result.discoveredFileCount, "legacy evidence file")}.`;
-  const partial =
-    result.status === "partial" || notImported > 0
-      ? ` Not imported: ${plural(notImported, "file")}, which stay in the legacy workspace evidence folder.`
-      : "";
-  const skipped =
-    result.skippedEntryCount > 0
-      ? ` ${plural(result.skippedEntryCount, "entry")} skipped as unsupported.`
-      : "";
-  const reopen = refreshFailed ? " Reopen the workspace to refresh the review." : "";
-  return {
-    status: "imported",
-    message: `${createdNotice(displayName, base.created)} ${counts}${partial}${skipped}${reopen}`,
   };
 }

@@ -308,9 +308,9 @@ and the flow strip:
 
 - **Career evidence page.** One Career evidence card, then the retrieval mode
   and embedding model. The card shows the base in use and holds every add
-  action (files, a folder, a public URL), the first add and the legacy import
-  offer. Its **Knowledge base** section chooses the base, imports legacy
-  workspace evidence into a base and switches the store; it has no add buttons.
+  action (files, a folder, public URLs) and the first add. Its **Knowledge
+  base** section chooses the base and switches the store; it has no add
+  buttons.
 - **Career profile page.** The profile workflow: generate or update, review
   facts, saved profiles, version history and Re-extract all sources.
 
@@ -1541,15 +1541,14 @@ and keeps paths local.
   location is no longer readable, the panel asks you to open the store again,
   also after a reload. Only the first saved entry's store is restored.
 
-- **Automatic knowledge base and one-time import.** The Career evidence card
-  sits at the top of the Career evidence page and follows the workspace's selected CKB. With none selected and no
-  legacy `evidence` files, the first added file or URL creates a default CKB
-  ("Career evidence") in DraftLoop application data, imports into it, and selects
-  it; the card says so without showing a path. With legacy files and no CKB, the
-  card offers a one-time **Import legacy evidence** (files are copied, never
-  moved) and reports how many were imported or left behind. **Keep using legacy
-  evidence** is saved in `.draft-loop/legacy-evidence-migration.json`; such
-  workspaces stay on the legacy path, and each run's preflight prints
+- **Automatic knowledge base.** The Career evidence card sits at the top of the
+  Career evidence page and follows the workspace's selected CKB. With none
+  selected, the first added file, folder or URL creates a default CKB ("Career
+  evidence") in DraftLoop application data, imports into it, and selects it;
+  the card says so without showing a path. Legacy workspace `evidence` files
+  are ignored by the card: it offers no import of them and no way to keep
+  them. A workspace with no CKB selected still runs on the legacy path, and
+  its preflight prints
   `Career evidence: legacy workspace evidence (no knowledge base selected)`.
 
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
@@ -1561,7 +1560,8 @@ and keeps paths local.
   Retired sources never count. The CLI's plain file import does not check; use
   `knowledge source duplicates` there. URL intake requires approval and applies
   the shared HTTPS and network-safety checks without returning the URL or its
-  content.
+  content. The card takes several URLs, one per line, and fetches them one
+  after another; a failed URL does not stop the rest and stays in the box.
 
 - **Versions, status, and refresh.** Appending a file version preserves its
   origin binding and reports whether the managed bytes created a version or
@@ -1578,11 +1578,8 @@ and keeps paths local.
 
 - **Directory intake.** CLI users choose a local path; the desktop offers a
   native directory picker (**Add folder** on the Career evidence card, which
-  imports into the base in use and fails on a folder with no supported files)
-  or **Import legacy workspace evidence**. The latter
-  requires explicit approval and an open collecting or stopped workspace. Its
-  host resolves the legacy workspace evidence directory; importing does not
-  select a base or start a provider workflow. Complete and partial results
+  imports into the base in use and fails on a folder with no supported files).
+  Complete and partial results
   contain only scan counts and opaque source or version identities; roots,
   filenames, labels, hashes, and content remain local.
 

@@ -40,7 +40,6 @@ const workspaceCapabilities = {
 
 function renderList(options: {
   intake: boolean;
-  workspace: boolean;
   bases?: typeof store.knowledgeBases;
   selected?: readonly string[];
 }) {
@@ -50,7 +49,6 @@ function renderList(options: {
       knowledgeBases={options.bases ?? activeKnowledgeBases(store)}
       disabled={false}
       intakeSupported={options.intake}
-      workspaceSourcesSupported={options.workspace}
       selectedKnowledgeBaseIds={options.selected ?? []}
       onSelect={noop}
       onImport={noop}
@@ -176,13 +174,12 @@ describe("desktop candidate knowledge workspace", () => {
         disabled={false}
         intakeSupported
         showIntake={false}
-        workspaceSourcesSupported
         onSelect={noop}
         onImport={noop}
       />,
     );
     expect(html).toContain(">Use this knowledge base<");
-    expect(html).toContain(">Import legacy workspace evidence<");
+    expect(html).not.toContain("legacy");
     expect(html).not.toContain(">Add file<");
     expect(html).not.toContain(">Add directory<");
     expect(html).not.toContain("intake is unavailable");
@@ -191,7 +188,6 @@ describe("desktop candidate knowledge workspace", () => {
   it("renders each knowledge base as a card with a Default chip and styled actions", () => {
     const html = renderList({
       intake: true,
-      workspace: true,
       bases: [
         ...activeKnowledgeBases(store),
         {
@@ -210,7 +206,7 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).toMatch(/class="button button-primary"[^>]*>Use this knowledge base</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Add file</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Add directory</);
-    expect(html).toMatch(/class="button button-outline"[^>]*>Import legacy workspace evidence</);
+    expect(html).not.toContain("legacy");
   });
 
   it("marks the bases the workspace already uses and disables their select button", () => {
@@ -224,13 +220,13 @@ describe("desktop candidate knowledge workspace", () => {
         isDefault: false,
       },
     ];
-    const html = renderList({ intake: true, workspace: true, bases, selected: ["active-2"] });
+    const html = renderList({ intake: true, bases, selected: ["active-2"] });
     expect(html.match(/>In use</g)).toHaveLength(2);
     expect(html.match(/<span class="meta-chip">In use<\/span>/g)).toHaveLength(1);
     expect(html.match(/>Use this knowledge base</g)).toHaveLength(1);
     expect(html).toMatch(/class="button button-primary" disabled=""[^>]*>In use</);
 
-    const none = renderList({ intake: true, workspace: true, bases });
+    const none = renderList({ intake: true, bases });
     expect(none).not.toContain("In use");
     expect(none.match(/>Use this knowledge base</g)).toHaveLength(2);
   });
@@ -250,21 +246,18 @@ describe("desktop candidate knowledge workspace", () => {
     );
   });
 
-  it("explains workspace import only when it is supported", () => {
-    const supported = renderList({ intake: true, workspace: true });
-    expect(supported).toContain("imports all supported files from this workspace");
-    expect(supported).not.toContain("Legacy workspace evidence import is unavailable");
+  it("explains when file and directory intake is unsupported", () => {
+    const supported = renderList({ intake: true });
+    expect(supported).not.toContain("File and directory intake is unavailable");
 
-    const unsupported = renderList({ intake: false, workspace: false });
-    expect(unsupported).not.toContain("imports all supported files from this workspace");
-    expect(unsupported).toContain("Legacy workspace evidence import is unavailable");
+    const unsupported = renderList({ intake: false });
     expect(unsupported).toContain("File and directory intake is unavailable");
     expect(unsupported).not.toContain("Add file");
     expect(unsupported).toContain("Use this knowledge base");
   });
 
   it("keeps the empty message as a hint", () => {
-    const html = renderList({ intake: true, workspace: true, bases: [] });
+    const html = renderList({ intake: true, bases: [] });
     expect(html).toContain("No active knowledge bases are available.");
     expect(html).not.toContain("knowledge-base-card");
   });

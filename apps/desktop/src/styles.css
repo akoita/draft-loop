@@ -3388,13 +3388,6 @@ input[type="checkbox"] {
   overflow-wrap: anywhere;
 }
 
-.knowledge-workspace-import {
-  display: grid;
-  gap: var(--space-2);
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-3);
-}
-
 /* Semantic retrieval: the local model's status and install approval, and the retrieval mode. */
 .semantic-model {
   display: grid;

@@ -2,18 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import type {
   KnowledgeCurrentResult,
-  KnowledgeDirectoryImportResult,
   KnowledgeFileImportResult,
   KnowledgeReadinessResult,
 } from "./bridge.js";
-import {
-  type CareerEvidenceCapabilities,
-  type CareerEvidenceStatus,
-  loadCareerEvidenceStatus,
-} from "./career-evidence.js";
+import { type CareerEvidenceCapabilities, loadCareerEvidenceStatus } from "./career-evidence.js";
 import {
   addFirstCareerEvidence,
-  importLegacyEvidence,
   noSelectionMode,
   supportsAutomaticKnowledgeBase,
 } from "./career-evidence-setup.js";
@@ -36,22 +30,6 @@ const fileResult: KnowledgeFileImportResult = {
   version: 1,
   created: true,
 };
-function directoryResult(
-  overrides: Partial<KnowledgeDirectoryImportResult> = {},
-): KnowledgeDirectoryImportResult {
-  return {
-    ...target,
-    status: "complete",
-    scannedEntryCount: 3,
-    discoveredFileCount: 3,
-    skippedEntryCount: 0,
-    sourceCount: 3,
-    sources: [],
-    sourcesTruncated: false,
-    ...overrides,
-  };
-}
-
 function capabilities(
   overrides: Partial<CareerEvidenceCapabilities> = {},
   calls: string[] = [],
@@ -72,12 +50,6 @@ function capabilities(
       calls.push("import-file");
       return fileResult;
     },
-    importWorkspaceCandidateSources: async () => {
-      calls.push("import-workspace");
-      return directoryResult();
-    },
-    getLegacyEvidenceMigration: async (workspaceId) => ({ workspaceId, declined: false }),
-    declineLegacyEvidenceMigration: async (workspaceId) => ({ workspaceId, declined: true }),
     ...overrides,
   };
 }
@@ -89,36 +61,17 @@ const context = {
 };
 
 describe("no-selection mode", () => {
-  const none = (legacyDeclined?: boolean): Extract<CareerEvidenceStatus, { kind: "none" }> =>
-    legacyDeclined === undefined ? { kind: "none" } : { kind: "none", legacyDeclined };
-
-  it("creates on the first add without legacy evidence and offers an import with it", () => {
-    expect(
-      noSelectionMode({ status: none(false), legacyEvidenceSourceCount: 0, automatic: true }),
-    ).toBe("first-add");
-    expect(
-      noSelectionMode({ status: none(false), legacyEvidenceSourceCount: 2, automatic: true }),
-    ).toBe("offer");
+  it("creates the base on the first add, and keeps legacy evidence only for an old host", () => {
+    expect(noSelectionMode(true)).toBe("first-add");
+    expect(noSelectionMode(false)).toBe("legacy");
   });
 
-  it("stays on the legacy path after a decline, an unreadable decision, or an old host", () => {
-    for (const status of [none(true), none()]) {
-      expect(noSelectionMode({ status, legacyEvidenceSourceCount: 2, automatic: true })).toBe(
-        "legacy",
-      );
-    }
-    expect(
-      noSelectionMode({ status: none(false), legacyEvidenceSourceCount: 0, automatic: false }),
-    ).toBe("legacy");
-  });
-
-  it("needs every automatic capability", () => {
+  it("needs the create and select capabilities, not the legacy migration ones", () => {
+    // The helper offers no legacy migration capabilities.
     expect(supportsAutomaticKnowledgeBase(capabilities())).toBe(true);
     for (const missing of [
       "ensureDefaultCandidateKnowledgeBase",
       "selectCandidateKnowledgeBase",
-      "getLegacyEvidenceMigration",
-      "declineLegacyEvidenceMigration",
     ] as const) {
       expect(supportsAutomaticKnowledgeBase(capabilities({ [missing]: undefined }))).toBe(false);
     }
@@ -126,31 +79,15 @@ describe("no-selection mode", () => {
 });
 
 describe("loading the no-selection status", () => {
-  it("carries the saved decision, and omits it when it cannot be read", async () => {
-    await expect(loadCareerEvidenceStatus(capabilities(), "workspace-1", String)).resolves.toEqual({
-      kind: "none",
-      legacyDeclined: false,
-    });
+  it("reports no selection without reading a legacy decision", async () => {
+    const getLegacyEvidenceMigration = vi.fn(async (workspaceId: string) => ({
+      workspaceId,
+      declined: true,
+    }));
     await expect(
-      loadCareerEvidenceStatus(
-        capabilities({
-          getLegacyEvidenceMigration: async (workspaceId) => ({ workspaceId, declined: true }),
-        }),
-        "workspace-1",
-        String,
-      ),
-    ).resolves.toEqual({ kind: "none", legacyDeclined: true });
-    await expect(
-      loadCareerEvidenceStatus(
-        capabilities({
-          getLegacyEvidenceMigration: async () => {
-            throw new Error("unreadable");
-          },
-        }),
-        "workspace-1",
-        String,
-      ),
+      loadCareerEvidenceStatus(capabilities({ getLegacyEvidenceMigration }), "workspace-1", String),
     ).resolves.toEqual({ kind: "none" });
+    expect(getLegacyEvidenceMigration).not.toHaveBeenCalled();
   });
 });
 
@@ -206,65 +143,6 @@ describe("first career evidence", () => {
         onChanged: async () => true,
       }),
     ).rejects.toThrow("cancelled");
-    expect(calls).toEqual(["ensure"]);
-  });
-});
-
-describe("one-time legacy evidence import", () => {
-  it("imports, selects, refreshes, and reports the counts", async () => {
-    const calls: string[] = [];
-    const outcome = await importLegacyEvidence({
-      ...context,
-      capabilities: capabilities({}, calls),
-      onChanged: async () => {
-        calls.push("refresh");
-        return true;
-      },
-    });
-    expect(calls).toEqual(["ensure", "import-workspace", "select", "refresh"]);
-    expect(outcome).toEqual({
-      status: "imported",
-      message:
-        "Created knowledge base “Career evidence” in DraftLoop application data and selected it for this workspace. Imported 3 of 3 legacy evidence files.",
-    });
-  });
-
-  it("reports partial results and rejections", async () => {
-    const outcome = await importLegacyEvidence({
-      ...context,
-      capabilities: capabilities({
-        importWorkspaceCandidateSources: async () =>
-          directoryResult({
-            status: "partial",
-            discoveredFileCount: 4,
-            sourceCount: 2,
-            skippedEntryCount: 1,
-          }),
-      }),
-      onChanged: async () => true,
-    });
-    expect(outcome).toMatchObject({
-      status: "imported",
-      message: expect.stringContaining(
-        "Imported 2 of 4 legacy evidence files. Not imported: 2 files, which stay in the legacy workspace evidence folder. 1 entry skipped as unsupported.",
-      ),
-    });
-  });
-
-  it("does not select an empty base when nothing could be imported", async () => {
-    const calls: string[] = [];
-    const outcome = await importLegacyEvidence({
-      ...context,
-      capabilities: capabilities(
-        {
-          importWorkspaceCandidateSources: async () =>
-            directoryResult({ status: "partial", sourceCount: 0, discoveredFileCount: 2 }),
-        },
-        calls,
-      ),
-      onChanged: async () => true,
-    });
-    expect(outcome).toMatchObject({ status: "nothing-imported" });
     expect(calls).toEqual(["ensure"]);
   });
 });

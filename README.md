@@ -166,23 +166,21 @@ without a CKB selection continue to use the legacy workspace evidence path.
 
 Career evidence is the material a run uses. Runs read the selected knowledge
 base; legacy workspace evidence (the workspace `evidence` folder) is used only
-when none is selected. A workspace without a base gets one created, with a
-visible one-time import of its legacy evidence.
+when none is selected. In the desktop app, a workspace without a base gets one
+created on its first add; the app no longer offers to import or keep legacy
+evidence.
 
 The desktop Career evidence page has one **Career evidence** panel. Its top
 part shows the base the workspace uses and is the one place to add evidence:
-**Add files** and **Add folder** open a native picker, and a public URL is
-fetched after you approve it. Everything you add goes into the base in use.
+**Add files** and **Add folder** open a native picker, and public URLs (one
+per line) are fetched one after another after you approve them. A URL that
+fails stays in the box to fix or retry. Everything you add goes into the base
+in use.
 
 Its **Knowledge base** section can create or open a local store. In a
 collecting or stopped workspace, choose **Use this knowledge base** to replace
 the workspace selection with one active base. This clears the selected
 canonical profile so you can review a profile against the new selection.
-
-**Import legacy workspace evidence** imports all supported files from this
-workspace’s legacy evidence directory into the chosen base. This
-requires an explicit action before a run or after it stops. Previously imported
-directories are rejected.
 
 If the desktop host restarts while a review is open, a workspace operation can
 lose its connection. DraftLoop clears that stale review and offers **Open

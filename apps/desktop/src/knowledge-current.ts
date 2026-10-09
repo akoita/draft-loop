@@ -87,9 +87,9 @@ export const differentStoreDisclosureLabel = "Use a different knowledge store…
 export const autoCreateHint =
   "Add career evidence from the Career evidence card above to create your knowledge base.";
 
-/** The same hint inside the Career evidence card, whose add and import actions sit just above. */
+/** The same hint inside the Career evidence card, whose add actions sit just above. */
 export const embeddedAutoCreateHint =
-  "Your knowledge base is created when you add or import your first evidence above.";
+  "Your knowledge base is created when you add your first evidence above.";
 
 /**
  * Whether the panel points to card 02 for creating a base. It must not when the workspace has a
