@@ -859,7 +859,11 @@ normal GLM author profile keeps `low` reasoning. The Gemini author route uses th
 detached extraction profile that sets `thinkingBudget: 0`. The Mistral Large 4
 author route uses the same ceiling with a detached extraction profile that sends
 `reasoningEffort: "none"`, so extraction runs without reasoning to save time and
-output budget; the review-run author keeps provider defaults. These settings make no speed
+output budget; the review-run author keeps provider defaults. Because Mistral
+counts that hidden reasoning against the request limit, a Mistral request with
+reasoning on is sent the model's 65,536-token limit while the prompt still states
+the 32,768-token answer budget. If Mistral still stops at its limit, the error
+counts the answer and reasoning characters it returned, never the text. These settings make no speed
 or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 

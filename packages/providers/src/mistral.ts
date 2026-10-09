@@ -175,8 +175,15 @@ function resolveSelectionControls(
         "profile_budget_mismatch",
       );
     }
-    outputTokens = profile.runtime.maxOutputTokens;
-    if (profile.runtime.thinking.mode === "disabled") reasoningEffort = "none";
+    // Mistral counts hidden reasoning against `maxTokens`. With reasoning on, the profile's
+    // budget is the answer's share and the request allows up to the model limit, so a long
+    // revision is not cut off by reasoning it never returns.
+    if (profile.runtime.thinking.mode === "disabled") {
+      outputTokens = profile.runtime.maxOutputTokens;
+      reasoningEffort = "none";
+    } else {
+      outputTokens = Math.min(profile.knownLimits.maxOutputTokens, maxOutputTokens);
+    }
   }
 
   if (!Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > maxOutputTokens) {
@@ -409,6 +416,10 @@ export class MistralAdapter<
             "Mistral reached the output-token limit before completing the structured response.",
             "output_token_limit_reached",
             "output-token-budget-exceeded",
+            [
+              { code: "stream_answer_characters", count: completion.text.length },
+              { code: "stream_reasoning_characters", count: completion.reasoningCharacters },
+            ],
           );
         }
         if (completion.finishReason === "model_length") {

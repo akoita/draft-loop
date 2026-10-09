@@ -193,6 +193,8 @@ export interface MistralStreamCompletion {
   readonly finishReason: string;
   readonly responseId: string | undefined;
   readonly usage: unknown;
+  /** Characters of reasoning the stream returned; the reasoning itself is discarded. */
+  readonly reasoningCharacters: number;
 }
 
 type StreamRejectionReason =
@@ -229,22 +231,36 @@ function isExpectedServedModel(value: unknown, modelId: string): value is string
   return typeof value === "string" && (value === modelId || value.startsWith(`${modelId}-`));
 }
 
-/** Join a delta's text; reasoning chunks are never stored or mixed into the answer. */
-function deltaText(content: unknown): string {
-  if (content === undefined || content === null) return "";
-  if (typeof content === "string") return content;
+/** Characters in a reasoning chunk, counted only; the text is never kept. */
+function reasoningLength(chunk: Record<string, unknown>): number {
+  if (!Array.isArray(chunk.thinking)) return 0;
+  let length = 0;
+  for (const part of chunk.thinking as unknown[]) {
+    if (isRecord(part) && typeof part.text === "string") length += part.text.length;
+  }
+  return length;
+}
+
+/** Join a delta's text; reasoning chunks are counted but never stored or mixed into the answer. */
+function deltaText(content: unknown): { readonly text: string; readonly reasoning: number } {
+  if (content === undefined || content === null) return { text: "", reasoning: 0 };
+  if (typeof content === "string") return { text: content, reasoning: 0 };
   if (!Array.isArray(content)) throw malformedStream("stream_content_type");
   let text = "";
+  let reasoning = 0;
   for (const chunk of content as unknown[]) {
     if (!isRecord(chunk)) throw malformedStream("stream_content_type");
-    if (chunk.type === "thinking") continue;
+    if (chunk.type === "thinking") {
+      reasoning += reasoningLength(chunk);
+      continue;
+    }
     if ((chunk.type === undefined || chunk.type === "text") && typeof chunk.text === "string") {
       text += chunk.text;
       continue;
     }
     throw malformedStream("stream_content_type");
   }
-  return text;
+  return { text, reasoning };
 }
 
 /**
@@ -261,6 +277,7 @@ export async function collectMistralStream(
   let completed = false;
   let text = "";
   let textBytes = 0;
+  let reasoningCharacters = 0;
   let finishReason: string | undefined;
   let responseId: string | undefined;
   let usage: unknown;
@@ -302,7 +319,9 @@ export async function collectMistralStream(
       if (isRecord(delta) && Array.isArray(delta.toolCalls) && delta.toolCalls.length > 0) {
         throw malformedStream("stream_tool_data");
       }
-      const piece = isRecord(delta) ? deltaText(delta.content) : "";
+      const parts = isRecord(delta) ? deltaText(delta.content) : { text: "", reasoning: 0 };
+      reasoningCharacters += parts.reasoning;
+      const piece = parts.text;
       if (piece !== "") {
         if (finishReason !== undefined) throw malformedStream("stream_post_terminal_data");
         text += piece;
@@ -337,5 +356,5 @@ export async function collectMistralStream(
       "incomplete_stream",
     );
   }
-  return { text, finishReason, responseId, usage };
+  return { text, finishReason, responseId, usage, reasoningCharacters };
 }
