@@ -370,7 +370,8 @@ relationships but cannot choose persisted IDs, provenance kinds, review state,
 severity, or messages. Each proposed fact must include an evidence quote that
 occurs in its cited normalized source and contains the proposed value; the quote
 is checked locally and is not persisted. The application maps valid citations back to exact selected CKB
-versions, generates deterministic IDs, keeps conflicting and duplicate facts,
+versions, generates deterministic IDs, keeps conflicting and duplicate facts
+(local conflicts only for known single-valued fields such as title or start date),
 adds visible category omissions, builds a draft, and appends it through the
 shared history service. The configured-provider adapter uses the workspace's
 author model and existing API-key, authenticated user-session, or local

@@ -686,7 +686,7 @@ Facts with the same category, subject, field, and value found in several places
 (for example the same skill in different sections of one source) are merged into
 one fact that keeps all their sources. A possible-duplicate warning remains only
 when such facts cannot be merged because the combined sources would exceed the
-per-fact limit; different values of the same field still raise a conflict.
+per-fact limit; different values of a single-valued field still raise a conflict.
 
 If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
@@ -866,11 +866,14 @@ Guidance may show bounded reason counts, such as fact values or evidence
 quotes over the 2,000-character limit, but omits values, source text, and
 paths.
 
-Skills are treated as collection values, so distinct skill facts do not become
-automatic conflicts even when they share a subject. Equal values can still
-raise duplicate warnings. Unscoped certifications are also collections, while
-scoped certifications retain automatic conflict detection. Explicitly proposed
-conflicts remain visible for skills and certifications.
+Automatic conflicts apply only to single-valued fields of one subject: for
+example role title, start and end dates, employment period, employer name,
+degree, institution, certification issuer and date, a contact email or phone,
+or an achievement metric. Every other field is a collection, so several
+revisions, studies, confirmations, or events for one subject are not conflicts.
+Skills and unscoped certifications are always collections. Equal values still
+merge or raise duplicate warnings. Explicitly proposed conflicts remain visible
+for every field.
 
 Exact duplicate source contents are sent once per bounded group while every
 original source version remains attached to facts as local provenance.
