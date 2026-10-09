@@ -1491,14 +1491,14 @@ async function prepareInputs(
       return content;
     })());
   const files = await collectSourceFiles(sourceDirectory);
-  if (files.length === 0) {
+  if (files.length === 0 && candidateKnowledgeSelection === undefined) {
     throw new CliUserError("No supported local source files were found in the source directory.");
   }
   const ingestion = await ingestSources(files.map((path) => ({ path })));
   const sourceWithNoChunks = ingestion.sources.find((source) => source.chunks.length === 0);
   if (
     ingestion.issues.length > 0 ||
-    ingestion.sources.length === 0 ||
+    (files.length > 0 && ingestion.sources.length === 0) ||
     sourceWithNoChunks !== undefined
   ) {
     throw new SourceIngestionUserError(

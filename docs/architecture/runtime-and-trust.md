@@ -22,8 +22,8 @@ so a token-budget failure alone does not establish the size of the final JSON.
 Prompt guidance is not a guarantee of compliance; live effectiveness requires a
 separate observation.
 
-1. Create a workspace with a job description, local evidence directory,
-   instructions, truthfulness policy, and readiness rubric.
+1. Create a workspace with a job description, local evidence directory or a
+   selected knowledge base, instructions, truthfulness policy, and readiness rubric.
 2. Ingest and normalize selected sources into a canonical evidence base.
 3. Ask the author for a draft with evidence references on important claims.
 4. Give the independent critic the same canonical inputs, draft, and rubric;
