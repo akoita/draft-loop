@@ -210,7 +210,7 @@ describe("Mistral adapter", () => {
     expect(options?.retries).toEqual({ strategy: "none" });
   });
 
-  it("takes the output budget from a matching profile", async () => {
+  it("takes the output budget from a matching profile, with reasoning headroom", async () => {
     const runtimeProfile: NonNullable<ModelSelection["profile"]> = {
       id: "mistral-large-author",
       version: 1,
@@ -228,7 +228,8 @@ describe("Mistral adapter", () => {
     const model = selection({ profile: runtimeProfile });
     const { adapter, stream } = harness(async () => completion(), { configuredModel: model });
     await adapter.execute(request({ model }));
-    expect(stream.mock.calls[0]?.[0].maxTokens).toBe(8192);
+    // Reasoning shares Mistral's output limit, so a reasoning profile may use the model limit.
+    expect(stream.mock.calls[0]?.[0].maxTokens).toBe(65_536);
 
     const unsupported = selection({
       profile: { ...runtimeProfile, runtime: { ...runtimeProfile.runtime, effort: "high" } },
@@ -266,6 +267,7 @@ describe("Mistral adapter", () => {
     const author = harness(async () => completion(), { configuredModel: providerDefault });
     await author.adapter.execute(request({ model: providerDefault }));
     expect(author.stream.mock.calls[0]?.[0]).not.toHaveProperty("reasoningEffort");
+    expect(author.stream.mock.calls[0]?.[0].maxTokens).toBe(65_536);
 
     const noProfile = harness(async () => completion());
     await noProfile.adapter.execute(request());
@@ -357,6 +359,23 @@ describe("Mistral adapter", () => {
     expect(error.diagnostics).toEqual([{ code: "output_token_limit_reached", path: "response" }]);
     expect(error.retryable).toBe(false);
     expect(stream).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts answer and reasoning characters when the output budget runs out", async () => {
+    const events = [
+      chunk({
+        content: [{ type: "thinking", thinking: [{ type: "text", text: `${secretMarker}abc` }] }],
+      }),
+      chunk({ content: [{ type: "text", text: '{"answer":"tru' }] }, "length"),
+    ];
+    const { adapter } = harness(async () => streamOf(events));
+    const error = await rejection(adapter.execute(request()));
+    expect(error.failureStage).toBe("output-token-budget-exceeded");
+    expect(error.diagnosticCounts).toEqual([
+      { code: "stream_answer_characters", count: 14 },
+      { code: "stream_reasoning_characters", count: secretMarker.length + 3 },
+    ]);
+    expect(JSON.stringify(error.metadata) + error.message).not.toContain(secretMarker);
   });
 
   it.each([

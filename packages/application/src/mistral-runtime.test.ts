@@ -128,7 +128,8 @@ describe("Mistral application route", () => {
     expect(factory).toHaveBeenCalledWith("synthetic-mistral-key");
     expect(stream.mock.calls[0]?.[0]).toMatchObject({
       model: mistralLarge4ModelId,
-      maxTokens: 32768,
+      // The author profile keeps reasoning on, which shares the model's 65,536-token limit.
+      maxTokens: 65536,
     });
     expect(policy.allowedCompanies).toEqual(["mistral"]);
     expect(policy.requestedRetention).toBe("ephemeral-request");
