@@ -6402,3 +6402,75 @@ input[type="checkbox"] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The application setup screen: the job card, then one compact card per input that has its own screen. */
+.application-setup {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.application-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.application-summary .home-card {
+  margin: 0;
+}
+
+.application-summary-select {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.application-summary-select select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* A quiet disclosure for detail that is rarely needed before a start. */
+.setup-details {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.setup-details > summary {
+  width: fit-content;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.setup-details > summary:hover {
+  color: var(--text-1);
+}
+
+.setup-details[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+.setup-advanced {
+  margin-top: var(--space-4);
+}
+
+.preflight-summary {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+@media (max-width: 1024px) {
+  .application-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.application-summary .home-card h2 {
+  font-size: var(--text-base);
+}
