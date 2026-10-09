@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { CredentialRow, googleCredentialNote, mistralCredentialNote } from "./review.js";
+import {
+  CredentialRow,
+  googleCredentialNote,
+  mistralCredentialNote,
+} from "./provider-authentication.js";
 
 describe("provider credential row", () => {
   it("renders a dedicated DeepInfra API-key row with secret-free status", () => {

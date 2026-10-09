@@ -698,14 +698,14 @@ input[type="checkbox"] {
 
 /* =========================================================================
    Spine: one fixed-height row carrying run identity, the loop, and cost.
-   It never wraps — the identity zone truncates instead.
+   The row never wraps; the application name may take two lines before it is cut.
    ========================================================================= */
 
 /* The right zone is sized intrinsically so it can never collapse under its own
    nowrap content and paint back over the loop; the loop is what degrades. */
 .spine {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, auto) auto;
   align-items: center;
   gap: var(--space-5);
   flex: none;
@@ -5940,6 +5940,14 @@ input[type="checkbox"] {
   font-weight: 650;
   letter-spacing: -0.005em;
   text-transform: none;
+  /* The name may use two lines before it is cut, so a short name is never ellipsised
+     ("Acme …") while the loop and the header actions share the row. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .home-settings .workspace-model-summary {
@@ -6199,6 +6207,32 @@ input[type="checkbox"] {
 .home-empty-applications {
   margin: 0;
   max-width: 62ch;
+}
+
+.provider-authentication {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.provider-authentication-head {
+  display: grid;
+  gap: 2px;
+}
+
+.provider-authentication-summary {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* On the application screen: where provider sign-in went, and the way to it. */
+.provider-signin-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .home-settings-actions {

@@ -8,6 +8,7 @@ import {
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
+import { CareerEvidenceCard } from "./career-evidence-card.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
@@ -57,6 +58,7 @@ import {
 } from "./native.js";
 import { NewApplicationFlow } from "./new-application-flow.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
+import { ProviderAuthentication } from "./provider-authentication.js";
 import { RecentWorkspaces } from "./recent-workspaces-ui.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
@@ -914,11 +916,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
   const [knowledgePending, setKnowledgePending] = useState(false);
-  const knowledgePendingRef = useRef(false);
-  // Bumped when the workspace's knowledge selection or contents change, so the Career evidence
-  // setup card reads the selected base again.
-  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
+  // Bumped by the Career evidence card to open the knowledge panel's store form.
   const [storeFormRequest, setStoreFormRequest] = useState(0);
+  const knowledgePendingRef = useRef(false);
+  // Bumped when the workspace's knowledge selection or contents change, so Home's Career evidence
+  // summary reads the selected base again.
+  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
   const [profilePendingScope, setProfilePendingScope] = useState<{
     readonly workspaceId: string;
     readonly generation: number;
@@ -2331,6 +2334,103 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       state.execution.status === "running",
   };
 
+  // File and URL intake are shared by the application screen and the Career evidence card.
+  const selectFiles =
+    activePort.selectFiles === undefined
+      ? undefined
+      : (target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override") => {
+          const workspaceId = state.workspaceId;
+          if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
+          setImportError(null);
+          void activePort
+            .selectFiles?.(target)
+            .then((loaded) => {
+              if (
+                isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
+                loaded.workspaceId === workspaceId
+              ) {
+                setState(loaded);
+              }
+            })
+            .catch((reason: unknown) => {
+              if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
+              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
+              setImportError(
+                reason instanceof Error ? reason.message : "The files could not be imported.",
+              );
+            });
+        };
+  const addUrl =
+    activePort.addUrl === undefined
+      ? undefined
+      : (target: "evidence" | "job-description", url: string) => {
+          const workspaceId = state.workspaceId;
+          if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
+          setImportError(null);
+          void activePort
+            .addUrl?.(target, url)
+            .then((loaded) => {
+              if (
+                isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
+                loaded.workspaceId === workspaceId
+              ) {
+                setState(loaded);
+              }
+            })
+            .catch((reason: unknown) => {
+              if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
+              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
+              setImportError(
+                reason instanceof Error ? reason.message : "The URL could not be imported.",
+              );
+            });
+        };
+
+  // Provider authentication is workspace-level, so it is offered on Home. Changing the OpenAI mode
+  // also invalidates the model-profile support read, as it did when the application screen owned it.
+  const providerAuthentication = (
+    <ProviderAuthentication
+      fixtureMode={state.setup.fixtureMode}
+      authorCompany={state.providerTransmissionPreflight.author.company as ModelCompany}
+      criticCompany={state.providerTransmissionPreflight.critic.company as ModelCompany}
+      getCredentialStatus={activePort.getCredentialStatus}
+      getProviderAuthModeStatus={activePort.getProviderAuthModeStatus}
+      onSetCredential={
+        activePort.setCredential === undefined
+          ? undefined
+          : async (provider: CredentialProvider, apiKey: string) => {
+              await activePort.setCredential?.(provider, apiKey);
+            }
+      }
+      onRemoveCredential={
+        activePort.removeCredential === undefined
+          ? undefined
+          : async (provider: CredentialProvider) => {
+              await activePort.removeCredential?.(provider);
+            }
+      }
+      onSetProviderAuthMode={
+        activePort.setProviderAuthMode === undefined
+          ? undefined
+          : async (provider: "anthropic" | "openai", mode: "api-key" | "user-session") => {
+              if (activePort.setProviderAuthMode === undefined) {
+                throw new Error("Provider authentication mode changes are unavailable.");
+              }
+              const workspaceId = state.workspaceId;
+              const generation = workspaceGeneration;
+              setModelProfileSupport({ status: "loading", workspaceId, generation });
+              try {
+                return await activePort.setProviderAuthMode(provider, mode);
+              } finally {
+                if (isCurrentWorkspaceContext(workspaceId, generation)) {
+                  setModelProfileSupportEpoch((current) => current + 1);
+                }
+              }
+            }
+      }
+    />
+  );
+
   if (homeAvailable && view.kind === "home") {
     return (
       <HomeScreen
@@ -2363,6 +2463,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               {modelSettingsButton}
               {writingPolicyNode}
             </div>
+            {providerAuthentication}
           </>
         }
       />
@@ -2410,6 +2511,31 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         workspaceNavigation={workspaceNavigationNode}
         errorMessage={importError}
         onHome={goHome}
+        card={
+          <CareerEvidenceCard
+            setup={state.setup}
+            knowledge={{
+              workspaceId: state.workspaceId,
+              capabilities: activePort,
+              revision: knowledgeRevision,
+              disabled:
+                busy ||
+                knowledgePending ||
+                profilePendingForActiveWorkspace ||
+                pendingReviewAction !== null ||
+                state.execution.status === "running",
+              onChanged: (workspaceId) =>
+                onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
+              onRequestStoreForm: () => setStoreFormRequest((current) => current + 1),
+              onPendingChange: (workspaceId, pending) =>
+                onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
+            }}
+            onSelectLegacyFiles={
+              selectFiles === undefined ? undefined : () => selectFiles("evidence")
+            }
+            onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
+          />
+        }
         knowledge={knowledgePanel}
         retrieval={retrievalPanel}
         {...(profileCapabilities === null ? {} : { onManageProfile: openProfileScreen })}
@@ -2472,118 +2598,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           ? profileAndEvidencePanels
           : undefined
       }
-      {...(activePort.selectFiles === undefined
-        ? {}
-        : {
-            onSelectFiles: (
-              target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
-            ) => {
-              const workspaceId = state.workspaceId;
-              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-              setImportError(null);
-              void activePort
-                .selectFiles?.(target)
-                .then((loaded) => {
-                  if (
-                    isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
-                    loaded.workspaceId === workspaceId
-                  ) {
-                    setState(loaded);
-                  }
-                })
-                .catch((reason: unknown) => {
-                  if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
-                  if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-                  setImportError(
-                    reason instanceof Error ? reason.message : "The files could not be imported.",
-                  );
-                });
-            },
-          })}
-      {...(activePort.addUrl === undefined
-        ? {}
-        : {
-            onAddUrl: (target: "evidence" | "job-description", url: string) => {
-              const workspaceId = state.workspaceId;
-              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-              setImportError(null);
-              void activePort
-                .addUrl?.(target, url)
-                .then((loaded) => {
-                  if (
-                    isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
-                    loaded.workspaceId === workspaceId
-                  ) {
-                    setState(loaded);
-                  }
-                })
-                .catch((reason: unknown) => {
-                  if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
-                  if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-                  setImportError(
-                    reason instanceof Error ? reason.message : "The URL could not be imported.",
-                  );
-                });
-            },
-          })}
+      {...(selectFiles === undefined ? {} : { onSelectFiles: selectFiles })}
+      {...(addUrl === undefined ? {} : { onAddUrl: addUrl })}
       jobRequirements={jobRequirementsBinding}
-      careerEvidence={{
-        workspaceId: state.workspaceId,
-        capabilities: activePort,
-        revision: knowledgeRevision,
-        disabled:
-          busy ||
-          knowledgePending ||
-          profilePendingForActiveWorkspace ||
-          pendingReviewAction !== null ||
-          state.execution.status === "running",
-        onChanged: (workspaceId) => onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
-        onRequestStoreForm: () => setStoreFormRequest((current) => current + 1),
-        onPendingChange: (workspaceId, pending) =>
-          onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
-      }}
-      {...(activePort.getCredentialStatus === undefined
-        ? {}
-        : { getCredentialStatus: activePort.getCredentialStatus })}
-      {...(activePort.setCredential === undefined
-        ? {}
-        : {
-            onSetCredential: async (provider: CredentialProvider, apiKey: string) => {
-              await activePort.setCredential?.(provider, apiKey);
-            },
-          })}
-      {...(activePort.removeCredential === undefined
-        ? {}
-        : {
-            onRemoveCredential: async (provider: CredentialProvider) => {
-              await activePort.removeCredential?.(provider);
-            },
-          })}
-      {...(activePort.getProviderAuthModeStatus === undefined
-        ? {}
-        : { getProviderAuthModeStatus: activePort.getProviderAuthModeStatus })}
-      {...(activePort.setProviderAuthMode === undefined
-        ? {}
-        : {
-            onSetProviderAuthMode: async (
-              provider: "anthropic" | "openai",
-              mode: "api-key" | "user-session",
-            ) => {
-              if (activePort.setProviderAuthMode === undefined) {
-                throw new Error("Provider authentication mode changes are unavailable.");
-              }
-              const workspaceId = state.workspaceId;
-              const generation = workspaceGeneration;
-              setModelProfileSupport({ status: "loading", workspaceId, generation });
-              try {
-                return await activePort.setProviderAuthMode(provider, mode);
-              } finally {
-                if (isCurrentWorkspaceContext(workspaceId, generation)) {
-                  setModelProfileSupportEpoch((current) => current + 1);
-                }
-              }
-            },
-          })}
+      {...(homeAvailable ? { onOpenHome: goHome } : {})}
     />
   );
 }

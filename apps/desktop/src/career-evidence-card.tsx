@@ -141,7 +141,6 @@ export function CareerEvidenceCardView({
   return (
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
-        <span className="setup-number">02</span>
         <span className={`setup-state${ready ? " setup-state-ready" : ""}`}>
           {ready ? "Ready" : "Required"}
         </span>
