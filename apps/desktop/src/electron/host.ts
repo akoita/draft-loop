@@ -200,7 +200,9 @@ import {
   type ApplicationScope,
   applicationJobUrl,
   applicationReadinessScope,
+  archiveApplicationSummary,
   createApplicationSummary,
+  deleteApplicationRecord,
   importApplicationSummary,
   listApplicationSummaries,
   projectApplication,
@@ -4185,6 +4187,33 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 resolve(sourceRoot),
                 storedName,
               )),
+            },
+          };
+        }
+        case "application.archive": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: await archiveApplicationSummary(
+                service,
+                workspace.root,
+                command.input.applicationId,
+                command.input.archived,
+              ),
+            },
+          };
+        }
+        case "application.delete": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          await deleteApplicationRecord(service, workspace.root, command.input.applicationId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              applicationId: command.input.applicationId,
+              deleted: true,
             },
           };
         }

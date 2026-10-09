@@ -33,6 +33,8 @@ export interface ApplicationSummaryView {
   readonly exportCount: number;
   /** The newest run, so the review can open on it; null before the first run. */
   readonly latestRunId: string | null;
+  /** When the application was archived; null while it is on the main list. */
+  readonly archivedAt: string | null;
 }
 
 export interface ApplicationListInput {
@@ -56,6 +58,25 @@ export interface ApplicationCreateInput {
   readonly jobUrl?: string;
   /** Must be `true` with a `jobUrl`: the person approved fetching that page. */
   readonly jobUrlApproved?: boolean;
+}
+
+/** Archives an application with `archived: true`, or restores it with `false`. */
+export interface ApplicationArchiveInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly archived: boolean;
+}
+
+/** Deletes a created application that holds no run, brief or export. */
+export interface ApplicationDeleteInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+}
+
+export interface ApplicationDeleteResult {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly deleted: true;
 }
 
 /**
@@ -107,6 +128,20 @@ export const applicationGetKeys = exactKeys<ApplicationGetInput>()([
   "workspaceId",
   "applicationId",
 ]);
+export const applicationArchiveKeys = exactKeys<ApplicationArchiveInput>()([
+  "workspaceId",
+  "applicationId",
+  "archived",
+]);
+export const applicationDeleteKeys = exactKeys<ApplicationDeleteInput>()([
+  "workspaceId",
+  "applicationId",
+]);
+const deleteResultKeys = exactKeys<ApplicationDeleteResult>()([
+  "workspaceId",
+  "applicationId",
+  "deleted",
+]);
 export const applicationImportKeys = exactKeys<ApplicationImportInput>()([
   "workspaceId",
   "selection",
@@ -142,6 +177,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "briefCount",
   "exportCount",
   "latestRunId",
+  "archivedAt",
 ]);
 const listResultKeys = exactKeys<ApplicationListResult>()(["workspaceId", "applications"]);
 const recordResultKeys = exactKeys<ApplicationRecordResult>()(["workspaceId", "application"]);
@@ -207,6 +243,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
   const briefCount = count(raw.briefCount);
   const exportCount = count(raw.exportCount);
   const latestRunId = raw.latestRunId === null ? null : identifier(raw.latestRunId);
+  const archivedAt = raw.archivedAt === null ? null : timestamp(raw.archivedAt);
   if (
     id === undefined ||
     name === undefined ||
@@ -218,7 +255,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     runCount === undefined ||
     briefCount === undefined ||
     exportCount === undefined ||
-    latestRunId === undefined
+    latestRunId === undefined ||
+    archivedAt === undefined
   ) {
     return undefined;
   }
@@ -234,6 +272,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     briefCount,
     exportCount,
     latestRunId,
+    archivedAt,
   };
 }
 
@@ -266,6 +305,19 @@ export function normalizeApplicationRecordResult(
   const application = normalizeApplicationSummary(raw.application);
   if (workspaceId === undefined || application === undefined) return undefined;
   return { workspaceId, application };
+}
+
+export function normalizeApplicationDeleteResult(
+  value: unknown,
+): ApplicationDeleteResult | undefined {
+  const raw = record(value);
+  if (raw === undefined || !onlyKeys(raw, deleteResultKeys)) return undefined;
+  const workspaceId = identifier(raw.workspaceId);
+  const applicationId = identifier(raw.applicationId);
+  if (workspaceId === undefined || applicationId === undefined || raw.deleted !== true) {
+    return undefined;
+  }
+  return { workspaceId, applicationId, deleted: true };
 }
 
 export function normalizeApplicationImportResult(

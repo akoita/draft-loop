@@ -132,6 +132,36 @@ describe("application CLI", () => {
     ).toBe("job.md");
   });
 
+  it("archives, restores and deletes an application", async () => {
+    const { root, lines, run } = await setup();
+    await run("application", "create", root, "--name", "Beta", "--job-text", "Design interfaces.");
+    const id = /^app-[0-9a-f]{12}/u.exec(lines[1] ?? "")?.[0] ?? "";
+
+    lines.length = 0;
+    await run("application", "archive", id, root);
+    await run("application", "list", root);
+    expect(lines[0]).toBe("application archived:");
+    expect(lines[1]).toMatch(/ {2}\(archived\)$/u);
+    expect(lines.at(-1)).toMatch(/^app-.+ {2}\(archived\)$/u);
+
+    lines.length = 0;
+    await run("application", "restore", id, root);
+    expect(lines[0]).toBe("application restored:");
+    expect(lines[1]).not.toContain("(archived)");
+
+    lines.length = 0;
+    await run("application", "delete", id, root);
+    await run("application", "list", root);
+    expect(lines).toEqual([
+      `application deleted: ${id}`,
+      "applications: 1",
+      "default  Synthetic Platform Engineer  [drafting]  runs=0 briefs=0 exports=0",
+    ]);
+    await expect(run("application", "delete", "default", root)).rejects.toBeInstanceOf(
+      CliUserError,
+    );
+  });
+
   it("passes --application to the service and omits it by default", async () => {
     const start = vi.fn(async (_command: Record<string, unknown>) => ({}) as never);
     const cli = createCli({

@@ -23,7 +23,7 @@ interface CreateOptions {
 
 function writeApplication(io: ApplicationIo, application: ApplicationView): void {
   io.write(
-    `${application.id}  ${application.name}  [${application.status}]  runs=${application.runs.length} briefs=${application.briefs.length} exports=${application.exports.length}`,
+    `${application.id}  ${application.name}  [${application.status}]  runs=${application.runs.length} briefs=${application.briefs.length} exports=${application.exports.length}${application.archivedAt === null ? "" : "  (archived)"}`,
   );
 }
 
@@ -35,8 +35,9 @@ function requireApplicationApi<Method>(method: Method | undefined): Method {
 }
 
 /**
- * Registers `application list`, `application create` and `application import`. An application is one job inside the
- * workspace; the workspace's own `job.md` is always listed as the default application.
+ * Registers `application list`, `create`, `import`, `archive`, `restore` and `delete`. An
+ * application is one job inside the workspace; the workspace's own `job.md` is always listed as
+ * the default application.
  */
 export function registerApplicationCommands(
   root: Command,
@@ -45,7 +46,7 @@ export function registerApplicationCommands(
 ): void {
   const application = root
     .command("application")
-    .description("List, create and import the job applications inside a workspace");
+    .description("List, create, import, archive and delete the job applications in a workspace");
 
   application
     .command("list")
@@ -127,5 +128,40 @@ export function registerApplicationCommands(
           `${counts.skippedExports} completed exports were not imported because their files were missing.`,
         );
       }
+    });
+
+  for (const [name, archived, description] of [
+    ["archive", true, "Hide an application from the main list; its runs, briefs and exports stay"],
+    ["restore", false, "Return an archived application to the main list"],
+  ] as const) {
+    application
+      .command(name)
+      .description(description)
+      .argument("<application>", "application id, or default")
+      .argument("[workspace]", "workspace directory", ".")
+      .action(async (applicationId: string, workspace: string) => {
+        const changed = await requireApplicationApi(service.archiveApplication)({
+          root: workspaceRoot(workspace),
+          applicationId,
+          archived,
+        });
+        io.write(archived ? "application archived:" : "application restored:");
+        writeApplication(io, changed);
+      });
+  }
+
+  application
+    .command("delete")
+    .description(
+      "Delete an application that has no runs, briefs or exports; archive the others instead",
+    )
+    .argument("<application>", "application id")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (applicationId: string, workspace: string) => {
+      await requireApplicationApi(service.deleteApplication)({
+        root: workspaceRoot(workspace),
+        applicationId,
+      });
+      io.write(`application deleted: ${applicationId}`);
     });
 }

@@ -26,6 +26,7 @@ const application: ApplicationSummaryView = {
   briefCount: 0,
   exportCount: 0,
   latestRunId: null,
+  archivedAt: null,
 };
 
 const brief = (status: "draft" | "reviewed"): OpportunityLatestBrief => ({

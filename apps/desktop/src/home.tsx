@@ -1,5 +1,15 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 
+import {
+  type ApplicationAction,
+  type ApplicationActionNotice,
+  applicationActionErrorNotice,
+  applicationActionSuccessNotice,
+  applicationDeleteConfirmation,
+  applicationDeleteExplanation,
+  canDeleteApplication,
+  partitionApplications,
+} from "./application-archive-model.js";
 import type { ApplicationSummaryView } from "./application-contract.js";
 import {
   type ApplicationImportNotice,
@@ -146,18 +156,37 @@ export function ProfileFreshnessNote({
   );
 }
 
-function ApplicationCard({
+/** What a card can do besides opening; each action is absent when the host cannot do it. */
+export interface ApplicationCardActions {
+  /** Archives an active application, or restores an archived one. */
+  readonly onArchive?: () => void;
+  /** Asks to delete; present only for an application that can be deleted. */
+  readonly onRequestDelete?: () => void;
+  readonly onConfirmDelete?: () => void;
+  readonly onCancelDelete?: () => void;
+  /** True while the delete confirmation is showing on this card. */
+  readonly confirmingDelete?: boolean;
+  /** True while an action on this card, or anything else in the workspace, is running. */
+  readonly busy?: boolean;
+}
+
+export function ApplicationCard({
   application,
   now,
   onOpen,
+  actions = {},
 }: {
   readonly application: ApplicationSummaryView;
   readonly now: Date;
   readonly onOpen: (application: ApplicationSummaryView) => void;
+  readonly actions?: ApplicationCardActions;
 }) {
   const metaId = `application-meta-${application.id}`;
+  const archived = application.archivedAt !== null;
+  const { onArchive, onRequestDelete, onConfirmDelete, onCancelDelete } = actions;
+  const busy = actions.busy === true;
   return (
-    <li className="application-card">
+    <li className={archived ? "application-card application-card-archived" : "application-card"}>
       <div className="application-card-head">
         <h3>
           <button
@@ -186,6 +215,54 @@ function ApplicationCard({
           </>
         ) : null}
       </p>
+      {actions.confirmingDelete === true && onConfirmDelete !== undefined ? (
+        <fieldset className="application-card-confirm">
+          <legend>{applicationDeleteConfirmation(application.name)}</legend>
+          <div className="application-card-actions">
+            <button
+              className="button button-danger"
+              type="button"
+              disabled={busy}
+              onClick={onConfirmDelete}
+            >
+              Delete
+            </button>
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={busy}
+              onClick={onCancelDelete}
+            >
+              Cancel
+            </button>
+          </div>
+        </fieldset>
+      ) : onArchive === undefined && onRequestDelete === undefined ? null : (
+        <div className="application-card-actions">
+          {onArchive === undefined ? null : (
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={busy}
+              aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
+              onClick={onArchive}
+            >
+              {archived ? "Restore" : "Archive"}
+            </button>
+          )}
+          {onRequestDelete === undefined ? null : (
+            <button
+              className="button button-danger"
+              type="button"
+              disabled={busy}
+              aria-label={`Delete ${application.name}`}
+              onClick={onRequestDelete}
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </li>
   );
 }
@@ -194,11 +271,25 @@ function ApplicationsList({
   state,
   now,
   onOpen,
+  onArchive,
+  onDelete,
+  busyApplicationId = null,
+  disabled = false,
+  initialShowArchived = false,
 }: {
   readonly state: HomeApplicationsState;
   readonly now: Date;
   readonly onOpen: (application: ApplicationSummaryView) => void;
+  readonly onArchive?:
+    | ((application: ApplicationSummaryView, archived: boolean) => void)
+    | undefined;
+  readonly onDelete?: ((application: ApplicationSummaryView) => void) | undefined;
+  readonly busyApplicationId?: string | null;
+  readonly disabled?: boolean;
+  readonly initialShowArchived?: boolean;
 }) {
+  const [showArchived, setShowArchived] = useState(initialShowArchived);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   if (state.status === "loading") {
     return (
       <p className="empty-state" role="status">
@@ -213,25 +304,74 @@ function ApplicationsList({
       </p>
     );
   }
-  const ordered = applicationsByActivity(state.applications);
+  const { active, archived } = partitionApplications(applicationsByActivity(state.applications));
+  const actionsFor = (application: ApplicationSummaryView): ApplicationCardActions => {
+    const isArchived = application.archivedAt !== null;
+    return {
+      busy: disabled || busyApplicationId !== null,
+      confirmingDelete: confirmingId === application.id,
+      ...(onArchive === undefined ? {} : { onArchive: () => onArchive(application, !isArchived) }),
+      ...(onDelete === undefined || !canDeleteApplication(application)
+        ? {}
+        : {
+            onRequestDelete: () => setConfirmingId(application.id),
+            onConfirmDelete: () => {
+              setConfirmingId(null);
+              onDelete(application);
+            },
+            onCancelDelete: () => setConfirmingId(null),
+          }),
+    };
+  };
+  const card = (application: ApplicationSummaryView) => (
+    <ApplicationCard
+      key={application.id}
+      application={application}
+      now={now}
+      onOpen={onOpen}
+      actions={actionsFor(application)}
+    />
+  );
   return (
     <>
-      <ul className="application-list" aria-label="Applications">
-        {ordered.map((application) => (
-          <ApplicationCard
-            key={application.id}
-            application={application}
-            now={now}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
-      {onlyDefaultApplication(state.applications) ? (
+      {active.length === 0 ? null : (
+        <ul className="application-list" aria-label="Applications">
+          {active.map(card)}
+        </ul>
+      )}
+      {active.length === 0 && archived.length > 0 ? (
+        <p className="empty-state home-empty-applications">
+          Every application is archived. Start a new application, or restore one below.
+        </p>
+      ) : archived.length === 0 && onlyDefaultApplication(active) ? (
         <p className="empty-state home-empty-applications">
           Applying for another role? Start a new application. It reuses your career profile and
           evidence, so you do not generate them again.
         </p>
       ) : null}
+      {archived.length === 0 ? null : (
+        <div className="home-archived-applications">
+          <button
+            className="button button-outline"
+            type="button"
+            aria-expanded={showArchived}
+            aria-controls="home-archived-applications"
+            onClick={() => setShowArchived((shown) => !shown)}
+          >
+            {showArchived ? "Hide archived" : `Show archived (${archived.length})`}
+          </button>
+          {showArchived ? (
+            <div id="home-archived-applications" className="home-archived-applications-body">
+              <ul className="application-list" aria-label="Archived applications">
+                {archived.map(card)}
+              </ul>
+              {onDelete === undefined ? null : (
+                <p className="home-card-copy">{applicationDeleteExplanation}</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }
@@ -260,6 +400,16 @@ export interface HomeViewProps {
   readonly importing?: boolean;
   /** The outcome of the last import: what it copied, or why it was refused. */
   readonly importNotice?: ApplicationImportNotice | null;
+  /** Present when the host can archive and restore applications. */
+  readonly onArchiveApplication?: (application: ApplicationSummaryView, archived: boolean) => void;
+  /** Present when the host can delete applications; called after the person confirmed. */
+  readonly onDeleteApplication?: (application: ApplicationSummaryView) => void;
+  /** The application an archive, restore or delete is running on. */
+  readonly busyApplicationId?: string | null;
+  /** The outcome of the last archive, restore or delete. */
+  readonly applicationNotice?: ApplicationActionNotice | null;
+  /** Opens the archived applications on first render; for tests and previews. */
+  readonly initialShowArchived?: boolean;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
@@ -282,6 +432,11 @@ export function HomeView({
   onImportApplication,
   importing = false,
   importNotice = null,
+  onArchiveApplication,
+  onDeleteApplication,
+  busyApplicationId = null,
+  applicationNotice = null,
+  initialShowArchived = false,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
@@ -384,16 +539,31 @@ export function HomeView({
                 {applicationImportExplanation}
               </p>
             )}
-            {importNotice === null ? null : importNotice.kind === "error" ? (
-              <div className="error-banner" role="alert">
-                <p>{importNotice.message}</p>
-              </div>
-            ) : (
-              <p className="home-card-copy home-import-success" role="status">
-                {importNotice.message}
-              </p>
+            {[importNotice, applicationNotice].map((notice, index) =>
+              notice === null ? null : notice.kind === "error" ? (
+                <div className="error-banner" role="alert" key={index === 0 ? "import" : "action"}>
+                  <p>{notice.message}</p>
+                </div>
+              ) : (
+                <p
+                  className="home-card-copy home-import-success"
+                  role="status"
+                  key={index === 0 ? "import" : "action"}
+                >
+                  {notice.message}
+                </p>
+              ),
             )}
-            <ApplicationsList state={applications} now={now} onOpen={onOpenApplication} />
+            <ApplicationsList
+              state={applications}
+              now={now}
+              onOpen={onOpenApplication}
+              onArchive={onArchiveApplication}
+              onDelete={onDeleteApplication}
+              busyApplicationId={busyApplicationId}
+              disabled={disabled}
+              initialShowArchived={initialShowArchived}
+            />
           </section>
 
           {settings === undefined ? null : (
@@ -460,6 +630,10 @@ export function HomeScreen({
   evidenceRef.current = evidenceCapabilities;
   const listApplications = applicationCapabilities.listApplications;
   const importApplication = applicationCapabilities.importApplication;
+  const archiveApplication = applicationCapabilities.archiveApplication;
+  const deleteApplication = applicationCapabilities.deleteApplication;
+  const [busyApplicationId, setBusyApplicationId] = useState<string | null>(null);
+  const [applicationNotice, setApplicationNotice] = useState<ApplicationActionNotice | null>(null);
   const [importing, setImporting] = useState(false);
   const [importNotice, setImportNotice] = useState<ApplicationImportNotice | null>(null);
   const [applicationsRevision, setApplicationsRevision] = useState(0);
@@ -471,7 +645,49 @@ export function HomeScreen({
     importRun.current += 1;
     setImporting(false);
     setImportNotice(null);
+    setBusyApplicationId(null);
+    setApplicationNotice(null);
   }, [workspaceId]);
+
+  // One action at a time; its outcome replaces the previous notice and re-reads the list.
+  const runApplicationAction = (
+    application: ApplicationSummaryView,
+    action: ApplicationAction,
+    operation: () => Promise<unknown>,
+  ) => {
+    const run = importRun.current;
+    setBusyApplicationId(application.id);
+    setImportNotice(null);
+    setApplicationNotice(null);
+    operation()
+      .then(() => {
+        if (run !== importRun.current) return;
+        setApplicationNotice(applicationActionSuccessNotice(application.name, action));
+        setApplicationsRevision((revision) => revision + 1);
+      })
+      .catch((error: unknown) => {
+        if (run === importRun.current) {
+          setApplicationNotice(applicationActionErrorNotice(error, action));
+        }
+      })
+      .finally(() => {
+        if (run === importRun.current) setBusyApplicationId(null);
+      });
+  };
+  const onArchiveApplication =
+    archiveApplication === undefined
+      ? undefined
+      : (application: ApplicationSummaryView, archived: boolean) =>
+          runApplicationAction(application, archived ? "archive" : "restore", () =>
+            archiveApplication(workspaceId, application.id, archived),
+          );
+  const onDeleteApplication =
+    deleteApplication === undefined
+      ? undefined
+      : (application: ApplicationSummaryView) =>
+          runApplicationAction(application, "delete", () =>
+            deleteApplication(workspaceId, application.id),
+          );
 
   const runImport =
     importApplication === undefined
@@ -480,6 +696,7 @@ export function HomeScreen({
           const run = ++importRun.current;
           setImporting(true);
           setImportNotice(null);
+          setApplicationNotice(null);
           importApplication(workspaceId)
             .then((result) => {
               if (run !== importRun.current) return;
@@ -538,7 +755,7 @@ export function HomeScreen({
     };
   }, [workspaceId, evidenceRevision]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `applicationsRevision` re-reads the list after an import.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `applicationsRevision` re-reads the list after an import, archive or delete.
   useEffect(() => {
     if (listApplications === undefined) {
       setApplications({ status: "unavailable" });
@@ -586,6 +803,10 @@ export function HomeScreen({
       {...(runImport === undefined ? {} : { onImportApplication: runImport })}
       importing={importing}
       importNotice={importNotice}
+      {...(onArchiveApplication === undefined ? {} : { onArchiveApplication })}
+      {...(onDeleteApplication === undefined ? {} : { onDeleteApplication })}
+      busyApplicationId={busyApplicationId}
+      applicationNotice={applicationNotice}
       onOpenApplication={onOpenApplication}
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}

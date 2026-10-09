@@ -307,6 +307,14 @@ export interface DesktopApplicationCapabilities {
   readonly importApplication?: (
     workspaceId: string,
   ) => Promise<Pick<ApplicationImportResult, "application" | "imported">>;
+  /** Archives (`true`) or restores (`false`) an application and resolves with its summary. */
+  readonly archiveApplication?: (
+    workspaceId: string,
+    applicationId: string,
+    archived: boolean,
+  ) => Promise<ApplicationSummaryView>;
+  /** Deletes a created application that holds no run, brief or export. */
+  readonly deleteApplication?: (workspaceId: string, applicationId: string) => Promise<void>;
   /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
    * `null`. Opening another workspace clears the scope.
@@ -469,6 +477,33 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               }),
             );
             return { application, imported };
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.archive")
+      ? {
+          archiveApplication: async (
+            workspaceId: string,
+            applicationId: string,
+            archived: boolean,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.archive",
+                input: { workspaceId, applicationId, archived },
+              }),
+            ).application,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.delete")
+      ? {
+          deleteApplication: async (workspaceId: string, applicationId: string) => {
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.delete",
+                input: { workspaceId, applicationId },
+              }),
+            );
           },
         }
       : {}),

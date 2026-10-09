@@ -43,6 +43,8 @@ export interface ApplicationView extends Application {
   readonly briefs: readonly ApplicationBriefSummary[];
   readonly runs: readonly ApplicationRunSummary[];
   readonly exports: readonly ApplicationExportSummary[];
+  /** When the application was archived; null while it is on the main list. */
+  readonly archivedAt: string | null;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -73,11 +75,30 @@ export interface GetApplicationCommand {
   readonly applicationId: string;
 }
 
+export interface ArchiveApplicationCommand {
+  readonly root: string;
+  readonly applicationId: string;
+  /** True archives the application, false restores it to the main list. */
+  readonly archived: boolean;
+}
+
+export interface DeleteApplicationCommand {
+  readonly root: string;
+  readonly applicationId: string;
+}
+
 export interface WorkspaceApplicationService {
   readonly create: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   /** The default application first, then created applications, oldest first. */
   readonly list: (command: ListApplicationsCommand) => Promise<readonly ApplicationView[]>;
   readonly get: (command: GetApplicationCommand) => Promise<ApplicationView | undefined>;
+  /** Archives or restores any application, including the default one; resolves with it. */
+  readonly archive: (command: ArchiveApplicationCommand) => Promise<ApplicationView>;
+  /**
+   * Deletes a created application that holds no run, brief or export, with its stored job text.
+   * The default application and applications with history can only be archived.
+   */
+  readonly delete: (command: DeleteApplicationCommand) => Promise<void>;
 }
 
 export interface WorkspaceApplicationDependencies {
@@ -136,6 +157,7 @@ async function describeApplication(
   workspaceId: string,
   base: Omit<Application, "status" | "updatedAt"> & { readonly updatedAt: string },
 ): Promise<ApplicationView> {
+  const archivedAt = (await applications.listArchived(workspaceId)).get(base.id) ?? null;
   const [briefs, runs, exports] = await Promise.all([
     applications.listBriefs(workspaceId, base.id),
     applications.listRuns(workspaceId, base.id),
@@ -151,7 +173,13 @@ async function describeApplication(
     ...briefs.map((brief) => brief.createdAt),
     ...exports.map((item) => item.createdAt),
   ]);
-  return { ...applicationSchema.parse({ ...base, updatedAt, status }), briefs, runs, exports };
+  return {
+    ...applicationSchema.parse({ ...base, updatedAt, status }),
+    briefs,
+    runs,
+    exports,
+    archivedAt,
+  };
 }
 
 /**
@@ -189,6 +217,7 @@ async function describeDefaultApplication(
       briefs: [],
       runs: [],
       exports: [],
+      archivedAt: null,
     };
   }
   return describeApplication(storage.applications, workspace.id, base);
@@ -270,20 +299,72 @@ export function createWorkspaceApplicationService(
       await storage.close();
     }
   };
+  const get: WorkspaceApplicationService["get"] = async ({ root: rootInput, applicationId }) => {
+    const root = resolve(rootInput);
+    if (applicationId === defaultApplicationId) {
+      return (await list({ root }))[0];
+    }
+    const workspace = await dependencies.readWorkspace(root);
+    if (!(await historyExists(root))) return undefined;
+    const storage = await openHistory(root);
+    try {
+      return await describeStoredApplication(storage, workspace.id, applicationId);
+    } finally {
+      await storage.close();
+    }
+  };
   return {
     list,
-    get: async ({ root: rootInput, applicationId }) => {
+    get,
+    archive: async ({ root: rootInput, applicationId, archived }) => {
       const root = resolve(rootInput);
-      if (applicationId === defaultApplicationId) {
-        return (await list({ root }))[0];
+      if ((await get({ root, applicationId })) === undefined) {
+        throw new CliUserError(`Application ${applicationId} was not found.`);
       }
       const workspace = await dependencies.readWorkspace(root);
-      if (!(await historyExists(root))) return undefined;
       const storage = await openHistory(root);
       try {
-        return await describeStoredApplication(storage, workspace.id, applicationId);
+        await storage.applications.setArchived(
+          workspace.id,
+          applicationId,
+          archived ? clock() : null,
+        );
       } finally {
         await storage.close();
+      }
+      const view = await get({ root, applicationId });
+      if (view === undefined) throw new CliUserError("The application could not be read back.");
+      return view;
+    },
+    delete: async ({ root: rootInput, applicationId }) => {
+      const root = resolve(rootInput);
+      if (applicationId === defaultApplicationId) {
+        throw new CliUserError(
+          "The default application is the workspace's own job. Archive it instead.",
+        );
+      }
+      const view = await get({ root, applicationId });
+      if (view === undefined) {
+        throw new CliUserError(`Application ${applicationId} was not found.`);
+      }
+      if (view.runs.length > 0 || view.briefs.length > 0 || view.exports.length > 0) {
+        throw new CliUserError(
+          "This application has runs, briefs or exports, so it can only be archived.",
+        );
+      }
+      const workspace = await dependencies.readWorkspace(root);
+      const storage = await openHistory(root);
+      try {
+        await storage.applications.deleteApplication(workspace.id, applicationId);
+      } finally {
+        await storage.close();
+      }
+      // Pasted job text is the only file an application owns; a local file is only referenced.
+      if (view.jobSource.kind === "pasted-text") {
+        await rm(join(root, historyDirectory, "applications", applicationId), {
+          recursive: true,
+          force: true,
+        });
       }
     },
     create: async (command) => {
@@ -435,6 +516,8 @@ export function withWorkspaceApplications(
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),
+    archiveApplication: async (command) => service.archive(command),
+    deleteApplication: async (command) => service.delete(command),
     importApplication: async (command: ImportApplicationCommand) => {
       const imported = await importApplicationFromWorkspace(command, dependencies);
       const application = await service.get({

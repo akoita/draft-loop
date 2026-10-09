@@ -211,6 +211,82 @@ describe("workspace applications", () => {
     expect(await service.listApplications({ root })).toHaveLength(2);
   });
 
+  it("archives and restores applications, the default one included, without changing them", async () => {
+    const { root, service } = await workspace();
+    const created = await service.createApplication({
+      root,
+      name: "Acme — Engineer",
+      jobSource: { kind: "pasted-text", text: "Acme needs an engineer.\n" },
+    });
+    expect(created.archivedAt).toBeNull();
+
+    const archived = await service.archiveApplication?.({
+      root,
+      applicationId: created.id,
+      archived: true,
+    });
+    const archivedDefault = await service.archiveApplication?.({
+      root,
+      applicationId: "default",
+      archived: true,
+    });
+
+    expect(archived).toMatchObject({ id: created.id, name: created.name });
+    expect(archived?.archivedAt).toEqual(expect.any(String));
+    expect(archivedDefault?.archivedAt).toEqual(expect.any(String));
+    expect(
+      (await service.listApplications({ root })).map((item) => [item.id, item.archivedAt]),
+    ).toEqual([
+      ["default", archivedDefault?.archivedAt],
+      [created.id, archived?.archivedAt],
+    ]);
+
+    const restored = await service.archiveApplication?.({
+      root,
+      applicationId: created.id,
+      archived: false,
+    });
+    expect(restored?.archivedAt).toBeNull();
+    await expect(
+      service.archiveApplication?.({ root, applicationId: "missing", archived: true }),
+    ).rejects.toThrow(CliUserError);
+  });
+
+  it("deletes an empty application with its stored job, and refuses the default or one with runs", async () => {
+    const { root, service } = await workspace();
+    const empty = await service.createApplication({
+      root,
+      name: "Empty",
+      jobSource: { kind: "pasted-text", text: "Nothing yet.\n" },
+    });
+    const withRun = await service.createApplication({
+      root,
+      name: "With run",
+      jobSource: { kind: "pasted-text", text: "Build tools.\n" },
+    });
+    await service.start({ root, applicationId: withRun.id }, silent);
+    if (empty.jobSource.kind !== "pasted-text") throw new Error("unexpected source");
+    const storedJob = join(root, empty.jobSource.storedPath);
+
+    await service.deleteApplication?.({ root, applicationId: empty.id });
+
+    expect(await service.getApplication({ root, applicationId: empty.id })).toBeUndefined();
+    await expect(stat(storedJob)).rejects.toThrow();
+    await expect(service.deleteApplication?.({ root, applicationId: withRun.id })).rejects.toThrow(
+      /can only be archived/u,
+    );
+    await expect(service.deleteApplication?.({ root, applicationId: "default" })).rejects.toThrow(
+      /Archive it instead/u,
+    );
+    await expect(service.deleteApplication?.({ root, applicationId: empty.id })).rejects.toThrow(
+      CliUserError,
+    );
+    expect((await service.listApplications({ root })).map((item) => item.id)).toEqual([
+      "default",
+      withRun.id,
+    ]);
+  });
+
   it("binds a run to its application and reads that application's job description", async () => {
     const { root, service } = await workspace();
     const created = await service.createApplication({

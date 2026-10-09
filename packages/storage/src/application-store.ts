@@ -68,6 +68,25 @@ export const applicationMigration = {
   `.trim(),
 } as const;
 
+/**
+ * Archiving hides an application from the main list without touching what it holds. The default
+ * application can be archived too, so its id is allowed here; restoring deletes the row.
+ */
+export const applicationArchiveMigration = {
+  version: 31,
+  sql: `
+    CREATE TABLE IF NOT EXISTS application_archives (
+      workspace_id TEXT NOT NULL CHECK (length(trim(workspace_id)) > 0),
+      application_id TEXT NOT NULL CHECK (length(trim(application_id)) > 0),
+      archived_at TEXT NOT NULL CHECK (julianday(archived_at) IS NOT NULL),
+      PRIMARY KEY (workspace_id, application_id)
+    );
+  `.trim(),
+} as const;
+
+/** The application migrations in the order they apply. */
+export const applicationMigrations = [applicationMigration, applicationArchiveMigration] as const;
+
 export interface ApplicationStoreRecord {
   readonly workspaceId: string;
   readonly id: string;
@@ -142,6 +161,19 @@ export interface ApplicationStoragePort extends ApplicationImportReadsPort {
     workspaceId: string,
     applicationId: string,
   ) => Promise<readonly ApplicationBriefSummary[]>;
+  /** Archives with `archivedAt`, or restores with `null`; idempotent either way. */
+  readonly setArchived: (
+    workspaceId: string,
+    applicationId: string,
+    archivedAt: string | null,
+  ) => Promise<void>;
+  /** When each archived application of the workspace was archived, by application id. */
+  readonly listArchived: (workspaceId: string) => Promise<ReadonlyMap<string, string>>;
+  /**
+   * Deletes a stored application that holds nothing. Runs and briefs are bound by append-only
+   * rows, so an application with any of them is a conflict: archive it instead.
+   */
+  readonly deleteApplication: (workspaceId: string, applicationId: string) => Promise<void>;
 }
 
 interface ApplicationStatement {
@@ -356,6 +388,68 @@ export function createApplicationStorage(
           status: text(row, "status"),
           createdAt: text(row, "created_at"),
         }));
+    },
+    setArchived: async (workspaceId, applicationId, archivedAt) => {
+      ensureOpen();
+      requireIdentifier(workspaceId, "workspace id");
+      requireIdentifier(applicationId, "application id");
+      if (archivedAt === null) {
+        database
+          .prepare("DELETE FROM application_archives WHERE workspace_id = ? AND application_id = ?")
+          .run(workspaceId, applicationId);
+        return;
+      }
+      database
+        .prepare(
+          `INSERT INTO application_archives (workspace_id, application_id, archived_at) VALUES (?, ?, ?)
+           ON CONFLICT (workspace_id, application_id) DO NOTHING`,
+        )
+        .run(workspaceId, applicationId, archivedAt);
+    },
+    listArchived: async (workspaceId) => {
+      ensureOpen();
+      return new Map(
+        database
+          .prepare(
+            "SELECT application_id, archived_at FROM application_archives WHERE workspace_id = ?",
+          )
+          .all(workspaceId)
+          .map((row) => [text(row, "application_id"), text(row, "archived_at")] as const),
+      );
+    },
+    deleteApplication: async (workspaceId, applicationId) => {
+      ensureOpen();
+      if (applicationId === defaultApplicationId) {
+        throw new StorageValidationError("The default application is derived and never deleted");
+      }
+      database.transaction(() => {
+        const stored = database
+          .prepare(
+            "SELECT 1 AS present FROM applications WHERE workspace_id = ? AND application_id = ?",
+          )
+          .get(workspaceId, applicationId);
+        if (stored === undefined) {
+          throw new StorageValidationError(`Application ${applicationId} was not found`);
+        }
+        for (const table of ["application_run_bindings", "application_brief_bindings"] as const) {
+          const bound = database
+            .prepare(
+              `SELECT 1 AS present FROM ${table} WHERE workspace_id = ? AND application_id = ?`,
+            )
+            .get(workspaceId, applicationId);
+          if (bound !== undefined) {
+            throw new StorageConflictError(
+              `Application ${applicationId} holds runs or briefs and can only be archived`,
+            );
+          }
+        }
+        database
+          .prepare("DELETE FROM application_archives WHERE workspace_id = ? AND application_id = ?")
+          .run(workspaceId, applicationId);
+        database
+          .prepare("DELETE FROM applications WHERE workspace_id = ? AND application_id = ?")
+          .run(workspaceId, applicationId);
+      })();
     },
   };
 }

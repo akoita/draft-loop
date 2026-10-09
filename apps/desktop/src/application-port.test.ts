@@ -18,6 +18,7 @@ const application: ApplicationSummaryView = {
   briefCount: 0,
   exportCount: 0,
   latestRunId: null,
+  archivedAt: null,
 };
 
 function portWith(capabilities: readonly string[]) {
@@ -41,6 +42,21 @@ function portWith(capabilities: readonly string[]) {
         },
       };
     }
+    if (command.type === "application.archive") {
+      return {
+        ok: true,
+        value: {
+          workspaceId: state.workspaceId,
+          application: { ...application, archivedAt: "2026-10-09T10:00:00.000Z" },
+        },
+      };
+    }
+    if (command.type === "application.delete") {
+      return {
+        ok: true,
+        value: { workspaceId: state.workspaceId, applicationId: "app-1", deleted: true },
+      };
+    }
     return { ok: false, error: { code: "capability-unavailable", message: command.type } };
   });
   const port = createBridgeReviewPort(
@@ -55,6 +71,8 @@ describe("application scope in the desktop review port", () => {
     expect(without.listApplications).toBeUndefined();
     expect(without.createApplication).toBeUndefined();
     expect(without.importApplication).toBeUndefined();
+    expect(without.archiveApplication).toBeUndefined();
+    expect(without.deleteApplication).toBeUndefined();
     expect(without.selectApplication).toBeUndefined();
     const withApplications = portWith([...bridgeCapabilities]).port;
     expect(withApplications.listApplications).toBeDefined();
@@ -83,6 +101,23 @@ describe("application scope in the desktop review port", () => {
     expect(invoke).toHaveBeenCalledWith({
       type: "application.import",
       input: { workspaceId: state.workspaceId, selection: "native-dialog" },
+    });
+  });
+
+  it("archives and deletes through the bridge commands", async () => {
+    const { port, invoke, state } = portWith([...bridgeCapabilities]);
+    await expect(port.archiveApplication?.(state.workspaceId, "app-1", true)).resolves.toEqual({
+      ...application,
+      archivedAt: "2026-10-09T10:00:00.000Z",
+    });
+    expect(invoke).toHaveBeenLastCalledWith({
+      type: "application.archive",
+      input: { workspaceId: state.workspaceId, applicationId: "app-1", archived: true },
+    });
+    await expect(port.deleteApplication?.(state.workspaceId, "app-1")).resolves.toBeUndefined();
+    expect(invoke).toHaveBeenLastCalledWith({
+      type: "application.delete",
+      input: { workspaceId: state.workspaceId, applicationId: "app-1" },
     });
   });
 

@@ -33,18 +33,24 @@ import {
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
 import {
+  type ApplicationArchiveInput,
   type ApplicationCreateInput,
+  type ApplicationDeleteInput,
+  type ApplicationDeleteResult,
   type ApplicationGetInput,
   type ApplicationImportInput,
   type ApplicationImportResult,
   type ApplicationListInput,
   type ApplicationListResult,
   type ApplicationRecordResult,
+  applicationArchiveKeys,
   applicationCreateKeys,
+  applicationDeleteKeys,
   applicationGetKeys,
   applicationImportKeys,
   applicationListKeys,
   maximumApplicationJobTextLength,
+  normalizeApplicationDeleteResult,
   normalizeApplicationImportResult,
   normalizeApplicationListResult,
   normalizeApplicationRecordResult,
@@ -2907,6 +2913,8 @@ export interface BridgeCommandInputMap {
   "application.get": ApplicationGetInput;
   "application.create": ApplicationCreateInput;
   "application.import": ApplicationImportInput;
+  "application.archive": ApplicationArchiveInput;
+  "application.delete": ApplicationDeleteInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3008,6 +3016,8 @@ export interface BridgeCommandOutputMap {
   "application.get": ApplicationRecordResult;
   "application.create": ApplicationRecordResult;
   "application.import": ApplicationImportResult;
+  "application.archive": ApplicationRecordResult;
+  "application.delete": ApplicationDeleteResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4284,6 +4294,31 @@ function validateApplicationImportInput(value: unknown): ApplicationImportInput 
   return selection === undefined ? { workspaceId } : { workspaceId, selection };
 }
 
+function validateApplicationArchiveInput(value: unknown): ApplicationArchiveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationArchiveKeys) || typeof input.archived !== "boolean") {
+    return invalidInput();
+  }
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+    archived: input.archived,
+  };
+}
+
+function validateApplicationDeleteInput(value: unknown): ApplicationDeleteInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationDeleteKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+  };
+}
+
+function normalizeApplicationDelete(value: unknown): ApplicationDeleteResult {
+  return normalizeApplicationDeleteResult(value) ?? invalidInput();
+}
+
 function normalizeApplicationImport(value: unknown): ApplicationImportResult {
   return normalizeApplicationImportResult(value) ?? invalidInput();
 }
@@ -5271,6 +5306,13 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "application.create", input: validateApplicationCreateInput(command.input) };
     case "application.import":
       return { type: "application.import", input: validateApplicationImportInput(command.input) };
+    case "application.archive":
+      return {
+        type: "application.archive",
+        input: validateApplicationArchiveInput(command.input),
+      };
+    case "application.delete":
+      return { type: "application.delete", input: validateApplicationDeleteInput(command.input) };
     case "workspace.recent-clear":
       return {
         type: "workspace.recent-clear",
@@ -7758,7 +7800,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeApplicationList(value);
     case "application.get":
     case "application.create":
+    case "application.archive":
       return normalizeApplicationRecord(value);
+    case "application.delete":
+      return normalizeApplicationDelete(value);
     case "application.import":
       return normalizeApplicationImport(value);
     case "workspace.configure-models":
