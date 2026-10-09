@@ -74,10 +74,13 @@ export interface CareerPageProps {
 }
 
 export interface CareerEvidencePageProps extends CareerPageProps {
-  /** The Career evidence card: the guided first add, automatic knowledge base and legacy import. */
+  /**
+   * The Career evidence card: status, every way to add evidence, and the Knowledge base section
+   * that chooses the base and the store.
+   */
   readonly card?: ReactNode;
-  /** The knowledge panel: sources, add file, add directory, store. */
-  readonly knowledge: ReactNode;
+  /** A separate knowledge panel, for hosts that show one outside the card. */
+  readonly knowledge?: ReactNode;
   /** The retrieval mode and embedding model panel, when the host offers it. */
   readonly retrieval?: ReactNode;
 }
@@ -85,7 +88,7 @@ export interface CareerEvidencePageProps extends CareerPageProps {
 /** The raw material the candidate provides. Manage evidence opens it. */
 export function CareerEvidencePage({
   card = null,
-  knowledge,
+  knowledge = null,
   retrieval = null,
   ...frame
 }: CareerEvidencePageProps) {

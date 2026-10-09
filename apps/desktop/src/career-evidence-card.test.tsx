@@ -9,6 +9,7 @@ import {
   focusKnowledgeStore,
   knowledgeStoreFocusTargetId,
   legacyRetrievalText,
+  parseSourceUrls,
 } from "./career-evidence-card.js";
 
 const setup = {
@@ -69,14 +70,32 @@ describe("Career evidence setup card", () => {
     expect(html).not.toContain("Semantic search");
   });
 
-  it("offers Manage only when a base is selected and the host wires it", () => {
-    expect(render(selected, { onManage: () => undefined })).toMatch(
-      /<button[^>]*class="button button-quiet"[^>]*>Manage</,
+  it("has no Manage button: adding and choosing the base both live in this one card", () => {
+    const html = render(selected, {
+      knowledgeBase: <section id="candidate-knowledge-heading">Knowledge base</section>,
+    });
+    expect(html).not.toContain(">Manage<");
+    expect(html).toMatch(/Review and fetch source URL<\/button><section[^>]*>Knowledge base</);
+    expect(html.indexOf("</section>")).toBeLessThan(html.indexOf("</article>"));
+  });
+
+  it("offers Add folder next to Add files only when evidence goes into a knowledge base", () => {
+    const withFolder = { onAddFolder: () => undefined };
+    expect(render(selected, withFolder)).toMatch(/>Add files<\/button><button[^>]*>Add folder</);
+    expect(render(selected)).not.toContain(">Add folder<");
+    expect(render({ kind: "none" }, withFolder)).not.toContain(">Add folder<");
+    expect(render({ kind: "unsupported" }, withFolder)).not.toContain(">Add folder<");
+    expect(render({ kind: "none" }, { ...withFolder, automatic: true })).toContain(">Add folder<");
+    expect(render(selected, { ...withFolder, pending: true })).toMatch(
+      /<button[^>]*disabled=""[^>]*>Add folder</,
     );
-    expect(render(selected)).not.toContain(">Manage<");
+  });
+
+  it("splits typed URLs on lines and spaces, dropping blanks and repeats", () => {
+    expect(parseSourceUrls("")).toEqual([]);
     expect(
-      render({ kind: "none", legacyDeclined: false }, { onManage: () => undefined }),
-    ).not.toContain(">Manage<");
+      parseSourceUrls("  https://a.example \n\n https://b.example https://a.example\t"),
+    ).toEqual(["https://a.example", "https://b.example"]);
   });
 
   it("shows the already-in-Career-evidence notice after an identical file is added again", () => {
@@ -89,7 +108,7 @@ describe("Career evidence setup card", () => {
     expect(html).not.toContain('role="alert"');
   });
 
-  it("targets the Manage career evidence heading", () => {
+  it("targets the Knowledge base heading", () => {
     expect(knowledgeStoreFocusTargetId).toBe("candidate-knowledge-heading");
   });
 
@@ -169,7 +188,7 @@ describe("Career evidence setup card", () => {
     expect(legacyRetrievalText(setup)).toBe("Evidence will be indexed when the review starts");
   });
 
-  it("scrolls to and focuses the Manage career evidence heading", () => {
+  it("scrolls to and focuses the Knowledge base heading", () => {
     const scrollIntoView = vi.fn();
     const focus = vi.fn();
     const documentRef = {

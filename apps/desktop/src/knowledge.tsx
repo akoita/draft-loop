@@ -6,6 +6,7 @@ import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import {
   autoCreateHint,
   differentStoreDisclosureLabel,
+  embeddedAutoCreateHint,
   isNewStoreFormRequest,
   knowledgeStoreFormPresentation,
   reloadedKnowledgeAction,
@@ -14,7 +15,6 @@ import {
 } from "./knowledge-current.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
-  hasWorkspaceSourcesIntakeCapabilities,
   knowledgeIntakeSummary,
   knowledgeReadinessSummary,
   runKnowledgeIntake,
@@ -31,6 +31,11 @@ export interface KnowledgeWorkspaceProps {
   readonly storeFormRequest?: number;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
   readonly onSelectionSaved: (workspaceId: string) => Promise<boolean>;
+  /**
+   * Renders as the Knowledge base section inside the Career evidence card, which owns adding
+   * evidence: the section only chooses the base, imports legacy evidence and switches the store.
+   */
+  readonly embedded?: boolean;
 }
 
 export function hasDesktopKnowledgeCapabilities(
@@ -97,15 +102,12 @@ export interface KnowledgeBaseListProps {
   readonly knowledgeBases: readonly KnowledgeBaseSummary[];
   readonly disabled: boolean;
   readonly intakeSupported: boolean;
-  readonly workspaceSourcesSupported: boolean;
+  /** False when the add actions live elsewhere, such as the Career evidence card. */
+  readonly showIntake?: boolean;
   /** Bases of this store the workspace already uses; marked "In use". */
   readonly selectedKnowledgeBaseIds?: readonly string[];
   readonly onSelect: (storeId: string, knowledgeBaseId: string) => void;
-  readonly onImport: (
-    storeId: string,
-    knowledgeBaseId: string,
-    kind: "file" | "directory" | "workspace",
-  ) => void;
+  readonly onImport: (storeId: string, knowledgeBaseId: string, kind: "file" | "directory") => void;
 }
 
 export function KnowledgeBaseList({
@@ -113,7 +115,7 @@ export function KnowledgeBaseList({
   knowledgeBases,
   disabled,
   intakeSupported,
-  workspaceSourcesSupported,
+  showIntake = true,
   selectedKnowledgeBaseIds = [],
   onSelect,
   onImport,
@@ -138,7 +140,7 @@ export function KnowledgeBaseList({
               >
                 {inUse ? "In use" : "Use this knowledge base"}
               </button>
-              {intakeSupported ? (
+              {showIntake && intakeSupported ? (
                 <>
                   <button
                     type="button"
@@ -159,32 +161,9 @@ export function KnowledgeBaseList({
                 </>
               ) : null}
             </div>
-            {intakeSupported ? null : (
+            {!showIntake || intakeSupported ? null : (
               <p className="knowledge-hint">
                 File and directory intake is unavailable in this desktop host.
-              </p>
-            )}
-            {workspaceSourcesSupported ? (
-              <div className="knowledge-workspace-import">
-                <div className="knowledge-actions">
-                  <button
-                    type="button"
-                    className="button button-outline"
-                    disabled={disabled}
-                    onClick={() => onImport(storeId, knowledgeBase.id, "workspace")}
-                  >
-                    Import legacy workspace evidence
-                  </button>
-                </div>
-                <p className="knowledge-hint">
-                  This imports all supported files from this workspace’s legacy evidence directory.
-                  It does not select the base automatically. Directory limits can produce a partial
-                  result, and previously imported directories are rejected.
-                </p>
-              </div>
-            ) : (
-              <p className="knowledge-hint">
-                Legacy workspace evidence import is unavailable in this desktop host.
               </p>
             )}
           </li>
@@ -232,6 +211,7 @@ export function KnowledgeWorkspace({
   storeFormRequest = 0,
   onPendingChange,
   onSelectionSaved,
+  embedded = false,
 }: KnowledgeWorkspaceProps) {
   const supported = hasDesktopKnowledgeCapabilities(capabilities);
   const [store, setStore] = useState<KnowledgeStoreResult | null>(null);
@@ -436,17 +416,15 @@ export function KnowledgeWorkspace({
   const importIntoKnowledgeBase = (
     storeId: string,
     knowledgeBaseId: string,
-    kind: "file" | "directory" | "workspace",
+    kind: "file" | "directory",
   ) => {
     const importFile = capabilities.importCandidateKnowledgeFile;
     const importDirectory = capabilities.importCandidateKnowledgeDirectory;
-    const importWorkspaceSources = capabilities.importWorkspaceCandidateSources;
     const readReadiness = capabilities.getCandidateKnowledgeReadiness;
     if (
       readReadiness === undefined ||
       (kind === "file" && importFile === undefined) ||
-      (kind === "directory" && importDirectory === undefined) ||
-      (kind === "workspace" && importWorkspaceSources === undefined)
+      (kind === "directory" && importDirectory === undefined)
     ) {
       return;
     }
@@ -461,14 +439,6 @@ export function KnowledgeWorkspace({
           }
           if (kind === "directory" && importDirectory !== undefined) {
             return importDirectory(storeId, knowledgeBaseId);
-          }
-          if (kind === "workspace" && importWorkspaceSources !== undefined) {
-            return importWorkspaceSources({
-              workspaceId,
-              storeId,
-              knowledgeBaseId,
-              approved: true,
-            });
           }
           throw new Error("Candidate knowledge intake is unavailable");
         },
@@ -499,6 +469,7 @@ export function KnowledgeWorkspace({
   };
 
   if (!supported) {
+    if (embedded) return null;
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
         <h2 id="candidate-knowledge-heading" tabIndex={-1}>
@@ -512,7 +483,6 @@ export function KnowledgeWorkspace({
   const knowledgeBases = store === null ? [] : activeKnowledgeBases(store);
   const controlsDisabled = disabled || pending;
   const intakeSupported = hasDesktopKnowledgeIntakeCapabilities(capabilities);
-  const workspaceSourcesSupported = hasWorkspaceSourcesIntakeCapabilities(capabilities);
   const autoCreateSupported = supportsAutomaticKnowledgeBase(capabilities);
   const formPresentation = knowledgeStoreFormPresentation({
     hasStore: store !== null,
@@ -555,19 +525,29 @@ export function KnowledgeWorkspace({
   );
 
   return (
-    <section className="panel knowledge-panel" aria-labelledby="candidate-knowledge-heading">
-      <div>
-        <p className="eyebrow">Career evidence</p>
-        <h2 id="candidate-knowledge-heading" tabIndex={-1}>
-          Manage career evidence
-        </h2>
-      </div>
+    <section
+      className={embedded ? "knowledge-section" : "panel knowledge-panel"}
+      aria-labelledby="candidate-knowledge-heading"
+    >
+      {embedded ? (
+        <h3 id="candidate-knowledge-heading" tabIndex={-1}>
+          Knowledge base
+        </h3>
+      ) : (
+        <div>
+          <p className="eyebrow">Career evidence</p>
+          <h2 id="candidate-knowledge-heading" tabIndex={-1}>
+            Manage career evidence
+          </h2>
+        </div>
+      )}
       <p className="knowledge-copy">
-        Reusable career evidence, kept separate from application material. Choosing a base replaces
-        this workspace’s current knowledge selection.
+        {embedded
+          ? "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
+          : "Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection."}
       </p>
       {showAutoCreateHint({ hasStore: store !== null, autoCreateSupported, savedUnavailable }) ? (
-        <p className="knowledge-hint">{autoCreateHint}</p>
+        <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
       ) : null}
       {pending ? (
         <p className="knowledge-status" role="status">
@@ -586,7 +566,7 @@ export function KnowledgeWorkspace({
           knowledgeBases={knowledgeBases}
           disabled={controlsDisabled}
           intakeSupported={intakeSupported}
-          workspaceSourcesSupported={workspaceSourcesSupported}
+          showIntake={!embedded}
           selectedKnowledgeBaseIds={
             selection !== null && selection.storeId === store.storeId ? selection.ids : []
           }

@@ -258,6 +258,52 @@ describe("adding career evidence", () => {
     });
   });
 
+  const folderResult = (overrides: Record<string, unknown> = {}) => ({
+    ...target,
+    status: "complete" as const,
+    scannedEntryCount: 3,
+    discoveredFileCount: 2,
+    skippedEntryCount: 1,
+    sourceCount: 2,
+    sources: [],
+    sourcesTruncated: false,
+    ...overrides,
+  });
+  const addFolder = (result: ReturnType<typeof folderResult>, afterImport?: () => Promise<void>) =>
+    addCareerEvidence({
+      capabilities: {
+        importCandidateKnowledgeDirectory: async () => result,
+        getCandidateKnowledgeReadiness: async () => readiness({ sourceCount: 5, readyCount: 5 }),
+      },
+      workspaceId: "workspace-1",
+      target,
+      displayName: "Engineering",
+      source: { kind: "directory" },
+      isCurrent: () => true,
+      onChanged: async () => true,
+      ...(afterImport === undefined ? {} : { afterImport }),
+    });
+
+  it("imports a folder into the selected base and says how many sources it added", async () => {
+    await expect(addFolder(folderResult())).resolves.toEqual({
+      status: "added",
+      message: "Added 2 sources from the folder to Engineering. 5 sources, 5 ready.",
+    });
+    await expect(addFolder(folderResult({ status: "partial", sourceCount: 1 }))).resolves.toEqual({
+      status: "added",
+      message:
+        "Added 1 source from the folder to Engineering. Some files could not be imported. 5 sources, 5 ready.",
+    });
+  });
+
+  it("fails on a folder with nothing to add, before a first add selects the base", async () => {
+    const afterImport = vi.fn(async () => undefined);
+    await expect(addFolder(folderResult({ sourceCount: 0 }), afterImport)).rejects.toThrow(
+      "The folder has no supported files to add.",
+    );
+    expect(afterImport).not.toHaveBeenCalled();
+  });
+
   it("imports a URL into the selected base only through the knowledge port", async () => {
     const importCandidateKnowledgeUrl = vi.fn(async () => ({
       ...target,

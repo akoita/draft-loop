@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import {
   addCareerEvidence,
@@ -14,7 +14,6 @@ import {
 import { defaultKnowledgeStoreDestinationLabel } from "./career-evidence-contract.js";
 import {
   addFirstCareerEvidence,
-  importLegacyEvidence,
   type NoSelectionMode,
   noSelectionMode,
   supportsAutomaticKnowledgeBase,
@@ -31,14 +30,14 @@ export interface CareerEvidenceBinding {
   readonly revision: number;
   readonly disabled: boolean;
   readonly onChanged: (workspaceId: string) => Promise<boolean>;
-  /** Asks the Manage career evidence panel to open its create-or-open form and focus it. */
+  /** Asks the Knowledge base section to open its create-or-open form and focus it. */
   readonly onRequestStoreForm?: () => void;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
 }
 
 export const knowledgeStoreFocusTargetId = "candidate-knowledge-heading";
 
-/** Takes the person to the Manage career evidence panel, where they can manage or switch the base. */
+/** Takes the person to the Knowledge base section, where they can choose or switch the base. */
 export function focusKnowledgeStore(documentRef: Document = document): boolean {
   const target = documentRef.getElementById(knowledgeStoreFocusTargetId);
   if (target === null) return false;
@@ -69,6 +68,11 @@ export function legacyRetrievalText(
   }
 }
 
+/** The URLs typed in the card, one per line or separated by spaces, without blanks or repeats. */
+export function parseSourceUrls(text: string): readonly string[] {
+  return [...new Set(text.split(/\s+/u).filter((value) => value !== ""))];
+}
+
 export interface CareerEvidenceCardViewProps {
   readonly status: CareerEvidenceStatus;
   readonly setup: Pick<
@@ -85,20 +89,23 @@ export interface CareerEvidenceCardViewProps {
   readonly url: string;
   readonly onUrlChange: (url: string) => void;
   readonly onAddFile: () => void;
+  /** Imports a whole folder into the base; shown only when evidence goes into a knowledge base. */
+  readonly onAddFolder?: () => void;
   readonly onAddUrl: () => void;
   readonly onChooseKnowledgeBase: () => void;
-  /** Takes the person to the panel that manages the selected base; shown only with a base. */
-  readonly onManage?: () => void;
   /** False when the host offers no way to add files or a URL in the current mode. */
   readonly canAddFile: boolean;
   readonly canAddUrl: boolean;
   /**
-   * True when the host can create and select a knowledge base itself, so a workspace without one
-   * is not left on the legacy path unless the person declines.
+   * The Knowledge base section: which base the workspace uses, the legacy import and the store.
+   * It sits inside the card so the page has one place for career evidence.
+   */
+  readonly knowledgeBase?: ReactNode;
+  /**
+   * True when the host can create and select a knowledge base itself, so the first add creates
+   * one instead of going to legacy workspace evidence.
    */
   readonly automatic?: boolean;
-  readonly onImportLegacy?: () => void;
-  readonly onDeclineLegacy?: () => void;
 }
 
 export function CareerEvidenceCardView({
@@ -111,24 +118,21 @@ export function CareerEvidenceCardView({
   url,
   onUrlChange,
   onAddFile,
+  onAddFolder,
   onAddUrl,
   onChooseKnowledgeBase,
-  onManage,
   canAddFile,
   canAddUrl,
   automatic = false,
-  onImportLegacy,
-  onDeclineLegacy,
+  knowledgeBase = null,
 }: CareerEvidenceCardViewProps) {
-  const ready = careerEvidenceReady(status, setup.evidenceSourceCount);
   const legacyCount = setup.evidenceSourceCount;
-  const mode: NoSelectionMode | null =
-    status.kind === "none"
-      ? noSelectionMode({ status, legacyEvidenceSourceCount: legacyCount, automatic })
-      : null;
+  const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
+  // Without a base the first add creates one; legacy workspace evidence no longer counts here.
+  const ready = mode !== "first-add" && careerEvidenceReady(status, legacyCount);
   const intoKnowledgeBase = status.kind === "selected" || status.kind === "loading";
   const inKnowledgeBase = intoKnowledgeBase || mode === "first-add";
-  const showAdd = status.kind !== "unavailable" && mode !== "offer";
+  const showAdd = status.kind !== "unavailable";
   const blocked = disabled || pending;
   const addDisabled = blocked || status.kind === "loading";
   const fileLabel =
@@ -137,7 +141,16 @@ export function CareerEvidenceCardView({
       : status.kind === "unsupported"
         ? "Add source files"
         : "Add files";
-  const urlLabel = mode === "legacy" ? "Add URL to legacy evidence" : "Review and fetch source URL";
+  const urlCount = parseSourceUrls(url).length;
+  // Legacy workspace evidence imports one URL per request; only a knowledge base takes several.
+  const tooManyForLegacy = !inKnowledgeBase && urlCount > 1;
+  const urlLabel = tooManyForLegacy
+    ? "Legacy evidence takes one URL at a time"
+    : mode === "legacy"
+      ? "Add URL to legacy evidence"
+      : urlCount > 1
+        ? `Review and fetch ${urlCount} source URLs`
+        : "Review and fetch source URL";
   return (
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
@@ -157,45 +170,12 @@ export function CareerEvidenceCardView({
           {status.semanticLine === null ? null : (
             <span className="setup-card-line">{status.semanticLine}</span>
           )}
-          {onManage === undefined ? null : (
-            <button className="button button-quiet" type="button" onClick={onManage}>
-              Manage
-            </button>
-          )}
         </>
       ) : status.kind === "unavailable" ? (
         <span role="status">
-          The selected knowledge base could not be opened. Open its store in the Manage career
-          evidence section below.
+          The selected knowledge base could not be opened. Open its store in the Knowledge base
+          section below.
         </span>
-      ) : status.kind === "none" && mode === "offer" ? (
-        <>
-          <span role="status">
-            This workspace has {legacyCount} legacy evidence file{legacyCount === 1 ? "" : "s"}.
-            Import {legacyCount === 1 ? "it" : "them"} into a knowledge base?
-          </span>
-          <span className="setup-card-line">
-            Copies the files into a “Career evidence” knowledge base in{" "}
-            {defaultKnowledgeStoreDestinationLabel} and uses it for runs. The workspace files are
-            not changed.
-          </span>
-          <button
-            className="button button-primary"
-            type="button"
-            disabled={blocked || onImportLegacy === undefined}
-            onClick={onImportLegacy}
-          >
-            Import legacy evidence
-          </button>
-          <button
-            className="button button-quiet"
-            type="button"
-            disabled={blocked || onDeclineLegacy === undefined}
-            onClick={onDeclineLegacy}
-          >
-            Keep using legacy evidence
-          </button>
-        </>
       ) : status.kind === "none" && mode === "first-add" ? (
         <>
           <span role="status">
@@ -260,27 +240,40 @@ export function CareerEvidenceCardView({
           >
             {fileLabel}
           </button>
+          {inKnowledgeBase && onAddFolder !== undefined ? (
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={addDisabled}
+              onClick={onAddFolder}
+            >
+              Add folder
+            </button>
+          ) : null}
           <label className="url-input-label">
-            <span>Or provide a public URL</span>
-            <input
+            <span>Or provide public URLs, one per line</span>
+            <textarea
               className="url-input"
-              type="url"
-              placeholder="https://github.com/…"
+              rows={3}
+              placeholder={"https://github.com/…\nhttps://www.linkedin.com/in/…"}
               value={url}
               onChange={(event) => onUrlChange(event.target.value)}
-              aria-label={inKnowledgeBase ? "Career evidence URL" : "Legacy workspace evidence URL"}
+              aria-label={
+                inKnowledgeBase ? "Career evidence URLs" : "Legacy workspace evidence URLs"
+              }
             />
           </label>
           <button
             className="button button-outline"
             type="button"
-            disabled={addDisabled || !canAddUrl || url.trim() === ""}
+            disabled={addDisabled || !canAddUrl || urlCount === 0 || tooManyForLegacy}
             onClick={onAddUrl}
           >
             {urlLabel}
           </button>
         </>
       ) : null}
+      {knowledgeBase}
     </article>
   );
 }
@@ -290,6 +283,8 @@ export interface CareerEvidenceCardProps {
   readonly knowledge?: CareerEvidenceBinding | undefined;
   readonly onSelectLegacyFiles?: (() => void) | undefined;
   readonly onAddLegacyUrl?: ((url: string) => void) | undefined;
+  /** The Knowledge base section shown at the bottom of the card. */
+  readonly knowledgeBase?: ReactNode;
 }
 
 function failureText(reason: unknown): string {
@@ -304,6 +299,7 @@ export function CareerEvidenceCard({
   knowledge,
   onSelectLegacyFiles,
   onAddLegacyUrl,
+  knowledgeBase,
 }: CareerEvidenceCardProps) {
   const capabilities = knowledge?.capabilities;
   const supported = capabilities !== undefined && supportsCareerEvidence(capabilities);
@@ -394,80 +390,86 @@ export function CareerEvidenceCard({
       });
   };
 
-  const addToKnowledgeBase = (source: CareerEvidenceSource) => {
-    if (knowledge === undefined) return;
-    const first = status.kind === "none";
-    if (!first && status.kind !== "selected") return;
-    void runOperation(async (isCurrent) => {
-      if (status.kind === "none") {
-        const outcome = await addFirstCareerEvidence({
-          capabilities: knowledge.capabilities,
-          workspaceId: knowledge.workspaceId,
-          source,
-          safeName: safeKnowledgeBaseDisplayName,
-          isCurrent,
-          onChanged: knowledge.onChanged,
-        });
-        return outcome.status === "added" ? outcome.message : null;
-      }
-      if (status.kind !== "selected") return null;
-      const { storeId, knowledgeBaseId, displayName } = status;
-      const outcome = await addCareerEvidence({
-        capabilities: knowledge.capabilities,
-        workspaceId: knowledge.workspaceId,
-        target: { storeId, knowledgeBaseId },
-        displayName,
+  /** Adds one source to the base in use, creating the base on a first add. Null when stale. */
+  const addOne = async (
+    binding: CareerEvidenceBinding,
+    source: CareerEvidenceSource,
+    isCurrent: () => boolean,
+  ): Promise<string | null> => {
+    if (status.kind === "none") {
+      const outcome = await addFirstCareerEvidence({
+        capabilities: binding.capabilities,
+        workspaceId: binding.workspaceId,
         source,
+        safeName: safeKnowledgeBaseDisplayName,
         isCurrent,
-        onChanged: knowledge.onChanged,
+        onChanged: binding.onChanged,
       });
       return outcome.status === "added" ? outcome.message : null;
-    }).then((added) => {
+    }
+    if (status.kind !== "selected") return null;
+    const { storeId, knowledgeBaseId, displayName } = status;
+    const outcome = await addCareerEvidence({
+      capabilities: binding.capabilities,
+      workspaceId: binding.workspaceId,
+      target: { storeId, knowledgeBaseId },
+      displayName,
+      source,
+      isCurrent,
+      onChanged: binding.onChanged,
+    });
+    return outcome.status === "added" ? outcome.message : null;
+  };
+
+  const addToKnowledgeBase = (source: CareerEvidenceSource) => {
+    if (knowledge === undefined) return;
+    if (status.kind !== "none" && status.kind !== "selected") return;
+    void runOperation((isCurrent) => addOne(knowledge, source, isCurrent)).then((added) => {
       if (added && source.kind === "url") setUrl("");
     });
   };
 
-  const importLegacy = () => {
+  /**
+   * Fetches several URLs one after another. A URL that fails does not stop the others; the
+   * failed ones stay in the box so the person can fix or retry them.
+   */
+  const addUrlsToKnowledgeBase = (urls: readonly string[]) => {
     if (knowledge === undefined) return;
+    if (status.kind !== "none" && status.kind !== "selected") return;
     void runOperation(
       async (isCurrent) => {
-        const outcome = await importLegacyEvidence({
-          capabilities: knowledge.capabilities,
-          workspaceId: knowledge.workspaceId,
-          safeName: safeKnowledgeBaseDisplayName,
-          isCurrent,
-          onChanged: knowledge.onChanged,
-        });
-        if (outcome.status === "stale") return null;
-        if (outcome.status === "nothing-imported") {
-          setError(outcome.message);
+        const failed: string[] = [];
+        const reasons: string[] = [];
+        let added = 0;
+        let last: string | null = null;
+        for (const [index, value] of urls.entries()) {
+          if (!isCurrent()) return null;
+          setMessage(`Fetching URL ${index + 1} of ${urls.length}…`);
+          try {
+            const text = await addOne(knowledge, { kind: "url", url: value }, isCurrent);
+            if (text === null) return null;
+            added += 1;
+            last = text;
+          } catch (reason: unknown) {
+            if (isKnowledgeOperationCancelled(reason)) throw reason;
+            failed.push(value);
+            reasons.push(`${value}: ${failureText(reason)}`);
+          }
+        }
+        if (!isCurrent()) return null;
+        setUrl(failed.join("\n"));
+        if (failed.length > 0) setError(`Not added: ${reasons.join(" ")}`);
+        if (added === 0) {
+          setMessage(null);
           return null;
         }
-        return outcome.message;
+        return `Added ${added} of ${urls.length} URLs. ${last ?? ""}`.trim();
       },
-      { progress: "Importing legacy evidence…" },
+      { progress: `Fetching URL 1 of ${urls.length}…` },
     );
   };
 
-  const declineLegacy = () => {
-    const decline = capabilities?.declineLegacyEvidenceMigration;
-    if (knowledge === undefined || decline === undefined) return;
-    void runOperation(async (isCurrent) => {
-      await decline(knowledge.workspaceId);
-      if (!isCurrent()) return null;
-      setStatus({ kind: "none", legacyDeclined: true });
-      return "Keeping legacy workspace evidence. Each run will say it is using it.";
-    });
-  };
-
-  const noSelection = status.kind === "none";
-  const mode: NoSelectionMode | null = noSelection
-    ? noSelectionMode({
-        status,
-        legacyEvidenceSourceCount: setup.evidenceSourceCount,
-        automatic,
-      })
-    : null;
+  const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
   const inKnowledgeBase =
     status.kind === "selected" || status.kind === "loading" || mode === "first-add";
 
@@ -482,32 +484,29 @@ export function CareerEvidenceCard({
       url={url}
       onUrlChange={setUrl}
       automatic={automatic}
-      onImportLegacy={importLegacy}
-      onDeclineLegacy={declineLegacy}
       canAddFile={inKnowledgeBase || onSelectLegacyFiles !== undefined}
       canAddUrl={inKnowledgeBase || onAddLegacyUrl !== undefined}
       onChooseKnowledgeBase={() => {
         knowledge?.onRequestStoreForm?.();
         focusKnowledgeStore();
       }}
-      {...(status.kind === "selected"
-        ? {
-            onManage: () => {
-              focusKnowledgeStore();
-            },
-          }
+      {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeDirectory !== undefined
+        ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
         : {})}
+      knowledgeBase={knowledgeBase}
       onAddFile={() => {
         if (inKnowledgeBase) addToKnowledgeBase({ kind: "file" });
         else onSelectLegacyFiles?.();
       }}
       onAddUrl={() => {
-        const value = url.trim();
-        if (value === "") return;
+        const urls = parseSourceUrls(url);
+        const [first] = urls;
+        if (first === undefined) return;
         if (inKnowledgeBase) {
-          addToKnowledgeBase({ kind: "url", url: value });
-        } else if (onAddLegacyUrl !== undefined) {
-          onAddLegacyUrl(value);
+          if (urls.length === 1) addToKnowledgeBase({ kind: "url", url: first });
+          else addUrlsToKnowledgeBase(urls);
+        } else if (onAddLegacyUrl !== undefined && urls.length === 1) {
+          onAddLegacyUrl(first);
           setUrl("");
         }
       }}

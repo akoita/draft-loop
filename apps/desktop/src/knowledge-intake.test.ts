@@ -7,7 +7,6 @@ import type {
 } from "./bridge.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
-  hasWorkspaceSourcesIntakeCapabilities,
   knowledgeIntakeSummary,
   knowledgeReadinessSummary,
   matchesKnowledgeBaseTarget,
@@ -59,17 +58,6 @@ describe("candidate knowledge intake", () => {
     ).toBe(false);
     expect(matchesKnowledgeBaseTarget(fileResult, target)).toBe(true);
     expect(matchesKnowledgeBaseTarget(readiness, target)).toBe(true);
-    expect(
-      hasWorkspaceSourcesIntakeCapabilities({
-        importWorkspaceCandidateSources: async () => directoryResult,
-        getCandidateKnowledgeReadiness: async () => readiness,
-      }),
-    ).toBe(true);
-    expect(
-      hasWorkspaceSourcesIntakeCapabilities({
-        importWorkspaceCandidateSources: async () => directoryResult,
-      }),
-    ).toBe(false);
     expect(
       matchesKnowledgeBaseTarget(fileResult, {
         storeId: "other-store",

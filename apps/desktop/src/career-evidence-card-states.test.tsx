@@ -38,7 +38,7 @@ function render(
   );
 }
 
-const fresh: CareerEvidenceStatus = { kind: "none", legacyDeclined: false };
+const fresh: CareerEvidenceStatus = { kind: "none" };
 
 describe("Career evidence card without a selected base", () => {
   it("creates the base on the first add when the workspace has no legacy evidence", () => {
@@ -53,42 +53,34 @@ describe("Career evidence card without a selected base", () => {
     expect(html).toContain("Required");
   });
 
-  it("offers a one-time import, with a decline, instead of add actions", () => {
+  it("ignores legacy workspace evidence: no import offer, and the first add still creates a base", () => {
     const html = render(fresh, {
       automatic: true,
       setup: { ...setup, evidenceSourceCount: 3 },
     });
-    expect(html).toContain("This workspace has 3 legacy evidence files.");
-    expect(html).toContain("into a knowledge base?");
-    expect(html).toContain("The workspace files are not changed.");
-    expect(html).toContain(">Import legacy evidence<");
-    expect(html).toContain(">Keep using legacy evidence<");
-    expect(html).not.toContain("Add to legacy workspace evidence");
-    expect(html).not.toContain("Add files");
-    const single = render(fresh, {
-      automatic: true,
-      setup: { ...setup, evidenceSourceCount: 1 },
-    });
-    expect(single).toContain("1 legacy evidence file.");
+    expect(html).toContain("No career evidence yet");
+    expect(html).toContain(">Add files<");
+    expect(html).not.toContain("legacy");
+    expect(html).not.toContain("Keep using");
+    expect(html).toContain("Required");
   });
 
-  it("disables the offer while an action runs", () => {
+  it("takes several URLs and says how many it will fetch", () => {
     const html = render(fresh, {
       automatic: true,
-      pending: true,
-      setup: { ...setup, evidenceSourceCount: 3 },
+      url: "https://example.com/a\nhttps://example.com/b https://example.com/a",
     });
-    expect(html.match(/disabled=""/gu)?.length).toBe(2);
+    expect(html).toContain("Or provide public URLs, one per line");
+    expect(html).toContain("<textarea");
+    expect(html).toContain(">Review and fetch 2 source URLs<");
   });
 
-  it("keeps the legacy copy and buttons after the person declines", () => {
-    const html = render(
-      { kind: "none", legacyDeclined: true },
-      { automatic: true, setup: { ...setup, evidenceSourceCount: 3 } },
+  it("asks for one URL at a time on legacy evidence", () => {
+    const html = render(fresh, { url: "https://example.com/a\nhttps://example.com/b" });
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Legacy evidence takes one URL at a time</);
+    expect(render(fresh, { url: "https://example.com/a" })).toContain(
+      ">Add URL to legacy evidence<",
     );
-    expect(html).toContain("No knowledge base selected — runs will use legacy workspace evidence");
-    expect(html).toContain(">Add to legacy workspace evidence<");
-    expect(html).not.toContain("Import legacy evidence");
   });
 
   it("keeps the legacy path in a host that cannot create a base", () => {
