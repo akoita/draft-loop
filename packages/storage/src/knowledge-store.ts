@@ -103,6 +103,10 @@ import type {
   ManagedCandidateKnowledgeWriteInterruptionBoundary,
 } from "./knowledge-store-types.js";
 import {
+  interruptManagedWriteAt,
+  SimulatedManagedWriteInterruption,
+} from "./knowledge-store-write-interruption.js";
+import {
   type CandidateKnowledgeVectorStoragePort,
   coordinateCandidateKnowledgeVectorPort,
 } from "./knowledge-vector-index.js";
@@ -620,23 +624,12 @@ interface CandidateKnowledgeWriterContext {
 
 const candidateKnowledgeWriterContext = new AsyncLocalStorage<CandidateKnowledgeWriterContext>();
 
-class SimulatedManagedWriteInterruption extends Error {
-  public constructor(boundary: ManagedCandidateKnowledgeWriteInterruptionBoundary) {
-    super(`Simulated managed candidate knowledge write interruption at ${boundary}.`);
-    this.name = "SimulatedManagedWriteInterruption";
-  }
-}
-
-async function interruptManagedWriteAt(
-  input: {
-    readonly interruptAt?: ManagedCandidateKnowledgeWriteInterruptionBoundary;
-  },
-  boundary: ManagedCandidateKnowledgeWriteInterruptionBoundary,
-): Promise<void> {
-  if (input.interruptAt === boundary) {
-    throw new SimulatedManagedWriteInterruption(boundary);
-  }
-}
+/**
+ * How long opening a store waits for another holder of its writer lease. Opening takes the lease
+ * only briefly, to recover interrupted writes, so two reads of one store in a process (a run's
+ * check and the review screen's refresh) must queue instead of failing the later one at once.
+ */
+const openLeaseWaitTimeoutMs = 2_000;
 
 function currentCandidateKnowledgeWriterLease(root: string): StorageWriterLease {
   const context = candidateKnowledgeWriterContext.getStore();
@@ -5872,6 +5865,7 @@ export async function openCandidateKnowledgeStore(
         await validateManagedCandidateKnowledgeFiles(storage, root);
         return report;
       },
+      { waitTimeoutMs: openLeaseWaitTimeoutMs },
     );
     if (storage === undefined) {
       throw new StorageValidationError("Candidate knowledge store database could not be opened.");

@@ -2429,17 +2429,18 @@ describe("portable candidate knowledge store", () => {
       status: "active",
     });
     expect((conflict as Error).message).not.toContain(root);
-    await expect(openCandidateKnowledgeStore(root)).rejects.toMatchObject({
-      diagnostic: {
-        scope: "candidate-knowledge-store",
-        activeOperation: "ckb-directory-refresh",
-        retryable: true,
-        status: "active",
-      },
+    // Opening queues behind the writer instead of failing at once, and completes when it ends.
+    let opened = false;
+    const waitingOpen = openCandidateKnowledgeStore(root).then((store) => {
+      opened = true;
+      return store;
     });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(opened).toBe(false);
 
     releaseWriter();
     await holdWriter;
+    await (await waitingOpen).close();
     await expect(
       secondStore.renameCandidateKnowledgeBase(
         "ckb-default",
