@@ -152,7 +152,9 @@ switching OpenAI authentication to an API key. It never switches automatically.
 
 ## Provider credentials
 
-Desktop provider settings can save or remove a dedicated DeepInfra API key for
+Provider authentication is workspace-level. In the desktop it opens from **Manage
+provider authentication** under Home's Workspace settings, not from an
+application. The dialog saves or removes a dedicated DeepInfra API key for
 Z.ai models served by DeepInfra. It uses the same local credential store as the Anthropic
 and OpenAI keys, and saved app keys take precedence over environment variables.
 The host reads `DEEPINFRA_API_KEY` when no app key is saved. DeepInfra remains API-key-only:
@@ -266,8 +268,11 @@ applications:
   to **New application**. Beside it, **Import from another workspace** opens a
   folder picker and imports a workspace made for one job as an application (see
   [Importing a workspace](#importing-a-workspace)).
-- **Workspace settings.** The configured model pair with **Change models**, and
-  the writing policy editor.
+- **Workspace settings.** The configured model pair with **Change models**, the
+  writing policy editor, and **Manage provider authentication**, which opens
+  the provider sign-in dialog described under
+  [Provider credentials](#provider-credentials). A line above the button
+  summarizes whether the configured pair can run.
 
 #### Profile freshness
 
@@ -297,7 +302,8 @@ two states from the saved profile list.
 Two pages sit behind the cards, each with **← Home**, a one-sentence intro and a
 link to the other page:
 
-- **Career evidence page.** The knowledge panel (sources, add file, add
+- **Career evidence page.** The Career evidence card (first add, automatic
+  knowledge base, legacy import), the knowledge panel (sources, add file, add
   directory, store) and the retrieval mode and embedding model.
 - **Career profile page.** The profile workflow: generate or update, review
   facts, saved profiles, version history and Re-extract all sources.
@@ -311,10 +317,13 @@ flow, described next.
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
 from its own reviewed brief, or from its own job text when it has none.
-**← Home** beside its name returns to Home. Provider
-authentication, retrieval mode and the career evidence setup cards remain on
-the application screen as well as behind Manage on Home. Focus moves to the
-screen's location line when a screen opens, so the change is announced.
+**← Home** beside its name returns to Home. Its setup cards cover only that
+application (the target job and the writing policy). Provider sign-in is
+workspace-level and lives in Home's Workspace settings; a line on the screen
+says so, with an **Open Home** button, and the command palette's **Open
+provider authentication** goes there too. The Career evidence and retrieval
+panels remain on the screen; the Career evidence card does not. Focus moves to the screen's location line when a
+screen opens, so the change is announced.
 
 ### New application
 
@@ -1449,16 +1458,17 @@ and keeps paths local.
 
 - **Saved store on reopen.** When a workspace opens, the **Manage career
   evidence** panel reopens the store saved with its selection, marks the
-  selected CKB "In use", and shows no path. It reloads when card 02 creates or
-  selects a CKB, and the create-or-open form sits behind **Use a different
+  selected CKB "In use", and shows no path. It reloads when the Career evidence
+  card creates or selects a CKB, and the create-or-open form sits behind **Use a different
   knowledge store…** (shown directly only when the host cannot create a CKB
-  itself). The panel and card 02 read the store one after another, so a store
+  itself). The panel and the card read the store one after another, so a store
   shared with another workspace shows the same CKB in both. If the saved
   location is no longer readable, the panel asks you to open the store again,
   also after a reload. Only the first saved entry's store is restored.
 
-- **Automatic knowledge base and one-time import.** Setup card 02, **Career
-  evidence**, follows the workspace's selected CKB. With none selected and no
+- **Automatic knowledge base and one-time import.** The Career evidence card
+  sits at the top of the Career evidence page, above the knowledge panel, and
+  follows the workspace's selected CKB. With none selected and no
   legacy `evidence` files, the first added file or URL creates a default CKB
   ("Career evidence") in DraftLoop application data, imports into it, and selects
   it; the card says so without showing a path. With legacy files and no CKB, the
@@ -1472,7 +1482,7 @@ and keeps paths local.
   returns only opaque source and version identities, plus whether the file was
   `added`, appended as a `new-version`, or `already-present`. The CKB is shared
   by every workspace, so an active source with identical content is not added
-  again and card 02 says "Already in Career evidence". A changed file whose
+  again and the card says "Already in Career evidence". A changed file whose
   remembered origin matches an active source becomes a new version of it.
   Retired sources never count. The CLI's plain file import does not check; use
   `knowledge source duplicates` there. URL intake requires approval and applies

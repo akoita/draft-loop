@@ -15,15 +15,6 @@ import {
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
 import { AutopilotToggle } from "./autopilot-toggle.js";
-import type {
-  CredentialProvider,
-  CredentialStatus,
-  ModelCompany,
-  ProviderAuthMode,
-  ProviderAuthModeProvider,
-  ProviderAuthModeStatus,
-} from "./bridge.js";
-import { type CareerEvidenceBinding, CareerEvidenceCard } from "./career-evidence-card.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
@@ -46,7 +37,6 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
-import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
@@ -80,8 +70,6 @@ interface ReviewWorkspaceProps {
     target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
   ) => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
-  /** Lets the Career evidence card follow, and add to, the workspace's knowledge base. */
-  readonly careerEvidence?: CareerEvidenceBinding;
   /** Lets the Target job description card extract requirements into a draft opportunity brief. */
   readonly jobRequirements?: JobRequirementsExtractionBinding;
   readonly errorMessage?: string | null;
@@ -97,16 +85,8 @@ interface ReviewWorkspaceProps {
   readonly profilePanel?: ReactNode;
   /** The "Edit policy" action for the Writing policy setup card. */
   readonly writingPolicyAction?: ReactNode;
-  readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
-  readonly onSetCredential?: (provider: CredentialProvider, apiKey: string) => Promise<void>;
-  readonly onRemoveCredential?: (provider: CredentialProvider) => Promise<void>;
-  readonly getProviderAuthModeStatus?: (
-    provider: ProviderAuthModeProvider,
-  ) => Promise<ProviderAuthModeStatus>;
-  readonly onSetProviderAuthMode?: (
-    provider: ProviderAuthModeProvider,
-    mode: ProviderAuthMode,
-  ) => Promise<ProviderAuthModeStatus>;
+  /** Opens Home, where workspace-level setup (provider authentication) lives. */
+  readonly onOpenHome?: () => void;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -400,13 +380,7 @@ function PlayIcon() {
  * an "active" mark there would be decoration that lies. `onOpenSources` is null before a run
  * exists, when there is no document, no queue and no traceability to reach.
  */
-function SideRail({
-  onOpenSources,
-  onOpenSettings,
-}: {
-  readonly onOpenSources: (() => void) | null;
-  readonly onOpenSettings: () => void;
-}) {
+function SideRail({ onOpenSources }: { readonly onOpenSources: (() => void) | null }) {
   return (
     <nav className="side-rail" aria-label="Workspace sections">
       <BrandMark />
@@ -470,23 +444,6 @@ function SideRail({
       )}
       <span className="rail-spacer" />
       <ThemeToggle />
-      <button
-        className="rail-button"
-        type="button"
-        title="Provider authentication"
-        onClick={onOpenSettings}
-      >
-        <span className="sr-only">Provider authentication</span>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-          <circle cx="8" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
-          <path
-            d="M11.6 12H21M18 12v3M15 12v2.2"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
     </nav>
   );
 }
@@ -636,198 +593,6 @@ function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
 function retryWaitLabel(waitMs: number): string {
   const seconds = Math.max(1, Math.ceil(waitMs / 1_000));
   return `${seconds} second${seconds === 1 ? "" : "s"}`;
-}
-
-const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
-  anthropic: "Anthropic",
-  openai: "OpenAI",
-  deepinfra: "DeepInfra",
-  google: "Google Gemini",
-  mistral: "Mistral",
-};
-
-export const mistralCredentialNote =
-  "This key sends candidate material to Mistral AI (api.mistral.ai). Mistral Large 4 is a public preview.";
-
-export const googleCredentialNote =
-  "This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key.";
-
-const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
-  app: "Configured in app",
-  env: "Configured via env",
-  "user-session": "Provider user session",
-  none: "Not configured",
-};
-
-const credentialProtectionLabels: Readonly<Record<CredentialStatus["protection"], string>> = {
-  "os-backed": "OS-backed encryption",
-  "basic-text": "Linux basic_text (weak protection)",
-  "local-aes-gcm": "Local AES fallback (key stored beside app data)",
-  environment: "Environment variable",
-  "session-memory": "Session memory only",
-  "provider-managed-session": "Provider-managed session",
-  none: "No credential",
-};
-
-interface CredentialRowProps {
-  readonly title: string;
-  readonly placeholder: string;
-  readonly status: CredentialStatus;
-  readonly value: string;
-  readonly revealed: boolean;
-  readonly onReveal: (next: boolean) => void;
-  readonly onChange: (next: string) => void;
-  readonly onSave: () => void;
-  readonly onRemove: () => void;
-  /** Optional one-sentence destination or terms notice shown under the header. */
-  readonly note?: string;
-}
-
-export function CredentialRow({
-  title,
-  placeholder,
-  status,
-  value,
-  revealed,
-  onReveal,
-  onChange,
-  onSave,
-  onRemove,
-  note,
-}: CredentialRowProps) {
-  return (
-    <section className="credential-row" aria-label={title}>
-      <div className="credential-row-header">
-        <strong>{title}</strong>
-        <span className={`status-badge status-${status.source}`}>
-          {credentialSourceLabels[status.source]}
-        </span>
-        <span className="credential-protection">
-          {credentialProtectionLabels[status.protection]}
-        </span>
-      </div>
-      {note === undefined ? null : <p className="credential-note">{note}</p>}
-      <div className="credential-input-group">
-        <input
-          className="url-input"
-          type={revealed ? "text" : "password"}
-          placeholder={status.configured ? "••••••••••••••••••••••••" : placeholder}
-          value={value}
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={title}
-        />
-        <button
-          className="button button-quiet"
-          type="button"
-          aria-pressed={revealed}
-          onClick={() => onReveal(!revealed)}
-        >
-          {revealed ? "Hide" : "Show"}
-        </button>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={value.trim() === ""}
-          onClick={onSave}
-        >
-          Save
-        </button>
-        {status.source === "app" ? (
-          <button className="button button-danger" type="button" onClick={onRemove}>
-            Remove
-          </button>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-export const providerAuthModeLabels: Readonly<Record<ProviderAuthMode, string>> = {
-  "api-key": "Provider API key",
-  "user-session": "Authenticated Codex / ChatGPT subscription",
-};
-
-interface ProviderAuthenticationModeProps {
-  readonly status: ProviderAuthModeStatus;
-  readonly credentialStatus: CredentialStatus;
-  readonly onChange?: ((mode: ProviderAuthMode) => void) | undefined;
-}
-
-/**
- * The OpenAI mode choice is kept separate from the key editor so an active
- * user-session never renders an actionable API-key control.
- */
-export function ProviderAuthenticationMode({
-  status,
-  credentialStatus,
-  onChange,
-}: ProviderAuthenticationModeProps) {
-  const modeLabel = providerAuthModeLabels[status.activeMode];
-  const modeChoiceDisabled = status.environmentOverride || onChange === undefined;
-  return (
-    <fieldset className="provider-auth-mode" aria-describedby="provider-auth-mode-copy">
-      <legend>OpenAI authentication</legend>
-      <p className="credential-mode-copy" id="provider-auth-mode-copy">
-        Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it
-        does not change the current host.
-      </p>
-      <label className="provider-auth-choice">
-        <input
-          type="radio"
-          name="openai-provider-auth-mode"
-          value="api-key"
-          checked={status.preferredMode === "api-key"}
-          disabled={modeChoiceDisabled}
-          onChange={() => onChange?.("api-key")}
-        />
-        <span>
-          <strong>{providerAuthModeLabels["api-key"]}</strong>
-          <small>Use an OpenAI API key with direct API billing.</small>
-        </span>
-      </label>
-      <label className="provider-auth-choice">
-        <input
-          type="radio"
-          name="openai-provider-auth-mode"
-          value="user-session"
-          checked={status.preferredMode === "user-session"}
-          disabled={modeChoiceDisabled}
-          onChange={() => onChange?.("user-session")}
-        />
-        <span>
-          <strong>{providerAuthModeLabels["user-session"]}</strong>
-          <small>Use the local Codex CLI session with subscription billing.</small>
-        </span>
-      </label>
-      <p className="credential-mode-status" role="status">
-        Active now: {modeLabel}. Saved preference: {providerAuthModeLabels[status.preferredMode]}.
-      </p>
-      {status.restartRequired ? (
-        <p className="credential-mode-pending" role="status">
-          Close and reopen DraftLoop to apply it; the active host remains unchanged until then.
-        </p>
-      ) : null}
-      {status.environmentOverride ? (
-        <p className="credential-mode-warning" role="alert">
-          An environment override controls this mode. Unset the provider auth override and restart
-          DraftLoop before changing the saved preference.
-        </p>
-      ) : null}
-      {status.activeMode === "user-session" ? (
-        <div className="credential-session-guidance">
-          <strong>
-            Codex session: {credentialStatus.configured ? "available" : "not detected"}
-          </strong>
-          <p>
-            Install the Codex CLI, run <code>codex login</code>, then close and reopen DraftLoop.
-            DraftLoop does not copy subscription credentials into an API key.
-          </p>
-        </div>
-      ) : null}
-    </fieldset>
-  );
 }
 
 /**
@@ -1300,7 +1065,6 @@ export function ReviewWorkspace({
   pendingReviewAction = null,
   onSelectFiles,
   onAddUrl,
-  careerEvidence,
   jobRequirements,
   errorMessage,
   startDisabledReason = null,
@@ -1309,11 +1073,7 @@ export function ReviewWorkspace({
   workspaceTitle,
   profilePanel,
   writingPolicyAction,
-  getCredentialStatus,
-  onSetCredential,
-  onRemoveCredential,
-  getProviderAuthModeStatus,
-  onSetProviderAuthMode,
+  onOpenHome,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
@@ -1427,8 +1187,6 @@ export function ReviewWorkspace({
   // Which draft lines this reviewer changed in this session. Session-local UI
   // state: it says what a signature would cover, and is not part of the run.
   const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsDialogRef = useRef<HTMLDivElement | null>(null);
   // The command palette: every action in this workspace reachable by name, with the reason
   // written on any action that cannot run yet.
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1442,54 +1200,6 @@ export function ReviewWorkspace({
   const traceabilitySummaryRef = useRef<HTMLElement | null>(null);
   const reviewColumnRef = useRef<HTMLElement | null>(null);
   const findingQueueRef = useRef<HTMLElement | null>(null);
-  const emptyCredentialStatus = (provider: CredentialProvider): CredentialStatus => ({
-    provider,
-    configured: false,
-    source: "none",
-    protection: "none",
-  });
-  const [anthropicStatus, setAnthropicStatus] = useState<CredentialStatus>(() =>
-    emptyCredentialStatus("anthropic"),
-  );
-  const [openaiStatus, setOpenaiStatus] = useState<CredentialStatus>(() =>
-    emptyCredentialStatus("openai"),
-  );
-  const [deepinfraStatus, setDeepinfraStatus] = useState<CredentialStatus>(() =>
-    emptyCredentialStatus("deepinfra"),
-  );
-  const [googleStatus, setGoogleStatus] = useState<CredentialStatus>(() =>
-    emptyCredentialStatus("google"),
-  );
-  const [mistralStatus, setMistralStatus] = useState<CredentialStatus>(() =>
-    emptyCredentialStatus("mistral"),
-  );
-  const [anthropicAuthModeStatus, setAnthropicAuthModeStatus] = useState<ProviderAuthModeStatus>(
-    () => ({
-      provider: "anthropic",
-      activeMode: "api-key",
-      preferredMode: "api-key",
-      restartRequired: false,
-      environmentOverride: false,
-    }),
-  );
-  const [openaiAuthModeStatus, setOpenaiAuthModeStatus] = useState<ProviderAuthModeStatus>(() => ({
-    provider: "openai",
-    activeMode: "api-key",
-    preferredMode: "api-key",
-    restartRequired: false,
-    environmentOverride: false,
-  }));
-  const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
-  const [openaiKeyInput, setOpenaiKeyInput] = useState("");
-  const [deepinfraKeyInput, setDeepinfraKeyInput] = useState("");
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
-  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
-  const [showDeepinfraKey, setShowDeepinfraKey] = useState(false);
-  const [googleKeyInput, setGoogleKeyInput] = useState("");
-  const [showGoogleKey, setShowGoogleKey] = useState(false);
-  const [mistralKeyInput, setMistralKeyInput] = useState("");
-  const [showMistralKey, setShowMistralKey] = useState(false);
-  const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
   const showChanges = hasPreviousArtifact && draftView === "changes";
@@ -1742,96 +1452,7 @@ export function ReviewWorkspace({
     element.focus();
   });
 
-  const refreshCredentials = useCallback(() => {
-    if (getCredentialStatus === undefined) return;
-    void getCredentialStatus("anthropic")
-      .then(setAnthropicStatus)
-      .catch(() => undefined);
-    void getCredentialStatus("openai")
-      .then(setOpenaiStatus)
-      .catch(() => undefined);
-    void getCredentialStatus("deepinfra")
-      .then(setDeepinfraStatus)
-      .catch(() => undefined);
-    void getCredentialStatus("google")
-      .then(setGoogleStatus)
-      .catch(() => undefined);
-    void getCredentialStatus("mistral")
-      .then(setMistralStatus)
-      .catch(() => undefined);
-  }, [getCredentialStatus]);
-
-  useEffect(() => {
-    refreshCredentials();
-  }, [refreshCredentials]);
-
-  const refreshProviderAuthMode = useCallback(() => {
-    if (getProviderAuthModeStatus === undefined) return;
-    void getProviderAuthModeStatus("anthropic")
-      .then(setAnthropicAuthModeStatus)
-      .catch(() => undefined);
-    void getProviderAuthModeStatus("openai")
-      .then(setOpenaiAuthModeStatus)
-      .catch(() => undefined);
-  }, [getProviderAuthModeStatus]);
-
-  useEffect(() => {
-    refreshProviderAuthMode();
-  }, [refreshProviderAuthMode]);
-
-  const handleSaveCredential = async (provider: CredentialProvider, key: string) => {
-    if (onSetCredential === undefined || key.trim() === "") return;
-    try {
-      await onSetCredential(provider, key.trim());
-      const label = credentialProviderLabels[provider];
-      setCredentialFeedback(
-        `${label} API key saved in app storage. Review the protection status below.`,
-      );
-      if (provider === "anthropic") setAnthropicKeyInput("");
-      else if (provider === "openai") setOpenaiKeyInput("");
-      else if (provider === "deepinfra") setDeepinfraKeyInput("");
-      else if (provider === "google") setGoogleKeyInput("");
-      else setMistralKeyInput("");
-      refreshCredentials();
-    } catch (error: unknown) {
-      setCredentialFeedback(error instanceof Error ? error.message : "Failed to save API key.");
-    }
-  };
-
-  const handleRemoveCredential = async (provider: CredentialProvider) => {
-    if (onRemoveCredential === undefined) return;
-    try {
-      await onRemoveCredential(provider);
-      setCredentialFeedback(
-        `${credentialProviderLabels[provider]} API key removed from app storage.`,
-      );
-      refreshCredentials();
-    } catch {
-      setCredentialFeedback("Failed to remove API key.");
-    }
-  };
-
-  const handleSetProviderAuthMode = async (mode: ProviderAuthMode) => {
-    if (onSetProviderAuthMode === undefined) return;
-    try {
-      const status = await onSetProviderAuthMode("openai", mode);
-      setOpenaiAuthModeStatus(status);
-      setCredentialFeedback(
-        status.restartRequired
-          ? `${providerAuthModeLabels[mode]} selected for OpenAI. Close and reopen DraftLoop to apply it.`
-          : `${providerAuthModeLabels[mode]} is active for OpenAI.`,
-      );
-      refreshCredentials();
-    } catch (error: unknown) {
-      setCredentialFeedback(
-        error instanceof Error ? error.message : "Failed to save provider authentication mode.",
-      );
-    }
-  };
-
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
-  useModalFocusTrap(settingsOpen, settingsDialogRef, closeSettings);
   useModalFocusTrap(paletteOpen, paletteDialogRef, closePalette);
 
   const submitUrl = (target: "job-description"): void => {
@@ -1898,7 +1519,7 @@ export function ReviewWorkspace({
   // artifact gate keeps its Alt chords, so approving is never one keystroke away.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (settingsOpen || paletteOpen) return;
+      if (paletteOpen) return;
       const target = event.target as HTMLElement | null;
 
       // Escape leaves the override editor even from inside its own input: that is the one
@@ -2058,7 +1679,6 @@ export function ReviewWorkspace({
     paletteAvailable,
     paletteOpen,
     revealFindingInQueue,
-    settingsOpen,
     state.findings,
     state.reviewComplete,
     roundLimitReached,
@@ -2215,9 +1835,10 @@ export function ReviewWorkspace({
     {
       id: "keys",
       label: "Open provider authentication",
-      note: "Choose API keys or an authenticated OpenAI Codex session",
-      disabledReason: null,
-      run: () => setSettingsOpen(true),
+      note: "Provider sign-in lives in Home, under Workspace settings",
+      disabledReason:
+        onOpenHome === undefined ? "This host has no Home to open provider sign-in from." : null,
+      run: () => onOpenHome?.(),
     },
     {
       id: "go-draft",
@@ -2448,118 +2069,6 @@ export function ReviewWorkspace({
     );
   };
 
-  const renderSettingsModal = () => {
-    if (!settingsOpen) return null;
-    // No dismiss-on-backdrop: a stray click must not discard a half-typed key.
-    return (
-      <div className="modal-backdrop">
-        <div
-          className="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-dialog-title"
-          aria-describedby="settings-dialog-copy"
-          ref={settingsDialogRef}
-        >
-          <div className="modal-header">
-            <div>
-              <p className="eyebrow">DraftLoop / Provider authentication</p>
-              <h2 id="settings-dialog-title">Provider authentication</h2>
-            </div>
-            <button
-              className="button button-quiet"
-              type="button"
-              onClick={() => setSettingsOpen(false)}
-            >
-              Close
-              <kbd>Esc</kbd>
-            </button>
-          </div>
-          <p className="modal-copy" id="settings-dialog-copy">
-            Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic
-            and OpenAI also support provider-managed sessions; app keys override their API-key
-            environment variables.
-          </p>
-          {credentialFeedback ? (
-            <div className="feedback-banner" role="status">
-              <p>{credentialFeedback}</p>
-            </div>
-          ) : null}
-          <div className="credential-sections">
-            <CredentialRow
-              title="Anthropic API key (Claude)"
-              placeholder="sk-ant-api03-…"
-              status={anthropicStatus}
-              value={anthropicKeyInput}
-              revealed={showAnthropicKey}
-              onReveal={setShowAnthropicKey}
-              onChange={setAnthropicKeyInput}
-              onSave={() => void handleSaveCredential("anthropic", anthropicKeyInput)}
-              onRemove={() => void handleRemoveCredential("anthropic")}
-            />
-            <ProviderAuthenticationMode
-              status={openaiAuthModeStatus}
-              credentialStatus={openaiStatus}
-              onChange={
-                onSetProviderAuthMode === undefined
-                  ? undefined
-                  : (mode) => void handleSetProviderAuthMode(mode)
-              }
-            />
-            {openaiAuthModeStatus.activeMode === "api-key" ? (
-              <CredentialRow
-                title="OpenAI API key (GPT)"
-                placeholder="sk-proj-…"
-                status={openaiStatus}
-                value={openaiKeyInput}
-                revealed={showOpenaiKey}
-                onReveal={setShowOpenaiKey}
-                onChange={setOpenaiKeyInput}
-                onSave={() => void handleSaveCredential("openai", openaiKeyInput)}
-                onRemove={() => void handleRemoveCredential("openai")}
-              />
-            ) : null}
-            <CredentialRow
-              title="DeepInfra API key (Z.ai GLM)"
-              placeholder="DeepInfra API key"
-              status={deepinfraStatus}
-              value={deepinfraKeyInput}
-              revealed={showDeepinfraKey}
-              onReveal={setShowDeepinfraKey}
-              onChange={setDeepinfraKeyInput}
-              onSave={() => void handleSaveCredential("deepinfra", deepinfraKeyInput)}
-              onRemove={() => void handleRemoveCredential("deepinfra")}
-            />
-            <CredentialRow
-              title="Google Gemini API key"
-              placeholder="Gemini API key"
-              note={googleCredentialNote}
-              status={googleStatus}
-              value={googleKeyInput}
-              revealed={showGoogleKey}
-              onReveal={setShowGoogleKey}
-              onChange={setGoogleKeyInput}
-              onSave={() => void handleSaveCredential("google", googleKeyInput)}
-              onRemove={() => void handleRemoveCredential("google")}
-            />
-            <CredentialRow
-              title="Mistral API key"
-              placeholder="Mistral API key"
-              note={mistralCredentialNote}
-              status={mistralStatus}
-              value={mistralKeyInput}
-              revealed={showMistralKey}
-              onReveal={setShowMistralKey}
-              onChange={setMistralKeyInput}
-              onSave={() => void handleSaveCredential("mistral", mistralKeyInput)}
-              onRemove={() => void handleRemoveCredential("mistral")}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Every action of this workspace, reachable by its name. A command that cannot run stays in
   // the list and says why, because "the button is missing" is not an explanation.
   const renderCommandPalette = () => {
@@ -2758,19 +2267,6 @@ export function ReviewWorkspace({
   };
 
   if (state.state === "collecting") {
-    const authentication = providerAuthenticationForPair({
-      fixtureMode: state.setup.fixtureMode,
-      anthropicConfigured: anthropicStatus.configured,
-      openaiConfigured: openaiStatus.configured,
-      deepinfraConfigured: deepinfraStatus.configured,
-      googleConfigured: googleStatus.configured,
-      mistralConfigured: mistralStatus.configured,
-      anthropicMode: anthropicAuthModeStatus.activeMode,
-      openaiMode: openaiAuthModeStatus.activeMode,
-      authorCompany: state.providerTransmissionPreflight.author.company as ModelCompany,
-      criticCompany: state.providerTransmissionPreflight.critic.company as ModelCompany,
-    });
-    const modelKeysReady = authentication.ready;
     const reviewedRequirements = reviewedRequirementsSelection(
       latestBrief,
       state.setup.reviewedOpportunity,
@@ -2824,9 +2320,8 @@ export function ReviewWorkspace({
     };
     return (
       <div className="app-frame">
-        <SideRail onOpenSources={null} onOpenSettings={() => setSettingsOpen(true)} />
+        <SideRail onOpenSources={null} />
         <main className="app-shell app-shell-single">
-          {renderSettingsModal()}
           <div className="main-column">
             <header className="spine">
               <div className="spine-identity">
@@ -2957,21 +2452,11 @@ export function ReviewWorkspace({
                     </div>
                   ) : null}
                 </article>
-                <CareerEvidenceCard
-                  setup={state.setup}
-                  knowledge={careerEvidence}
-                  onSelectLegacyFiles={
-                    onSelectFiles === undefined ? undefined : () => onSelectFiles("evidence")
-                  }
-                  onAddLegacyUrl={
-                    onAddUrl === undefined ? undefined : (url) => onAddUrl("evidence", url)
-                  }
-                />
                 <article
                   className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
                 >
                   <div className="setup-card-head">
-                    <span className="setup-number">03</span>
+                    <span className="setup-number">02</span>
                     <span
                       className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
                     >
@@ -3053,28 +2538,20 @@ export function ReviewWorkspace({
                     Importing an opportunity override does not change the global policy.
                   </span>
                 </article>
-                <article className={`setup-card${modelKeysReady ? " setup-card-ready" : ""}`}>
-                  <div className="setup-card-head">
-                    <span className="setup-number">04</span>
-                    <span className={`setup-state${modelKeysReady ? " setup-state-ready" : ""}`}>
-                      {state.setup.fixtureMode
-                        ? "Not needed"
-                        : modelKeysReady
-                          ? "Ready"
-                          : "Required"}
-                    </span>
-                  </div>
-                  <strong>Provider authentication</strong>
-                  <span>{authentication.summary}</span>
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    onClick={() => setSettingsOpen(true)}
-                  >
-                    Manage provider authentication
-                  </button>
-                </article>
               </div>
+              {state.setup.fixtureMode ? null : (
+                <p className="setup-note provider-signin-note">
+                  Provider sign-in is in Home → Workspace settings.
+                  {onOpenHome === undefined ? null : (
+                    <>
+                      {" "}
+                      <button className="button button-quiet" type="button" onClick={onOpenHome}>
+                        Open Home
+                      </button>
+                    </>
+                  )}
+                </p>
+              )}
               {renderProviderTransmissionPreflight()}
               {profilePanel}
               {reviewedRequirements === null || rawJobKey === null ? null : (
@@ -3152,9 +2629,8 @@ export function ReviewWorkspace({
 
   return (
     <div className="app-frame">
-      <SideRail onOpenSources={openTraceability} onOpenSettings={() => setSettingsOpen(true)} />
+      <SideRail onOpenSources={openTraceability} />
       <main className="app-shell">
-        {renderSettingsModal()}
         {renderCommandPalette()}
         <div className="main-column">
           <header className="spine">

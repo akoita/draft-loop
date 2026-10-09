@@ -1,7 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
+import { CareerEvidenceCard } from "./career-evidence-card.js";
 import {
   CareerFlowStrip,
   careerEvidenceCardSubtitle,
@@ -12,7 +12,9 @@ import {
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeView, WorkspaceLocation } from "./home.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
+import { createFixtureReviewState } from "./model.js";
 import { ProfileWorkspace } from "./profile.js";
+import { ReviewWorkspace } from "./review.js";
 import { SemanticRetrievalPanel } from "./semantic-retrieval.js";
 
 const noop = () => undefined;
@@ -91,6 +93,26 @@ describe("Career evidence page", () => {
     expect(html).toMatch(/aria-current="page">Career evidence<\/span>/u);
     expect(html).toContain("Home</button>");
     expect(html).not.toContain("Career profile and evidence");
+  });
+
+  it("shows the Career evidence card above the knowledge panel, and the application screen does not", () => {
+    const state = { ...createFixtureReviewState(), state: "collecting" as const, runId: "pending" };
+    const page = renderToStaticMarkup(
+      <CareerEvidencePage
+        {...frame}
+        card={<CareerEvidenceCard setup={state.setup} />}
+        knowledge={knowledge}
+      />,
+    );
+    expect(page).toContain("<strong>Career evidence</strong>");
+    expect(page.indexOf("<strong>Career evidence</strong>")).toBeLessThan(
+      page.indexOf("candidate-knowledge-heading"),
+    );
+
+    const application = renderToStaticMarkup(
+      <ReviewWorkspace state={state} onAction={noop} onSelectFiles={noop} onAddUrl={noop} />,
+    );
+    expect(application).not.toContain("<strong>Career evidence</strong>");
   });
 
   it("links to the profile page only when the host has a profile workflow", () => {

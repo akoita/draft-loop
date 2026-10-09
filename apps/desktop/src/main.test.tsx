@@ -44,7 +44,6 @@ import {
   findingQueueCounts,
   initialFindingQueueState,
   isOverrideEditorVisible,
-  ProviderAuthenticationMode,
   ReviewWorkspace,
 } from "./review.js";
 import { createReviewActionDispatcher } from "./review-dispatch.js";
@@ -61,59 +60,6 @@ const collectingState = () => ({
 });
 
 describe("desktop trust-centered review", () => {
-  it("offers OpenAI subscription authentication without exposing an API-key editor in session mode", () => {
-    const html = renderToStaticMarkup(
-      <ProviderAuthenticationMode
-        status={{
-          provider: "openai",
-          activeMode: "user-session",
-          preferredMode: "user-session",
-          restartRequired: false,
-          environmentOverride: false,
-        }}
-        credentialStatus={{
-          provider: "openai",
-          configured: false,
-          source: "user-session",
-          protection: "provider-managed-session",
-        }}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(html).toContain("Authenticated Codex / ChatGPT subscription");
-    expect(html).toContain("Active now: Authenticated Codex / ChatGPT subscription.");
-    expect(html).toContain("Codex session: not detected");
-    expect(html).toContain("codex login");
-    expect(html).not.toContain("OpenAI API key (GPT)");
-    expect(html).not.toContain('type="password"');
-  });
-
-  it("makes a saved authentication change visibly pending restart", () => {
-    const html = renderToStaticMarkup(
-      <ProviderAuthenticationMode
-        status={{
-          provider: "openai",
-          activeMode: "api-key",
-          preferredMode: "user-session",
-          restartRequired: true,
-          environmentOverride: false,
-        }}
-        credentialStatus={{
-          provider: "openai",
-          configured: true,
-          source: "app",
-          protection: "os-backed",
-        }}
-        onChange={() => undefined}
-      />,
-    );
-
-    expect(html).toContain("Active now: Provider API key.");
-    expect(html).toContain("Saved preference: Authenticated Codex / ChatGPT subscription.");
-    expect(html).toContain("Close and reopen DraftLoop to apply it");
-  });
-
   it("shows live execution details and a stop control", () => {
     const state = {
       ...createFixtureReviewState(),
@@ -277,7 +223,7 @@ describe("desktop trust-centered review", () => {
 
     expect(html).toContain("Bring your career evidence into the loop");
     expect(html).toContain("Add job description");
-    expect(html).toContain("Review and fetch source URL");
+    expect(html).toContain("Review and fetch job URL");
     expect(html).toContain("Writing policy");
     expect(html).toContain("Choose policy file");
     expect(html).toContain("kept separate from career evidence");
@@ -328,9 +274,9 @@ describe("desktop trust-centered review", () => {
     expect(withReview).toContain("Import opportunity override");
   });
 
-  it("distinguishes pending indexing from a bounded no-match fallback", () => {
+  it("keeps the retrieval fallback wording on the run, not on a setup card", () => {
     const base = collectingState();
-    const pendingHtml = renderToStaticMarkup(
+    const collectingHtml = renderToStaticMarkup(
       <ReviewWorkspace
         state={{
           ...base,
@@ -340,21 +286,6 @@ describe("desktop trust-centered review", () => {
             indexedEvidenceChunkCount: 0,
             selectedEvidenceChunkCount: 0,
             selectedEvidenceSourceCount: 0,
-          },
-        }}
-        onAction={() => undefined}
-      />,
-    );
-    const fallbackHtml = renderToStaticMarkup(
-      <ReviewWorkspace
-        state={{
-          ...base,
-          setup: {
-            ...base.setup,
-            retrievalStatus: "fallback",
-            indexedEvidenceChunkCount: 3,
-            selectedEvidenceChunkCount: 2,
-            selectedEvidenceSourceCount: 1,
           },
         }}
         onAction={() => undefined}
@@ -376,11 +307,47 @@ describe("desktop trust-centered review", () => {
       />,
     );
 
-    expect(pendingHtml).toContain("Evidence will be indexed when the review starts");
-    expect(fallbackHtml).toContain("No lexical match; 2 bounded fallback excerpts selected");
+    expect(collectingHtml).not.toContain("Evidence will be indexed when the review starts");
     expect(activeFallbackHtml).toContain(
       "No lexical match; using 2 bounded fallback excerpts from career evidence",
     );
+  });
+
+  it("keeps workspace-level setup off the application screen", () => {
+    const base = collectingState();
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{ ...base, setup: { ...base.setup, fixtureMode: false } }}
+        onAction={() => undefined}
+        onOpenHome={() => undefined}
+      />,
+    );
+
+    // Application-level setup stays: the target job and the writing policy.
+    expect(html).toContain("Target job description");
+    expect(html).toContain("Writing policy");
+    // Workspace-level setup moved to Home: no provider card, no Career evidence card, no key editor.
+    expect(html).not.toContain("Manage provider authentication");
+    expect(html).not.toContain("Provider API key");
+    expect(html).not.toContain("API key (");
+    expect(html).not.toContain("<strong>Career evidence</strong>");
+    expect(html).not.toContain("<strong>Provider authentication</strong>");
+    expect(html).not.toContain('title="Provider authentication"');
+    // The way to it is stated, and navigates Home.
+    expect(html).toContain("Provider sign-in is in Home → Workspace settings.");
+    expect(html).toContain("Open Home");
+  });
+
+  it("does not offer a Home button when the host has no Home", () => {
+    const base = collectingState();
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{ ...base, setup: { ...base.setup, fixtureMode: false } }}
+        onAction={() => undefined}
+      />,
+    );
+    expect(html).toContain("Provider sign-in is in Home → Workspace settings.");
+    expect(html).not.toContain("Open Home");
   });
 
   it("makes paused progress, provider exposure, and unresolved findings visible", () => {
