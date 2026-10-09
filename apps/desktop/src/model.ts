@@ -266,6 +266,11 @@ export interface ReviewExecutionView {
   readonly attempt: number | null;
   readonly elapsedMs: number;
   readonly timeoutRemainingMs: number | null;
+  /**
+   * Why the last attempt to continue this run in the background failed before it could make
+   * progress, when it did. Only set while the run is interrupted.
+   */
+  readonly failure?: string;
 }
 
 export interface DesktopReviewState {

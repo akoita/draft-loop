@@ -190,3 +190,19 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   if (hasBridgeErrorCode(error)) return undefined;
   return `${describeDesktopOperation(command)} failed with an unexpected error.`;
 }
+
+/**
+ * The message the review screen shows when a run continuing in the background fails before it
+ * records a step of its own. It follows the same rules as a refused resume: a fixed, path-free
+ * application message is shown as written, anything else names only the operation.
+ */
+export function backgroundRunFailureMessage(error: unknown): string {
+  const resume: BridgeCommand = {
+    type: "review.dispatch",
+    input: { workspaceId: "background", runId: "background", action: { type: "resume" } },
+  };
+  return (
+    hostFailureMessage(resume, error) ??
+    `${describeDesktopOperation(resume)} failed with an unexpected error.`
+  );
+}

@@ -100,6 +100,30 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("previous app session ended");
   });
 
+  it("says why an interrupted run could not continue instead of blaming the last session", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "drafting" as const,
+      execution: {
+        status: "interrupted" as const,
+        step: "author" as const,
+        provider: "mistral",
+        model: "mistral-large-4",
+        attempt: 1,
+        elapsedMs: 0,
+        timeoutRemainingMs: null,
+        failure: "The candidate knowledge selection changed.",
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Resume interrupted review");
+    expect(html).toContain(
+      "The review could not continue: The candidate knowledge selection changed.",
+    );
+    expect(html).not.toContain("previous app session ended");
+  });
+
   it("acknowledges a pending review start without claiming step progress", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace

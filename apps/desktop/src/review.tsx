@@ -3207,7 +3207,12 @@ export function ReviewWorkspace({
                 </p>
               ) : null}
             </div>
-            {state.execution.status === "interrupted" ? (
+            {state.execution.status === "interrupted" && state.execution.failure !== undefined ? (
+              <p className="pending-action-status setup-blocker" role="alert">
+                The review could not continue: {state.execution.failure} Fix this, then resume the
+                review, or stop it without losing history.
+              </p>
+            ) : state.execution.status === "interrupted" ? (
               <p className="pending-action-status" role="status">
                 This review was interrupted when the previous app session ended. Resume it to
                 continue from the durable step, or stop it without losing history.
