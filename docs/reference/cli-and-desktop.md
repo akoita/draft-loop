@@ -203,13 +203,22 @@ location used for credential and authentication preferences. Electron places it
 under the application’s folder in `%APPDATA%` on Windows, `$XDG_CONFIG_HOME`
 (or `~/.config`) on Linux, and `~/Library/Application Support` on macOS.
 
-Each line contains only an ISO timestamp, capability, recognized error class,
-and recognized bridge or provider code. Recognized classes include the
+Each line contains an ISO timestamp, capability, recognized error class, and
+recognized bridge or provider code, plus the cause summary described below.
+Recognized classes include the
 application's user errors (`JobRequirementUserError`,
 `SourceIngestionUserError`, `CliUserError`), so a refused run start is
 distinguishable from an unexpected failure. Messages, stacks, filesystem paths,
-filenames, source content, and provider responses are excluded. The current log
-and one rotated backup are each bounded to 64 KiB. Logging failures do not
+filenames, source content, and provider responses are excluded.
+
+When the error wraps an `Error` cause, the line also has `causeClass` (the
+cause's class name, or `UnknownError`) and `causeDetails`: at most five short
+issue locations, such as `facts[].provenance: must contain at least one exact
+provenance reference.` or `invalid_type at facts[].category`. Array indices are
+removed, and any detail containing a quote or longer than 200 characters is
+dropped, so no values or candidate content are logged.
+
+The current log and one rotated backup are each bounded to 64 KiB. Logging failures do not
 interrupt a review operation. Logs stay local and are not uploaded automatically.
 
 When a desktop action fails, the banner shows the application's own message

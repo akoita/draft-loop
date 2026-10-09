@@ -639,7 +639,8 @@ export function createCanonicalCandidateProfileDerivationService(
       ) {
         throw error;
       }
-      throw new Error(canonicalCandidateProfileDerivationErrorMessage);
+      // The message stays fixed for users; the cause is for local content-free diagnostics only.
+      throw new Error(canonicalCandidateProfileDerivationErrorMessage, { cause: error });
     }
   };
 

@@ -17,6 +17,7 @@ import {
 import { ProviderAdapterError, type ProviderErrorCode } from "@draft-loop/providers";
 import { type BridgeErrorCode, bridgeCapabilities } from "../bridge.js";
 import { DesktopBridgeError } from "../native.js";
+import { summarizeHostErrorCause } from "./diagnostics-cause.js";
 
 const maximumLogBytes = 64 * 1024;
 const knownCapabilities = new Set<string>(bridgeCapabilities);
@@ -137,6 +138,7 @@ export function createHostErrorLogger(
               : "unknown",
           errorClass: classifyError(error),
           code: classifyCode(error),
+          ...summarizeHostErrorCause(error),
         };
         const line = `${JSON.stringify(record)}\n`;
         const lineBytes = Buffer.byteLength(line, "utf8");
