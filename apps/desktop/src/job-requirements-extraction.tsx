@@ -330,22 +330,14 @@ export function JobRequirementsExtraction({
     handledSignal.current = openSignal;
     setPhase((current) => (current.kind === "idle" ? { kind: "consent" } : current));
   }, [openSignal]);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
   const { createOpportunity, cancelOpportunityExtraction } = binding;
   if (createOpportunity === undefined) return null;
   const briefOperations = briefOperationsOf(binding);
 
   const confirm = () => {
     setPhase({ kind: "running" });
-    void runJobRequirementsExtraction(createOpportunity).then((outcome) => {
-      if (mounted.current) setPhase(outcome);
-    });
+    // A screen left mid-extraction stays mounted while hidden, so it still records the outcome.
+    void runJobRequirementsExtraction(createOpportunity).then(setPhase);
   };
 
   const cancelExtraction = () => {
@@ -355,7 +347,6 @@ export function JobRequirementsExtraction({
     );
     // The cancelled create request settles the card; a failed cancel leaves it cancellable.
     void cancelOpportunityExtraction().catch(() => {
-      if (!mounted.current) return;
       setPhase((current) => (current.kind === "running" ? { kind: "running" } : current));
     });
   };

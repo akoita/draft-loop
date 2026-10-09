@@ -51,32 +51,48 @@ import {
 } from "./profile-freshness.js";
 import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
-/** Focus lands on the location line of a screen when it opens, so assistive technology says where. */
+/**
+ * Focus lands on the location line of a screen when it opens or is returned to, so assistive
+ * technology says where. It does not scroll: a page returned to keeps its scroll position.
+ */
 function useFocusOnOpen(ref: RefObject<HTMLElement | null>): void {
   // biome-ignore lint/correctness/useExhaustiveDependencies: the ref object is stable and focus moves once per screen.
   useEffect(() => {
-    ref.current?.focus();
+    ref.current?.focus({ preventScroll: true });
   }, []);
+}
+
+/** The Back action of a screen: the page it returns to. */
+export interface WorkspaceBack {
+  /** The name of the page Back returns to, such as "Home" or an application's name. */
+  readonly label: string;
+  readonly onBack: () => void;
 }
 
 interface WorkspaceLocationProps {
   /** The name of the screen; shown as the current page. */
   readonly current: string;
-  /** Present on every screen but Home. */
-  readonly onHome?: () => void;
+  /** Present on every screen but Home: returns to the page the person came from. */
+  readonly back?: WorkspaceBack;
   /** Names the screen with the page heading, for a screen with no other title. */
   readonly asHeading?: boolean;
 }
 
-/** "← Home / Current screen": the way back to Home, and the screen's label. */
-export function WorkspaceLocation({ current, onHome, asHeading = false }: WorkspaceLocationProps) {
+/** "← Previous page / Current screen": the way back, and the screen's label. */
+export function WorkspaceLocation({ current, back, asHeading = false }: WorkspaceLocationProps) {
   const ref = useRef<HTMLElement>(null);
   useFocusOnOpen(ref);
   return (
     <nav ref={ref} className="home-location" aria-label="Workspace location" tabIndex={-1}>
-      {onHome === undefined ? null : (
-        <button className="button button-quiet home-back" type="button" onClick={onHome}>
-          <span aria-hidden="true">←</span> Home
+      {back === undefined ? null : (
+        <button
+          className="button button-quiet home-back"
+          type="button"
+          title={`Back to ${back.label}`}
+          aria-label={`Back to ${back.label}`}
+          onClick={back.onBack}
+        >
+          <span aria-hidden="true">←</span> <span className="home-back-label">{back.label}</span>
         </button>
       )}
       {asHeading ? (
@@ -461,7 +477,13 @@ export function HomeView({
             </div>
           )}
 
-          <CareerFlowStrip current="applications" />
+          <CareerFlowStrip
+            current="applications"
+            onOpen={{
+              evidence: onManageEvidence,
+              ...(profile.kind === "unsupported" ? {} : { profile: onManageProfile }),
+            }}
+          />
 
           <div className="home-summary">
             {/* Evidence first, matching the Career evidence → Career profile → Applications flow. */}
@@ -761,8 +783,8 @@ export function HomeScreen({
       setApplications({ status: "unavailable" });
       return;
     }
+    // A Home returned to keeps showing its list while it is read again.
     let active = true;
-    setApplications({ status: "loading" });
     listApplications(workspaceId)
       .then((loaded) => {
         if (active) setApplications({ status: "ready", applications: loaded });

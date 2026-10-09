@@ -105,6 +105,14 @@ describe("Home dashboard", () => {
       /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Applications<\/li>/u,
     );
     expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
+    expect(html).toContain('class="career-flow-link" type="button">Career evidence</button>');
+    expect(html).toContain('class="career-flow-link" type="button">Career profile</button>');
+  });
+
+  it("offers no Career profile link in the flow when the host has no profile workflow", () => {
+    const html = render({ profile: { kind: "unsupported" } });
+    expect(html).toContain('type="button">Career evidence</button>');
+    expect(html).not.toContain('type="button">Career profile</button>');
   });
 
   it("shows the empty evidence state with an add action", () => {
@@ -194,9 +202,13 @@ describe("workspace location", () => {
 
   it("offers a visible way back to Home on other screens", () => {
     const html = renderToStaticMarkup(
-      <WorkspaceLocation current="Acme — Backend Lead" onHome={() => undefined} />,
+      <WorkspaceLocation
+        current="Acme — Backend Lead"
+        back={{ label: "Home", onBack: () => undefined }}
+      />,
     );
-    expect(html).toContain("Home</button>");
+    expect(html).toContain("Home</span></button>");
+    expect(html).toContain('aria-label="Back to Home"');
     expect(html).toContain("←");
     expect(html).toContain("Acme — Backend Lead");
   });

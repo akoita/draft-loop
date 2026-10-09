@@ -93,6 +93,8 @@ interface ReviewWorkspaceProps {
    * keeps only what starting a review needs.
    */
   readonly setupSummary?: ReactNode;
+  /** The flow strip linking the workspace's other pages, shown above the header. */
+  readonly pageNavigation?: ReactNode;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -1081,6 +1083,7 @@ export function ReviewWorkspace({
   writingPolicyAction,
   onOpenHome,
   setupSummary,
+  pageNavigation,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
@@ -2412,6 +2415,7 @@ export function ReviewWorkspace({
         <SideRail onOpenSources={null} />
         <main className="app-shell app-shell-single">
           <div className="main-column">
+            {pageNavigation}
             <header className="spine">
               <div className="spine-identity">
                 {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
@@ -2725,6 +2729,7 @@ export function ReviewWorkspace({
       <main className="app-shell">
         {renderCommandPalette()}
         <div className="main-column">
+          {pageNavigation}
           <header className="spine">
             <div className="spine-identity">
               {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}

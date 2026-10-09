@@ -266,7 +266,8 @@ describe("New application screen", () => {
     } as never,
     startDisabledReason: null,
     onStart: async () => undefined,
-    onHome: none,
+    back: { label: "Home", onBack: none },
+    onOpenStep: { evidence: none, profile: none, applications: none },
   };
 
   it("opens on step 1 with the four steps and a way back to Home", () => {
@@ -276,8 +277,17 @@ describe("New application screen", () => {
       expect(html).toContain(`>${label}</span>`);
     }
     expect(html).toContain('aria-current="step"');
-    expect(html).toContain("</span> Home</button>");
+    expect(html).toContain('aria-label="Back to Home"');
+    expect(html).toContain('<span class="home-back-label">Home</span></button>');
     expect(html).toMatch(/<h1[^>]*>New application<\/h1>/u);
     expect(html).toContain("Name and job");
+  });
+
+  it("links straight to the career pages from the flow strip", () => {
+    const html = renderToStaticMarkup(<NewApplicationFlow {...props} />);
+    expect(html).toContain('aria-label="Career flow"');
+    expect(html).toContain('class="career-flow-link" type="button">Career evidence</button>');
+    expect(html).toContain('class="career-flow-link" type="button">Career profile</button>');
+    expect(html).toMatch(/aria-current="step">(<span[^>]*>→<\/span>)?Applications<\/li>/u);
   });
 });
