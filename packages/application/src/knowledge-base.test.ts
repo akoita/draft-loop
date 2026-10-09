@@ -404,7 +404,8 @@ describe("candidate knowledge store application service", () => {
       scope: "candidate-knowledge-store",
       activeOperation: "ckb-directory-refresh",
       retryable: true,
-      status: "active",
+      // Opening the store waits briefly for the writer before reporting the conflict.
+      status: "timeout",
     });
     expect(JSON.stringify((conflict as StorageWriterLeaseConflictError).diagnostic)).not.toContain(
       storeRoot,
