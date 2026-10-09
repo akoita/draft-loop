@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-10-05<br>
+**Last reviewed:** 2026-10-09<br>
 **Current stage:** Manual parity: inputs
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -280,6 +280,7 @@ applications.
 | Next | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Not started; opened 2026-10-08 | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
+| Later | Harness observability and evaluation ([#1101](https://github.com/akoita/draft-loop/issues/1101)) | Not started; planned 2026-10-09 | Trace every run, measure the critic against labelled failures, explain each revision, and let the author check its own grounding | A failed author attempt is diagnosable from its trace, critic agreement is recorded on a held-out set, and the tighter loop shows fewer rejected attempts without regression (#1102–#1113) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1794,6 +1795,36 @@ files ([#1030](https://github.com/akoita/draft-loop/issues/1030)):
 This stage starts after Any-format career intake, because the interview
 needs the structured career record to know what to ask.
 
+### Later — Harness observability and evaluation
+
+The author–critic harness is well guarded but hard to see into
+([#1101](https://github.com/akoita/draft-loop/issues/1101)). Failed author
+attempts have kept no token usage, no proposal and only capped diagnostics, so
+root causes needed one-off studies such as
+[author correction reliability](evaluation/author-correction-reliability.md).
+Four ordered phases, each closed by a gate:
+
+1. **See every run.** Content-free OpenTelemetry GenAI spans emitted at the
+   orchestrator's author, critic and retrieval ports, stored beside run
+   history, with an opt-in localhost export for development (#1102–#1104).
+   Gate: a failed author attempt can be diagnosed from its trace alone.
+2. **Measure the critic.** A binary failure taxonomy labelled on synthetic
+   cohorts, critic agreement rates per category, and a local live eval suite
+   that never runs in hosted CI (#1105–#1107). Gate: critic rates recorded
+   for the economy pair on a held-out set.
+3. **Explain each round.** Finding-to-change attribution, a run timeline with
+   score trajectory, and a plain reason the loop stopped (#1108–#1110). Gate:
+   every revised block links to the finding it addresses.
+4. **Tighten the loop.** Bounded `validate_proposal` and `search_evidence`
+   author tools on the API adapters, targeted patch revisions, and stopping
+   on finding resolution (#1111–#1113). Gate: fewer rejected author attempts
+   and no regression on the phase 2 suite.
+
+Spans and eval records stay local and content-free; message content is
+captured only for invented fixtures. Model internals are out of scope: the
+hosted reference pair cannot be inspected, so interpretation means explaining
+behaviour from structured records.
+
 ### Later — Production-ready beta
 
 Complete signed installers, safe migrations and updates, backup/restore, crash
@@ -1865,6 +1896,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-09 | Planned Harness observability and evaluation as a Later stage (#1101, #1102–#1113); no implementation yet. | Tracing, critic calibration, revision attribution and a bounded author tool loop are ordered behind gates. Current stages keep priority. |
 | 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
 | 2026-10-08 | Opened Candidate home and applications (milestone 28, #1054–#1059) and accepted ADR 0010: a workspace is the candidate's home with many applications. | One reviewed career profile per candidate is reused across job applications. Home with an Applications list becomes the landing page. This comes ahead of #1027 and #1028. |
 | 2026-10-08 | Opened Any-format career intake (milestone 26, #1022–#1029) and Guided career interview (milestone 27, #1030). | Interpreting and structuring career evidence in any format becomes the next stage, ahead of Manual parity: review and export. A guided, multi-session interview with local voice input follows it. |
