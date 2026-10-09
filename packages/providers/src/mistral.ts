@@ -19,6 +19,7 @@ import {
 } from "./index.js";
 import {
   canceledError,
+  cancellableSleep,
   collectMistralStream,
   createMistralStreamWatchdog,
   failResponse,
@@ -383,6 +384,7 @@ export class MistralAdapter<
 
     const startedAt = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
+    const retry = { ...this.retry, sleep: cancellableSleep(this.retry.sleep, request.signal) };
     return executeWithRetry(async () => {
       if (request.signal?.aborted) throw canceledError();
       const watchdog = createMistralStreamWatchdog({
@@ -447,7 +449,7 @@ export class MistralAdapter<
       } finally {
         watchdog.dispose();
       }
-    }, this.retry);
+    }, retry);
   }
 }
 

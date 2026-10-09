@@ -207,6 +207,19 @@ function deepInfraFailureMessage(error: ProviderAdapterError): string | undefine
   return undefined;
 }
 
+const safeReasonCodePattern = /^[a-z][a-z0-9_]{0,63}$/u;
+
+/** Name the adapter's fixed diagnostic code; provider text and content are never used. */
+function invalidResponseReasonSuffix(error: ProviderAdapterError): string {
+  const first = error.diagnostics[0]?.code;
+  if (first === undefined || !safeReasonCodePattern.test(first)) return "";
+  if (first === "malformed_stream") {
+    const specific = error.diagnosticCounts.find(({ code }) => safeReasonCodePattern.test(code));
+    if (specific !== undefined) return ` Reason: ${specific.code}.`;
+  }
+  return ` Reason: ${first}.`;
+}
+
 function providerFailureMessage(error: ProviderAdapterError): string {
   const transportMessage = deepInfraProfileTransportFailureMessage(error);
   if (transportMessage !== undefined) return transportMessage;
@@ -249,7 +262,7 @@ function providerFailureMessage(error: ProviderAdapterError): string {
     case "invalid-request":
       return "The provider rejected the extraction request. Check the model configuration and retry.";
     case "invalid-response":
-      return "The provider returned an invalid extraction response. Retry or check the configured model.";
+      return `The provider returned an invalid extraction response. Retry or check the configured model.${invalidResponseReasonSuffix(error)}`;
     case "policy":
       return "The provider did not accept this extraction request under its policy. Check provider settings.";
     case "unknown":

@@ -400,7 +400,7 @@ describe("Mistral adapter", () => {
     const { adapter } = harness(async () => body as AsyncIterable<unknown>);
     const error = await rejection(adapter.execute(request()));
     expect(error.code).toBe("invalid-response");
-    expect(error.retryable).toBe(false);
+    expect(error.retryable).toBe(true);
     expect(error.diagnostics).toEqual([{ code: "malformed_stream", path: "response" }]);
     expect(error.diagnosticCounts).toHaveLength(1);
   });
@@ -746,7 +746,7 @@ describe("Mistral interrupted streams", () => {
     const { adapter, stream } = harness(async () => streamOf(events));
     const error = await rejection(adapter.execute(request()));
     expect(error.code).toBe("invalid-response");
-    expect(error.retryable).toBe(false);
+    expect(error.retryable).toBe(true);
     expect(error.diagnostics).toEqual([{ code: "incomplete_stream", path: "response" }]);
     expect(JSON.stringify(error.metadata) + error.message).not.toContain(secretMarker);
     expect(stream).toHaveBeenCalledTimes(1);
@@ -763,5 +763,91 @@ describe("Mistral interrupted streams", () => {
     const error = await rejection(adapter.execute(request()));
     expect(error.diagnostics).toEqual([{ code: "malformed_response", path: "response" }]);
     expect(error.message).not.toContain(secretMarker);
+    expect(error.retryable).toBe(false);
+  });
+});
+
+describe("Mistral broken-reply retries", () => {
+  const retry = { maxRetries: 1, baseDelayMs: 1, sleep: noSleep } as const;
+  const cutOffEvents = [chunk({ content: `{"answer":"${secretMarker}` })];
+
+  it("retries a stream that ends without a finish reason and returns the next output", async () => {
+    const stream = vi
+      .fn<Stream>()
+      .mockImplementationOnce(async () => streamOf(cutOffEvents))
+      .mockResolvedValueOnce(completion());
+    const adapter = new MistralAdapter(
+      { chat: { stream } },
+      { configuredModel: selection(), retry },
+    );
+    expect((await adapter.execute(request())).output).toEqual({ answer: "ok" });
+    expect(stream).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["invalid JSON", { content: "not json" }],
+    ["empty output", { content: "" }],
+    ["an unfinished response", { finishReason: "error" }],
+  ])("retries %s once and then succeeds", async (_label, broken) => {
+    const stream = vi
+      .fn<Stream>()
+      .mockImplementationOnce(async () => completion(broken))
+      .mockResolvedValueOnce(completion());
+    const adapter = new MistralAdapter(
+      { chat: { stream } },
+      { configuredModel: selection(), retry },
+    );
+    expect((await adapter.execute(request())).output).toEqual({ answer: "ok" });
+    expect(stream).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a malformed stream up to the bounded limit", async () => {
+    const stream = vi.fn<Stream>(async () => streamOf([{}]));
+    const adapter = new MistralAdapter(
+      { chat: { stream } },
+      { configuredModel: selection(), retry: { ...retry, maxRetries: 2 } },
+    );
+    const error = await rejection(adapter.execute(request()));
+    expect(error.diagnostics).toEqual([{ code: "malformed_stream", path: "response" }]);
+    expect(stream).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["a schema mismatch", { content: '{"answer":7}' }, "output_schema_mismatch"],
+    ["a refusal", { content: "", finishReason: "content_filter" }, "refusal"],
+    [
+      "the output limit",
+      { content: '{"answer":"tru', finishReason: "length" },
+      "output_token_limit_reached",
+    ],
+    ["the context limit", { finishReason: "model_length" }, "context_length_reached"],
+    ["an unexpected model", { model: "mistral-small-4" }, "unexpected_response_model"],
+  ])("does not retry %s", async (_label, broken, code) => {
+    const stream = vi.fn<Stream>(async () => completion(broken));
+    const adapter = new MistralAdapter(
+      { chat: { stream } },
+      { configuredModel: selection(), retry },
+    );
+    const error = await rejection(adapter.execute(request()));
+    expect(error.diagnostics).toEqual([{ code, path: "response" }]);
+    expect(error.retryable).toBe(false);
+    expect(stream).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops during the retry delay when the caller cancels", async () => {
+    const controller = new AbortController();
+    const sleep = vi.fn(() => never());
+    const stream = vi.fn<Stream>(async () => streamOf(cutOffEvents));
+    const adapter = new MistralAdapter(
+      { chat: { stream } },
+      { configuredModel: selection(), retry: { maxRetries: 2, baseDelayMs: 1, sleep } },
+    );
+    const pending = rejection(adapter.execute(request({ signal: controller.signal })));
+    await vi.waitFor(() => expect(sleep).toHaveBeenCalledTimes(1));
+    controller.abort();
+    const error = await pending;
+    expect(error.code).toBe("cancelled");
+    expect(error.retryable).toBe(false);
+    expect(stream).toHaveBeenCalledTimes(1);
   });
 });

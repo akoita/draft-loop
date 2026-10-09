@@ -22,6 +22,19 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Codes for a reply that was cut off or garbled in transit. A fresh attempt can succeed, so
+ * these are retried. Schema mismatches, limits, refusals, and an unexpected model are
+ * deterministic for the same request and stay non-retryable.
+ */
+export const retryableMistralResponseCodes: ReadonlySet<string> = new Set([
+  "invalid_json",
+  "missing_output",
+  "incomplete_stream",
+  "incomplete_response",
+  "malformed_stream",
+]);
+
 export function failResponse(
   message: string,
   code: string,
@@ -29,7 +42,7 @@ export function failResponse(
   diagnosticCounts?: readonly { readonly code: string; readonly count: number }[],
 ): ProviderAdapterError {
   return new ProviderAdapterError(mistralProvider, "invalid-response", message, {
-    retryable: false,
+    retryable: retryableMistralResponseCodes.has(code),
     failureStage,
     diagnostics: [{ code, path: "response" }],
     ...(diagnosticCounts === undefined ? {} : { diagnosticCounts }),
@@ -43,6 +56,35 @@ export function canceledError(): ProviderAdapterError {
     "The Mistral request was cancelled.",
     { retryable: false },
   );
+}
+
+/**
+ * Wrap the retry delay so a caller cancellation ends the wait at once instead of after the
+ * backoff, which now also precedes retries of broken replies.
+ */
+export function cancellableSleep(
+  sleep: ((ms: number) => Promise<void>) | undefined,
+  signal: AbortSignal | undefined,
+): (ms: number) => Promise<void> {
+  const wait = sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  if (signal === undefined) return wait;
+  return (ms) => {
+    if (signal.aborted) return Promise.reject(canceledError());
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = () => reject(canceledError());
+      signal.addEventListener("abort", onAbort, { once: true });
+      wait(ms).then(
+        () => {
+          signal.removeEventListener("abort", onAbort);
+          resolve();
+        },
+        (error: unknown) => {
+          signal.removeEventListener("abort", onAbort);
+          reject(error instanceof Error ? error : new Error("The retry delay failed."));
+        },
+      );
+    });
+  };
 }
 
 function streamTimeoutError(
