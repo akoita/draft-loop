@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ApplicationSummaryView } from "./application-contract.js";
+import { ApplicationSetupSummary } from "./application-setup-summary.js";
 import {
   type CredentialProvider,
   type ModelCompany,
@@ -2602,6 +2603,30 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(addUrl === undefined ? {} : { onAddUrl: addUrl })}
       jobRequirements={jobRequirementsBinding}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
+      {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")
+        ? {
+            setupSummary: (
+              <ApplicationSetupSummary
+                key={state.workspaceId}
+                workspaceId={state.workspaceId}
+                evidenceCapabilities={activePort}
+                evidenceRevision={knowledgeRevision}
+                legacyEvidenceSourceCount={state.setup.evidenceSourceCount}
+                profileCapabilities={activePort}
+                selectedProfile={selectedCandidateProfile}
+                onSelectProfile={onCandidateProfileSelectionChange}
+                author={state.providerTransmissionPreflight.author}
+                critic={state.providerTransmissionPreflight.critic}
+                writingPolicyStatus={state.setup.writingPolicyStatus}
+                writingPolicyVersion={state.setup.writingPolicy?.version ?? null}
+                disabled={modelSettingsDisabled}
+                onManageEvidence={openEvidenceScreen}
+                onManageProfile={openProfileScreen}
+                onOpenSettings={goHome}
+              />
+            ),
+          }
+        : {})}
     />
   );
 }

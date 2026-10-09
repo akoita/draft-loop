@@ -317,13 +317,22 @@ flow, described next.
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
 from its own reviewed brief, or from its own job text when it has none.
-**← Home** beside its name returns to Home. Its setup cards cover only that
-application (the target job and the writing policy). Provider sign-in is
-workspace-level and lives in Home's Workspace settings; a line on the screen
-says so, with an **Open Home** button, and the command palette's **Open
-provider authentication** goes there too. The Career evidence and retrieval
-panels remain on the screen; the Career evidence card does not. Focus moves to the screen's location line when a
-screen opens, so the change is announced.
+**← Home** beside its name returns to Home. Focus moves to the screen's location
+line when a screen opens, so the change is announced.
+
+Before a run, the screen keeps only what starting a review needs:
+
+- **Job and requirements.** The requirements brief and its review action;
+  replacing the job description is behind a disclosure.
+- **Summary cards.** Career evidence, Career profile and Workspace settings
+  (model pair, writing policy, provider sign-in) each show their status and
+  open their own screen. The Career profile card selects the latest reviewed
+  profile, as New application does, and offers the other reviewed versions.
+- **Data sent.** One line names the writer and reviewer; the full transmission
+  detail is behind **See exactly what is sent**, and the acknowledgement stays
+  visible while it is required.
+- **Start.** The per-job writing policy override sits under **Advanced**, then
+  autopilot, **Start author–critic review** and the list of blockers.
 
 ### New application
 
@@ -546,7 +555,7 @@ pnpm --filter @draft-loop/cli start start ./workspace \
   --allow-provider-data
 ```
 
-In the desktop, the **Target job description** setup card offers **Extract
+In the desktop, the **Job and requirements** card offers **Extract
 requirements** when the workspace has a job description and no reviewed brief
 is selected. It asks for consent first, naming the configured writing model and
 saying that only the job description is sent, never career evidence. **Extract**
@@ -1066,7 +1075,7 @@ A policy may contain `Tone`, `Spelling locale`, `Verbosity`, `Page target`,
 anti-formulaic defaults are transparent and enabled unless the policy says
 `Anti-formulaic defaults: disabled`.
 
-In the desktop, **Edit policy** on the Writing policy setup card opens the
+In the desktop, **Edit policy** in Home's Workspace settings opens the
 active policy as text, or the default policy when the workspace has none.
 Tone, verbosity, page target and spelling locale selectors rewrite the matching
 `Name: value` lines, and editing the text updates the selectors. Saving creates

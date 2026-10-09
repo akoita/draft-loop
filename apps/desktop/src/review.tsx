@@ -87,6 +87,12 @@ interface ReviewWorkspaceProps {
   readonly writingPolicyAction?: ReactNode;
   /** Opens Home, where workspace-level setup (provider authentication) lives. */
   readonly onOpenHome?: () => void;
+  /**
+   * Compact cards for the inputs that have their own screens (career evidence, career profile,
+   * workspace settings). When set, the setup screen shows them in place of the full panels and
+   * keeps only what starting a review needs.
+   */
+  readonly setupSummary?: ReactNode;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -1074,6 +1080,7 @@ export function ReviewWorkspace({
   profilePanel,
   writingPolicyAction,
   onOpenHome,
+  setupSummary,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
@@ -2152,28 +2159,10 @@ export function ReviewWorkspace({
     );
   };
 
-  const renderProviderTransmissionPreflight = () => {
+  const renderProviderTransmissionPreflight = (compact = false) => {
     const preflight = state.providerTransmissionPreflight;
-    return (
-      <section
-        className={`provider-preflight${preflight.required && !preflight.acknowledged ? " provider-preflight-required" : ""}`}
-        aria-labelledby="provider-preflight-title"
-      >
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">Provider transmission preflight</p>
-            <h2 id="provider-preflight-title">
-              {preflight.required ? "Review data leaving this workspace" : "Demo remains local"}
-            </h2>
-          </div>
-          <span className="status-tag">
-            {preflight.required
-              ? preflight.acknowledged
-                ? "Acknowledged"
-                : "Acknowledgement required"
-              : "No network transmission"}
-          </span>
-        </div>
+    const details = (
+      <>
         <dl className="preflight-policy-grid">
           <div>
             <dt>Data class</dt>
@@ -2231,6 +2220,46 @@ export function ReviewWorkspace({
             ))}
           </ul>
         </div>
+      </>
+    );
+    return (
+      <section
+        className={`provider-preflight${preflight.required && !preflight.acknowledged ? " provider-preflight-required" : ""}`}
+        aria-labelledby="provider-preflight-title"
+      >
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Provider transmission preflight</p>
+            <h2 id="provider-preflight-title">
+              {preflight.required ? "Review data leaving this workspace" : "Demo remains local"}
+            </h2>
+          </div>
+          <span className="status-tag">
+            {preflight.required
+              ? preflight.acknowledged
+                ? "Acknowledged"
+                : "Acknowledgement required"
+              : "No network transmission"}
+          </span>
+        </div>
+        {compact ? (
+          <>
+            {preflight.required ? (
+              <p className="preflight-summary">
+                The review sends the job, your profile and selected evidence excerpts to{" "}
+                {preflight.author.company} · {preflight.author.model} (writer) and{" "}
+                {preflight.critic.company} · {preflight.critic.model} (reviewer), for at most{" "}
+                {preflight.budget.maxRounds} rounds. Your complete evidence is never sent.
+              </p>
+            ) : null}
+            <details className="setup-details">
+              <summary>See exactly what is sent</summary>
+              {details}
+            </details>
+          </>
+        ) : (
+          details
+        )}
         {preflight.required && !preflight.acknowledged ? (
           <div className="preflight-acknowledgement">
             <label>
@@ -2291,6 +2320,66 @@ export function ReviewWorkspace({
         .getElementById(jobRequirementsExtractionId)
         ?.scrollIntoView?.({ block: "center", behavior: "smooth" });
     };
+    const compact = setupSummary !== undefined;
+    const jobDescriptionInputs = (
+      <>
+        <button
+          className="button button-quiet"
+          type="button"
+          disabled={onSelectFiles === undefined}
+          onClick={() => onSelectFiles?.("job-description")}
+        >
+          {state.setup.jobDescriptionReady ? "Replace job description" : "Add job description"}
+        </button>
+        <label className="url-input-label">
+          <span>Or provide a public URL</span>
+          <input
+            className="url-input"
+            type="url"
+            placeholder="https://…"
+            value={jobUrl}
+            onChange={(event) => setJobUrl(event.target.value)}
+            aria-label="Target job description URL"
+          />
+        </label>
+        <button
+          className="button button-outline"
+          type="button"
+          disabled={onAddUrl === undefined || jobUrl.trim() === ""}
+          onClick={() => submitUrl("job-description")}
+        >
+          Review and fetch job URL
+        </button>
+      </>
+    );
+    // The writing policy is workspace-level and lives on Home; only the per-job override stays.
+    const renderOpportunityOverride = () => (
+      <details className="setup-details setup-advanced">
+        <summary>Advanced: writing policy override for this job</summary>
+        <p className="setup-note">
+          Import a policy version for this reviewed job without changing the workspace policy.
+        </p>
+        <button
+          className="button button-outline"
+          type="button"
+          disabled={onSelectFiles === undefined || state.setup.reviewedOpportunity == null}
+          onClick={() => onSelectFiles?.("writing-policy-override")}
+        >
+          Import opportunity override
+        </button>
+        {state.setup.reviewedOpportunity == null ? (
+          <span className="setup-retrieval-status">
+            Review the requirements before importing an override.
+          </span>
+        ) : null}
+        {state.setup.pendingWritingPolicyOverride == null ? null : (
+          <span className="setup-retrieval-status" role="status">
+            Selected override {state.setup.pendingWritingPolicyOverride.version} (
+            {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)}).
+          </span>
+        )}
+      </details>
+    );
     const renderBlockerAction = () => {
       if (reviewedRequirements !== null) {
         return (
@@ -2337,65 +2426,62 @@ export function ReviewWorkspace({
               </div>
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
-              <p className="eyebrow">Before the first run</p>
-              <h2 id="onboarding-title">Bring your career evidence into the loop</h2>
-              <p className="onboarding-copy">
-                Add the career evidence DraftLoop is allowed to use. Your files stay in this
-                workspace. DraftLoop will not invent missing experience or start an agent run until
-                the target job and career evidence are present.
-              </p>
+              {compact ? (
+                <>
+                  <p className="eyebrow">Before the review</p>
+                  <h2 id="onboarding-title">Start the review</h2>
+                  <p className="onboarding-copy">
+                    Check what this review uses, then start it. Each card opens the screen where you
+                    change it.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="eyebrow">Before the first run</p>
+                  <h2 id="onboarding-title">Bring your career evidence into the loop</h2>
+                  <p className="onboarding-copy">
+                    Add the career evidence DraftLoop is allowed to use. Your files stay in this
+                    workspace. DraftLoop will not invent missing experience or start an agent run
+                    until the target job and career evidence are present.
+                  </p>
+                </>
+              )}
               {errorMessage ? (
                 <div className="error-banner" role="alert">
                   <p>{errorMessage}</p>
                 </div>
               ) : null}
-              <div className="setup-grid">
+              <div className={compact ? "application-setup" : "setup-grid"}>
                 <article
                   className={`setup-card${state.setup.jobDescriptionReady ? " setup-card-ready" : ""}`}
+                  {...(compact ? { "aria-labelledby": "application-job-title" } : {})}
                 >
                   <div className="setup-card-head">
-                    <span className="setup-number">01</span>
+                    {compact ? (
+                      <strong id="application-job-title">Job and requirements</strong>
+                    ) : (
+                      <span className="setup-number">01</span>
+                    )}
                     <span
                       className={`setup-state${state.setup.jobDescriptionReady ? " setup-state-ready" : ""}`}
                     >
                       {state.setup.jobDescriptionReady ? "Ready" : "Required"}
                     </span>
                   </div>
-                  <strong>Target job description</strong>
+                  {compact ? null : <strong>Target job description</strong>}
                   <span>
                     {state.setup.jobDescriptionReady
                       ? "Ready for review"
                       : "Required input missing"}
                   </span>
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    disabled={onSelectFiles === undefined}
-                    onClick={() => onSelectFiles?.("job-description")}
-                  >
-                    {state.setup.jobDescriptionReady
-                      ? "Replace job description"
-                      : "Add job description"}
-                  </button>
-                  <label className="url-input-label">
-                    <span>Or provide a public URL</span>
-                    <input
-                      className="url-input"
-                      type="url"
-                      placeholder="https://…"
-                      value={jobUrl}
-                      onChange={(event) => setJobUrl(event.target.value)}
-                      aria-label="Target job description URL"
-                    />
-                  </label>
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    disabled={onAddUrl === undefined || jobUrl.trim() === ""}
-                    onClick={() => submitUrl("job-description")}
-                  >
-                    Review and fetch job URL
-                  </button>
+                  {compact && state.setup.jobDescriptionReady ? (
+                    <details className="setup-details">
+                      <summary>Replace the job description</summary>
+                      {jobDescriptionInputs}
+                    </details>
+                  ) : (
+                    jobDescriptionInputs
+                  )}
                   {latestBrief != null && requirementsBinding !== undefined ? (
                     <LatestRequirementsBriefView
                       latest={latestBrief}
@@ -2452,94 +2538,99 @@ export function ReviewWorkspace({
                     </div>
                   ) : null}
                 </article>
-                <article
-                  className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
-                >
-                  <div className="setup-card-head">
-                    <span className="setup-number">02</span>
-                    <span
-                      className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
+                {compact ? (
+                  setupSummary
+                ) : (
+                  <article
+                    className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
+                  >
+                    <div className="setup-card-head">
+                      <span className="setup-number">02</span>
+                      <span
+                        className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
+                      >
+                        {state.setup.writingPolicyStatus === "active"
+                          ? "Active"
+                          : state.setup.writingPolicyStatus === "unavailable"
+                            ? "Needs attention"
+                            : "Optional"}
+                      </span>
+                    </div>
+                    <strong>Writing policy</strong>
+                    <span>
+                      {state.setup.writingPolicyStatus === "unavailable"
+                        ? "The configured policy cannot be read; replace it before starting"
+                        : state.setup.writingPolicy === null
+                          ? "Add explicit rules for both author and critic"
+                          : `Applied as ${state.setup.writingPolicy.version}`}
+                    </span>
+                    <span className="setup-note">
+                      Policy content stays local to this workspace and is kept separate from career
+                      evidence. Runs record only its version and checksum in ordinary review status.
+                    </span>
+                    {state.setup.writingPolicy === null ? null : (
+                      <span className="setup-retrieval-status" role="status">
+                        Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
+                      </span>
+                    )}
+                    {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
+                      <span className="setup-retrieval-status" role="status">
+                        History:{" "}
+                        {state.setup.writingPolicyHistory
+                          ?.map(
+                            (policy) =>
+                              `${policy.version} (${policyChecksumLabel(policy.checksum)})`,
+                          )
+                          .join(" · ")}
+                      </span>
+                    ) : null}
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      disabled={onSelectFiles === undefined}
+                      onClick={() => onSelectFiles?.("writing-policy")}
                     >
-                      {state.setup.writingPolicyStatus === "active"
-                        ? "Active"
-                        : state.setup.writingPolicyStatus === "unavailable"
-                          ? "Needs attention"
-                          : "Optional"}
+                      {state.setup.writingPolicyStatus === "none"
+                        ? "Choose policy file"
+                        : "Replace policy"}
+                    </button>
+                    {writingPolicyAction}
+                    <button
+                      className="button button-outline"
+                      type="button"
+                      disabled={
+                        onSelectFiles === undefined || state.setup.reviewedOpportunity == null
+                      }
+                      title={
+                        state.setup.reviewedOpportunity == null
+                          ? "Review an opportunity before importing an override."
+                          : "Import a policy version for this reviewed opportunity without changing the global policy."
+                      }
+                      onClick={() => onSelectFiles?.("writing-policy-override")}
+                    >
+                      Import opportunity override
+                    </button>
+                    {state.setup.reviewedOpportunity == null ? (
+                      <span className="setup-retrieval-status">
+                        Review an opportunity before importing an override.
+                      </span>
+                    ) : null}
+                    {state.setup.pendingWritingPolicyOverride == null ? null : (
+                      <span className="setup-retrieval-status" role="status">
+                        Selected override {state.setup.pendingWritingPolicyOverride.version} (
+                        {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
+                        bound to brief{" "}
+                        {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
+                        {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
+                      </span>
+                    )}
+                    <span className="setup-note">
+                      Importing an opportunity override does not change the global policy.
                     </span>
-                  </div>
-                  <strong>Writing policy</strong>
-                  <span>
-                    {state.setup.writingPolicyStatus === "unavailable"
-                      ? "The configured policy cannot be read; replace it before starting"
-                      : state.setup.writingPolicy === null
-                        ? "Add explicit rules for both author and critic"
-                        : `Applied as ${state.setup.writingPolicy.version}`}
-                  </span>
-                  <span className="setup-note">
-                    Policy content stays local to this workspace and is kept separate from career
-                    evidence. Runs record only its version and checksum in ordinary review status.
-                  </span>
-                  {state.setup.writingPolicy === null ? null : (
-                    <span className="setup-retrieval-status" role="status">
-                      Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
-                    </span>
-                  )}
-                  {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
-                    <span className="setup-retrieval-status" role="status">
-                      History:{" "}
-                      {state.setup.writingPolicyHistory
-                        ?.map(
-                          (policy) => `${policy.version} (${policyChecksumLabel(policy.checksum)})`,
-                        )
-                        .join(" · ")}
-                    </span>
-                  ) : null}
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    disabled={onSelectFiles === undefined}
-                    onClick={() => onSelectFiles?.("writing-policy")}
-                  >
-                    {state.setup.writingPolicyStatus === "none"
-                      ? "Choose policy file"
-                      : "Replace policy"}
-                  </button>
-                  {writingPolicyAction}
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    disabled={
-                      onSelectFiles === undefined || state.setup.reviewedOpportunity == null
-                    }
-                    title={
-                      state.setup.reviewedOpportunity == null
-                        ? "Review an opportunity before importing an override."
-                        : "Import a policy version for this reviewed opportunity without changing the global policy."
-                    }
-                    onClick={() => onSelectFiles?.("writing-policy-override")}
-                  >
-                    Import opportunity override
-                  </button>
-                  {state.setup.reviewedOpportunity == null ? (
-                    <span className="setup-retrieval-status">
-                      Review an opportunity before importing an override.
-                    </span>
-                  ) : null}
-                  {state.setup.pendingWritingPolicyOverride == null ? null : (
-                    <span className="setup-retrieval-status" role="status">
-                      Selected override {state.setup.pendingWritingPolicyOverride.version} (
-                      {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
-                      bound to brief{" "}
-                      {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
-                      {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
-                    </span>
-                  )}
-                  <span className="setup-note">
-                    Importing an opportunity override does not change the global policy.
-                  </span>
-                </article>
+                  </article>
+                )}
               </div>
-              {state.setup.fixtureMode ? null : (
+              {compact || state.setup.fixtureMode ? null : (
                 <p className="setup-note provider-signin-note">
                   Provider sign-in is in Home → Workspace settings.
                   {onOpenHome === undefined ? null : (
@@ -2552,8 +2643,8 @@ export function ReviewWorkspace({
                   )}
                 </p>
               )}
-              {renderProviderTransmissionPreflight()}
-              {profilePanel}
+              {renderProviderTransmissionPreflight(compact)}
+              {compact ? null : profilePanel}
               {reviewedRequirements === null || rawJobKey === null ? null : (
                 <StartRequirementsSourceView
                   selection={reviewedRequirements}
@@ -2563,6 +2654,7 @@ export function ReviewWorkspace({
                   onUseReviewed={() => setRawJobChoice(null)}
                 />
               )}
+              {compact ? renderOpportunityOverride() : null}
               <div className="onboarding-footer">
                 <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
                 <span>
@@ -2672,7 +2764,7 @@ export function ReviewWorkspace({
             </div>
           </header>
 
-          {state.state === "stopped" ? profilePanel : null}
+          {state.state === "stopped" ? (setupSummary ?? profilePanel) : null}
 
           {errorMessage ? (
             <div className="error-banner" role="alert">

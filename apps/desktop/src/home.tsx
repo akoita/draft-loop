@@ -86,7 +86,8 @@ function Chip({ tone, children }: { readonly tone: HomeTone; readonly children: 
   return <span className={`home-chip home-chip-${tone}`}>{children}</span>;
 }
 
-function SummaryCard({
+/** A status card: title, one-line purpose, a chip, and the action that opens its screen. */
+export function SummaryCard({
   id,
   title,
   subtitle,
