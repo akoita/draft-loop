@@ -1614,7 +1614,7 @@ describe("native host", () => {
     expect(JSON.stringify(derived)).not.toContain("/private/kb");
   });
 
-  it("keeps profile derivation messages generic outside profile derivation", async () => {
+  it("shows a refused start's application message instead of the generic sentence", async () => {
     const root = "/local/profile-derivation-error-workspace";
     const fixture = service(root);
     fixture.service.start.mockRejectedValueOnce(
@@ -1633,7 +1633,7 @@ describe("native host", () => {
 
     expect(started).toMatchObject({
       ok: false,
-      error: { message: "Starting the review failed with an unexpected error." },
+      error: { message: canonicalCandidateProfileDerivationErrorMessage },
     });
   });
 

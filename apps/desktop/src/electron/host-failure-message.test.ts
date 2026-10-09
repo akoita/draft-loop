@@ -1,4 +1,6 @@
 import {
+  CliUserError,
+  JobRequirementUserError,
   OpportunityJobPageUnreadableError,
   opportunityJobPageUnreadableMessage,
 } from "@draft-loop/application";
@@ -26,6 +28,42 @@ describe("unreadable job page failure", () => {
     );
     expect(hostFailureMessage(create, new Error("private page text"))).toBe(
       "The opportunity action failed with an unexpected error.",
+    );
+  });
+});
+
+describe("refused run start or resume", () => {
+  const dispatch = (type: string) =>
+    ({ type: "review.dispatch", input: { action: { type } } }) as never;
+  const runStart = { type: "run.start", input: {} } as never;
+  const generic = "Starting the review failed with an unexpected error.";
+
+  it("shows a CliUserError message on a review start, a run start and a resume", () => {
+    const error = new CliUserError("The selected candidate profile version is not reviewed.");
+    expect(hostFailureMessage(dispatch("start"), error)).toBe(error.message);
+    expect(hostFailureMessage(runStart, error)).toBe(error.message);
+    expect(hostFailureMessage(dispatch("resume"), error)).toBe(error.message);
+  });
+
+  it("keeps a plain Error generic", () => {
+    expect(hostFailureMessage(dispatch("start"), new Error("boom"))).toBe(generic);
+    expect(hostFailureMessage(runStart, new Error("boom"))).toBe(generic);
+  });
+
+  it("prefers the requirement summary over the full message", () => {
+    const error = new JobRequirementUserError("No requirements were found.");
+    expect(hostFailureMessage(dispatch("start"), error)).toBe("No requirements were found.");
+  });
+
+  it("keeps a message that quotes a path generic", () => {
+    const error = new CliUserError("No DraftLoop workspace found at /home/me/work.");
+    expect(hostFailureMessage(dispatch("start"), error)).toBe(generic);
+  });
+
+  it("does not widen to other review actions", () => {
+    const error = new CliUserError("Refused.");
+    expect(hostFailureMessage(dispatch("pause"), error)).toBe(
+      "Pausing the review failed with an unexpected error.",
     );
   });
 });

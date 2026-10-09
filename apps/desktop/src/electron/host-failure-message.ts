@@ -95,6 +95,16 @@ function startsRun(command: BridgeCommand): boolean {
   );
 }
 
+function resumesRun(command: BridgeCommand): boolean {
+  return (
+    command.type === "run.resume" ||
+    (command.type === "review.dispatch" && command.input.action.type === "resume")
+  );
+}
+
+// Some application messages quote a workspace path; one with a path separator is never shown.
+const pathSeparator = /[\\/]/u;
+
 function hasBridgeErrorCode(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   try {
@@ -120,6 +130,14 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
     return error.message;
   }
   if (startsRun(command) && error instanceof JobRequirementUserError) return error.summary;
+  // A refused start or resume is worded for a person; a message that quotes a path stays generic.
+  if (
+    (startsRun(command) || resumesRun(command)) &&
+    error instanceof CliUserError &&
+    !pathSeparator.test(error.message)
+  ) {
+    return error.message;
+  }
   if (command.type === "profile.derive") {
     const message = userFixableProfileDerivationMessage(error);
     if (message !== undefined) return message;
