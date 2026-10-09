@@ -6,6 +6,7 @@ import {
   JobRequirementUserError,
   SourceIngestionUserError,
 } from "@draft-loop/application";
+import { SemanticValidationError } from "@draft-loop/domain";
 import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it } from "vitest";
 import { DesktopBridgeError } from "../native.js";
@@ -217,6 +218,99 @@ describe("packaged desktop host diagnostics", () => {
     } finally {
       rmSync(userDataDirectory, { recursive: true, force: true });
     }
+  });
+
+  describe("error cause summaries", () => {
+    function recordCause(cause: unknown): Record<string, unknown> {
+      const userDataDirectory = tempUserData();
+      try {
+        const logger = createHostErrorLogger(userDataDirectory);
+        const error = new Error("private derivation message", { cause });
+        expect(logger.record(error, "profile.derive")).toBe(true);
+        const current = readFileSync(join(userDataDirectory, "diagnostics", filenames[0]), "utf8");
+        expect(current).not.toMatch(/private/u);
+        const [record] = readRecords(userDataDirectory, filenames[0]);
+        if (record === undefined) throw new Error("expected a record");
+        return record;
+      } finally {
+        rmSync(userDataDirectory, { recursive: true, force: true });
+      }
+    }
+
+    it("records semantic validation issue locations without array indices", () => {
+      const record = recordCause(
+        new SemanticValidationError([
+          {
+            code: "invalid-value",
+            field: "facts[12].provenance",
+            message: "must reference a selected source.",
+          },
+          { code: "invalid-value", field: "facts[3].skills[40]", message: "must be unique." },
+        ]),
+      );
+      expect(record).toMatchObject({
+        capability: "profile.derive",
+        errorClass: "Error",
+        code: "unknown",
+        causeClass: "SemanticValidationError",
+        causeDetails: [
+          "facts[].provenance: must reference a selected source.",
+          "facts[].skills[]: must be unique.",
+        ],
+      });
+    });
+
+    it("records Zod-like issue codes and paths with numeric segments hidden", () => {
+      const cause = Object.assign(new Error("private zod message"), {
+        name: "ZodError",
+        issues: [
+          { code: "invalid_type", path: ["facts", 7, "category"], message: "private value" },
+          { code: "too_big", path: [], message: "private" },
+        ],
+      });
+      expect(recordCause(cause)).toMatchObject({
+        causeClass: "ZodError",
+        causeDetails: ["invalid_type at facts[].category", "too_big at "],
+      });
+    });
+
+    it("drops unsafe details, caps the list, and restricts the class name", () => {
+      const safe = Array.from({ length: 8 }, (_, index) => ({
+        field: `facts[${index}].label`,
+        message: "must be present.",
+      }));
+      const cause = Object.assign(new Error("private"), {
+        name: "Bad Name",
+        issues: [
+          { field: "facts[0]", message: 'contains "a quoted value"' },
+          { field: "facts[1]", message: "it's a quoted value" },
+          { field: "facts[2]", message: "x".repeat(201) },
+          ...safe,
+        ],
+      });
+      const record = recordCause(cause);
+      expect(record.causeClass).toBe("UnknownError");
+      expect(record.causeDetails).toEqual(Array(5).fill("facts[].label: must be present."));
+    });
+
+    it("omits cause fields when the error has no Error cause", () => {
+      expect(Object.keys(recordCause("a string cause")).sort()).toEqual([
+        "capability",
+        "code",
+        "errorClass",
+        "timestamp",
+      ]);
+      const userDataDirectory = tempUserData();
+      try {
+        const logger = createHostErrorLogger(userDataDirectory);
+        expect(logger.record(new Error("private"), "run.start")).toBe(true);
+        const [record] = readRecords(userDataDirectory, filenames[0]);
+        expect(record).not.toHaveProperty("causeClass");
+        expect(record).not.toHaveProperty("causeDetails");
+      } finally {
+        rmSync(userDataDirectory, { recursive: true, force: true });
+      }
+    });
   });
 });
 

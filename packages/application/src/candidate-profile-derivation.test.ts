@@ -203,6 +203,40 @@ describe("canonical candidate profile derivation", () => {
     expect(saveCanonicalCandidateProfile).not.toHaveBeenCalled();
   });
 
+  it("keeps the failure cause off the fixed message so local diagnostics can classify it", async () => {
+    const storageFailure = new Error("private storage path /home/candidate/workspace.sqlite");
+    const service = createCanonicalCandidateProfileDerivationService({
+      persistence: {
+        getLatestCanonicalCandidateProfile: vi.fn(async () => undefined),
+        saveCanonicalCandidateProfile: vi.fn(),
+      },
+      extractor: { extract: vi.fn() },
+      knowledgeService: {
+        createKnowledgeSelectionSnapshot: vi.fn(async () => {
+          throw storageFailure;
+        }),
+      },
+      openKnowledgeStore: vi.fn(),
+      now: () => createdAt,
+    });
+
+    const failure = await service
+      .deriveCanonicalCandidateProfile({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        selections: [{ storeRoot: "/private/store", knowledgeBaseId: "knowledge-1" }],
+        allowProviderData: true,
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toBe(canonicalCandidateProfileDerivationErrorMessage);
+    expect((failure as Error).cause).toBe(storageFailure);
+  });
+
   it("rejects path-bearing snapshot identities before reading or persistence", async () => {
     const selected = snapshot();
     const selectedEntry = selected.entries[0];
