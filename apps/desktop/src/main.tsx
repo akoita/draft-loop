@@ -2275,13 +2275,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     />
   );
 
-  const knowledgePanel = (
+  const knowledgePanelFor = (embedded: boolean) => (
     <KnowledgeWorkspace
       key={state.workspaceId}
       workspaceId={state.workspaceId}
       capabilities={activePort}
       revision={knowledgeRevision}
       storeFormRequest={storeFormRequest}
+      embedded={embedded}
       disabled={
         busy ||
         profilePendingForActiveWorkspace ||
@@ -2296,6 +2297,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       }
     />
   );
+  const knowledgePanel = knowledgePanelFor(false);
 
   const retrievalPanel = hasAnySemanticRetrievalCapability(activePort) ? (
     <SemanticRetrievalPanel
@@ -2646,9 +2648,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 selectFiles === undefined ? undefined : () => selectFiles("evidence")
               }
               onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
+              knowledgeBase={knowledgePanelFor(true)}
             />
           }
-          knowledge={knowledgePanel}
           retrieval={retrievalPanel}
         />
       ),

@@ -3294,6 +3294,18 @@ input[type="checkbox"] {
   margin: 0;
 }
 
+.knowledge-section {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.knowledge-section h3 {
+  margin: 0;
+}
+
 .knowledge-panel .eyebrow {
   margin-bottom: var(--space-1);
 }

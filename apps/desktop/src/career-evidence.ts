@@ -1,4 +1,8 @@
-import type { KnowledgeReadinessResult, KnowledgeUrlImportResult } from "./bridge.js";
+import type {
+  KnowledgeDirectoryImportResult,
+  KnowledgeReadinessResult,
+  KnowledgeUrlImportResult,
+} from "./bridge.js";
 import type { KnowledgeIntakeResult } from "./knowledge-intake.js";
 import type {
   DesktopKnowledgeCapabilities,
@@ -163,6 +167,7 @@ export function careerEvidenceReadinessText(
 
 export type CareerEvidenceSource =
   | { readonly kind: "file" }
+  | { readonly kind: "directory" }
   | { readonly kind: "url"; readonly url: string };
 
 /** Says what adding the source did: new source, new version of one, or already there. */
@@ -170,11 +175,18 @@ function careerEvidenceAddLead(
   result: KnowledgeIntakeResult | KnowledgeUrlImportResult,
   displayName: string,
 ): string {
+  if ("status" in result) return folderAddLead(result, displayName);
   const outcome = "outcome" in result ? result.outcome : undefined;
   if (outcome === "new-version") return `Added a new version of that file to ${displayName}.`;
   const created =
     outcome !== undefined ? outcome === "added" : !("created" in result) || result.created;
   return created ? `Added to ${displayName}.` : `Already in ${displayName}.`;
+}
+
+/** Says how many of the folder's files reached the base, and when the import stopped early. */
+function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
+  const lead = `Added ${plural(result.sourceCount, "source")} from the folder to ${displayName}.`;
+  return result.status === "partial" ? `${lead} Some files could not be imported.` : lead;
 }
 
 export type CareerEvidenceAddOutcome =
@@ -200,6 +212,7 @@ export async function addCareerEvidence(input: {
 }): Promise<CareerEvidenceAddOutcome> {
   const { capabilities, target } = input;
   const importFile = capabilities.importCandidateKnowledgeFile;
+  const importDirectory = capabilities.importCandidateKnowledgeDirectory;
   const importUrl = capabilities.importCandidateKnowledgeUrl;
   const readReadiness = capabilities.getCandidateKnowledgeReadiness;
   if (readReadiness === undefined) throw new Error("Career evidence intake is unavailable");
@@ -207,12 +220,19 @@ export async function addCareerEvidence(input: {
   if (input.source.kind === "file") {
     if (importFile === undefined) throw new Error("Career evidence intake is unavailable");
     result = await importFile(target.storeId, target.knowledgeBaseId);
+  } else if (input.source.kind === "directory") {
+    if (importDirectory === undefined) throw new Error("Career evidence intake is unavailable");
+    result = await importDirectory(target.storeId, target.knowledgeBaseId);
   } else {
     if (importUrl === undefined) throw new Error("Career evidence intake is unavailable");
     result = await importUrl(target.storeId, target.knowledgeBaseId, input.source.url);
   }
   if (result.storeId !== target.storeId || result.knowledgeBaseId !== target.knowledgeBaseId) {
     throw new Error("Imported source result did not match the selected knowledge base");
+  }
+  // An empty folder adds nothing, so a first add must not go on to select an empty base.
+  if ("status" in result && result.sourceCount === 0) {
+    throw new Error("The folder has no supported files to add.");
   }
   await input.afterImport?.();
   if (!input.isCurrent()) return { status: "stale" };

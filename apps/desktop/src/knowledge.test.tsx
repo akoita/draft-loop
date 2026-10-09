@@ -11,7 +11,11 @@ import {
   savedKnowledgeUnavailableMessage,
   selectCandidateKnowledgeBaseAndRefresh,
 } from "./knowledge.js";
-import { autoCreateHint, differentStoreDisclosureLabel } from "./knowledge-current.js";
+import {
+  autoCreateHint,
+  differentStoreDisclosureLabel,
+  embeddedAutoCreateHint,
+} from "./knowledge-current.js";
 
 const store: KnowledgeStoreResult = {
   storeId: "store-1",
@@ -124,6 +128,64 @@ describe("desktop candidate knowledge workspace", () => {
     );
     expect(html).not.toContain("Create knowledge store");
     expect(html).not.toContain("Open knowledge store");
+  });
+
+  it("renders as the Knowledge base section of the Career evidence card when embedded", () => {
+    const html = renderToStaticMarkup(
+      <KnowledgeWorkspace
+        workspaceId="workspace-1"
+        capabilities={workspaceCapabilities}
+        disabled={false}
+        embedded
+        onPendingChange={noop}
+        onSelectionSaved={async () => true}
+      />,
+    );
+    expect(html).toMatch(/^<section class="knowledge-section"/);
+    expect(html).toContain(
+      '<h3 id="candidate-knowledge-heading" tabindex="-1">Knowledge base</h3>',
+    );
+    expect(html).not.toContain("Manage career evidence");
+    expect(html).not.toContain("eyebrow");
+    expect(html).toContain("Where your evidence is kept.");
+    expect(html).toContain('id="candidate-knowledge-name"');
+    expect(html).not.toContain(autoCreateHint);
+    expect(html).not.toContain(embeddedAutoCreateHint);
+  });
+
+  it("renders nothing embedded when the host lacks the knowledge capabilities", () => {
+    expect(
+      renderToStaticMarkup(
+        <KnowledgeWorkspace
+          workspaceId="workspace-1"
+          capabilities={{}}
+          disabled={false}
+          embedded
+          onPendingChange={noop}
+          onSelectionSaved={async () => true}
+        />,
+      ),
+    ).toBe("");
+  });
+
+  it("leaves adding to the card: an embedded list has no Add file or Add directory", () => {
+    const html = renderToStaticMarkup(
+      <KnowledgeBaseList
+        storeId="store-1"
+        knowledgeBases={activeKnowledgeBases(store)}
+        disabled={false}
+        intakeSupported
+        showIntake={false}
+        workspaceSourcesSupported
+        onSelect={noop}
+        onImport={noop}
+      />,
+    );
+    expect(html).toContain(">Use this knowledge base<");
+    expect(html).toContain(">Import legacy workspace evidence<");
+    expect(html).not.toContain(">Add file<");
+    expect(html).not.toContain(">Add directory<");
+    expect(html).not.toContain("intake is unavailable");
   });
 
   it("renders each knowledge base as a card with a Default chip and styled actions", () => {

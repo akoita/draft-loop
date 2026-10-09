@@ -169,13 +169,15 @@ base; legacy workspace evidence (the workspace `evidence` folder) is used only
 when none is selected. A workspace without a base gets one created, with a
 visible one-time import of its legacy evidence.
 
-In a collecting or stopped desktop workspace, **Career evidence** can
-create or open a local store. Choose **Use this knowledge base** to replace
+The desktop Career evidence page has one **Career evidence** panel. Its top
+part shows the base the workspace uses and is the one place to add evidence:
+**Add files** and **Add folder** open a native picker, and a public URL is
+fetched after you approve it. Everything you add goes into the base in use.
+
+Its **Knowledge base** section can create or open a local store. In a
+collecting or stopped workspace, choose **Use this knowledge base** to replace
 the workspace selection with one active base. This clears the selected
 canonical profile so you can review a profile against the new selection.
-Use **Add file** or **Add directory** beside an active base to import local
-material through a native picker. The result reports complete or partial intake
-and source readiness; importing does not select that base for the workspace.
 
 **Import legacy workspace evidence** imports all supported files from this
 workspace’s legacy evidence directory into the chosen base. This

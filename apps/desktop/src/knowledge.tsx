@@ -6,6 +6,7 @@ import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import {
   autoCreateHint,
   differentStoreDisclosureLabel,
+  embeddedAutoCreateHint,
   isNewStoreFormRequest,
   knowledgeStoreFormPresentation,
   reloadedKnowledgeAction,
@@ -31,6 +32,11 @@ export interface KnowledgeWorkspaceProps {
   readonly storeFormRequest?: number;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
   readonly onSelectionSaved: (workspaceId: string) => Promise<boolean>;
+  /**
+   * Renders as the Knowledge base section inside the Career evidence card, which owns adding
+   * evidence: the section only chooses the base, imports legacy evidence and switches the store.
+   */
+  readonly embedded?: boolean;
 }
 
 export function hasDesktopKnowledgeCapabilities(
@@ -97,6 +103,8 @@ export interface KnowledgeBaseListProps {
   readonly knowledgeBases: readonly KnowledgeBaseSummary[];
   readonly disabled: boolean;
   readonly intakeSupported: boolean;
+  /** False when the add actions live elsewhere, such as the Career evidence card. */
+  readonly showIntake?: boolean;
   readonly workspaceSourcesSupported: boolean;
   /** Bases of this store the workspace already uses; marked "In use". */
   readonly selectedKnowledgeBaseIds?: readonly string[];
@@ -113,6 +121,7 @@ export function KnowledgeBaseList({
   knowledgeBases,
   disabled,
   intakeSupported,
+  showIntake = true,
   workspaceSourcesSupported,
   selectedKnowledgeBaseIds = [],
   onSelect,
@@ -138,7 +147,7 @@ export function KnowledgeBaseList({
               >
                 {inUse ? "In use" : "Use this knowledge base"}
               </button>
-              {intakeSupported ? (
+              {showIntake && intakeSupported ? (
                 <>
                   <button
                     type="button"
@@ -159,7 +168,7 @@ export function KnowledgeBaseList({
                 </>
               ) : null}
             </div>
-            {intakeSupported ? null : (
+            {!showIntake || intakeSupported ? null : (
               <p className="knowledge-hint">
                 File and directory intake is unavailable in this desktop host.
               </p>
@@ -232,6 +241,7 @@ export function KnowledgeWorkspace({
   storeFormRequest = 0,
   onPendingChange,
   onSelectionSaved,
+  embedded = false,
 }: KnowledgeWorkspaceProps) {
   const supported = hasDesktopKnowledgeCapabilities(capabilities);
   const [store, setStore] = useState<KnowledgeStoreResult | null>(null);
@@ -499,6 +509,7 @@ export function KnowledgeWorkspace({
   };
 
   if (!supported) {
+    if (embedded) return null;
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
         <h2 id="candidate-knowledge-heading" tabIndex={-1}>
@@ -555,19 +566,29 @@ export function KnowledgeWorkspace({
   );
 
   return (
-    <section className="panel knowledge-panel" aria-labelledby="candidate-knowledge-heading">
-      <div>
-        <p className="eyebrow">Career evidence</p>
-        <h2 id="candidate-knowledge-heading" tabIndex={-1}>
-          Manage career evidence
-        </h2>
-      </div>
+    <section
+      className={embedded ? "knowledge-section" : "panel knowledge-panel"}
+      aria-labelledby="candidate-knowledge-heading"
+    >
+      {embedded ? (
+        <h3 id="candidate-knowledge-heading" tabIndex={-1}>
+          Knowledge base
+        </h3>
+      ) : (
+        <div>
+          <p className="eyebrow">Career evidence</p>
+          <h2 id="candidate-knowledge-heading" tabIndex={-1}>
+            Manage career evidence
+          </h2>
+        </div>
+      )}
       <p className="knowledge-copy">
-        Reusable career evidence, kept separate from application material. Choosing a base replaces
-        this workspace’s current knowledge selection.
+        {embedded
+          ? "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
+          : "Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection."}
       </p>
       {showAutoCreateHint({ hasStore: store !== null, autoCreateSupported, savedUnavailable }) ? (
-        <p className="knowledge-hint">{autoCreateHint}</p>
+        <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
       ) : null}
       {pending ? (
         <p className="knowledge-status" role="status">
@@ -586,6 +607,7 @@ export function KnowledgeWorkspace({
           knowledgeBases={knowledgeBases}
           disabled={controlsDisabled}
           intakeSupported={intakeSupported}
+          showIntake={!embedded}
           workspaceSourcesSupported={workspaceSourcesSupported}
           selectedKnowledgeBaseIds={
             selection !== null && selection.storeId === store.storeId ? selection.ids : []

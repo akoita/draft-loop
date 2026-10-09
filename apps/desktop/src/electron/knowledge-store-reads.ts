@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import type { CandidateKnowledgeStoreService } from "@draft-loop/application";
 
 /**
- * The store reads the desktop panels issue side by side: the Manage career evidence panel, card
+ * The store reads the desktop panels issue side by side: the Knowledge base section, card
  * 02's readiness line, and the review's source count all open the same store at once.
  *
  * Opening a store takes the store's writer lease with no wait, so two overlapping opens made one

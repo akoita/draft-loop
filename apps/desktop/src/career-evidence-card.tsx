@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import {
   addCareerEvidence,
@@ -31,14 +31,14 @@ export interface CareerEvidenceBinding {
   readonly revision: number;
   readonly disabled: boolean;
   readonly onChanged: (workspaceId: string) => Promise<boolean>;
-  /** Asks the Manage career evidence panel to open its create-or-open form and focus it. */
+  /** Asks the Knowledge base section to open its create-or-open form and focus it. */
   readonly onRequestStoreForm?: () => void;
   readonly onPendingChange: (workspaceId: string, pending: boolean) => void;
 }
 
 export const knowledgeStoreFocusTargetId = "candidate-knowledge-heading";
 
-/** Takes the person to the Manage career evidence panel, where they can manage or switch the base. */
+/** Takes the person to the Knowledge base section, where they can choose or switch the base. */
 export function focusKnowledgeStore(documentRef: Document = document): boolean {
   const target = documentRef.getElementById(knowledgeStoreFocusTargetId);
   if (target === null) return false;
@@ -85,13 +85,18 @@ export interface CareerEvidenceCardViewProps {
   readonly url: string;
   readonly onUrlChange: (url: string) => void;
   readonly onAddFile: () => void;
+  /** Imports a whole folder into the base; shown only when evidence goes into a knowledge base. */
+  readonly onAddFolder?: () => void;
   readonly onAddUrl: () => void;
   readonly onChooseKnowledgeBase: () => void;
-  /** Takes the person to the panel that manages the selected base; shown only with a base. */
-  readonly onManage?: () => void;
   /** False when the host offers no way to add files or a URL in the current mode. */
   readonly canAddFile: boolean;
   readonly canAddUrl: boolean;
+  /**
+   * The Knowledge base section: which base the workspace uses, the legacy import and the store.
+   * It sits inside the card so the page has one place for career evidence.
+   */
+  readonly knowledgeBase?: ReactNode;
   /**
    * True when the host can create and select a knowledge base itself, so a workspace without one
    * is not left on the legacy path unless the person declines.
@@ -111,14 +116,15 @@ export function CareerEvidenceCardView({
   url,
   onUrlChange,
   onAddFile,
+  onAddFolder,
   onAddUrl,
   onChooseKnowledgeBase,
-  onManage,
   canAddFile,
   canAddUrl,
   automatic = false,
   onImportLegacy,
   onDeclineLegacy,
+  knowledgeBase = null,
 }: CareerEvidenceCardViewProps) {
   const ready = careerEvidenceReady(status, setup.evidenceSourceCount);
   const legacyCount = setup.evidenceSourceCount;
@@ -157,16 +163,11 @@ export function CareerEvidenceCardView({
           {status.semanticLine === null ? null : (
             <span className="setup-card-line">{status.semanticLine}</span>
           )}
-          {onManage === undefined ? null : (
-            <button className="button button-quiet" type="button" onClick={onManage}>
-              Manage
-            </button>
-          )}
         </>
       ) : status.kind === "unavailable" ? (
         <span role="status">
-          The selected knowledge base could not be opened. Open its store in the Manage career
-          evidence section below.
+          The selected knowledge base could not be opened. Open its store in the Knowledge base
+          section below.
         </span>
       ) : status.kind === "none" && mode === "offer" ? (
         <>
@@ -260,6 +261,16 @@ export function CareerEvidenceCardView({
           >
             {fileLabel}
           </button>
+          {inKnowledgeBase && onAddFolder !== undefined ? (
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={addDisabled}
+              onClick={onAddFolder}
+            >
+              Add folder
+            </button>
+          ) : null}
           <label className="url-input-label">
             <span>Or provide a public URL</span>
             <input
@@ -281,6 +292,7 @@ export function CareerEvidenceCardView({
           </button>
         </>
       ) : null}
+      {knowledgeBase}
     </article>
   );
 }
@@ -290,6 +302,8 @@ export interface CareerEvidenceCardProps {
   readonly knowledge?: CareerEvidenceBinding | undefined;
   readonly onSelectLegacyFiles?: (() => void) | undefined;
   readonly onAddLegacyUrl?: ((url: string) => void) | undefined;
+  /** The Knowledge base section shown at the bottom of the card. */
+  readonly knowledgeBase?: ReactNode;
 }
 
 function failureText(reason: unknown): string {
@@ -304,6 +318,7 @@ export function CareerEvidenceCard({
   knowledge,
   onSelectLegacyFiles,
   onAddLegacyUrl,
+  knowledgeBase,
 }: CareerEvidenceCardProps) {
   const capabilities = knowledge?.capabilities;
   const supported = capabilities !== undefined && supportsCareerEvidence(capabilities);
@@ -490,13 +505,10 @@ export function CareerEvidenceCard({
         knowledge?.onRequestStoreForm?.();
         focusKnowledgeStore();
       }}
-      {...(status.kind === "selected"
-        ? {
-            onManage: () => {
-              focusKnowledgeStore();
-            },
-          }
+      {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeDirectory !== undefined
+        ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
         : {})}
+      knowledgeBase={knowledgeBase}
       onAddFile={() => {
         if (inKnowledgeBase) addToKnowledgeBase({ kind: "file" });
         else onSelectLegacyFiles?.();
