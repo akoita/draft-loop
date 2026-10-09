@@ -267,7 +267,10 @@ applications:
   first. A workspace with nothing but its default application says so and points
   to **New application**. Beside it, **Import from another workspace** opens a
   folder picker and imports a workspace made for one job as an application (see
-  [Importing a workspace](#importing-a-workspace)).
+  [Importing a workspace](#importing-a-workspace)). Each card has **Archive**,
+  and **Delete** when the application can be deleted (see
+  [Archiving and deleting](#archiving-and-deleting)). Archived applications sit
+  behind **Show archived**, where **Restore** brings them back.
 - **Workspace settings.** The configured model pair with **Change models**, the
   writing policy editor, and **Manage provider authentication**, which opens
   the provider sign-in dialog described under
@@ -369,11 +372,13 @@ or review of another application's brief is refused. Without an `applicationId`
 the default application keeps the workspace's own latest and reviewed brief.
 
 The bridge exposes `application.list`, `application.get`,
-`application.create` and `application.import`. `application.create` takes the job
+`application.create`, `application.import`, `application.archive` (with
+`archived: true` or `false`) and `application.delete`. `application.create` takes the job
 as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
 takes only the workspace id: the host shows the folder picker, so no path crosses
 the bridge in either direction. Results carry the name, job source kind,
-status, timestamps, run, brief and export counts, and the latest run id, never a
+status, timestamps, run, brief and export counts, the latest run id and when it
+was archived, never a
 path, URL or job text. An import also returns content-free counts of what it
 copied. `review.load`, `review.dispatch` and `run.start` accept an
 optional `applicationId`.
@@ -485,7 +490,8 @@ pnpm --filter @draft-loop/cli start start ./workspace --application app-01234567
   that application. Without the option the brief belongs to the default
   application.
 - **Service only.** The application service (`createApplication`,
-  `listApplications`, `getApplication`, `importApplication`) also accepts an approved URL as a job
+  `listApplications`, `getApplication`, `importApplication`,
+  `archiveApplication`, `deleteApplication`) also accepts an approved URL as a job
   source. A URL application
   starts a run only with a reviewed opportunity brief, and a brief belonging to
   another application is refused.
@@ -528,6 +534,28 @@ pnpm --filter @draft-loop/cli start application import ./home-workspace \
 - **Refusals.** A folder that is not a DraftLoop workspace, the current
   workspace itself, and a workspace without a job description are refused with a
   sentence that names no path.
+
+### Archiving and deleting
+
+Archive an application to take it off the main list. Nothing it holds changes,
+and it can be restored at any time:
+
+```sh
+pnpm --filter @draft-loop/cli start application archive app-0123456789ab ./workspace
+pnpm --filter @draft-loop/cli start application restore app-0123456789ab ./workspace
+pnpm --filter @draft-loop/cli start application delete app-0123456789ab ./workspace
+```
+
+- **Archive.** Any application can be archived, the default one included. It is
+  still listed (`application list` marks it `(archived)`), can still be opened,
+  and keeps its runs, briefs and exports.
+- **Delete.** Only a created application with no runs, briefs or exports can be
+  deleted. It is removed with its stored job text; a referenced job file is left
+  in place. Runs and briefs are kept as history, so an application that holds
+  any is refused with "can only be archived". The default application is the
+  workspace's own job and is never deleted.
+- **Desktop.** Home asks for confirmation before deleting, naming the
+  application.
 
 ## Opportunity briefs
 

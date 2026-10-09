@@ -146,6 +146,74 @@ describe("application storage", () => {
     storage = new SqliteStorage(filename);
   });
 
+  it("archives and restores applications, including the default one", async () => {
+    const { applications } = storage;
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-a",
+      name: "A",
+      jobSource,
+      createdAt,
+    });
+    expect(await applications.listArchived(workspaceId)).toEqual(new Map());
+
+    await applications.setArchived(workspaceId, "app-a", "2030-01-03T00:00:00.000Z");
+    await applications.setArchived(workspaceId, "app-a", "2030-01-04T00:00:00.000Z");
+    await applications.setArchived(workspaceId, "default", "2030-01-05T00:00:00.000Z");
+    expect(await applications.listArchived(workspaceId)).toEqual(
+      new Map([
+        ["app-a", "2030-01-03T00:00:00.000Z"],
+        ["default", "2030-01-05T00:00:00.000Z"],
+      ]),
+    );
+    expect(await applications.listArchived("another-workspace")).toEqual(new Map());
+
+    await applications.setArchived(workspaceId, "app-a", null);
+    await applications.setArchived(workspaceId, "app-a", null);
+    expect([...(await applications.listArchived(workspaceId)).keys()]).toEqual(["default"]);
+  });
+
+  it("deletes an empty application and refuses one that holds runs or briefs", async () => {
+    const { applications } = storage;
+    for (const id of ["app-empty", "app-run", "app-brief"]) {
+      await applications.insertApplication({ workspaceId, id, name: id, jobSource, createdAt });
+    }
+    await applications.setArchived(workspaceId, "app-empty", createdAt);
+    await applications.bindRun({
+      workspaceId,
+      applicationId: "app-run",
+      runId: "run-1",
+      createdAt,
+    });
+    await applications.bindBrief({
+      workspaceId,
+      applicationId: "app-brief",
+      briefId: "brief-1",
+      createdAt,
+    });
+
+    await applications.deleteApplication(workspaceId, "app-empty");
+    expect(await applications.getApplication(workspaceId, "app-empty")).toBeUndefined();
+    expect(await applications.listArchived(workspaceId)).toEqual(new Map());
+
+    await expect(applications.deleteApplication(workspaceId, "app-run")).rejects.toBeInstanceOf(
+      StorageConflictError,
+    );
+    await expect(applications.deleteApplication(workspaceId, "app-brief")).rejects.toBeInstanceOf(
+      StorageConflictError,
+    );
+    await expect(applications.deleteApplication(workspaceId, "default")).rejects.toBeInstanceOf(
+      StorageValidationError,
+    );
+    await expect(applications.deleteApplication(workspaceId, "app-empty")).rejects.toBeInstanceOf(
+      StorageValidationError,
+    );
+    expect((await applications.listApplications(workspaceId)).map((item) => item.id)).toEqual([
+      "app-brief",
+      "app-run",
+    ]);
+  });
+
   it("applies migration 30 to an existing database without touching existing rows", async () => {
     storage.close();
     // A v29 database has no application tables or migration row; every other table is the same.
@@ -162,7 +230,7 @@ describe("application storage", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(30);
+    expect(storage.appliedMigrationVersions().at(-1)).toBe(31);
     expect((await storage.getWorkspace(workspaceId))?.createdAt).toBe(createdAt);
     expect(await storage.applications.listApplications(workspaceId)).toEqual([]);
     expect(await storage.applications.listRuns(workspaceId, "default")).toEqual([]);

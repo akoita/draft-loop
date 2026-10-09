@@ -1327,7 +1327,7 @@ export class StorageUnavailableError extends Error {
   }
 }
 
-export const storageSchemaVersion = 30 as const;
+export const storageSchemaVersion = 31 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3298,7 +3298,7 @@ const migrations: readonly Migration[] = [
   sourceSensitivityRulesMigration,
   vectorIndex.candidateKnowledgeVectorIndexMigration,
   semanticTrace.semanticRetrievalTraceMigration,
-  applicationStore.applicationMigration,
+  ...applicationStore.applicationMigrations,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;

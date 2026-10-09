@@ -44,6 +44,8 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "application.get": "Reading the application",
   "application.create": "Creating the application",
   "application.import": "Importing the workspace as an application",
+  "application.archive": "Archiving the application",
+  "application.delete": "Deleting the application",
   "run.status": "Reading the review status",
   "run.start": "Starting the review",
   "run.pause": "Pausing the review",
@@ -148,9 +150,13 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   if (command.type === "writing-policy.save" && error instanceof CliUserError) {
     return error.message;
   }
-  // Creating an application fails with a fixed sentence about the name or the pasted job text.
+  // Creating, importing, archiving or deleting an application fails with a fixed sentence about
+  // the name, the pasted job text or why it can only be archived; it names no path.
   if (
-    (command.type === "application.create" || command.type === "application.import") &&
+    (command.type === "application.create" ||
+      command.type === "application.import" ||
+      command.type === "application.archive" ||
+      command.type === "application.delete") &&
     error instanceof CliUserError
   ) {
     return error.message;

@@ -22,6 +22,7 @@ const application: ApplicationSummaryView = {
   briefCount: 1,
   exportCount: 0,
   latestRunId: "run-2",
+  archivedAt: null,
 };
 
 function portReturning(value: unknown) {
@@ -293,6 +294,70 @@ describe("application.import", () => {
       { workspaceId: "workspace-1", application },
     ]) {
       await expect(portReturning(bad).execute(command)).resolves.toMatchObject({ ok: false });
+    }
+  });
+});
+
+describe("application.archive and application.delete", () => {
+  it("are advertised and accept only ids and the archive flag", () => {
+    expect(bridgeCapabilities).toContain("application.archive");
+    expect(bridgeCapabilities).toContain("application.delete");
+    for (const archived of [true, false]) {
+      const archive = {
+        type: "application.archive",
+        input: { workspaceId: "workspace-1", applicationId: "default", archived },
+      };
+      expect(validateBridgeCommand(archive)).toEqual(archive);
+    }
+    const remove = {
+      type: "application.delete",
+      input: { workspaceId: "workspace-1", applicationId: "app-1" },
+    };
+    expect(validateBridgeCommand(remove)).toEqual(remove);
+    for (const command of [
+      { type: "application.archive", input: { workspaceId: "w", applicationId: "a" } },
+      {
+        type: "application.archive",
+        input: { workspaceId: "w", applicationId: "a", archived: "yes" },
+      },
+      { type: "application.delete", input: { workspaceId: "w", applicationId: "../a" } },
+      { type: "application.delete", input: { workspaceId: "w", applicationId: "a", force: true } },
+    ]) {
+      expect(() => validateBridgeCommand(command)).toThrow();
+    }
+  });
+
+  it("accepts real results and rejects malformed ones", async () => {
+    const archived = { ...application, archivedAt: "2026-10-09T10:00:00.000Z" };
+    const archive = {
+      type: "application.archive",
+      input: { workspaceId: "workspace-1", applicationId: "app-1", archived: true },
+    } as const;
+    await expect(
+      portReturning({ workspaceId: "workspace-1", application: archived }).execute(archive),
+    ).resolves.toEqual({ ok: true, value: { workspaceId: "workspace-1", application: archived } });
+    await expect(
+      portReturning({
+        workspaceId: "workspace-1",
+        application: { ...application, archivedAt: "yesterday" },
+      }).execute(archive),
+    ).resolves.toMatchObject({ ok: false });
+
+    const remove = {
+      type: "application.delete",
+      input: { workspaceId: "workspace-1", applicationId: "app-1" },
+    } as const;
+    const deleted = { workspaceId: "workspace-1", applicationId: "app-1", deleted: true };
+    await expect(portReturning(deleted).execute(remove)).resolves.toEqual({
+      ok: true,
+      value: deleted,
+    });
+    for (const bad of [
+      { ...deleted, deleted: false },
+      { ...deleted, jobPath: "/home/me/job.md" },
+      { workspaceId: "workspace-1", applicationId: "app-1" },
+    ]) {
+      await expect(portReturning(bad).execute(remove)).resolves.toMatchObject({ ok: false });
     }
   });
 });

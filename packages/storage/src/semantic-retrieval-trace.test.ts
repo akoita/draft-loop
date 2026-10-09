@@ -345,7 +345,7 @@ describe("semantic retrieval trace companion", () => {
   });
 
   it("applies migration 29 to an existing v28 database without touching v1 traces", async () => {
-    expect(storageSchemaVersion).toBe(30);
+    expect(storageSchemaVersion).toBe(31);
     await storage.candidateKnowledgeSemanticRetrievalTrace.appendSemanticRetrievalTrace(used);
     storage.close();
 

@@ -6209,6 +6209,55 @@ input[type="checkbox"] {
   max-width: 62ch;
 }
 
+/* Card actions sit above the name's card-wide hit area so they stay clickable. */
+.application-card-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.application-card-actions .button {
+  min-height: 28px;
+}
+
+.application-card-confirm {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: var(--space-2) 0 0;
+}
+
+.application-card-confirm legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.application-card-archived {
+  background: transparent;
+}
+
+.home-archived-applications,
+.home-archived-applications-body {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.home-archived-applications-body {
+  justify-self: stretch;
+}
+
 .provider-authentication {
   display: grid;
   justify-items: start;

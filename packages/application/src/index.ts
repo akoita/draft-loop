@@ -27,7 +27,9 @@ import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunit
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
+  ArchiveApplicationCommand,
   CreateApplicationCommand,
+  DeleteApplicationCommand,
   GetApplicationCommand,
   ImportedApplicationView,
   ListApplicationsCommand,
@@ -524,6 +526,10 @@ export interface ApplicationDriver {
   readonly importApplication?: (
     command: ImportApplicationCommand,
   ) => Promise<ImportedApplicationView>;
+  /** Hides an application from the main list, or restores it; nothing it holds changes. */
+  readonly archiveApplication?: (command: ArchiveApplicationCommand) => Promise<ApplicationView>;
+  /** Deletes a created application that holds no run, brief or export. */
+  readonly deleteApplication?: (command: DeleteApplicationCommand) => Promise<void>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -671,6 +677,16 @@ export function createApplicationService(driver: ApplicationDriver): Application
       requireApplicationApi(driver.getApplication)({ ...command, root: requireRoot(command.root) }),
     importApplication: async (command) =>
       requireApplicationApi(driver.importApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    archiveApplication: async (command) =>
+      requireApplicationApi(driver.archiveApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    deleteApplication: async (command) =>
+      requireApplicationApi(driver.deleteApplication)({
         ...command,
         root: requireRoot(command.root),
       }),

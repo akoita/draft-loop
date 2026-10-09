@@ -32,6 +32,7 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     briefCount: view.briefs.length,
     exportCount: view.exports.length,
     latestRunId: newestRunId(view),
+    archivedAt: view.archivedAt,
   };
 }
 
@@ -86,6 +87,29 @@ export async function importApplicationSummary(
     application: projectApplication(result.application),
     imported: { runs, briefs, briefVersions, exports, skippedExports },
   };
+}
+
+export async function archiveApplicationSummary(
+  service: ApplicationService,
+  root: string,
+  applicationId: string,
+  archived: boolean,
+): Promise<ApplicationSummaryView> {
+  if (service.archiveApplication === undefined) {
+    throw new Error("This application service cannot archive applications.");
+  }
+  return projectApplication(await service.archiveApplication({ root, applicationId, archived }));
+}
+
+export async function deleteApplicationRecord(
+  service: ApplicationService,
+  root: string,
+  applicationId: string,
+): Promise<void> {
+  if (service.deleteApplication === undefined) {
+    throw new Error("This application service cannot delete applications.");
+  }
+  await service.deleteApplication({ root, applicationId });
 }
 
 /** An application a request is scoped to, with the run the review should open on. */

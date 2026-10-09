@@ -22,6 +22,7 @@ function application(overrides: Partial<ApplicationSummaryView> = {}): Applicati
     briefCount: 0,
     exportCount: 0,
     latestRunId: null,
+    archivedAt: null,
     ...overrides,
   };
 }
