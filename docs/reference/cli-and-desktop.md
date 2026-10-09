@@ -778,10 +778,14 @@ example, separate credentials remain separate when they share an issuer, and a
 launch date differs from a publication date. The prompt still requires genuine
 disputed claims to remain conflicts without choosing an authoritative answer.
 
-The extractor may remove one outer Markdown emphasis pair from a quote only
-when the remaining exact source text contains the entire unchanged fact value.
-Other quote mismatches remain fail-closed; fact values and source text are not
-rewritten.
+Quote and value checks ignore meaning-preserving formatting on both sides:
+Markdown emphasis and inline-code markers, leading list, heading, and
+blockquote markers, link markup reduced to its text, whitespace and line
+breaks, case, and typographic quotes, dashes, and ellipses. When a quote
+matches only this way, the extractor replaces it with the exact source text it
+matched, provided that text still contains the entire fact value. Paraphrases,
+changed numbers, and elided text remain fail-closed; fact values and source
+text are not rewritten.
 
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported

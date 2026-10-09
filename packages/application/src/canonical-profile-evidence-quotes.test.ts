@@ -89,6 +89,23 @@ describe("canonical profile evidence quote recovery", () => {
     ]);
   });
 
+  it("removes interior emphasis markers the source does not contain", () => {
+    const input = proposal([
+      {
+        key: "fact-a",
+        value: "migration",
+        sourceId: "source-a",
+        quote: "**Led a *safe* migration**",
+      },
+    ]);
+    const repaired = repairCanonicalProfileEvidenceQuotes(
+      input,
+      new Map([["source-a", "Led a safe migration across the platform."]]),
+    );
+
+    expect(repaired.facts[0]?.evidence[0]?.quote).toBe("Led a safe migration");
+  });
+
   it("preserves already exact evidence and returns the original proposal unchanged", () => {
     const input = proposal([
       {
@@ -135,12 +152,6 @@ describe("canonical profile evidence quote recovery", () => {
       "**Led a migraton**",
       "migration",
       new Map([["source-a", "Led a migration across the platform."]]),
-    ],
-    [
-      "interior emphasis",
-      "**Led a *safe* migration**",
-      "migration",
-      new Map([["source-a", "Led a safe migration across the platform."]]),
     ],
     [
       "noncontiguous source text",
@@ -243,6 +254,13 @@ describe("canonical profile evidence quote recovery", () => {
       extract([
         validFact,
         {
+          key: "interior-emphasis",
+          category: "skill",
+          field: "name",
+          value: "applications",
+          evidence: [{ sourceId: source.id, quote: "to **ship** applications" }],
+        },
+        {
           key: "unsupported-react",
           category: "skill",
           field: "name",
@@ -252,7 +270,7 @@ describe("canonical profile evidence quote recovery", () => {
       ]),
       request,
     );
-    expect(filtered.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    expect(filtered.facts.map((fact) => fact.value).sort()).toEqual(["TypeScript", "applications"]);
     expect(filtered.issues.map((issue) => issue.message)).toContain(
       "1 extracted fact was dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
     );

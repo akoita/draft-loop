@@ -1,0 +1,210 @@
+/** Synthetic Markdown career source and the quote shapes a model plausibly returns for it. */
+export const syntheticCareerSource = [
+  "# Jane Example",
+  "",
+  "## Experience",
+  "",
+  "- **Senior Engineer** at *Acme Labs* — led a platform migration",
+  "  across three production services.",
+  "* Built `CI pipelines` with [GitHub Actions](https://example.com/actions) for “release” automation.",
+  "1. Mentored 4 engineers during 2019–2021 and cut build time by 40%…",
+  "2) Shipped the \"search\" feature in the team's 'quick' sprint.",
+  "",
+  "### Skills",
+  "",
+  "- TypeScript, __Kotlin__, and snake_case_naming conventions",
+].join("\n");
+
+export interface EvidenceQuoteCase {
+  readonly label: string;
+  readonly value: string;
+  readonly quote: string;
+  readonly grounded: boolean;
+  /** Whether the pre-#1083 plain comparison already accepted the case. */
+  readonly acceptedBefore: boolean;
+}
+
+export const evidenceQuoteCases: readonly EvidenceQuoteCase[] = [
+  {
+    label: "exact quote with its own emphasis markers",
+    value: "Senior Engineer",
+    quote: "**Senior Engineer** at *Acme Labs*",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "quote without any emphasis markers",
+    value: "Acme Labs",
+    quote: "Senior Engineer at Acme Labs",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "emphasis markers added to words that have none",
+    value: "TypeScript",
+    quote: "**TypeScript**, Kotlin",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "underscore emphasis dropped",
+    value: "Kotlin",
+    quote: "TypeScript, Kotlin, and snake_case_naming",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "intra-word underscores kept",
+    value: "snake_case_naming",
+    quote: "Kotlin, and snake_case_naming conventions",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "inline code markers dropped",
+    value: "CI pipelines",
+    quote: "Built CI pipelines with",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "dash list marker included",
+    value: "Kotlin",
+    quote: "- TypeScript, Kotlin",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "different list marker style included",
+    value: "search",
+    quote: '2. Shipped the "search" feature',
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "heading marker included",
+    value: "Experience",
+    quote: "## Experience",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "heading marker stripped",
+    value: "Experience",
+    quote: "Experience",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "line-wrapped paragraph joined",
+    value: "platform migration",
+    quote: "led a platform migration across three production services.",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "line breaks and extra whitespace added",
+    value: "platform migration",
+    quote: "led   a platform\nmigration   across three",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "straight quotes for typographic source quotes",
+    value: "release",
+    quote: 'for "release" automation',
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "typographic quotes for straight source quotes",
+    value: "search",
+    quote: "Shipped the “search” feature in the team’s ‘quick’ sprint",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "hyphen for en dash",
+    value: "2019-2021",
+    quote: "during 2019-2021 and",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "hyphen for em dash",
+    value: "Acme Labs",
+    quote: "at Acme Labs - led a platform migration",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "three periods for an ellipsis character",
+    value: "40%",
+    quote: "by 40%...",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "link rendered as its text only",
+    value: "GitHub Actions",
+    quote: "with GitHub Actions for",
+    grounded: true,
+    acceptedBefore: false,
+  },
+  {
+    label: "full link markup with the link text as value",
+    value: "GitHub Actions",
+    quote: "[GitHub Actions](https://example.com/actions)",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "full link markup with the URL as value",
+    value: "https://example.com/actions",
+    quote: "[GitHub Actions](https://example.com/actions)",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "case difference in the value",
+    value: "typescript",
+    quote: "TypeScript, __Kotlin__",
+    grounded: true,
+    acceptedBefore: true,
+  },
+  {
+    label: "paraphrase of the source",
+    value: "platform migrations",
+    quote: "Led platform migrations across three services",
+    grounded: false,
+    acceptedBefore: false,
+  },
+  {
+    label: "changed number",
+    value: "5 engineers",
+    quote: "Mentored 5 engineers",
+    grounded: false,
+    acceptedBefore: false,
+  },
+  {
+    label: "elided middle of the source",
+    value: "platform migration",
+    quote: "**Senior Engineer** ... platform migration",
+    grounded: false,
+    acceptedBefore: false,
+  },
+  {
+    label: "underscores turned into spaces",
+    value: "snake case naming",
+    quote: "snake case naming conventions",
+    grounded: false,
+    acceptedBefore: false,
+  },
+  {
+    label: "value absent from a grounded quote",
+    value: "React",
+    quote: "**Senior Engineer** at *Acme Labs*",
+    grounded: false,
+    acceptedBefore: false,
+  },
+];

@@ -3,6 +3,8 @@ import type {
   CanonicalCandidateProfileProvenanceReference,
 } from "@draft-loop/schemas";
 
+import { createEvidenceSourceIndex, valueOccursInQuote } from "./evidence-text-normalization.js";
+
 export type CandidateProfileGroundingDiagnosticCode =
   | "unknown_source"
   | "quote_not_in_source"
@@ -25,10 +27,6 @@ export class CandidateProfileGroundingError extends Error {
   }
 }
 
-function normalizedSemantic(value: string): string {
-  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
-}
-
 function addCount(
   counts: Map<CandidateProfileGroundingDiagnosticCode, number>,
   code: CandidateProfileGroundingDiagnosticCode,
@@ -44,19 +42,19 @@ type ProfileReferences = ReadonlyMap<
 /**
  * The single definition of evidence grounding, shared by the whole-proposal assertion and the
  * ungrounded-fact filter so the two cannot drift: a known source with references, a quote found in
- * that source's text, and a fact value found in its quote.
+ * that source's text, and a fact value found in its quote. Quote and value comparison tolerates
+ * Markdown formatting and typographic punctuation but never paraphrase (see
+ * `evidence-text-normalization.ts`).
  */
 export function createCanonicalProfileEvidenceChecker(
   referencesByRepresentativeId: ProfileReferences,
   sourceTexts: ReadonlyMap<string, string>,
 ) {
-  const normalizedSourceTexts = new Map(
-    [...sourceTexts].map(([sourceId, text]) => [sourceId, normalizedSemantic(text)]),
-  );
+  const sourceIndex = createEvidenceSourceIndex(sourceTexts);
 
   const sourceFailures = (sourceId: string): readonly CandidateProfileGroundingDiagnosticCode[] => {
     const references = referencesByRepresentativeId.get(sourceId);
-    return references !== undefined && references.length > 0 && normalizedSourceTexts.has(sourceId)
+    return references !== undefined && references.length > 0 && sourceTexts.has(sourceId)
       ? []
       : ["unknown_source"];
   };
@@ -67,14 +65,11 @@ export function createCanonicalProfileEvidenceChecker(
   ): readonly CandidateProfileGroundingDiagnosticCode[] => {
     const unknown = sourceFailures(evidence.sourceId);
     if (unknown.length > 0) return unknown;
-    const value = normalizedSemantic(factValue);
-    const quote = normalizedSemantic(evidence.quote);
-    const sourceText = normalizedSourceTexts.get(evidence.sourceId) ?? "";
     const failures: CandidateProfileGroundingDiagnosticCode[] = [];
-    if (quote.length === 0 || !sourceText.includes(quote)) failures.push("quote_not_in_source");
-    if (value.length === 0 || quote.length === 0 || !quote.includes(value)) {
-      failures.push("value_not_in_quote");
+    if (!sourceIndex.containsQuote(evidence.sourceId, evidence.quote)) {
+      failures.push("quote_not_in_source");
     }
+    if (!valueOccursInQuote(factValue, evidence.quote)) failures.push("value_not_in_quote");
     return failures;
   };
 

@@ -368,8 +368,9 @@ source IDs through a strict extraction port.
 The strict provider proposal can describe all canonical fact categories and
 relationships but cannot choose persisted IDs, provenance kinds, review state,
 severity, or messages. Each proposed fact must include an evidence quote that
-occurs in its cited normalized source and contains the proposed value; the quote
-is checked locally and is not persisted. The application maps valid citations back to exact selected CKB
+occurs in its cited normalized source and contains the proposed value, ignoring
+Markdown formatting and typographic punctuation but not wording; the quote is
+checked locally and is not persisted. The application maps valid citations back to exact selected CKB
 versions, generates deterministic IDs, keeps conflicting and duplicate facts
 (local conflicts only for known single-valued fields such as title or start date),
 adds visible category omissions, builds a draft, and appends it through the
