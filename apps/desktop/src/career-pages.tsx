@@ -6,7 +6,7 @@ import {
   careerEvidenceIntro,
   careerProfileIntro,
 } from "./career-flow.js";
-import { WorkspaceLocation } from "./home.js";
+import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 
 interface CareerPageFrameProps {
   readonly page: Extract<CareerFlowStep, "evidence" | "profile">;
@@ -15,9 +15,9 @@ interface CareerPageFrameProps {
   readonly workspaceTitle: ReactNode;
   readonly workspaceNavigation: ReactNode;
   readonly errorMessage: string | null;
-  readonly onHome: () => void;
-  /** The other career page, offered next to the flow strip when the host supports it. */
-  readonly sibling?: { readonly label: string; readonly onOpen: () => void };
+  readonly back: WorkspaceBack;
+  /** The pages the flow strip's other steps open. */
+  readonly onOpenStep: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
   readonly children: ReactNode;
 }
 
@@ -28,8 +28,8 @@ function CareerPageFrame({
   workspaceTitle,
   workspaceNavigation,
   errorMessage,
-  onHome,
-  sibling,
+  back,
+  onOpenStep,
   children,
 }: CareerPageFrameProps) {
   return (
@@ -38,7 +38,7 @@ function CareerPageFrame({
         <div className="main-column">
           <header className="home-header">
             <div className="home-header-identity">
-              <WorkspaceLocation current={current} onHome={onHome} />
+              <WorkspaceLocation current={current} back={back} />
               {workspaceTitle}
             </div>
             <div className="home-header-actions">{workspaceNavigation}</div>
@@ -50,12 +50,7 @@ function CareerPageFrame({
           )}
           <div className="home-profile-screen">
             <div className="career-page-lead">
-              <CareerFlowStrip current={page} />
-              {sibling === undefined ? null : (
-                <button className="button button-quiet" type="button" onClick={sibling.onOpen}>
-                  {sibling.label}
-                </button>
-              )}
+              <CareerFlowStrip current={page} onOpen={onOpenStep} />
             </div>
             <p className="career-page-intro">{intro}</p>
             {children}
@@ -70,7 +65,12 @@ export interface CareerPageProps {
   readonly workspaceTitle: ReactNode;
   readonly workspaceNavigation: ReactNode;
   readonly errorMessage: string | null;
-  readonly onHome: () => void;
+  readonly back: WorkspaceBack;
+  /**
+   * The pages the flow strip opens: Applications opens Home, and Career profile is absent when
+   * the host has no profile workflow.
+   */
+  readonly onOpenStep: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
 }
 
 export interface CareerEvidencePageProps extends CareerPageProps {
@@ -80,8 +80,6 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly knowledge: ReactNode;
   /** The retrieval mode and embedding model panel, when the host offers it. */
   readonly retrieval?: ReactNode;
-  /** Opens the profile page; absent when the host has no profile workflow. */
-  readonly onManageProfile?: () => void;
 }
 
 /** The raw material the candidate provides. Manage evidence opens it. */
@@ -89,7 +87,6 @@ export function CareerEvidencePage({
   card = null,
   knowledge,
   retrieval = null,
-  onManageProfile,
   ...frame
 }: CareerEvidencePageProps) {
   return (
@@ -98,9 +95,6 @@ export function CareerEvidencePage({
       page="evidence"
       current="Career evidence"
       intro={careerEvidenceIntro}
-      {...(onManageProfile === undefined
-        ? {}
-        : { sibling: { label: "Manage profile", onOpen: onManageProfile } })}
     >
       {card}
       {knowledge}
@@ -112,23 +106,12 @@ export function CareerEvidencePage({
 export interface CareerProfilePageProps extends CareerPageProps {
   /** The canonical profile workflow: generate or update, review facts, saved profiles, history. */
   readonly workflow: ReactNode;
-  readonly onManageEvidence: () => void;
 }
 
 /** The reviewed record built from the evidence. Manage profile opens it. */
-export function CareerProfilePage({
-  workflow,
-  onManageEvidence,
-  ...frame
-}: CareerProfilePageProps) {
+export function CareerProfilePage({ workflow, ...frame }: CareerProfilePageProps) {
   return (
-    <CareerPageFrame
-      {...frame}
-      page="profile"
-      current="Career profile"
-      intro={careerProfileIntro}
-      sibling={{ label: "Manage evidence", onOpen: onManageEvidence }}
-    >
+    <CareerPageFrame {...frame} page="profile" current="Career profile" intro={careerProfileIntro}>
       {workflow}
     </CareerPageFrame>
   );

@@ -1,5 +1,13 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  StrictMode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import type { ApplicationSummaryView } from "./application-contract.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
@@ -10,18 +18,18 @@ import {
   modelCompanies,
 } from "./bridge.js";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
+import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
   evidenceView,
   homeView,
-  newApplicationView,
   profileView,
   type WorkspaceView,
-  workspaceEntryView,
 } from "./home-model.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
+import { KeptPage } from "./kept-page.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import type {
   CandidateProfileSelection,
@@ -58,6 +66,18 @@ import {
   type WorkspaceModelSelection,
 } from "./native.js";
 import { NewApplicationFlow } from "./new-application-flow.js";
+import {
+  backTarget,
+  finishNewApplication,
+  goBack,
+  initialPageNavigation,
+  keepsNewApplicationFlow,
+  navigateTo,
+  openNewApplication,
+  type PageNavigation,
+  pageKey,
+  pageLabel,
+} from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import { ProviderAuthentication } from "./provider-authentication.js";
 import { RecentWorkspaces } from "./recent-workspaces-ui.js";
@@ -907,7 +927,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [error, setError] = useState<string | null>(null);
   const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
   // Opening a workspace lands on Home; an application's review is one screen inside it.
-  const [view, setView] = useState<WorkspaceView>(workspaceEntryView);
+  const [navigation, setNavigation] = useState<PageNavigation>(initialPageNavigation);
+  const navigationRef = useRef(navigation);
+  navigationRef.current = navigation;
+  const view = navigation.view;
+  const openPage = (to: WorkspaceView) => setNavigation((current) => navigateTo(current, to));
   const [loadedApplicationId, setLoadedApplicationId] = useState<string | null>(null);
   const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
@@ -1424,7 +1448,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
-      setView(workspaceEntryView());
+      setNavigation(initialPageNavigation());
       setLoadedApplicationId(null);
       setState(loaded);
       if (openModelEditor && activePort.configureModels !== undefined) {
@@ -1467,7 +1491,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setProfilePendingScope(null);
       setError(null);
       setImportError(null);
-      setView(workspaceEntryView());
+      setNavigation(initialPageNavigation());
       setLoadedApplicationId(null);
       setState(loaded);
     } catch {
@@ -1525,7 +1549,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       profilePendingScopeRef.current = null;
       requestedCompanies.current.clear();
 
-      setView(workspaceEntryView());
+      setNavigation(initialPageNavigation());
       setLoadedApplicationId(null);
       setState(null);
       setWorkspaceSetupVisible(true);
@@ -1566,18 +1590,30 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   };
 
-  const goHome = () => setView(homeView);
+  const goHome = () => openPage(homeView);
+  const openProfileScreen = () => openPage(profileView);
+  const openEvidenceScreen = () => openPage(evidenceView);
 
-  /** Scopes the review to one application and loads its latest run, or its empty setup. */
-  const openApplication = (application: ApplicationSummaryView) => {
+  /**
+   * Shows one application. The application the window still holds opens as it was left; any other
+   * is scoped and loads its latest run, or its empty setup.
+   */
+  const showApplication = (
+    applicationId: string,
+    move: (current: PageNavigation) => PageNavigation,
+  ) => {
     if (state === null) return;
     const workspaceId = state.workspaceId;
     const generation = workspaceGeneration;
     if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
-    activePort.selectApplication?.(application.id);
     setImportError(null);
+    if (loadedApplicationId === applicationId) {
+      setNavigation(move);
+      return;
+    }
+    activePort.selectApplication?.(applicationId);
     setLoadedApplicationId(null);
-    setView(applicationView(application.id, application.name));
+    setNavigation(move);
     void activePort
       .load()
       .then((loaded) => {
@@ -1588,18 +1624,36 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           return;
         }
         setState(loaded);
-        setLoadedApplicationId(application.id);
+        setLoadedApplicationId(applicationId);
       })
       .catch((reason: unknown) => {
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
         if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
-        setView(homeView);
+        setNavigation((current) => navigateTo(current, homeView));
         setImportError(messageOf(reason, "The application could not be opened."));
       });
   };
 
-  /** Scopes the window to the application the New application flow just created. */
-  const onApplicationCreated = (application: ApplicationSummaryView) => {
+  const openApplication = (application: ApplicationSummaryView) =>
+    showApplication(application.id, (current) =>
+      navigateTo(current, applicationView(application.id, application.name)),
+    );
+
+  /** Returns to the previous page; an application no longer loaded is loaded again. */
+  const goBackPage = () => {
+    const target = backTarget(navigationRef.current);
+    if (target === null) return;
+    if (target.kind === "application") showApplication(target.applicationId, goBack);
+    else setNavigation(goBack);
+  };
+
+  /**
+   * Scopes the window to the application the New application flow just created, unless that flow
+   * was left for good meanwhile: the person may have opened another application since.
+   */
+  const onApplicationCreated = (application: ApplicationSummaryView, flowEpoch: number) => {
+    const current = navigationRef.current;
+    if (current.newApplicationEpoch !== flowEpoch || !keepsNewApplicationFlow(current)) return;
     if (state === null) return;
     const workspaceId = state.workspaceId;
     const generation = workspaceGeneration;
@@ -1653,15 +1707,18 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setImportError(null);
       setState(next);
       setLoadedApplicationId(application.id);
-      setView(applicationView(application.id, application.name));
+      setNavigation((current) =>
+        finishNewApplication(current, {
+          kind: "application",
+          applicationId: application.id,
+          name: application.name,
+        }),
+      );
     } catch (reason: unknown) {
       if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
       throw reason;
     }
   };
-
-  const openProfileScreen = () => setView(profileView);
-  const openEvidenceScreen = () => setView(evidenceView);
 
   const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
     const settings = workspaceModelSettingsDraft(workspace);
@@ -2036,116 +2093,116 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
-  if (editingModels) {
-    return (
-      <main className="boot-shell">
-        <section className="panel boot-panel">
-          <div className="boot-brand">
-            <BrandMark />
-            <span className="brand-name">DraftLoop</span>
-            <ThemeToggle />
-          </div>
-          <p className="eyebrow">Workspace settings</p>
-          <h1>
-            {modelEditorFromCreation ? "Choose models for new runs" : "Change models for new runs"}
-          </h1>
-          <p>
-            {modelEditorFromCreation
-              ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
-              : "Existing run records stay unchanged. New runs will use the saved model pair."}
-          </p>
-          <WorkspaceModelSummary
-            title="Current configured model pair"
-            author={state.providerTransmissionPreflight.author}
-            critic={state.providerTransmissionPreflight.critic}
-          />
-          <fieldset className="model-editor-mode">
-            <legend>How to choose models</legend>
-            <div className="view-toggle">
-              <button
-                className="view-toggle-option"
-                type="button"
-                aria-pressed={modelEditorMode === "profiles"}
-                disabled={modelSettingsDisabled}
-                onClick={() => setModelEditorMode("profiles")}
-              >
-                Presets
-              </button>
-              <button
-                className="view-toggle-option"
-                type="button"
-                aria-pressed={modelEditorMode === "custom"}
-                disabled={modelSettingsDisabled}
-                onClick={() => setModelEditorMode("custom")}
-              >
-                Custom
-              </button>
-            </div>
-          </fieldset>
-          {modelEditorMode === "profiles" &&
-          activePort.configureModels !== undefined &&
-          activePort.getModelProfileSupport !== undefined ? (
-            <ModelProfilePicker
-              key={`${state.workspaceId}:${workspaceGeneration}`}
-              workspaceId={state.workspaceId}
-              generation={workspaceGeneration}
-              applied={selectedModelProfiles?.refs ?? null}
-              savedPairNotice={modelProfileNotice}
-              {...(modelEditorFromCreation
-                ? {
-                    pendingSelectionMessage: "No profile has been selected for this workspace yet.",
-                  }
-                : {})}
-              support={modelProfileSupport}
+  // The model editor covers the workspace pages rather than replacing them, so they keep their
+  // state for when it closes.
+  const modelEditorScreen = !editingModels ? null : (
+    <main className="boot-shell">
+      <section className="panel boot-panel">
+        <div className="boot-brand">
+          <BrandMark />
+          <span className="brand-name">DraftLoop</span>
+          <ThemeToggle />
+        </div>
+        <p className="eyebrow">Workspace settings</p>
+        <h1>
+          {modelEditorFromCreation ? "Choose models for new runs" : "Change models for new runs"}
+        </h1>
+        <p>
+          {modelEditorFromCreation
+            ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
+            : "Existing run records stay unchanged. New runs will use the saved model pair."}
+        </p>
+        <WorkspaceModelSummary
+          title="Current configured model pair"
+          author={state.providerTransmissionPreflight.author}
+          critic={state.providerTransmissionPreflight.critic}
+        />
+        <fieldset className="model-editor-mode">
+          <legend>How to choose models</legend>
+          <div className="view-toggle">
+            <button
+              className="view-toggle-option"
+              type="button"
+              aria-pressed={modelEditorMode === "profiles"}
               disabled={modelSettingsDisabled}
-              onApply={async (references) => {
-                const applied = await applyModelProfiles(references);
-                if (applied) {
-                  setModelEditorFromCreation(false);
-                  setEditingModels(false);
+              onClick={() => setModelEditorMode("profiles")}
+            >
+              Presets
+            </button>
+            <button
+              className="view-toggle-option"
+              type="button"
+              aria-pressed={modelEditorMode === "custom"}
+              disabled={modelSettingsDisabled}
+              onClick={() => setModelEditorMode("custom")}
+            >
+              Custom
+            </button>
+          </div>
+        </fieldset>
+        {modelEditorMode === "profiles" &&
+        activePort.configureModels !== undefined &&
+        activePort.getModelProfileSupport !== undefined ? (
+          <ModelProfilePicker
+            key={`${state.workspaceId}:${workspaceGeneration}`}
+            workspaceId={state.workspaceId}
+            generation={workspaceGeneration}
+            applied={selectedModelProfiles?.refs ?? null}
+            savedPairNotice={modelProfileNotice}
+            {...(modelEditorFromCreation
+              ? {
+                  pendingSelectionMessage: "No profile has been selected for this workspace yet.",
                 }
-                return applied;
-              }}
-              onCancel={() => {
+              : {})}
+            support={modelProfileSupport}
+            disabled={modelSettingsDisabled}
+            onApply={async (references) => {
+              const applied = await applyModelProfiles(references);
+              if (applied) {
                 setModelEditorFromCreation(false);
                 setEditingModels(false);
-              }}
-              onRetrySupport={() => setModelProfileSupportEpoch((current) => current + 1)}
-              isContextCurrent={isCurrentWorkspaceContext}
-            />
-          ) : modelEditorMode === "custom" ? (
-            <WorkspaceSetupForm
-              draft={draft}
-              discovery={discovery}
-              preview={preview}
-              typingOwnModel={typingOwnModel}
-              modelFilters={modelFilters}
-              busy={modelSettingsDisabled}
-              editMode
-              errorMessage={modelSettingsError}
-              onDraftChange={setDraft}
-              onModelFilterChange={(side, filter) =>
-                setModelFilters((current) => ({ ...current, [side]: filter }))
               }
-              onTypeOwnModel={(side) =>
-                setTypingOwnModel((current) => ({ ...current, [side]: true }))
-              }
-              onSave={() => void saveModelSettings()}
-              onCancel={() => {
-                setModelEditorFromCreation(false);
-                setEditingModels(false);
-                setModelSettingsError(null);
-              }}
-            />
-          ) : (
-            <p className="setup-blocker" role="alert">
-              Preset selection is unavailable. Choose Custom to edit the current destinations.
-            </p>
-          )}
-        </section>
-      </main>
-    );
-  }
+              return applied;
+            }}
+            onCancel={() => {
+              setModelEditorFromCreation(false);
+              setEditingModels(false);
+            }}
+            onRetrySupport={() => setModelProfileSupportEpoch((current) => current + 1)}
+            isContextCurrent={isCurrentWorkspaceContext}
+          />
+        ) : modelEditorMode === "custom" ? (
+          <WorkspaceSetupForm
+            draft={draft}
+            discovery={discovery}
+            preview={preview}
+            typingOwnModel={typingOwnModel}
+            modelFilters={modelFilters}
+            busy={modelSettingsDisabled}
+            editMode
+            errorMessage={modelSettingsError}
+            onDraftChange={setDraft}
+            onModelFilterChange={(side, filter) =>
+              setModelFilters((current) => ({ ...current, [side]: filter }))
+            }
+            onTypeOwnModel={(side) =>
+              setTypingOwnModel((current) => ({ ...current, [side]: true }))
+            }
+            onSave={() => void saveModelSettings()}
+            onCancel={() => {
+              setModelEditorFromCreation(false);
+              setEditingModels(false);
+              setModelSettingsError(null);
+            }}
+          />
+        ) : (
+          <p className="setup-blocker" role="alert">
+            Preset selection is unavailable. Choose Custom to edit the current destinations.
+          </p>
+        )}
+      </section>
+    </main>
+  );
 
   const renameWorkspace = activePort.renameWorkspace;
   const workspaceTitleNode = (
@@ -2288,7 +2345,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   );
 
   const homeAvailable = activePort.listApplications !== undefined;
-  const applicationOpen = homeAvailable && view.kind === "application";
 
   const jobRequirementsBinding: JobRequirementsExtractionBinding = {
     workspaceId: state.workspaceId,
@@ -2432,148 +2488,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     />
   );
 
-  if (homeAvailable && view.kind === "home") {
-    return (
-      <HomeScreen
-        workspaceId={state.workspaceId}
-        workspaceTitle={workspaceTitleNode}
-        workspaceNavigation={workspaceNavigationNode}
-        profileCapabilities={activePort}
-        evidenceCapabilities={activePort}
-        evidenceRevision={knowledgeRevision}
-        legacyEvidenceSourceCount={state.setup.evidenceSourceCount}
-        applicationCapabilities={activePort}
-        errorMessage={importError}
-        disabled={modelSettingsDisabled}
-        {...(activePort.createApplication === undefined
-          ? {}
-          : { onNewApplication: () => setView(newApplicationView) })}
-        onOpenApplication={openApplication}
-        onManageProfile={openProfileScreen}
-        onManageEvidence={openEvidenceScreen}
-        settings={
-          <>
-            <WorkspaceModelSummary
-              title="Configured model pair"
-              author={state.providerTransmissionPreflight.author}
-              critic={state.providerTransmissionPreflight.critic}
-              appliedProfiles={selectedModelProfiles?.refs ?? null}
-              profileWarning={modelProfileWarningText}
-            />
-            <div className="home-settings-actions">
-              {modelSettingsButton}
-              {writingPolicyNode}
-            </div>
-            {providerAuthentication}
-          </>
-        }
-      />
-    );
-  }
-
   const createApplication = activePort.createApplication;
-  if (homeAvailable && view.kind === "new-application" && createApplication !== undefined) {
-    return (
-      <NewApplicationFlow
-        workspaceId={state.workspaceId}
-        workspaceTitle={workspaceTitleNode}
-        workspaceNavigation={workspaceNavigationNode}
-        errorMessage={importError}
-        createApplication={(name, job) => createApplication(state.workspaceId, name, job)}
-        onCreated={onApplicationCreated}
-        requirements={jobRequirementsBinding}
-        profileCapabilities={activePort}
-        selectedProfile={selectedCandidateProfile}
-        onSelectProfile={onCandidateProfileSelectionChange}
-        onManageProfile={openProfileScreen}
-        modelPair={
-          <WorkspaceModelSummary
-            title="Configured model pair"
-            author={state.providerTransmissionPreflight.author}
-            critic={state.providerTransmissionPreflight.critic}
-            appliedProfiles={selectedModelProfiles?.refs ?? null}
-            profileWarning={modelProfileWarningText}
-          />
-        }
-        preflight={state.providerTransmissionPreflight}
-        startDisabledReason={
-          knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason
-        }
-        onStart={startNewApplication}
-        onHome={goHome}
-      />
-    );
-  }
-
-  if (homeAvailable && view.kind === "evidence") {
-    return (
-      <CareerEvidencePage
-        workspaceTitle={workspaceTitleNode}
-        workspaceNavigation={workspaceNavigationNode}
-        errorMessage={importError}
-        onHome={goHome}
-        card={
-          <CareerEvidenceCard
-            setup={state.setup}
-            knowledge={{
-              workspaceId: state.workspaceId,
-              capabilities: activePort,
-              revision: knowledgeRevision,
-              disabled:
-                busy ||
-                knowledgePending ||
-                profilePendingForActiveWorkspace ||
-                pendingReviewAction !== null ||
-                state.execution.status === "running",
-              onChanged: (workspaceId) =>
-                onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
-              onRequestStoreForm: () => setStoreFormRequest((current) => current + 1),
-              onPendingChange: (workspaceId, pending) =>
-                onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
-            }}
-            onSelectLegacyFiles={
-              selectFiles === undefined ? undefined : () => selectFiles("evidence")
-            }
-            onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
-          />
-        }
-        knowledge={knowledgePanel}
-        retrieval={retrievalPanel}
-        {...(profileCapabilities === null ? {} : { onManageProfile: openProfileScreen })}
-      />
-    );
-  }
-
-  if (homeAvailable && view.kind === "profile") {
-    return (
-      <CareerProfilePage
-        workspaceTitle={workspaceTitleNode}
-        workspaceNavigation={workspaceNavigationNode}
-        errorMessage={importError}
-        onHome={goHome}
-        workflow={profilePanel}
-        onManageEvidence={openEvidenceScreen}
-      />
-    );
-  }
-
-  if (
-    applicationOpen &&
-    view.kind === "application" &&
-    loadedApplicationId !== view.applicationId
-  ) {
-    return (
-      <main className="boot-shell">
-        <section className="panel boot-panel boot-panel-quiet">
-          <p className="boot-loading" role="status" aria-live="polite">
-            Opening {view.name}…
-          </p>
-        </section>
-      </main>
-    );
-  }
-
-  return (
+  /** The review and setup screen, scoped to an application when Home lists them. */
+  const reviewWorkspace = (
+    application: Extract<WorkspaceView, { kind: "application" }> | null,
+  ): ReactNode => (
     <ReviewWorkspace
       state={state}
       onAction={onAction}
@@ -2583,14 +2502,19 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       pendingReviewAction={pendingReviewAction}
       startDisabledReason={profileStartDisabledReason}
       workspaceTitle={
-        applicationOpen && view.kind === "application" ? (
-          <div className="application-title">
-            <WorkspaceLocation current={view.name} onHome={goHome} asHeading />
-          </div>
-        ) : (
+        application === null ? (
           workspaceTitleNode
+        ) : (
+          <div className="application-title">
+            <WorkspaceLocation current={application.name} back={pageBack} asHeading />
+          </div>
         )
       }
+      {...(application === null
+        ? {}
+        : {
+            pageNavigation: <CareerFlowStrip current="applications" onOpen={flowStepHandlers} />,
+          })}
       {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
       {...(writingPolicyNode === undefined ? {} : { writingPolicyAction: writingPolicyNode })}
       workspaceNavigationAction={workspaceNavigationNode}
@@ -2628,6 +2552,201 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           }
         : {})}
     />
+  );
+
+  const pageBack = (() => {
+    const target = backTarget(navigation);
+    return { label: target === null ? "Home" : pageLabel(target), onBack: goBackPage };
+  })();
+  const flowStepHandlers: Partial<Record<CareerFlowStep, () => void>> = {
+    evidence: openEvidenceScreen,
+    ...(profileCapabilities === null ? {} : { profile: openProfileScreen }),
+    applications: goHome,
+  };
+  const flowEpoch = navigation.newApplicationEpoch;
+
+  if (!homeAvailable) return modelEditorScreen ?? reviewWorkspace(null);
+
+  // Every page opened since the workspace opened stays mounted, hidden while another is shown, so
+  // returning to it finds it as it was left. The shown page comes first in the document.
+  const pages: { readonly key: string; readonly active: boolean; readonly node: ReactNode }[] = [];
+  if (navigation.visited.includes("home")) {
+    pages.push({
+      key: "home",
+      active: view.kind === "home",
+      node: (
+        <HomeScreen
+          workspaceId={state.workspaceId}
+          workspaceTitle={workspaceTitleNode}
+          workspaceNavigation={workspaceNavigationNode}
+          profileCapabilities={activePort}
+          evidenceCapabilities={activePort}
+          evidenceRevision={knowledgeRevision}
+          legacyEvidenceSourceCount={state.setup.evidenceSourceCount}
+          applicationCapabilities={activePort}
+          errorMessage={importError}
+          disabled={modelSettingsDisabled}
+          {...(activePort.createApplication === undefined
+            ? {}
+            : { onNewApplication: () => setNavigation(openNewApplication) })}
+          onOpenApplication={openApplication}
+          onManageProfile={openProfileScreen}
+          onManageEvidence={openEvidenceScreen}
+          settings={
+            <>
+              <WorkspaceModelSummary
+                title="Configured model pair"
+                author={state.providerTransmissionPreflight.author}
+                critic={state.providerTransmissionPreflight.critic}
+                appliedProfiles={selectedModelProfiles?.refs ?? null}
+                profileWarning={modelProfileWarningText}
+              />
+              <div className="home-settings-actions">
+                {modelSettingsButton}
+                {writingPolicyNode}
+              </div>
+              {providerAuthentication}
+            </>
+          }
+        />
+      ),
+    });
+  }
+  if (navigation.visited.includes("evidence")) {
+    pages.push({
+      key: "evidence",
+      active: view.kind === "evidence",
+      node: (
+        <CareerEvidencePage
+          workspaceTitle={workspaceTitleNode}
+          workspaceNavigation={workspaceNavigationNode}
+          errorMessage={importError}
+          back={pageBack}
+          onOpenStep={flowStepHandlers}
+          card={
+            <CareerEvidenceCard
+              setup={state.setup}
+              knowledge={{
+                workspaceId: state.workspaceId,
+                capabilities: activePort,
+                revision: knowledgeRevision,
+                disabled:
+                  busy ||
+                  knowledgePending ||
+                  profilePendingForActiveWorkspace ||
+                  pendingReviewAction !== null ||
+                  state.execution.status === "running",
+                onChanged: (workspaceId) =>
+                  onKnowledgeSelectionSaved(workspaceId, workspaceGeneration),
+                onRequestStoreForm: () => setStoreFormRequest((current) => current + 1),
+                onPendingChange: (workspaceId, pending) =>
+                  onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
+              }}
+              onSelectLegacyFiles={
+                selectFiles === undefined ? undefined : () => selectFiles("evidence")
+              }
+              onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
+            />
+          }
+          knowledge={knowledgePanel}
+          retrieval={retrievalPanel}
+        />
+      ),
+    });
+  }
+  if (navigation.visited.includes("profile")) {
+    pages.push({
+      key: "profile",
+      active: view.kind === "profile",
+      node: (
+        <CareerProfilePage
+          workspaceTitle={workspaceTitleNode}
+          workspaceNavigation={workspaceNavigationNode}
+          errorMessage={importError}
+          back={pageBack}
+          onOpenStep={flowStepHandlers}
+          workflow={profilePanel}
+        />
+      ),
+    });
+  }
+  // The flow keeps its step and draft while Back can still return to it.
+  if (createApplication !== undefined && keepsNewApplicationFlow(navigation)) {
+    pages.push({
+      key: `new-application:${flowEpoch}`,
+      active: view.kind === "new-application",
+      node: (
+        <NewApplicationFlow
+          workspaceId={state.workspaceId}
+          workspaceTitle={workspaceTitleNode}
+          workspaceNavigation={workspaceNavigationNode}
+          errorMessage={importError}
+          createApplication={(name, job) => createApplication(state.workspaceId, name, job)}
+          onCreated={(application) => onApplicationCreated(application, flowEpoch)}
+          requirements={jobRequirementsBinding}
+          profileCapabilities={activePort}
+          selectedProfile={selectedCandidateProfile}
+          onSelectProfile={onCandidateProfileSelectionChange}
+          onManageProfile={openProfileScreen}
+          modelPair={
+            <WorkspaceModelSummary
+              title="Configured model pair"
+              author={state.providerTransmissionPreflight.author}
+              critic={state.providerTransmissionPreflight.critic}
+              appliedProfiles={selectedModelProfiles?.refs ?? null}
+              profileWarning={modelProfileWarningText}
+            />
+          }
+          preflight={state.providerTransmissionPreflight}
+          startDisabledReason={
+            knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason
+          }
+          onStart={startNewApplication}
+          back={pageBack}
+          onOpenStep={flowStepHandlers}
+        />
+      ),
+    });
+  }
+  // The application last opened stays while it is the one the window holds; opening another
+  // application replaces it.
+  const keptApplication = view.kind === "application" ? view : navigation.lastApplication;
+  if (keptApplication !== null && loadedApplicationId === keptApplication.applicationId) {
+    pages.push({
+      key: pageKey(keptApplication),
+      active: view.kind === "application",
+      node: reviewWorkspace(keptApplication),
+    });
+  } else if (view.kind === "application") {
+    pages.push({
+      key: "opening",
+      active: true,
+      node: (
+        <main className="boot-shell">
+          <section className="panel boot-panel boot-panel-quiet">
+            <p className="boot-loading" role="status" aria-live="polite">
+              Opening {view.name}…
+            </p>
+          </section>
+        </main>
+      ),
+    });
+  }
+
+  return (
+    <>
+      {modelEditorScreen}
+      {[...pages]
+        .sort((left, right) => Number(right.active) - Number(left.active))
+        .map((page) => (
+          <KeptPage
+            key={`${state.workspaceId}:${workspaceGeneration}:${page.key}`}
+            active={page.active && modelEditorScreen === null}
+          >
+            {page.node}
+          </KeptPage>
+        ))}
+    </>
   );
 }
 

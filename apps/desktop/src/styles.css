@@ -603,6 +603,11 @@ input[type="checkbox"] {
    review panel each scroll inside it. Without the clip, anything that escapes a column's own
    overflow (an absolutely positioned screen-reader label far down a long queue, say) extends
    the page, and the whole frame can be dragged up off an empty desk. */
+/* A workspace page kept mounted while another is shown adds no box of its own. */
+.kept-page {
+  display: contents;
+}
+
 .app-frame {
   display: flex;
   align-items: stretch;
@@ -5904,8 +5909,18 @@ input[type="checkbox"] {
 }
 
 .home-back {
+  flex: none;
+  max-width: 16rem;
   min-height: 26px;
   padding: 0 var(--space-2);
+}
+
+/* Back may name an application; a long name is cut rather than pushing the location aside. */
+.home-back-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-location-current {
@@ -6028,6 +6043,24 @@ input[type="checkbox"] {
 .career-flow-arrow {
   margin-right: var(--space-2);
   color: var(--text-4);
+}
+
+/* A step that opens its page: a quiet link within the strip. */
+.career-flow-link {
+  padding: 0;
+  border: 0;
+  color: var(--text-2);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.career-flow-link:hover {
+  color: var(--text-1);
+  text-decoration-color: currentColor;
 }
 
 .career-page-lead {

@@ -2,7 +2,8 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { OpportunityLatestResult } from "./bridge.js";
-import { WorkspaceLocation } from "./home.js";
+import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
+import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import {
   briefOperationsOf,
   JobRequirementsExtraction,
@@ -477,7 +478,10 @@ export interface NewApplicationFlowProps {
     application: ApplicationSummaryView,
     acknowledgeFingerprint: string | null,
   ) => Promise<void>;
-  readonly onHome: () => void;
+  /** Leaves the flow for the page the person came from; the flow keeps its step while it can be returned to. */
+  readonly back: WorkspaceBack;
+  /** The pages the flow strip opens, so evidence or the profile can be checked mid-flow. */
+  readonly onOpenStep: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
 }
 
 function failureText(reason: unknown, fallback: string): string {
@@ -501,7 +505,8 @@ export function NewApplicationFlow({
   preflight,
   startDisabledReason,
   onStart,
-  onHome,
+  back,
+  onOpenStep,
 }: NewApplicationFlowProps) {
   const [step, setStep] = useState<NewApplicationStepId>("job");
   const [draft, setDraft] = useState<NewApplicationDraft>(emptyNewApplicationDraft);
@@ -512,14 +517,6 @@ export function NewApplicationFlow({
   const [transmissionConfirmed, setTransmissionConfirmed] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
   // Briefs are read only after the application exists: until then the port is not scoped to it.
   const { latest, refresh } = useLatestOpportunity(
     application === null ? undefined : requirements.getLatestOpportunity,
@@ -561,16 +558,16 @@ export function NewApplicationFlow({
     setCreating(true);
     setCreateError(null);
     try {
+      // The flow may be hidden on another page by now; it still records the outcome, so returning
+      // to it finds the created application.
       const created = await createApplication(draft.name.trim(), newApplicationJobInput(draft));
-      if (!mounted.current) return;
       setApplication(created);
       onCreated(created);
       setStep("requirements");
     } catch (reason: unknown) {
-      if (mounted.current)
-        setCreateError(failureText(reason, "The application could not be created."));
+      setCreateError(failureText(reason, "The application could not be created."));
     } finally {
-      if (mounted.current) setCreating(false);
+      setCreating(false);
     }
   };
 
@@ -582,9 +579,9 @@ export function NewApplicationFlow({
       const needsAcknowledgement = preflight.required && !preflight.acknowledged;
       await onStart(application, needsAcknowledgement ? preflight.fingerprint : null);
     } catch (reason: unknown) {
-      if (mounted.current) setStartError(failureText(reason, "The review could not be started."));
+      setStartError(failureText(reason, "The review could not be started."));
     } finally {
-      if (mounted.current) setStarting(false);
+      setStarting(false);
     }
   };
 
@@ -624,7 +621,7 @@ export function NewApplicationFlow({
         <div className="main-column">
           <header className="home-header">
             <div className="home-header-identity">
-              <WorkspaceLocation current="New application" onHome={onHome} asHeading />
+              <WorkspaceLocation current="New application" back={back} asHeading />
               {workspaceTitle}
             </div>
             <div className="home-header-actions">{workspaceNavigation}</div>
@@ -634,6 +631,7 @@ export function NewApplicationFlow({
               <p>{errorMessage}</p>
             </div>
           )}
+          <CareerFlowStrip current="applications" onOpen={onOpenStep} />
           <p className="subtle flow-progress">{stepProgressText(step)}</p>
           <StepList step={step} created={application !== null} />
           {step === "job" || application === null ? (

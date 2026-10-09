@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
 import {
+  type CareerFlowStep,
   CareerFlowStrip,
   careerEvidenceCardSubtitle,
   careerEvidenceIntro,
@@ -50,19 +51,20 @@ const frame = {
   workspaceTitle: <h1>Job search 2026</h1>,
   workspaceNavigation: null,
   errorMessage: null,
-  onHome: noop,
+  back: { label: "Home", onBack: noop },
+  onOpenStep: { evidence: noop, profile: noop, applications: noop },
 };
 
-function evidencePage(overrides: { onManageProfile?: () => void } = {}): string {
+function evidencePage(
+  overrides: { onOpenStep?: Partial<Record<CareerFlowStep, () => void>> } = {},
+): string {
   return renderToStaticMarkup(
     <CareerEvidencePage {...frame} knowledge={knowledge} retrieval={retrieval} {...overrides} />,
   );
 }
 
-function profilePage(onManageEvidence: () => void = noop): string {
-  return renderToStaticMarkup(
-    <CareerProfilePage {...frame} workflow={workflow} onManageEvidence={onManageEvidence} />,
-  );
+function profilePage(): string {
+  return renderToStaticMarkup(<CareerProfilePage {...frame} workflow={workflow} />);
 }
 
 describe("Career evidence page", () => {
@@ -86,12 +88,12 @@ describe("Career evidence page", () => {
     expect(html.indexOf("career-flow")).toBeLessThan(html.indexOf("career-page-intro"));
   });
 
-  it("names the page in a labelled location with a way back to Home", () => {
+  it("names the page in a labelled location with a way back", () => {
     const html = evidencePage();
     expect(html).toContain('aria-label="Workspace location"');
     expect(html).toContain('tabindex="-1"');
     expect(html).toMatch(/aria-current="page">Career evidence<\/span>/u);
-    expect(html).toContain("Home</button>");
+    expect(html).toContain('aria-label="Back to Home"');
     expect(html).not.toContain("Career profile and evidence");
   });
 
@@ -116,8 +118,10 @@ describe("Career evidence page", () => {
   });
 
   it("links to the profile page only when the host has a profile workflow", () => {
-    expect(evidencePage()).not.toContain("Manage profile");
-    expect(evidencePage({ onManageProfile: noop })).toContain("Manage profile</button>");
+    expect(evidencePage()).toContain('type="button">Career profile</button>');
+    expect(evidencePage({ onOpenStep: { evidence: noop, applications: noop } })).not.toContain(
+      'type="button">Career profile</button>',
+    );
   });
 });
 
@@ -141,12 +145,13 @@ describe("Career profile page", () => {
     expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
   });
 
-  it("names the page, offers Home and links to Manage evidence", () => {
-    const onManageEvidence = vi.fn();
-    const html = profilePage(onManageEvidence);
+  it("names the page, offers Back and links to the other steps", () => {
+    const html = profilePage();
     expect(html).toMatch(/aria-current="page">Career profile<\/span>/u);
-    expect(html).toContain("Home</button>");
-    expect(html).toContain("Manage evidence</button>");
+    expect(html).toContain('aria-label="Back to Home"');
+    expect(html).toContain('type="button">Career evidence</button>');
+    expect(html).toContain('type="button">Applications</button>');
+    expect(html).not.toContain('type="button">Career profile</button>');
     expect(html).not.toContain("Career profile and evidence");
   });
 });
@@ -168,7 +173,22 @@ describe("career flow", () => {
       );
       expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
       expect((html.match(/aria-hidden="true">→<\/span>/gu) ?? []).length).toBe(2);
+      expect(html).not.toContain("<button");
     }
+  });
+
+  it("makes every step but the current one a button when it has a page to open", () => {
+    const onOpen = { evidence: vi.fn(), profile: vi.fn(), applications: vi.fn() };
+    const html = renderToStaticMarkup(<CareerFlowStrip current="profile" onOpen={onOpen} />);
+    expect(html).toContain('type="button">Career evidence</button>');
+    expect(html).toContain('type="button">Applications</button>');
+    expect(html).toMatch(/aria-current="step">(<span[^>]*>→<\/span>)?Career profile<\/li>/u);
+    const found = handlers(<CareerFlowStrip current="profile" onOpen={onOpen} />);
+    found.get("Career evidence")?.();
+    found.get("Applications")?.();
+    expect(onOpen.evidence).toHaveBeenCalledTimes(1);
+    expect(onOpen.applications).toHaveBeenCalledTimes(1);
+    expect(onOpen.profile).not.toHaveBeenCalled();
   });
 
   it("keeps the Home card subtitles consistent with the intros", () => {
@@ -190,8 +210,9 @@ function findHandlers(node: ReactNode, found: Map<string, () => void>): void {
   if (node.type === "button" && typeof props.onClick === "function") {
     found.set(textOf(props.children as ReactNode), props.onClick as () => void);
   }
-  if (node.type === WorkspaceLocation && typeof props.onHome === "function") {
-    found.set("Home", props.onHome as () => void);
+  if (node.type === WorkspaceLocation) {
+    const back = props.back as { label: string; onBack: () => void } | undefined;
+    if (back !== undefined) found.set(`Back to ${back.label}`, back.onBack);
   }
   if (typeof node.type === "function" && node.type !== WorkspaceLocation) {
     try {
@@ -250,34 +271,26 @@ describe("career navigation", () => {
     expect(onManageEvidence).toHaveBeenCalledTimes(1);
   });
 
-  it("returns Home and crosses between the two pages", () => {
-    const onHome = vi.fn();
-    const onManageProfile = vi.fn();
-    const onManageEvidence = vi.fn();
+  it("goes back and crosses between the two pages through the flow strip", () => {
+    const onBack = vi.fn();
+    const onOpenStep = { evidence: vi.fn(), profile: vi.fn(), applications: vi.fn() };
+    const back = { label: "Acme", onBack };
     const evidence = handlers(
-      <CareerEvidencePage
-        {...frame}
-        onHome={onHome}
-        knowledge={knowledge}
-        onManageProfile={onManageProfile}
-      />,
+      <CareerEvidencePage {...frame} back={back} onOpenStep={onOpenStep} knowledge={knowledge} />,
     );
-    evidence.get("Home")?.();
-    evidence.get("Manage profile")?.();
-    expect(onHome).toHaveBeenCalledTimes(1);
-    expect(onManageProfile).toHaveBeenCalledTimes(1);
+    evidence.get("Back to Acme")?.();
+    evidence.get("Career profile")?.();
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onOpenStep.profile).toHaveBeenCalledTimes(1);
 
     const profile = handlers(
-      <CareerProfilePage
-        {...frame}
-        onHome={onHome}
-        workflow={workflow}
-        onManageEvidence={onManageEvidence}
-      />,
+      <CareerProfilePage {...frame} back={back} onOpenStep={onOpenStep} workflow={workflow} />,
     );
-    profile.get("Home")?.();
-    profile.get("Manage evidence")?.();
-    expect(onHome).toHaveBeenCalledTimes(2);
-    expect(onManageEvidence).toHaveBeenCalledTimes(1);
+    profile.get("Back to Acme")?.();
+    profile.get("Career evidence")?.();
+    profile.get("Applications")?.();
+    expect(onBack).toHaveBeenCalledTimes(2);
+    expect(onOpenStep.evidence).toHaveBeenCalledTimes(1);
+    expect(onOpenStep.applications).toHaveBeenCalledTimes(1);
   });
 });

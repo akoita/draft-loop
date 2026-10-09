@@ -252,8 +252,9 @@ applications:
 - **Flow strip.** "Career evidence → Career profile → Applications" shows how
   the pieces relate: evidence is the raw material you provide, the profile is
   the verified record DraftLoop extracts from it and you review once, and every
-  application reuses the reviewed version. The strip also tops both career
-  pages, with the current step marked.
+  application reuses the reviewed version. The current step is marked, and each
+  other step opens its page; Applications opens Home's list. See
+  [Moving between pages](#moving-between-pages).
 - **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
   (generation saved no facts), or Not yet generated. **Manage profile** opens
   the Career profile page. A freshness line under the status says whether the
@@ -302,8 +303,8 @@ a state and counts only: no source names, ids, text or paths. Home asks the host
 only when the newest version is reviewed, because it already knows the other
 two states from the saved profile list.
 
-Two pages sit behind the cards, each with **← Home**, a one-sentence intro and a
-link to the other page:
+Two pages sit behind the cards, each with a Back action, a one-sentence intro
+and the flow strip:
 
 - **Career evidence page.** The Career evidence card (first add, automatic
   knowledge base, legacy import), the knowledge panel (sources, add file, add
@@ -320,8 +321,9 @@ flow, described next.
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
 from its own reviewed brief, or from its own job text when it has none.
-**← Home** beside its name returns to Home. Focus moves to the screen's location
-line when a screen opens, so the change is announced.
+Back beside its name returns to the previous page, and the flow strip above the
+header opens either career page. Focus moves to the screen's location line when
+a screen opens, so the change is announced.
 
 Before a run, the screen keeps only what starting a review needs:
 
@@ -337,10 +339,32 @@ Before a run, the screen keeps only what starting a review needs:
 - **Start.** The per-job writing policy override sits under **Advanced**, then
   autopilot, **Start author–critic review** and the list of blockers.
 
+### Moving between pages
+
+Every page other than Home carries the flow strip and a Back action, so no page
+is reached through Home:
+
+- **Flow strip.** Opens Career evidence, Career profile, or Applications (Home)
+  from any page, including an application's review and the New application
+  flow.
+- **Back.** Names the page it returns to, such as "← Career evidence" or
+  "← Acme — Backend Lead", and walks back the pages you came through. Home
+  starts the trail again.
+- **Kept state.** A page you return to is as you left it: typed text, the step
+  reached, open panels and the scroll position. An application you return to
+  opens without reloading. Statuses and counts are read again when a page is
+  shown, so they stay current.
+
+The New application flow is kept while Back can still return to it. Going Home
+discards it, and **New application** always starts an empty flow. The last
+application opened is kept until another application is opened.
+
 ### New application
 
-The flow has four steps, and **← Home** leaves it at any point. The application
-exists from step 1, so it appears on Home as Drafting and can be resumed there.
+The flow has four steps. Back leaves it at any point, and the flow strip opens
+either career page, for example to review the profile at step 3; Back then
+returns to the flow where it was left. The application exists from step 1, so
+it appears on Home as Drafting and can be resumed there.
 
 1. **Name and job.** Paste the job text, or give a job page address and approve
    fetching it. The address is stored with that approval and fetched only when

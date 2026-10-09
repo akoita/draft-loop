@@ -24,24 +24,43 @@ export const careerEvidenceCardSubtitle =
 export const careerProfileCardSubtitle =
   "The verified record DraftLoop extracts from your evidence, with an exact quote for each fact. You review it once; every application reuses it.";
 
-/** "Career evidence → Career profile → Applications", with the current step marked for assistive technology. */
-export function CareerFlowStrip({ current }: { readonly current: CareerFlowStep }) {
+/**
+ * "Career evidence → Career profile → Applications", with the current step marked for assistive
+ * technology. A step with a handler in `onOpen` is a button that opens its page directly; the
+ * current step never is.
+ */
+export function CareerFlowStrip({
+  current,
+  onOpen = {},
+}: {
+  readonly current: CareerFlowStep;
+  readonly onOpen?: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
+}) {
   return (
     <ol className="career-flow" aria-label="Career flow">
-      {flowSteps.map(({ step, label }, index) => (
-        <li
-          key={step}
-          className="career-flow-step"
-          {...(step === current ? { "aria-current": "step" as const } : {})}
-        >
-          {index === 0 ? null : (
-            <span className="career-flow-arrow" aria-hidden="true">
-              →
-            </span>
-          )}
-          {label}
-        </li>
-      ))}
+      {flowSteps.map(({ step, label }, index) => {
+        const open = step === current ? undefined : onOpen[step];
+        return (
+          <li
+            key={step}
+            className="career-flow-step"
+            {...(step === current ? { "aria-current": "step" as const } : {})}
+          >
+            {index === 0 ? null : (
+              <span className="career-flow-arrow" aria-hidden="true">
+                →
+              </span>
+            )}
+            {open === undefined ? (
+              label
+            ) : (
+              <button className="career-flow-link" type="button" onClick={open}>
+                {label}
+              </button>
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }

@@ -944,8 +944,12 @@ export function ProfileWorkspace({
     };
   }, [generationStartedAt, getProgress]);
 
+  // Runs for each new workspace only: a page shown again re-runs its effects, and must not wipe
+  // the profile being reviewed or cancel an operation still running.
+  const resetWorkspaceRef = useRef<string | null>(null);
   useEffect(() => {
-    if (workspaceId.trim() === "") return;
+    if (workspaceId.trim() === "" || resetWorkspaceRef.current === workspaceId) return;
+    resetWorkspaceRef.current = workspaceId;
     selectionRequestRef.current += 1;
     catalogChoiceRef.current = null;
     setCatalogChoice("");
