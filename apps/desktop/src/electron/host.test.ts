@@ -1782,6 +1782,55 @@ describe("native host", () => {
     }
   });
 
+  it("shows why an interrupted run could not continue in the background", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-background-failure-"));
+    const fixture = service(root, { state: "drafting", currentStep: "author" });
+    const refusal =
+      "The candidate knowledge selection changed; review is required before provider execution.";
+    fixture.service.resume
+      .mockRejectedValueOnce(new CliUserError(refusal))
+      .mockRejectedValueOnce(new CliUserError("Knowledge missing at /private/kb."))
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    const resume = () =>
+      host.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "resume" } },
+      });
+    const execution = async () => {
+      const loaded = await host.invoke({ type: "review.load", input: {} });
+      return loaded.ok ? (loaded.value as DesktopReviewState).execution : undefined;
+    };
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      expect(await execution()).not.toHaveProperty("failure");
+
+      await resume();
+      await vi.waitFor(async () =>
+        expect(await execution()).toMatchObject({ status: "interrupted", failure: refusal }),
+      );
+
+      await resume();
+      await vi.waitFor(async () =>
+        expect(await execution()).toMatchObject({
+          status: "interrupted",
+          failure: "Resuming the review failed with an unexpected error.",
+        }),
+      );
+
+      const running = await resume();
+      expect(running).toMatchObject({ ok: true, value: { execution: { status: "running" } } });
+      expect(running.ok && (running.value as DesktopReviewState).execution).not.toHaveProperty(
+        "failure",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects safe provider recovery and enforces retry and stop actions", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-provider-error-"));
     const lastError = {

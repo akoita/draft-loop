@@ -209,7 +209,7 @@ import {
   resolveApplicationScope,
   urlJobBriefStep,
 } from "./host-applications.js";
-import { hostFailureMessage } from "./host-failure-message.js";
+import { backgroundRunFailureMessage, hostFailureMessage } from "./host-failure-message.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { serializeKnowledgeStoreReads } from "./knowledge-store-reads.js";
 import { resolveWorkspaceJobDescriptionSource } from "./opportunity-job-description.js";
@@ -757,10 +757,16 @@ function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
 
 const executingRunStates = new Set(["drafting", "reviewing", "revising"]);
 
+interface BackgroundRunStatus {
+  readonly running: boolean;
+  /** The safe reason the last background attempt for this run failed, if it did. */
+  readonly failure?: string;
+}
+
 function reviewExecution(
   descriptor: WorkspaceDescriptor,
   snapshot: RunSnapshot,
-  running: boolean,
+  { running, failure }: BackgroundRunStatus,
 ): ReviewExecutionView {
   const step = snapshot.currentStep;
   const executing = executingRunStates.has(snapshot.state) && step !== null;
@@ -783,6 +789,7 @@ function reviewExecution(
       snapshot.budget.maxDurationMs === undefined
         ? null
         : Math.max(0, snapshot.budget.maxDurationMs - totalElapsedMs),
+    ...(executing && !running && failure !== undefined ? { failure } : {}),
   };
 }
 
@@ -1027,7 +1034,7 @@ function reviewState(
   exportPath: string | null,
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
-  executionRunning = false,
+  background: BackgroundRunStatus = { running: false },
   writingPolicy?: RunWritingPolicyProjection,
 ): DesktopReviewState {
   const artifact =
@@ -1046,7 +1053,7 @@ function reviewState(
     workspaceName: overrides.workspaceName ?? workspaceName(descriptor.root),
     runId: snapshot.runId,
     state: runState(snapshot),
-    execution: reviewExecution(descriptor, snapshot, executionRunning),
+    execution: reviewExecution(descriptor, snapshot, background),
     round: snapshot.round,
     approval: snapshot.approval,
     approvalReadiness: projectApprovalReadiness(
@@ -2254,15 +2261,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     options.defaultKnowledgeStoreRoot ?? defaultCandidateKnowledgeStoreRoot();
   let ensuringDefaultKnowledgeBase: ReturnType<typeof ensureDefaultKnowledgeBase> | undefined;
   const backgroundRuns = new Map<string, BackgroundRun>();
+  const backgroundFailures = new Map<string, string>();
   const reviewedOpportunityCache = new Map<string, OpportunityBriefSelectionInput>();
 
   function backgroundKey(workspace: ActiveWorkspace, runId: string): string {
     return `${workspace.descriptor.id}:${runId}`;
   }
 
+  function backgroundStatus(workspace: ActiveWorkspace, runId: string): BackgroundRunStatus {
+    const key = backgroundKey(workspace, runId);
+    const failure = backgroundFailures.get(key);
+    return { running: backgroundRuns.has(key), ...(failure === undefined ? {} : { failure }) };
+  }
+
   function resumeInBackground(workspace: ActiveWorkspace, snapshot: RunSnapshot): void {
     const key = backgroundKey(workspace, snapshot.runId);
     if (backgroundRuns.has(key)) return;
+    backgroundFailures.delete(key);
     const controller = new AbortController();
     const timeoutRemainingMs =
       snapshot.budget.maxDurationMs === undefined
@@ -2292,7 +2307,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         ),
       )
       .then(() => undefined)
-      .catch((error: unknown) => options.onError?.(error, "review.dispatch"))
+      .catch((error: unknown) => {
+        // Nothing awaits this run, so keep the reason for the review screen to show.
+        if (!controller.signal.aborted) {
+          backgroundFailures.set(key, backgroundRunFailureMessage(error));
+        }
+        options.onError?.(error, "review.dispatch");
+      })
       .finally(() => {
         if (timeout !== undefined) clearTimeout(timeout);
         backgroundRuns.delete(key);
@@ -4099,7 +4120,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         })),
       setup,
       preflight,
-      backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
+      backgroundStatus(workspace, snapshot.runId),
       await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
     );
   }
@@ -5770,7 +5791,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               }),
               setup,
               preflight,
-              backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
+              backgroundStatus(workspace, snapshot.runId),
               await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
             ),
           };
