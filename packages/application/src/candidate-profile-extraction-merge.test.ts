@@ -106,13 +106,34 @@ describe("canonical candidate profile fact merging", () => {
 
   it("resolves proposed issues that reference a merged fact key to the survivor", async () => {
     const result = await derive({
-      facts: [skill("a", "Java", "source-a"), skill("b", "Java", "source-b")],
-      issues: [{ code: "duplicate", factKeys: ["a", "b"], sourceIds: ["source-a"] }],
+      facts: [
+        skill("a", "Java", "source-a"),
+        skill("b", "Java", "source-b"),
+        { ...skill("c", "Java", "source-a"), subjectKey: "other-skills" },
+      ],
+      issues: [{ code: "duplicate", factKeys: ["a", "b", "c"], sourceIds: ["source-a"] }],
     });
     const survivor = result.facts[0];
     const proposed = result.issues.filter((issue) => issue.code === "duplicate");
     expect(proposed).toHaveLength(1);
-    expect(proposed[0]?.factIds).toEqual([survivor?.id]);
+    expect(proposed[0]?.factIds).toContain(survivor?.id);
+    expect(proposed[0]?.factIds).toHaveLength(2);
+  });
+
+  it("drops a proposed conflict or duplicate whose facts merged into one", async () => {
+    const result = await derive({
+      facts: [skill("a", "Java", "source-a"), skill("b", "Java", "source-b")],
+      issues: [
+        { code: "duplicate", factKeys: ["a", "b"], sourceIds: ["source-a"] },
+        { code: "conflict-value", factKeys: ["b", "a"], sourceIds: [] },
+      ],
+    });
+    expect(result.facts).toHaveLength(1);
+    expect(
+      result.issues.some(
+        (issue) => issue.code === "duplicate" || issue.code.startsWith("conflict-"),
+      ),
+    ).toBe(false);
   });
 
   it("keeps facts separate and warns when the provenance union would exceed the cap", async () => {

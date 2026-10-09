@@ -375,7 +375,10 @@ adds visible category omissions, builds a draft, and appends it through the
 shared history service. The configured-provider adapter uses the workspace's
 author model and existing API-key, authenticated user-session, or local
 transport. Its system prompt treats source text as untrusted data, and the
-strict proposal schema remains the only accepted response shape.
+strict proposal schema remains the only accepted response shape. A proposed
+conflict or duplicate issue that names fewer than two distinct facts, whether
+as proposed or after unknown keys are removed or identical facts merge, is
+dropped rather than failing the extraction; facts are never dropped for it.
 
 Shared application and local-driver operations derive from the workspace's
 validated, pinned CKB selection and provide exact/latest reads, immutable

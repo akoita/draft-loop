@@ -34,6 +34,7 @@ import {
   candidateProfileSourceTooLargeMessage,
   candidateProfileTotalTooLargeMessage,
 } from "./candidate-profile-input-error.js";
+import { hasEnoughDistinctFactsForIssue } from "./candidate-profile-paired-issues.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
@@ -442,7 +443,8 @@ function mapProposal(
     ]);
   }
 
-  const proposedIssues = proposal.issues.map((candidate) => {
+  // Facts that merged into one leave a conflict or duplicate with nothing to compare; drop it.
+  const proposedIssues = proposal.issues.flatMap((candidate) => {
     const issueFacts = candidate.factKeys.map((key) => {
       const fact = factByKey.get(key);
       if (fact === undefined)
@@ -452,11 +454,14 @@ function mapProposal(
     const citedReferences = candidate.sourceIds.flatMap((sourceId) => {
       return referencesByRepresentativeId.get(sourceId) ?? [];
     });
-    return buildIssue(
-      candidate.code,
-      issueFacts.map((fact) => fact.id),
-      [...citedReferences, ...issueFacts.flatMap((fact) => fact.provenance)],
-    );
+    const factIds = issueFacts.map((fact) => fact.id);
+    if (!hasEnoughDistinctFactsForIssue(candidate.code, factIds)) return [];
+    return [
+      buildIssue(candidate.code, factIds, [
+        ...citedReferences,
+        ...issueFacts.flatMap((fact) => fact.provenance),
+      ]),
+    ];
   });
 
   const droppedFactsIssues =
@@ -515,19 +520,22 @@ export function reconcileCanonicalCandidateProfileFacts(
   }
   const carriedExtractionIssues = input.extracted.issues
     .filter((issue) => !derivedFromNewFactsOnly.has(issue.id))
-    .map((issue) => {
+    .flatMap((issue) => {
       const factIds = [...new Set(issue.factIds.map((id) => aliasOf.get(id) ?? id))];
-      return factIds.length === issue.factIds.length &&
+      if (!hasEnoughDistinctFactsForIssue(issue.code, factIds)) return [];
+      return [
+        factIds.length === issue.factIds.length &&
         factIds.every((id, index) => id === issue.factIds[index])
-        ? issue
-        : buildIssue(
-            issue.code,
-            factIds,
-            issue.sourceRefs,
-            undefined,
-            issue.severity,
-            issue.message,
-          );
+          ? issue
+          : buildIssue(
+              issue.code,
+              factIds,
+              issue.sourceRefs,
+              undefined,
+              issue.severity,
+              issue.message,
+            ),
+      ];
     });
   const issues = uniqueSorted(
     [...carriedExtractionIssues, ...input.carriedIssues, ...detectedIssues(facts)],

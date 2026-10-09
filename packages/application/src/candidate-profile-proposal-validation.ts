@@ -3,6 +3,7 @@ import {
   canonicalCandidateProfileExtractionProposalSchema,
 } from "@draft-loop/schemas";
 import { recoverUnreferencedDuplicateFactKeys } from "./candidate-profile-fact-key-recovery.js";
+import { hasEnoughDistinctFactsForIssue } from "./candidate-profile-paired-issues.js";
 
 export const candidateProfileProposalDiagnosticCodes = {
   invalid_type: "profile_output_invalid_type",
@@ -38,6 +39,7 @@ const repairableMessages = new Set([
   "fact keys must be unique",
   "factKeys must contain unique fact keys",
   "sourceIds must contain unique source ids",
+  "conflict and duplicate issues require at least two fact keys",
 ]);
 
 const customDiagnosticCodes = new Map<string, CandidateProfileProposalDiagnosticCode>([
@@ -123,10 +125,24 @@ function uniqueByTrimmedIdentity<T>(values: readonly T[], identity: (value: T) =
   });
 }
 
+/**
+ * Drop references the model got wrong. A conflict or duplicate issue left without two distinct
+ * facts is dropped as well, because it no longer describes anything; facts are never touched.
+ */
 function proposalWithRepairableReferencesRemoved(
   proposal: CanonicalCandidateProfileExtractionProposal,
-  danglingOmissionFactKeys: ReadonlyMap<number, ReadonlySet<number>> = new Map(),
+  danglingFactKeys: ReadonlyMap<number, ReadonlySet<number>> = new Map(),
 ): CanonicalCandidateProfileExtractionProposal {
+  const issues = proposal.issues.map((issue, issueIndex) => ({
+    ...issue,
+    factKeys: uniqueByTrimmedIdentity(
+      issue.factKeys.filter(
+        (_key, factKeyIndex) => !danglingFactKeys.get(issueIndex)?.has(factKeyIndex),
+      ),
+      (key) => key.trim(),
+    ),
+    sourceIds: uniqueByTrimmedIdentity(issue.sourceIds, (sourceId) => sourceId.trim()),
+  }));
   return {
     ...proposal,
     facts: proposal.facts.map((fact) => ({
@@ -136,20 +152,11 @@ function proposalWithRepairableReferencesRemoved(
         (evidence) => JSON.stringify([evidence.sourceId.trim(), evidence.quote.trim()]),
       ),
     })),
-    issues: proposal.issues.map((issue, issueIndex) => ({
-      ...issue,
-      factKeys: uniqueByTrimmedIdentity(
-        issue.factKeys.filter(
-          (_key, factKeyIndex) => !danglingOmissionFactKeys.get(issueIndex)?.has(factKeyIndex),
-        ),
-        (key) => key.trim(),
-      ),
-      sourceIds: uniqueByTrimmedIdentity(issue.sourceIds, (sourceId) => sourceId.trim()),
-    })),
+    issues: issues.filter((issue) => hasEnoughDistinctFactsForIssue(issue.code, issue.factKeys)),
   };
 }
 
-function omissionFactKeyReferenceToRemove(
+function danglingFactKeyReferenceToRemove(
   issue: { readonly code: string; readonly path: readonly PropertyKey[] },
   output: unknown,
 ): { readonly issueIndex: number; readonly factKeyIndex: number } | null {
@@ -190,12 +197,13 @@ function omissionFactKeyReferenceToRemove(
     readonly sourceIds?: unknown;
     readonly factKeys?: unknown;
   };
+  if (!Array.isArray(candidateIssue.factKeys) || factKeyIndex >= candidateIssue.factKeys.length) {
+    return null;
+  }
+  // An omission is kept for its sources, so it must cite some once its bad fact keys are gone.
   if (
-    candidateIssue.code !== "omission" ||
-    !Array.isArray(candidateIssue.sourceIds) ||
-    candidateIssue.sourceIds.length === 0 ||
-    !Array.isArray(candidateIssue.factKeys) ||
-    factKeyIndex >= candidateIssue.factKeys.length
+    candidateIssue.code === "omission" &&
+    (!Array.isArray(candidateIssue.sourceIds) || candidateIssue.sourceIds.length === 0)
   ) {
     return null;
   }
@@ -218,16 +226,16 @@ export function parseCanonicalCandidateProfileExtractionProposal(
   if (parsed.success) return parsed.data;
 
   const issues = parsed.error.issues;
-  const danglingOmissionFactKeys = new Map<number, Set<number>>();
+  const danglingFactKeys = new Map<number, Set<number>>();
   const canRepair =
     issues.length > 0 &&
     issues.every((issue) => {
       if (issue.code === "custom" && repairableMessages.has(issue.message)) return true;
-      const dangling = omissionFactKeyReferenceToRemove(issue, output);
+      const dangling = danglingFactKeyReferenceToRemove(issue, output);
       if (dangling === null) return false;
-      const indexes = danglingOmissionFactKeys.get(dangling.issueIndex) ?? new Set<number>();
+      const indexes = danglingFactKeys.get(dangling.issueIndex) ?? new Set<number>();
       indexes.add(dangling.factKeyIndex);
-      danglingOmissionFactKeys.set(dangling.issueIndex, indexes);
+      danglingFactKeys.set(dangling.issueIndex, indexes);
       return true;
     });
   if (!canRepair) {
@@ -243,7 +251,7 @@ export function parseCanonicalCandidateProfileExtractionProposal(
     proposal = recovered;
   }
 
-  const repaired = proposalWithRepairableReferencesRemoved(proposal, danglingOmissionFactKeys);
+  const repaired = proposalWithRepairableReferencesRemoved(proposal, danglingFactKeys);
   const revalidated = canonicalCandidateProfileExtractionProposalSchema.safeParse(repaired);
   if (!revalidated.success) throw validationError(revalidated.error.issues);
   return revalidated.data;
