@@ -143,15 +143,46 @@ describe("canonical candidate profile proposal validation", () => {
     expect(input).toEqual(before);
   });
 
-  it("keeps dangling conflict and duplicate references rejected", () => {
+  it("drops a conflict or duplicate left with one valid key and one dangling key", () => {
     for (const code of ["conflict-value", "duplicate"]) {
-      expectValidationFailure(
+      const input = deepFreeze(
         proposal({
-          issues: [{ code, factKeys: ["fact-a", "missing-fact"], sourceIds: ["source-a"] }],
+          issues: [
+            { code, factKeys: ["fact-a", "missing-fact"], sourceIds: ["source-a"] },
+            { code: "omission", factKeys: [], sourceIds: ["source-a"] },
+          ],
         }),
-        "profile_unknown_issue_facts",
       );
+      const parsed = parseCanonicalCandidateProfileExtractionProposal(input);
+      expect(parsed.facts).toEqual(input.facts);
+      expect(parsed.issues).toEqual([{ code: "omission", factKeys: [], sourceIds: ["source-a"] }]);
     }
+  });
+
+  it("keeps a valid two-fact conflict and removes a dangling key beside it", () => {
+    const parsed = parseCanonicalCandidateProfileExtractionProposal(
+      proposal({
+        issues: [
+          { code: "conflict-value", factKeys: ["fact-a", "fact-b"], sourceIds: ["source-a"] },
+          {
+            code: "conflict-title",
+            factKeys: ["fact-a", "missing-fact", "fact-b"],
+            sourceIds: [],
+          },
+        ],
+      }),
+    );
+    expect(parsed.issues).toEqual([
+      { code: "conflict-value", factKeys: ["fact-a", "fact-b"], sourceIds: ["source-a"] },
+      { code: "conflict-title", factKeys: ["fact-a", "fact-b"], sourceIds: [] },
+    ]);
+  });
+
+  it("keeps a valid two-fact conflict untouched when nothing needs repair", () => {
+    const input = proposal({
+      issues: [{ code: "conflict-value", factKeys: ["fact-a", "fact-b"], sourceIds: [] }],
+    });
+    expect(parseCanonicalCandidateProfileExtractionProposal(input).issues).toEqual(input.issues);
   });
 
   it("keeps a source-less omission with dangling fact references rejected", () => {
@@ -168,7 +199,7 @@ describe("canonical candidate profile proposal validation", () => {
       proposal({
         issues: [
           { code: "omission", factKeys: ["missing-omission-fact"], sourceIds: ["source-a"] },
-          { code: "conflict-value", factKeys: ["missing-conflict-fact"], sourceIds: ["source-a"] },
+          { code: "omission", factKeys: ["missing-other-fact"], sourceIds: [] },
         ],
       }),
       "profile_unknown_issue_facts",
@@ -192,13 +223,23 @@ describe("canonical candidate profile proposal validation", () => {
     );
   });
 
-  it("reports conflict issues made unpaired by duplicate fact-key removal", () => {
-    expectValidationFailure(
+  it.each([
+    ["a single key", ["fact-a"]],
+    ["no keys", []],
+    ["two identical keys", ["fact-a", "fact-a"]],
+    ["two keys identical after trimming", ["fact-a", " fact-a "]],
+  ])("drops a conflict with %s and keeps every fact", (_name, factKeys) => {
+    const input = deepFreeze(
       proposal({
-        issues: [{ code: "conflict-value", factKeys: ["fact-a", "fact-a"], sourceIds: [] }],
+        issues: [
+          { code: "conflict-value", factKeys, sourceIds: [] },
+          { code: "duplicate", factKeys, sourceIds: [] },
+        ],
       }),
-      "profile_unpaired_conflicts",
     );
+    const parsed = parseCanonicalCandidateProfileExtractionProposal(input);
+    expect(parsed.facts).toEqual(input.facts);
+    expect(parsed.issues).toEqual([]);
   });
 
   it("does not repair structural failures or oversized duplicate lists", () => {
