@@ -2,11 +2,18 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type {
+  CandidateKnowledgeRetrievalSourceVersionReference,
+  ContextSnapshot,
+  ScoredEvidenceChunk,
+} from "@draft-loop/domain";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 
-import type { candidateKnowledgeRuntimeRetrieval } from "./candidate-knowledge-retrieval.js";
+import {
+  candidateKnowledgeEvidenceSourceId,
+  type candidateKnowledgeRuntimeRetrieval,
+} from "./candidate-knowledge-retrieval.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import { CliUserError, createLocalApplicationDriver } from "./local.js";
 import { profileFactEvidenceIdPrefix } from "./profile-fact-evidence.js";
@@ -276,6 +283,72 @@ describe("runs with a pinned reviewed profile", () => {
 
       expect(authorInputs[0]?.retrievedEvidence.length).toBeGreaterThan(0);
       expect(factItems(authorInputs[0])).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the facts when reserved evidence fills the chunk limit", async () => {
+    const { root, reviewed } = await profileWorkspace();
+    try {
+      const version = {
+        storeId: "profile-store",
+        knowledgeBaseId: "profile-ckb",
+        sourceId: "profile-source",
+        versionId: "profile-version",
+      } as CandidateKnowledgeRetrievalSourceVersionReference;
+      // A long career: contact, priority and one chronology chunk per role take all 20 slots,
+      // and the chunk retrieval cannot fit them under a smaller limit.
+      const reservedIds = Array.from({ length: 20 }, (_, index) => `reserved-${index}`);
+      const queryEvidence = vi.fn(async (_text: string, options?: { limit?: number }) => {
+        const limit = options?.limit ?? 20;
+        if (limit < reservedIds.length) {
+          throw new Error("Chronology evidence could not fit within the provider retrieval limit.");
+        }
+        return [
+          ...reservedIds.map((id) => chunk(id, `Role ${id}`)),
+          ...Array.from({ length: limit - reservedIds.length }, (_, index) =>
+            chunk(`ranked-${index}`, `Ranked excerpt ${index}`),
+          ),
+        ];
+      });
+      const runtime = {
+        ...fakeRuntime(queryEvidence),
+        reservedEvidenceIds: (_text: string, limit = 20) =>
+          limit >= reservedIds.length ? new Set(reservedIds) : new Set(),
+        loadPinnedSourceChunks: async () => [
+          {
+            chunkId: "source-chunk",
+            ordinal: 0,
+            lineStart: 3,
+            lineEnd: 3,
+            text: evidenceLine,
+            metadata: { provenance: version },
+          },
+        ],
+      } as unknown as Runtime;
+      const retrieval = await withPinnedProfileFacts(runtime, {
+        storage: { getCanonicalCandidateProfile: async () => reviewed, ...traceStorage },
+        workspaceId: reviewed.workspaceId,
+        context: {
+          ...context,
+          candidateProfileReference: {
+            profileId: reviewed.profile.id,
+            version: reviewed.profile.version,
+            checksum: reviewed.checksum,
+          },
+          evidenceManifest: [{ id: candidateKnowledgeEvidenceSourceId(version) }],
+        } as unknown as ContextSnapshot,
+      });
+
+      const selected = await retrieval.port.queryEvidence("TypeScript testing", { limit: 20 });
+
+      const ids = selected.map(({ id }) => id);
+      expect(ids.filter((id) => id.startsWith(profileFactEvidenceIdPrefix))).toHaveLength(1);
+      expect(ids).toEqual(expect.arrayContaining(reservedIds));
+      expect(selected).toHaveLength(21);
+      // The chunks are queried exactly as a run without a profile queries them.
+      expect(queryEvidence).toHaveBeenCalledWith("TypeScript testing", { limit: 20 });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

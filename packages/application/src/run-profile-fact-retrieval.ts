@@ -63,7 +63,8 @@ async function loadPinnedProfile(
  * Fact-first retrieval for a run whose context pins a reviewed candidate profile. The profile is
  * loaded and verified here, when the run starts or resumes. Each evidence query then ranks the
  * profile's grounded facts against the query with the run's retrieval mode, asks the chunk
- * retrieval for the remaining slots, and merges both (see profile-fact-evidence). A full-source run
+ * retrieval for the evidence a run without a profile gets, and adds the facts beside it (see
+ * profile-fact-evidence). A full-source run
  * already sends every eligible chunk, so it is left unchanged, as is a run without a profile.
  */
 export async function withPinnedProfileFacts(
@@ -162,27 +163,19 @@ export async function withPinnedProfileFacts(
         ...(semanticOptions === undefined ? {} : { semantic: semanticOptions }),
       });
       const facts = ranked.candidates;
-      const chunkOnly = async () =>
-        recordOrigins(text, ranked.effectiveMode, await runtime.port.queryEvidence(text, options));
-      if (facts.length === 0) return chunkOnly();
-      const chunkLimit = limit - facts.length;
-      let chunks: Awaited<ReturnType<RetrievalPort["queryEvidence"]>>;
-      let reserved: ReadonlySet<string>;
-      try {
-        chunks = await runtime.port.queryEvidence(text, { ...options, limit: chunkLimit });
-        reserved = runtime.reservedEvidenceIds(text, chunkLimit);
-      } catch {
-        // Reserved evidence that cannot fit beside the facts keeps the chunk-only selection, which
-        // fails exactly as a run without a profile would when it cannot fit either.
-        return chunkOnly();
-      }
+      // The chunks are exactly those a run without a profile gets, reserved contact, chronology
+      // and priority evidence included; facts come on top. Taking the facts' slots out of the
+      // chunk limit instead let a long career's reserved evidence squeeze every fact out.
+      const chunks = await runtime.port.queryEvidence(text, options);
+      if (facts.length === 0) return recordOrigins(text, ranked.effectiveMode, chunks);
+      const reserved = runtime.reservedEvidenceIds(text, limit);
       return recordOrigins(
         text,
         ranked.effectiveMode,
         mergeProfileFactEvidence({
           facts,
           chunks,
-          limit,
+          limit: limit + facts.length,
           isReserved: ({ id }) => reserved.has(id),
         }),
       );

@@ -426,9 +426,12 @@ A run with a pinned profile retrieves evidence fact first
   version's opaque source id, the quote's line range, and the fact value with
   its quote, so author citations resolve to the source quote and locator.
 - **Selection.** Facts are ranked against the query in the run's retrieval
-  mode and take up to two fifths of the 20-item limit. Chunks fill the rest
-  with their reserved contact, chronology and priority slots intact, and a
-  chunk repeating a selected fact's quote is skipped.
+  mode, and up to two fifths of the 20-item limit (8 facts) are added beside
+  the chunks a run without a profile gets, so a run sends at most 28 items.
+  Those chunks keep their reserved contact, chronology and priority slots, and
+  a chunk repeating a selected fact's quote is skipped. Facts never compete
+  with reserved chunks: a long career's chronology can fill most of the 20
+  chunk slots on its own.
 
 - **Traces.** Each selection appends a content-free origin trace
   (`retrieval-origin-trace.ts`, a companion table beside the v1 retrieval

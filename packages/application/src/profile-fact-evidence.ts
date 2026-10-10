@@ -29,12 +29,12 @@ import type { RetrievalMode } from "./workspace-retrieval-mode.js";
  * item shaped like a retrieved chunk, so author citations accept it without a special case: its
  * source id and checksum are those of the cited source version, its line range is where the quote
  * sits in that version, and its text is the fact value plus the exact quote. Facts are ranked
- * against the run query, take up to a fixed share of the retrieval limit, and chunks fill the rest.
+ * against the run query, and up to a fixed share of the retrieval limit is added beside the chunks.
  */
 
 export const profileFactEvidenceIdPrefix = "profile-fact-";
 
-/** Facts take at most two fifths of the retrieval limit (8 of 20), so chunks keep the majority. */
+/** Facts add at most two fifths of the retrieval limit (8 beside 20 chunks). */
 export function profileFactEvidenceSlots(limit: number): number {
   return Math.max(0, Math.floor((limit * 2) / 5));
 }
