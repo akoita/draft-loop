@@ -40,6 +40,12 @@ import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
+  inProgressStatus,
+  notIndexedRetrievalText,
+  reviewInProgress,
+  uncritiquedStatus,
+} from "./review-run-status.js";
+import {
   LatestRequirementsBriefView,
   StartRequirementsSourceView,
   useLatestOpportunity,
@@ -1133,21 +1139,29 @@ export function ReviewWorkspace({
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
-  const validationLabel = !hasArtifact
-    ? "No draft artifact available"
-    : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-      ? "Final CV checks block approval"
-      : roundLimitRecovery
-        ? "Round limit recovery required"
-        : !state.reviewComplete
-          ? "Independent critique did not complete"
-          : state.state === "provider-error"
-            ? "Provider recovery remains before approval"
-            : findingSummary.status === "blocked"
-              ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-              : findingSummary.status === "warnings"
-                ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-                : "No unresolved findings";
+  const runInProgress = reviewInProgress(state);
+  const runStatusLine = runInProgress
+    ? inProgressStatus(state)
+    : !state.reviewComplete
+      ? uncritiquedStatus(state)
+      : null;
+  const validationLabel = runInProgress
+    ? (runStatusLine?.label ?? "")
+    : !hasArtifact
+      ? "No draft artifact available"
+      : approvalReadiness?.applicationReady === false && state.approval !== "approved"
+        ? "Final CV checks block approval"
+        : roundLimitRecovery
+          ? "Round limit recovery required"
+          : !state.reviewComplete
+            ? (runStatusLine?.label ?? "")
+            : state.state === "provider-error"
+              ? "Provider recovery remains before approval"
+              : findingSummary.status === "blocked"
+                ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+                : findingSummary.status === "warnings"
+                  ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+                  : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
   const readinessOverrideKey = `${state.runId}:${state.artifact.id}:${state.artifact.version}`;
@@ -2861,26 +2875,28 @@ export function ReviewWorkspace({
             : null}
 
           <section
-            className={`validation-banner validation-${findingSummary.status}`}
+            className={`validation-banner validation-${runInProgress ? "in-progress" : findingSummary.status}`}
             aria-label="validation status"
             role="status"
             aria-live="polite"
           >
             <strong>{validationLabel}</strong>
             <span>
-              {!hasArtifact
-                ? "Complete or recover the author step before reviewing findings or approving an artifact."
-                : roundLimitRecovery
-                  ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
-                  : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-                    ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
-                    : !state.reviewComplete
-                      ? "Complete an independent critic review before approval or export."
-                      : findingSummary.status === "blocked"
-                        ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-                        : findingSummary.status === "warnings"
-                          ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                          : "All findings have a recorded decision."}
+              {runInProgress
+                ? runStatusLine?.detail
+                : !hasArtifact
+                  ? "Complete or recover the author step before reviewing findings or approving an artifact."
+                  : roundLimitRecovery
+                    ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
+                    : approvalReadiness?.applicationReady === false && state.approval !== "approved"
+                      ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
+                      : !state.reviewComplete
+                        ? runStatusLine?.detail
+                        : findingSummary.status === "blocked"
+                          ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                          : findingSummary.status === "warnings"
+                            ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                            : "All findings have a recorded decision."}
             </span>
           </section>
 
@@ -2915,7 +2931,7 @@ export function ReviewWorkspace({
                     : state.setup.retrievalStatus === "fallback"
                       ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
                       : state.setup.retrievalStatus === "not-indexed"
-                        ? "Candidate material is not indexed; no evidence excerpt was selected"
+                        ? notIndexedRetrievalText(state)
                         : state.setup.retrievalStatus === "no-query"
                           ? "The job description has no searchable role terms"
                           : "Retrieval readiness is unavailable"}
@@ -3336,10 +3352,18 @@ export function ReviewWorkspace({
                   <h2>Findings</h2>
                   <p className="finding-progress" role="status" aria-live="polite">
                     {queueCounts.resolved} of {state.findings.length} resolved
-                    {queueCounts.needsAction > 0
-                      ? ` · ${queueCounts.needsAction} need action`
-                      : " · all findings resolved"}
+                    {queueCounts.needsAction === 0
+                      ? " · all findings resolved"
+                      : runInProgress
+                        ? ` · ${queueCounts.needsAction} open`
+                        : ` · ${queueCounts.needsAction} need action`}
                   </p>
+                  {runInProgress && queueCounts.needsAction > 0 ? (
+                    <p className="setup-note">
+                      The review is still running, so nothing here needs you yet. It pauses when it
+                      needs your decisions.
+                    </p>
+                  ) : null}
                 </div>
                 <span className="count-badge">
                   {!hasArtifact
@@ -3701,10 +3725,11 @@ export function ReviewWorkspace({
                     Return to reviewed Round {state.round - 1}
                   </button>
                 </div>
+              ) : runInProgress ? (
+                <p className="setup-note">Approval opens when the review pauses for you.</p>
               ) : !state.reviewComplete ? (
                 <p className="warning-copy">
-                  Independent critique did not complete. Complete an independent critic review
-                  before approval or export.
+                  {runStatusLine?.label}. {runStatusLine?.detail}
                 </p>
               ) : blockingFindings.length > 0 ? (
                 <p className="warning-copy">
