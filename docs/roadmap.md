@@ -276,7 +276,7 @@ applications.
 | Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
 | Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
-| Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | In progress: extraction speed, incremental reuse, real-run failure fixes and quote recovery (#1083) merged; source kinds (#1127–#1131) and fact-first retrieval (#1132–#1135) split into ordered issues | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
+| Previous | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Completed in code: 50/51 issues closed, ending with source kinds (#1127–#1131) and fact-first retrieval (#1132–#1135); the output-ratio re-measurement (#1053) and the "structured in minutes" check need a live consented run | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
 | Previous | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Completed in code: 29/29 issues closed, ending with a per-application model pair and provider readiness in New application step 4 (#1065) | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
 | Next | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | Not started; opened 2026-10-09 | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
@@ -1721,7 +1721,7 @@ or over a Claude subscription session where the account allows Claude Code.
 both the Haiku 5.5 economy pair and the Mistral development pair. Every issue
 has shipped; full reviews on both pairs are still pending.
 
-### Next — Any-format career intake
+### Completed — Any-format career intake
 
 Candidates will never provide career evidence in one format. A CV, a
 LinkedIn export, a performance review, loose notes and a transcript each
@@ -1750,6 +1750,10 @@ issues ([#1029](https://github.com/akoita/draft-loop/issues/1029)):
 **Exit criterion:** A mixed-format knowledge base is structured in minutes.
 Re-adding one source re-processes only that source, and review runs retrieve
 verified facts first.
+
+Every ordered issue has shipped. Incremental reuse and fact-first retrieval are
+covered by tests. Timing on a real mixed-format knowledge base still needs a
+live consented run, together with the output-ratio re-measurement (#1053).
 
 ### Completed — Candidate home and applications
 
@@ -1936,6 +1940,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-10 | Completed Any-format career intake (milestone 26, 50/51 issues) in code; #1053 stays open for a live measurement. | Each source has a detected or user-set kind that guides extraction. Runs that pin a reviewed profile retrieve its verified facts first, with chunks as backup and a content-free origin trace. |
 | 2026-10-10 | Completed Candidate home and applications (milestone 28, 29/29 issues) in code. | One workspace holds many applications that reuse one reviewed profile. An application can use its own preset model pair, and step 4 shows the pair's provider readiness before Start. |
 | 2026-10-09 | Planned Harness observability and evaluation as a Later stage (#1101, #1102–#1113); no implementation yet. | Tracing, critic calibration, revision attribution and a bounded author tool loop are ordered behind gates. Current stages keep priority. |
 | 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
