@@ -786,6 +786,41 @@ describe("desktop trust-centered review", () => {
     expect(approved.approval).toBe("approved");
   });
 
+  it("tells the person to wait, not to act, while a review round is still running", () => {
+    const fixture = createFixtureReviewState();
+    const state = {
+      ...fixture,
+      state: "revising" as const,
+      round: 2,
+      reviewComplete: false,
+      execution: { ...fixture.execution, status: "running" as const, step: "revision" as const },
+      setup: { ...fixture.setup, autopilot: true, retrievalStatus: "not-indexed" as const },
+    };
+
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+    expect(html).toContain("Review in progress · nothing to do yet");
+    expect(html).toContain("The author is revising version 2 for round 2.");
+    expect(html).toContain("Autopilot keeps going until the draft is ready");
+    expect(html).toContain("validation-in-progress");
+    expect(html).not.toContain("validation-blocked");
+    expect(html).not.toContain("has not been critiqued yet");
+    expect(html).not.toContain("Independent critique did not complete");
+    expect(html).toContain("2 open");
+    expect(html).not.toContain("need action");
+    expect(html).toContain("nothing here needs you yet");
+    expect(html).toContain("Your career evidence is indexed and searched as the review runs");
+    expect(html).not.toContain("Candidate material is not indexed");
+  });
+
+  it("asks the person to resume when a paused review has not critiqued the draft", () => {
+    const state = { ...createFixtureReviewState(), reviewComplete: false };
+
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+    expect(html).toContain("Version 2 has not been critiqued yet");
+    expect(html).toContain("Resume the review so the critic can check it.");
+    expect(html).not.toContain("Review in progress");
+  });
+
   it("keeps legacy approval unexportable when independent review is incomplete", () => {
     const state = {
       ...createFixtureReviewState(),
@@ -804,8 +839,9 @@ describe("desktop trust-centered review", () => {
       state: "awaiting-approval",
     });
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
-    expect(html).toContain("Independent critique did not complete");
-    expect(html).toContain("Complete an independent critic review before approval or export.");
+    expect(html).toContain("Version 2 has not been critiqued yet");
+    expect(html).toContain("approval and export need a finished critique.");
+    expect(html).not.toContain("Independent critique did not complete");
     expect(html).toContain("Unavailable until independent critique completes");
     expect(html).not.toContain("Available now");
     expect(html).not.toContain("All findings have a recorded decision.");
