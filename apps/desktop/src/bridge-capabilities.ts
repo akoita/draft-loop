@@ -22,6 +22,8 @@ export const bridgeCapabilities = [
   "knowledge.current",
   "knowledge.readiness",
   "knowledge.sources",
+  "knowledge.source-evidence-kinds",
+  "knowledge.source-evidence-kind.set",
   "knowledge.duplicates",
   "knowledge.inventory",
   "knowledge.backup-export",

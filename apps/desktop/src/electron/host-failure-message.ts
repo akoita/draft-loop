@@ -178,6 +178,14 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   if (command.type.startsWith("embedding-model.") && error instanceof EmbeddingModelInstallError) {
     return error.message;
   }
+  // An evidence-kind refusal names the kind list or a source id, never a path or source text.
+  if (
+    command.type === "knowledge.source-evidence-kind.set" &&
+    error instanceof CliUserError &&
+    !pathSeparator.test(error.message)
+  ) {
+    return error.message;
+  }
   // The retrieval-mode file's own validation message names the setting, never a path.
   if (command.type.startsWith("workspace.retrieval-mode.") && error instanceof CliUserError) {
     return error.message;

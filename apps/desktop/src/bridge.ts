@@ -148,6 +148,16 @@ import {
   workspaceRetrievalModeResultKeys,
   workspaceRetrievalModeSetKeys,
 } from "./semantic-retrieval-contract.js";
+import {
+  normalizeSourceEvidenceKindSetResult,
+  normalizeSourceEvidenceKindsResult,
+  parseSourceEvidenceKindSetInput,
+  parseSourceEvidenceKindsInput,
+  type SourceEvidenceKindSetInput,
+  type SourceEvidenceKindSetResult,
+  type SourceEvidenceKindsInput,
+  type SourceEvidenceKindsResult,
+} from "./source-evidence-kind-contract.js";
 import { normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
@@ -193,6 +203,14 @@ export type {
   WorkspaceRetrievalModeResult,
   WorkspaceRetrievalModeSetInput,
 } from "./semantic-retrieval-contract.js";
+
+export type {
+  SourceEvidenceKindSetInput,
+  SourceEvidenceKindSetResult,
+  SourceEvidenceKindSummary,
+  SourceEvidenceKindsInput,
+  SourceEvidenceKindsResult,
+} from "./source-evidence-kind-contract.js";
 
 export const supportedFileExtensions = [
   ".docx",
@@ -2959,6 +2977,8 @@ export interface BridgeCommandInputMap {
   "knowledge.current": KnowledgeCurrentInput;
   "knowledge.readiness": KnowledgeReadinessInput;
   "knowledge.sources": KnowledgeSourcesInput;
+  "knowledge.source-evidence-kinds": SourceEvidenceKindsInput;
+  "knowledge.source-evidence-kind.set": SourceEvidenceKindSetInput;
   "knowledge.duplicates": KnowledgeDuplicatesInput;
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.backup-export": KnowledgeBackupExportInput;
@@ -3063,6 +3083,8 @@ export interface BridgeCommandOutputMap {
   "knowledge.current": KnowledgeCurrentResult;
   "knowledge.readiness": KnowledgeReadinessResult;
   "knowledge.sources": KnowledgeSourcesResult;
+  "knowledge.source-evidence-kinds": SourceEvidenceKindsResult;
+  "knowledge.source-evidence-kind.set": SourceEvidenceKindSetResult;
   "knowledge.duplicates": KnowledgeDuplicatesResult;
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.backup-export": KnowledgePortableBackupResult;
@@ -5413,6 +5435,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
     case "knowledge.sources":
       return { type: "knowledge.sources", input: validateKnowledgeSourcesInput(command.input) };
+    case "knowledge.source-evidence-kinds":
+      return {
+        type: "knowledge.source-evidence-kinds",
+        input: parseSourceEvidenceKindsInput(command.input) ?? invalidInput(),
+      };
+    case "knowledge.source-evidence-kind.set":
+      return {
+        type: "knowledge.source-evidence-kind.set",
+        input: parseSourceEvidenceKindSetInput(command.input) ?? invalidInput(),
+      };
     case "knowledge.duplicates":
       return {
         type: "knowledge.duplicates",
@@ -7958,6 +7990,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeKnowledgeReadinessResult(value);
     case "knowledge.sources":
       return normalizeKnowledgeSourcesResult(value);
+    case "knowledge.source-evidence-kinds":
+      return normalizeSourceEvidenceKindsResult(value) ?? invalidInput();
+    case "knowledge.source-evidence-kind.set":
+      return normalizeSourceEvidenceKindSetResult(value) ?? invalidInput();
     case "knowledge.duplicates":
       return normalizeKnowledgeDuplicatesResult(value);
     case "knowledge.inventory":

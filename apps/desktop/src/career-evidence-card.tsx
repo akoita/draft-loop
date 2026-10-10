@@ -21,6 +21,11 @@ import {
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import type { WorkspaceReadiness } from "./model.js";
+import {
+  SourceEvidenceKindList,
+  type SourceEvidenceKindListProps,
+  useSourceEvidenceKinds,
+} from "./source-evidence-kinds.js";
 
 /** The host connection that lets the card follow, and add to, the workspace's knowledge base. */
 export interface CareerEvidenceBinding {
@@ -106,6 +111,8 @@ export interface CareerEvidenceCardViewProps {
    * one instead of going to legacy workspace evidence.
    */
   readonly automatic?: boolean;
+  /** Each source's evidence kind, when the host reports them for the selected base. */
+  readonly evidenceKinds?: Omit<SourceEvidenceKindListProps, "disabled">;
 }
 
 export function CareerEvidenceCardView({
@@ -125,6 +132,7 @@ export function CareerEvidenceCardView({
   canAddUrl,
   automatic = false,
   knowledgeBase = null,
+  evidenceKinds,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -169,6 +177,9 @@ export function CareerEvidenceCardView({
           </span>
           {status.semanticLine === null ? null : (
             <span className="setup-card-line">{status.semanticLine}</span>
+          )}
+          {evidenceKinds === undefined ? null : (
+            <SourceEvidenceKindList {...evidenceKinds} disabled={blocked} />
           )}
         </>
       ) : status.kind === "unavailable" ? (
@@ -472,6 +483,13 @@ export function CareerEvidenceCard({
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
   const inKnowledgeBase =
     status.kind === "selected" || status.kind === "loading" || mode === "first-add";
+  const evidenceKinds = useSourceEvidenceKinds(
+    capabilities,
+    status.kind === "selected"
+      ? { storeId: status.storeId, knowledgeBaseId: status.knowledgeBaseId }
+      : null,
+    revision,
+  );
 
   return (
     <CareerEvidenceCardView
@@ -494,6 +512,9 @@ export function CareerEvidenceCard({
         ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
         : {})}
       knowledgeBase={knowledgeBase}
+      {...(evidenceKinds.state === null
+        ? {}
+        : { evidenceKinds: { state: evidenceKinds.state, onChange: evidenceKinds.change } })}
       onAddFile={() => {
         if (inKnowledgeBase) addToKnowledgeBase({ kind: "file" });
         else onSelectLegacyFiles?.();
