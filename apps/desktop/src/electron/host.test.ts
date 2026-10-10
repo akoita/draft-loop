@@ -6668,6 +6668,13 @@ describe("candidate knowledge native controls", () => {
       await expect(
         host.invoke({ type: "knowledge.source-retirement-state", input }),
       ).resolves.toEqual(retired);
+      // The removed source is no longer counted, so it does not read as "not ready".
+      await expect(
+        host.invoke({ type: "knowledge.readiness", input: { storeId, knowledgeBaseId } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { sourceCount: 0, readyCount: 0, blockedCount: 0, blockerReasons: [] },
+      });
       await expect(
         host.invoke({
           type: "knowledge.rebind-file",
