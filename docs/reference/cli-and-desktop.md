@@ -892,10 +892,11 @@ tokens.
 For more than 65,536 UTF-16 text units across one to four unique prepared
 sources, extraction proactively makes one call per source up to the window size
 and divides each larger source into contiguous windows of at most that size. The
-window size is three quarters of the call's output-token budget divided by 3
+window size is three quarters of the call's output-token budget divided by 1.6
 (the planning ratio of output tokens per character of dense career text; Mistral
-Large 4 measured at least 2.8), clamped to 8,192 to 32,768 UTF-16 units. Both the
-8,192-token routes and the 32,768-token ceiling therefore use 8,192-unit windows.
+Large 4 measured about 1.1 with entry-level facts), clamped to 8,192 to 32,768
+UTF-16 units. The 8,192-token routes therefore use 8,192-unit windows and the
+32,768-token ceiling uses 15,360-unit windows.
 The plan uses at most 96 calls and is declined if it would exceed that cap.
 
 Markdown sources are cut at ATX headings (`#` to `######`, outside fenced code)

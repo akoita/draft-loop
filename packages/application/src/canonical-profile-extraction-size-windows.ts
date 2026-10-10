@@ -3,9 +3,10 @@ import type { CanonicalProfileExtractionTextWindow } from "./canonical-profile-e
 /** Window size, in UTF-16 units, used when the output-token budget is unknown or small. */
 export const minimumCanonicalProfileExtractionWindowCharacters = 8_192;
 const maximumCanonicalProfileExtractionWindowCharacters = 32_768;
-// Measured on dense career text with Mistral Large 4: structured output needs at least 2.8 tokens
-// per source character, so plan for 3.
-const outputTokensPerSourceCharacter = 3;
+// With entry-level facts, Mistral Large 4 measured about 1.1 output tokens per character of dense
+// career text (9.5K tokens for an 8.6K-character window); plan for 1.6. The adaptive split stays
+// the safety net for denser text.
+const outputTokensPerSourceCharacter = 1.6;
 // Leave a quarter of the budget free, so denser-than-measured text does not hit the output ceiling.
 const outputBudgetSafetyFactor = 0.75;
 
