@@ -276,8 +276,9 @@ applications.
 | Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
 | Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
-| Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Not started; opened 2026-10-08 | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
-| Next | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Not started; opened 2026-10-08 | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
+| Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | In progress: extraction speed, incremental reuse, real-run failure fixes and quote recovery (#1083) merged; source kinds (#1027) and fact-first retrieval (#1028) open | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
+| Next | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | In progress: application record, Home, New application, profile freshness, import, setup on Home, knowledge-base-only runs (#1085) and start refusal reasons (#1086) merged; #1065 open | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
+| Next | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | Not started; opened 2026-10-09 | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
 | Later | Harness observability and evaluation ([#1101](https://github.com/akoita/draft-loop/issues/1101)) | Not started; planned 2026-10-09 | Trace every run, measure the critic against labelled failures, explain each revision, and let the author check its own grounding | A failed author attempt is diagnosable from its trace, critic agreement is recorded on a held-out set, and the tighter loop shows fewer rejected attempts without regression (#1102–#1113) |
@@ -1760,7 +1761,9 @@ it. The ordered issues ([#1059](https://github.com/akoita/draft-loop/issues/1059
 3. a New application flow: job, reviewed requirements, reviewed profile,
    review (#1056);
 4. profile freshness and reuse across applications (#1057);
-5. import of existing per-job workspaces (#1058).
+5. import of existing per-job workspaces (#1058);
+6. workspace-level setup moved off the application screen (#1062);
+7. a per-application model pair and credential readiness before Start (#1065).
 
 This stage follows the profile-extraction fixes in Any-format career intake.
 It comes ahead of that stage's remaining issues (#1027, #1028), because a fast,
@@ -1769,6 +1772,37 @@ reusable profile needs a journey that reuses it.
 **Exit criterion:** Two applications for different jobs come from one
 workspace and one reviewed profile without regenerating it, and existing
 per-job workspaces can be imported.
+
+### Next — Simple guided workflow
+
+Real use on 2026-10-09 showed the desktop journey is hard to follow. Features
+added stage by stage left workspace settings on the application screen, gave
+two ways to start an application, explained start blockers off screen, and
+filled the Career profile page with internal terms.
+
+The target, recorded in [ADR 0010](adr/0010-workspace-as-candidate-home.md#screen-responsibilities),
+gives each screen one job:
+
+- **Home** holds the evidence and profile status, the Applications list and
+  the workspace settings.
+- **Career evidence** and **Career profile** are the only places to manage
+  those.
+- **An application** is three steps: job and requirements, profile, review.
+
+The ordered issues ([#1092](https://github.com/akoita/draft-loop/issues/1092)):
+
+1. explain every start blocker next to the Start button, with its fix (#1087);
+2. the application screen as three steps (#1088);
+3. one path to a new application (#1089);
+4. a plain-language Career profile page (#1090);
+5. walk the first-run journey and record it (#1091).
+
+It follows #1065 and comes ahead of the remaining Any-format career intake
+issues, because people must be able to use what already works.
+
+**Exit criterion:** From an empty workspace, a first-time user reaches a
+started review with no dead end, and every disabled control says why and
+offers the fix.
 
 ### Next — Manual parity: review and export
 

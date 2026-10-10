@@ -44,6 +44,23 @@ A workspace is the **candidate's home**:
 - **Separate workspaces** remain for a different person, for example a coach
   with several candidates, or for deliberate isolation.
 
+## Screen responsibilities
+
+Added 2026-10-09, after real use showed the journey was hard to follow. Each
+screen has one job, and a control appears on exactly one screen:
+
+| Screen | Holds |
+|---|---|
+| **Home** | Career evidence status, Career profile status, Applications, and Workspace settings (models, writing policy, provider sign-in) |
+| **Career evidence** | The only place to add and manage sources |
+| **Career profile** | The only place to generate, update and review the profile |
+| **Application** | Three steps: job and requirements, profile, review |
+
+Workspace-level settings appear on an application only as links to Home.
+Every disabled action says why and offers the step that fixes it. Delivery is
+tracked in the [Simple guided workflow milestone](https://github.com/akoita/draft-loop/milestone/29)
+(rollup #1092).
+
 ## Compatibility
 
 - **Legacy workspaces.** An existing workspace reads as one default
