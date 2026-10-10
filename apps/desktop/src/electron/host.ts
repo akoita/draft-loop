@@ -4485,17 +4485,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             storeRoot: root,
             knowledgeBaseId: command.input.knowledgeBaseId,
           });
-          const readyCount = readiness.sources.filter((source) => source.status === "ready").length;
-          const blockerReasons = [
-            ...new Set(readiness.sources.flatMap((source) => source.reasons)),
-          ].sort();
+          // A removed (retired) source never reaches a run, so it is neither counted nor blocking.
+          const sources = readiness.sources.filter(
+            (source) => source.lifecycleRevision.retirement === null,
+          );
+          const readyCount = sources.filter((source) => source.status === "ready").length;
+          const blockerReasons = [...new Set(sources.flatMap((source) => source.reasons))].sort();
           const result: KnowledgeReadinessResult = {
             storeId: command.input.storeId,
             knowledgeBaseId: readiness.knowledgeBaseId,
             state: readiness.state,
-            sourceCount: readiness.sources.length,
+            sourceCount: sources.length,
             readyCount,
-            blockedCount: readiness.sources.length - readyCount,
+            blockedCount: sources.length - readyCount,
             blockerReasons,
           };
           return { ok: true, value: result };
