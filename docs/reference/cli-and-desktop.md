@@ -989,8 +989,12 @@ these conditions:
 - The latest version records the same extraction route (provider, model, prompt,
   and extraction profile). Older versions without a recorded route are
   extracted in full.
-- The source version is unchanged since that version, its knowledge base has no
-  sensitivity rules, and no earlier extraction error cites it.
+- The source version is unchanged since that version, its knowledge base was
+  filtered the same way, and no earlier extraction error cites it. Each version
+  records the sensitivity rules version and checksum applied to every knowledge
+  base and the excluded tiers. A knowledge base with rules is reused only when
+  both match the current run; older versions without this record are extracted
+  in full for knowledge bases that have rules.
 
 A fact is kept only when every source it cites is unchanged; the others are
 extracted again. When nothing changed, derivation makes no provider call and

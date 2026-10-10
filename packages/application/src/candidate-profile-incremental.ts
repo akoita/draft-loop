@@ -1,7 +1,12 @@
 import type {
   CandidateKnowledgeSelectionSnapshot,
   CanonicalCandidateProfileExtractionIdentity,
+  CanonicalCandidateProfileSensitivityIdentity,
 } from "@draft-loop/domain";
+import {
+  type SourceSensitivityTier,
+  sourceSensitivityTiers,
+} from "@draft-loop/domain/source-sensitivity";
 import type {
   CanonicalCandidateProfileFact,
   CanonicalCandidateProfileIssue,
@@ -11,6 +16,10 @@ import type { CanonicalCandidateProfileVersionRecord } from "@draft-loop/storage
 
 import type { CanonicalCandidateProfileExtractionMaterial } from "./candidate-profile-extraction.js";
 import { referenceKey } from "./canonical-profile-fact-keys.js";
+import {
+  type CanonicalProfileSensitivityRulesApplied,
+  canonicalProfileExcludedSensitivityTiers,
+} from "./canonical-profile-sensitivity-filter.js";
 
 /** The earlier profile version's facts that still hold, and the sources that need extraction. */
 export interface IncrementalCanonicalProfilePlan {
@@ -29,11 +38,78 @@ export interface PlanIncrementalCanonicalProfileInput {
   readonly fullExtraction: boolean;
   readonly snapshot: CandidateKnowledgeSelectionSnapshot;
   readonly materials: readonly CanonicalCandidateProfileExtractionMaterial[];
-  /** Knowledge bases with sensitivity rules; their sources are always extracted again. */
-  readonly filteredKnowledgeBases: readonly {
-    readonly storeId: string;
-    readonly knowledgeBaseId: string;
-  }[];
+  /** The sensitivity filtering of this run; see {@link currentSensitivityIdentity}. */
+  readonly sensitivity: CanonicalCandidateProfileSensitivityIdentity;
+}
+
+/**
+ * The sensitivity filtering of one derivation, as recorded on the profile version: the excluded
+ * tiers (the default set when the run names none) in tier order, and the rules applied per
+ * knowledge base ordered by store then knowledge base.
+ */
+export function currentSensitivityIdentity(
+  excludedTiers: ReadonlySet<SourceSensitivityTier> | undefined,
+  rulesApplied: readonly CanonicalProfileSensitivityRulesApplied[],
+): CanonicalCandidateProfileSensitivityIdentity {
+  const effective = excludedTiers ?? canonicalProfileExcludedSensitivityTiers;
+  return {
+    excludedTiers: sourceSensitivityTiers.filter((tier) => effective.has(tier)),
+    rules: rulesApplied
+      .map((rule) => ({
+        storeId: rule.storeId,
+        knowledgeBaseId: rule.knowledgeBaseId,
+        rulesVersion: rule.rulesVersion,
+        rulesChecksum: rule.rulesChecksum,
+      }))
+      .sort((left, right) =>
+        compareOrdinal(
+          knowledgeBaseKey(left.storeId, left.knowledgeBaseId),
+          knowledgeBaseKey(right.storeId, right.knowledgeBaseId),
+        ),
+      ),
+  };
+}
+
+function compareOrdinal(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function knowledgeBaseKey(storeId: string, knowledgeBaseId: string): string {
+  return JSON.stringify([storeId, knowledgeBaseId]);
+}
+
+function rulesByKnowledgeBase(
+  sensitivity: CanonicalCandidateProfileSensitivityIdentity,
+): Map<string, string> {
+  return new Map(
+    sensitivity.rules.map((rule) => [
+      knowledgeBaseKey(rule.storeId, rule.knowledgeBaseId),
+      JSON.stringify([rule.rulesVersion, rule.rulesChecksum]),
+    ]),
+  );
+}
+
+function sameTiers(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((tier, index) => tier === right[index]);
+}
+
+/**
+ * Knowledge bases whose earlier facts were extracted under different sensitivity filtering. A
+ * version recorded without sensitivity cannot vouch for any knowledge base that has rules now.
+ */
+function knowledgeBasesFilteredDifferently(
+  previous: CanonicalCandidateProfileSensitivityIdentity | undefined,
+  current: CanonicalCandidateProfileSensitivityIdentity,
+): (key: string) => boolean {
+  const currentRules = rulesByKnowledgeBase(current);
+  if (previous === undefined) return (key) => currentRules.has(key);
+  const previousRules = rulesByKnowledgeBase(previous);
+  const tiersMatch = sameTiers(previous.excludedTiers, current.excludedTiers);
+  return (key) => {
+    const rules = currentRules.get(key);
+    if (rules !== previousRules.get(key)) return true;
+    return rules !== undefined && !tiersMatch;
+  };
 }
 
 function sameIdentity(
@@ -109,9 +185,12 @@ function referenceKeys(references: readonly CanonicalCandidateProfileProvenanceR
  *
  * Reuse needs a recorded extraction identity equal to the current route. A source is unchanged when
  * its exact version (store, knowledge base, source, version, kind) and recorded revision match the
- * earlier selection, it can be extracted now, and its knowledge base has no sensitivity rules. A
- * fact is kept only when every cited source is unchanged; sources cited by a dropped fact, or by an
- * earlier extraction error, are extracted again so the merged facts match a full extraction.
+ * earlier selection, it can be extracted now, and its knowledge base was filtered the same way: the
+ * latest version recorded the same sensitivity rules (version and checksum) for it, or none on
+ * either side, and, when rules apply, the same excluded tiers. A version recorded without
+ * sensitivity only vouches for knowledge bases that have no rules now. A fact is kept only when
+ * every cited source is unchanged; sources cited by a dropped fact, or by an earlier extraction
+ * error, are extracted again so the merged facts match a full extraction.
  */
 export function planIncrementalCanonicalProfileExtraction(
   input: PlanIncrementalCanonicalProfileInput,
@@ -130,10 +209,9 @@ export function planIncrementalCanonicalProfileExtraction(
   if (latest.profile.candidateKnowledgeSelection === undefined) return fullPlan(input.materials);
   const previousRevisions = snapshotRevisions(latest.profile.candidateKnowledgeSelection);
   const currentRevisions = snapshotRevisions(input.snapshot);
-  const filtered = new Set(
-    input.filteredKnowledgeBases.map((base) =>
-      JSON.stringify([base.storeId, base.knowledgeBaseId]),
-    ),
+  const filteredDifferently = knowledgeBasesFilteredDifferently(
+    latest.profile.extraction.sensitivity,
+    input.sensitivity,
   );
   const materialByKey = new Map(
     input.materials.map((material) => [referenceKey(material.reference), material]),
@@ -145,7 +223,7 @@ export function planIncrementalCanonicalProfileExtraction(
     if (
       revision !== undefined &&
       revision === previousRevisions.get(key) &&
-      !filtered.has(JSON.stringify([storeId, knowledgeBaseId]))
+      !filteredDifferently(knowledgeBaseKey(storeId, knowledgeBaseId))
     ) {
       unchanged.add(key);
     }

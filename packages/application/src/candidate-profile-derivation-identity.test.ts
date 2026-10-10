@@ -80,11 +80,16 @@ describe("canonical profile derivation extraction identity", () => {
         now: () => createdAt,
       }).deriveCanonicalCandidateProfile({ ...command, profileId: "profile-unknown" });
 
-      expect(recorded.profile.extraction).toEqual(extraction);
+      // The derivation also records the sensitivity filtering: the default tiers, no rules here.
+      const recordedExtraction = {
+        ...extraction,
+        sensitivity: { excludedTiers: ["sensitive", "never-share"], rules: [] },
+      };
+      expect(recorded.profile.extraction).toEqual(recordedExtraction);
       expect(
         (await storage.getLatestCanonicalCandidateProfile(workspace.id, "profile-recorded"))
           ?.profile.extraction,
-      ).toEqual(extraction);
+      ).toEqual(recordedExtraction);
       expect(unknown.profile).not.toHaveProperty("extraction");
       expect(JSON.stringify(recorded)).not.toContain(storeRoot);
     } finally {

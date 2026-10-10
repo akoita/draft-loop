@@ -134,7 +134,10 @@ describe("incremental canonical profile derivation", () => {
     const first = await derive();
 
     expect(calls.flat().sort()).toEqual(["Analyst|SQL", "Engineer|TypeScript"]);
-    expect(first.profile.extraction).toEqual(identity);
+    expect(first.profile.extraction).toEqual({
+      ...identity,
+      sensitivity: { excludedTiers: ["sensitive", "never-share"], rules: [] },
+    });
     expect(first).toMatchObject({ reusedSourceCount: 0, extractedSourceCount: 2 });
   });
 
