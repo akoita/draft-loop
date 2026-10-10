@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createCanonicalCandidateProfileDerivationService } from "./candidate-profile-derivation.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
+import { createSourceEvidenceKindService } from "./source-evidence-kind-service.js";
 
 const createdAt = "2026-08-28T08:00:00.000Z";
 const identity: CanonicalCandidateProfileExtractionIdentity = {
@@ -51,6 +52,7 @@ describe("incremental canonical profile derivation", () => {
   let knowledgeBaseId: string;
   let storage: ReturnType<typeof openSqliteStorage>;
   let calls: string[][];
+  let kinds: (string | undefined)[][];
   let failOn: string | undefined;
   const knowledge = createCandidateKnowledgeStoreService({ now: () => createdAt });
   const workspace: WorkspaceRecord = {
@@ -70,6 +72,7 @@ describe("incremental canonical profile derivation", () => {
     if (id === undefined) throw new Error("missing knowledge base");
     knowledgeBaseId = id;
     calls = [];
+    kinds = [];
     failOn = undefined;
   });
 
@@ -112,6 +115,7 @@ describe("incremental canonical profile derivation", () => {
       extractor: {
         extract: (request) => {
           calls.push(request.sources.map((source) => source.text.trim()));
+          kinds.push(request.sources.map((source) => source.evidenceKind));
           return proposalFor(request.sources, failOn);
         },
       },
@@ -137,6 +141,10 @@ describe("incremental canonical profile derivation", () => {
     expect(first.profile.extraction).toEqual({
       ...identity,
       sensitivity: { excludedTiers: ["sensitive", "never-share"], rules: [] },
+      evidenceKinds: [
+        expect.objectContaining({ kind: "other" }),
+        expect.objectContaining({ kind: "other" }),
+      ],
     });
     expect(first).toMatchObject({ reusedSourceCount: 0, extractedSourceCount: 2 });
   });
@@ -177,6 +185,41 @@ describe("incremental canonical profile derivation", () => {
     )) {
       expect(second.profile.facts).toContainEqual(fact);
     }
+  });
+
+  it("extracts only the source whose evidence kind changed, under its new kind", async () => {
+    const a = await importSource("a", "Engineer|TypeScript");
+    await importSource("b", "Analyst|SQL");
+    const first = await derive();
+    expect(kinds.flat()).toEqual(["other", "other"]);
+
+    const evidenceKinds = createSourceEvidenceKindService({ now: () => createdAt });
+    await evidenceKinds.setSourceEvidenceKind({
+      storeRoot,
+      knowledgeBaseId,
+      sourceId: a,
+      kind: "notes",
+    });
+    calls = [];
+    kinds = [];
+    const second = await derive();
+
+    expect(calls).toEqual([["Engineer|TypeScript"]]);
+    expect(kinds).toEqual([["notes"]]);
+    expect(second).toMatchObject({ reusedSourceCount: 1, extractedSourceCount: 1 });
+    expect(second.profile.extraction?.evidenceKinds?.map((entry) => entry.kind).sort()).toEqual([
+      "notes",
+      "other",
+    ]);
+    for (const fact of first.profile.facts.filter((candidate) =>
+      ["Analyst", "SQL"].includes(candidate.value),
+    )) {
+      expect(second.profile.facts).toContainEqual(fact);
+    }
+
+    calls = [];
+    await derive();
+    expect(calls).toEqual([]);
   });
 
   it("drops the facts of a retired source without calling the provider", async () => {

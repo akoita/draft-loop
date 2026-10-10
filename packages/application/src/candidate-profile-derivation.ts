@@ -8,6 +8,7 @@ import {
   maximumCanonicalCandidateProfileIssueCount,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
 } from "@draft-loop/domain";
+import type { CandidateEvidenceKind } from "@draft-loop/domain/candidate-evidence-kind";
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { ingestBytes as defaultIngestBytes, type IngestionResult } from "@draft-loop/ingestion";
 import type {
@@ -39,6 +40,10 @@ import {
 } from "./candidate-profile-incremental.js";
 import { candidateProfileSourceTooLargeMessage } from "./candidate-profile-input-error.js";
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import {
+  effectiveCandidateEvidenceKind,
+  recordedCanonicalProfileEvidenceKinds,
+} from "./canonical-profile-evidence-kinds.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import {
   type CanonicalProfileSensitivityRulesApplied,
@@ -308,6 +313,12 @@ async function materializeSelection(
       const sensitivityRules = await handle.getCandidateKnowledgeSourceSensitivityRules(
         entry.knowledgeBaseId,
       );
+      const evidenceKindOverrides = new Map<string, CandidateEvidenceKind>();
+      for (const record of await handle.listCandidateKnowledgeSourceEvidenceKindOverrides(
+        entry.knowledgeBaseId,
+      )) {
+        if (record.kind !== null) evidenceKindOverrides.set(record.sourceId, record.kind);
+      }
       if (sensitivityRules !== undefined) {
         sensitivityRulesApplied.push({
           storeId: entry.storeId,
@@ -372,11 +383,28 @@ async function materializeSelection(
           fullyExcludedReferences.push(reference);
           continue;
         }
+        const override = evidenceKindOverrides.get(selectedSource.sourceId);
+        const displayName =
+          override === undefined
+            ? (
+                await handle.getCandidateKnowledgeSource(
+                  entry.knowledgeBaseId,
+                  selectedSource.sourceId,
+                )
+              )?.displayName
+            : undefined;
         materials.push({
           id,
           mediaType: source.mediaType,
           checksum: source.checksum,
           text: filtered.status === "filtered" ? filtered.text : source.text,
+          // Detection reads the whole normalized text, as the CLI and desktop do when they show it.
+          evidenceKind: effectiveCandidateEvidenceKind({
+            text: source.text,
+            mediaType: source.mediaType,
+            ...(displayName === undefined ? {} : { displayName }),
+            ...(override === undefined ? {} : { override }),
+          }),
           reference,
           ...(filtered.status === "filtered" ? { sensitivity: filtered.guard } : {}),
         });
@@ -617,7 +645,13 @@ export function createCanonicalCandidateProfileDerivationService(
         candidateKnowledgeSelection: snapshot,
         ...(dependencies.extractionIdentity === undefined
           ? {}
-          : { extraction: { ...dependencies.extractionIdentity, sensitivity } }),
+          : {
+              extraction: {
+                ...dependencies.extractionIdentity,
+                sensitivity,
+                evidenceKinds: recordedCanonicalProfileEvidenceKinds(materialization.materials),
+              },
+            }),
         facts: extracted.facts,
         issues,
       });

@@ -148,6 +148,35 @@ describe("canonical profile extraction identity", () => {
     ).not.toHaveProperty("sensitivity");
   });
 
+  it("round-trips per-version evidence kinds and rejects unknown kinds or duplicates", () => {
+    const entry = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      sourceId: "source-1",
+      versionId: "version-1",
+      kind: "performance-review",
+    };
+    const parsed = canonicalCandidateProfileSchema.parse(
+      profilePayload({ extraction: { ...identity, evidenceKinds: [entry] } }),
+    );
+    expect(parsed.extraction?.evidenceKinds).toEqual([entry]);
+    expect(parseCanonicalCandidateProfile(serializeCanonicalCandidateProfile(parsed))).toEqual(
+      parsed,
+    );
+    for (const evidenceKinds of [
+      [{ ...entry, kind: "resume" }],
+      [entry, { ...entry }],
+      [{ ...entry, path: "/private" }],
+      [{ ...entry, versionId: " " }],
+    ]) {
+      expect(() =>
+        canonicalCandidateProfileSchema.parse(
+          profilePayload({ extraction: { ...identity, evidenceKinds } }),
+        ),
+      ).toThrow();
+    }
+  });
+
   it("rejects unknown tiers, duplicates, bad checksums, and unsupported fields", () => {
     const rule = {
       storeId: "store-1",

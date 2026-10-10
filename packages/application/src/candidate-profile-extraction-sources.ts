@@ -24,6 +24,11 @@ export function canonicalCandidateProfileSourceContentKey(
   return JSON.stringify([source.mediaType, source.checksum, source.text]);
 }
 
+/** Exact inputs extracted under different evidence kinds get different guidance, so stay apart. */
+function providerInputKey(source: CanonicalCandidateProfileExtractionSource): string {
+  return JSON.stringify([canonicalCandidateProfileSourceContentKey(source), source.evidenceKind]);
+}
+
 /** Deduplicate exact provider inputs while retaining every local source reference. */
 export function prepareCanonicalCandidateProfileExtractionSources(
   sources: readonly CanonicalCandidateProfileExtractionSource[],
@@ -33,7 +38,7 @@ export function prepareCanonicalCandidateProfileExtractionSources(
   const groups: SourceGroup[] = [];
 
   for (const source of sources) {
-    const key = canonicalCandidateProfileSourceContentKey(source);
+    const key = providerInputKey(source);
     const contentGroups = groupsByContent.get(key) ?? [];
     let group = contentGroups.at(-1);
     if (
@@ -45,6 +50,7 @@ export function prepareCanonicalCandidateProfileExtractionSources(
         mediaType: source.mediaType,
         checksum: source.checksum,
         text: source.text,
+        ...(source.evidenceKind === undefined ? {} : { evidenceKind: source.evidenceKind }),
       });
       group = { representative, references: [] };
       contentGroups.push(group);

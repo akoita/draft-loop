@@ -12,6 +12,10 @@ import {
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
 import {
+  type CandidateEvidenceKind,
+  isCandidateEvidenceKind,
+} from "@draft-loop/domain/candidate-evidence-kind";
+import {
   type CanonicalCandidateProfileExtractionProposal,
   type CanonicalCandidateProfileFact,
   type CanonicalCandidateProfileFactProvenanceReference,
@@ -79,6 +83,8 @@ export interface CanonicalCandidateProfileExtractionSource {
   readonly mediaType: string;
   readonly checksum: string;
   readonly text: string;
+  /** The source's effective evidence kind; it selects kind-specific extraction guidance. */
+  readonly evidenceKind?: CandidateEvidenceKind;
 }
 
 /** Local source material plus the exact CKB reference hidden from the provider request. */
@@ -197,7 +203,8 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
       source.mediaType.length > maximumCanonicalCandidateProfileValueLength ||
       typeof source.checksum !== "string" ||
       !checksumPattern.test(source.checksum) ||
-      typeof source.text !== "string"
+      typeof source.text !== "string" ||
+      (source.evidenceKind !== undefined && !isCandidateEvidenceKind(source.evidenceKind))
     ) {
       throw new Error("The canonical candidate profile extraction source is invalid.");
     }
@@ -228,6 +235,7 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
         mediaType: source.mediaType.trim(),
         checksum: source.checksum,
         text: source.text,
+        ...(source.evidenceKind === undefined ? {} : { evidenceKind: source.evidenceKind }),
       }),
     );
   }

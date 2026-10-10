@@ -15,6 +15,7 @@ import type {
 import type { CanonicalCandidateProfileVersionRecord } from "@draft-loop/storage";
 
 import type { CanonicalCandidateProfileExtractionMaterial } from "./candidate-profile-extraction.js";
+import { evidenceKindChangedSince } from "./canonical-profile-evidence-kinds.js";
 import { referenceKey } from "./canonical-profile-fact-keys.js";
 import {
   type CanonicalProfileSensitivityRulesApplied,
@@ -188,7 +189,8 @@ function referenceKeys(references: readonly CanonicalCandidateProfileProvenanceR
  * earlier selection, it can be extracted now, and its knowledge base was filtered the same way: the
  * latest version recorded the same sensitivity rules (version and checksum) for it, or none on
  * either side, and, when rules apply, the same excluded tiers. A version recorded without
- * sensitivity only vouches for knowledge bases that have no rules now. A fact is kept only when
+ * sensitivity only vouches for knowledge bases that have no rules now. A source whose evidence kind
+ * differs from the kind recorded for its version is extracted again under the new guidance. A fact is kept only when
  * every cited source is unchanged; sources cited by a dropped fact, or by an earlier extraction
  * error, are extracted again so the merged facts match a full extraction.
  */
@@ -213,6 +215,7 @@ export function planIncrementalCanonicalProfileExtraction(
     latest.profile.extraction.sensitivity,
     input.sensitivity,
   );
+  const kindChanged = evidenceKindChangedSince(latest.profile.extraction.evidenceKinds);
   const materialByKey = new Map(
     input.materials.map((material) => [referenceKey(material.reference), material]),
   );
@@ -223,6 +226,7 @@ export function planIncrementalCanonicalProfileExtraction(
     if (
       revision !== undefined &&
       revision === previousRevisions.get(key) &&
+      !kindChanged(material) &&
       !filteredDifferently(knowledgeBaseKey(storeId, knowledgeBaseId))
     ) {
       unchanged.add(key);

@@ -382,6 +382,7 @@ function plannedPartKey(
     plannedCall.sourceId,
     source?.checksum,
     source?.text.length,
+    source?.evidenceKind,
     plannedCall.window?.start,
     plannedCall.window?.end,
     controls.model,

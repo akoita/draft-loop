@@ -44,7 +44,14 @@ export function buildBoundedCallRequest(
       sources:
         window === undefined
           ? [source]
-          : [{ id: source.id, mediaType: source.mediaType, text: window.text }],
+          : [
+              {
+                id: source.id,
+                mediaType: source.mediaType,
+                ...(source.evidenceKind === undefined ? {} : { evidenceKind: source.evidenceKind }),
+                text: window.text,
+              },
+            ],
       ...(window === undefined
         ? {}
         : {
