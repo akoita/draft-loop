@@ -161,4 +161,56 @@ describe("opportunity edit and review failures", () => {
     expect(value.requirements[1]).not.toHaveProperty("excerpt");
     expect(value.priorities[0]).not.toHaveProperty("excerpt");
   });
+
+  it("projects a JobPosting text origin on a page source to the renderer", async () => {
+    const source = (id: string, textOrigin?: string) => ({
+      id,
+      classification: "job-posting",
+      status: "available",
+      provenance: {
+        kind: "approved-url",
+        originalUrl: `https://jobs.example.test/${id}`,
+        capturedAt: "2026-10-07T10:00:00.000Z",
+        contentChecksum: "a".repeat(64),
+        ...(textOrigin === undefined ? {} : { textOrigin }),
+      },
+    });
+    const getOpportunity = vi.fn<ApplicationService["getOpportunity"]>(
+      async () =>
+        ({
+          checksum: "c".repeat(64),
+          brief: {
+            id: "brief-1",
+            version: 1,
+            priorVersion: null,
+            status: "draft",
+            createdAt: "2026-10-07T10:00:00.000Z",
+            reviewedAt: null,
+            sources: [source("job-1", "job-posting-json-ld"), source("job-2")],
+            role: null,
+            employer: null,
+            responsibilities: [],
+            requirements: [],
+            priorities: [],
+            candidateInstructions: {
+              tone: null,
+              applicationGoal: null,
+              forbiddenLanguage: [],
+              focusAreas: [],
+            },
+            issues: [],
+          },
+        }) as unknown as Awaited<ReturnType<ApplicationService["getOpportunity"]>>,
+    );
+    const { host, workspaceId } = await openWorkspace({ getOpportunity });
+
+    const read = await host.invoke({
+      type: "opportunity.get",
+      input: { workspaceId, briefId: "brief-1" },
+    });
+    if (!read.ok) throw new Error(`Expected a brief: ${JSON.stringify(read)}`);
+    const sources = (read.value as { sources: object[] }).sources;
+    expect(sources[0]).toMatchObject({ id: "job-1", textOrigin: "job-posting-json-ld" });
+    expect(sources[1]).not.toHaveProperty("textOrigin");
+  });
 });

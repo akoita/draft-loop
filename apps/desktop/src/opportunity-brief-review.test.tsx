@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { type OpportunityRecordResult, validateBridgeCommand } from "./bridge.js";
+import {
+  createCapabilityPort,
+  type OpportunityRecordResult,
+  validateBridgeCommand,
+} from "./bridge.js";
+import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { OpportunityBriefReviewView } from "./opportunity-brief-review.js";
 import {
   acknowledgeIssue,
@@ -194,6 +199,60 @@ describe("job-text excerpts", () => {
         input: { workspaceId: "workspace-1", briefId: "brief-abc", expectedVersion: 1, patch },
       }),
     ).toMatchObject({ input: { patch: { requirements: [{ excerpt }, {}] } } });
+  });
+});
+
+describe("job text read from the page's JobPosting data", () => {
+  const fromJobPosting = record({
+    sources: [
+      {
+        id: "workspace-job-description",
+        kind: "approved-url",
+        classification: "job-posting",
+        status: "available",
+        checksum: "a".repeat(64),
+        capturedAt: "2026-10-07T10:00:00.000Z",
+        textOrigin: "job-posting-json-ld",
+      },
+    ],
+  });
+
+  it("says so in the brief review, and says nothing for visible page text", () => {
+    expect(view(fromJobPosting, null)).toContain("Read from the page&#x27;s job posting data.");
+    const plain = record();
+    expect(view(plain, null)).not.toContain("job posting data");
+  });
+
+  it("keeps the origin through the bridge result allowlist", async () => {
+    const port = createCapabilityPort({
+      capabilities: [...bridgeCapabilities],
+      invoke: async () => ({ ok: true, value: fromJobPosting }) as never,
+    });
+    const result = await port.execute({
+      type: "opportunity.get",
+      input: { workspaceId: "workspace-1", briefId: "brief-abc" },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: { sources: [{ textOrigin: "job-posting-json-ld" }] },
+    });
+
+    const unknown = createCapabilityPort({
+      capabilities: [...bridgeCapabilities],
+      invoke: async () =>
+        ({
+          ok: true,
+          value: record({
+            sources: [{ ...fromJobPosting.sources[0], textOrigin: "visible-page" } as never],
+          }),
+        }) as never,
+    });
+    expect(
+      await unknown.execute({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-1", briefId: "brief-abc" },
+      }),
+    ).toMatchObject({ ok: false });
   });
 });
 

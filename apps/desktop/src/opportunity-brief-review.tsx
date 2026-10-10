@@ -274,6 +274,9 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                 <dd>{record.employer?.value ?? "Not found in the job description"}</dd>
               </div>
             </dl>
+            {record.sources.some((source) => source.textOrigin === "job-posting-json-ld") ? (
+              <p className="setup-note">Read from the page's job posting data.</p>
+            ) : null}
             {notice === null ? null : (
               <p className="error-banner" role="alert">
                 {notice.message}

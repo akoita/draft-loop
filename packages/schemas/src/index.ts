@@ -114,6 +114,16 @@ import {
 } from "./opportunity-brief-fields.js";
 
 export { opportunityBriefMaximumExcerptLength } from "./opportunity-brief-fields.js";
+
+import { opportunityBriefProvenanceSchema } from "./opportunity-brief-provenance.js";
+
+export {
+  type OpportunityBriefProvenance,
+  type OpportunityBriefTextOrigin,
+  opportunityBriefProvenanceSchema,
+  opportunityBriefTextOriginSchema,
+  opportunityBriefTextOrigins,
+} from "./opportunity-brief-provenance.js";
 export {
   type OpportunityExtractionProposal,
   opportunityExtractionProposalJsonSchema,
@@ -195,57 +205,6 @@ export const jobRequirementInputSchema = z
 
 export type JobRequirementInput = z.input<typeof jobRequirementInputSchema>;
 
-const opportunityBriefChecksumSchema = z
-  .string()
-  .regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum")
-  .transform((value) => value.toLowerCase());
-const opportunityBriefUrlSchema = opportunityBriefNonEmptyString
-  .max(opportunityBriefMaximumTextLength)
-  .refine((value) => {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, "must be a valid HTTPS URL");
-
-const opportunityBriefApprovedUrlProvenanceSchema = z.strictObject({
-  kind: z.literal("approved-url"),
-  originalUrl: opportunityBriefUrlSchema,
-  finalUrl: opportunityBriefUrlSchema.optional(),
-  capturedAt: strictTimestampSchema,
-  contentChecksum: opportunityBriefChecksumSchema.nullable(),
-});
-
-const opportunityBriefLocalFileProvenanceSchema = z.strictObject({
-  kind: z.literal("local-file"),
-  displayName: opportunityBriefNonEmptyString
-    .max(opportunityBriefMaximumTextLength)
-    .refine(
-      (value) =>
-        !value.includes("/") &&
-        !value.includes("\\") &&
-        !value.startsWith("~") &&
-        !/^[A-Za-z]:/u.test(value),
-      "must be a display name, not a host path",
-    ),
-  capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema.nullable(),
-});
-
-const opportunityBriefPastedContentProvenanceSchema = z.strictObject({
-  kind: z.literal("pasted-content"),
-  capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema.nullable(),
-});
-
-const opportunityBriefCandidateInputProvenanceSchema = z.strictObject({
-  kind: z.literal("candidate-input"),
-  capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema.nullable(),
-});
-
 export const opportunityBriefStatusSchema = z.enum(opportunityBriefStatuses);
 export const opportunityBriefSourceClassificationSchema = z.enum(
   opportunityBriefSourceClassifications,
@@ -255,14 +214,6 @@ export const opportunityBriefSourceStatusSchema = z.enum(opportunityBriefSourceS
 export const opportunityBriefIssueCodeSchema = z.enum(opportunityBriefIssueCodes);
 export const opportunityBriefIssueStatusSchema = z.enum(opportunityBriefIssueStatuses);
 export const opportunityBriefIssueSeveritySchema = z.enum(opportunityBriefIssueSeverities);
-
-export const opportunityBriefProvenanceSchema = z.discriminatedUnion("kind", [
-  opportunityBriefApprovedUrlProvenanceSchema,
-  opportunityBriefLocalFileProvenanceSchema,
-  opportunityBriefPastedContentProvenanceSchema,
-  opportunityBriefCandidateInputProvenanceSchema,
-]);
-export type OpportunityBriefProvenance = z.infer<typeof opportunityBriefProvenanceSchema>;
 
 export const opportunityBriefSourceSchema = z
   .strictObject({
