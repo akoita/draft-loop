@@ -894,7 +894,7 @@ sources, extraction proactively makes one call per source up to the window size
 and divides each larger source into contiguous windows of at most that size. The
 window size is three quarters of the call's output-token budget divided by 1.6
 (the planning ratio of output tokens per character of dense career text; Mistral
-Large 4 measured about 1.1 with entry-level facts), clamped to 8,192 to 32,768
+Large 4 measured at most 1.33 on dense and 0.85 on prose synthetic text), clamped to 8,192 to 32,768
 UTF-16 units. The 8,192-token routes therefore use 8,192-unit windows and the
 32,768-token ceiling uses 15,360-unit windows. `pnpm test:profile-windows:live` checks the
 ratio on a developer machine: it extracts made-up dense and prose career text
