@@ -387,9 +387,14 @@ it appears on Home as Drafting and can be resumed there.
    run has begun. After approval and export, Home lists the application as
    Exported.
 
-A second application reuses the same reviewed profile and has its own brief. A
-per-application model override is not offered yet; runs use the workspace's
-model pair.
+A second application reuses the same reviewed profile and has its own brief.
+
+A created application can also hold its own model pair: exact author and critic
+model profiles from two different companies. Its new runs use and record that
+pair instead of the workspace's, even when a start names the workspace's applied
+profiles, and a resumed run keeps the pair it recorded. Its review state and
+provider-transmission consent follow the pair, so switching to it asks for
+consent again. The default application always uses the workspace's pair.
 
 Briefs belong to applications. `opportunity.create`, `opportunity.latest`,
 `opportunity.edit` and `opportunity.review` accept an optional `applicationId`.
@@ -399,12 +404,14 @@ the default application keeps the workspace's own latest and reviewed brief.
 
 The bridge exposes `application.list`, `application.get`,
 `application.create`, `application.import`, `application.archive` (with
-`archived: true` or `false`) and `application.delete`. `application.create` takes the job
+`archived: true` or `false`), `application.delete` and `application.set-models`
+(with `modelProfiles: { author, critic }` profile references, or `null` to use
+the workspace's pair again). `application.create` takes the job
 as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
 takes only the workspace id: the host shows the folder picker, so no path crosses
 the bridge in either direction. Results carry the name, job source kind,
-status, timestamps, run, brief and export counts, the latest run id and when it
-was archived, never a
+status, timestamps, run, brief and export counts, the latest run id, when it
+was archived and its own model pair, never a
 path, URL or job text. An import also returns content-free counts of what it
 copied. `review.load`, `review.dispatch` and `run.start` accept an
 optional `applicationId`.

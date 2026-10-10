@@ -35,6 +35,7 @@ function application(overrides: Partial<ApplicationSummaryView> = {}): Applicati
     exportCount: 0,
     latestRunId: null,
     archivedAt: null,
+    modelProfiles: null,
     ...overrides,
   };
 }

@@ -10,7 +10,9 @@ import {
 import {
   type Application,
   type ApplicationJobSource,
+  type ApplicationModelProfiles,
   applicationIdSchema,
+  applicationModelProfilesSchema,
   applicationSchema,
 } from "@draft-loop/schemas/application";
 import { openSqliteStorage, type SqliteStorage } from "@draft-loop/storage";
@@ -26,7 +28,8 @@ import {
   withCandidateProfileFreshness,
 } from "./candidate-profile-freshness.js";
 import { CliUserError } from "./cli-user-error.js";
-import type { ApplicationDriver, CreateOpportunityCommand } from "./index.js";
+import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
+import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
   type ImportApplicationCommand,
   type ImportApplicationCounts,
@@ -45,6 +48,8 @@ export interface ApplicationView extends Application {
   readonly exports: readonly ApplicationExportSummary[];
   /** When the application was archived; null while it is on the main list. */
   readonly archivedAt: string | null;
+  /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
+  readonly modelProfiles: ApplicationModelProfiles | null;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -87,6 +92,13 @@ export interface DeleteApplicationCommand {
   readonly applicationId: string;
 }
 
+export interface SetApplicationModelsCommand {
+  readonly root: string;
+  readonly applicationId: string;
+  /** The pair for this application's new runs, or null to use the workspace's pair again. */
+  readonly modelProfiles: ApplicationModelProfiles | null;
+}
+
 export interface WorkspaceApplicationService {
   readonly create: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   /** The default application first, then created applications, oldest first. */
@@ -99,6 +111,8 @@ export interface WorkspaceApplicationService {
    * The default application and applications with history can only be archived.
    */
   readonly delete: (command: DeleteApplicationCommand) => Promise<void>;
+  /** Sets or clears the model pair a created application's new runs use; resolves with it. */
+  readonly setModels: (command: SetApplicationModelsCommand) => Promise<ApplicationView>;
 }
 
 export interface WorkspaceApplicationDependencies {
@@ -109,6 +123,8 @@ export interface WorkspaceApplicationDependencies {
     readonly candidateKnowledgeSelection?: CandidateProfileFreshnessSelection;
   }>;
   readonly now?: () => string;
+  /** Resolves an application's model pair; the built-in profiles by default. */
+  readonly modelProfileRegistry?: ModelProfileRegistry;
 }
 
 interface WorkspaceIdentity {
@@ -158,6 +174,9 @@ async function describeApplication(
   base: Omit<Application, "status" | "updatedAt"> & { readonly updatedAt: string },
 ): Promise<ApplicationView> {
   const archivedAt = (await applications.listArchived(workspaceId)).get(base.id) ?? null;
+  const modelProfiles = base.isDefault
+    ? null
+    : ((await applications.getModelProfiles(workspaceId, base.id)) ?? null);
   const [briefs, runs, exports] = await Promise.all([
     applications.listBriefs(workspaceId, base.id),
     applications.listRuns(workspaceId, base.id),
@@ -179,6 +198,7 @@ async function describeApplication(
     runs,
     exports,
     archivedAt,
+    modelProfiles,
   };
 }
 
@@ -218,6 +238,7 @@ async function describeDefaultApplication(
       runs: [],
       exports: [],
       archivedAt: null,
+      modelProfiles: null,
     };
   }
   return describeApplication(storage.applications, workspace.id, base);
@@ -275,6 +296,34 @@ async function persistJobSource(
   return { jobSource: { kind: "pasted-text", storedPath }, storedFile: absolute };
 }
 
+/**
+ * Checks an application's model pair: registered author and critic profiles from two different
+ * companies, as the workspace's own pairing requires without a written override.
+ */
+function validatedModelProfiles(
+  value: ApplicationModelProfiles,
+  registry: ModelProfileRegistry,
+): ApplicationModelProfiles {
+  const parsed = applicationModelProfilesSchema.safeParse(value);
+  if (!parsed.success) throw new CliUserError("The model pair is not a valid profile pair.");
+  const providers = (["author", "critic"] as const).map((role) => {
+    const reference = parsed.data[role];
+    try {
+      return registry.resolve(reference.id, reference.version, role).provider;
+    } catch {
+      throw new CliUserError(
+        `The ${role} profile ${reference.id}@${reference.version} is not a registered ${role} profile.`,
+      );
+    }
+  });
+  if (providers[0] === providers[1]) {
+    throw new CliUserError(
+      "An application's author and critic must come from different companies.",
+    );
+  }
+  return parsed.data;
+}
+
 /** Application records for a workspace; the workspace itself stays the candidate's home. */
 export function createWorkspaceApplicationService(
   dependencies: WorkspaceApplicationDependencies,
@@ -316,6 +365,34 @@ export function createWorkspaceApplicationService(
   return {
     list,
     get,
+    setModels: async ({ root: rootInput, applicationId, modelProfiles }) => {
+      const root = resolve(rootInput);
+      if (applicationId === defaultApplicationId) {
+        throw new CliUserError(
+          "The default application uses the workspace's models. Change the workspace's models instead.",
+        );
+      }
+      const pair =
+        modelProfiles === null
+          ? null
+          : validatedModelProfiles(
+              modelProfiles,
+              dependencies.modelProfileRegistry ?? defaultModelProfileRegistry,
+            );
+      if ((await get({ root, applicationId })) === undefined) {
+        throw new CliUserError(`Application ${applicationId} was not found.`);
+      }
+      const workspace = await dependencies.readWorkspace(root);
+      const storage = await openHistory(root);
+      try {
+        await storage.applications.setModelProfiles(workspace.id, applicationId, pair, clock());
+      } finally {
+        await storage.close();
+      }
+      const view = await get({ root, applicationId });
+      if (view === undefined) throw new CliUserError("The application could not be read back.");
+      return view;
+    },
     archive: async ({ root: rootInput, applicationId, archived }) => {
       const root = resolve(rootInput);
       if ((await get({ root, applicationId })) === undefined) {
@@ -511,8 +588,19 @@ export function withWorkspaceApplications(
   dependencies: WorkspaceApplicationDependencies,
 ): ApplicationDriver {
   const service = createWorkspaceApplicationService(dependencies);
+  /** A run of an application with its own pair uses that pair, whatever the caller named. */
+  const withApplicationModels = async (command: StartRunCommand): Promise<StartRunCommand> => {
+    const { applicationId } = command;
+    if (applicationId === undefined || applicationId === defaultApplicationId) return command;
+    const application = await service.get({ root: command.root, applicationId });
+    if (application === undefined || application.modelProfiles === null) return command;
+    return { ...command, modelProfiles: application.modelProfiles };
+  };
   const withApplications: ApplicationDriver = {
     ...driver,
+    begin: async (command, io) => driver.begin(await withApplicationModels(command), io),
+    start: async (command, io) => driver.start(await withApplicationModels(command), io),
+    setApplicationModels: async (command) => service.setModels(command),
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),

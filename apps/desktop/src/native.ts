@@ -315,6 +315,12 @@ export interface DesktopApplicationCapabilities {
   ) => Promise<ApplicationSummaryView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (workspaceId: string, applicationId: string) => Promise<void>;
+  /** Sets the model pair one application's new runs use, or clears it with `null`. */
+  readonly setApplicationModels?: (
+    workspaceId: string,
+    applicationId: string,
+    modelProfiles: ApplicationSummaryView["modelProfiles"],
+  ) => Promise<ApplicationSummaryView>;
   /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
    * `null`. Opening another workspace clears the scope.
@@ -491,6 +497,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "application.archive",
                 input: { workspaceId, applicationId, archived },
+              }),
+            ).application,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.set-models")
+      ? {
+          setApplicationModels: async (
+            workspaceId: string,
+            applicationId: string,
+            modelProfiles: ApplicationSummaryView["modelProfiles"],
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.set-models",
+                input: { workspaceId, applicationId, modelProfiles },
               }),
             ).application,
         }

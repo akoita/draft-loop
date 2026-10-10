@@ -29,7 +29,7 @@ A workspace is the **candidate's home**:
 |---|---|
 | Career evidence selection (knowledge base) | Job source: pasted text, approved URL, or file |
 | The reviewed career profile, updated incrementally | Opportunity brief versions |
-| Writing policy and default model pair | Author–critic runs, drafts and decisions |
+| Writing policy and default model pair | Author–critic runs, drafts and decisions, and an optional model pair override |
 | Future guided career interview | Exports and application status |
 
 - **Applications.** An *application* is a first-class record inside the

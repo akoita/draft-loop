@@ -1,8 +1,10 @@
 import { defaultApplicationId, normalizeApplicationName } from "@draft-loop/domain/application";
 import {
   type ApplicationJobSource,
+  type ApplicationModelProfiles,
   applicationIdSchema,
   applicationJobSourceSchema,
+  applicationModelProfilesSchema,
 } from "@draft-loop/schemas/application";
 import {
   type ApplicationImportReadsPort,
@@ -84,8 +86,30 @@ export const applicationArchiveMigration = {
   `.trim(),
 } as const;
 
+/**
+ * The model pair an application uses instead of the workspace's. One row per overridden
+ * application; no row means the workspace's pair. Runs record the pair they used themselves.
+ */
+export const applicationModelProfilesMigration = {
+  version: 32,
+  sql: `
+    CREATE TABLE IF NOT EXISTS application_model_profiles (
+      workspace_id TEXT NOT NULL,
+      application_id TEXT NOT NULL,
+      model_profiles_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL CHECK (julianday(updated_at) IS NOT NULL),
+      PRIMARY KEY (workspace_id, application_id),
+      FOREIGN KEY (workspace_id, application_id) REFERENCES applications(workspace_id, application_id)
+    );
+  `.trim(),
+} as const;
+
 /** The application migrations in the order they apply. */
-export const applicationMigrations = [applicationMigration, applicationArchiveMigration] as const;
+export const applicationMigrations = [
+  applicationMigration,
+  applicationArchiveMigration,
+  applicationModelProfilesMigration,
+] as const;
 
 export interface ApplicationStoreRecord {
   readonly workspaceId: string;
@@ -169,6 +193,18 @@ export interface ApplicationStoragePort extends ApplicationImportReadsPort {
   ) => Promise<void>;
   /** When each archived application of the workspace was archived, by application id. */
   readonly listArchived: (workspaceId: string) => Promise<ReadonlyMap<string, string>>;
+  /** Sets a created application's model pair, or clears it with `null`. */
+  readonly setModelProfiles: (
+    workspaceId: string,
+    applicationId: string,
+    modelProfiles: ApplicationModelProfiles | null,
+    updatedAt: string,
+  ) => Promise<void>;
+  /** The application's own model pair, or `undefined` when it uses the workspace's. */
+  readonly getModelProfiles: (
+    workspaceId: string,
+    applicationId: string,
+  ) => Promise<ApplicationModelProfiles | undefined>;
   /**
    * Deletes a stored application that holds nothing. Runs and briefs are bound by append-only
    * rows, so an application with any of them is a conflict: archive it instead.
@@ -417,6 +453,59 @@ export function createApplicationStorage(
           .map((row) => [text(row, "application_id"), text(row, "archived_at")] as const),
       );
     },
+    setModelProfiles: async (workspaceId, applicationId, modelProfiles, updatedAt) => {
+      ensureOpen();
+      requireIdentifier(workspaceId, "workspace id");
+      if (applicationId === defaultApplicationId) {
+        throw new StorageValidationError("The default application uses the workspace's models");
+      }
+      database.transaction(() => {
+        const stored = database
+          .prepare(
+            "SELECT 1 AS present FROM applications WHERE workspace_id = ? AND application_id = ?",
+          )
+          .get(workspaceId, applicationId);
+        if (stored === undefined) {
+          throw new StorageValidationError(`Application ${applicationId} was not found`);
+        }
+        if (modelProfiles === null) {
+          database
+            .prepare(
+              "DELETE FROM application_model_profiles WHERE workspace_id = ? AND application_id = ?",
+            )
+            .run(workspaceId, applicationId);
+          return;
+        }
+        const parsed = applicationModelProfilesSchema.safeParse(modelProfiles);
+        if (!parsed.success) {
+          throw new StorageValidationError("Invalid application model profiles");
+        }
+        database
+          .prepare(
+            `INSERT INTO application_model_profiles (workspace_id, application_id, model_profiles_json, updated_at)
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT (workspace_id, application_id)
+             DO UPDATE SET model_profiles_json = excluded.model_profiles_json, updated_at = excluded.updated_at`,
+          )
+          .run(workspaceId, applicationId, JSON.stringify(parsed.data), updatedAt);
+      })();
+    },
+    getModelProfiles: async (workspaceId, applicationId) => {
+      ensureOpen();
+      const row = database
+        .prepare(
+          "SELECT model_profiles_json FROM application_model_profiles WHERE workspace_id = ? AND application_id = ?",
+        )
+        .get(workspaceId, applicationId);
+      if (row === undefined) return undefined;
+      const parsed = applicationModelProfilesSchema.safeParse(
+        JSON.parse(text(row, "model_profiles_json")),
+      );
+      if (!parsed.success) {
+        throw new StorageValidationError("Invalid stored application model profiles");
+      }
+      return parsed.data;
+    },
     deleteApplication: async (workspaceId, applicationId) => {
       ensureOpen();
       if (applicationId === defaultApplicationId) {
@@ -445,6 +534,11 @@ export function createApplicationStorage(
         }
         database
           .prepare("DELETE FROM application_archives WHERE workspace_id = ? AND application_id = ?")
+          .run(workspaceId, applicationId);
+        database
+          .prepare(
+            "DELETE FROM application_model_profiles WHERE workspace_id = ? AND application_id = ?",
+          )
           .run(workspaceId, applicationId);
         database
           .prepare("DELETE FROM applications WHERE workspace_id = ? AND application_id = ?")

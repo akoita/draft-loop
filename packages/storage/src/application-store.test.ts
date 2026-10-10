@@ -173,6 +173,49 @@ describe("application storage", () => {
     expect([...(await applications.listArchived(workspaceId)).keys()]).toEqual(["default"]);
   });
 
+  it("sets, replaces and clears an application's own model pair", async () => {
+    const { applications } = storage;
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-a",
+      name: "Acme — Engineer",
+      jobSource,
+      createdAt,
+    });
+    const frontier = {
+      author: { id: "anthropic-frontier", version: 1 },
+      critic: { id: "openai-frontier", version: 2 },
+    };
+    expect(await applications.getModelProfiles(workspaceId, "app-a")).toBeUndefined();
+    await applications.setModelProfiles(workspaceId, "app-a", frontier, createdAt);
+    expect(await applications.getModelProfiles(workspaceId, "app-a")).toEqual(frontier);
+    const replaced = { ...frontier, critic: { id: "openai-economy", version: 1 } };
+    await applications.setModelProfiles(workspaceId, "app-a", replaced, createdAt);
+    expect(await applications.getModelProfiles(workspaceId, "app-a")).toEqual(replaced);
+    await applications.setModelProfiles(workspaceId, "app-a", null, createdAt);
+    expect(await applications.getModelProfiles(workspaceId, "app-a")).toBeUndefined();
+
+    await expect(
+      applications.setModelProfiles(workspaceId, "default", frontier, createdAt),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      applications.setModelProfiles(workspaceId, "app-missing", frontier, createdAt),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      applications.setModelProfiles(
+        workspaceId,
+        "app-a",
+        { ...frontier, author: { id: "anthropic-frontier", version: 0 } },
+        createdAt,
+      ),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+
+    // Deleting an empty application removes its pair with it.
+    await applications.setModelProfiles(workspaceId, "app-a", frontier, createdAt);
+    await applications.deleteApplication(workspaceId, "app-a");
+    expect(await applications.getModelProfiles(workspaceId, "app-a")).toBeUndefined();
+  });
+
   it("deletes an empty application and refuses one that holds runs or briefs", async () => {
     const { applications } = storage;
     for (const id of ["app-empty", "app-run", "app-brief"]) {
@@ -230,7 +273,7 @@ describe("application storage", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(31);
+    expect(storage.appliedMigrationVersions().at(-1)).toBe(32);
     expect((await storage.getWorkspace(workspaceId))?.createdAt).toBe(createdAt);
     expect(await storage.applications.listApplications(workspaceId)).toEqual([]);
     expect(await storage.applications.listRuns(workspaceId, "default")).toEqual([]);

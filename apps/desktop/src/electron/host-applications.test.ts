@@ -196,4 +196,121 @@ describe("application commands in the native host", () => {
     await host.invoke({ type: "run.start", input: { workspaceId } });
     expect(start.mock.calls[1]?.[0]).not.toHaveProperty("applicationId");
   });
+
+  it("sets an application's own model pair and runs, consents and reports with it", async () => {
+    const begin = vi.fn<ApplicationService["begin"]>(async () => {
+      throw new Error("stop after recording");
+    });
+    const { host, workspaceId } = await openHost({ begin });
+    const created = await createApplication(host, workspaceId, "Acme");
+    expect(created.modelProfiles).toBeNull();
+    const premium = {
+      author: { id: "premium-anthropic-author", version: 1 },
+      critic: { id: "premium-openai-critic", version: 1 },
+    };
+
+    const set = await host.invoke({
+      type: "application.set-models",
+      input: { workspaceId, applicationId: created.id, modelProfiles: premium },
+    });
+    expect(set).toMatchObject({ ok: true, value: { application: { modelProfiles: premium } } });
+    const listedApplication = (await listed(host, workspaceId)).applications.find(
+      (application) => application.id === created.id,
+    );
+    expect(listedApplication?.modelProfiles).toEqual(premium);
+
+    const load = async (applicationId?: string) => {
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId, ...(applicationId === undefined ? {} : { applicationId }) },
+      });
+      if (!loaded.ok) throw new Error(`Expected a review state: ${JSON.stringify(loaded)}`);
+      return (loaded.value as DesktopReviewState).providerTransmissionPreflight;
+    };
+    const workspacePreflight = await load();
+    const applicationPreflight = await load(created.id);
+    expect(applicationPreflight.author).toMatchObject({
+      company: "anthropic",
+      model: "claude-fable-5-1",
+    });
+    expect(applicationPreflight.critic).toMatchObject({ company: "openai", model: "gpt-6-astra" });
+    expect(workspacePreflight.author.model).not.toBe("claude-fable-5-1");
+    expect(applicationPreflight.fingerprint).not.toBe(workspacePreflight.fingerprint);
+
+    if (applicationPreflight.required) {
+      const acknowledged = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId,
+          runId: "pending",
+          action: {
+            type: "acknowledge-provider-transmission",
+            fingerprint: applicationPreflight.fingerprint,
+          },
+          applicationId: created.id,
+        },
+      });
+      expect(acknowledged.ok).toBe(true);
+      expect((await load(created.id)).acknowledged).toBe(true);
+    }
+    // The workspace's applied pair named by the renderer does not replace the application's.
+    await host.invoke({
+      type: "review.dispatch",
+      input: {
+        workspaceId,
+        runId: "pending",
+        action: {
+          type: "start",
+          modelProfiles: {
+            author: { id: "standard-anthropic-author", version: 1 },
+            critic: { id: "standard-openai-critic", version: 1 },
+          },
+        },
+        applicationId: created.id,
+      },
+    });
+    expect(begin).toHaveBeenCalledTimes(1);
+    expect(begin.mock.calls[0]?.[0]).toMatchObject({
+      applicationId: created.id,
+      modelProfiles: premium,
+    });
+
+    const cleared = await host.invoke({
+      type: "application.set-models",
+      input: { workspaceId, applicationId: created.id, modelProfiles: null },
+    });
+    expect(cleared).toMatchObject({ ok: true, value: { application: { modelProfiles: null } } });
+    expect((await load(created.id)).fingerprint).toBe(workspacePreflight.fingerprint);
+  });
+
+  it("refuses a malformed pair at the bridge and a pair for the default application", async () => {
+    const { host, workspaceId } = await openHost();
+    const created = await createApplication(host, workspaceId, "Acme");
+    expect(
+      await host.invoke({
+        type: "application.set-models",
+        input: {
+          workspaceId,
+          applicationId: created.id,
+          modelProfiles: { author: { id: "premium-anthropic-author", version: 0 } },
+        },
+      }),
+    ).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+    expect(
+      await host.invoke({
+        type: "application.set-models",
+        input: {
+          workspaceId,
+          applicationId: "default",
+          modelProfiles: {
+            author: { id: "premium-anthropic-author", version: 1 },
+            critic: { id: "premium-openai-critic", version: 1 },
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: { message: expect.stringContaining("workspace's models") },
+    });
+  });
 });

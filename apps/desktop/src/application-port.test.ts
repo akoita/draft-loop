@@ -19,6 +19,7 @@ const application: ApplicationSummaryView = {
   exportCount: 0,
   latestRunId: null,
   archivedAt: null,
+  modelProfiles: null,
 };
 
 function portWith(capabilities: readonly string[]) {

@@ -23,6 +23,7 @@ const application: ApplicationSummaryView = {
   exportCount: 0,
   latestRunId: "run-2",
   archivedAt: null,
+  modelProfiles: null,
 };
 
 function portReturning(value: unknown) {
@@ -58,6 +59,55 @@ describe("application bridge commands", () => {
       input: { workspaceId: "workspace-1", name: "Acme", jobText: "Line one\n\nLine two" },
     };
     expect(validateBridgeCommand(create)).toEqual(create);
+  });
+
+  it("sets or clears one application's model pair, and keeps the pair on summaries", async () => {
+    const premium = {
+      author: { id: "premium-anthropic-author", version: 1 },
+      critic: { id: "premium-openai-critic", version: 1 },
+    };
+    for (const modelProfiles of [premium, null]) {
+      const command = {
+        type: "application.set-models",
+        input: { workspaceId: "workspace-1", applicationId: "app-1", modelProfiles },
+      };
+      expect(validateBridgeCommand(command)).toEqual(command);
+    }
+    for (const modelProfiles of [
+      undefined,
+      { author: premium.author },
+      { ...premium, critic: { id: "premium-openai-critic", version: 0 } },
+      { ...premium, critic: { id: "../profile", version: 1 } },
+      { ...premium, extra: true },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "application.set-models",
+          input: { workspaceId: "workspace-1", applicationId: "app-1", modelProfiles },
+        }),
+      ).toThrow();
+    }
+
+    const withPair = { ...application, modelProfiles: premium };
+    const result = await portReturning({
+      workspaceId: "workspace-1",
+      application: withPair,
+    }).execute({
+      type: "application.set-models",
+      input: { workspaceId: "workspace-1", applicationId: application.id, modelProfiles: premium },
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: { workspaceId: "workspace-1", application: withPair },
+    });
+    const malformed = await portReturning({
+      workspaceId: "workspace-1",
+      application: { ...application, modelProfiles: { author: premium.author } },
+    }).execute({
+      type: "application.get",
+      input: { workspaceId: "workspace-1", applicationId: application.id },
+    });
+    expect(malformed.ok).toBe(false);
   });
 
   it("rejects extra keys, missing keys and paths", () => {

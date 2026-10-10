@@ -67,7 +67,7 @@ describe("knowledge-base sensitivity rule storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(31);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(32);
     expect(await upgraded.get("note")).toBe("kept");
     expect(await upgraded.getCandidateKnowledgeBase(knowledgeBase.id)).toMatchObject({
       id: knowledgeBase.id,
