@@ -9,6 +9,23 @@ function asJsonObject(value: unknown): JsonObject {
   return JSON.parse(JSON.stringify(value)) as JsonObject;
 }
 
+/**
+ * The saved round a review decision belongs to. A round's row is written once its draft exists,
+ * so while the author revises, the snapshot's round has no row yet and the findings being decided
+ * came from the latest saved round.
+ */
+export async function decisionRoundId(
+  storage: Pick<SqliteStorage, "getRound" | "listRounds">,
+  snapshot: Pick<RunSnapshot, "runId" | "round">,
+): Promise<string | null> {
+  const current = `${snapshot.runId}:round:${snapshot.round}`;
+  if ((await storage.getRound(current)) !== undefined) return current;
+  const saved = (await storage.listRounds(snapshot.runId)).filter(
+    (round) => round.number <= snapshot.round,
+  );
+  return saved.at(-1)?.id ?? null;
+}
+
 export async function saveTypedHistory(
   storage: SqliteStorage,
   config: Pick<WorkspaceConfig, "id">,
