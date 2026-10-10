@@ -1381,9 +1381,23 @@ the reviewer, notes yield only explicit statements, a LinkedIn export's sections
 map to roles, dates, and skills, and a transcript's evidence is the candidate's
 own turns. The never-invent and exact-quote rules are the same for every kind.
 Each profile version records the kind used for every extracted source version.
-The application service is `source-evidence-kind-service`; CLI and desktop
-controls arrive with [#1130](https://github.com/akoita/draft-loop/issues/1130)
-and [#1131](https://github.com/akoita/draft-loop/issues/1131).
+
+The application service is `source-evidence-kind-service`; the desktop control
+arrives with [#1131](https://github.com/akoita/draft-loop/issues/1131).
+
+`knowledge source list` shows each current source's `evidenceKind` and
+`evidenceKindOrigin` (`detected` or `user`). `knowledge source kind` shows one
+source's kind, sets an override, or clears it with `--clear`; it accepts
+`--json`.
+
+```sh
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID performance-review
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --clear
+```
 
 ### Evidence mode
 
