@@ -33,6 +33,7 @@ import type {
   GetApplicationCommand,
   ImportedApplicationView,
   ListApplicationsCommand,
+  SetApplicationModelsCommand,
 } from "./workspace-applications.js";
 
 export type {
@@ -530,6 +531,10 @@ export interface ApplicationDriver {
   readonly archiveApplication?: (command: ArchiveApplicationCommand) => Promise<ApplicationView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (command: DeleteApplicationCommand) => Promise<void>;
+  /** Sets or clears the model pair a created application's new runs use. */
+  readonly setApplicationModels?: (
+    command: SetApplicationModelsCommand,
+  ) => Promise<ApplicationView>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -687,6 +692,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       }),
     deleteApplication: async (command) =>
       requireApplicationApi(driver.deleteApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    setApplicationModels: async (command) =>
+      requireApplicationApi(driver.setApplicationModels)({
         ...command,
         root: requireRoot(command.root),
       }),

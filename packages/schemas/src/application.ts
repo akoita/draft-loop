@@ -29,6 +29,25 @@ export const applicationJobSourceSchema = z.discriminatedUnion("kind", [
 ]);
 export type ApplicationJobSource = z.infer<typeof applicationJobSourceSchema>;
 
+const applicationModelProfileReferenceSchema = z
+  .object({
+    id: z.string().trim().min(1).max(200),
+    version: z.number().int().positive(),
+  })
+  .strict();
+
+/**
+ * The model pair one application uses instead of the workspace's: exact author and critic model
+ * profile references. Absent means the application uses the workspace's pair.
+ */
+export const applicationModelProfilesSchema = z
+  .object({
+    author: applicationModelProfileReferenceSchema,
+    critic: applicationModelProfileReferenceSchema,
+  })
+  .strict();
+export type ApplicationModelProfiles = z.infer<typeof applicationModelProfilesSchema>;
+
 export const applicationSchema = z
   .object({
     schemaVersion: z.literal(1),

@@ -1,4 +1,12 @@
-import type { ApplicationService, ApplicationView } from "@draft-loop/application";
+import type {
+  ApplicationService,
+  ApplicationView,
+  WorkspaceDescriptor,
+} from "@draft-loop/application";
+import {
+  defaultModelProfileRegistry,
+  type ModelProfileRegistry,
+} from "@draft-loop/application/model-profiles";
 
 import type { ApplicationImportCounts, ApplicationSummaryView } from "../application-contract.js";
 
@@ -33,6 +41,7 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     exportCount: view.exports.length,
     latestRunId: newestRunId(view),
     archivedAt: view.archivedAt,
+    modelProfiles: view.modelProfiles,
   };
 }
 
@@ -101,6 +110,20 @@ export async function archiveApplicationSummary(
   return projectApplication(await service.archiveApplication({ root, applicationId, archived }));
 }
 
+export async function setApplicationModelsSummary(
+  service: ApplicationService,
+  root: string,
+  applicationId: string,
+  modelProfiles: ApplicationSummaryView["modelProfiles"],
+): Promise<ApplicationSummaryView> {
+  if (service.setApplicationModels === undefined) {
+    throw new Error("This application service cannot choose an application's models.");
+  }
+  return projectApplication(
+    await service.setApplicationModels({ root, applicationId, modelProfiles }),
+  );
+}
+
 export async function deleteApplicationRecord(
   service: ApplicationService,
   root: string,
@@ -137,6 +160,26 @@ export async function resolveApplicationScope(
     application,
     latestRunId: newestRunId(application) ?? undefined,
     created: !application.isDefault,
+  };
+}
+
+/**
+ * The workspace descriptor as a created application's runs see it: with the application's own
+ * model pair when it has one. Transmission consent and the review state follow this pair.
+ */
+export function applicationPairDescriptor(
+  descriptor: WorkspaceDescriptor,
+  scope: ApplicationScope | undefined,
+  registry: ModelProfileRegistry = defaultModelProfileRegistry,
+): WorkspaceDescriptor {
+  const pair = scope?.created === true ? scope.application.modelProfiles : null;
+  if (pair === null || pair === undefined) return descriptor;
+  const author = registry.resolve(pair.author.id, pair.author.version, "author");
+  const critic = registry.resolve(pair.critic.id, pair.critic.version, "critic");
+  return {
+    ...descriptor,
+    author: { company: author.provider, model: author.modelId },
+    critic: { company: critic.provider, model: critic.modelId },
   };
 }
 

@@ -35,6 +35,21 @@ export interface ApplicationSummaryView {
   readonly latestRunId: string | null;
   /** When the application was archived; null while it is on the main list. */
   readonly archivedAt: string | null;
+  /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
+  readonly modelProfiles: ApplicationModelProfilesView | null;
+}
+
+/** Exact author and critic model profile references, as the model profile picker names them. */
+export interface ApplicationModelProfilesView {
+  readonly author: { readonly id: string; readonly version: number };
+  readonly critic: { readonly id: string; readonly version: number };
+}
+
+/** Sets the pair one application's new runs use, or clears it with `null`. */
+export interface ApplicationSetModelsInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly modelProfiles: ApplicationModelProfilesView | null;
 }
 
 export interface ApplicationListInput {
@@ -133,6 +148,13 @@ export const applicationArchiveKeys = exactKeys<ApplicationArchiveInput>()([
   "applicationId",
   "archived",
 ]);
+export const applicationSetModelsKeys = exactKeys<ApplicationSetModelsInput>()([
+  "workspaceId",
+  "applicationId",
+  "modelProfiles",
+]);
+const modelProfilesKeys = exactKeys<ApplicationModelProfilesView>()(["author", "critic"]);
+const modelProfileReferenceKeys = ["id", "version"] as const;
 export const applicationDeleteKeys = exactKeys<ApplicationDeleteInput>()([
   "workspaceId",
   "applicationId",
@@ -178,6 +200,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "exportCount",
   "latestRunId",
   "archivedAt",
+  "modelProfiles",
 ]);
 const listResultKeys = exactKeys<ApplicationListResult>()(["workspaceId", "applications"]);
 const recordResultKeys = exactKeys<ApplicationRecordResult>()(["workspaceId", "application"]);
@@ -229,6 +252,28 @@ function oneOf<Value extends string>(value: unknown, values: readonly Value[]): 
   return typeof value === "string" ? values.find((candidate) => candidate === value) : undefined;
 }
 
+const modelProfileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+
+/** Validates a model pair from either side of the bridge; `undefined` means it is malformed. */
+export function normalizeApplicationModelProfiles(
+  value: unknown,
+): ApplicationModelProfilesView | undefined {
+  const raw = record(value);
+  if (raw === undefined || !onlyKeys(raw, modelProfilesKeys)) return undefined;
+  const reference = (item: unknown) => {
+    const ref = record(item);
+    if (ref === undefined || !onlyKeys(ref, modelProfileReferenceKeys)) return undefined;
+    if (typeof ref.id !== "string" || !modelProfileIdPattern.test(ref.id)) return undefined;
+    if (typeof ref.version !== "number" || !Number.isSafeInteger(ref.version) || ref.version < 1) {
+      return undefined;
+    }
+    return { id: ref.id, version: ref.version };
+  };
+  const author = reference(raw.author);
+  const critic = reference(raw.critic);
+  return author === undefined || critic === undefined ? undefined : { author, critic };
+}
+
 /** Validates one summary received from the host; `undefined` means the host answered wrongly. */
 export function normalizeApplicationSummary(value: unknown): ApplicationSummaryView | undefined {
   const raw = record(value);
@@ -244,6 +289,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
   const exportCount = count(raw.exportCount);
   const latestRunId = raw.latestRunId === null ? null : identifier(raw.latestRunId);
   const archivedAt = raw.archivedAt === null ? null : timestamp(raw.archivedAt);
+  const modelProfiles =
+    raw.modelProfiles === null ? null : normalizeApplicationModelProfiles(raw.modelProfiles);
   if (
     id === undefined ||
     name === undefined ||
@@ -256,7 +303,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     briefCount === undefined ||
     exportCount === undefined ||
     latestRunId === undefined ||
-    archivedAt === undefined
+    archivedAt === undefined ||
+    modelProfiles === undefined
   ) {
     return undefined;
   }
@@ -273,6 +321,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     exportCount,
     latestRunId,
     archivedAt,
+    modelProfiles,
   };
 }
 

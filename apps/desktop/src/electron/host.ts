@@ -199,6 +199,7 @@ import {
   type ApplicationReadinessScope,
   type ApplicationScope,
   applicationJobUrl,
+  applicationPairDescriptor,
   applicationReadinessScope,
   archiveApplicationSummary,
   createApplicationSummary,
@@ -207,6 +208,7 @@ import {
   listApplicationSummaries,
   projectApplication,
   resolveApplicationScope,
+  setApplicationModelsSummary,
   urlJobBriefStep,
 } from "./host-applications.js";
 import { backgroundRunFailureMessage, hostFailureMessage } from "./host-failure-message.js";
@@ -2791,9 +2793,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
 
   async function requireProviderTransmissionAcknowledgement(
     workspace: ActiveWorkspace,
+    scope: ApplicationScope | undefined,
   ): Promise<ProviderTransmissionPreflight> {
     const preflight = await providerTransmissionPreflight(
-      workspace.descriptor,
+      applicationPairDescriptor(workspace.descriptor, scope),
       workspace.root,
       requireProviderPreflight,
       providerAuthModeConfiguration,
@@ -3832,7 +3835,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     switch (action.type) {
       case "acknowledge-provider-transmission": {
         const current = await providerTransmissionPreflight(
-          workspace.descriptor,
+          applicationPairDescriptor(workspace.descriptor, scope),
           workspace.root,
           requireProviderPreflight,
           providerAuthModeConfiguration,
@@ -3846,18 +3849,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         await writeProviderTransmissionAcknowledgement(
           workspace.root,
-          providerTransmissionPolicy(workspace.descriptor, providerAuthModeConfiguration),
+          providerTransmissionPolicy(
+            applicationPairDescriptor(workspace.descriptor, scope),
+            providerAuthModeConfiguration,
+          ),
           current.fingerprint,
         );
         break;
       }
       case "start": {
         let modelProfiles: ReturnType<typeof resolveWorkspaceModelProfileSelection> | undefined;
-        if (action.modelProfiles !== undefined) {
+        // An application with its own pair runs with it; the workspace's applied pair does not apply.
+        const requestedProfiles =
+          scope?.created === true && scope.application.modelProfiles !== null
+            ? scope.application.modelProfiles
+            : action.modelProfiles;
+        if (requestedProfiles !== undefined) {
           try {
             modelProfiles = resolveWorkspaceModelProfileSelection(
-              action.modelProfiles,
-              workspace.descriptor,
+              requestedProfiles,
+              applicationPairDescriptor(workspace.descriptor, scope),
               providerAuthModeConfiguration,
             );
           } catch (error) {
@@ -3868,7 +3879,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             return fail("operation-failed", message);
           }
         }
-        await requireProviderTransmissionAcknowledgement(workspace);
+        await requireProviderTransmissionAcknowledgement(workspace, scope);
         // The person may start from the raw job description instead of the reviewed brief.
         const fromJobDescription = action.requirementsSource === "job-description";
         // A created application starts from its own reviewed brief, or its own job text when it
@@ -3975,7 +3986,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return fail("operation-failed", "This provider recovery action is not available.");
         }
         if (action.type === "request-revision") {
-          await requireProviderTransmissionAcknowledgement(workspace);
+          await requireProviderTransmissionAcknowledgement(workspace, scope);
         }
         if (
           action.type === "approve" &&
@@ -4056,7 +4067,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         ) {
           return fail("operation-failed", "Retry is paused until the provider retry window opens.");
         }
-        await requireProviderTransmissionAcknowledgement(workspace);
+        await requireProviderTransmissionAcknowledgement(workspace, scope);
         if (
           currentSnapshot !== undefined &&
           executingRunStates.has(currentSnapshot.state) &&
@@ -4101,17 +4112,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }));
     overrides = await reconcileReviewPreferences(workspace, overrides, "review.dispatch");
     const setup = await setupFor(workspace, scope, overrides);
+    const pairDescriptor = applicationPairDescriptor(workspace.descriptor, scope);
     const preflight = await providerTransmissionPreflight(
-      workspace.descriptor,
+      pairDescriptor,
       workspace.root,
       requireProviderPreflight,
       providerAuthModeConfiguration,
     );
     if (snapshot === undefined) {
-      return emptyReviewState(workspace.descriptor, setup, preflight, overrides);
+      return emptyReviewState(pairDescriptor, setup, preflight, overrides);
     }
     return reviewState(
-      workspace.descriptor,
+      pairDescriptor,
       snapshot,
       await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
       overrides,
@@ -4225,6 +4237,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 workspace.root,
                 command.input.applicationId,
                 command.input.archived,
+              ),
+            },
+          };
+        }
+        case "application.set-models": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: await setApplicationModelsSummary(
+                service,
+                workspace.root,
+                command.input.applicationId,
+                command.input.modelProfiles,
               ),
             },
           };
@@ -5762,28 +5789,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             "review.load",
           );
           const setup = await setupFor(workspace, scope, preferences);
-          if (snapshot === undefined) {
-            const preflight = await providerTransmissionPreflight(
-              workspace.descriptor,
-              workspace.root,
-              requireProviderPreflight,
-              providerAuthModeConfiguration,
-            );
-            return {
-              ok: true,
-              value: emptyReviewState(workspace.descriptor, setup, preflight, preferences),
-            };
-          }
+          const pairDescriptor = applicationPairDescriptor(workspace.descriptor, scope);
           const preflight = await providerTransmissionPreflight(
-            workspace.descriptor,
+            pairDescriptor,
             workspace.root,
             requireProviderPreflight,
             providerAuthModeConfiguration,
           );
+          if (snapshot === undefined) {
+            return {
+              ok: true,
+              value: emptyReviewState(pairDescriptor, setup, preflight, preferences),
+            };
+          }
           return {
             ok: true,
             value: reviewState(
-              workspace.descriptor,
+              pairDescriptor,
               snapshot,
               await independentReviewFor(workspace, snapshot.runId, "review.load"),
               preferences,

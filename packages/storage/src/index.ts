@@ -1327,7 +1327,7 @@ export class StorageUnavailableError extends Error {
   }
 }
 
-export const storageSchemaVersion = 31 as const;
+export const storageSchemaVersion = 32 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {

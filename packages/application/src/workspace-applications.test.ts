@@ -9,7 +9,12 @@ import { type ApplicationService, createApplicationService } from "./index.js";
 import { createLocalApplicationDriver } from "./local.js";
 
 type Service = ApplicationService &
-  Required<Pick<ApplicationService, "createApplication" | "listApplications" | "getApplication">>;
+  Required<
+    Pick<
+      ApplicationService,
+      "createApplication" | "listApplications" | "getApplication" | "setApplicationModels"
+    >
+  >;
 
 const silent = { write: () => undefined };
 const openRaw = createRequire(import.meta.url)("better-sqlite3") as new (
@@ -287,6 +292,24 @@ describe("workspace applications", () => {
     ]);
   });
 
+  async function modelConfigurationOfRun(
+    root: string,
+    runId: string,
+  ): Promise<Record<"author" | "critic", Record<string, unknown>>> {
+    const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    try {
+      const run = await storage.getRun(runId);
+      const context = await storage.getContextSnapshot(run?.contextSnapshotId ?? "");
+      const payload = context?.payload as
+        | { modelConfiguration?: Record<"author" | "critic", Record<string, unknown>> }
+        | undefined;
+      if (payload?.modelConfiguration === undefined) throw new Error("No model configuration.");
+      return payload.modelConfiguration;
+    } finally {
+      await storage.close();
+    }
+  }
+
   it("binds a run to its application and reads that application's job description", async () => {
     const { root, service } = await workspace();
     const created = await service.createApplication({
@@ -310,6 +333,101 @@ describe("workspace applications", () => {
       JSON.parse(await readFile(join(root, ".draft-loop", "workspace.json"), "utf8"))
         .jobDescriptionPath,
     ).toBe("job.md");
+  });
+
+  it("runs an application with its own model pair and records the pair on the run", async () => {
+    const { root, service } = await workspace();
+    const created = await service.createApplication({
+      root,
+      name: "Delta — Staff Engineer",
+      jobSource: { kind: "pasted-text", text: "Lead platform work in TypeScript." },
+    });
+    expect(created.modelProfiles).toBeNull();
+    const premium = {
+      author: { id: "premium-anthropic-author", version: 1 },
+      critic: { id: "premium-openai-critic", version: 1 },
+    };
+
+    const updated = await service.setApplicationModels({
+      root,
+      applicationId: created.id,
+      modelProfiles: premium,
+    });
+    expect(updated.modelProfiles).toEqual(premium);
+    expect(
+      (await service.getApplication({ root, applicationId: created.id }))?.modelProfiles,
+    ).toEqual(premium);
+
+    // The application's pair wins over a pair the caller named, such as the workspace's.
+    const bound = await service.begin(
+      {
+        root,
+        applicationId: created.id,
+        modelProfiles: {
+          author: { id: "standard-anthropic-author", version: 1 },
+          critic: { id: "standard-openai-critic", version: 1 },
+        },
+      },
+      silent,
+    );
+    const unbound = await service.begin({ root }, silent);
+    const recorded = await modelConfigurationOfRun(root, bound.runId);
+    expect(recorded.author).toMatchObject({
+      company: "anthropic",
+      modelId: "claude-fable-5-1",
+      profile: { id: "premium-anthropic-author", version: 1 },
+    });
+    expect(recorded.critic).toMatchObject({
+      company: "openai",
+      modelId: "gpt-6-astra",
+      profile: { id: "premium-openai-critic", version: 1 },
+    });
+    expect((await modelConfigurationOfRun(root, unbound.runId)).author).not.toHaveProperty(
+      "profile",
+    );
+
+    const cleared = await service.setApplicationModels({
+      root,
+      applicationId: created.id,
+      modelProfiles: null,
+    });
+    expect(cleared.modelProfiles).toBeNull();
+  });
+
+  it("refuses a model pair for the default application, an unknown profile or one company", async () => {
+    const { root, service } = await workspace();
+    const created = await service.createApplication({
+      root,
+      name: "Epsilon — Engineer",
+      jobSource: { kind: "pasted-text", text: "Build services." },
+    });
+    const premium = {
+      author: { id: "premium-anthropic-author", version: 1 },
+      critic: { id: "premium-openai-critic", version: 1 },
+    };
+    await expect(
+      service.setApplicationModels({ root, applicationId: "default", modelProfiles: premium }),
+    ).rejects.toThrow(/workspace's models/u);
+    await expect(
+      service.setApplicationModels({ root, applicationId: "missing", modelProfiles: premium }),
+    ).rejects.toThrow(/was not found/u);
+    await expect(
+      service.setApplicationModels({
+        root,
+        applicationId: created.id,
+        modelProfiles: { ...premium, critic: { id: "premium-anthropic-author", version: 1 } },
+      }),
+    ).rejects.toThrow(/not a registered critic profile/u);
+    await expect(
+      service.setApplicationModels({
+        root,
+        applicationId: created.id,
+        modelProfiles: { ...premium, critic: { id: "economy-openai-critic", version: 99 } },
+      }),
+    ).rejects.toThrow(/not a registered critic profile/u);
+    expect(
+      (await service.getApplication({ root, applicationId: created.id }))?.modelProfiles,
+    ).toBeNull();
   });
 
   it("refuses to start in an unknown application or a URL application without a brief", async () => {
