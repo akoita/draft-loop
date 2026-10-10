@@ -14,6 +14,7 @@ import {
   canonicalCandidateProfileStatuses,
   createCandidateKnowledgeSelectionSnapshot,
   createCanonicalCandidateProfile,
+  maximumCanonicalCandidateProfileEvidenceKindCount,
   maximumCanonicalCandidateProfileExtractionIdentityLength,
   maximumCanonicalCandidateProfileFactCount,
   maximumCanonicalCandidateProfileFactIdLength,
@@ -29,6 +30,7 @@ import {
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
+import { candidateEvidenceKinds } from "@draft-loop/domain/candidate-evidence-kind";
 import { sourceSensitivityTiers } from "@draft-loop/domain/source-sensitivity";
 import { z } from "zod";
 
@@ -359,6 +361,27 @@ const canonicalCandidateProfileSensitivityIdentitySchema = z.strictObject({
     ),
 });
 
+const canonicalCandidateProfileEvidenceKindsSchema = z
+  .array(
+    z.strictObject({
+      storeId: canonicalCandidateProfileIdSchema,
+      knowledgeBaseId: canonicalCandidateProfileIdSchema,
+      sourceId: canonicalCandidateProfileIdSchema,
+      versionId: canonicalCandidateProfileIdSchema,
+      kind: z.enum(candidateEvidenceKinds),
+    }),
+  )
+  .max(maximumCanonicalCandidateProfileEvidenceKindCount)
+  .refine(
+    (entries) =>
+      new Set(
+        entries.map((entry) =>
+          JSON.stringify([entry.storeId, entry.knowledgeBaseId, entry.sourceId, entry.versionId]),
+        ),
+      ).size === entries.length,
+    "must have one entry per source version",
+  );
+
 /**
  * Which model and prompt extracted a profile version. Optional on the profile so versions
  * persisted before it was recorded keep parsing.
@@ -374,6 +397,7 @@ export const canonicalCandidateProfileExtractionIdentitySchema = z.strictObject(
     })
     .optional(),
   sensitivity: canonicalCandidateProfileSensitivityIdentitySchema.optional(),
+  evidenceKinds: canonicalCandidateProfileEvidenceKindsSchema.optional(),
 });
 export type CanonicalCandidateProfileExtractionIdentity = z.infer<
   typeof canonicalCandidateProfileExtractionIdentitySchema

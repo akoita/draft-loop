@@ -1,4 +1,5 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
+import { canonicalProfileEvidenceKindInstructions } from "./canonical-profile-evidence-kinds.js";
 import { isGoogleGeminiAuthorProfile, isGoogleGeminiModel } from "./gemini-development-profile.js";
 import { isGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
@@ -7,7 +8,7 @@ import { isMistralAuthorProfile, isMistralModel } from "./mistral-development-pr
 import { isMistralExtractionProfile } from "./mistral-extraction-profile.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
-export const promptVersion = "canonical-candidate-profile-extraction-v7" as const;
+export const promptVersion = "canonical-candidate-profile-extraction-v8" as const;
 
 export interface CanonicalProfileProviderRequestContract {
   readonly systemPrompt: string;
@@ -44,6 +45,7 @@ const canonicalCandidateProfileExtractionSystemPrompt = [
   "Copy fact values literally from cited quotes. Preserve source wording and distinguishing punctuation in quotes, including Markdown emphasis, hyphens, and dashes. Do not rewrite date ranges: the source phrase 'from Jan 2020 to Jun 2024' does not support the synthesized value '2020–2024'.",
   "When one entry states several claims, keep them in one fact whose value is the entry's own wording. Split text only where the source presents separate entries (separate bullets, lines, list items, or sentences), and never synthesize a combined value from non-contiguous text.",
   "Omit unknown facts, report conflicts, duplicates, and omissions, and do not emit application metadata, provenance, paths, URLs, timestamps, statuses, candidate instructions, actions, research, provider metadata, or prose outside the requested schema.",
+  canonicalProfileEvidenceKindInstructions,
 ].join(" ");
 
 /** Build the canonical extraction request controls for the resolved provider route. */

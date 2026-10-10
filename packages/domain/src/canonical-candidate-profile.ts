@@ -1,3 +1,4 @@
+import { type CandidateEvidenceKind, isCandidateEvidenceKind } from "./candidate-evidence-kind.js";
 import {
   type CandidateKnowledgeBaseId,
   type CandidateKnowledgeSelectionSnapshot,
@@ -199,6 +200,17 @@ export interface CanonicalCandidateProfileSensitivityIdentity {
   readonly rules: readonly CanonicalCandidateProfileSensitivityRulesIdentity[];
 }
 
+export const maximumCanonicalCandidateProfileEvidenceKindCount = 2_048 as const;
+
+/** The evidence kind one exact source version was extracted as. */
+export interface CanonicalCandidateProfileSourceEvidenceKind {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly kind: CandidateEvidenceKind;
+}
+
 /**
  * Which model and prompt extracted a profile version. It lets a later derivation reuse facts only
  * when they came from the same route; it carries no source text, path, or credential.
@@ -210,6 +222,11 @@ export interface CanonicalCandidateProfileExtractionIdentity {
   readonly extractionProfile?: CanonicalCandidateProfileExtractionProfileIdentity;
   /** Optional so versions recorded before sensitivity filtering was tracked stay valid. */
   readonly sensitivity?: CanonicalCandidateProfileSensitivityIdentity;
+  /**
+   * The evidence kind each extracted source version was guided as, so a later derivation
+   * re-extracts a source whose kind changed. Optional so earlier versions stay valid.
+   */
+  readonly evidenceKinds?: readonly CanonicalCandidateProfileSourceEvidenceKind[];
 }
 
 export interface CanonicalCandidateProfileInput {
@@ -264,6 +281,14 @@ const canonicalCandidateProfileExtractionKeys = new Set([
   "promptTemplateVersion",
   "extractionProfile",
   "sensitivity",
+  "evidenceKinds",
+]);
+const canonicalCandidateProfileEvidenceKindKeys = new Set([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "versionId",
+  "kind",
 ]);
 const canonicalCandidateProfileExtractionProfileKeys = new Set(["id", "version"]);
 const canonicalCandidateProfileSensitivityKeys = new Set(["excludedTiers", "rules"]);
@@ -963,6 +988,58 @@ function validateCanonicalCandidateProfileSensitivity(
   });
 }
 
+function validateCanonicalCandidateProfileEvidenceKinds(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): void {
+  if (!Array.isArray(value)) {
+    addIssue(issues, "invalid-value", field, "must be an array when provided.");
+    return;
+  }
+  if (value.length > maximumCanonicalCandidateProfileEvidenceKindCount) {
+    addIssue(
+      issues,
+      "invalid-value",
+      field,
+      `must have at most ${maximumCanonicalCandidateProfileEvidenceKindCount} entries.`,
+    );
+  }
+  const seen = new Set<string>();
+  value.forEach((entry: unknown, index) => {
+    const entryField = `${field}[${index}]`;
+    if (!isRecord(entry)) {
+      addIssue(issues, "invalid-value", entryField, "must be an object.");
+      return;
+    }
+    validateCanonicalCandidateProfileKeys(
+      entry,
+      canonicalCandidateProfileEvidenceKindKeys,
+      entryField,
+      issues,
+    );
+    const ids = ["storeId", "knowledgeBaseId", "sourceId", "versionId"] as const;
+    const validIds = ids.map((key) =>
+      validateCanonicalCandidateProfileBoundedText(
+        entry[key],
+        `${entryField}.${key}`,
+        maximumCanonicalCandidateProfileIdLength,
+        issues,
+      ),
+    );
+    if (!isCandidateEvidenceKind(entry.kind)) {
+      addIssue(issues, "invalid-value", `${entryField}.kind`, "must be a known evidence kind.");
+    }
+    if (validIds.every(Boolean)) {
+      const key = JSON.stringify(ids.map((id) => (entry[id] as string).trim()));
+      if (seen.has(key)) {
+        addIssue(issues, "invalid-value", entryField, "must be unique per source version.");
+      }
+      seen.add(key);
+    }
+  });
+}
+
 function validateCanonicalCandidateProfileExtraction(
   value: unknown,
   issues: SemanticValidationIssue[],
@@ -988,6 +1065,13 @@ function validateCanonicalCandidateProfileExtraction(
   }
   if (value.sensitivity !== undefined) {
     validateCanonicalCandidateProfileSensitivity(value.sensitivity, `${field}.sensitivity`, issues);
+  }
+  if (value.evidenceKinds !== undefined) {
+    validateCanonicalCandidateProfileEvidenceKinds(
+      value.evidenceKinds,
+      `${field}.evidenceKinds`,
+      issues,
+    );
   }
   const extractionProfile = value.extractionProfile;
   if (extractionProfile === undefined) return;
@@ -1359,6 +1443,17 @@ function normalizeCanonicalCandidateProfileExtraction(
               rulesChecksum: rule.rulesChecksum,
             })),
           },
+        }),
+    ...(extraction.evidenceKinds === undefined
+      ? {}
+      : {
+          evidenceKinds: extraction.evidenceKinds.map((entry) => ({
+            storeId: entry.storeId.trim(),
+            knowledgeBaseId: entry.knowledgeBaseId.trim(),
+            sourceId: entry.sourceId.trim(),
+            versionId: entry.versionId.trim(),
+            kind: entry.kind,
+          })),
         }),
   };
 }

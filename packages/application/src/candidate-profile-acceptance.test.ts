@@ -375,7 +375,13 @@ describe("canonical candidate profile representative-career acceptance", () => {
       const providerSource = request.sources[0];
       if (providerSource === undefined)
         throw new Error("deterministic fixture provider source missing");
-      expect(Object.keys(providerSource).sort()).toEqual(["checksum", "id", "mediaType", "text"]);
+      expect(Object.keys(providerSource).sort()).toEqual([
+        "checksum",
+        "evidenceKind",
+        "id",
+        "mediaType",
+        "text",
+      ]);
       expect(providerSource.text).toBe(text);
       expect(JSON.stringify(request)).not.toContain(fixture.directory);
       expect(JSON.stringify(request)).not.toContain("storeRoot");

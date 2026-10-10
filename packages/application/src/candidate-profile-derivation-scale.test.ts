@@ -150,6 +150,8 @@ describe("canonical candidate profile derivation at real scale", () => {
     const handle = {
       descriptor: { schemaVersion: 1, id: "store-1", createdAt },
       getCandidateKnowledgeSourceSensitivityRules: async () => undefined,
+      listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
+      getCandidateKnowledgeSource: async () => undefined,
       readManagedCandidateKnowledgeSourceVersion: async () => ({
         metadata: {
           knowledgeBaseId: "knowledge-1",

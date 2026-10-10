@@ -84,6 +84,7 @@ describe("canonical profile derivation extraction identity", () => {
       const recordedExtraction = {
         ...extraction,
         sensitivity: { excludedTiers: ["sensitive", "never-share"], rules: [] },
+        evidenceKinds: [expect.objectContaining({ kind: expect.any(String) })],
       };
       expect(recorded.profile.extraction).toEqual(recordedExtraction);
       expect(
