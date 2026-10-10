@@ -34,6 +34,7 @@ import {
   readLegacyEvidenceMigration,
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
+  type SourceEvidenceKindService,
   type WorkspaceDescriptor,
   type WorkspaceModelProfileSelectionService,
   type WorkspaceRetrievalModeService,
@@ -234,6 +235,7 @@ import {
   resolveWorkspaceModelProfileSelection,
 } from "./run-model-profile-selection.js";
 import { createSemanticRetrievalHost } from "./semantic-retrieval-host.js";
+import { createSourceEvidenceKindHost } from "./source-evidence-kind-host.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -384,6 +386,8 @@ export interface NativeHostOptions {
   readonly embeddingModelService?: EmbeddingModelService;
   /** Replaces the workspace retrieval-mode service; tests inject a fake. */
   readonly retrievalModeService?: WorkspaceRetrievalModeService;
+  /** Replaces the source evidence-kind service; tests inject a fake. */
+  readonly sourceEvidenceKindService?: SourceEvidenceKindService;
   readonly providerAuthModeEnvironmentOverrides?: Readonly<
     Record<ProviderAuthModeProvider, boolean>
   >;
@@ -2291,6 +2295,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       : { retrievalModeService: options.retrievalModeService }),
     workspaceFor: (id) => workspaceFor(id),
     fail,
+  });
+  const sourceEvidenceKinds = createSourceEvidenceKindHost({
+    ...(options.sourceEvidenceKindService === undefined
+      ? {}
+      : { service: options.sourceEvidenceKindService }),
+    knowledgeBaseRoot: (storeId, knowledgeBaseId) =>
+      verifiedKnowledgeBaseRoot(storeId, knowledgeBaseId),
   });
   const knowledgeStoreRoots = new Map<string, string>();
   const defaultKnowledgeStoreRoot =
@@ -4515,6 +4526,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
           return { ok: true, value: result };
         }
+        case "knowledge.source-evidence-kinds":
+          return { ok: true, value: await sourceEvidenceKinds.list(command.input) };
+        case "knowledge.source-evidence-kind.set":
+          return { ok: true, value: await sourceEvidenceKinds.set(command.input) };
         case "knowledge.duplicates": {
           const root = await verifiedKnowledgeBaseRoot(
             command.input.storeId,
