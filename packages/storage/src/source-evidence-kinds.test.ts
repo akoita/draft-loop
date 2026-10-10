@@ -76,7 +76,7 @@ describe("candidate knowledge source evidence kind override storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(33);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(34);
     expect(await upgraded.get("note")).toBe("kept");
     expect(
       await upgraded.listCandidateKnowledgeSourceEvidenceKindOverrides(knowledgeBase.id),

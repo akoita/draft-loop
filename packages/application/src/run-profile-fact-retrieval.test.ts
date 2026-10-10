@@ -97,7 +97,11 @@ async function profileWorkspace() {
   await writeFile(join(root, "evidence", "resume.md"), `${evidenceLine}\n`, "utf8");
   const storeRoot = join(root, "candidate-store");
   const candidatePath = join(root, "candidate.md");
-  await writeFile(candidatePath, `Ada Lovelace\n\n${evidenceLine}\n`, "utf8");
+  await writeFile(
+    candidatePath,
+    `Ada Lovelace\n\n${evidenceLine}\n\nMaintained deterministic testing suites for local-first tools.\n`,
+    "utf8",
+  );
   const ids = ["profile-store", "profile-ckb", "profile-source", "profile-version"];
   const service = createCandidateKnowledgeStoreService({
     generateId: () => ids.shift() ?? "unexpected-id",
@@ -217,6 +221,37 @@ describe("runs with a pinned reviewed profile", () => {
         // The fact item resolves to its source version, quote locator and excerpt.
         expect(serialized).toContain('"locator":"line:3-3"');
         expect(serialized).toContain(JSON.stringify(`TypeScript\n${evidenceLine}`));
+
+        // The origin trace pins the profile version and tells facts from chunks, content-free.
+        const traces =
+          await storage.candidateKnowledgeRetrievalOriginTrace.listRetrievalOriginTraces(
+            reviewed.workspaceId,
+          );
+        expect(traces.length).toBeGreaterThan(0);
+        const [trace] = traces;
+        expect(trace).toMatchObject({
+          profile: {
+            profileId: "profile-1",
+            version: reviewed.profile.version,
+            checksum: reviewed.checksum,
+          },
+          factRankingMode: "lexical",
+        });
+        expect(trace?.selectedItems[0]).toEqual({
+          itemId: fact?.id,
+          origin: "profile-fact",
+          sourceId: fact?.sourceId,
+        });
+        expect(trace?.selectedItems.slice(1).map(({ origin }) => origin)).toContain(
+          "knowledge-chunk",
+        );
+        expect(trace?.selectedItems.filter(({ origin }) => origin === "profile-fact")).toHaveLength(
+          1,
+        );
+        const recorded = JSON.stringify(traces);
+        for (const content of ["TypeScript", "Lovelace", "deterministic", "skill-typescript"]) {
+          expect(recorded).not.toContain(content);
+        }
       } finally {
         await storage.close();
       }
@@ -276,6 +311,9 @@ function fakeRuntime(queryEvidence: Runtime["port"]["queryEvidence"]): Runtime {
 }
 
 const reference = { profileId: "profile-1", version: 3, checksum: "a".repeat(64) };
+const traceStorage = {
+  candidateKnowledgeRetrievalOriginTrace: { appendRetrievalOriginTrace: vi.fn() },
+};
 const context = {
   candidateProfileReference: reference,
   evidenceManifest: [],
@@ -310,7 +348,7 @@ describe("withPinnedProfileFacts", () => {
       } as ContextSnapshot;
       const request = (record: unknown, pinnedContext: ContextSnapshot = pinned) =>
         withPinnedProfileFacts(runtime, {
-          storage: { getCanonicalCandidateProfile: async () => record as never },
+          storage: { getCanonicalCandidateProfile: async () => record as never, ...traceStorage },
           workspaceId: reviewed.workspaceId,
           context: pinnedContext,
         });
@@ -322,6 +360,13 @@ describe("withPinnedProfileFacts", () => {
       await expect(
         request({ ...reviewed, profile: { ...reviewed.profile, reviewedAt: undefined } }),
       ).rejects.toThrow(runCandidateProfileUnavailableMessage);
+      await expect(
+        withPinnedProfileFacts(runtime, {
+          storage: { getCanonicalCandidateProfile: async () => reviewed },
+          workspaceId: reviewed.workspaceId,
+          context: pinned,
+        }),
+      ).rejects.toThrow("requires storage with retrieval origin traces");
       await expect(
         withPinnedProfileFacts(runtime, {
           storage: {},
@@ -337,7 +382,7 @@ describe("withPinnedProfileFacts", () => {
           evidenceModeDecision: async () => ({ effectiveMode: "full-source" }),
         } as unknown as Runtime,
         {
-          storage: { getCanonicalCandidateProfile: async () => reviewed },
+          storage: { getCanonicalCandidateProfile: async () => reviewed, ...traceStorage },
           workspaceId: reviewed.workspaceId,
           context: pinned,
         },

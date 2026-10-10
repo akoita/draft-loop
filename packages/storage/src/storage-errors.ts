@@ -18,3 +18,10 @@ export class StorageValidationError extends Error {
     this.name = "StorageValidationError";
   }
 }
+
+export class StorageUnavailableError extends Error {
+  constructor(message: string, options?: { readonly cause?: unknown }) {
+    super(message, options);
+    this.name = "StorageUnavailableError";
+  }
+}

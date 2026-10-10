@@ -1,6 +1,11 @@
-import type { ContextSnapshot, RetrievalPort } from "@draft-loop/domain";
-import type { CanonicalCandidateProfileStoragePort } from "@draft-loop/storage";
+import { createHash, randomUUID } from "node:crypto";
 
+import type { ContextSnapshot, RetrievalPort, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type {
+  CanonicalCandidateProfileStoragePort,
+  RetrievalOriginTraceStoragePort,
+} from "@draft-loop/storage";
+import { candidateKnowledgeSearchText } from "./candidate-knowledge-query.js";
 import type { candidateKnowledgeRuntimeRetrieval } from "./candidate-knowledge-retrieval.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { CliUserError } from "./cli-user-error.js";
@@ -9,9 +14,11 @@ import {
   type ProfileFactEvidenceCandidate,
   type ProfileFactSemanticRanking,
   profileFactEvidenceCandidates,
+  profileFactEvidenceIdPrefix,
   profileFactEvidenceSlots,
   rankProfileFactEvidence,
 } from "./profile-fact-evidence.js";
+import { timestamp } from "./response-execution.js";
 import { openRunEmbedder, type RunSemanticRetrievalOptions } from "./run-semantic-retrieval.js";
 
 type RunCandidateRetrieval = NonNullable<ReturnType<typeof candidateKnowledgeRuntimeRetrieval>>;
@@ -64,7 +71,12 @@ export async function withPinnedProfileFacts(
   request: {
     readonly storage: Partial<
       Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">
-    >;
+    > & {
+      readonly candidateKnowledgeRetrievalOriginTrace?: Pick<
+        RetrievalOriginTraceStoragePort,
+        "appendRetrievalOriginTrace"
+      >;
+    };
     readonly workspaceId: string;
     readonly context: ContextSnapshot;
     readonly semanticOptions?: RunSemanticRetrievalOptions;
@@ -73,6 +85,37 @@ export async function withPinnedProfileFacts(
   const reference = request.context.candidateProfileReference;
   if (reference === undefined) return runtime;
   const profile = await loadPinnedProfile(request.storage, request.workspaceId, reference);
+  const originTrace = request.storage.candidateKnowledgeRetrievalOriginTrace;
+  if (originTrace === undefined) {
+    throw new Error("Pinned-profile retrieval requires storage with retrieval origin traces.");
+  }
+  /** Content-free: opaque item and source ids, the origin, and a query checksum only. */
+  const recordOrigins = async (
+    text: string,
+    factRankingMode: "lexical" | "semantic" | "hybrid",
+    selected: readonly ScoredEvidenceChunk[],
+  ): Promise<readonly ScoredEvidenceChunk[]> => {
+    await originTrace.appendRetrievalOriginTrace({
+      workspaceId: request.workspaceId,
+      traceId: `origin-trace-${randomUUID()}`,
+      queryChecksum: createHash("sha256")
+        .update(candidateKnowledgeSearchText(text), "utf8")
+        .digest("hex"),
+      profile: {
+        profileId: reference.profileId,
+        version: reference.version,
+        checksum: reference.checksum,
+      },
+      factRankingMode,
+      selectedItems: selected.map(({ id, sourceId }) => ({
+        itemId: id,
+        origin: id.startsWith(profileFactEvidenceIdPrefix) ? "profile-fact" : "knowledge-chunk",
+        sourceId,
+      })),
+      createdAt: timestamp(),
+    });
+    return selected;
+  };
   const manifestSourceIds = new Set(request.context.evidenceManifest.map(({ id }) => id));
 
   let candidates: Promise<readonly ProfileFactEvidenceCandidate[]> | undefined;
@@ -119,7 +162,9 @@ export async function withPinnedProfileFacts(
         ...(semanticOptions === undefined ? {} : { semantic: semanticOptions }),
       });
       const facts = ranked.candidates;
-      if (facts.length === 0) return runtime.port.queryEvidence(text, options);
+      const chunkOnly = async () =>
+        recordOrigins(text, ranked.effectiveMode, await runtime.port.queryEvidence(text, options));
+      if (facts.length === 0) return chunkOnly();
       const chunkLimit = limit - facts.length;
       let chunks: Awaited<ReturnType<RetrievalPort["queryEvidence"]>>;
       let reserved: ReadonlySet<string>;
@@ -129,14 +174,18 @@ export async function withPinnedProfileFacts(
       } catch {
         // Reserved evidence that cannot fit beside the facts keeps the chunk-only selection, which
         // fails exactly as a run without a profile would when it cannot fit either.
-        return runtime.port.queryEvidence(text, options);
+        return chunkOnly();
       }
-      return mergeProfileFactEvidence({
-        facts,
-        chunks,
-        limit,
-        isReserved: ({ id }) => reserved.has(id),
-      });
+      return recordOrigins(
+        text,
+        ranked.effectiveMode,
+        mergeProfileFactEvidence({
+          facts,
+          chunks,
+          limit,
+          isReserved: ({ id }) => reserved.has(id),
+        }),
+      );
     },
   };
   return { ...runtime, port };
