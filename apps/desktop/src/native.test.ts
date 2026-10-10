@@ -598,7 +598,7 @@ describe("desktop native profile capabilities", () => {
 });
 
 describe("desktop recent workspace capabilities", () => {
-  it("lists, opens, and clears only path-free recent workspace commands", async () => {
+  it("lists, opens, removes, and clears only path-free recent workspace commands", async () => {
     const state = createFixtureReviewState();
     const id = "123e4567-e89b-12d3-a456-426614174000";
     const commands: string[] = [];
@@ -608,6 +608,7 @@ describe("desktop recent workspace capabilities", () => {
           "review.load",
           "workspace.recent-list",
           "workspace.recent-open",
+          "workspace.recent-remove",
           "workspace.recent-clear",
         ],
         invoke: async (command) => {
@@ -625,6 +626,10 @@ describe("desktop recent workspace capabilities", () => {
             return { ok: true, value: { workspace: { id: state.workspaceId, name: "Recent" } } };
           }
           if (command.type === "review.load") return { ok: true, value: state };
+          if (command.type === "workspace.recent-remove") {
+            expect(command.input).toEqual({ id });
+            return { ok: true, value: { removed: true } };
+          }
           if (command.type === "workspace.recent-clear")
             return { ok: true, value: { cleared: true } };
           throw new Error("Unexpected command");
@@ -636,11 +641,13 @@ describe("desktop recent workspace capabilities", () => {
       { id, name: "Recent", lastOpenedAt: "2026-10-03T10:00:00.000Z" },
     ]);
     await expect(port.openRecentWorkspace?.(id)).resolves.toEqual(state);
+    await expect(port.removeRecentWorkspace?.(id)).resolves.toBeUndefined();
     await expect(port.clearRecentWorkspaces?.()).resolves.toBeUndefined();
     expect(commands).toEqual([
       "workspace.recent-list",
       "workspace.recent-open",
       "review.load",
+      "workspace.recent-remove",
       "workspace.recent-clear",
     ]);
     expect(port.listRecentWorkspaces).toBeDefined();

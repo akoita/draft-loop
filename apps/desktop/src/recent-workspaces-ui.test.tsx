@@ -49,6 +49,47 @@ describe("recent workspace start-page controls", () => {
     expect(onOpen).toHaveBeenCalledWith(workspaces[0]?.id);
   });
 
+  it("removes only the selected entry and offers no remove control without host support", () => {
+    const onOpen = vi.fn();
+    const onRemove = vi.fn();
+    const props = {
+      workspaces,
+      busy: false,
+      loadState: "ready",
+      errorMessage: null,
+      statusMessage: null,
+      openingId: null,
+      onOpen,
+      onClear: () => undefined,
+    } as const;
+    const element = RecentWorkspacesView({ ...props, onRemove });
+    const markup = renderToStaticMarkup(element);
+    expect(markup).toContain('aria-label="Remove Candidate workspace from recent workspaces"');
+    expect(markup).toContain("Workspace files are never");
+    const remove = elements(element).find(
+      (candidate) =>
+        (candidate.props as { readonly className?: string }).className ===
+        "button button-quiet recent-workspace-remove",
+    ) as ReactElement<{ readonly onClick: () => void; readonly type: string }> | undefined;
+    if (remove === undefined) throw new Error("Expected a remove button.");
+    expect(remove.props.type).toBe("button");
+    remove.props.onClick();
+    expect(onRemove).toHaveBeenCalledWith(workspaces[0]?.id);
+    expect(onOpen).not.toHaveBeenCalled();
+
+    const busy = RecentWorkspacesView({ ...props, busy: true, onRemove });
+    const busyRemove = elements(busy).find(
+      (candidate) =>
+        (candidate.props as { readonly className?: string }).className ===
+        "button button-quiet recent-workspace-remove",
+    );
+    expect(busyRemove?.props).toMatchObject({ disabled: true });
+
+    expect(renderToStaticMarkup(RecentWorkspacesView(props))).not.toContain(
+      "recent-workspace-remove",
+    );
+  });
+
   it("shows the parent folder name only for entries that carry a location", () => {
     const markup = renderToStaticMarkup(
       RecentWorkspacesView({

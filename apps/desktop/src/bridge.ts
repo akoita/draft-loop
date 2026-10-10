@@ -112,6 +112,8 @@ import {
 } from "./profile-freshness-contract.js";
 import type {
   RecentWorkspaceOpenInput,
+  RecentWorkspaceRemoveInput,
+  RecentWorkspaceRemoveResult,
   RecentWorkspacesClearInput,
   RecentWorkspacesClearResult,
   RecentWorkspacesListInput,
@@ -119,6 +121,8 @@ import type {
 } from "./recent-workspaces.js";
 import {
   parseRecentWorkspaceOpenInput,
+  parseRecentWorkspaceRemoveInput,
+  parseRecentWorkspaceRemoveResult,
   parseRecentWorkspacesClearInput,
   parseRecentWorkspacesClearResult,
   parseRecentWorkspacesListInput,
@@ -2962,6 +2966,7 @@ export interface BridgeCommandInputMap {
   "writing-policy.save": WritingPolicySaveInput;
   "workspace.recent-list": RecentWorkspacesListInput;
   "workspace.recent-open": RecentWorkspaceOpenInput;
+  "workspace.recent-remove": RecentWorkspaceRemoveInput;
   "workspace.recent-clear": RecentWorkspacesClearInput;
   "workspace.rename": WorkspaceRenameInput;
   "application.list": ApplicationListInput;
@@ -3068,6 +3073,7 @@ export interface BridgeCommandOutputMap {
   "writing-policy.save": WritingPolicySaveResult;
   "workspace.recent-list": RecentWorkspacesListResult;
   "workspace.recent-open": WorkspaceResult;
+  "workspace.recent-remove": RecentWorkspaceRemoveResult;
   "workspace.recent-clear": RecentWorkspacesClearResult;
   "workspace.rename": WorkspaceRenameResult;
   "application.list": ApplicationListResult;
@@ -5417,6 +5423,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "application.set-models",
         input: validateApplicationSetModelsInput(command.input),
+      };
+    case "workspace.recent-remove":
+      return {
+        type: "workspace.recent-remove",
+        input: parseRecentWorkspaceRemoveInput(command.input),
       };
     case "workspace.recent-clear":
       return {
@@ -7922,6 +7933,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeWorkspaceResult(value);
     case "workspace.recent-list":
       return parseRecentWorkspacesListResult(value);
+    case "workspace.recent-remove":
+      return parseRecentWorkspaceRemoveResult(value);
     case "workspace.recent-clear":
       return parseRecentWorkspacesClearResult(value);
     case "workspace.rename":

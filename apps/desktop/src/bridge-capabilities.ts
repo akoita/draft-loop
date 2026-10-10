@@ -7,6 +7,7 @@ export const bridgeCapabilities = [
   "writing-policy.save",
   "workspace.recent-list",
   "workspace.recent-open",
+  "workspace.recent-remove",
   "workspace.recent-clear",
   "workspace.rename",
   "application.list",

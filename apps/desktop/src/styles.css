@@ -5381,7 +5381,15 @@ input[type="checkbox"] {
   list-style: none;
 }
 
+.recent-workspace-list > li {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .recent-workspace-open {
+  flex: 1 1 auto;
   display: grid;
   justify-content: stretch;
   justify-items: start;
@@ -5392,6 +5400,16 @@ input[type="checkbox"] {
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: left;
+}
+
+.recent-workspace-remove {
+  flex: 0 0 auto;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.recent-workspace-remove:not(:disabled):hover {
+  color: var(--text-1);
 }
 
 .recent-workspace-name {
