@@ -239,6 +239,15 @@ export function candidateKnowledgeRuntimeRetrieval(
   | (EvidenceModeRetrieval & {
       readonly port: RetrievalPort;
       readonly inspect: (query: string) => Promise<CandidateKnowledgeRetrievalResult>;
+      /**
+       * Ids of the contact, chronology and priority chunks reserved by a completed `port` query
+       * with this text and limit; empty before that query or in full-source mode.
+       */
+      readonly reservedEvidenceIds: (query: string, limit?: number) => ReadonlySet<string>;
+      /** Eligible chunks of exact pinned source versions, withheld sections already dropped. */
+      readonly loadPinnedSourceChunks: (
+        references: readonly CandidateKnowledgeRetrievalSourceVersionReference[],
+      ) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]>;
     })
   | undefined {
   const binding = config.candidateKnowledgeSelection;
@@ -296,6 +305,7 @@ export function candidateKnowledgeRuntimeRetrieval(
         });
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
+  const reservedIdsByQuery = new Map<string, ReadonlySet<string>>();
   type RawQuery = (
     text: string,
     limit: number,
@@ -660,6 +670,14 @@ export function candidateKnowledgeRuntimeRetrieval(
         );
       }
       assertCandidateKnowledgeProviderBounds(hits, limit);
+      reservedIdsByQuery.set(
+        key,
+        new Set([
+          ...contactChunks.map(({ id }) => id),
+          ...chronologyChunks.map(({ id }) => id),
+          ...selectedPriorityHits.map(({ chunkId }) => chunkId),
+        ]),
+      );
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
         [
           contactRawResult,
@@ -753,6 +771,9 @@ export function candidateKnowledgeRuntimeRetrieval(
   };
 
   return {
+    reservedEvidenceIds: (text, limit = 20) =>
+      reservedIdsByQuery.get(JSON.stringify([text, limit])) ?? new Set(),
+    loadPinnedSourceChunks: (references) => loadPinnedSourceReferences(references),
     evidenceModeDecision: async () => (await resolveFullSource()).decision,
     ...(semantic === undefined
       ? {}

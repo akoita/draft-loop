@@ -1,11 +1,16 @@
 import type { ContextSnapshot } from "@draft-loop/domain";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { CanonicalCandidateProfileStoragePort, SqliteStorage } from "@draft-loop/storage";
 
 import {
   type CandidateKnowledgeRuntimeConfig,
   candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
 import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
+import { CliUserError } from "./cli-user-error.js";
+import {
+  runCandidateProfileUnavailableMessage,
+  withPinnedProfileFacts,
+} from "./run-profile-fact-retrieval.js";
 import {
   type RunSemanticRetrievalOptions,
   runEmbeddingModelRoot,
@@ -16,11 +21,14 @@ import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
 /**
  * Build a run's candidate-knowledge retrieval with the workspace evidence and retrieval modes in
  * force. Both are read here, once, when a run starts or resumes, and fail closed when a setting
- * cannot be read. Lexical retrieval, the default, takes exactly the path it always did.
+ * cannot be read. Lexical retrieval, the default, takes exactly the path it always did. When the
+ * run's context pins a reviewed candidate profile, that exact version is loaded and verified here
+ * too, and its facts lead the evidence (see run-profile-fact-retrieval).
  */
 export async function openRunCandidateRetrieval(
   storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace"> &
-    Partial<Pick<SqliteStorage, "candidateKnowledgeSemanticRetrievalTrace">>,
+    Partial<Pick<SqliteStorage, "candidateKnowledgeSemanticRetrievalTrace">> &
+    Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
   root: string,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
@@ -39,5 +47,24 @@ export async function openRunCandidateRetrieval(
           mode: retrieval.mode,
           tier: retrieval.modelTier,
         };
-  return candidateKnowledgeRuntimeRetrieval(storage, config, context, withheld, mode, semantic);
+  const runtime = candidateKnowledgeRuntimeRetrieval(
+    storage,
+    config,
+    context,
+    withheld,
+    mode,
+    semantic,
+  );
+  if (runtime === undefined) {
+    if (context.candidateProfileReference !== undefined) {
+      throw new CliUserError(runCandidateProfileUnavailableMessage);
+    }
+    return undefined;
+  }
+  return withPinnedProfileFacts(runtime, {
+    storage,
+    workspaceId: config.id,
+    context,
+    ...(semantic === undefined ? {} : { semanticOptions: semantic }),
+  });
 }

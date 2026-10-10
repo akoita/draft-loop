@@ -409,6 +409,24 @@ statuses, requires explicit transmission approval for derivation, and injects
 the selected reviewed ID/version pair into the existing run-dispatch boundary.
 Historical and reviewed versions remain read-only in that surface.
 
+A run with a pinned profile retrieves evidence fact first
+(`run-profile-fact-retrieval.ts`, `profile-fact-evidence.ts`):
+
+- **Verification.** At start and at resume the exact profile version is loaded
+  and its checksum checked against the run's reference; a missing or changed
+  version fails the run before any evidence is sent.
+- **Fact items.** Each fact whose quote occurs verbatim in its cited, pinned,
+  non-withheld source version becomes one evidence item. It carries that
+  version's opaque source id, the quote's line range, and the fact value with
+  its quote, so author citations resolve to the source quote and locator.
+- **Selection.** Facts are ranked against the query in the run's retrieval
+  mode and take up to two fifths of the 20-item limit. Chunks fill the rest
+  with their reserved contact, chronology and priority slots intact, and a
+  chunk repeating a selected fact's quote is skipped.
+
+A full-source run already sends every eligible chunk and is unchanged, as is a
+run without a pinned profile.
+
 ### CKB integration status
 
 The exact-version lexical path is integrated. Each portable CKB store owns a

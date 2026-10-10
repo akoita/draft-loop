@@ -688,7 +688,9 @@ requirements)" or "Requirements: job description (unreviewed source units)".
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins
 the exact immutable versions and their checksums in run context; later edits do
-not change a started or resumed run. Starts that predate canonical profiles
+not change a started or resumed run. A run with a pinned profile re-verifies
+its checksum at start and resume, and its evidence leads with the profile's
+grounded facts ([fact-first retrieval](../architecture/candidate-evidence.md#canonical-candidate-profile-contract)). Starts that predate canonical profiles
 remain supported without a profile selection.
 
 Without a reviewed opportunity brief, a local job document supplies complete
