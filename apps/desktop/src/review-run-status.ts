@@ -25,6 +25,16 @@ export function reviewInProgress(state: Pick<DesktopReviewState, "state" | "exec
   );
 }
 
+/** Whether the person has approved this run, so it is done rather than in progress. */
+export function reviewFinished(state: Pick<DesktopReviewState, "state">): boolean {
+  return state.state === "approved" || state.state === "exported";
+}
+
+/** The run panel's title for a finished run. */
+export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): string {
+  return state.state === "exported" ? "Done · approved and exported" : "Done · approved";
+}
+
 /** What the running review is doing, and when it will need the person. */
 export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
   const step =
