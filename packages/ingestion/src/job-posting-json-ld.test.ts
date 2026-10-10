@@ -116,7 +116,7 @@ describe("JobPosting JSON-LD", () => {
     const plain = await ingest(html, false);
     const optedIn = await ingest(html, true);
 
-    expect(plain.source?.text).toBe("Platform Engineer\nKeep services reliable.\nTypeScript");
+    expect(plain.source?.text).toBe("# Platform Engineer\nKeep services reliable.\nTypeScript");
     expect(plain.source?.textOrigin).toBeUndefined();
     expect(optedIn.source?.text).toBe(plain.source?.text);
     expect(optedIn.source?.textOrigin).toBeUndefined();

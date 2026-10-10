@@ -899,8 +899,12 @@ Markdown sources are cut at ATX headings (`#` to `######`, outside fenced code)
 and whole sections are packed into windows in document order. A section larger
 than one window is split by size, and each piece also carries its heading path
 (for example `Experience > Senior Engineer at X`) as context that is never
-quotable. Text without Markdown headings is cut by size alone. Ingestion strips
-heading markup from HTML and DOCX, so those sources are cut by size alone.
+quotable. Text without Markdown headings is cut by size alone.
+
+Ingestion turns HTML headings (`<h1>` to `<h6>`) and DOCX heading paragraphs
+(Word heading styles or outline levels 1 to 6) into the same `#` markers, so
+those sources are cut at headings too. Stored source versions keep the text
+they were normalized with.
 
 One source may be up to 524,288 characters, the same bound as the whole
 selection, and is extracted in these bounded windows without manual splitting.

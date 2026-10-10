@@ -6,7 +6,8 @@ import { isIP } from "node:net";
 import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
-import { decodeHtmlEntities } from "./html-text.js";
+import { markDocxHeadings } from "./docx-headings.js";
+import { decodeHtmlEntities, markHtmlHeadings } from "./html-text.js";
 import { extractJobPostingText } from "./job-posting-json-ld.js";
 import { PdfTextLayoutCollector } from "./pdf-text-layout.js";
 
@@ -415,8 +416,8 @@ function extractHtml(text: string): string {
   const withoutInactiveContent = text
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
-  const withBoundaries = withoutInactiveContent.replace(
-    /<\/?(address|article|aside|blockquote|br|dd|div|dl|dt|footer|h[1-6]|header|hr|li|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi,
+  const withBoundaries = markHtmlHeadings(withoutInactiveContent).replace(
+    /<\/?(address|article|aside|blockquote|br|dd|div|dl|dt|footer|header|hr|li|main|nav|ol|p|pre|section|table|td|th|tr|ul)\b[^>]*>/gi,
     "\n",
   );
   return normalizeText(
@@ -888,12 +889,20 @@ function extractZipEntry(bytes: Uint8Array, entryName: string): string {
   throw new Error(`ZIP entry ${entryName} is missing`);
 }
 
+function readDocxStyles(bytes: Uint8Array): string | undefined {
+  try {
+    return extractZipEntry(bytes, "word/styles.xml");
+  } catch {
+    return undefined;
+  }
+}
+
 function extractDocx(bytes: Uint8Array): string {
   const xml = extractZipEntry(bytes, "word/document.xml");
   if (!/<(?:[a-z]+:)?document\b/u.test(xml)) throw new Error("DOCX document part is invalid");
   return normalizeText(
     decodeHtmlEntities(
-      xml
+      markDocxHeadings(xml, readDocxStyles(bytes))
         .replace(/<w:(?:tab|br)\b[^>]*\/?\s*>/gu, "\t")
         .replace(/<\/w:(?:p|tr)>/gu, "\n")
         .replace(/<[^>]*>/gu, "")

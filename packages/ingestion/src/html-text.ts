@@ -57,3 +57,22 @@ export function htmlFragmentToMarkdown(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/**
+ * Rewrites each `<h1>`-`<h6>` element as its own line starting with the matching `#` marker. Inner
+ * tags are dropped and whitespace collapses to one line; a heading with no text is removed.
+ */
+export function markHtmlHeadings(html: string): string {
+  return html.replace(
+    /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1\s*>/gi,
+    (_match, level: string, inner: string) => {
+      const title = inner
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return title === "" || decodeHtmlEntities(title).trim() === ""
+        ? "\n"
+        : `\n${"#".repeat(Number(level))} ${title}\n`;
+    },
+  );
+}
