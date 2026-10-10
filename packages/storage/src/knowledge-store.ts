@@ -41,7 +41,7 @@ import {
   candidateKnowledgePortableBackupSchemaVersion,
   candidateKnowledgeStoreSchema,
 } from "@draft-loop/schemas";
-
+import { errorCode, isMissing } from "./filesystem-error-codes.js";
 import {
   type CandidateKnowledgeBaseInput,
   type CandidateKnowledgeBaseRecord,
@@ -110,6 +110,7 @@ import {
   type CandidateKnowledgeVectorStoragePort,
   coordinateCandidateKnowledgeVectorPort,
 } from "./knowledge-vector-index.js";
+import { coordinateSourceEvidenceKindsPort } from "./source-evidence-kinds.js";
 import { coordinateSourceSensitivityRulesPort } from "./source-sensitivity-rules.js";
 import {
   type StorageWriterLease,
@@ -1151,21 +1152,6 @@ async function verifyCandidateDirectoryRoot(
     }
     throw new StorageValidationError("Candidate knowledge directory root could not be verified.");
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { readonly code?: unknown }).code === "ENOENT"
-  );
-}
-
-function errorCode(error: unknown): unknown {
-  return typeof error === "object" && error !== null && "code" in error
-    ? (error as { readonly code?: unknown }).code
-    : undefined;
 }
 
 async function chmodWhereSupported(path: string, mode: number): Promise<void> {
@@ -5681,6 +5667,7 @@ function createHandle(
         return Object.freeze({ ...result });
       }),
     ...coordinateSourceSensitivityRulesPort(storage, coordinateWrite),
+    ...coordinateSourceEvidenceKindsPort(storage, coordinateWrite),
     ...coordinateCandidateKnowledgeVectorPort(
       storage.candidateKnowledgeVectorIndex,
       coordinateWrite,
