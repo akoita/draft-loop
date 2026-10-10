@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   type CandidateKnowledgeBaseState,
   type CandidateKnowledgeLexicalChunk,
@@ -65,6 +64,7 @@ import {
   maximumCandidateKnowledgeRetentionExpireAfterDays,
 } from "./candidate-knowledge-retention-types.js";
 import * as vectorIndex from "./knowledge-vector-index.js";
+import * as originTrace from "./retrieval-origin-trace.js";
 import * as semanticTrace from "./semantic-retrieval-trace.js";
 import {
   appendSourceEvidenceKindOverride,
@@ -87,6 +87,7 @@ import {
   type SourceSensitivityRuleVersionSummary,
   sourceSensitivityRulesMigration,
 } from "./source-sensitivity-rules.js";
+import { loadSqlite, type SqliteHandle, type SqliteStorageOpenOptions } from "./sqlite-handle.js";
 import {
   StorageConflictError,
   StorageSecurityError,
@@ -95,6 +96,7 @@ import {
 
 export * from "./candidate-knowledge-retention-types.js";
 export * from "./knowledge-vector-index.js";
+export * from "./retrieval-origin-trace.js";
 export * from "./semantic-retrieval-trace.js";
 export type {
   SourceEvidenceKindOverrideInput,
@@ -107,9 +109,11 @@ export type {
   SourceSensitivityRuleVersionRecord,
   SourceSensitivityRuleVersionSummary,
 } from "./source-sensitivity-rules.js";
+export type { SqliteStorageOpenOptions } from "./sqlite-handle.js";
 export {
   StorageConflictError,
   StorageSecurityError,
+  StorageUnavailableError,
   StorageValidationError,
 } from "./storage-errors.js";
 
@@ -1339,45 +1343,7 @@ export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
 
-export class StorageUnavailableError extends Error {
-  constructor(message: string, options?: { readonly cause?: unknown }) {
-    super(message, options);
-    this.name = "StorageUnavailableError";
-  }
-}
-
-export const storageSchemaVersion = 33 as const;
-
-interface SqliteStatement {
-  readonly run: (...parameters: readonly unknown[]) => {
-    readonly changes: number;
-    readonly lastInsertRowid: number | bigint;
-  };
-  readonly get: <Row extends Record<string, unknown> = Record<string, unknown>>(
-    ...parameters: readonly unknown[]
-  ) => Row | undefined;
-  readonly all: <Row extends Record<string, unknown> = Record<string, unknown>>(
-    ...parameters: readonly unknown[]
-  ) => readonly Row[];
-}
-
-interface SqliteHandle {
-  readonly exec: (sql: string) => void;
-  readonly pragma: (sql: string) => unknown;
-  readonly prepare: (sql: string) => SqliteStatement;
-  readonly transaction: <Result>(operation: () => Result) => () => Result;
-  readonly backup: (destination: string) => Promise<unknown>;
-  readonly close: () => void;
-}
-
-interface SqliteConstructor {
-  new (filename: string, options?: { readonly?: boolean; fileMustExist?: boolean }): SqliteHandle;
-}
-
-export interface SqliteStorageOpenOptions {
-  readonly readOnly?: boolean;
-  readonly fileMustExist?: boolean;
-}
+export const storageSchemaVersion = 34 as const;
 
 interface Migration {
   readonly version: number;
@@ -3319,6 +3285,7 @@ const migrations: readonly Migration[] = [
   semanticTrace.semanticRetrievalTraceMigration,
   ...applicationStore.applicationMigrations,
   sourceEvidenceKindOverridesMigration,
+  originTrace.retrievalOriginTraceMigration,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3893,49 +3860,6 @@ function requirePositiveInteger(value: number, field: string): number {
   return value;
 }
 
-function moduleRequire(): NodeRequire {
-  try {
-    return createRequire(import.meta.url);
-  } catch {
-    // Electron Forge emits the main bundle as CommonJS. In that bundle Vite
-    // can leave import.meta.url undefined, so use an absolute cwd anchor.
-    return createRequire(join(process.cwd(), "package.json"));
-  }
-}
-
-function loadSqlite(filename: string, options: SqliteStorageOpenOptions = {}): SqliteHandle {
-  let loaded: unknown;
-  const require = moduleRequire();
-  try {
-    loaded = require("better-sqlite3");
-  } catch (error) {
-    const resourcesPath = (process as NodeJS.Process & { readonly resourcesPath?: string })
-      .resourcesPath;
-    if (resourcesPath === undefined) {
-      throw new StorageUnavailableError(
-        "SQLite storage requires the optional better-sqlite3 dependency.",
-        { cause: error },
-      );
-    }
-    try {
-      loaded = require(join(resourcesPath, "better-sqlite3"));
-    } catch {
-      throw new StorageUnavailableError(
-        "SQLite storage requires the optional better-sqlite3 dependency.",
-        { cause: error },
-      );
-    }
-  }
-  const Constructor = (loaded as { readonly default?: unknown }).default ?? loaded;
-  if (typeof Constructor !== "function") {
-    throw new StorageUnavailableError("The better-sqlite3 module did not expose a constructor.");
-  }
-  const sqliteOptions: { readonly?: boolean; fileMustExist?: boolean } = {};
-  if (options.readOnly !== undefined) sqliteOptions.readonly = options.readOnly;
-  if (options.fileMustExist !== undefined) sqliteOptions.fileMustExist = options.fileMustExist;
-  return new (Constructor as SqliteConstructor)(filename, sqliteOptions);
-}
-
 function rowString(row: Record<string, unknown>, field: string): string {
   return String(row[field]);
 }
@@ -4050,6 +3974,11 @@ export class SqliteStorage
     return semanticTrace.createSemanticRetrievalTraceStorage(this.database, () =>
       this.ensureOpen(),
     );
+  }
+
+  /** Append-only fact/chunk origin traces of pinned-profile runs; also on read-only stores. */
+  public get candidateKnowledgeRetrievalOriginTrace() {
+    return originTrace.createRetrievalOriginTraceStorage(this.database, () => this.ensureOpen());
   }
 
   /** Applications and their run and brief bindings; also available on read-only stores. */

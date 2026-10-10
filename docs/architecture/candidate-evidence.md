@@ -424,6 +424,12 @@ A run with a pinned profile retrieves evidence fact first
   with their reserved contact, chronology and priority slots intact, and a
   chunk repeating a selected fact's quote is skipped.
 
+- **Traces.** Each selection appends a content-free origin trace
+  (`retrieval-origin-trace.ts`, a companion table beside the v1 retrieval
+  trace). It holds the pinned profile ID, version and checksum, the fact
+  ranking mode, a query checksum, and each selected item's opaque ID, source ID
+  and origin (`profile-fact` or `knowledge-chunk`), never fact values or quotes.
+
 A full-source run already sends every eligible chunk and is unchanged, as is a
 run without a pinned profile.
 
