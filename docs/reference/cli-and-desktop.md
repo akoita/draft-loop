@@ -1000,6 +1000,9 @@ these conditions:
   base and the excluded tiers. A knowledge base with rules is reused only when
   both match the current run; older versions without this record are extracted
   in full for knowledge bases that have rules.
+- The source's [evidence kind](#source-evidence-kind) is the one recorded for
+  its version. Changing a source's kind extracts that source again under the
+  new kind's guidance.
 
 A fact is kept only when every source it cites is unchanged; the others are
 extracted again. When nothing changed, derivation makes no provider call and
@@ -1371,6 +1374,14 @@ Each knowledge source has an evidence kind that names what the material is:
 so nothing is sent to a provider and no detection result is stored. A user can
 override the kind for a source; the override is stored per source, so it
 survives refreshes that add new versions, and clearing it returns to detection.
+
+Profile extraction sends each source's effective kind with its text and gives
+short guidance per kind: a performance review's judgements stay attributed to
+the reviewer, notes yield only explicit statements, a LinkedIn export's sections
+map to roles, dates, and skills, and a transcript's evidence is the candidate's
+own turns. The never-invent and exact-quote rules are the same for every kind.
+Each profile version records the kind used for every extracted source version.
+
 The application service is `source-evidence-kind-service`; the desktop control
 arrives with [#1131](https://github.com/akoita/draft-loop/issues/1131).
 

@@ -7332,7 +7332,7 @@ describe("candidate knowledge native controls", () => {
       record.profile.extraction = {
         company: "mistral",
         modelId: "mistral-large-4",
-        promptTemplateVersion: "canonical-candidate-profile-extraction-v7",
+        promptTemplateVersion: "canonical-candidate-profile-extraction-v8",
         extractionProfile: { id: "dev-mistral-extraction", version: 2 },
       };
       fixture.service.deriveCanonicalCandidateProfile.mockResolvedValue(record as never);

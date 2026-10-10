@@ -128,6 +128,8 @@ async function derive(
   const handle = {
     descriptor: { schemaVersion: 1, id: "store-1", createdAt },
     getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => options.rules),
+    listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
+    getCandidateKnowledgeSource: async () => undefined,
     readManagedCandidateKnowledgeSourceVersion: vi.fn(
       async (_knowledgeBaseId: string, sourceId: string, versionId: string) => {
         const source = sources.find((candidate) => candidate.sourceId === sourceId);

@@ -249,6 +249,8 @@ describe("derivation records and reuses sensitivity filtering", () => {
   const handle = {
     descriptor: { schemaVersion: 1, id: "store-1", createdAt },
     getCandidateKnowledgeSourceSensitivityRules: vi.fn(async () => rulesRecord),
+    listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
+    getCandidateKnowledgeSource: async () => undefined,
     readManagedCandidateKnowledgeSourceVersion: vi.fn(async () => ({
       metadata: {
         knowledgeBaseId: "knowledge-1",
