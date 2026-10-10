@@ -1384,8 +1384,11 @@ map to roles, dates, and skills, and a transcript's evidence is the candidate's
 own turns. The never-invent and exact-quote rules are the same for every kind.
 Each profile version records the kind used for every extracted source version.
 
-The application service is `source-evidence-kind-service`; the desktop control
-arrives with [#1131](https://github.com/akoita/draft-loop/issues/1131).
+The application service is `source-evidence-kind-service`, used by both the CLI
+and the desktop. In the desktop, **Manage career evidence** lists each source of
+the base in use under **What each source is**, with its kind labelled
+"detected" or "set by you". Choosing a kind from the source's select records an
+override, and **use detected** clears it.
 
 `knowledge source list` shows each current source's `evidenceKind` and
 `evidenceKindOrigin` (`detected` or `user`). `knowledge source kind` shows one

@@ -48,6 +48,9 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
   type SavedModelProfilesResult,
+  type SourceEvidenceKindSetInput,
+  type SourceEvidenceKindSetResult,
+  type SourceEvidenceKindsResult,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
   type WorkspaceRetrievalModeResult,
@@ -218,6 +221,15 @@ export interface DesktopKnowledgeCapabilities {
     storeId: string,
     knowledgeBaseId: string,
   ) => Promise<KnowledgeReadinessResult>;
+  /** Each current source's evidence kind, detected or set by the person. */
+  readonly listSourceEvidenceKinds?: (
+    storeId: string,
+    knowledgeBaseId: string,
+  ) => Promise<SourceEvidenceKindsResult>;
+  /** Sets one source's evidence kind, or clears the override with null. */
+  readonly setSourceEvidenceKind?: (
+    input: SourceEvidenceKindSetInput,
+  ) => Promise<SourceEvidenceKindSetResult>;
   readonly importWorkspaceCandidateSources?: (
     input: KnowledgeWorkspaceSourcesImportInput,
   ) => Promise<KnowledgeDirectoryImportResult>;
@@ -923,6 +935,25 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 type: "knowledge.readiness",
                 input: { storeId, knowledgeBaseId },
               }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.source-evidence-kinds")
+      ? {
+          listSourceEvidenceKinds: async (storeId: string, knowledgeBaseId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.source-evidence-kinds",
+                input: { storeId, knowledgeBaseId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.source-evidence-kind.set")
+      ? {
+          setSourceEvidenceKind: async (input: SourceEvidenceKindSetInput) =>
+            unwrap(
+              await capabilityPort.execute({ type: "knowledge.source-evidence-kind.set", input }),
             ),
         }
       : {}),

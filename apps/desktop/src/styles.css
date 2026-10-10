@@ -3177,6 +3177,57 @@ input[type="checkbox"] {
   min-height: 0;
 }
 
+/* Manage career evidence: one row per source with its evidence kind. */
+.evidence-kind-list {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 36rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence-kind-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, auto);
+  align-items: center;
+  gap: 2px var(--space-2);
+}
+
+.evidence-kind-row select {
+  grid-row: span 2;
+  width: auto;
+  font-size: var(--text-xs);
+}
+
+.evidence-kind-name {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-kind-origin {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+}
+
+.evidence-kind-clear {
+  border: 0;
+  padding: 0;
+  color: var(--text-3);
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.evidence-kind-clear:not(:disabled):hover {
+  color: var(--teal-bright);
+}
+
 .url-input-label {
   display: grid;
   gap: var(--space-1);
