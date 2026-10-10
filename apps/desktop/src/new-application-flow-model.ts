@@ -208,12 +208,15 @@ export interface NewApplicationStartPlan {
   readonly profile: CandidateProfileSelection | null;
   readonly transmissionRequired: boolean;
   readonly transmissionConfirmed: boolean;
+  /** The pair's provider readiness; absent or `null` while it is unknown, which does not block. */
+  readonly providerReadiness?: { readonly ready: boolean; readonly summary: string } | null;
 }
 
 /** Why the review cannot start yet, or null when it can. */
 export function newApplicationStartBlocker(plan: NewApplicationStartPlan): string | null {
   if (!plan.requirementsReady) return "Review the application's requirements first.";
   if (plan.profile === null) return "Select a reviewed career profile first.";
+  if (plan.providerReadiness?.ready === false) return `${plan.providerReadiness.summary}.`;
   if (plan.transmissionRequired && !plan.transmissionConfirmed) {
     return "Confirm the provider data transmission to start.";
   }

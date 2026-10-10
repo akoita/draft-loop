@@ -223,6 +223,51 @@ describe("start step", () => {
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Start review/u);
   });
 
+  it("shows the pair's provider readiness and holds Start until it is configured", () => {
+    const readiness = (
+      <section aria-label="Provider authentication">
+        Configure OpenAI API key for live review
+      </section>
+    );
+    const missing = renderToStaticMarkup(
+      <StartStep
+        {...props}
+        transmissionConfirmed
+        providerAuthentication={readiness}
+        providerReadiness={{ ready: false, summary: "Configure OpenAI API key for live review" }}
+      />,
+    );
+    expect(missing).toContain('aria-label="Provider authentication"');
+    expect(missing).toMatch(/<button[^>]*disabled=""[^>]*>Start review/u);
+    expect(missing).toContain(
+      '<p class="subtle" id="flow-start-blocker">Configure OpenAI API key for live review.</p>',
+    );
+
+    const configured = renderToStaticMarkup(
+      <StartStep
+        {...props}
+        transmissionConfirmed
+        providerAuthentication={readiness}
+        providerReadiness={{
+          ready: true,
+          summary: "Anthropic API key & OpenAI API key configured",
+        }}
+      />,
+    );
+    expect(configured).not.toMatch(/<button[^>]*disabled=""[^>]*>Start review/u);
+
+    // Still reading the statuses: Start is not held on an unknown.
+    const loading = renderToStaticMarkup(
+      <StartStep
+        {...props}
+        transmissionConfirmed
+        providerAuthentication={readiness}
+        providerReadiness={null}
+      />,
+    );
+    expect(loading).not.toMatch(/<button[^>]*disabled=""[^>]*>Start review/u);
+  });
+
   it("shows an outside blocker, a failure and the starting state", () => {
     const blocked = renderToStaticMarkup(
       <StartStep

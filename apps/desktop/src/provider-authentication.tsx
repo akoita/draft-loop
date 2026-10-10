@@ -17,7 +17,10 @@ import {
   saveOpenAiAuthMode,
   saveProviderCredential,
 } from "./provider-authentication-actions.js";
-import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
+import {
+  type ProviderAuthenticationSummary,
+  providerAuthenticationForPair,
+} from "./provider-authentication-summary.js";
 import { useModalFocusTrap } from "./review.js";
 
 export { credentialProviderLabels, providerAuthModeLabels };
@@ -366,6 +369,8 @@ export interface ProviderAuthenticationProps extends ProviderAuthenticationCallb
   /** The configured pair, so the summary names only the providers a run would use. */
   readonly authorCompany?: ModelCompany;
   readonly criticCompany?: ModelCompany;
+  /** Told the pair's readiness once the statuses are read, and `null` while they are unknown. */
+  readonly onReadiness?: (readiness: ProviderAuthenticationSummary | null) => void;
 }
 
 /**
@@ -381,6 +386,7 @@ export function ProviderAuthentication({
   fixtureMode = false,
   authorCompany,
   criticCompany,
+  onReadiness,
 }: ProviderAuthenticationProps) {
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -458,7 +464,7 @@ export function ProviderAuthentication({
     }
   };
 
-  const summary =
+  const readiness =
     loaded || fixtureMode
       ? providerAuthenticationForPair({
           fixtureMode,
@@ -471,8 +477,16 @@ export function ProviderAuthentication({
           openaiMode: openaiAuthMode.activeMode,
           ...(authorCompany === undefined ? {} : { authorCompany }),
           ...(criticCompany === undefined ? {} : { criticCompany }),
-        }).summary
+        })
       : null;
+  const summary = readiness?.summary ?? null;
+  const ready = readiness?.ready;
+
+  const onReadinessRef = useRef(onReadiness);
+  onReadinessRef.current = onReadiness;
+  useEffect(() => {
+    onReadinessRef.current?.(ready === undefined || summary === null ? null : { ready, summary });
+  }, [ready, summary]);
 
   if (getCredentialStatus === undefined && onSetCredential === undefined) return null;
 

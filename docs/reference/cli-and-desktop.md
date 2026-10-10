@@ -382,10 +382,12 @@ it appears on Home as Drafting and can be resumed there.
    generated here. With no reviewed profile, the step says so and offers
    **Manage profile**.
 4. **Start review.** A summary of the application, brief version, profile
-   version and model pair, plus the provider-transmission confirmation when it
-   is still required. **Start review** opens the application's review once the
-   run has begun. After approval and export, Home lists the application as
-   Exported.
+   version and model pair, the pair's provider authentication readiness with
+   **Manage provider authentication**, and the provider-transmission
+   confirmation when it is still required. While a provider the pair needs is
+   not configured, **Start review** stays disabled and says which one. It opens
+   the application's review once the run has begun. After approval and export,
+   Home lists the application as Exported.
 
 A second application reuses the same reviewed profile and has its own brief.
 
