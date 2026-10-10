@@ -193,6 +193,26 @@ describe("step 4: start", () => {
     expect(newApplicationStartBlocker(ready)).toBeNull();
   });
 
+  it("holds Start while the pair's provider is not configured, but not while unknown", () => {
+    const missing = { ready: false, summary: "Configure OpenAI API key for live review" };
+    expect(newApplicationStartBlocker({ ...ready, providerReadiness: missing })).toBe(
+      "Configure OpenAI API key for live review.",
+    );
+    expect(
+      newApplicationStartBlocker({ ...ready, profile: null, providerReadiness: missing }),
+    ).toMatch(/career profile/u);
+    expect(
+      newApplicationStartBlocker({
+        ...ready,
+        providerReadiness: {
+          ready: true,
+          summary: "Anthropic API key & OpenAI API key configured",
+        },
+      }),
+    ).toBeNull();
+    expect(newApplicationStartBlocker({ ...ready, providerReadiness: null })).toBeNull();
+  });
+
   it("counts the four steps", () => {
     expect(stepProgressText("job")).toBe("Step 1 of 4");
     expect(stepProgressText("start")).toBe("Step 4 of 4");
