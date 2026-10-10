@@ -740,6 +740,7 @@ export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
+export * from "./source-evidence-kind-service.js";
 export * from "./source-sensitivity-service.js";
 export * from "./user-data-root.js";
 export * from "./workspace-application-import.js";

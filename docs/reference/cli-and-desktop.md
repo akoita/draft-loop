@@ -1358,6 +1358,18 @@ mutually exclusive, and all forms accept `--json`. The output always states that
 The desktop preflight control for this setting arrives with
 [#897](https://github.com/akoita/draft-loop/issues/897); until then, use the CLI.
 
+### Source evidence kind
+
+Each knowledge source has an evidence kind that names what the material is:
+`cv`, `linkedin-export`, `performance-review`, `notes`, `transcript`, or
+`other`. The kind is detected locally from the latest version's normalized text,
+so nothing is sent to a provider and no detection result is stored. A user can
+override the kind for a source; the override is stored per source, so it
+survives refreshes that add new versions, and clearing it returns to detection.
+The application service is `source-evidence-kind-service`; CLI and desktop
+controls arrive with [#1130](https://github.com/akoita/draft-loop/issues/1130)
+and [#1131](https://github.com/akoita/draft-loop/issues/1131).
+
 ### Evidence mode
 
 A workspace chooses what candidate material a run's author and critic
