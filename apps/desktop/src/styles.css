@@ -5402,6 +5402,84 @@ input[type="checkbox"] {
   text-align: left;
 }
 
+.recent-workspace-open-primary {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.recent-workspace-open-primary:not(:disabled):hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.recent-workspace-badge {
+  margin-left: var(--space-2);
+  color: var(--teal-bright);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* With recent history the page leads with reopening; the folder picker and demo
+   sit under the list, and creation waits behind a closed disclosure. */
+.workspace-start-alternatives {
+  margin-top: var(--space-4);
+}
+
+.workspace-start-alternatives .button {
+  flex: 0 0 auto;
+}
+
+.workspace-create-section {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.workspace-create-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.workspace-create-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.workspace-create-section > summary::after {
+  flex: none;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  content: "⌄";
+}
+
+.workspace-create-section[open] > summary::after {
+  content: "⌃";
+}
+
+.workspace-create-section > summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+/* Inside the disclosure the form is a section, not the panel's closing row. */
+.workspace-create-section .setup-form {
+  margin-top: var(--space-3);
+}
+
+.workspace-create-section .setup-form .approval-actions {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
 .recent-workspace-remove {
   flex: 0 0 auto;
   color: var(--text-3);

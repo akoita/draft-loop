@@ -1,9 +1,9 @@
-interface WorkspaceCreationDraft {
+export interface WorkspaceCreationDraft {
   readonly name: string;
   readonly maxRounds: number;
 }
 
-interface WorkspaceCreationFormProps {
+export interface WorkspaceCreationFormProps {
   readonly draft: WorkspaceCreationDraft;
   readonly busy: boolean;
   readonly errorMessage?: string | null;
@@ -11,6 +11,11 @@ interface WorkspaceCreationFormProps {
   readonly onCreate?: (name: string, maxRounds: number) => void;
   readonly onCreateDemo?: () => void;
   readonly onOpen?: () => void;
+  /**
+   * False when the form sits in the secondary "Create a new workspace" section
+   * and the page already offers Open and demo elsewhere.
+   */
+  readonly showAlternatives?: boolean;
 }
 
 export function workspaceCreationSubmission(name: string, maxRounds: number) {
@@ -25,6 +30,7 @@ export function WorkspaceCreationForm({
   onCreate,
   onCreateDemo,
   onOpen,
+  showAlternatives = true,
 }: WorkspaceCreationFormProps) {
   const validRounds =
     Number.isSafeInteger(draft.maxRounds) && draft.maxRounds >= 1 && draft.maxRounds <= 20;
@@ -32,7 +38,7 @@ export function WorkspaceCreationForm({
   return (
     <form
       className="setup-form"
-      aria-label="Create or open a review workspace"
+      aria-label={showAlternatives ? "Create or open a review workspace" : "Create a new workspace"}
       onSubmit={(event) => {
         event.preventDefault();
         if (busy || !canCreate || onCreate === undefined) return;
@@ -84,23 +90,42 @@ export function WorkspaceCreationForm({
         >
           Create workspace
         </button>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={busy || onCreateDemo === undefined}
-          onClick={() => onCreateDemo?.()}
-        >
-          Try demo workspace
-        </button>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={busy || onOpen === undefined}
-          onClick={() => onOpen?.()}
-        >
-          Open workspace
-        </button>
+        {showAlternatives ? (
+          <WorkspaceAlternatives busy={busy} onCreateDemo={onCreateDemo} onOpen={onOpen} />
+        ) : null}
       </div>
     </form>
+  );
+}
+
+/** The demo and folder-picker paths, shared by both start-page layouts. */
+export function WorkspaceAlternatives({
+  busy,
+  onCreateDemo,
+  onOpen,
+}: {
+  readonly busy: boolean;
+  readonly onCreateDemo?: (() => void) | undefined;
+  readonly onOpen?: (() => void) | undefined;
+}) {
+  return (
+    <>
+      <button
+        className="button button-quiet"
+        type="button"
+        disabled={busy || onOpen === undefined}
+        onClick={() => onOpen?.()}
+      >
+        Open workspace
+      </button>
+      <button
+        className="button button-quiet"
+        type="button"
+        disabled={busy || onCreateDemo === undefined}
+        onClick={() => onCreateDemo?.()}
+      >
+        Try demo workspace
+      </button>
+    </>
   );
 }

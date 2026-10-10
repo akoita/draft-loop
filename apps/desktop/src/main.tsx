@@ -85,7 +85,6 @@ import {
 } from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import { ProviderAuthentication } from "./provider-authentication.js";
-import { RecentWorkspaces } from "./recent-workspaces-ui.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import {
@@ -96,7 +95,7 @@ import {
 } from "./saved-model-profiles.js";
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { ThemeToggle } from "./theme.js";
-import { WorkspaceCreationForm, workspaceCreationSubmission } from "./workspace-creation.js";
+import { workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 import {
   workspaceModelSettingsBlocker,
@@ -116,6 +115,7 @@ import {
   isWorkspaceContextLost,
   WorkspaceRecovery,
 } from "./workspace-recovery.js";
+import { WorkspaceStart } from "./workspace-start.js";
 import { WorkspaceTitle } from "./workspace-title.js";
 import { WritingPolicyEditAction } from "./writing-policy-editor.js";
 import "./styles.css";
@@ -2108,53 +2108,67 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           <p className="eyebrow">{workspaceSetupVisible ? "Workspace navigation" : "First run"}</p>
           <h1>
             {workspaceSetupVisible
-              ? "Create or open a review workspace"
+              ? "Open or create a review workspace"
               : "Set up a review workspace"}
           </h1>
           {error === null ? null : <p>{error}</p>}
-          {openWorkspace === undefined &&
-          createWorkspace === undefined &&
-          createDemoWorkspace === undefined ? null : (
-            <WorkspaceCreationForm
-              draft={draft}
-              busy={busy}
-              onDraftChange={(next) => setDraft((current) => ({ ...current, ...next }))}
-              {...(createWorkspace === undefined
-                ? {}
-                : {
-                    onCreate: (name: string, maxRounds: number) =>
-                      void setup(
-                        () => {
-                          const submission = workspaceCreationSubmission(name, maxRounds);
-                          return createWorkspace(submission.name, submission.selection);
-                        },
-                        (reason) => messageOf(reason, "The workspace could not be created."),
-                        true,
+          <WorkspaceStart
+            busy={busy}
+            {...(openWorkspace === undefined &&
+            createWorkspace === undefined &&
+            createDemoWorkspace === undefined
+              ? {}
+              : {
+                  form: {
+                    draft,
+                    busy,
+                    onDraftChange: (next) => setDraft((current) => ({ ...current, ...next })),
+                    ...(createWorkspace === undefined
+                      ? {}
+                      : {
+                          onCreate: (name: string, maxRounds: number) =>
+                            void setup(
+                              () => {
+                                const submission = workspaceCreationSubmission(name, maxRounds);
+                                return createWorkspace(submission.name, submission.selection);
+                              },
+                              (reason) => messageOf(reason, "The workspace could not be created."),
+                              true,
+                            ),
+                        }),
+                    ...(createDemoWorkspace === undefined
+                      ? {}
+                      : {
+                          onCreateDemo: () =>
+                            void setup(() => createDemoWorkspace("draft-loop-demo")),
+                        }),
+                    ...(openWorkspace === undefined
+                      ? {}
+                      : { onOpen: () => void setup(openWorkspace) }),
+                  },
+                })}
+            {...(listRecentWorkspaces === undefined ||
+            openRecentWorkspace === undefined ||
+            clearRecentWorkspaces === undefined
+              ? {}
+              : {
+                  recentActions: {
+                    busy,
+                    listRecentWorkspaces,
+                    openRecentWorkspace: (id: string) =>
+                      setup(
+                        () => openRecentWorkspace(id),
+                        (reason) =>
+                          messageOf(
+                            reason,
+                            "This recent workspace could not be opened. Choose another.",
+                          ),
                       ),
-                  })}
-              {...(createDemoWorkspace === undefined
-                ? {}
-                : { onCreateDemo: () => void setup(() => createDemoWorkspace("draft-loop-demo")) })}
-              {...(openWorkspace === undefined ? {} : { onOpen: () => void setup(openWorkspace) })}
-            />
-          )}
-          {listRecentWorkspaces === undefined ||
-          openRecentWorkspace === undefined ||
-          clearRecentWorkspaces === undefined ? null : (
-            <RecentWorkspaces
-              busy={busy}
-              listRecentWorkspaces={listRecentWorkspaces}
-              openRecentWorkspace={(id) =>
-                setup(
-                  () => openRecentWorkspace(id),
-                  (reason) =>
-                    messageOf(reason, "This recent workspace could not be opened. Choose another."),
-                )
-              }
-              {...(removeRecentWorkspace === undefined ? {} : { removeRecentWorkspace })}
-              clearRecentWorkspaces={clearRecentWorkspaces}
-            />
-          )}
+                    ...(removeRecentWorkspace === undefined ? {} : { removeRecentWorkspace }),
+                    clearRecentWorkspaces,
+                  },
+                })}
+          />
         </section>
       </main>
     );
