@@ -60,6 +60,33 @@ export function isEmptyDraftBrief(latest: OpportunityLatestBrief): boolean {
   return latest.status === "draft" && latest.requirementCount === 0;
 }
 
+/** Whether setup card 01 offers extraction: no brief yet, or only an empty draft to replace. */
+export function offersRequirementsExtraction(
+  latest: OpportunityLatestBrief | null | undefined,
+): boolean {
+  return latest === null || latest === undefined || isEmptyDraftBrief(latest);
+}
+
+/** What the start blocker offers next to the parser's refusal of the raw job description. */
+export type RequirementRefusalAction =
+  | "use-reviewed"
+  | "review-draft"
+  | "extract"
+  | "extract-again"
+  | null;
+
+export function requirementRefusalAction(
+  latest: OpportunityLatestBrief | null | undefined,
+  reviewed: ReviewedRequirementsSelection | null,
+  canExtract: boolean,
+): RequirementRefusalAction {
+  if (reviewed !== null) return "use-reviewed";
+  const emptyDraft = latest !== null && latest !== undefined && isEmptyDraftBrief(latest);
+  if (latest?.status === "draft" && !emptyDraft) return "review-draft";
+  if (!canExtract) return null;
+  return emptyDraft ? "extract-again" : "extract";
+}
+
 /** "Requirements brief v2 (draft)" for the setup card. */
 export function latestBriefTitle(latest: OpportunityLatestBrief): string {
   return `Requirements brief v${latest.version} (${latest.status})`;

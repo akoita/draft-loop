@@ -150,7 +150,13 @@ copies exact bytes under an opaque ID-derived name. A changed append creates
 the next parent-linked version; identical current bytes are a no-op and do not
 advance time or imply freshness.
 
-PDF extraction joins adjacent text fragments on the same line using text-position
+PDF extraction reads pages through the page tree and decodes each text run with
+the ToUnicode map of the font it selects, including fonts in Form XObjects and
+object streams. Subset fonts reuse glyph codes, so one document-wide map would
+garble any PDF with several fonts. Files without a readable page tree fall back
+to scanning every stream.
+
+It joins adjacent text fragments on the same line using text-position
 operators, while retaining line changes and separate text objects. This keeps
 browser-generated PDFs that draw individual characters readable. Existing saved
 job text retains its previous extraction until the job document is replaced or

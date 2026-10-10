@@ -652,7 +652,8 @@ For a job page address or saved job page, extraction reads only that page:
   JavaScript. Paste the job text instead."
 - **No requirements found.** If extraction returns no requirements, the card
   says "No requirements were found in this job text" and offers **Extract
-  again** instead of a review.
+  again** instead of a review. The empty draft keeps offering extraction after
+  a restart, and the start blocker offers **Extract requirements again**.
 
 The card also shows the workspace's latest brief as "Requirements brief vN
 (draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review

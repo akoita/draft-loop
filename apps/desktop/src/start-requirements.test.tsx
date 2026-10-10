@@ -9,7 +9,9 @@ import {
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
+  offersRequirementsExtraction,
   rawJobDescriptionLabel,
+  requirementRefusalAction,
   reviewedRequirementsLabel,
   reviewedRequirementsSelection,
 } from "./start-requirements-model.js";
@@ -163,6 +165,23 @@ describe("guided requirement blocker", () => {
     );
     expect(html).toContain(problem);
     expect(html).not.toContain("Extract requirements into a brief");
+  });
+
+  it("offers a fresh extraction, not a review, when the latest draft has no requirements", () => {
+    const empty = { ...draft, requirementCount: 0, criticalCount: 0 };
+    const selection = reviewedRequirementsSelection(reviewed, {
+      briefId: "target-role",
+      version: 3,
+    });
+    expect(requirementRefusalAction(empty, null, true)).toBe("extract-again");
+    expect(requirementRefusalAction(empty, null, false)).toBeNull();
+    expect(requirementRefusalAction(draft, null, true)).toBe("review-draft");
+    expect(requirementRefusalAction(null, null, true)).toBe("extract");
+    expect(requirementRefusalAction(empty, selection, true)).toBe("use-reviewed");
+    expect(offersRequirementsExtraction(empty)).toBe(true);
+    expect(offersRequirementsExtraction(undefined)).toBe(true);
+    expect(offersRequirementsExtraction(draft)).toBe(false);
+    expect(offersRequirementsExtraction(reviewed)).toBe(false);
   });
 
   it("recognizes only the refusal itself as the guided blocker", () => {
