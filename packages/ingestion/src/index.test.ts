@@ -57,51 +57,66 @@ function concat(...parts: readonly Uint8Array[]): Uint8Array {
   return result;
 }
 
-function storedDocx(document: string): Uint8Array {
-  const name = new TextEncoder().encode("word/document.xml");
-  const content = new TextEncoder().encode(document);
-  const local = concat(
-    new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
-    littleEndian(20, 2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    littleEndian(crc32(content), 4),
-    littleEndian(content.length, 4),
-    littleEndian(content.length, 4),
-    littleEndian(name.length, 2),
-    new Uint8Array(2),
-    name,
-    content,
-  );
-  const central = concat(
-    new Uint8Array([0x50, 0x4b, 0x01, 0x02]),
-    littleEndian(20, 2),
-    littleEndian(20, 2),
-    new Uint8Array(8),
-    littleEndian(crc32(content), 4),
-    littleEndian(content.length, 4),
-    littleEndian(content.length, 4),
-    littleEndian(name.length, 2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    new Uint8Array(2),
-    new Uint8Array(4),
-    new Uint8Array(4),
-    name,
-  );
+function storedDocx(document: string, styles?: string): Uint8Array {
+  const entries = [
+    { name: "word/document.xml", content: document },
+    ...(styles === undefined ? [] : [{ name: "word/styles.xml", content: styles }]),
+  ].map((entry) => ({
+    name: new TextEncoder().encode(entry.name),
+    content: new TextEncoder().encode(entry.content),
+  }));
+  const locals: Uint8Array[] = [];
+  const centrals: Uint8Array[] = [];
+  let offset = 0;
+  for (const { name, content } of entries) {
+    const local = concat(
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
+      littleEndian(20, 2),
+      new Uint8Array(2),
+      new Uint8Array(2),
+      new Uint8Array(2),
+      new Uint8Array(2),
+      littleEndian(crc32(content), 4),
+      littleEndian(content.length, 4),
+      littleEndian(content.length, 4),
+      littleEndian(name.length, 2),
+      new Uint8Array(2),
+      name,
+      content,
+    );
+    centrals.push(
+      concat(
+        new Uint8Array([0x50, 0x4b, 0x01, 0x02]),
+        littleEndian(20, 2),
+        littleEndian(20, 2),
+        new Uint8Array(8),
+        littleEndian(crc32(content), 4),
+        littleEndian(content.length, 4),
+        littleEndian(content.length, 4),
+        littleEndian(name.length, 2),
+        new Uint8Array(2),
+        new Uint8Array(2),
+        new Uint8Array(2),
+        new Uint8Array(2),
+        new Uint8Array(4),
+        littleEndian(offset, 4),
+        name,
+      ),
+    );
+    locals.push(local);
+    offset += local.length;
+  }
+  const central = concat(...centrals);
   const end = concat(
     new Uint8Array([0x50, 0x4b, 0x05, 0x06]),
     new Uint8Array(4),
-    littleEndian(1, 2),
-    littleEndian(1, 2),
+    littleEndian(entries.length, 2),
+    littleEndian(entries.length, 2),
     littleEndian(central.length, 4),
-    littleEndian(local.length, 4),
+    littleEndian(offset, 4),
     new Uint8Array(2),
   );
-  return concat(local, central, end);
+  return concat(...locals, central, end);
 }
 
 afterEach(async () => {
@@ -237,9 +252,22 @@ describe("local source ingestion", () => {
     const result = await ingestFile({ path });
 
     expect(result.issues).toEqual([]);
-    expect(result.source?.text).toBe("Ada & Grace\nBuilt <systems>.");
+    expect(result.source?.text).toBe("# Ada & Grace\nBuilt <systems>.");
     expect(result.source?.text).not.toContain("SECRET-CANDIDATE");
     expect(result.source?.text).not.toContain("alert");
+  });
+
+  it("keeps HTML headings as Markdown markers and drops empty headings", async () => {
+    const path = await fixture(
+      "structured.html",
+      "<body><h1>Ada <em>Example</em></h1><p>Intro.</p><h2 class='role'><span>Senior</span>\n  Engineer</h2><h2>  </h2><p>Built.</p><h3>Skills</h3><ul><li>TypeScript</li></ul></body>",
+    );
+
+    const result = await ingestFile({ path });
+
+    expect(result.source?.text).toBe(
+      "# Ada Example\nIntro.\n## Senior Engineer\nBuilt.\n### Skills\nTypeScript",
+    );
   });
 
   it("uses an injected binary extractor without changing the provenance contract", async () => {
@@ -360,6 +388,31 @@ describe("local source ingestion", () => {
     expect(docxResult.issues).toEqual([]);
     expect(docxResult.source?.text).toBe("Ada & Grace\nBuilt reliable systems.");
     expect(docxResult.source?.chunks[0]?.locator).toEqual({ lineStart: 1, lineEnd: 2 });
+  });
+
+  it("keeps DOCX heading paragraphs as Markdown markers using the styles part", async () => {
+    const ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const paragraph = (text: string, properties = "") =>
+      `<w:p>${properties === "" ? "" : `<w:pPr>${properties}</w:pPr>`}<w:r><w:t>${text}</w:t></w:r></w:p>`;
+    const document = `<?xml version="1.0"?><w:document ${ns}><w:body>${[
+      paragraph("Experience", '<w:pStyle w:val="Titre1"/>'),
+      paragraph("Senior engineer at Fictional Works", '<w:pStyle w:val="Heading2"/>'),
+      paragraph("Built reliable systems."),
+    ].join("")}</w:body></w:document>`;
+    const styles = `<w:styles ${ns}><w:style w:type="paragraph" w:styleId="Titre1"><w:name w:val="heading 1"/></w:style></w:styles>`;
+    const withStyles = await fixture("styled.docx", storedDocx(document, styles));
+    const withoutStyles = await fixture("unstyled.docx", storedDocx(document));
+
+    const styled = await ingestFile({ path: withStyles });
+    const unstyled = await ingestFile({ path: withoutStyles });
+
+    expect(styled.source?.text).toBe(
+      "# Experience\n## Senior engineer at Fictional Works\nBuilt reliable systems.",
+    );
+    expect(unstyled.issues).toEqual([]);
+    expect(unstyled.source?.text).toBe(
+      "Experience\n## Senior engineer at Fictional Works\nBuilt reliable systems.",
+    );
   });
 
   it("accepts legitimate accented Unicode from PDF extraction", async () => {
@@ -861,7 +914,7 @@ describe("URL source ingestion", () => {
     expect(result.issues).toEqual([]);
     expect(result.source).toMatchObject({
       mediaType: "text/html",
-      text: "Ada Lovelace\nMathematician",
+      text: "# Ada Lovelace\nMathematician",
       url: {
         originalUrl,
         finalUrl: originalUrl,
