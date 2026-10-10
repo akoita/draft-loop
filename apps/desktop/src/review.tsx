@@ -48,6 +48,8 @@ import {
 import {
   isJobRequirementRefusal,
   jobRequirementsExtractionId,
+  offersRequirementsExtraction,
+  requirementRefusalAction,
   reviewedRequirementsSelection,
 } from "./start-requirements-model.js";
 import {
@@ -2384,7 +2386,12 @@ export function ReviewWorkspace({
       </details>
     );
     const renderBlockerAction = () => {
-      if (reviewedRequirements !== null) {
+      const action = requirementRefusalAction(
+        latestBrief,
+        reviewedRequirements,
+        requirementsBinding?.createOpportunity !== undefined,
+      );
+      if (action === "use-reviewed") {
         return (
           <button
             className="button button-quiet"
@@ -2395,10 +2402,11 @@ export function ReviewWorkspace({
           </button>
         );
       }
-      if (latestBrief?.status === "draft") {
+      if (action === "review-draft") {
         return <span className="setup-note">Review the requirements brief above to start.</span>;
       }
-      if (requirementsBinding?.createOpportunity === undefined) return null;
+      if (action === null || requirementsBinding === undefined) return null;
+      // An empty draft has nothing to review, so it offers a fresh extraction instead.
       return (
         <button
           className="button button-outline"
@@ -2406,7 +2414,9 @@ export function ReviewWorkspace({
           disabled={requirementsBinding.disabled}
           onClick={extractRequirements}
         >
-          Extract requirements into a brief
+          {action === "extract-again"
+            ? "Extract requirements again"
+            : "Extract requirements into a brief"}
         </button>
       );
     };
@@ -2509,7 +2519,7 @@ export function ReviewWorkspace({
                       }
                     />
                   ) : null}
-                  {latestBrief == null &&
+                  {offersRequirementsExtraction(latestBrief) &&
                   state.setup.jobDescriptionReady &&
                   !state.setup.reviewedOpportunity &&
                   requirementsBinding?.createOpportunity !== undefined ? (
