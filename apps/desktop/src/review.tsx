@@ -40,8 +40,10 @@ import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
+  finishedRunTitle,
   inProgressStatus,
   notIndexedRetrievalText,
+  reviewFinished,
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
@@ -1140,6 +1142,7 @@ export function ReviewWorkspace({
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const runInProgress = reviewInProgress(state);
+  const runFinished = reviewFinished(state);
   const runStatusLine = runInProgress
     ? inProgressStatus(state)
     : !state.reviewComplete
@@ -3171,12 +3174,12 @@ export function ReviewWorkspace({
             <div className="section-heading compact">
               <div>
                 <PanelToggle
-                  label="Run progress"
+                  label={runFinished ? "Run history" : "Run progress"}
                   collapsed={collapsedPanels.has("progress")}
                   controls="run-progress-events"
                   onToggle={() => togglePanel("progress")}
                 />
-                <h2>{stateLabel(state.state)}</h2>
+                <h2>{runFinished ? finishedRunTitle(state) : stateLabel(state.state)}</h2>
               </div>
               {state.execution.status === "interrupted" ? (
                 <div className="approval-actions">
@@ -3258,7 +3261,7 @@ export function ReviewWorkspace({
                   : ` · timeout in ${Math.ceil(state.execution.timeoutRemainingMs / 1_000)}s`}
               </p>
             )}
-            {renderAutopilotToggle()}
+            {runFinished ? null : renderAutopilotToggle()}
             <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
               <RunTimeline events={state.events} describeState={stateLabel} />
             </div>
@@ -3323,14 +3326,27 @@ export function ReviewWorkspace({
             )}
             <div className="trust-fact">
               <span className="label">Evidence</span>
-              <strong className="numeric">
-                {state.setup.selectedEvidenceChunkCount} excerpt
-                {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
-              </strong>
-              <span>
-                from {state.setup.selectedEvidenceSourceCount} source
-                {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
-              </span>
+              {state.setup.retrievalStatus === "not-indexed" ? (
+                // Setup has not searched the evidence yet, so there are no excerpt counts to show.
+                <>
+                  <strong className="numeric">
+                    {state.setup.evidenceSourceCount} source
+                    {state.setup.evidenceSourceCount === 1 ? "" : "s"}
+                  </strong>
+                  <span>{notIndexedRetrievalText(state)}</span>
+                </>
+              ) : (
+                <>
+                  <strong className="numeric">
+                    {state.setup.selectedEvidenceChunkCount} excerpt
+                    {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
+                  </strong>
+                  <span>
+                    from {state.setup.selectedEvidenceSourceCount} source
+                    {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
+                  </span>
+                </>
+              )}
             </div>
           </section>
 
