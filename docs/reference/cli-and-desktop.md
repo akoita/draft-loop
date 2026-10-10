@@ -433,8 +433,13 @@ profile form edits are discarded. Closing does not rewrite persisted run state.
 The start page lists the ten most recently opened local workspaces. Select an
 entry to reopen it, use its **Remove** button to drop just that entry, or clear
 the whole list. Removing or clearing entries only edits this history and leaves
-workspace files untouched. The native **Open workspace** picker remains
-available.
+workspace files untouched.
+
+Most people keep one main workspace, so when there is history the start page
+leads with it: the most recent entry is marked **Last used**, **Open workspace**
+and **Try demo workspace** follow, and the name and round-limit fields sit in a
+closed **Create a new workspace** section. With no history, creating a
+workspace is the first thing on the page.
 
 Entries show the workspace's display name. When two or more entries share a
 name, each also shows the name of its parent folder ("in hc5") so they can be

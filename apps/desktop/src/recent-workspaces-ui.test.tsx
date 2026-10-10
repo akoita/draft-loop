@@ -65,7 +65,7 @@ describe("recent workspace start-page controls", () => {
     const element = RecentWorkspacesView({ ...props, onRemove });
     const markup = renderToStaticMarkup(element);
     expect(markup).toContain('aria-label="Remove Candidate workspace from recent workspaces"');
-    expect(markup).toContain("Workspace files are never");
+    expect(markup).toContain("never deletes workspace files");
     const remove = elements(element).find(
       (candidate) =>
         (candidate.props as { readonly className?: string }).className ===

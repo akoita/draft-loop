@@ -4,12 +4,12 @@ import {
   type RecentWorkspaceSummary,
 } from "./recent-workspaces.js";
 
-type LoadState = "loading" | "ready";
+export type RecentWorkspacesLoadState = "loading" | "ready";
 
-interface RecentWorkspacesViewProps {
+export interface RecentWorkspacesViewProps {
   readonly workspaces: readonly RecentWorkspaceSummary[];
   readonly busy: boolean;
-  readonly loadState: LoadState;
+  readonly loadState: RecentWorkspacesLoadState;
   readonly errorMessage: string | null;
   readonly statusMessage: string | null;
   readonly openingId: string | null;
@@ -17,6 +17,8 @@ interface RecentWorkspacesViewProps {
   /** Present only when the host can forget a single entry. */
   readonly onRemove?: (id: string) => void;
   readonly onClear: () => void;
+  /** Presents the most recent entry as the page's primary action. */
+  readonly highlightFirst?: boolean;
 }
 
 export function RecentWorkspacesView({
@@ -29,14 +31,17 @@ export function RecentWorkspacesView({
   onOpen,
   onRemove,
   onClear,
+  highlightFirst = false,
 }: RecentWorkspacesViewProps) {
   return (
     <section className="panel recent-workspaces" aria-labelledby="recent-workspaces-heading">
       <div className="recent-workspaces-intro">
         <h2 id="recent-workspaces-heading">Recent workspaces</h2>
         <p>
-          Open a local workspace again, or remove entries from this list. Workspace files are never
-          deleted.
+          {highlightFirst
+            ? "Continue where you left off, or pick another workspace. "
+            : "Open a local workspace again. "}
+          Removing entries from this list never deletes workspace files.
         </p>
         {statusMessage === null ? null : <p role="status">{statusMessage}</p>}
         {loadState === "loading" ? (
@@ -52,15 +57,24 @@ export function RecentWorkspacesView({
       </div>
       {workspaces.length === 0 ? null : (
         <ul className="recent-workspace-list">
-          {workspaces.map((workspace) => (
+          {workspaces.map((workspace, index) => (
             <li key={workspace.id}>
               <button
-                className="button button-quiet recent-workspace-open"
+                className={
+                  highlightFirst && index === 0
+                    ? "button button-quiet recent-workspace-open recent-workspace-open-primary"
+                    : "button button-quiet recent-workspace-open"
+                }
                 type="button"
                 disabled={busy || openingId !== null}
                 onClick={() => onOpen(workspace.id)}
               >
-                <span className="recent-workspace-name">{workspace.name}</span>
+                <span className="recent-workspace-name">
+                  {workspace.name}
+                  {highlightFirst && index === 0 ? (
+                    <span className="recent-workspace-badge">Last used</span>
+                  ) : null}
+                </span>
                 <span className="recent-workspace-meta">
                   {workspace.location === undefined ? null : (
                     <span className="recent-workspace-location">in {workspace.location}</span>
@@ -98,7 +112,7 @@ export function RecentWorkspacesView({
   );
 }
 
-interface RecentWorkspacesProps {
+export interface RecentWorkspacesActions {
   readonly busy: boolean;
   readonly listRecentWorkspaces: () => Promise<readonly RecentWorkspaceSummary[]>;
   readonly openRecentWorkspace: (id: string) => Promise<boolean>;
@@ -106,15 +120,16 @@ interface RecentWorkspacesProps {
   readonly clearRecentWorkspaces: () => Promise<void>;
 }
 
-export function RecentWorkspaces({
+/** Loads the recent list and owns its open, remove, and clear flows. */
+export function useRecentWorkspaces({
   busy,
   listRecentWorkspaces,
   openRecentWorkspace,
   removeRecentWorkspace,
   clearRecentWorkspaces,
-}: RecentWorkspacesProps) {
+}: RecentWorkspacesActions): RecentWorkspacesViewProps {
   const [workspaces, setWorkspaces] = useState<readonly RecentWorkspaceSummary[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [loadState, setLoadState] = useState<RecentWorkspacesLoadState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -188,17 +203,15 @@ export function RecentWorkspaces({
     }
   };
 
-  return (
-    <RecentWorkspacesView
-      workspaces={workspaces}
-      busy={busy || updatingList}
-      loadState={loadState}
-      errorMessage={errorMessage}
-      statusMessage={statusMessage}
-      openingId={openingId}
-      onOpen={(id) => void open(id)}
-      {...(removeRecentWorkspace === undefined ? {} : { onRemove: (id) => void remove(id) })}
-      onClear={() => void clear()}
-    />
-  );
+  return {
+    workspaces,
+    busy: busy || updatingList,
+    loadState,
+    errorMessage,
+    statusMessage,
+    openingId,
+    onOpen: (id) => void open(id),
+    ...(removeRecentWorkspace === undefined ? {} : { onRemove: (id: string) => void remove(id) }),
+    onClear: () => void clear(),
+  };
 }
