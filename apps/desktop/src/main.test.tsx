@@ -794,7 +794,14 @@ describe("desktop trust-centered review", () => {
       round: 2,
       reviewComplete: false,
       execution: { ...fixture.execution, status: "running" as const, step: "revision" as const },
-      setup: { ...fixture.setup, autopilot: true, retrievalStatus: "not-indexed" as const },
+      setup: {
+        ...fixture.setup,
+        autopilot: true,
+        retrievalStatus: "not-indexed" as const,
+        evidenceSourceCount: 3,
+        selectedEvidenceChunkCount: 0,
+        selectedEvidenceSourceCount: 0,
+      },
     };
 
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
@@ -810,6 +817,8 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("nothing here needs you yet");
     expect(html).toContain("Your career evidence is indexed and searched as the review runs");
     expect(html).not.toContain("Candidate material is not indexed");
+    expect(html).not.toMatch(/0(<!-- -->)? excerpts/u);
+    expect(html).toMatch(/3(<!-- -->)? source/u);
   });
 
   it("asks the person to resume when a paused review has not critiqued the draft", () => {

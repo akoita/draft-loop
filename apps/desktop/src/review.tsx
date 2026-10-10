@@ -3323,14 +3323,27 @@ export function ReviewWorkspace({
             )}
             <div className="trust-fact">
               <span className="label">Evidence</span>
-              <strong className="numeric">
-                {state.setup.selectedEvidenceChunkCount} excerpt
-                {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
-              </strong>
-              <span>
-                from {state.setup.selectedEvidenceSourceCount} source
-                {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
-              </span>
+              {state.setup.retrievalStatus === "not-indexed" ? (
+                // Setup has not searched the evidence yet, so there are no excerpt counts to show.
+                <>
+                  <strong className="numeric">
+                    {state.setup.evidenceSourceCount} source
+                    {state.setup.evidenceSourceCount === 1 ? "" : "s"}
+                  </strong>
+                  <span>{notIndexedRetrievalText(state)}</span>
+                </>
+              ) : (
+                <>
+                  <strong className="numeric">
+                    {state.setup.selectedEvidenceChunkCount} excerpt
+                    {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
+                  </strong>
+                  <span>
+                    from {state.setup.selectedEvidenceSourceCount} source
+                    {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
+                  </span>
+                </>
+              )}
             </div>
           </section>
 
