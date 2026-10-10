@@ -33,7 +33,10 @@ import {
   processCanonicalCandidateProfileExtraction,
   reconcileCanonicalCandidateProfileFacts,
 } from "./candidate-profile-extraction.js";
-import { planIncrementalCanonicalProfileExtraction } from "./candidate-profile-incremental.js";
+import {
+  currentSensitivityIdentity,
+  planIncrementalCanonicalProfileExtraction,
+} from "./candidate-profile-incremental.js";
 import { candidateProfileSourceTooLargeMessage } from "./candidate-profile-input-error.js";
 import type { CanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
@@ -109,8 +112,8 @@ export interface CanonicalCandidateProfileDerivationResult
   extends CanonicalCandidateProfileVersionRecord {
   /**
    * The sensitivity rules version that filtered each knowledge base's sources. Omitted when no
-   * selected knowledge base has rules. The profile schema has no field for this, so it is not
-   * persisted; it is returned from the derivation only.
+   * selected knowledge base has rules. The saved profile version records the same versions, with
+   * the excluded tiers, in its extraction identity so a later derivation can reuse sources.
    */
   readonly sensitivityRulesApplied?: readonly CanonicalProfileSensitivityRulesApplied[];
   /** Selected source versions whose facts came from the latest profile version unchanged. */
@@ -490,6 +493,10 @@ export function createCanonicalCandidateProfileDerivationService(
         throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
       }
 
+      const sensitivity = currentSensitivityIdentity(
+        command.excludedSensitivityTiers,
+        materialization.sensitivityRulesApplied,
+      );
       const plan = planIncrementalCanonicalProfileExtraction({
         latest: await dependencies.persistence.getLatestCanonicalCandidateProfile(
           command.workspaceId,
@@ -499,7 +506,7 @@ export function createCanonicalCandidateProfileDerivationService(
         fullExtraction: command.fullExtraction === true,
         snapshot,
         materials: materialization.materials,
-        filteredKnowledgeBases: materialization.sensitivityRulesApplied,
+        sensitivity,
       });
       const freshlyExtracted =
         plan.materials.length === 0
@@ -610,7 +617,7 @@ export function createCanonicalCandidateProfileDerivationService(
         candidateKnowledgeSelection: snapshot,
         ...(dependencies.extractionIdentity === undefined
           ? {}
-          : { extraction: dependencies.extractionIdentity }),
+          : { extraction: { ...dependencies.extractionIdentity, sensitivity } }),
         facts: extracted.facts,
         issues,
       });

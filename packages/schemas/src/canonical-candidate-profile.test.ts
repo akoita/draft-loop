@@ -117,4 +117,54 @@ describe("canonical profile extraction identity", () => {
       expect(() => canonicalCandidateProfileSchema.parse(profilePayload({ extraction }))).toThrow();
     }
   });
+
+  it("round-trips the sensitivity record and still parses an identity without one", () => {
+    const sensitivity = {
+      excludedTiers: ["sensitive", "never-share"],
+      rules: [
+        {
+          storeId: "store-1",
+          knowledgeBaseId: "kb-1",
+          rulesVersion: 2,
+          rulesChecksum: "a".repeat(64),
+        },
+      ],
+    };
+    const parsed = canonicalCandidateProfileSchema.parse(
+      profilePayload({ extraction: { ...identity, sensitivity } }),
+    );
+
+    expect(parsed.extraction?.sensitivity).toEqual(sensitivity);
+    expect(Object.isFrozen(parsed.extraction?.sensitivity?.rules)).toBe(true);
+    expect(parseCanonicalCandidateProfile(serializeCanonicalCandidateProfile(parsed))).toEqual(
+      parsed,
+    );
+    expect(
+      canonicalCandidateProfileSchema.parse(profilePayload({ extraction: identity })).extraction,
+    ).not.toHaveProperty("sensitivity");
+  });
+
+  it("rejects unknown tiers, duplicates, bad checksums, and unsupported fields", () => {
+    const rule = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      rulesVersion: 2,
+      rulesChecksum: "a".repeat(64),
+    };
+    for (const sensitivity of [
+      { excludedTiers: ["secret"], rules: [] },
+      { excludedTiers: ["sensitive", "sensitive"], rules: [] },
+      { excludedTiers: [], rules: [{ ...rule, rulesChecksum: "ABC" }] },
+      { excludedTiers: [], rules: [{ ...rule, rulesVersion: 0 }] },
+      { excludedTiers: [], rules: [{ ...rule, path: "/private" }] },
+      { excludedTiers: [], rules: [rule, { ...rule, rulesVersion: 3 }] },
+      { excludedTiers: [] },
+    ]) {
+      expect(() =>
+        canonicalCandidateProfileSchema.parse(
+          profilePayload({ extraction: { ...identity, sensitivity } }),
+        ),
+      ).toThrow();
+    }
+  });
 });

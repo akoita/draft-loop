@@ -20,6 +20,7 @@ import {
   isRecord,
   isSafePositiveInteger,
 } from "./semantic-validation-helpers.js";
+import { type SourceSensitivityTier, sourceSensitivityTiers } from "./source-sensitivity.js";
 
 /** Version of the provider-independent canonical candidate profile contract. */
 export const canonicalCandidateProfileSchemaVersion = 1 as const;
@@ -161,6 +162,26 @@ export interface CanonicalCandidateProfileExtractionProfileIdentity {
   readonly version: number;
 }
 
+export const maximumCanonicalCandidateProfileSensitivityRuleCount = 200 as const;
+
+/** The sensitivity rules version that filtered one knowledge base's sources. */
+export interface CanonicalCandidateProfileSensitivityRulesIdentity {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly rulesVersion: number;
+  /** Lowercase SHA-256 hex of the canonical rules, as the store records it. */
+  readonly rulesChecksum: string;
+}
+
+/**
+ * The sensitivity filtering behind one extraction: the tiers kept out of provider requests and the
+ * rules versions applied per knowledge base. An empty `rules` list records that no rules applied.
+ */
+export interface CanonicalCandidateProfileSensitivityIdentity {
+  readonly excludedTiers: readonly SourceSensitivityTier[];
+  readonly rules: readonly CanonicalCandidateProfileSensitivityRulesIdentity[];
+}
+
 /**
  * Which model and prompt extracted a profile version. It lets a later derivation reuse facts only
  * when they came from the same route; it carries no source text, path, or credential.
@@ -170,6 +191,8 @@ export interface CanonicalCandidateProfileExtractionIdentity {
   readonly modelId: string;
   readonly promptTemplateVersion: string;
   readonly extractionProfile?: CanonicalCandidateProfileExtractionProfileIdentity;
+  /** Optional so versions recorded before sensitivity filtering was tracked stay valid. */
+  readonly sensitivity?: CanonicalCandidateProfileSensitivityIdentity;
 }
 
 export interface CanonicalCandidateProfileInput {
@@ -223,8 +246,17 @@ const canonicalCandidateProfileExtractionKeys = new Set([
   "modelId",
   "promptTemplateVersion",
   "extractionProfile",
+  "sensitivity",
 ]);
 const canonicalCandidateProfileExtractionProfileKeys = new Set(["id", "version"]);
+const canonicalCandidateProfileSensitivityKeys = new Set(["excludedTiers", "rules"]);
+const canonicalCandidateProfileSensitivityRuleKeys = new Set([
+  "storeId",
+  "knowledgeBaseId",
+  "rulesVersion",
+  "rulesChecksum",
+]);
+const canonicalCandidateProfileRulesChecksumPattern = /^[0-9a-f]{64}$/u;
 const canonicalCandidateProfileFactKeys = new Set([
   "id",
   "category",
@@ -798,6 +830,106 @@ function validateCanonicalCandidateProfileIssue(
   return true;
 }
 
+function validateCanonicalCandidateProfileSensitivity(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): void {
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be an object when provided.");
+    return;
+  }
+  validateCanonicalCandidateProfileKeys(
+    value,
+    canonicalCandidateProfileSensitivityKeys,
+    field,
+    issues,
+  );
+  const tiers = value.excludedTiers;
+  if (!Array.isArray(tiers)) {
+    addIssue(issues, "invalid-value", `${field}.excludedTiers`, "must be an array.");
+  } else {
+    const seen = new Set<unknown>();
+    tiers.forEach((tier, index) => {
+      if (!sourceSensitivityTiers.includes(tier as SourceSensitivityTier)) {
+        addIssue(
+          issues,
+          "invalid-value",
+          `${field}.excludedTiers[${index}]`,
+          "must be a known sensitivity tier.",
+        );
+      } else if (seen.has(tier)) {
+        addIssue(issues, "invalid-value", `${field}.excludedTiers[${index}]`, "must be unique.");
+      }
+      seen.add(tier);
+    });
+  }
+  const rules = value.rules;
+  if (!Array.isArray(rules)) {
+    addIssue(issues, "invalid-value", `${field}.rules`, "must be an array.");
+    return;
+  }
+  if (rules.length > maximumCanonicalCandidateProfileSensitivityRuleCount) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.rules`,
+      `must have at most ${maximumCanonicalCandidateProfileSensitivityRuleCount} entries.`,
+    );
+  }
+  const seenBases = new Set<string>();
+  rules.forEach((rule: unknown, index) => {
+    const ruleField = `${field}.rules[${index}]`;
+    if (!isRecord(rule)) {
+      addIssue(issues, "invalid-value", ruleField, "must be an object.");
+      return;
+    }
+    validateCanonicalCandidateProfileKeys(
+      rule,
+      canonicalCandidateProfileSensitivityRuleKeys,
+      ruleField,
+      issues,
+    );
+    const validIds = (["storeId", "knowledgeBaseId"] as const).map((key) =>
+      validateCanonicalCandidateProfileBoundedText(
+        rule[key],
+        `${ruleField}.${key}`,
+        maximumCanonicalCandidateProfileIdLength,
+        issues,
+      ),
+    );
+    if (!isSafePositiveInteger(rule.rulesVersion)) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${ruleField}.rulesVersion`,
+        "must be a positive safe integer.",
+      );
+    }
+    if (
+      typeof rule.rulesChecksum !== "string" ||
+      !canonicalCandidateProfileRulesChecksumPattern.test(rule.rulesChecksum)
+    ) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${ruleField}.rulesChecksum`,
+        "must be a lowercase SHA-256 hex digest.",
+      );
+    }
+    if (validIds.every(Boolean)) {
+      const key = JSON.stringify([
+        (rule.storeId as string).trim(),
+        (rule.knowledgeBaseId as string).trim(),
+      ]);
+      if (seenBases.has(key)) {
+        addIssue(issues, "invalid-value", ruleField, "must be unique per knowledge base.");
+      }
+      seenBases.add(key);
+    }
+  });
+}
+
 function validateCanonicalCandidateProfileExtraction(
   value: unknown,
   issues: SemanticValidationIssue[],
@@ -820,6 +952,9 @@ function validateCanonicalCandidateProfileExtraction(
       maximumCanonicalCandidateProfileExtractionIdentityLength,
       issues,
     );
+  }
+  if (value.sensitivity !== undefined) {
+    validateCanonicalCandidateProfileSensitivity(value.sensitivity, `${field}.sensitivity`, issues);
   }
   const extractionProfile = value.extractionProfile;
   if (extractionProfile === undefined) return;
@@ -1168,6 +1303,19 @@ function normalizeCanonicalCandidateProfileExtraction(
           extractionProfile: {
             id: extraction.extractionProfile.id.trim(),
             version: extraction.extractionProfile.version,
+          },
+        }),
+    ...(extraction.sensitivity === undefined
+      ? {}
+      : {
+          sensitivity: {
+            excludedTiers: [...extraction.sensitivity.excludedTiers],
+            rules: extraction.sensitivity.rules.map((rule) => ({
+              storeId: rule.storeId.trim(),
+              knowledgeBaseId: rule.knowledgeBaseId.trim(),
+              rulesVersion: rule.rulesVersion,
+              rulesChecksum: rule.rulesChecksum,
+            })),
           },
         }),
   };

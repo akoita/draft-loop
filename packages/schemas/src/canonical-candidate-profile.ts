@@ -24,9 +24,11 @@ import {
   maximumCanonicalCandidateProfileIssueMessageLength,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
   maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileSensitivityRuleCount,
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
+import { sourceSensitivityTiers } from "@draft-loop/domain/source-sensitivity";
 import { z } from "zod";
 
 import {
@@ -324,6 +326,29 @@ const canonicalCandidateProfileExtractionTextSchema = nonEmptyString.max(
   maximumCanonicalCandidateProfileExtractionIdentityLength,
 );
 
+const canonicalCandidateProfileSensitivityIdentitySchema = z.strictObject({
+  excludedTiers: z
+    .array(z.enum(sourceSensitivityTiers))
+    .max(sourceSensitivityTiers.length)
+    .refine((tiers) => new Set(tiers).size === tiers.length, "must not repeat a tier"),
+  rules: z
+    .array(
+      z.strictObject({
+        storeId: canonicalCandidateProfileIdSchema,
+        knowledgeBaseId: canonicalCandidateProfileIdSchema,
+        rulesVersion: z.number().finite().int().positive().refine(Number.isSafeInteger),
+        rulesChecksum: z.string().regex(/^[0-9a-f]{64}$/u, "must be a lowercase SHA-256 digest"),
+      }),
+    )
+    .max(maximumCanonicalCandidateProfileSensitivityRuleCount)
+    .refine(
+      (rules) =>
+        new Set(rules.map((rule) => JSON.stringify([rule.storeId, rule.knowledgeBaseId]))).size ===
+        rules.length,
+      "must have one entry per knowledge base",
+    ),
+});
+
 /**
  * Which model and prompt extracted a profile version. Optional on the profile so versions
  * persisted before it was recorded keep parsing.
@@ -338,6 +363,7 @@ export const canonicalCandidateProfileExtractionIdentitySchema = z.strictObject(
       version: z.number().finite().int().positive(),
     })
     .optional(),
+  sensitivity: canonicalCandidateProfileSensitivityIdentitySchema.optional(),
 });
 export type CanonicalCandidateProfileExtractionIdentity = z.infer<
   typeof canonicalCandidateProfileExtractionIdentitySchema
