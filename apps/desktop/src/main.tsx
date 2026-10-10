@@ -2447,46 +2447,46 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   // Provider authentication is workspace-level, so it is offered on Home. Changing the OpenAI mode
   // also invalidates the model-profile support read, as it did when the application screen owned it.
+  const providerAuthenticationProps = {
+    fixtureMode: state.setup.fixtureMode,
+    getCredentialStatus: activePort.getCredentialStatus,
+    getProviderAuthModeStatus: activePort.getProviderAuthModeStatus,
+    onSetCredential:
+      activePort.setCredential === undefined
+        ? undefined
+        : async (provider: CredentialProvider, apiKey: string) => {
+            await activePort.setCredential?.(provider, apiKey);
+          },
+    onRemoveCredential:
+      activePort.removeCredential === undefined
+        ? undefined
+        : async (provider: CredentialProvider) => {
+            await activePort.removeCredential?.(provider);
+          },
+    onSetProviderAuthMode:
+      activePort.setProviderAuthMode === undefined
+        ? undefined
+        : async (provider: "anthropic" | "openai", mode: "api-key" | "user-session") => {
+            if (activePort.setProviderAuthMode === undefined) {
+              throw new Error("Provider authentication mode changes are unavailable.");
+            }
+            const workspaceId = state.workspaceId;
+            const generation = workspaceGeneration;
+            setModelProfileSupport({ status: "loading", workspaceId, generation });
+            try {
+              return await activePort.setProviderAuthMode(provider, mode);
+            } finally {
+              if (isCurrentWorkspaceContext(workspaceId, generation)) {
+                setModelProfileSupportEpoch((current) => current + 1);
+              }
+            }
+          },
+  };
   const providerAuthentication = (
     <ProviderAuthentication
-      fixtureMode={state.setup.fixtureMode}
+      {...providerAuthenticationProps}
       authorCompany={state.providerTransmissionPreflight.author.company as ModelCompany}
       criticCompany={state.providerTransmissionPreflight.critic.company as ModelCompany}
-      getCredentialStatus={activePort.getCredentialStatus}
-      getProviderAuthModeStatus={activePort.getProviderAuthModeStatus}
-      onSetCredential={
-        activePort.setCredential === undefined
-          ? undefined
-          : async (provider: CredentialProvider, apiKey: string) => {
-              await activePort.setCredential?.(provider, apiKey);
-            }
-      }
-      onRemoveCredential={
-        activePort.removeCredential === undefined
-          ? undefined
-          : async (provider: CredentialProvider) => {
-              await activePort.removeCredential?.(provider);
-            }
-      }
-      onSetProviderAuthMode={
-        activePort.setProviderAuthMode === undefined
-          ? undefined
-          : async (provider: "anthropic" | "openai", mode: "api-key" | "user-session") => {
-              if (activePort.setProviderAuthMode === undefined) {
-                throw new Error("Provider authentication mode changes are unavailable.");
-              }
-              const workspaceId = state.workspaceId;
-              const generation = workspaceGeneration;
-              setModelProfileSupport({ status: "loading", workspaceId, generation });
-              try {
-                return await activePort.setProviderAuthMode(provider, mode);
-              } finally {
-                if (isCurrentWorkspaceContext(workspaceId, generation)) {
-                  setModelProfileSupportEpoch((current) => current + 1);
-                }
-              }
-            }
-      }
     />
   );
 
@@ -2699,6 +2699,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               profileWarning={modelProfileWarningText}
             />
           }
+          providerAuthentication={providerAuthenticationProps}
           preflight={state.providerTransmissionPreflight}
           startDisabledReason={
             knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason

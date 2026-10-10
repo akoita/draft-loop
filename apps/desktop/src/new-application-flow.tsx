@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
-import type { OpportunityLatestResult } from "./bridge.js";
+import type { ModelCompany, OpportunityLatestResult } from "./bridge.js";
 import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import {
@@ -33,6 +33,11 @@ import {
   stepProgressText,
 } from "./new-application-flow-model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import {
+  ProviderAuthentication,
+  type ProviderAuthenticationProps,
+} from "./provider-authentication.js";
+import type { ProviderAuthenticationSummary } from "./provider-authentication-summary.js";
 import {
   LatestRequirementsBriefView,
   useLatestOpportunity,
@@ -345,6 +350,10 @@ export interface StartStepProps {
   readonly latest: OpportunityLatestResult | undefined;
   readonly profile: CandidateProfileSelection | null;
   readonly modelPair: ReactNode;
+  /** The pair's provider readiness and the way to fix it, shown under the model pair. */
+  readonly providerAuthentication?: ReactNode;
+  /** `null` while unknown or when the host cannot tell; a pair that is not ready blocks Start. */
+  readonly providerReadiness?: ProviderAuthenticationSummary | null;
   readonly preflight: ProviderTransmissionPreflight;
   readonly transmissionConfirmed: boolean;
   readonly starting: boolean;
@@ -360,6 +369,8 @@ export function StartStep({
   latest,
   profile,
   modelPair,
+  providerAuthentication = null,
+  providerReadiness = null,
   preflight,
   transmissionConfirmed,
   starting,
@@ -375,6 +386,7 @@ export function StartStep({
     newApplicationStartBlocker({
       requirementsReady: requirementsReviewed(latest),
       profile,
+      providerReadiness,
       transmissionRequired,
       transmissionConfirmed,
     });
@@ -408,6 +420,7 @@ export function StartStep({
         </div>
       </dl>
       {modelPair}
+      {providerAuthentication}
       {transmissionRequired ? (
         <label className="flow-approval">
           <input
@@ -470,6 +483,11 @@ export interface NewApplicationFlowProps {
   readonly onSelectProfile: (selection: CandidateProfileSelection | null) => void;
   readonly onManageProfile: () => void;
   readonly modelPair: ReactNode;
+  /** The host's provider authentication; step 4 shows the pair's readiness from it. */
+  readonly providerAuthentication?: Omit<
+    ProviderAuthenticationProps,
+    "authorCompany" | "criticCompany" | "onReadiness"
+  >;
   readonly preflight: ProviderTransmissionPreflight;
   /** Why a review cannot start for a reason outside the flow, such as an unsupported model. */
   readonly startDisabledReason: string | null;
@@ -502,6 +520,7 @@ export function NewApplicationFlow({
   onSelectProfile,
   onManageProfile,
   modelPair,
+  providerAuthentication,
   preflight,
   startDisabledReason,
   onStart,
@@ -517,6 +536,9 @@ export function NewApplicationFlow({
   const [transmissionConfirmed, setTransmissionConfirmed] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [providerReadiness, setProviderReadiness] = useState<ProviderAuthenticationSummary | null>(
+    null,
+  );
   // Briefs are read only after the application exists: until then the port is not scoped to it.
   const { latest, refresh } = useLatestOpportunity(
     application === null ? undefined : requirements.getLatestOpportunity,
@@ -669,6 +691,17 @@ export function NewApplicationFlow({
               latest={latest}
               profile={selectedProfile}
               modelPair={modelPair}
+              providerAuthentication={
+                providerAuthentication === undefined ? null : (
+                  <ProviderAuthentication
+                    {...providerAuthentication}
+                    authorCompany={preflight.author.company as ModelCompany}
+                    criticCompany={preflight.critic.company as ModelCompany}
+                    onReadiness={setProviderReadiness}
+                  />
+                )
+              }
+              providerReadiness={providerReadiness}
               preflight={preflight}
               transmissionConfirmed={transmissionConfirmed}
               starting={starting}

@@ -6416,6 +6416,11 @@ input[type="checkbox"] {
   gap: var(--space-2);
 }
 
+/* Step 4's provider readiness sits in the panel's own rhythm, not Home's settings spacing. */
+.flow-panel .provider-authentication {
+  margin: 0 0 var(--space-2);
+}
+
 .flow-approval,
 .flow-choice {
   display: flex;
@@ -6480,8 +6485,8 @@ input[type="checkbox"] {
     gap: 0;
   }
 
+  /* The actions stay beside the title; the title gives way and truncates. */
   .home-header {
-    flex-direction: column;
     gap: var(--space-3);
   }
 
