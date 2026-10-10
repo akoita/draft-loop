@@ -321,6 +321,49 @@ describe("opportunity brief schemas", () => {
     expect(opportunityBriefSchema.safeParse(mismatchedProvenance).success).toBe(false);
   });
 
+  it("round-trips a JobPosting text origin on page provenance and rejects unknown origins", () => {
+    const input = brief();
+    const withOrigin: OpportunityBriefInput = {
+      ...input,
+      sources: input.sources.map((source) =>
+        source.provenance.kind === "approved-url" || source.provenance.kind === "local-file"
+          ? { ...source, provenance: { ...source.provenance, textOrigin: "job-posting-json-ld" } }
+          : source,
+      ),
+    };
+    const parsed = opportunityBriefSchema.parse(withOrigin);
+    expect(opportunityBriefSchema.parse(JSON.parse(JSON.stringify(parsed)))).toEqual(parsed);
+    expect(parsed.sources.map(({ provenance }) => provenance)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "approved-url", textOrigin: "job-posting-json-ld" }),
+        expect.objectContaining({ kind: "local-file", textOrigin: "job-posting-json-ld" }),
+      ]),
+    );
+    expect(opportunityBriefSchema.parse(input).sources[0]?.provenance).not.toHaveProperty(
+      "textOrigin",
+    );
+
+    const unknownOrigin = {
+      ...input,
+      sources: input.sources.map((source) =>
+        source.provenance.kind === "approved-url"
+          ? { ...source, provenance: { ...source.provenance, textOrigin: "visible-page" } }
+          : source,
+      ),
+    } as unknown as OpportunityBriefInput;
+    expect(opportunityBriefSchema.safeParse(unknownOrigin).success).toBe(false);
+
+    const pastedWithOrigin = {
+      ...input,
+      sources: input.sources.map((source) =>
+        source.provenance.kind === "pasted-content"
+          ? { ...source, provenance: { ...source.provenance, textOrigin: "job-posting-json-ld" } }
+          : source,
+      ),
+    } as unknown as OpportunityBriefInput;
+    expect(opportunityBriefSchema.safeParse(pastedWithOrigin).success).toBe(false);
+  });
+
   it("rejects duplicate ids and unresolved source references", () => {
     const duplicateSource = brief({
       sources: [sourceAt(0), { ...sourceAt(0), classification: "company-context" }],

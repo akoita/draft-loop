@@ -628,7 +628,9 @@ For a job page address or saved job page, extraction reads only that page:
   data, which most job boards publish for search engines, DraftLoop reads the
   job from it: the title and company as a heading, then the description with
   its headings and list items kept. This is what makes pages rendered by
-  JavaScript readable. No other address is fetched.
+  JavaScript readable. No other address is fetched. The brief's source
+  provenance records this origin, and its review says "Read from the page's job
+  posting data."
 - **Too little text.** A page that yields under 400 characters of job text
   fails before anything is sent to a provider, and no brief is saved: "DraftLoop
   could not read enough job text from this page. It may show the job only with

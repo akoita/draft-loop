@@ -1,4 +1,5 @@
 import type { UrlIngestionOptions } from "@draft-loop/ingestion";
+import { opportunityBriefSchema } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
 
 import type { OpportunityExtractionRequest } from "./opportunity-extraction.js";
@@ -96,6 +97,13 @@ describe("job pages rendered by JavaScript", () => {
     );
     expect(draft.requirements[1]).not.toHaveProperty("excerpt");
     expect(draft.sources[0]?.status).toBe("available");
+    expect(draft.sources[0]?.provenance).toMatchObject({
+      kind: "approved-url",
+      textOrigin: "job-posting-json-ld",
+    });
+    expect(opportunityBriefSchema.parse(draft).sources[0]?.provenance).toMatchObject({
+      textOrigin: "job-posting-json-ld",
+    });
   });
 
   it("refuses a shell page without JobPosting data before any provider call", async () => {
@@ -140,6 +148,7 @@ describe("job pages rendered by JavaScript", () => {
 
     expect(extract).toHaveBeenCalledTimes(1);
     expect(draft.requirements).toEqual([]);
+    expect(draft.sources[0]?.provenance).not.toHaveProperty("textOrigin");
   });
 
   it("does not apply the minimum to pasted job text", async () => {

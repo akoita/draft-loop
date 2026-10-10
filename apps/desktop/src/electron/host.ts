@@ -1700,6 +1700,9 @@ function opportunitySource(value: unknown): OpportunityRecordResult["sources"][n
     status: source.status,
     checksum: checksum === null || typeof checksum === "string" ? checksum : null,
     capturedAt: provenanceRecord.capturedAt,
+    ...(provenanceRecord.textOrigin === "job-posting-json-ld"
+      ? { textOrigin: "job-posting-json-ld" }
+      : {}),
   } as OpportunityRecordResult["sources"][number];
 }
 

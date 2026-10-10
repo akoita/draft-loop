@@ -23,6 +23,7 @@ import type {
   OpportunityBriefProvenance,
   OpportunityBriefSource,
   OpportunityBriefSourcedText,
+  OpportunityBriefTextOrigin,
 } from "@draft-loop/schemas";
 import { CliUserError } from "./cli-user-error.js";
 import { buildOpportunityBrief } from "./opportunity-brief.js";
@@ -384,7 +385,14 @@ function urlProvenance(
     ...(finalUrl === undefined || finalUrl === input.url.trim() ? {} : { finalUrl }),
     capturedAt,
     contentChecksum: result.source?.checksum ?? null,
+    ...textOrigin(result),
   };
+}
+
+/** Records when the job text came from the page's JobPosting data rather than its visible text. */
+function textOrigin(result: IngestionResult): { readonly textOrigin?: OpportunityBriefTextOrigin } {
+  const origin = result.source?.textOrigin;
+  return origin === undefined ? {} : { textOrigin: origin };
 }
 
 function localFileProvenance(
@@ -397,6 +405,7 @@ function localFileProvenance(
     displayName: safeDisplayName(input.path),
     capturedAt,
     checksum: result.source?.checksum ?? null,
+    ...textOrigin(result),
   };
 }
 

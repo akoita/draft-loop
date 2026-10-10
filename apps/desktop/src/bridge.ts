@@ -2370,6 +2370,8 @@ export interface OpportunitySourceResult {
   readonly status: "available" | "inaccessible" | "unsupported" | "failed" | "partial" | "stale";
   readonly checksum: string | null;
   readonly capturedAt: string;
+  /** Set when the job text was read from the page's JobPosting data, not its visible text. */
+  readonly textOrigin?: "job-posting-json-ld";
 }
 
 export interface OpportunitySourcedTextResult {
@@ -2461,6 +2463,7 @@ const opportunitySourceResultKeys = resultKeys<OpportunitySourceResult>()([
   "status",
   "checksum",
   "capturedAt",
+  "textOrigin",
 ]);
 const opportunitySourcedTextResultKeys = resultKeys<OpportunitySourcedTextResult>()([
   "value",
@@ -7332,6 +7335,9 @@ function normalizeOpportunitySourceResult(value: unknown): OpportunitySourceResu
     ] as const),
     checksum: opportunityChecksum(result.checksum),
     capturedAt: timestampValue(result.capturedAt),
+    ...(result.textOrigin === undefined
+      ? {}
+      : { textOrigin: enumValue(result.textOrigin, ["job-posting-json-ld"] as const) }),
   };
 }
 
