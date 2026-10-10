@@ -389,6 +389,12 @@ it appears on Home as Drafting and can be resumed there.
    the application's review once the run has begun. After approval and export,
    Home lists the application as Exported.
 
+   **Use a different model pair for this application** keeps the workspace's
+   pair (the default) or picks a preset pair for this application alone, for
+   example a stronger pair for an important role. The summary, the provider
+   readiness and the transmission confirmation then follow that pair, and the
+   application's setup summary names it.
+
 A second application reuses the same reviewed profile and has its own brief.
 
 A created application can also hold its own model pair: exact author and critic

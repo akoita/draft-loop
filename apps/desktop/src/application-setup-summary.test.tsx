@@ -69,6 +69,27 @@ function collectingState() {
 }
 
 describe("ApplicationSetupSummaryView", () => {
+  it("names the application's own model pair when it has one", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationSetupSummaryView
+        {...summaryProps({
+          applicationPair: {
+            author: { id: "standard-anthropic-author", version: 1 },
+            critic: { id: "standard-openai-critic", version: 2 },
+          },
+        })}
+      />,
+    );
+
+    expect(html).toContain(
+      `This application: Writer ${fixture.providerTransmissionPreflight.author.model}`,
+    );
+    expect(html).toContain("Preset Standard, chosen for this application.");
+    expect(renderToStaticMarkup(<ApplicationSetupSummaryView {...summaryProps()} />)).not.toContain(
+      "This application:",
+    );
+  });
+
   it("shows each workspace input as one card that opens its own screen", () => {
     const html = renderToStaticMarkup(<ApplicationSetupSummaryView {...summaryProps()} />);
 

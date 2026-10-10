@@ -277,7 +277,7 @@ applications.
 | Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
 | Next | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | In progress: extraction speed, incremental reuse, real-run failure fixes and quote recovery (#1083) merged; source kinds (#1027) and fact-first retrieval (#1028) open | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
-| Next | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | In progress: application record, Home, New application, profile freshness, import, setup on Home, knowledge-base-only runs (#1085) and start refusal reasons (#1086) merged; #1065 open | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
+| Previous | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Completed in code: 29/29 issues closed, ending with a per-application model pair and provider readiness in New application step 4 (#1065) | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
 | Next | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | Not started; opened 2026-10-09 | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
@@ -1747,7 +1747,7 @@ issues ([#1029](https://github.com/akoita/draft-loop/issues/1029)):
 Re-adding one source re-processes only that source, and review runs retrieve
 verified facts first.
 
-### Next — Candidate home and applications
+### Completed — Candidate home and applications
 
 Real use on 2026-10-08 showed that a workspace holds one job, so a second
 application meant a new workspace and a regenerated profile. Decided the same
@@ -1763,7 +1763,9 @@ it. The ordered issues ([#1059](https://github.com/akoita/draft-loop/issues/1059
 4. profile freshness and reuse across applications (#1057);
 5. import of existing per-job workspaces (#1058);
 6. workspace-level setup moved off the application screen (#1062);
-7. a per-application model pair and credential readiness before Start (#1065).
+7. a per-application model pair and credential readiness before Start (#1065):
+   provider readiness in step 4 (#1119), the pair stored on the application and
+   recorded on its runs (#1120), and the choice in step 4 (#1122).
 
 This stage follows the profile-extraction fixes in Any-format career intake.
 It comes ahead of that stage's remaining issues (#1027, #1028), because a fast,
@@ -1930,6 +1932,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-10 | Completed Candidate home and applications (milestone 28, 29/29 issues) in code. | One workspace holds many applications that reuse one reviewed profile. An application can use its own preset model pair, and step 4 shows the pair's provider readiness before Start. |
 | 2026-10-09 | Planned Harness observability and evaluation as a Later stage (#1101, #1102–#1113); no implementation yet. | Tracing, critic calibration, revision attribution and a bounded author tool loop are ordered behind gates. Current stages keep priority. |
 | 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
 | 2026-10-08 | Opened Candidate home and applications (milestone 28, #1054–#1059) and accepted ADR 0010: a workspace is the candidate's home with many applications. | One reviewed career profile per candidate is reused across job applications. Home with an Applications list becomes the landing page. This comes ahead of #1027 and #1028. |

@@ -1,7 +1,11 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import type { ApplicationSummaryView } from "./application-contract.js";
-import type { ModelCompany, OpportunityLatestResult } from "./bridge.js";
+import type {
+  ApplicationModelProfilesView,
+  ApplicationSummaryView,
+} from "./application-contract.js";
+import { ApplicationModelPairChoice, type ModelPairSides } from "./application-model-pair.js";
+import type { ModelCompany, ModelProfileSupportResult, OpportunityLatestResult } from "./bridge.js";
 import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import {
@@ -350,6 +354,8 @@ export interface StartStepProps {
   readonly latest: OpportunityLatestResult | undefined;
   readonly profile: CandidateProfileSelection | null;
   readonly modelPair: ReactNode;
+  /** Keeps the workspace's pair or picks one for this application, shown under the model pair. */
+  readonly modelPairChoice?: ReactNode;
   /** The pair's provider readiness and the way to fix it, shown under the model pair. */
   readonly providerAuthentication?: ReactNode;
   /** `null` while unknown or when the host cannot tell; a pair that is not ready blocks Start. */
@@ -369,6 +375,7 @@ export function StartStep({
   latest,
   profile,
   modelPair,
+  modelPairChoice = null,
   providerAuthentication = null,
   providerReadiness = null,
   preflight,
@@ -420,6 +427,7 @@ export function StartStep({
         </div>
       </dl>
       {modelPair}
+      {modelPairChoice}
       {providerAuthentication}
       {transmissionRequired ? (
         <label className="flow-approval">
@@ -483,6 +491,14 @@ export interface NewApplicationFlowProps {
   readonly onSelectProfile: (selection: CandidateProfileSelection | null) => void;
   readonly onManageProfile: () => void;
   readonly modelPair: ReactNode;
+  /** Sets or clears the created application's own pair; step 4 offers the choice when present. */
+  readonly setApplicationModels?: (
+    application: ApplicationSummaryView,
+    pair: ApplicationModelProfilesView | null,
+  ) => Promise<ApplicationSummaryView>;
+  /** The workspace's own pair, the default the choice offers. */
+  readonly workspacePair?: ModelPairSides;
+  readonly modelProfileSupport?: ModelProfileSupportResult;
   /** The host's provider authentication; step 4 shows the pair's readiness from it. */
   readonly providerAuthentication?: Omit<
     ProviderAuthenticationProps,
@@ -520,6 +536,9 @@ export function NewApplicationFlow({
   onSelectProfile,
   onManageProfile,
   modelPair,
+  setApplicationModels,
+  workspacePair,
+  modelProfileSupport,
   providerAuthentication,
   preflight,
   startDisabledReason,
@@ -536,6 +555,8 @@ export function NewApplicationFlow({
   const [transmissionConfirmed, setTransmissionConfirmed] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [savingModels, setSavingModels] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const [providerReadiness, setProviderReadiness] = useState<ProviderAuthenticationSummary | null>(
     null,
   );
@@ -604,6 +625,21 @@ export function NewApplicationFlow({
       setStartError(failureText(reason, "The review could not be started."));
     } finally {
       setStarting(false);
+    }
+  };
+
+  const chooseModels = async (pair: ApplicationModelProfilesView | null) => {
+    if (application === null || setApplicationModels === undefined || savingModels) return;
+    setSavingModels(true);
+    setModelsError(null);
+    try {
+      setApplication(await setApplicationModels(application, pair));
+      // The confirmation names the companies, so a new pair is confirmed again.
+      setTransmissionConfirmed(false);
+    } catch (reason: unknown) {
+      setModelsError(failureText(reason, "The model pair could not be saved."));
+    } finally {
+      setSavingModels(false);
     }
   };
 
@@ -691,6 +727,18 @@ export function NewApplicationFlow({
               latest={latest}
               profile={selectedProfile}
               modelPair={modelPair}
+              modelPairChoice={
+                setApplicationModels === undefined || workspacePair === undefined ? null : (
+                  <ApplicationModelPairChoice
+                    pair={application.modelProfiles}
+                    workspace={workspacePair}
+                    support={modelProfileSupport}
+                    saving={savingModels}
+                    errorMessage={modelsError}
+                    onChoose={(pair) => void chooseModels(pair)}
+                  />
+                )
+              }
               providerAuthentication={
                 providerAuthentication === undefined ? null : (
                   <ProviderAuthentication
@@ -706,7 +754,7 @@ export function NewApplicationFlow({
               transmissionConfirmed={transmissionConfirmed}
               starting={starting}
               errorMessage={startError}
-              startDisabledReason={startDisabledReason}
+              startDisabledReason={savingModels ? "Saving the model pair…" : startDisabledReason}
               onTransmissionConfirmedChange={setTransmissionConfirmed}
               onBack={() => setStep("profile")}
               onStart={() => void start()}
