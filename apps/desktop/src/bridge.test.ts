@@ -2385,6 +2385,57 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("carries a fact's exact source quote through results and edits, but never an issue reference's", async () => {
+    const record = canonicalCandidateProfileResult();
+    const fact = (record.facts as Record<string, unknown>[])[0] ?? {};
+    const reference = (fact.provenance as Record<string, unknown>[])[0] ?? {};
+    const quote = "Linked from my approved profile page.";
+    const quoted = { ...record, facts: [{ ...fact, provenance: [{ ...reference, quote }] }] };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value: quoted }));
+    const port = createCapabilityPort(bridge(invoke, ["profile.get", "profile.edit"]));
+
+    await expect(
+      port.execute({
+        type: "profile.get",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { facts: [{ provenance: [{ quote }] }] },
+    });
+
+    const edit = (patch: unknown) =>
+      port.execute({
+        type: "profile.edit",
+        input: { workspaceId: "workspace-1", profileId: "profile-1", expectedVersion: 1, patch },
+      } as never);
+    await expect(
+      edit({ facts: [{ ...fact, provenance: [{ ...reference, quote }] }] }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(invoke).toHaveBeenLastCalledWith({
+      type: "profile.edit",
+      input: expect.objectContaining({
+        patch: { facts: [{ ...fact, provenance: [{ ...reference, quote }] }] },
+      }),
+    });
+
+    for (const badQuote of ["", "x".repeat(2001), 7]) {
+      await expect(
+        edit({ facts: [{ ...fact, provenance: [{ ...reference, quote: badQuote }] }] }),
+      ).resolves.toMatchObject({ ok: false });
+    }
+    const issue = {
+      id: "issue-1",
+      code: "omission",
+      severity: "warning",
+      status: "open",
+      message: "Review required.",
+      factIds: [],
+      sourceRefs: [{ ...reference, quote }],
+    };
+    await expect(edit({ issues: [issue] })).resolves.toMatchObject({ ok: false });
+  });
+
   it("carries the recorded independence claim, rationale included, back to the renderer", async () => {
     // The result normalizers keep hand-written allowlists. A field that the
     // host reports and the allowlist has never heard of would not reach the

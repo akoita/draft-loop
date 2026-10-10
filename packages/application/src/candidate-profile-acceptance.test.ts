@@ -351,7 +351,7 @@ describe("canonical candidate profile representative-career acceptance", () => {
         kind: "candidate-provided" as const,
       };
       for (const fact of saved.profile.facts) {
-        expect(fact.provenance).toEqual([expectedReference]);
+        expect(fact.provenance).toMatchObject([expectedReference]);
         expect(fact.provenance.some((reference) => reference.kind === "public-corroboration")).toBe(
           false,
         );
@@ -360,7 +360,7 @@ describe("canonical candidate profile representative-career acceptance", () => {
         (fact) => fact.category === "project" && fact.value === "Private Offline Migration",
       );
       expect(privateProject).toBeDefined();
-      expect(privateProject?.provenance).toEqual([expectedReference]);
+      expect(privateProject?.provenance).toMatchObject([expectedReference]);
 
       expect(extractor.requests).toHaveLength(1);
       const request = extractor.requests[0];

@@ -1,3 +1,7 @@
+import {
+  createCanonicalCandidateProfile,
+  maximumCanonicalCandidateProfileProvenanceQuoteLength,
+} from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -166,5 +170,105 @@ describe("canonical profile extraction identity", () => {
         ),
       ).toThrow();
     }
+  });
+});
+
+describe("canonical profile fact provenance quotes", () => {
+  const reference = {
+    storeId: "store-1",
+    knowledgeBaseId: "knowledge-1",
+    sourceId: "source-1",
+    versionId: "version-1",
+    kind: "candidate-provided",
+  };
+  const fact = {
+    id: "fact-1",
+    category: "role",
+    field: "title",
+    value: "Platform Engineer",
+  };
+
+  function withQuote(quote: unknown) {
+    return profilePayload({ facts: [{ ...fact, provenance: [{ ...reference, quote }] }] });
+  }
+
+  it("round-trips a fact quote and trims it", () => {
+    const parsed = canonicalCandidateProfileSchema.parse(
+      withQuote("Led the Platform Engineer team"),
+    );
+    expect(parsed.facts[0]?.provenance[0]?.quote).toBe("Led the Platform Engineer team");
+    expect(parseCanonicalCandidateProfile(serializeCanonicalCandidateProfile(parsed))).toEqual(
+      parsed,
+    );
+    const padded = canonicalCandidateProfileSchema.parse(withQuote("  padded quote \n"));
+    expect(padded.facts[0]?.provenance[0]?.quote).toBe("padded quote");
+  });
+
+  it("keeps a payload without quotes valid and adds none", () => {
+    const parsed = canonicalCandidateProfileSchema.parse(profilePayload());
+    expect(parsed.facts[0]?.provenance[0]).not.toHaveProperty("quote");
+  });
+
+  it("rejects empty, oversized, and non-string quotes", () => {
+    for (const quote of [
+      "",
+      "   ",
+      "x".repeat(maximumCanonicalCandidateProfileProvenanceQuoteLength + 1),
+      7,
+      null,
+    ]) {
+      expect(() => canonicalCandidateProfileSchema.parse(withQuote(quote))).toThrow();
+    }
+    expect(() =>
+      canonicalCandidateProfileSchema.parse(
+        withQuote("x".repeat(maximumCanonicalCandidateProfileProvenanceQuoteLength)),
+      ),
+    ).not.toThrow();
+  });
+
+  it("does not let a quote change which references are duplicates", () => {
+    expect(() =>
+      canonicalCandidateProfileSchema.parse(
+        profilePayload({
+          facts: [
+            {
+              ...fact,
+              provenance: [
+                { ...reference, quote: "one" },
+                { ...reference, quote: "two" },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toThrow(/unique/u);
+  });
+
+  it("never accepts a quote on an issue source reference", () => {
+    const issue = {
+      id: "issue-1",
+      code: "omission",
+      severity: "warning",
+      status: "open",
+      message: "Review required.",
+      factIds: [],
+      sourceRefs: [reference],
+    };
+    expect(() =>
+      canonicalCandidateProfileSchema.parse(profilePayload({ issues: [issue] })),
+    ).not.toThrow();
+    const quoted = { ...issue, sourceRefs: [{ ...reference, quote: "Led the team" }] };
+    expect(() =>
+      canonicalCandidateProfileSchema.parse(profilePayload({ issues: [quoted] })),
+    ).toThrow();
+
+    // The domain validator rejects it too, independently of the schema.
+    const parsed = canonicalCandidateProfileSchema.parse(profilePayload({ issues: [issue] }));
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...parsed,
+        issues: [{ ...issue, sourceRefs: [{ ...reference, quote: "Led the team" }] }],
+      } as never),
+    ).toThrow();
   });
 });

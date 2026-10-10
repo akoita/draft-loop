@@ -188,9 +188,9 @@ describe("canonical candidate profile extraction coverage", () => {
         date?.value,
         ...skills.map((fact) => fact.value),
       ]).toEqual(["Acme", "Staff Engineer", "2020 to 2023", "TypeScript", "React", "PostgreSQL"]);
-      expect(employer?.provenance).toEqual([sourceMaterials[0].reference]);
-      expect(role?.provenance).toEqual([sourceMaterials[0].reference]);
-      expect(date?.provenance).toEqual([sourceMaterials[0].reference]);
+      expect(employer?.provenance).toMatchObject([sourceMaterials[0].reference]);
+      expect(role?.provenance).toMatchObject([sourceMaterials[0].reference]);
+      expect(date?.provenance).toMatchObject([sourceMaterials[0].reference]);
       expect(skills.every((fact) => fact.provenance[0]?.sourceId === "skills-document")).toBe(true);
       expect(employer?.subjectId).toBe(role?.subjectId);
       expect(role?.subjectId).toBe(date?.subjectId);

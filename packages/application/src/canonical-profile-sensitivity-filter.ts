@@ -163,6 +163,40 @@ function overlapsExcluded(
 }
 
 /**
+ * The exact original-text span of the first occurrence of the quote that lies entirely outside
+ * every excluded range, or undefined when there is none. An exact occurrence wins; otherwise the
+ * quote is matched like evidence grounding does (case, whitespace, and Unicode form ignored) and
+ * the verbatim original text it covers is returned. A quote that only exists in excluded text, or
+ * that spans an artificial join, has no such span.
+ */
+export function createCanonicalProfileQuoteSpanLocator(
+  guard: CanonicalProfileSourceSensitivityGuard,
+): (quote: string) => string | undefined {
+  let normalized: NormalizedOriginal | undefined;
+  const original = guard.originalText;
+  return (quote) => {
+    const exact = quote.trim();
+    if (exact.length === 0) return undefined;
+    for (let at = original.indexOf(exact); at !== -1; at = original.indexOf(exact, at + 1)) {
+      if (!overlapsExcluded(at, at + exact.length, guard.excludedRanges)) return exact;
+    }
+    const needle = normalizeQuote(quote);
+    if (needle.length === 0) return undefined;
+    normalized ??= normalizeOriginalWithPositions(original);
+    let from = 0;
+    while (from <= normalized.text.length - needle.length) {
+      const index = normalized.text.indexOf(needle, from);
+      if (index === -1) return undefined;
+      const start = normalized.starts[index] ?? 0;
+      const end = normalized.ends[index + needle.length - 1] ?? original.length;
+      if (!overlapsExcluded(start, end, guard.excludedRanges)) return original.slice(start, end);
+      from = index + 1;
+    }
+    return undefined;
+  };
+}
+
+/**
  * Whether the quote occurs in the original text at least once entirely outside every excluded
  * range. A quote that only exists in excluded text, or that spans an artificial join, has no such
  * occurrence.
@@ -170,22 +204,8 @@ function overlapsExcluded(
 export function createCanonicalProfileQuoteLocator(
   guard: CanonicalProfileSourceSensitivityGuard,
 ): (quote: string) => boolean {
-  let normalized: NormalizedOriginal | undefined;
-  return (quote) => {
-    const needle = normalizeQuote(quote);
-    if (needle.length === 0) return false;
-    normalized ??= normalizeOriginalWithPositions(guard.originalText);
-    let from = 0;
-    while (from <= normalized.text.length - needle.length) {
-      const index = normalized.text.indexOf(needle, from);
-      if (index === -1) return false;
-      const start = normalized.starts[index] ?? 0;
-      const end = normalized.ends[index + needle.length - 1] ?? guard.originalText.length;
-      if (!overlapsExcluded(start, end, guard.excludedRanges)) return true;
-      from = index + 1;
-    }
-    return false;
-  };
+  const locate = createCanonicalProfileQuoteSpanLocator(guard);
+  return (quote) => locate(quote) !== undefined;
 }
 
 function referenceKey(reference: CanonicalCandidateProfileProvenanceReference): string {

@@ -239,10 +239,10 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(conflict?.factIds).toHaveLength(2);
     expect(conflict?.factIds.every((id) => result.facts.some((fact) => fact.id === id))).toBe(true);
     expect(conflict?.sourceRefs).toEqual([first.reference, second.reference]);
-    expect(result.facts.find((fact) => fact.value === "Acme")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "Acme")?.provenance).toMatchObject([
       second.reference,
     ]);
-    expect(result.facts.find((fact) => fact.value === "Northwind")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "Northwind")?.provenance).toMatchObject([
       first.reference,
     ]);
   });
@@ -282,8 +282,8 @@ describe("canonical profile extraction output-limit fallback", () => {
 
     expect(calls).toHaveLength(3);
     expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript", "React"]);
-    expect(result.facts[0]?.provenance).toEqual([first.reference]);
-    expect(result.facts[1]?.provenance).toEqual([second.reference]);
+    expect(result.facts[0]?.provenance).toMatchObject([first.reference]);
+    expect(result.facts[1]?.provenance).toMatchObject([second.reference]);
   });
 
   it("recovers a truncating focused source in four windows and retains full-source grounding", async () => {
@@ -366,7 +366,7 @@ describe("canonical profile extraction output-limit fallback", () => {
       "PostgreSQL",
       "Acme Labs",
     ]);
-    expect(result.facts.find((fact) => fact.value === "TypeScript")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "TypeScript")?.provenance).toMatchObject([
       first.reference,
     ]);
   });
@@ -442,10 +442,10 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(conflict?.factIds).toHaveLength(2);
     expect(conflict?.factIds.every((id) => result.facts.some((fact) => fact.id === id))).toBe(true);
     expect(conflict?.sourceRefs).toEqual([first.reference, second.reference]);
-    expect(result.facts.find((fact) => fact.value === "2021")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "2021")?.provenance).toMatchObject([
       first.reference,
     ]);
-    expect(result.facts.find((fact) => fact.value === "2023")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "2023")?.provenance).toMatchObject([
       second.reference,
     ]);
   });

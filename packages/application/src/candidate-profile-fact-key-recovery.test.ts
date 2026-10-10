@@ -269,7 +269,7 @@ describe("unreferenced duplicate candidate fact keys", () => {
     expect(execute).toHaveBeenCalledTimes(1);
     expect(result.facts.map(({ value }) => value)).toEqual(["Project Orion", "Project Atlas"]);
     for (const resultFact of result.facts) {
-      expect(resultFact.provenance).toEqual([material().reference]);
+      expect(resultFact.provenance).toMatchObject([material().reference]);
     }
     expect(result.issues.some(({ code }) => code === "duplicate")).toBe(false);
     const conflict = result.issues.find(({ code }) => code === "conflict-value");

@@ -7669,6 +7669,51 @@ describe("candidate knowledge native controls", () => {
     expect(chooseFiles).not.toHaveBeenCalled();
   });
 
+  it("carries a fact's exact source quote to the window but never an issue reference's", async () => {
+    const root = "/local/profile-quotes";
+    const fixture = service(root);
+    const record = canonicalCandidateProfileRecord() as unknown as {
+      profile: { facts: { provenance: Record<string, unknown>[] }[]; issues: unknown[] };
+    };
+    const reference = record.profile.facts[0]?.provenance[0] ?? {};
+    reference.quote = "Linked from my approved profile page.";
+    fixture.service.getCanonicalCandidateProfile.mockResolvedValue(record as never);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    const get = () =>
+      host.invoke({
+        type: "profile.get",
+        input: { workspaceId: "workspace-native", profileId: "profile-native", version: 1 },
+      });
+
+    await expect(get()).resolves.toMatchObject({
+      ok: true,
+      value: {
+        facts: [{ provenance: [{ quote: "Linked from my approved profile page." }] }],
+      },
+    });
+
+    record.profile.issues = [
+      {
+        id: "issue-1",
+        code: "omission",
+        severity: "warning",
+        status: "open",
+        message: "Review required.",
+        factIds: [],
+        sourceRefs: [{ ...reference }],
+      },
+    ];
+    await expect(get()).resolves.toMatchObject({ ok: false });
+
+    reference.quote = "";
+    record.profile.issues = [];
+    await expect(get()).resolves.toMatchObject({ ok: false });
+  });
+
   it("answers profile freshness with a state and counts, never paths or source names", async () => {
     const root = "/local/profile-freshness";
     const fixture = service(root);

@@ -24,6 +24,7 @@ import {
   maximumCanonicalCandidateProfileIssueMessageLength,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
   maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileProvenanceQuoteLength,
   maximumCanonicalCandidateProfileSensitivityRuleCount,
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
@@ -292,6 +293,15 @@ export type CanonicalCandidateProfileProvenanceReference = z.infer<
 >;
 export type CanonicalCandidateProfileSourceReference = CanonicalCandidateProfileProvenanceReference;
 
+/** Fact provenance may also keep the exact grounded source quote; issue references never do. */
+export const canonicalCandidateProfileFactProvenanceReferenceSchema =
+  canonicalCandidateProfileProvenanceReferenceSchema.extend({
+    quote: nonEmptyString.max(maximumCanonicalCandidateProfileProvenanceQuoteLength).optional(),
+  });
+export type CanonicalCandidateProfileFactProvenanceReference = z.infer<
+  typeof canonicalCandidateProfileFactProvenanceReferenceSchema
+>;
+
 export const canonicalCandidateProfileFactSchema = z.strictObject({
   id: canonicalCandidateProfileFactIdSchema,
   category: canonicalCandidateProfileFactCategorySchema,
@@ -299,7 +309,7 @@ export const canonicalCandidateProfileFactSchema = z.strictObject({
   field: canonicalCandidateProfileFieldSchema,
   value: canonicalCandidateProfileValueSchema,
   provenance: z
-    .array(canonicalCandidateProfileProvenanceReferenceSchema)
+    .array(canonicalCandidateProfileFactProvenanceReferenceSchema)
     .min(1)
     .max(maximumCanonicalCandidateProfileProvenanceCount),
 });

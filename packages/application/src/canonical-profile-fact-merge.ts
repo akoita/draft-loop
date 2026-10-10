@@ -58,8 +58,16 @@ function unionProvenance(
   members: readonly CanonicalCandidateProfileFact[],
   extra?: CanonicalCandidateProfileFact,
 ): readonly CanonicalCandidateProfileFact["provenance"][number][] {
-  return uniqueSorted(
-    [...members, ...(extra === undefined ? [] : [extra])].flatMap((fact) => fact.provenance),
-    referenceKey,
-  );
+  // The first quote seen for a reference wins; identity ignores the quote.
+  const byKey = new Map<string, CanonicalCandidateProfileFact["provenance"][number]>();
+  for (const reference of [...members, ...(extra === undefined ? [] : [extra])].flatMap(
+    (fact) => fact.provenance,
+  )) {
+    const key = referenceKey(reference);
+    const existing = byKey.get(key);
+    if (existing === undefined || (existing.quote === undefined && reference.quote !== undefined)) {
+      byKey.set(key, reference);
+    }
+  }
+  return uniqueSorted([...byKey.values()], referenceKey);
 }
