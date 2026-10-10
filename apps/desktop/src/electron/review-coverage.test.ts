@@ -86,4 +86,19 @@ describe("reviewCoverage", () => {
       reviewCoverage(snapshot([execution({ round: 1, ...judgement("previous") })], 2)),
     ).toBeNull();
   });
+
+  it("names each requirement with the text the run recorded, without control characters", () => {
+    const coverage = reviewCoverage(
+      snapshot([execution({ ...judgement("judged") })]),
+      new Map([["r-1", "  Mastery of SQL\r\nand NoSQL databases  "]]),
+    );
+    expect(coverage?.assessments[0]).toMatchObject({
+      requirementId: "r-1",
+      requirementText: "Mastery of SQL \nand NoSQL databases",
+    });
+    // Without recorded text the id alone crosses the bridge.
+    expect(
+      reviewCoverage(snapshot([execution({ ...judgement("judged") })]))?.assessments[0],
+    ).not.toHaveProperty("requirementText");
+  });
 });

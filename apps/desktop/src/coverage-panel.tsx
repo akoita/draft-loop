@@ -39,12 +39,32 @@ function coverageSummaryParts(summary: CoverageSummaryView): readonly string[] {
   ];
 }
 
-function sectionTitlesByBlockId(sections: readonly ReviewSection[]): ReadonlyMap<string, string> {
-  const titles = new Map<string, string>();
+/** Where a cited block sits and how it starts, so a reader can tell the blocks apart. */
+interface CitedBlock {
+  readonly title: string;
+  readonly opening: string;
+}
+
+/** Longest opening of a cited block shown beside its section title. */
+export const COVERAGE_BLOCK_OPENING_LENGTH = 72;
+
+/** The block's first words, cut at a word boundary with an ellipsis when it runs longer. */
+export function blockOpening(text: string): string {
+  const flat = text.replace(/\s+/gu, " ").trim();
+  if (flat.length <= COVERAGE_BLOCK_OPENING_LENGTH) return flat;
+  const cut = flat.slice(0, COVERAGE_BLOCK_OPENING_LENGTH);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > COVERAGE_BLOCK_OPENING_LENGTH / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
+
+function citedBlocksById(sections: readonly ReviewSection[]): ReadonlyMap<string, CitedBlock> {
+  const blocks = new Map<string, CitedBlock>();
   for (const section of sections) {
-    for (const block of section.blocks) titles.set(block.id, section.title);
+    for (const block of section.blocks) {
+      blocks.set(block.id, { title: section.title, opening: blockOpening(block.text) });
+    }
   }
-  return titles;
+  return blocks;
 }
 
 export function RequirementCoveragePanel({
@@ -60,7 +80,7 @@ export function RequirementCoveragePanel({
   readonly onToggle: () => void;
   readonly onLocateBlock: (blockId: string) => void;
 }): JSX.Element {
-  const titles = sectionTitlesByBlockId(sections);
+  const citedBlocks = citedBlocksById(sections);
   const summaryLine = coverageSummaryLine(coverage);
   return (
     <section className="panel coverage-panel" aria-label="requirement coverage">
@@ -84,7 +104,11 @@ export function RequirementCoveragePanel({
               key={assessment.requirementId}
             >
               <div className="coverage-row-heading">
-                <strong className="coverage-requirement">{assessment.requirementId}</strong>
+                {/* The requirement as the candidate reviewed it; its id only when no text was
+                    recorded, so a row is never left unnamed. */}
+                <strong className="coverage-requirement">
+                  {assessment.requirementText ?? assessment.requirementId}
+                </strong>
                 <span className="status-tag coverage-status">
                   {coverageStatusLabels[assessment.status]}
                 </span>
@@ -96,13 +120,13 @@ export function RequirementCoveragePanel({
               {assessment.evidence.length === 0 ? null : (
                 <ul
                   className="coverage-evidence"
-                  aria-label={`Draft blocks cited for ${assessment.requirementId}`}
+                  aria-label={`Draft blocks cited for ${assessment.requirementText ?? assessment.requirementId}`}
                 >
                   {assessment.evidence.map((item) => {
-                    const title = titles.get(item.blockId);
+                    const cited = citedBlocks.get(item.blockId);
                     return (
                       <li key={item.blockId}>
-                        {title === undefined ? (
+                        {cited === undefined ? (
                           <span className="coverage-block">{item.blockId}</span>
                         ) : (
                           <button
@@ -111,8 +135,8 @@ export function RequirementCoveragePanel({
                             title="Show this block in the draft"
                             onClick={() => onLocateBlock(item.blockId)}
                           >
-                            {title}
-                            <span className="coverage-block-id"> · {item.blockId}</span>
+                            {cited.title}
+                            <span className="coverage-block-opening"> · {cited.opening}</span>
                             <span className="sr-only">, show in the draft</span>
                           </button>
                         )}

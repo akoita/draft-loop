@@ -24,6 +24,7 @@ import type {
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type { RunRequirementText } from "./run-context-read.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
@@ -515,6 +516,14 @@ export interface ApplicationDriver {
   readonly readRunWritingPolicy?: (
     command: ReadRunWritingPolicyCommand,
   ) => Promise<RunWritingPolicyProjection | undefined>;
+  /**
+   * The job requirements a run was judged against, read from its context snapshot, so a
+   * coverage view can name each requirement instead of its id. `undefined` when nothing is
+   * recorded, as for `readIndependentReview`.
+   */
+  readonly readRunRequirements?: (
+    command: StatusCommand,
+  ) => Promise<readonly RunRequirementText[] | undefined>;
   /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
   readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   readonly listApplications?: (
@@ -668,6 +677,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunWritingPolicy === undefined
         ? undefined
         : driver.readRunWritingPolicy({ ...command, root: requireRoot(command.root) }),
+    readRunRequirements: async (command) =>
+      driver.readRunRequirements === undefined
+        ? undefined
+        : driver.readRunRequirements({ ...command, root: requireRoot(command.root) }),
     createApplication: async (command) =>
       requireApplicationApi(driver.createApplication)({
         ...command,
@@ -735,6 +748,7 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export type { RunRequirementText } from "./run-context-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";

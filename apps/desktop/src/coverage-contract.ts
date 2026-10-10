@@ -2,9 +2,10 @@
  * Bridge contract for the requirement coverage shown in the review panel.
  *
  * The host projects the latest same-round critic judgement from the run snapshot with the same
- * application helper the CLI uses. Only ids, enumerated statuses, counts, and the critic's
- * user-visible rationale cross the bridge: no requirement text, block text, or filesystem path.
- * The renderer resolves section titles from the artifact it already holds.
+ * application helper the CLI uses. Ids, enumerated statuses, counts, the critic's user-visible
+ * rationale, and the text of each job requirement as the run recorded it cross the bridge; no
+ * block text or filesystem path does. The renderer resolves section titles from the artifact
+ * it already holds.
  *
  * The runtime key lists below are bound to the interfaces, so adding a field to one without the
  * other is a compile error rather than a validator that silently rejects real payloads.
@@ -33,6 +34,8 @@ export interface CoverageEvidenceView {
 
 export interface CoverageAssessmentView {
   readonly requirementId: string;
+  /** The job requirement as the run recorded it; absent when the run's context has no text. */
+  readonly requirementText?: string;
   readonly status: CoverageStatus;
   readonly basis: CoverageBasis;
   readonly evidence: readonly CoverageEvidenceView[];
@@ -76,6 +79,7 @@ const summaryKeys = exactKeys<CoverageSummaryView>()([
 ]);
 const assessmentKeys = exactKeys<CoverageAssessmentView>()([
   "requirementId",
+  "requirementText",
   "status",
   "basis",
   "evidence",
@@ -87,6 +91,8 @@ export const maximumCoverageAssessments = 512;
 export const maximumCoverageEvidencePerAssessment = 64;
 const maximumIdentifierLength = 256;
 const maximumRationaleLength = 1_000;
+/** Longer requirement text is cut by the host before it crosses the bridge. */
+export const maximumCoverageRequirementTextLength = 2_000;
 const maximumCount = 1_000_000;
 
 /** The CLI's wording for how an assessment was reached. */
@@ -170,6 +176,10 @@ function normalizeAssessment(value: unknown): CoverageAssessmentView | undefined
   const raw = record(value);
   if (raw === undefined || !onlyKeys(raw, assessmentKeys)) return undefined;
   const requirementId = plainText(raw.requirementId, maximumIdentifierLength, false);
+  const requirementText =
+    raw.requirementText === undefined
+      ? undefined
+      : plainText(raw.requirementText, maximumCoverageRequirementTextLength, true);
   const status = oneOf(raw.status, coverageStatuses);
   const basis = oneOf(raw.basis, coverageBases);
   const rationale = plainText(raw.rationale, maximumRationaleLength, true);
@@ -178,6 +188,7 @@ function normalizeAssessment(value: unknown): CoverageAssessmentView | undefined
     status === undefined ||
     basis === undefined ||
     rationale === undefined ||
+    (raw.requirementText !== undefined && requirementText === undefined) ||
     !Array.isArray(raw.evidence) ||
     raw.evidence.length > maximumCoverageEvidencePerAssessment
   ) {
@@ -191,7 +202,14 @@ function normalizeAssessment(value: unknown): CoverageAssessmentView | undefined
     if (blockId === undefined) return undefined;
     evidence.push({ blockId });
   }
-  return { requirementId, status, basis, evidence, rationale };
+  return {
+    requirementId,
+    ...(requirementText === undefined ? {} : { requirementText }),
+    status,
+    basis,
+    evidence,
+    rationale,
+  };
 }
 
 /**

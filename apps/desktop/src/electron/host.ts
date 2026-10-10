@@ -1044,6 +1044,7 @@ function reviewState(
   preflight: ProviderTransmissionPreflight,
   background: BackgroundRunStatus = { running: false },
   writingPolicy?: RunWritingPolicyProjection,
+  requirementTexts?: ReadonlyMap<string, string>,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -1092,7 +1093,7 @@ function reviewState(
     },
     events: reviewEvents(snapshot, overrides, preflight),
     exportPath,
-    coverage: reviewCoverage(snapshot),
+    coverage: reviewCoverage(snapshot, requirementTexts),
     ...(writingPolicy === undefined ? {} : { writingPolicy }),
     setup,
   };
@@ -2836,6 +2837,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** Each requirement's text by id, for the coverage panel; empty when it cannot be read. */
+  async function requirementTextsForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<ReadonlyMap<string, string>> {
+    if (service.readRunRequirements === undefined) return new Map();
+    try {
+      const requirements = await service.readRunRequirements({ root: workspace.root, runId });
+      return new Map((requirements ?? []).map(({ id, text }) => [id, text]));
+    } catch (error) {
+      options.onError?.(error, capability);
+      return new Map();
+    }
+  }
+
   async function requireProviderTransmissionAcknowledgement(
     workspace: ActiveWorkspace,
     scope: ApplicationScope | undefined,
@@ -4182,6 +4199,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       preflight,
       backgroundStatus(workspace, snapshot.runId),
       await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
+      await requirementTextsForRun(workspace, snapshot.runId, "review.dispatch"),
     );
   }
 
@@ -5869,6 +5887,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               preflight,
               backgroundStatus(workspace, snapshot.runId),
               await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
+              await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
             ),
           };
         }
