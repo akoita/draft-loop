@@ -4826,10 +4826,23 @@ describe("candidate knowledge source inspection CLI controls", () => {
       listKnowledgeSourceDuplicateGroups,
       inspectManagedCandidateKnowledgeFiles,
     } as unknown as CandidateKnowledgeStoreService;
+    const listSourceEvidenceKinds = vi.fn(async () => [
+      {
+        sourceId: "source-b",
+        displayName: "Profile page",
+        versionId: "version-b2",
+        kind: "linkedin-export" as const,
+        origin: "user" as const,
+      },
+    ]);
     const cli = createCli({
       service: dependencies.service,
       io: dependencies.io,
       knowledgeService,
+      evidenceKindService: {
+        listSourceEvidenceKinds,
+        setSourceEvidenceKind: vi.fn(),
+      },
     });
 
     await cli.parseAsync([
@@ -4879,10 +4892,13 @@ describe("candidate knowledge source inspection CLI controls", () => {
           versionCount: 2,
           versionIds: ["version-b1", "version-b2"],
           versionIdsTruncated: false,
+          evidenceKind: "linkedin-export",
+          evidenceKindOrigin: "user",
         },
       ],
       sourcesTruncated: false,
     });
+    expect(listSourceEvidenceKinds).toHaveBeenCalledWith({ storeRoot, knowledgeBaseId });
     expect(duplicateOutput).toEqual({
       knowledgeBaseId,
       groupCount: 1,
@@ -4934,6 +4950,10 @@ describe("candidate knowledge source inspection CLI controls", () => {
       service: dependencies.service,
       io: dependencies.io,
       knowledgeService,
+      evidenceKindService: {
+        listSourceEvidenceKinds: vi.fn(async () => []),
+        setSourceEvidenceKind: vi.fn(),
+      },
     });
 
     await cli.parseAsync([

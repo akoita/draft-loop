@@ -1371,9 +1371,22 @@ Each knowledge source has an evidence kind that names what the material is:
 so nothing is sent to a provider and no detection result is stored. A user can
 override the kind for a source; the override is stored per source, so it
 survives refreshes that add new versions, and clearing it returns to detection.
-The application service is `source-evidence-kind-service`; CLI and desktop
-controls arrive with [#1130](https://github.com/akoita/draft-loop/issues/1130)
-and [#1131](https://github.com/akoita/draft-loop/issues/1131).
+The application service is `source-evidence-kind-service`; the desktop control
+arrives with [#1131](https://github.com/akoita/draft-loop/issues/1131).
+
+`knowledge source list` shows each current source's `evidenceKind` and
+`evidenceKindOrigin` (`detected` or `user`). `knowledge source kind` shows one
+source's kind, sets an override, or clears it with `--clear`; it accepts
+`--json`.
+
+```sh
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID performance-review
+pnpm --filter @draft-loop/cli start knowledge source kind \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --clear
+```
 
 ### Evidence mode
 

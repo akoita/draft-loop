@@ -14,6 +14,11 @@ import {
   registerEmbeddingModelCommands,
 } from "./embedding-model-commands.js";
 import { isEntryPoint } from "./entry-point.js";
+import {
+  registerEvidenceKindCommand,
+  type SourceEvidenceKindListing,
+  sourceEvidenceKindListings,
+} from "./evidence-kind-commands.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
 import { resolveModelProfileSelection } from "./model-profile-selection.js";
@@ -54,10 +59,12 @@ import {
   type RunWritingPolicyProjection,
   runPilot,
   type SensitiveKnowledgeConsentService,
+  type SourceEvidenceKindService,
   type SourceSensitivityService,
   type StatusCommand,
   safeErrorMessage,
   sensitiveKnowledgeConsentService,
+  sourceEvidenceKindService,
   sourceSensitivityService,
   type WorkspaceDescriptor,
   type WorkspaceEvidenceModeService,
@@ -249,6 +256,8 @@ export interface CliDependencies {
   readonly knowledgeService?: CandidateKnowledgeStoreService;
   /** The source-sensitivity rule boundary; replaced in tests. */
   readonly sensitivityService?: SourceSensitivityService;
+  /** The source evidence-kind boundary; replaced in tests. */
+  readonly evidenceKindService?: SourceEvidenceKindService;
   /** The workspace evidence-mode boundary; replaced in tests. */
   readonly evidenceModeService?: WorkspaceEvidenceModeService;
   /** The workspace retrieval-mode boundary; replaced in tests. */
@@ -320,6 +329,7 @@ function writeKnowledgeSourceManifests(
   io: ApplicationIo,
   knowledgeBaseId: string,
   manifests: readonly CandidateKnowledgeSourceManifest[],
+  evidenceKinds: ReadonlyMap<string, SourceEvidenceKindListing>,
 ): void {
   const ordered = [...manifests].sort((left, right) =>
     lexicalCompare(left.source.id, right.source.id),
@@ -334,6 +344,7 @@ function writeKnowledgeSourceManifests(
       versionCount: versions.length,
       versionIds: versions.slice(0, maximumKnowledgeInspectionItems).map((version) => version.id),
       versionIdsTruncated: versions.length > maximumKnowledgeInspectionItems,
+      ...evidenceKinds.get(manifest.source.id),
     };
   });
   writeJson(io, {
@@ -1387,6 +1398,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   const service = dependencies.service ?? applicationService;
   const candidateKnowledge = dependencies.knowledgeService ?? knowledgeService;
   const sensitivity = dependencies.sensitivityService ?? sourceSensitivityService;
+  const evidenceKinds = dependencies.evidenceKindService ?? sourceEvidenceKindService;
   const consent = dependencies.consentService ?? sensitiveKnowledgeConsentService;
   const io = dependencies.io ?? stdoutIo;
 
@@ -2771,7 +2783,9 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   knowledgeSource
     .command("list")
-    .description("List source kinds and version identities")
+    .description(
+      "List source kinds, version identities, and each current source's evidence kind (detected or set by you)",
+    )
     .argument("<store-root>", "local candidate-knowledge store directory")
     .argument("<knowledge-base-id>", "opaque knowledge-base id")
     .action(async (storeRoot: string, knowledgeBaseId: string) => {
@@ -2779,8 +2793,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         io,
         knowledgeBaseId,
         await candidateKnowledge.listKnowledgeSourceManifests({ storeRoot, knowledgeBaseId }),
+        await sourceEvidenceKindListings(evidenceKinds, { storeRoot, knowledgeBaseId }),
       );
     });
+
+  registerEvidenceKindCommand(knowledgeSource, evidenceKinds, io);
 
   knowledgeSource
     .command("duplicates")
