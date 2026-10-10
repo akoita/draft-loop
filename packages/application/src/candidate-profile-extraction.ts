@@ -14,6 +14,7 @@ import {
 import {
   type CanonicalCandidateProfileExtractionProposal,
   type CanonicalCandidateProfileFact,
+  type CanonicalCandidateProfileFactProvenanceReference,
   type CanonicalCandidateProfileIssue,
   type CanonicalCandidateProfileProvenanceReference,
   canonicalCandidateProfileProvenanceReferenceSchema,
@@ -44,6 +45,7 @@ import {
   uniqueSorted,
 } from "./canonical-profile-fact-keys.js";
 import { mergeIdenticalProfileFacts } from "./canonical-profile-fact-merge.js";
+import { createCanonicalProfileFactQuoteResolver } from "./canonical-profile-fact-quotes.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 import {
   type CanonicalProfileSourceSensitivityGuard,
@@ -300,7 +302,17 @@ function buildIssue(
   message?: string,
 ): CanonicalCandidateProfileIssue {
   const normalizedFactIds = [...new Set(factIds)].sort(lexicalCompare);
-  const normalizedSourceRefs = uniqueSorted(sourceRefs, referenceKey);
+  // Issue references never carry a fact's evidence quote.
+  const normalizedSourceRefs = uniqueSorted(
+    sourceRefs.map(({ storeId, knowledgeBaseId, sourceId, versionId, kind }) => ({
+      storeId,
+      knowledgeBaseId,
+      sourceId,
+      versionId,
+      kind,
+    })),
+    referenceKey,
+  );
   return {
     id: `profile-issue-${digest([
       code,
@@ -403,15 +415,29 @@ function mapProposal(
   >,
   droppedFacts: number,
   sources: readonly CanonicalCandidateProfileExtractionMaterial[],
+  sourceTextsByRepresentativeId: ReadonlyMap<string, string>,
 ): CanonicalCandidateProfileExtractionResult {
+  const resolveQuote = createCanonicalProfileFactQuoteResolver(
+    sources,
+    sourceTextsByRepresentativeId,
+  );
   const unmergedByKey = new Map<string, CanonicalCandidateProfileFact>();
   const unmergedFacts = proposal.facts.map((candidate) => {
-    const provenance = uniqueSorted(
-      candidate.evidence.flatMap((evidence) => {
-        return referencesByRepresentativeId.get(evidence.sourceId) ?? [];
-      }),
-      referenceKey,
-    );
+    // Each cited source version keeps the first evidence quote that resolves to an exact span.
+    const quotedReferences = new Map<string, CanonicalCandidateProfileFactProvenanceReference>();
+    for (const evidence of candidate.evidence) {
+      for (const reference of referencesByRepresentativeId.get(evidence.sourceId) ?? []) {
+        const key = referenceKey(reference);
+        const existing = quotedReferences.get(key);
+        if (existing?.quote !== undefined) continue;
+        const quote = resolveQuote(evidence.sourceId, reference, evidence.quote);
+        quotedReferences.set(
+          key,
+          quote === undefined ? (existing ?? reference) : { ...reference, quote },
+        );
+      }
+    }
+    const provenance = uniqueSorted([...quotedReferences.values()], referenceKey);
     if (provenance.length > maximumCanonicalCandidateProfileProvenanceCount) {
       throw new Error("The extraction proposal cites too many sources for one fact.");
     }
@@ -618,6 +644,7 @@ export async function processCanonicalCandidateProfileExtraction(
       preparedSources.referencesByRepresentativeId,
       grounded.droppedFacts + guarded.droppedFacts,
       input.sources,
+      preparedSources.sourceTextsByRepresentativeId,
     );
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {

@@ -88,7 +88,7 @@ describe("canonical candidate profile skill conflict detection", () => {
     );
 
     expect(result.facts).toHaveLength(1);
-    expect(result.facts[0]?.provenance).toEqual([first.reference, second.reference]);
+    expect(result.facts[0]?.provenance).toMatchObject([first.reference, second.reference]);
     expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
   });
@@ -121,7 +121,7 @@ describe("canonical candidate profile skill conflict detection", () => {
     );
 
     expect(result.facts).toHaveLength(1);
-    expect(result.facts[0]?.provenance).toEqual([first.reference, second.reference]);
+    expect(result.facts[0]?.provenance).toMatchObject([first.reference, second.reference]);
     expect(result.issues.some((issue) => issue.code === "duplicate")).toBe(false);
     expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
   });

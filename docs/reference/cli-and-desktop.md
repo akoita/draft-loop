@@ -979,6 +979,11 @@ for every field.
 Exact duplicate source contents are sent once per bounded group while every
 original source version remains attached to facts as local provenance.
 
+Each fact also keeps, for every cited source version, the exact quote that
+grounded it: a verbatim contiguous span of that version's normalized text, up to
+2,000 characters. The quote is omitted when no such span can be resolved, and
+issue source references never carry quotes.
+
 ### Incremental derivation
 
 Derivation extracts only new or changed sources. It reuses the facts of

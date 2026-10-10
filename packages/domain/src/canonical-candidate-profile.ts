@@ -96,6 +96,9 @@ export const maximumCanonicalCandidateProfileFactIdLength = 120 as const;
 export const maximumCanonicalCandidateProfileSubjectIdLength = 120 as const;
 export const maximumCanonicalCandidateProfileFieldLength = 120 as const;
 export const maximumCanonicalCandidateProfileValueLength = 2_000 as const;
+/** An evidence quote is bounded like a fact value, the same bound the extraction proposal uses. */
+export const maximumCanonicalCandidateProfileProvenanceQuoteLength =
+  maximumCanonicalCandidateProfileValueLength;
 export const maximumCanonicalCandidateProfileIssueMessageLength = 400 as const;
 
 export interface CanonicalCandidateProfileProvenanceReferenceInput {
@@ -116,13 +119,27 @@ export interface CanonicalCandidateProfileProvenanceReference {
 
 export type CanonicalCandidateProfileSourceReference = CanonicalCandidateProfileProvenanceReference;
 
+/**
+ * Only fact provenance may keep the exact grounded source quote for its cited source version; issue
+ * source references never carry one. The quote is not part of the reference identity.
+ */
+export interface CanonicalCandidateProfileFactProvenanceReferenceInput
+  extends CanonicalCandidateProfileProvenanceReferenceInput {
+  readonly quote?: string;
+}
+
+export interface CanonicalCandidateProfileFactProvenanceReference
+  extends CanonicalCandidateProfileProvenanceReference {
+  readonly quote?: string;
+}
+
 export interface CanonicalCandidateProfileFactInput {
   readonly id: string;
   readonly category: CanonicalCandidateProfileFactCategory;
   readonly subjectId?: string;
   readonly field: string;
   readonly value: string;
-  readonly provenance: readonly CanonicalCandidateProfileProvenanceReferenceInput[];
+  readonly provenance: readonly CanonicalCandidateProfileFactProvenanceReferenceInput[];
 }
 
 export interface CanonicalCandidateProfileFact {
@@ -131,7 +148,7 @@ export interface CanonicalCandidateProfileFact {
   readonly subjectId?: string;
   readonly field: string;
   readonly value: string;
-  readonly provenance: readonly CanonicalCandidateProfileProvenanceReference[];
+  readonly provenance: readonly CanonicalCandidateProfileFactProvenanceReference[];
 }
 
 export interface CanonicalCandidateProfileIssueInput {
@@ -271,6 +288,10 @@ const canonicalCandidateProfileProvenanceKeys = new Set([
   "sourceId",
   "versionId",
   "kind",
+]);
+const canonicalCandidateProfileFactProvenanceKeys = new Set([
+  ...canonicalCandidateProfileProvenanceKeys,
+  "quote",
 ]);
 const canonicalCandidateProfileIssueKeys = new Set([
   "id",
@@ -458,6 +479,7 @@ function validateCanonicalCandidateProfileProvenanceReference(
   field: string,
   issues: SemanticValidationIssue[],
   selectionReferences: ReadonlySet<string> | undefined,
+  allowQuote = false,
 ): value is CanonicalCandidateProfileProvenanceReferenceInput {
   if (!isRecord(value)) {
     addIssue(issues, "invalid-value", field, "must be a provenance reference object.");
@@ -465,10 +487,20 @@ function validateCanonicalCandidateProfileProvenanceReference(
   }
   validateCanonicalCandidateProfileKeys(
     value,
-    canonicalCandidateProfileProvenanceKeys,
+    allowQuote
+      ? canonicalCandidateProfileFactProvenanceKeys
+      : canonicalCandidateProfileProvenanceKeys,
     field,
     issues,
   );
+  if (allowQuote && value.quote !== undefined) {
+    validateCanonicalCandidateProfileBoundedText(
+      value.quote,
+      `${field}.quote`,
+      maximumCanonicalCandidateProfileProvenanceQuoteLength,
+      issues,
+    );
+  }
   const reference = value as Partial<CanonicalCandidateProfileProvenanceReferenceInput>;
   const identifiers = [
     ["storeId", reference.storeId],
@@ -608,6 +640,7 @@ function validateCanonicalCandidateProfileFact(
       referenceField,
       issues,
       selectionReferences,
+      true,
     );
     if (!validReference || !isRecord(reference)) continue;
     const candidateReference =
@@ -1246,11 +1279,20 @@ function normalizeCanonicalCandidateProfileProvenanceReference(
   };
 }
 
+function normalizeCanonicalCandidateProfileFactProvenanceReference(
+  reference: CanonicalCandidateProfileFactProvenanceReferenceInput,
+): CanonicalCandidateProfileFactProvenanceReference {
+  return {
+    ...normalizeCanonicalCandidateProfileProvenanceReference(reference),
+    ...(reference.quote === undefined ? {} : { quote: reference.quote.trim() }),
+  };
+}
+
 function normalizeCanonicalCandidateProfileFact(
   fact: CanonicalCandidateProfileFactInput,
 ): CanonicalCandidateProfileFact {
   const provenance = fact.provenance
-    .map(normalizeCanonicalCandidateProfileProvenanceReference)
+    .map(normalizeCanonicalCandidateProfileFactProvenanceReference)
     .sort((left, right) =>
       compareCanonicalCandidateProfileStrings(
         canonicalCandidateProfileReferenceSortKey(left),

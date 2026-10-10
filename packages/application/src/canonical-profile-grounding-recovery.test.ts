@@ -157,10 +157,10 @@ describe("canonical profile grounding recovery", () => {
       "payment",
       "analytics",
     ]);
-    expect(result.facts.find((fact) => fact.value === "payment")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "payment")?.provenance).toMatchObject([
       source.reference,
     ]);
-    expect(result.facts.find((fact) => fact.value === "analytics")?.provenance).toEqual([
+    expect(result.facts.find((fact) => fact.value === "analytics")?.provenance).toMatchObject([
       source.reference,
     ]);
     expect(result.facts.some((fact) => fact.value === "Jan 2020")).toBe(false);

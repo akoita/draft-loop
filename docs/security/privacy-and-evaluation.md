@@ -105,7 +105,9 @@ unchanged.
 Canonical profile versions are stored in workspace-local SQLite as immutable,
 checksum-verified payloads bound to exact path-free CKB store, base, source,
 and source-version identities. Every fact requires candidate-provided
-provenance; optional public corroboration remains distinguishable. Storage
+provenance; optional public corroboration remains distinguishable. Each
+provenance entry may also keep the exact source quote that grounded the fact,
+stored locally as a verbatim span of that source version. Storage
 audit events contain only opaque identity, version, status, lineage, schema,
 and checksum metadata rather than fact values or issue messages.
 

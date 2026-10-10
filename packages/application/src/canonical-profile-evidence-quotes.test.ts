@@ -248,7 +248,7 @@ describe("canonical profile evidence quote recovery", () => {
     );
     expect(recovered.facts).toHaveLength(1);
     expect(recovered.facts[0]?.value).toBe("TypeScript");
-    expect(recovered.facts[0]?.provenance).toEqual([source.reference]);
+    expect(recovered.facts[0]?.provenance).toMatchObject([source.reference]);
 
     const filtered = await processCanonicalCandidateProfileExtraction(
       extract([

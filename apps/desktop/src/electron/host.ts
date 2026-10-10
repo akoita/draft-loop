@@ -58,6 +58,7 @@ import {
   maximumCanonicalCandidateProfileIssueMessageLength,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
   maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileProvenanceQuoteLength,
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
@@ -86,6 +87,7 @@ import {
   type BridgeResult,
   bridgeCapabilities,
   type CanonicalCandidateProfileCancelResult,
+  type CanonicalCandidateProfileFactProvenanceReferenceResult,
   type CanonicalCandidateProfileFactResult,
   type CanonicalCandidateProfileIssueResult,
   type CanonicalCandidateProfileListResult,
@@ -1858,6 +1860,11 @@ const canonicalCandidateProfileReferenceKeys = new Set([
   "versionId",
   "kind",
 ]);
+// Only fact provenance keeps the exact source quote; issue references never carry one.
+const canonicalCandidateProfileFactReferenceKeys = new Set([
+  ...canonicalCandidateProfileReferenceKeys,
+  "quote",
+]);
 
 function canonicalCandidateProfileFailure(): never {
   return fail(
@@ -1930,6 +1937,30 @@ function projectCanonicalCandidateProfileReference(
   };
 }
 
+function projectCanonicalCandidateProfileFactReference(
+  value: unknown,
+): CanonicalCandidateProfileFactProvenanceReferenceResult {
+  if (
+    !isRecord(value) ||
+    ![...Object.keys(value)].every((key) => canonicalCandidateProfileFactReferenceKeys.has(key))
+  ) {
+    return canonicalCandidateProfileFailure();
+  }
+  const { quote, ...identity } = value;
+  if (
+    quote !== undefined &&
+    (typeof quote !== "string" ||
+      quote.trim().length === 0 ||
+      quote.length > maximumCanonicalCandidateProfileProvenanceQuoteLength)
+  ) {
+    return canonicalCandidateProfileFailure();
+  }
+  return {
+    ...projectCanonicalCandidateProfileReference(identity),
+    ...(quote === undefined ? {} : { quote }),
+  };
+}
+
 function projectCanonicalCandidateProfileFact(value: unknown): CanonicalCandidateProfileFactResult {
   if (
     !isRecord(value) ||
@@ -1944,7 +1975,7 @@ function projectCanonicalCandidateProfileFact(value: unknown): CanonicalCandidat
   ) {
     return canonicalCandidateProfileFailure();
   }
-  const provenance = value.provenance.map(projectCanonicalCandidateProfileReference);
+  const provenance = value.provenance.map(projectCanonicalCandidateProfileFactReference);
   if (
     new Set(provenance.map(canonicalCandidateProfileReferenceKey)).size !== provenance.length ||
     !provenance.some((reference) => reference.kind === "candidate-provided")

@@ -29,6 +29,7 @@ import {
   maximumCanonicalCandidateProfileIssueMessageLength,
   maximumCanonicalCandidateProfileIssueSourceReferenceCount,
   maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileProvenanceQuoteLength,
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
@@ -2591,13 +2592,19 @@ export interface CanonicalCandidateProfileProvenanceReferenceInput {
   readonly kind: CanonicalCandidateProfileProvenanceKind;
 }
 
+/** Fact provenance also carries the exact source quote; issue references never do. */
+export interface CanonicalCandidateProfileFactProvenanceReferenceInput
+  extends CanonicalCandidateProfileProvenanceReferenceInput {
+  readonly quote?: string;
+}
+
 export interface CanonicalCandidateProfileFactInput {
   readonly id: string;
   readonly category: CanonicalCandidateProfileFactCategory;
   readonly subjectId?: string;
   readonly field: string;
   readonly value: string;
-  readonly provenance: readonly CanonicalCandidateProfileProvenanceReferenceInput[];
+  readonly provenance: readonly CanonicalCandidateProfileFactProvenanceReferenceInput[];
 }
 
 export interface CanonicalCandidateProfileIssuePatchInput {
@@ -2669,6 +2676,15 @@ const canonicalCandidateProfileProvenanceReferenceKeys =
     "versionId",
     "kind",
   ]);
+const canonicalCandidateProfileFactProvenanceReferenceKeys =
+  inputKeys<CanonicalCandidateProfileFactProvenanceReferenceInput>()([
+    "storeId",
+    "knowledgeBaseId",
+    "sourceId",
+    "versionId",
+    "kind",
+    "quote",
+  ]);
 const canonicalCandidateProfileFactKeys = inputKeys<CanonicalCandidateProfileFactInput>()([
   "id",
   "category",
@@ -2710,13 +2726,19 @@ export interface CanonicalCandidateProfileProvenanceReferenceResult {
   readonly kind: CanonicalCandidateProfileProvenanceKind;
 }
 
+/** Fact provenance also carries the exact source quote; issue references never do. */
+export interface CanonicalCandidateProfileFactProvenanceReferenceResult
+  extends CanonicalCandidateProfileProvenanceReferenceResult {
+  readonly quote?: string;
+}
+
 export interface CanonicalCandidateProfileFactResult {
   readonly id: string;
   readonly category: CanonicalCandidateProfileFactCategory;
   readonly subjectId?: string;
   readonly field: string;
   readonly value: string;
-  readonly provenance: readonly CanonicalCandidateProfileProvenanceReferenceResult[];
+  readonly provenance: readonly CanonicalCandidateProfileFactProvenanceReferenceResult[];
 }
 
 export interface CanonicalCandidateProfileIssueResult {
@@ -2760,6 +2782,15 @@ const canonicalCandidateProfileProvenanceReferenceResultKeys =
     "sourceId",
     "versionId",
     "kind",
+  ]);
+const canonicalCandidateProfileFactProvenanceReferenceResultKeys =
+  resultKeys<CanonicalCandidateProfileFactProvenanceReferenceResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "sourceId",
+    "versionId",
+    "kind",
+    "quote",
   ]);
 const canonicalCandidateProfileFactResultKeys = resultKeys<CanonicalCandidateProfileFactResult>()([
   "id",
@@ -4839,6 +4870,32 @@ function validateCanonicalCandidateProfileProvenanceReference(
   };
 }
 
+/** A grounded source quote is kept verbatim; only its size is bounded, like the stored fact. */
+function canonicalCandidateProfileQuote(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0 ||
+    value.length > maximumCanonicalCandidateProfileProvenanceQuoteLength
+  ) {
+    return invalidInput();
+  }
+  return value;
+}
+
+function validateCanonicalCandidateProfileFactProvenanceReference(
+  value: unknown,
+): CanonicalCandidateProfileFactProvenanceReferenceInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileFactProvenanceReferenceKeys)) {
+    return invalidInput();
+  }
+  const { quote, ...identity } = input;
+  return {
+    ...validateCanonicalCandidateProfileProvenanceReference(identity),
+    ...(quote === undefined ? {} : { quote: canonicalCandidateProfileQuote(quote) }),
+  };
+}
+
 function validateCanonicalCandidateProfileFact(value: unknown): CanonicalCandidateProfileFactInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, canonicalCandidateProfileFactKeys)) return invalidInput();
@@ -4853,7 +4910,7 @@ function validateCanonicalCandidateProfileFact(value: unknown): CanonicalCandida
   if (input.provenance.length > maximumCanonicalCandidateProfileProvenanceCount) {
     return invalidInput();
   }
-  const provenance = input.provenance.map(validateCanonicalCandidateProfileProvenanceReference);
+  const provenance = input.provenance.map(validateCanonicalCandidateProfileFactProvenanceReference);
   if (new Set(provenance.map(canonicalCandidateProfileReferenceKey)).size !== provenance.length) {
     return invalidInput();
   }
@@ -7523,6 +7580,16 @@ function normalizeCanonicalCandidateProfileProvenanceReferenceResult(
   return validateCanonicalCandidateProfileProvenanceReference(result);
 }
 
+function normalizeCanonicalCandidateProfileFactProvenanceReferenceResult(
+  value: unknown,
+): CanonicalCandidateProfileFactProvenanceReferenceResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileFactProvenanceReferenceResultKeys)) {
+    return invalidInput();
+  }
+  return validateCanonicalCandidateProfileFactProvenanceReference(result);
+}
+
 function normalizeCanonicalCandidateProfileFactResult(
   value: unknown,
 ): CanonicalCandidateProfileFactResult {
@@ -7531,7 +7598,9 @@ function normalizeCanonicalCandidateProfileFactResult(
   const fact = validateCanonicalCandidateProfileFact(result);
   return {
     ...fact,
-    provenance: fact.provenance.map(normalizeCanonicalCandidateProfileProvenanceReferenceResult),
+    provenance: fact.provenance.map(
+      normalizeCanonicalCandidateProfileFactProvenanceReferenceResult,
+    ),
   };
 }
 
