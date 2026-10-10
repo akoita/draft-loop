@@ -2674,7 +2674,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           storeRoot: entry.storeRoot,
           knowledgeBaseId: entry.knowledgeBaseId,
         });
-        total += readiness.sources.length;
+        // A removed (retired) source never reaches a run, as in the knowledge readiness summary.
+        total += readiness.sources.filter(
+          (source) => source.lifecycleRevision.retirement === null,
+        ).length;
       } catch {
         // Counted as empty: the card then asks for a source instead of failing the load.
       }

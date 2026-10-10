@@ -271,6 +271,45 @@ describe("workspaces that already have a selection", () => {
   });
 });
 
+describe("the review's evidence source count", () => {
+  it("leaves out a removed source, as the career evidence card does", async () => {
+    const secondPath = join(parent, "projects.md");
+    await writeFile(secondPath, "Led a payments migration.\n", "utf8");
+    const chosen = [sourcePath, secondPath];
+    const host = createNativeHost({
+      defaultKnowledgeStoreRoot: storeRoot,
+      dialogs: {
+        chooseDirectory: async (mode) => (mode === "open" ? root : parent),
+        chooseFiles: async () => [],
+        chooseKnowledgeSourceFile: async () => chosen.shift(),
+      },
+    });
+    const workspaceId = await createWorkspace(host);
+    const { storeId, knowledgeBaseId } = await ensureDefault(host, workspaceId);
+    const sourceIds: string[] = [];
+    for (let index = 0; index < 2; index += 1) {
+      const imported = await host.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected the file import to succeed.");
+      sourceIds.push((imported.value as { sourceId: string }).sourceId);
+    }
+    await host.invoke({
+      type: "knowledge.select",
+      input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+    });
+    expect((await setupOf(host, workspaceId)).evidenceSourceCount).toBe(2);
+
+    const retired = await host.invoke({
+      type: "knowledge.retire-source",
+      input: { storeId, knowledgeBaseId, sourceId: sourceIds[0], confirmed: true },
+    });
+    expect(retired).toMatchObject({ ok: true, value: { status: "retired" } });
+    expect((await setupOf(host, workspaceId)).evidenceSourceCount).toBe(1);
+  });
+});
+
 describe("the legacy path stays readable for old workspaces", () => {
   it("does not touch a workspace that never used the new commands", async () => {
     const host = createHost();
