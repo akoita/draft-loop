@@ -56,6 +56,23 @@ describe("recent workspace store", () => {
     await expect(store.rename("/tmp/rename-one", "  padded ")).rejects.toThrow();
   });
 
+  it("removes one entry by id, persists it, and ignores unknown ids", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-recent-workspaces-"));
+    try {
+      const filename = join(directory, "recent-workspaces.json");
+      const store = createRecentWorkspaceStore({ filename });
+      const kept = await store.remember("kept", join(directory, "kept"), time(1));
+      const removed = await store.remember("removed", join(directory, "removed"), time(2));
+      await store.remove(removed.id);
+      await store.remove("123e4567-e89b-12d3-a456-426614174999");
+      expect(await store.list()).toEqual([kept]);
+      expect(await store.resolvePath(removed.id)).toBeUndefined();
+      expect(await createRecentWorkspaceStore({ filename }).list()).toEqual([kept]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("compares canonical paths case-insensitively on Windows", async () => {
     const store = createRecentWorkspaceStore({ platform: "win32" });
     const first = await store.remember("Workspace", "/tmp/LocalWorkspace", time(1));

@@ -4336,6 +4336,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ok: true,
             value: await renameWorkspace(command.input.workspaceId, command.input.name),
           };
+        case "workspace.recent-remove":
+          await recentWorkspaces.remove(command.input.id);
+          return { ok: true, value: { removed: true } };
         case "workspace.recent-clear":
           await recentWorkspaces.clear();
           return { ok: true, value: { cleared: true } };

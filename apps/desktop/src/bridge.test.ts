@@ -497,6 +497,25 @@ describe("recent workspace bridge contracts", () => {
     expect(() =>
       validateBridgeCommand({ type: "workspace.recent-clear", input: { path: "/private" } }),
     ).toThrow();
+    expect(bridgeCapabilities).toContain("workspace.recent-remove");
+    expect(
+      validateBridgeCommand({
+        type: "workspace.recent-remove",
+        input: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      }),
+    ).toEqual({
+      type: "workspace.recent-remove",
+      input: { id: "123e4567-e89b-12d3-a456-426614174000" },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "workspace.recent-remove",
+        input: { id: "123e4567-e89b-12d3-a456-426614174000", path: "/private" },
+      }),
+    ).toThrow();
+    expect(() =>
+      validateBridgeCommand({ type: "workspace.recent-remove", input: { id: "../../secret" } }),
+    ).toThrow();
   });
 });
 

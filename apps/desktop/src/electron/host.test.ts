@@ -562,6 +562,15 @@ describe("native host", () => {
       expect(fixture.service.start).not.toHaveBeenCalled();
       expect(fixture.service.begin).not.toHaveBeenCalled();
 
+      const removed = await host.invoke({
+        type: "workspace.recent-remove",
+        input: { id: entry.id },
+      });
+      expect(removed).toEqual({ ok: true, value: { removed: true } });
+      expect(await recentWorkspaces.list()).toEqual([]);
+      expect(await readFile(join(expectedRoot, "job.md"), "utf8")).toBe("");
+      await recentWorkspaces.remember("Saved workspace", expectedRoot);
+
       const cleared = await host.invoke({ type: "workspace.recent-clear", input: {} });
       expect(cleared).toEqual({ ok: true, value: { cleared: true } });
       expect(await recentWorkspaces.list()).toEqual([]);
@@ -619,6 +628,7 @@ describe("native host", () => {
         throw new Error("private path write failure");
       },
       rename: async () => undefined,
+      remove: async () => undefined,
       clear: async () => undefined,
     };
     const host = createNativeHost({

@@ -2095,6 +2095,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const createDemoWorkspace = nativeActions.createDemo;
     const listRecentWorkspaces = activePort.listRecentWorkspaces;
     const openRecentWorkspace = activePort.openRecentWorkspace;
+    const removeRecentWorkspace = activePort.removeRecentWorkspace;
     const clearRecentWorkspaces = activePort.clearRecentWorkspaces;
     return (
       <main className="boot-shell">
@@ -2150,6 +2151,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                     messageOf(reason, "This recent workspace could not be opened. Choose another."),
                 )
               }
+              {...(removeRecentWorkspace === undefined ? {} : { removeRecentWorkspace })}
               clearRecentWorkspaces={clearRecentWorkspaces}
             />
           )}

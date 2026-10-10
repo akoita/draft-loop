@@ -27,6 +27,8 @@ export interface RecentWorkspaceStore {
   remember(name: string, path: string, openedAt?: string): Promise<RecentWorkspaceSummary>;
   /** Renames the entry for a path, keeping its place in the list. Unknown paths are ignored. */
   rename(path: string, name: string): Promise<void>;
+  /** Forgets one entry. Workspace files are never touched; unknown ids are ignored. */
+  remove(id: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -213,6 +215,12 @@ function store(persistence: TextPersistence, platform: NodeJS.Platform): RecentW
           ].slice(0, maximumRecentWorkspaces),
         );
         return { id: entry.id, name: entry.name, lastOpenedAt: entry.lastOpenedAt };
+      }),
+    remove: (id) =>
+      serialize(async () => {
+        const entries = await readEntries();
+        if (!entries.some((entry) => entry.id === id)) return;
+        await persist(entries.filter((entry) => entry.id !== id));
       }),
     clear: () => serialize(async () => persist([])),
   };

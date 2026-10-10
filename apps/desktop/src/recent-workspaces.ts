@@ -22,6 +22,10 @@ export interface RecentWorkspaceOpenInput {
   readonly id: string;
 }
 
+export interface RecentWorkspaceRemoveInput {
+  readonly id: string;
+}
+
 export interface RecentWorkspacesClearInput {
   readonly [key: string]: never;
 }
@@ -32,6 +36,10 @@ export interface RecentWorkspacesListResult {
 
 export interface RecentWorkspacesClearResult {
   readonly cleared: true;
+}
+
+export interface RecentWorkspaceRemoveResult {
+  readonly removed: true;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -113,6 +121,11 @@ export function parseRecentWorkspaceOpenInput(value: unknown): RecentWorkspaceOp
   return { id: safeId(input.id) };
 }
 
+/** Removing an entry forgets it in the history only; the workspace folder is untouched. */
+export function parseRecentWorkspaceRemoveInput(value: unknown): RecentWorkspaceRemoveInput {
+  return parseRecentWorkspaceOpenInput(value);
+}
+
 export function parseRecentWorkspacesListResult(value: unknown): RecentWorkspacesListResult {
   const result = record(value);
   if (!exactKeys(result, ["workspaces"]) || !Array.isArray(result.workspaces)) {
@@ -145,4 +158,12 @@ export function parseRecentWorkspacesClearResult(value: unknown): RecentWorkspac
     throw new Error("Invalid recent workspace result.");
   }
   return { cleared: true };
+}
+
+export function parseRecentWorkspaceRemoveResult(value: unknown): RecentWorkspaceRemoveResult {
+  const result = record(value);
+  if (!exactKeys(result, ["removed"]) || result.removed !== true) {
+    throw new Error("Invalid recent workspace result.");
+  }
+  return { removed: true };
 }

@@ -14,6 +14,8 @@ interface RecentWorkspacesViewProps {
   readonly statusMessage: string | null;
   readonly openingId: string | null;
   readonly onOpen: (id: string) => void;
+  /** Present only when the host can forget a single entry. */
+  readonly onRemove?: (id: string) => void;
   readonly onClear: () => void;
 }
 
@@ -25,13 +27,17 @@ export function RecentWorkspacesView({
   statusMessage,
   openingId,
   onOpen,
+  onRemove,
   onClear,
 }: RecentWorkspacesViewProps) {
   return (
     <section className="panel recent-workspaces" aria-labelledby="recent-workspaces-heading">
       <div className="recent-workspaces-intro">
         <h2 id="recent-workspaces-heading">Recent workspaces</h2>
-        <p>Open a local workspace again, or clear this list without deleting workspace files.</p>
+        <p>
+          Open a local workspace again, or remove entries from this list. Workspace files are never
+          deleted.
+        </p>
         {statusMessage === null ? null : <p role="status">{statusMessage}</p>}
         {loadState === "loading" ? (
           <p role="status">Loading recent workspaces…</p>
@@ -64,6 +70,18 @@ export function RecentWorkspacesView({
                   </time>
                 </span>
               </button>
+              {onRemove === undefined ? null : (
+                <button
+                  className="button button-quiet recent-workspace-remove"
+                  type="button"
+                  aria-label={`Remove ${workspace.name} from recent workspaces`}
+                  title="Remove from this list. Workspace files are kept."
+                  disabled={busy || openingId !== null}
+                  onClick={() => onRemove(workspace.id)}
+                >
+                  Remove
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -84,6 +102,7 @@ interface RecentWorkspacesProps {
   readonly busy: boolean;
   readonly listRecentWorkspaces: () => Promise<readonly RecentWorkspaceSummary[]>;
   readonly openRecentWorkspace: (id: string) => Promise<boolean>;
+  readonly removeRecentWorkspace?: (id: string) => Promise<void>;
   readonly clearRecentWorkspaces: () => Promise<void>;
 }
 
@@ -91,6 +110,7 @@ export function RecentWorkspaces({
   busy,
   listRecentWorkspaces,
   openRecentWorkspace,
+  removeRecentWorkspace,
   clearRecentWorkspaces,
 }: RecentWorkspacesProps) {
   const [workspaces, setWorkspaces] = useState<readonly RecentWorkspaceSummary[]>([]);
@@ -98,7 +118,7 @@ export function RecentWorkspaces({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
+  const [updatingList, setUpdatingList] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -120,7 +140,7 @@ export function RecentWorkspaces({
   }, [listRecentWorkspaces]);
 
   const open = async (id: string) => {
-    if (busy || openingId !== null || clearing) return;
+    if (busy || openingId !== null || updatingList) return;
     setOpeningId(id);
     setErrorMessage(null);
     setStatusMessage(null);
@@ -135,9 +155,26 @@ export function RecentWorkspaces({
     }
   };
 
+  const remove = async (id: string) => {
+    if (busy || openingId !== null || updatingList || removeRecentWorkspace === undefined) return;
+    const name = workspaces.find((workspace) => workspace.id === id)?.name ?? "The workspace";
+    setUpdatingList(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+    try {
+      await removeRecentWorkspace(id);
+      setWorkspaces((current) => current.filter((workspace) => workspace.id !== id));
+      setStatusMessage(`${name} was removed from recent workspaces. Its files are unchanged.`);
+    } catch {
+      setErrorMessage("This recent workspace could not be removed from the list.");
+    } finally {
+      setUpdatingList(false);
+    }
+  };
+
   const clear = async () => {
-    if (busy || openingId !== null || clearing) return;
-    setClearing(true);
+    if (busy || openingId !== null || updatingList) return;
+    setUpdatingList(true);
     setErrorMessage(null);
     setStatusMessage(null);
     try {
@@ -147,19 +184,20 @@ export function RecentWorkspaces({
     } catch {
       setErrorMessage("Recent workspace history could not be cleared.");
     } finally {
-      setClearing(false);
+      setUpdatingList(false);
     }
   };
 
   return (
     <RecentWorkspacesView
       workspaces={workspaces}
-      busy={busy || clearing}
+      busy={busy || updatingList}
       loadState={loadState}
       errorMessage={errorMessage}
       statusMessage={statusMessage}
       openingId={openingId}
       onOpen={(id) => void open(id)}
+      {...(removeRecentWorkspace === undefined ? {} : { onRemove: (id) => void remove(id) })}
       onClear={() => void clear()}
     />
   );

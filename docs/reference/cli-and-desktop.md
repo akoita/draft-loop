@@ -431,8 +431,10 @@ files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.
 
 The start page lists the ten most recently opened local workspaces. Select an
-entry to reopen it, or clear the recent list; clearing history leaves workspace
-files untouched. The native **Open workspace** picker remains available.
+entry to reopen it, use its **Remove** button to drop just that entry, or clear
+the whole list. Removing or clearing entries only edits this history and leaves
+workspace files untouched. The native **Open workspace** picker remains
+available.
 
 Entries show the workspace's display name. When two or more entries share a
 name, each also shows the name of its parent folder ("in hc5") so they can be
