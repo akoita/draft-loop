@@ -140,7 +140,7 @@ import {
   type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
-import { saveTypedHistory } from "./local-typed-history.js";
+import { decisionRoundId, saveTypedHistory } from "./local-typed-history.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { noopAgents } from "./noop-agents.js";
 import type {
@@ -2206,7 +2206,7 @@ export async function recordReviewDecision(command: RecordReviewDecisionCommand)
       id: `decision-${command.runId}-${randomUUID()}`,
       workspaceId: config.id,
       runId: command.runId,
-      roundId: `${command.runId}:round:${snapshot.round}`,
+      roundId: await decisionRoundId(storage, snapshot),
       artifactId: snapshot.artifact?.id ?? null,
       type: command.kind === "edit" ? "edit" : findingDecisionType(command.decision),
       rationale:

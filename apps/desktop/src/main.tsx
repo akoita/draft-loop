@@ -948,6 +948,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const refreshFailureRef = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
@@ -1303,14 +1304,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           loaded.workspaceId === workspaceId
         ) {
           setState(loaded);
-          setImportError(null);
+          // Clear only this refresh's own failure, so an action's error stays readable.
+          const refreshFailure = refreshFailureRef.current;
+          refreshFailureRef.current = null;
+          if (refreshFailure !== null) {
+            setImportError((current) => (current === refreshFailure ? null : current));
+          }
         }
       } catch (reason: unknown) {
         if (!active || !isCurrentWorkspaceContext(workspaceId, generation)) return;
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
-        setImportError(
-          reason instanceof Error ? reason.message : "Review progress could not be refreshed.",
-        );
+        const message =
+          reason instanceof Error ? reason.message : "Review progress could not be refreshed.";
+        refreshFailureRef.current = message;
+        setImportError(message);
       } finally {
         loading = false;
       }
