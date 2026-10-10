@@ -736,14 +736,15 @@ interface VersionPair<T> {
 
 /**
  * Lines up two versions of one ordered list. Ids are authoritative; whatever they leave
- * unmatched falls back to `fallbackMatches` in document order, because a revision may rewrite
- * a line without keeping its id and a reader still pairs the two versions by position.
- * Records that exist only in the previous version come back as removals, in their old place.
+ * unmatched falls back to `fallbackScore`, because a revision may rewrite a line without keeping
+ * its id. Each unmatched record takes the highest-scoring unmatched previous record, earliest on
+ * a tie; a score of zero or less never pairs. Records that exist only in the previous version
+ * come back as removals, in their old place.
  */
 function alignVersions<T extends { readonly id: string }>(
   current: readonly T[],
   previous: readonly T[],
-  fallbackMatches: (currentItem: T, previousItem: T) => boolean,
+  fallbackScore: (currentItem: T, previousItem: T) => number,
 ): readonly VersionPair<T>[] {
   const previousIndexById = new Map(previous.map((item, index) => [item.id, index]));
   const taken = new Set<number>();
@@ -755,14 +756,20 @@ function alignVersions<T extends { readonly id: string }>(
   });
   current.forEach((item, index) => {
     if (matches[index] !== null) return;
+    let best: number | null = null;
+    let bestScore = 0;
     for (let candidate = 0; candidate < previous.length; candidate += 1) {
       const previousItem = previous[candidate];
       if (previousItem === undefined || taken.has(candidate)) continue;
-      if (!fallbackMatches(item, previousItem)) continue;
-      taken.add(candidate);
-      matches[index] = candidate;
-      return;
+      const score = fallbackScore(item, previousItem);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
     }
+    if (best === null) return;
+    taken.add(best);
+    matches[index] = best;
   });
 
   const pairs: VersionPair<T>[] = [];
@@ -789,13 +796,45 @@ function alignVersions<T extends { readonly id: string }>(
   return pairs;
 }
 
+/** Lower-cased words with their surrounding punctuation trimmed, so "akoita," matches "akoita". */
+function lineWords(text: string): ReadonlySet<string> {
+  const words = new Set<string>();
+  for (const token of text.toLowerCase().split(/\s+/u)) {
+    const word = token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+    if (word !== "") words.add(word);
+  }
+  return words;
+}
+
+/** A rewritten line must keep at least this share of the shorter line's words to pair with it. */
+export const LINE_PAIR_MIN_SHARED_WORDS = 0.5;
+
+/**
+ * How alike two lines read: 2 for the same text, otherwise the share of the shorter line's words
+ * the other also uses, or 0 below the pairing threshold. Unrelated lines must not pair just
+ * because they sit at the same position, or the redline interleaves two different facts.
+ */
+export function lineSimilarity(text: string, previousText: string): number {
+  if (text === previousText) return 2;
+  const words = lineWords(text);
+  const previousWords = lineWords(previousText);
+  const shorter = Math.min(words.size, previousWords.size);
+  if (shorter === 0) return 0;
+  let shared = 0;
+  for (const word of words) if (previousWords.has(word)) shared += 1;
+  const similarity = shared / shorter;
+  return similarity >= LINE_PAIR_MIN_SHARED_WORDS ? similarity : 0;
+}
+
 /** Pairs the lines of one section across two versions, keeping removals in document order. */
 export function pairDraftBlocks(
   currentBlocks: readonly ReviewBlock[],
   previousBlocks: readonly ReviewBlock[],
 ): readonly DraftBlockPair[] {
   const pairs: DraftBlockPair[] = [];
-  for (const pair of alignVersions(currentBlocks, previousBlocks, () => true)) {
+  for (const pair of alignVersions(currentBlocks, previousBlocks, (block, previousBlock) =>
+    lineSimilarity(block.text, previousBlock.text),
+  )) {
     if (pair.current === null) {
       if (pair.previous === null) continue;
       pairs.push({
@@ -825,7 +864,7 @@ export function pairDraftSections(
   for (const pair of alignVersions(
     artifact.sections,
     previousArtifact?.sections ?? [],
-    (section, previousSection) => section.title === previousSection.title,
+    (section, previousSection) => (section.title === previousSection.title ? 1 : 0),
   )) {
     if (pair.current === null) {
       if (pair.previous === null) continue;
@@ -910,8 +949,15 @@ export function redlineShape(ops: readonly DiffOp[]): RedlineShape {
  */
 export function collapseFragmentedRedline(ops: readonly DiffOp[]): readonly DiffOp[] {
   const shape = redlineShape(ops);
-  if (shape.editRegions < REDLINE_MIN_EDIT_REGIONS || shape.retention >= REDLINE_MIN_RETENTION) {
-    return ops;
+  if (shape.retention >= REDLINE_MIN_RETENTION) return ops;
+  // A line that kept none of its words is a replacement even as one region: whitespace alone
+  // still aligns, and would otherwise interleave the old and new words.
+  if (shape.editRegions < REDLINE_MIN_EDIT_REGIONS) {
+    const rewritten =
+      shape.retention === 0 &&
+      ops.some((op) => op.kind === "delete") &&
+      ops.some((op) => op.kind === "insert");
+    if (!rewritten) return ops;
   }
 
   let previousText = "";
