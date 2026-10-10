@@ -22,6 +22,7 @@ const coverage: ReviewCoverageView = {
     },
     {
       requirementId: "req-2",
+      requirementText: "Experience in CI/CD and Infra as Code (Terraform)",
       status: "uncovered",
       basis: "judgement",
       evidence: [],
@@ -55,6 +56,17 @@ describe("review state coverage over the bridge", () => {
       value: { ...fixture, coverage: null },
     });
     await expect(loadReview(fixture)).resolves.toEqual({ ok: true, value: fixture });
+  });
+
+  it("rejects requirement text that is empty or carries control characters", async () => {
+    for (const requirementText of ["", "   ", "Terraform\u0007", "x".repeat(2_001)]) {
+      const assessments = coverage.assessments.map((assessment, index) =>
+        index === 0 ? { ...assessment, requirementText } : assessment,
+      );
+      await expect(
+        loadReview({ ...createFixtureReviewState(), coverage: { ...coverage, assessments } }),
+      ).resolves.toMatchObject({ ok: false });
+    }
   });
 
   it("rejects an unexpected key at every level", async () => {

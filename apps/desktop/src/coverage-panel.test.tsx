@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ReviewCoverageView } from "./coverage-contract.js";
-import { coverageSummaryLine, RequirementCoveragePanel } from "./coverage-panel.js";
+import {
+  blockOpening,
+  COVERAGE_BLOCK_OPENING_LENGTH,
+  coverageSummaryLine,
+  RequirementCoveragePanel,
+} from "./coverage-panel.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
@@ -37,6 +42,7 @@ const coverage: ReviewCoverageView = {
     },
     {
       requirementId: "req-judged",
+      requirementText: "Good knowledge of cloud services (Azure or AWS)",
       status: "uncovered",
       basis: "judgement",
       evidence: [],
@@ -112,9 +118,11 @@ describe("requirement coverage panel", () => {
       expect(html).toContain(`Assessed by ${basis}`);
     }
     for (const assessment of coverage.assessments) {
-      expect(html).toContain(assessment.requirementId);
+      // A row is named by its requirement, and by its id only when no text was recorded.
+      expect(html).toContain(assessment.requirementText ?? assessment.requirementId);
       expect(html).toContain(assessment.rationale);
     }
+    expect(html).not.toContain("req-judged");
   });
 
   it("renders the rows as a labelled list", () => {
@@ -129,7 +137,7 @@ describe("requirement coverage panel", () => {
     const html = render(coverage);
 
     expect(html).toContain(
-      `${knownTitle}<span class="coverage-block-id"> · ${knownBlock.id}</span>`,
+      `${knownTitle}<span class="coverage-block-opening"> · ${blockOpening(knownBlock.text)}</span>`,
     );
     expect(html).toContain('<button class="coverage-block coverage-block-link" type="button"');
     expect(html).toContain(", show in the draft</span>");
@@ -160,7 +168,7 @@ describe("coverage in the review workspace", () => {
       <ReviewWorkspace state={{ ...fixture, coverage }} onAction={() => undefined} />,
     );
     expect(html).toContain('aria-label="requirement coverage"');
-    expect(html).toContain("req-judged");
+    expect(html).toContain("Good knowledge of cloud services (Azure or AWS)");
   });
 
   it("hides the panel when coverage is null or absent", () => {
@@ -171,5 +179,20 @@ describe("coverage in the review workspace", () => {
       expect(html).not.toContain("requirement coverage");
       expect(html).not.toContain("Requirement coverage");
     }
+  });
+});
+
+describe("blockOpening", () => {
+  it("keeps a short block whole and flattens its whitespace", () => {
+    expect(blockOpening("Led the  payments\nmigration.")).toBe("Led the payments migration.");
+  });
+
+  it("cuts a long block at a word boundary with an ellipsis", () => {
+    const opening = blockOpening(
+      "Took strategic ownership of Osirisk, the bank's main operational risk application, a fifteen-year-old system.",
+    );
+    expect(opening.endsWith("…")).toBe(true);
+    expect(opening.length).toBeLessThanOrEqual(COVERAGE_BLOCK_OPENING_LENGTH + 1);
+    expect(opening).toBe("Took strategic ownership of Osirisk, the bank's main operational risk…");
   });
 });

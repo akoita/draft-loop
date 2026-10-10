@@ -1560,9 +1560,11 @@ Requirement coverage (round 1):
 ```
 
 The desktop review panel shows the same assessments in a **Requirement
-coverage** section, chosen the same way as `status`. It lists each requirement
-with a status badge, the basis, the rationale, and the cited draft blocks, which
-jump to the block when it is in the draft, under a summary such as
+coverage** section, chosen the same way as `status`. Unlike `status`, it names
+each requirement by the text the run recorded (its id only when none was
+recorded) and each cited block by its section and opening words. Each row has a
+status badge, the basis, the rationale, and the cited blocks, which jump to the
+block when it is in the draft, under a summary such as
 `3 judged · 2 satisfied · 1 not satisfied`. The section is hidden when no
 critic judgement was recorded for the round.
 

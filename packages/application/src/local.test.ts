@@ -2815,6 +2815,7 @@ describe("local application driver", () => {
       expect(
         await driver.readIndependentReview({ root, runId: "run-does-not-exist" }),
       ).toBeUndefined();
+      expect(await driver.readRunRequirements?.({ root })).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -2949,6 +2950,13 @@ describe("local application driver", () => {
       expect(await driver.readIndependentReview({ root, runId: snapshot.runId })).toEqual(
         await driver.readIndependentReview({ root }),
       );
+      // The requirements the run was judged against, read from the same context.
+      const requirements = await driver.readRunRequirements?.({ root, runId: snapshot.runId });
+      expect(requirements?.length).toBeGreaterThan(0);
+      for (const requirement of requirements ?? []) {
+        expect(Object.keys(requirement).sort()).toEqual(["id", "text"]);
+        expect(requirement.text.trim()).not.toBe("");
+      }
       // Operator prose about model choice is an auditor's field, not model input.
       expect(sentBodies.length).toBeGreaterThan(0);
       for (const body of sentBodies) {

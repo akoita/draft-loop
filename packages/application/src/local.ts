@@ -154,6 +154,7 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
@@ -2278,24 +2279,8 @@ export async function readRunIndependentReview(
   rootInput: string,
   runIdInput?: string,
 ): Promise<IndependentReviewRecord | undefined> {
-  const root = resolve(rootInput);
-  const config = await readWorkspace(root);
-  const runId = runIdInput ?? config.latestRunId;
-  if (runId === undefined) return undefined;
-  const storage = await openStorage(root);
-  try {
-    const runStore = createStorageRunStore(storage);
-    const snapshot = await runStore.loadRun(runId);
-    if (snapshot === undefined) return undefined;
-    const contextRecord = await storage.getContextSnapshot(snapshot.contextSnapshotId);
-    if (contextRecord === undefined) return undefined;
-    const context = contextSnapshotSchema.parse(
-      contextRecord.payload,
-    ) as unknown as ContextSnapshot;
-    return context.modelConfiguration.independentReview;
-  } finally {
-    await storage.close();
-  }
+  const context = await readRunContext(rootInput, runIdInput, { readWorkspace, openStorage });
+  return context?.modelConfiguration.independentReview;
 }
 export async function exportRun(
   rootInput: string,
@@ -3058,6 +3043,10 @@ export function createLocalApplicationDriver(
     recordReviewDecision: async (command) => recordReviewDecision(command),
     readIndependentReview: async (command) => readRunIndependentReview(command.root, command.runId),
     readRunWritingPolicy: async (command) => readRunWritingPolicy(command),
+    readRunRequirements: async ({ root, runId }) => {
+      const context = await readRunContext(root, runId, { readWorkspace, openStorage });
+      return context === undefined ? undefined : runRequirementTexts(context);
+    },
   };
   return withWorkspaceApplications(driver, { readWorkspace });
 }
