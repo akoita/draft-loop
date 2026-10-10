@@ -2091,7 +2091,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const clearRecentWorkspaces = activePort.clearRecentWorkspaces;
     return (
       <main className="boot-shell">
-        <section className="panel boot-panel">
+        <section className="panel boot-panel boot-panel-setup">
           <div className="boot-brand">
             <BrandMark />
             <span className="brand-name">DraftLoop</span>

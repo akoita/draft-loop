@@ -29,19 +29,21 @@ export function RecentWorkspacesView({
 }: RecentWorkspacesViewProps) {
   return (
     <section className="panel recent-workspaces" aria-labelledby="recent-workspaces-heading">
-      <h2 id="recent-workspaces-heading">Recent workspaces</h2>
-      <p>Open a local workspace again, or clear this list without deleting workspace files.</p>
-      {statusMessage === null ? null : <p role="status">{statusMessage}</p>}
-      {loadState === "loading" ? (
-        <p role="status">Loading recent workspaces…</p>
-      ) : errorMessage === null ? null : (
-        <p className="setup-blocker" role="alert">
-          {errorMessage}
-        </p>
-      )}
-      {loadState === "ready" && errorMessage === null && workspaces.length === 0 ? (
-        <p>No recent workspaces yet.</p>
-      ) : null}
+      <div className="recent-workspaces-intro">
+        <h2 id="recent-workspaces-heading">Recent workspaces</h2>
+        <p>Open a local workspace again, or clear this list without deleting workspace files.</p>
+        {statusMessage === null ? null : <p role="status">{statusMessage}</p>}
+        {loadState === "loading" ? (
+          <p role="status">Loading recent workspaces…</p>
+        ) : errorMessage === null ? null : (
+          <p className="setup-blocker" role="alert">
+            {errorMessage}
+          </p>
+        )}
+        {loadState === "ready" && errorMessage === null && workspaces.length === 0 ? (
+          <p>No recent workspaces yet.</p>
+        ) : null}
+      </div>
       {workspaces.length === 0 ? null : (
         <ul className="recent-workspace-list">
           {workspaces.map((workspace) => (
@@ -52,13 +54,15 @@ export function RecentWorkspacesView({
                 disabled={busy || openingId !== null}
                 onClick={() => onOpen(workspace.id)}
               >
-                <span>{workspace.name}</span>
-                {workspace.location === undefined ? null : (
-                  <span className="recent-workspace-location">in {workspace.location}</span>
-                )}
-                <time dateTime={workspace.lastOpenedAt}>
-                  Last opened {new Date(workspace.lastOpenedAt).toLocaleString()}
-                </time>
+                <span className="recent-workspace-name">{workspace.name}</span>
+                <span className="recent-workspace-meta">
+                  {workspace.location === undefined ? null : (
+                    <span className="recent-workspace-location">in {workspace.location}</span>
+                  )}
+                  <time dateTime={workspace.lastOpenedAt}>
+                    Last opened {new Date(workspace.lastOpenedAt).toLocaleString()}
+                  </time>
+                </span>
               </button>
             </li>
           ))}
