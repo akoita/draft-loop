@@ -322,12 +322,24 @@ function normalizeMistralError(error: unknown): ProviderAdapterError {
   return normalizeProviderError(mistralProvider, error);
 }
 
+function promptCacheKey(contextSnapshotId: string): string {
+  return `draft-loop-${createHash("sha256").update(contextSnapshotId, "utf8").digest("hex").slice(0, 32)}`;
+}
+
 function mistralUsage(value: unknown): unknown {
   if (!isRecord(value)) return undefined;
   const mapped: Record<string, unknown> = {};
   if (Object.hasOwn(value, "promptTokens")) mapped.input_tokens = value.promptTokens;
   if (Object.hasOwn(value, "completionTokens")) mapped.output_tokens = value.completionTokens;
   if (Object.hasOwn(value, "totalTokens")) mapped.total_tokens = value.totalTokens;
+  // The SDK passes prompt-token details through under the wire name.
+  const details = value.prompt_tokens_details ?? value.promptTokensDetails;
+  if (isRecord(details)) {
+    const cached = details.cached_tokens ?? details.cachedTokens;
+    if (cached !== undefined && cached !== null) {
+      mapped.input_tokens_details = { cached_tokens: cached };
+    }
+  }
   return mapped;
 }
 
@@ -377,6 +389,9 @@ export class MistralAdapter<
       ...(controls.reasoningEffort === undefined
         ? {}
         : { reasoningEffort: controls.reasoningEffort }),
+      // Requests built from one context share their leading prompt; one opaque
+      // key lets Mistral route them to the same prefix cache.
+      promptCacheKey: promptCacheKey(request.contextSnapshotId),
       n: 1,
       stream: true,
       responseFormat: {

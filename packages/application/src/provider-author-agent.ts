@@ -82,31 +82,36 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         revision,
         context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
       );
+      const { outputBudget, groundingGuide, ...turnInput } = authorPrompt.providerInput;
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
         systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        // Members that stay the same for every round of a run come first, so a
+        // provider's prompt-prefix cache can reuse them; per-call members follow.
         input: JSON.parse(
           JSON.stringify({
-            executionId,
-            runId,
-            round,
             context: deps.promptContext,
             retrievedEvidence,
             achievementPlan,
+            groundingGuide,
+            outputBudget,
+            runId,
+            round,
+            executionId,
             currentArtifact:
               currentArtifact === null
                 ? null
                 : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
             findings,
-            ...authorPrompt.providerInput,
+            ...turnInput,
           }),
         ) as JsonObject,
         outputSchema: authorArtifactProposalJsonSchemaForEvidence(
           retrievedEvidence.map(({ id }) => id),
         ) as JsonObject,
         outputName: "author_artifact_proposal",
-        maxOutputTokens: authorPrompt.providerInput.outputBudget.maxOutputTokens,
+        maxOutputTokens: outputBudget.maxOutputTokens,
         dataPolicy: deps.dataPolicy(deps.authorCompany),
         ...(signal === undefined ? {} : { signal }),
       };

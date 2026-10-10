@@ -173,6 +173,29 @@ function request(
 describe("provider author agent revision", () => {
   beforeEach(() => resetAuthorRevisionMemoryForTests());
 
+  it("puts the members that stay fixed across rounds ahead of per-call members", async () => {
+    const { author, requests } = agent([proposal(acceptedText), proposal(acceptedText)]);
+    await author.execute(request("run-cache"));
+    await author.execute({
+      ...request("run-cache", { currentArtifact: previousArtifact() }),
+      executionId: "run-cache-round-2",
+      round: 2,
+    });
+
+    const stable = [
+      "context",
+      "retrievedEvidence",
+      "achievementPlan",
+      "groundingGuide",
+      "outputBudget",
+    ];
+    expect(Object.keys(requests[0]?.input ?? {}).slice(0, stable.length)).toEqual(stable);
+    const [first, second] = requests.map((sent) => JSON.stringify(sent.input));
+    const sharedPrefix = first?.slice(0, first.indexOf('"runId"'));
+    expect(sharedPrefix?.length).toBeGreaterThan(0);
+    expect(second?.startsWith(sharedPrefix ?? "-")).toBe(true);
+  });
+
   it("sends a prior artifact with its reference table and resolution instruction", async () => {
     const { author, requests } = agent([proposal(acceptedText)]);
     await author.execute(request("run-reference-table", { currentArtifact: previousArtifact() }));

@@ -154,6 +154,48 @@ describe("provider-neutral model adapters", () => {
     expect(seenOptions?.signal).toBe(controller.signal);
   });
 
+  it("counts Anthropic prompt-cache reads and writes as input and prices them at cache rates", async () => {
+    const response = {
+      id: "msg-1",
+      content: [{ type: "text", text: '{"answer":"yes"}' }],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 10,
+        output_tokens: 7,
+        cache_read_input_tokens: 1000,
+        cache_creation_input_tokens: 200,
+      },
+    };
+    const create = () =>
+      Object.assign(Promise.resolve(response), {
+        withResponse: async () => ({ data: response, request_id: "anthropic-request-1" }),
+      }) as ReturnType<AnthropicClient["messages"]["create"]>;
+    const adapter = new AnthropicAdapter(
+      { messages: { create } },
+      {
+        configuredModel: model,
+        pricing: {
+          inputUsdPerMillionTokens: 1,
+          outputUsdPerMillionTokens: 2,
+          cachedInputUsdPerMillionTokens: 0.1,
+          cacheWriteInputUsdPerMillionTokens: 1.25,
+        },
+      },
+    );
+
+    const result = await adapter.execute(request());
+
+    expect(result.usage).toEqual({
+      inputTokens: 1210,
+      outputTokens: 7,
+      totalTokens: 1217,
+      cachedInputTokens: 1000,
+      cacheWriteInputTokens: 200,
+    });
+    expect(result.cost.estimatedUsd).toBeCloseTo((10 + 100 + 250 + 14) / 1_000_000, 12);
+  });
+
   it("normalizes the canonical candidate profile schema in the Anthropic request payload", async () => {
     type Params = Parameters<AnthropicClient["messages"]["create"]>[0];
     const response = {

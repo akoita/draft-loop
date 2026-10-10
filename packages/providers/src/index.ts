@@ -7,6 +7,7 @@ import {
   classifyAnthropicBillingError,
 } from "./anthropic-billing-error.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
+import { anthropicUsage } from "./anthropic-usage.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 
@@ -584,6 +585,7 @@ function anthropicMessageData(value: unknown): {
   readonly content: readonly { readonly type: string; readonly text?: string }[];
   readonly stop_reason: unknown;
   readonly usage: { readonly input_tokens: number; readonly output_tokens: number };
+  readonly rawUsage: unknown;
 } {
   if (typeof value !== "object" || value === null) {
     throw new ProviderAdapterError(
@@ -634,6 +636,7 @@ function anthropicMessageData(value: unknown): {
     content,
     stop_reason: response.stop_reason,
     usage: { input_tokens: usageValue.input_tokens, output_tokens: usageValue.output_tokens },
+    rawUsage: response.usage,
   };
 }
 
@@ -740,11 +743,7 @@ export class AnthropicAdapter<
           );
         }
         const output = parseJson<Output>(this.provider, textBlock.text, "content");
-        const accounting = usage(
-          message.usage.input_tokens,
-          message.usage.output_tokens,
-          this.pricing,
-        );
+        const accounting = accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing);
         const elapsedMs = Date.now() - startTime;
         request.onProgress?.({
           stage: "completed",

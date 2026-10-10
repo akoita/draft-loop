@@ -1168,6 +1168,41 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       });
     },
   );
+
+  it("records the prompt-cache tokens Claude Code reports as part of the input", async () => {
+    const runner = vi.fn<UserSessionProcessRunner>(async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "claude-session",
+        structured_output: { answer: "yes" },
+        usage: {
+          input_tokens: 3,
+          output_tokens: 5,
+          cache_read_input_tokens: 4000,
+          cache_creation_input_tokens: 600,
+        },
+        permission_denials: [],
+      }),
+      stderr: "",
+    }));
+    const adapter = new AnthropicClaudeUserSessionAdapter({
+      configuredModel: anthropicModel,
+      runner,
+    });
+
+    const response = await adapter.execute(request(anthropicModel));
+    expect(response.usage).toEqual({
+      inputTokens: 4603,
+      outputTokens: 5,
+      totalTokens: 4608,
+      cachedInputTokens: 4000,
+      cacheWriteInputTokens: 600,
+    });
+    expect(response.cost).toEqual({ estimatedUsd: null });
+  });
 });
 
 describe("AnthropicClaudeUserSessionAdapter effort", () => {
