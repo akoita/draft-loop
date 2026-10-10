@@ -18,6 +18,10 @@
     "./application": {
       "types": "./src/application.ts",
       "import": "./src/application.ts"
+    },
+    "./candidate-evidence-kind": {
+      "types": "./src/candidate-evidence-kind.ts",
+      "import": "./src/candidate-evidence-kind.ts"
     }
   },
   "files": [

@@ -11,6 +11,12 @@ import { decodeHtmlEntities, markHtmlHeadings } from "./html-text.js";
 import { extractJobPostingText } from "./job-posting-json-ld.js";
 import { PdfTextLayoutCollector } from "./pdf-text-layout.js";
 
+export {
+  type CandidateEvidenceKindDetection,
+  type CandidateEvidenceKindInput,
+  detectCandidateEvidenceKind,
+} from "./candidate-evidence-kind-detection.js";
+
 export const supportedMediaTypes = [
   "text/plain",
   "text/markdown",
