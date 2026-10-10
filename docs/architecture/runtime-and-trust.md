@@ -272,6 +272,20 @@ request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain
 artifact/template versions, timestamp, format, MIME type, and checksum.
 
+Every provider call is stateless: each round resends the system prompt and the
+full input, and no provider-side conversation or session is reused. Author and
+critic inputs list the members that stay fixed for a run first (context,
+retrieved evidence, achievement plan, and the author's grounding guide and
+output budget), then the per-call members (run, round, execution, artifact, and
+findings). Providers with automatic prefix caching (OpenAI, Mistral, Gemini,
+DeepInfra, and Claude Code's own caching) can then reuse that shared prefix.
+Mistral requests carry an opaque prompt-cache key hashed from the context
+snapshot ID. The Anthropic API adapter does not mark cache breakpoints yet.
+
+Recorded input tokens count every input token a call carried, including
+prompt-cache reads and writes. Adapters that report them also return the
+cached and cache-write counts; run history persists only the totals.
+
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not
 integrated or outcome-validated merely because contracts and tests exist; the

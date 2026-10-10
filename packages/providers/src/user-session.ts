@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import type { ModelSelection } from "@draft-loop/domain";
 
+import { anthropicUsage } from "./anthropic-usage.js";
 import {
   claudeApiErrorCauseDiagnostics,
   claudeOAuthRefreshContentionDiagnosticCode,
@@ -17,8 +18,10 @@ import {
   type JsonValue,
   type ModelRequest,
   type ModelResponse,
+  type ModelUsage,
   ProviderAdapterError,
 } from "./index.js";
+import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveClaudeSessionProfileControls } from "./session-profile-controls.js";
 
 export { codexSessionModelUnsupportedDiagnosticCode } from "./codex-session-model-error.js";
@@ -769,8 +772,7 @@ async function parseClaudeResult<Output extends JsonValue>(
   captureParent: string | undefined,
 ): Promise<{
   readonly output: Output;
-  readonly inputTokens: number;
-  readonly outputTokens: number;
+  readonly usage: ModelUsage;
   readonly sessionId: string;
 }> {
   const response = parseJson<JsonValue>("anthropic", text, "stdout") as ClaudeJsonResult;
@@ -819,8 +821,7 @@ async function parseClaudeResult<Output extends JsonValue>(
   }
   return {
     output: structuredOutput<Output>("anthropic", response.structured_output, "structured_output"),
-    inputTokens: usage.input_tokens,
-    outputTokens: usage.output_tokens,
+    usage: accountOpenAIUsage(anthropicUsage(usage), undefined).usage,
     sessionId: response.session_id,
   };
 }
@@ -952,11 +953,10 @@ export class AnthropicClaudeUserSessionAdapter<
           result.stdout,
           this.options.localClaudeCategoryCaptureParent,
         );
-        const totalTokens = parsed.inputTokens + parsed.outputTokens;
         request.onProgress?.({
           stage: "completed",
           elapsedMs: Date.now() - startTime,
-          tokensObserved: totalTokens,
+          tokensObserved: parsed.usage.totalTokens,
         });
         return {
           output: parsed.output,
@@ -966,11 +966,7 @@ export class AnthropicClaudeUserSessionAdapter<
           modelId: request.model.modelId,
           providerRequestId: parsed.sessionId,
           structuredOutputSha256: responseHash(parsed.output),
-          usage: {
-            inputTokens: parsed.inputTokens,
-            outputTokens: parsed.outputTokens,
-            totalTokens,
-          },
+          usage: parsed.usage,
           cost: { estimatedUsd: null },
         };
       });

@@ -178,6 +178,20 @@ describe("Mistral adapter", () => {
     expect(response.usage).toMatchObject({ inputTokens: 120, outputTokens: 30, totalTokens: 150 });
   });
 
+  it("records cached prompt tokens and keys the prefix cache by context, not content", async () => {
+    const usage = { ...finalUsage, prompt_tokens_details: { cached_tokens: 64 } };
+    const { adapter, stream } = harness(async () => completion({ usage }));
+    const response = await adapter.execute(request());
+    expect(response.usage).toMatchObject({ inputTokens: 120, cachedInputTokens: 64 });
+
+    await adapter.execute(request({ input: { question: "another round" } }));
+    const [first, second] = stream.mock.calls.map(([sent]) => sent.promptCacheKey);
+    expect(second).toBe(first);
+    expect(first).not.toContain("snapshot-mistral-1");
+    await adapter.execute(request({ contextSnapshotId: "snapshot-mistral-2" }));
+    expect(stream.mock.calls[2]?.[0].promptCacheKey).not.toBe(first);
+  });
+
   it("prices usage only when pricing is supplied", async () => {
     const { adapter } = harness(async () => completion(), {
       configuredModel: selection(),
@@ -199,6 +213,7 @@ describe("Mistral adapter", () => {
         { role: "user", content: JSON.stringify({ question: secretMarker }) },
       ],
       maxTokens: 2048,
+      promptCacheKey: expect.stringMatching(/^draft-loop-[0-9a-f]{32}$/u),
       n: 1,
       stream: true,
       responseFormat: {
