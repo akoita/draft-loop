@@ -5250,6 +5250,19 @@ input[type="checkbox"] {
   flex: 0 0 auto;
 }
 
+/* The setup panel always fits the window. The form keeps its height and the
+   recent-workspace list takes what is left, scrolling inside its card. */
+.boot-panel-setup {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--space-8));
+  overflow-y: auto;
+}
+
+.boot-panel-setup > * {
+  flex-shrink: 0;
+}
+
 .recent-workspaces {
   display: grid;
   gap: var(--space-3);
@@ -5258,6 +5271,36 @@ input[type="checkbox"] {
   border-radius: var(--radius-md);
   padding: var(--space-4);
   background: var(--surface-2);
+}
+
+/* Only the list gives up height when the window is short; the card around it
+   keeps its heading and clear button in view. */
+.boot-panel-setup > .recent-workspaces {
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.recent-workspaces:has(> .recent-workspace-list) {
+  grid-template-rows: auto minmax(0, auto) auto;
+}
+
+/* Below this height the form alone nearly fills the window, so squeezing the
+   list further would leave a sliver. Keep a few entries and let the page
+   scroll instead. */
+@media (max-height: 56rem) {
+  .boot-panel-setup {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .recent-workspace-list {
+    max-height: 9.5rem;
+  }
+}
+
+.recent-workspaces-intro {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .recent-workspaces h2,
@@ -5270,7 +5313,7 @@ input[type="checkbox"] {
   font-size: var(--text-base);
 }
 
-.recent-workspaces > p {
+.recent-workspaces-intro > p {
   color: var(--text-3);
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -5278,30 +5321,44 @@ input[type="checkbox"] {
 
 .recent-workspace-list {
   display: grid;
+  align-content: start;
   gap: var(--space-2);
   margin: 0;
   padding: 0;
+  overflow-y: auto;
   list-style: none;
 }
 
 .recent-workspace-open {
   display: grid;
+  justify-content: stretch;
   justify-items: start;
+  gap: 2px;
   min-width: 0;
   width: 100%;
+  padding-block: var(--space-2);
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: left;
 }
 
-.recent-workspace-location {
-  color: var(--text-3);
-  font-size: var(--text-xs);
+.recent-workspace-name {
+  color: var(--text-1);
+  font-size: var(--text-sm);
 }
 
-.recent-workspace-open time {
+.recent-workspace-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
   color: var(--text-3);
   font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.recent-workspace-location + time::before {
+  content: "·";
+  margin-right: var(--space-2);
 }
 
 .setup-side {
