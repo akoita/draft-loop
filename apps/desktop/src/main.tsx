@@ -9,7 +9,11 @@ import {
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
-import type { ApplicationSummaryView } from "./application-contract.js";
+import type {
+  ApplicationModelProfilesView,
+  ApplicationSummaryView,
+} from "./application-contract.js";
+import { workspacePairSides, workspaceScopedState } from "./application-model-pair.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
 import {
   type CredentialProvider,
@@ -50,6 +54,7 @@ import {
   modelProfileNotSupportedMessage,
   modelProfileRouteIsSupported,
   modelProfileStartDisabledReason,
+  modelProfileSupportForContext,
   modelProfileSupportUnavailableMessage,
   modelProfileWarning,
   profileReferencesMatchPreflight,
@@ -933,6 +938,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const view = navigation.view;
   const openPage = (to: WorkspaceView) => setNavigation((current) => navigateTo(current, to));
   const [loadedApplicationId, setLoadedApplicationId] = useState<string | null>(null);
+  // Each application's own model pair, as last read; `null` while it uses the workspace's.
+  const [applicationPairs, setApplicationPairs] = useState<
+    Readonly<Record<string, ApplicationModelProfilesView | null>>
+  >({});
+  const rememberApplicationPair = (application: ApplicationSummaryView) =>
+    setApplicationPairs((current) => ({ ...current, [application.id]: application.modelProfiles }));
   const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
@@ -1195,11 +1206,28 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     knowledgePending,
     profilePendingForActiveWorkspace,
   );
+  const loadedApplicationPair =
+    loadedApplicationId === null ? null : (applicationPairs[loadedApplicationId] ?? null);
+  const readyModelProfileSupport =
+    state === null
+      ? null
+      : modelProfileSupportForContext(modelProfileSupport, state.workspaceId, workspaceGeneration);
+  const contextualModelProfileSupport =
+    readyModelProfileSupport?.status === "ready" ? readyModelProfileSupport.result : undefined;
+  // A loaded application with its own pair runs with that pair, whatever the workspace applied.
+  const runModelProfiles: AppliedModelProfileSelection | null =
+    loadedApplicationPair !== null && state !== null
+      ? {
+          workspaceId: state.workspaceId,
+          generation: workspaceGeneration,
+          refs: loadedApplicationPair,
+        }
+      : selectedModelProfiles;
   const modelProfileStartReason =
-    selectedModelProfiles === null || state === null
+    runModelProfiles === null || state === null
       ? null
       : modelProfileStartDisabledReason(
-          selectedModelProfiles,
+          runModelProfiles,
           state.workspaceId,
           workspaceGeneration,
           modelProfileSupport,
@@ -1316,7 +1344,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const withCandidateProfile = reviewActionWithCandidateProfile(action, selectedCandidateProfile);
     const dispatchedAction = reviewActionWithModelProfiles(
       withCandidateProfile,
-      selectedModelProfiles?.refs ?? null,
+      runModelProfiles?.refs ?? null,
     );
     setImportError(null);
     reviewActionDispatcher.dispatch(dispatchedAction, async () => {
@@ -1634,10 +1662,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       });
   };
 
-  const openApplication = (application: ApplicationSummaryView) =>
+  const openApplication = (application: ApplicationSummaryView) => {
+    rememberApplicationPair(application);
     showApplication(application.id, (current) =>
       navigateTo(current, applicationView(application.id, application.name)),
     );
+  };
 
   /** Returns to the previous page; an application no longer loaded is loaded again. */
   const goBackPage = () => {
@@ -1657,6 +1687,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     if (state === null) return;
     const workspaceId = state.workspaceId;
     const generation = workspaceGeneration;
+    rememberApplicationPair(application);
     activePort.selectApplication?.(application.id);
     void activePort
       .load()
@@ -1698,7 +1729,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         current,
         reviewActionWithModelProfiles(
           { type: "start", candidateProfile: profile },
-          selectedModelProfiles?.refs ?? null,
+          runModelProfiles?.refs ?? null,
         ),
       );
       if (!isCurrentWorkspaceContext(workspaceId, generation) || next.workspaceId !== workspaceId) {
@@ -1719,6 +1750,47 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       throw reason;
     }
   };
+
+  /**
+   * Sets or clears the new application's own pair, then reloads the window's state so the
+   * provider readiness and transmission confirmation follow the pair. Rejects with the message.
+   */
+  const setNewApplicationModels = async (
+    application: ApplicationSummaryView,
+    pair: ApplicationModelProfilesView | null,
+  ): Promise<ApplicationSummaryView> => {
+    const setModels = activePort.setApplicationModels;
+    if (state === null || setModels === undefined) return application;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    const updated = await setModels(workspaceId, application.id, pair);
+    rememberApplicationPair(updated);
+    try {
+      const loaded = await activePort.load();
+      if (
+        isCurrentWorkspaceContext(workspaceId, generation) &&
+        loaded.workspaceId === workspaceId
+      ) {
+        setState(loaded);
+      }
+    } catch (reason: unknown) {
+      if (enterWorkspaceRecovery(workspaceId, generation, reason)) return updated;
+    }
+    return updated;
+  };
+
+  /** The pair the next run uses: the loaded application's own, or the workspace's. */
+  const runPairSummary = (current: DesktopReviewState) => (
+    <WorkspaceModelSummary
+      title={
+        loadedApplicationPair === null ? "Configured model pair" : "Model pair for this application"
+      }
+      author={current.providerTransmissionPreflight.author}
+      critic={current.providerTransmissionPreflight.critic}
+      appliedProfiles={runModelProfiles?.refs ?? null}
+      profileWarning={loadedApplicationPair === null ? modelProfileWarningText : null}
+    />
+  );
 
   const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
     const settings = workspaceModelSettingsDraft(workspace);
@@ -1745,7 +1817,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const openModelSettings = () => {
     if (state === null || activePort.configureModels === undefined || modelSettingsDisabled) return;
     try {
-      prepareModelEditorDraft(state);
+      prepareModelEditorDraft(
+        workspaceScopedState(state, loadedApplicationPair, selectedModelProfiles?.refs ?? null),
+      );
       setModelEditorFromCreation(false);
       setEditingModels(true);
     } catch {
@@ -2114,8 +2188,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         </p>
         <WorkspaceModelSummary
           title="Current configured model pair"
-          author={state.providerTransmissionPreflight.author}
-          critic={state.providerTransmissionPreflight.critic}
+          {...workspacePairSides(state, loadedApplicationPair, selectedModelProfiles?.refs ?? null)}
         />
         <fieldset className="model-editor-mode">
           <legend>How to choose models</legend>
@@ -2335,13 +2408,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     <>
       {knowledgePanel}
       {retrievalPanel}
-      <WorkspaceModelSummary
-        title="Configured model pair"
-        author={state.providerTransmissionPreflight.author}
-        critic={state.providerTransmissionPreflight.critic}
-        appliedProfiles={selectedModelProfiles?.refs ?? null}
-        profileWarning={modelProfileWarningText}
-      />
+      {runPairSummary(state)}
       {profilePanel}
     </>
   );
@@ -2543,6 +2610,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 onSelectProfile={onCandidateProfileSelectionChange}
                 author={state.providerTransmissionPreflight.author}
                 critic={state.providerTransmissionPreflight.critic}
+                applicationPair={loadedApplicationPair}
                 writingPolicyStatus={state.setup.writingPolicyStatus}
                 writingPolicyVersion={state.setup.writingPolicy?.version ?? null}
                 disabled={modelSettingsDisabled}
@@ -2598,8 +2666,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             <>
               <WorkspaceModelSummary
                 title="Configured model pair"
-                author={state.providerTransmissionPreflight.author}
-                critic={state.providerTransmissionPreflight.critic}
+                {...workspacePairSides(
+                  state,
+                  loadedApplicationPair,
+                  selectedModelProfiles?.refs ?? null,
+                )}
                 appliedProfiles={selectedModelProfiles?.refs ?? null}
                 profileWarning={modelProfileWarningText}
               />
@@ -2690,15 +2761,18 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           selectedProfile={selectedCandidateProfile}
           onSelectProfile={onCandidateProfileSelectionChange}
           onManageProfile={openProfileScreen}
-          modelPair={
-            <WorkspaceModelSummary
-              title="Configured model pair"
-              author={state.providerTransmissionPreflight.author}
-              critic={state.providerTransmissionPreflight.critic}
-              appliedProfiles={selectedModelProfiles?.refs ?? null}
-              profileWarning={modelProfileWarningText}
-            />
-          }
+          modelPair={runPairSummary(state)}
+          {...(activePort.setApplicationModels === undefined
+            ? {}
+            : { setApplicationModels: setNewApplicationModels })}
+          workspacePair={workspacePairSides(
+            state,
+            loadedApplicationPair,
+            selectedModelProfiles?.refs ?? null,
+          )}
+          {...(contextualModelProfileSupport === undefined
+            ? {}
+            : { modelProfileSupport: contextualModelProfileSupport })}
           providerAuthentication={providerAuthenticationProps}
           preflight={state.providerTransmissionPreflight}
           startDisabledReason={

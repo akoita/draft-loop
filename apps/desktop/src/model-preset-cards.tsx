@@ -1,4 +1,6 @@
 import type { ModelProfilePreset } from "@draft-loop/application/model-profile-catalog";
+import type { ReactNode } from "react";
+
 import type { ModelProfileSupportResult } from "./bridge.js";
 import {
   modelProfileEntryForReference,
@@ -22,6 +24,11 @@ interface ModelPresetCardsProps {
   readonly disabled: boolean;
   readonly support: ModelProfileSupportResult | undefined;
   readonly onSelect: (value: string) => void;
+  readonly legend?: string;
+  /** A card shown before the presets, in the same radio group. */
+  readonly leading?: ReactNode;
+  /** Whether the last card lets the person pick the writer and reviewer themselves. */
+  readonly includeCustom?: boolean;
 }
 
 function PresetCard({
@@ -97,11 +104,15 @@ export function ModelPresetCards({
   disabled,
   support,
   onSelect,
+  legend = "Choose a model pair",
+  leading = null,
+  includeCustom = true,
 }: ModelPresetCardsProps) {
   return (
     <fieldset className="model-preset-cards">
-      <legend>Choose a model pair</legend>
+      <legend>{legend}</legend>
       <div className="model-preset-card-grid">
+        {leading}
         {modelProfilePresets.map((preset) => (
           <PresetCard
             key={preset.id}
@@ -113,18 +124,20 @@ export function ModelPresetCards({
             onSelect={onSelect}
           />
         ))}
-        <label className="model-preset-card model-preset-card-custom">
-          <input
-            type="radio"
-            name={groupName}
-            value={customPresetValue}
-            checked={checkedValue === customPresetValue}
-            disabled={disabled}
-            onChange={() => onSelect(customPresetValue)}
-          />
-          <span className="model-preset-card-title">Custom pair</span>
-          <span className="model-preset-card-line">Pick the writer and reviewer yourself.</span>
-        </label>
+        {includeCustom ? (
+          <label className="model-preset-card model-preset-card-custom">
+            <input
+              type="radio"
+              name={groupName}
+              value={customPresetValue}
+              checked={checkedValue === customPresetValue}
+              disabled={disabled}
+              onChange={() => onSelect(customPresetValue)}
+            />
+            <span className="model-preset-card-title">Custom pair</span>
+            <span className="model-preset-card-line">Pick the writer and reviewer yourself.</span>
+          </label>
+        ) : null}
       </div>
     </fieldset>
   );

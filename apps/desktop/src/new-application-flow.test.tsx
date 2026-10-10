@@ -268,6 +268,19 @@ describe("start step", () => {
     expect(loading).not.toMatch(/<button[^>]*disabled=""[^>]*>Start review/u);
   });
 
+  it("shows the pair choice between the model pair and its readiness", () => {
+    const html = renderToStaticMarkup(
+      <StartStep
+        {...props}
+        modelPair={<p>Pair summary</p>}
+        modelPairChoice={<p>Pair choice</p>}
+        providerAuthentication={<p>Pair readiness</p>}
+      />,
+    );
+    expect(html.indexOf("Pair summary")).toBeLessThan(html.indexOf("Pair choice"));
+    expect(html.indexOf("Pair choice")).toBeLessThan(html.indexOf("Pair readiness"));
+  });
+
   it("shows an outside blocker, a failure and the starting state", () => {
     const blocked = renderToStaticMarkup(
       <StartStep

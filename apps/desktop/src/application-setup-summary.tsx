@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import type { ApplicationModelProfilesView } from "./application-contract.js";
+import { applicationPairLabel } from "./application-model-pair.js";
 import {
   type CareerEvidenceCapabilities,
   type CareerEvidenceStatus,
@@ -28,6 +30,8 @@ export interface ApplicationSetupSummaryViewProps {
   readonly selectedProfile: CandidateProfileSelection | null;
   readonly author: ProviderTransmissionIdentity;
   readonly critic: ProviderTransmissionIdentity;
+  /** The application's own model pair; `author` and `critic` are then that pair's. */
+  readonly applicationPair?: ApplicationModelProfilesView | null;
   readonly writingPolicyStatus: WritingPolicySummaryStatus;
   readonly writingPolicyVersion: string | null;
   readonly disabled: boolean;
@@ -90,6 +94,7 @@ export function ApplicationSetupSummaryView({
   selectedProfile,
   author,
   critic,
+  applicationPair = null,
   writingPolicyStatus,
   writingPolicyVersion,
   disabled,
@@ -171,7 +176,7 @@ export function ApplicationSetupSummaryView({
           chip: writingPolicyStatus === "unavailable" ? "Check" : "Set",
           tone: settingsTone,
         }}
-        headline={`Writer ${author.model} · Reviewer ${critic.model}`}
+        headline={`${applicationPair === null ? "" : "This application: "}Writer ${author.model} · Reviewer ${critic.model}`}
         action={
           <button
             className="button button-outline"
@@ -183,6 +188,12 @@ export function ApplicationSetupSummaryView({
           </button>
         }
       >
+        {applicationPair === null ? null : (
+          <p className="home-card-copy">
+            {applicationPairLabel(applicationPair)}, chosen for this application. Other applications
+            use the workspace&apos;s pair.
+          </p>
+        )}
         <p className="home-card-copy">
           {writingPolicyText(writingPolicyStatus, writingPolicyVersion)}
         </p>

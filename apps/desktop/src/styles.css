@@ -6566,3 +6566,25 @@ input[type="checkbox"] {
 .application-summary .home-card h2 {
   font-size: var(--text-base);
 }
+
+.flow-model-pair {
+  min-width: 0;
+  margin: 0 0 var(--space-3);
+}
+
+.flow-model-pair > summary {
+  width: fit-content;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.flow-model-pair > summary:hover {
+  color: var(--text-1);
+}
+
+.flow-model-pair > p {
+  margin: var(--space-2) 0 var(--space-3);
+}
