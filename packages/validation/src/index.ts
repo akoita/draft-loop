@@ -277,6 +277,34 @@ function addSectionOrderFinding(
   }
 }
 
+const structuredFieldJoiningWords = new Set([
+  "and",
+  "of",
+  "for",
+  "the",
+  "to",
+  "in",
+  "at",
+  "de",
+  "et",
+]);
+
+/**
+ * A short name-like claim, such as a title, an employer, a date range or a named skill. These
+ * repeat legitimately (a headline naming the title of a role, one employer over two roles), so a
+ * repeat is not duplicate content. Statements with lowercase words still are.
+ */
+function isStructuredFieldClaim(value: string): boolean {
+  const words = value.normalize("NFKC").match(/[\p{L}\p{N}][\p{L}\p{N}.+#'’&-]*/gu) ?? [];
+  return (
+    words.length > 0 &&
+    words.length <= 6 &&
+    words.every(
+      (word) => /^[\p{Lu}\p{N}]/u.test(word) || structuredFieldJoiningWords.has(word.toLowerCase()),
+    )
+  );
+}
+
 function wordCount(value: string): number {
   const trimmed = value.trim();
   return trimmed === "" ? 0 : trimmed.split(/\s+/u).length;
@@ -483,7 +511,7 @@ export function validateDraftArtifact(
   const seenClaims = new Set<string>();
   for (const claim of artifact.claims) {
     const normalized = normalizeText(claim.text);
-    if (seenClaims.has(normalized)) {
+    if (seenClaims.has(normalized) && !isStructuredFieldClaim(claim.text)) {
       addIssue(issues, {
         code: "duplicate-content",
         category: "quality",

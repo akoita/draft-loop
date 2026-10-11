@@ -412,6 +412,32 @@ describe("deterministic artifact validation", () => {
     expect(result.issues[2]).toMatchObject({ requirementId: "requirement-docker" });
   });
 
+  it.each([
+    "Senior Software Engineer",
+    "Senior Software Engineer and Tech Lead",
+    "Example Ledger",
+    "2021 to 2024",
+    "Solidity",
+  ])("does not warn when the structured field %s repeats in another block", (field) => {
+    const artifact = artifactWithClaim(field, [evidence(field)]);
+    artifact.sections[0]?.blocks.push({
+      id: "block-headline",
+      type: "paragraph",
+      text: `${field} | Distributed systems`,
+      claimIds: ["claim-2"],
+    });
+    const firstClaim = artifact.claims[0];
+    if (firstClaim === undefined) throw new Error("the fixture must contain a claim");
+    artifact.claims.push({ ...firstClaim, id: "claim-2", text: field });
+
+    const result = validateDraftArtifact(
+      artifact,
+      context({ requirements: [], outputConstraints: { requiredSections: [] } }),
+    );
+
+    expect(result.issues).toEqual([]);
+  });
+
   it("warns about a phrase repeated back to back inside one block", () => {
     const text = "Owned the API and the Keycloak stack; the API and the Keycloak stack.";
     const result = validateDraftArtifact(

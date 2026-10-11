@@ -134,12 +134,8 @@ describe("job-tailored CV layout", () => {
       outputConstraints: { requiredSections: ["summary", "experience"] },
     });
     expect(result.issues.filter(({ severity }) => severity === "error")).toEqual([]);
-    // The headline repeats the role title from the experience heading. Today that is one
-    // "duplicate claim content" warning, never an error.
-    expect(
-      result.issues
-        .filter(({ code }) => code === "duplicate-content")
-        .map(({ severity, message }) => [severity, message]),
-    ).toEqual([["warning", "duplicate claim content"]]);
+    // The headline repeats the role title from the experience heading. Short title-like
+    // claims may repeat, so that is not a duplicate-content warning.
+    expect(result.issues.filter(({ code }) => code === "duplicate-content")).toEqual([]);
   });
 });
