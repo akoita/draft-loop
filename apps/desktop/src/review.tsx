@@ -48,6 +48,7 @@ import {
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
+import { sendVerdict } from "./send-verdict.js";
 import {
   LatestRequirementsBriefView,
   StartRequirementsSourceView,
@@ -1212,6 +1213,15 @@ export function ReviewWorkspace({
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const runInProgress = reviewInProgress(state);
   const runFinished = reviewFinished(state);
+  // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
+  const verdict =
+    hasArtifact &&
+    state.reviewComplete &&
+    !runInProgress &&
+    !roundLimitRecovery &&
+    state.approval !== "approved"
+      ? sendVerdict({ blocking: blockingFindings, warnings, readiness: approvalReadiness })
+      : null;
   const runStatusLine = runInProgress
     ? inProgressStatus(state)
     : !state.reviewComplete
@@ -3796,6 +3806,15 @@ export function ReviewWorkspace({
               {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
               {validationLabel}
             </p>
+            {verdict === null ? null : (
+              <p
+                className={`send-verdict ${verdict.ready ? "safe-copy" : "warning-copy"}`}
+                role="status"
+              >
+                <strong>{verdict.headline}</strong>
+                {verdict.reasons.length === 0 ? null : `: ${verdict.reasons.join("; ")}.`}
+              </p>
+            )}
             <div id="approval-gate-details" hidden={gateCollapsed}>
               {!hasArtifact ? (
                 <p className="warning-copy">
