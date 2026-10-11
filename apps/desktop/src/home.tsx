@@ -84,23 +84,28 @@ interface WorkspaceLocationProps {
   readonly asHeading?: boolean;
 }
 
+/** "← Previous page": returns to the page the person came from. */
+export function WorkspaceBackButton({ back }: { readonly back: WorkspaceBack }) {
+  return (
+    <button
+      className="button button-toolbar home-back"
+      type="button"
+      title={`Back to ${back.label}`}
+      aria-label={`Back to ${back.label}`}
+      onClick={back.onBack}
+    >
+      <span aria-hidden="true">←</span> <span className="home-back-label">{back.label}</span>
+    </button>
+  );
+}
+
 /** "← Previous page / Current screen": the way back, and the screen's label. */
 export function WorkspaceLocation({ current, back, asHeading = false }: WorkspaceLocationProps) {
   const ref = useRef<HTMLElement>(null);
   useFocusOnOpen(ref);
   return (
     <nav ref={ref} className="home-location" aria-label="Workspace location" tabIndex={-1}>
-      {back === undefined ? null : (
-        <button
-          className="button button-quiet home-back"
-          type="button"
-          title={`Back to ${back.label}`}
-          aria-label={`Back to ${back.label}`}
-          onClick={back.onBack}
-        >
-          <span aria-hidden="true">←</span> <span className="home-back-label">{back.label}</span>
-        </button>
-      )}
+      {back === undefined ? null : <WorkspaceBackButton back={back} />}
       {asHeading ? (
         <h1 className="home-location-current" title={current} aria-current="page">
           {current}

@@ -332,8 +332,8 @@ flow, described next.
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
 from its own reviewed brief, or from its own job text when it has none.
-Back beside its name returns to the previous page, and the flow strip above the
-header opens either career page. Focus moves to the screen's location line when
+The row above the run header starts with Back, which returns to the previous
+page, followed by the flow strip, which opens either career page. Focus moves to the screen's location line when
 a screen opens, so the change is announced.
 
 Before a run, the screen keeps only what starting a review needs:
