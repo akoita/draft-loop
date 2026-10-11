@@ -791,14 +791,54 @@ describe("durable orchestration", () => {
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
   });
 
-  it("normalizes and persists output-token budget failures for a safe retry", async () => {
+  it("retries the first output-token budget failure automatically with concise feedback", async () => {
+    let attempts = 0;
+    const authorRequests: unknown[] = [];
+    const { engine, author } = engineFixture({
+      author: async (request) => {
+        authorRequests.push(request);
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("private provider output-token details"), {
+            code: "invalid-response",
+            retryable: false,
+            failureStage: "output-token-budget-exceeded",
+            diagnostics: [{ code: "output_token_limit_reached", path: "response" }],
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const completed = await engine.start(request());
+
+    expect(completed.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(authorRequests[0]).not.toHaveProperty("retryFeedback");
+    expect(authorRequests[1]).toMatchObject({
+      retryFeedback: {
+        failureCode: "invalid-response",
+        failureStage: "output-token-budget-exceeded",
+        diagnostics: [{ code: "output_token_limit_reached", path: "response" }],
+      },
+    });
+    expect(completed.executionHistory).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ step: "author", status: "failed", attempt: 1 }),
+        expect.objectContaining({ step: "author", status: "completed", attempt: 2 }),
+      ]),
+    );
+    expect(JSON.stringify(completed)).not.toContain("private provider output-token details");
+  });
+
+  it("normalizes and persists a repeated output-token budget failure for a safe retry", async () => {
     let attempts = 0;
     const authorRequests: unknown[] = [];
     const { engine, author, store } = engineFixture({
       author: async (request) => {
         authorRequests.push(request);
         attempts += 1;
-        if (attempts === 1) {
+        if (attempts <= 2) {
           throw Object.assign(new Error("private provider output-token details"), {
             code: "invalid-response",
             retryable: false,
@@ -811,13 +851,14 @@ describe("durable orchestration", () => {
     });
 
     const failed = await engine.start(request());
+    expect(author).toHaveBeenCalledTimes(2);
     expect(failed).toMatchObject({
       state: "provider-error",
       currentStep: "author",
       lastError: {
         code: "invalid-response",
         message: "The provider request failed. You can retry safely.",
-        attempt: 1,
+        attempt: 2,
         maxAttempts: 3,
         retryable: true,
         failureStage: "output-token-budget-exceeded",
@@ -831,8 +872,8 @@ describe("durable orchestration", () => {
     const recovered = await engine.resume("run-1", { context: context() });
 
     expect(recovered.state).toBe("awaiting-approval");
-    expect(author).toHaveBeenCalledTimes(2);
-    expect(authorRequests[1]).toMatchObject({
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(authorRequests[2]).toMatchObject({
       retryFeedback: {
         failureCode: "invalid-response",
         failureStage: "output-token-budget-exceeded",
@@ -1897,7 +1938,7 @@ describe("uncapped diagnostic counts", () => {
             { code: `x${"a".repeat(64)}`, count: 1 },
             { code: "negative", count: -1 },
             { code: "fractional", count: 1.5 },
-            { code: "huge", count: 100_001 },
+            { code: "huge", count: 10_000_001 },
             { code: "text", count: "3" },
             { code: "extra", count: 2, message: "private detail" },
             { code: "missing" },
@@ -1906,7 +1947,7 @@ describe("uncapped diagnostic counts", () => {
             "custom=2",
             Object.assign(Object.create({ inherited: true }), { code: "proto", count: 2 }),
             { code: "unsupported_claim", count: 9 },
-            { code: "missing_evidence", count: 100_000 },
+            { code: "missing_evidence", count: 160_000 },
             { code: "custom", count: 2 },
           ],
         });
@@ -1916,7 +1957,7 @@ describe("uncapped diagnostic counts", () => {
     const failed = await engine.start(request());
 
     expect(failed.lastError?.diagnosticCounts).toEqual([
-      { code: "missing_evidence", count: 100_000 },
+      { code: "missing_evidence", count: 160_000 },
       { code: "unsupported_claim", count: 6 },
       { code: "custom", count: 2 },
     ]);
