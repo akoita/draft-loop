@@ -98,9 +98,11 @@ export function ProfileGenerationProgress({
 export function ProfileGenerationSummary({
   activity,
   now,
+  label = "Generating…",
 }: {
   readonly activity: ProfileGenerationActivity;
   readonly now?: number;
+  readonly label?: string;
 }) {
   const part = formatProfileGenerationPart(activity.progress);
   const elapsed = useElapsed(activity.startedAt, now);
@@ -108,7 +110,7 @@ export function ProfileGenerationSummary({
     <p className="profile-generation-progress-row home-profile-progress">
       <span className="profile-generation-spinner" aria-hidden="true" />
       <span className="sr-only">Generating profile.</span>
-      <strong aria-hidden="true">Generating…</strong>
+      <strong aria-hidden="true">{label}</strong>
       <span className="profile-generation-elapsed" aria-hidden="true">
         Elapsed {elapsed}
       </span>

@@ -361,6 +361,8 @@ is reached through Home:
   shown, so they stay current.
 - **Long operations.** Profile generation and review runs keep going while you
   move between pages, and the page you return to shows their current progress.
+  A bar pinned to the bottom of the window shows the one running, with its
+  progress and **View progress** or **Open review** to return to it.
   Only actions that would conflict wait: while one runs, Home keeps **New
   application**, **Import from another workspace**, **Archive** and **Delete**
   unavailable and says why, and Close workspace waits for it to finish. During a

@@ -102,6 +102,7 @@ import {
 } from "./saved-model-profiles.js";
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { ThemeToggle } from "./theme.js";
+import { type WorkspaceActivity, WorkspaceActivityBar } from "./workspace-activity.js";
 import { workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 import {
@@ -1599,8 +1600,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       running: state?.execution.status === "running",
     };
   };
-  const closeDisabledReason =
+  const closeGuardReason =
     state === null ? null : workspaceCloseDisabledReason(currentWorkspaceCloseGuard());
+  // Name the operation when it is the profile generation, which the activity bar also shows.
+  const closeDisabledReason =
+    closeGuardReason !== null && profileGenerationForActiveWorkspace !== null
+      ? "Close workspace is available again once your career profile is generated."
+      : closeGuardReason;
 
   const requestWorkspaceClose = () => {
     if (state === null) return;
@@ -2889,8 +2895,37 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   }
 
+  // What runs while the person moves between pages, pinned to the window with a way back to it.
+  // A running review belongs to the application the window holds, the one last opened.
+  const runningApplication =
+    reviewRunning && navigation.lastApplication?.applicationId === loadedApplicationId
+      ? navigation.lastApplication
+      : null;
+  const activity: WorkspaceActivity | null =
+    profileGenerationForActiveWorkspace !== null
+      ? { kind: "profile-generation", generation: profileGenerationForActiveWorkspace }
+      : runningApplication !== null
+        ? { kind: "review-run", applicationName: runningApplication.name }
+        : null;
+  // The bar's action opens the page showing the operation, unless that page is already shown.
+  let openActivity: (() => void) | undefined;
+  if (profileGenerationForActiveWorkspace !== null) {
+    if (view.kind !== "profile") openActivity = openProfileScreen;
+  } else if (runningApplication !== null && pageKey(view) !== pageKey(runningApplication)) {
+    openActivity = () =>
+      showApplication(runningApplication.applicationId, (current) =>
+        navigateTo(current, runningApplication),
+      );
+  }
+
   return (
     <>
+      {activity === null || modelEditorScreen !== null ? null : (
+        <WorkspaceActivityBar
+          activity={activity}
+          {...(openActivity === undefined ? {} : { onOpen: openActivity })}
+        />
+      )}
       {modelEditorScreen}
       {[...pages]
         .sort((left, right) => Number(right.active) - Number(left.active))
