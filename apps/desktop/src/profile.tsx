@@ -23,6 +23,7 @@ import {
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
+  type ProfileGenerationActivity,
   type ProfileGenerationCallProgress,
   ProfileGenerationCancel,
   ProfileGenerationProgress,
@@ -81,6 +82,11 @@ export interface ProfileWorkspaceProps {
   readonly selectedProfile: CandidateProfileSelection | null;
   readonly onSelectionChange: (selection: CandidateProfileSelection | null) => void;
   readonly onPendingChange?: (workspaceId: string, pending: boolean) => void;
+  /** Reports a generation as it starts, progresses and ends, so Home can show it in progress. */
+  readonly onGenerationChange?: (
+    workspaceId: string,
+    generation: ProfileGenerationActivity | null,
+  ) => void;
 }
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
@@ -827,6 +833,7 @@ export function ProfileWorkspace({
   selectedProfile,
   onSelectionChange,
   onPendingChange,
+  onGenerationChange,
 }: ProfileWorkspaceProps) {
   const [profileId, setProfileId] = useState("");
   const [loadedProfileId, setLoadedProfileId] = useState<string | null>(null);
@@ -844,7 +851,7 @@ export function ProfileWorkspace({
     readonly reused: number;
     readonly extracted: number;
   } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
   const [generationProgress, setGenerationProgress] = useState<
@@ -879,7 +886,11 @@ export function ProfileWorkspace({
   const selectedProfileRef = useRef(selectedProfile);
   const onSelectionChangeRef = useRef(onSelectionChange);
   const catalogEpochRef = useRef(catalogEpoch);
+  const onPendingChangeRef = useRef(onPendingChange);
+  const onGenerationChangeRef = useRef(onGenerationChange);
   workspaceIdRef.current = workspaceId;
+  onPendingChangeRef.current = onPendingChange;
+  onGenerationChangeRef.current = onGenerationChange;
   selectedProfileRef.current = selectedProfile;
   onSelectionChangeRef.current = onSelectionChange;
   catalogEpochRef.current = catalogEpoch;
@@ -920,30 +931,6 @@ export function ProfileWorkspace({
     onPendingChange?.(workspaceId, busy);
   }, [busy, onPendingChange, workspaceId]);
 
-  const getProgress = capabilities.getCanonicalCandidateProfileProgress;
-  useEffect(() => {
-    if (generationStartedAt === null || getProgress === undefined) return;
-    let active = true;
-    const timer = setInterval(() => {
-      void getProgress(generatingProfileIdRef.current)
-        .then((progress) => {
-          if (!active || !progress.active) return;
-          if (progress.completedCalls === undefined || progress.plannedCalls === undefined) return;
-          setGenerationProgress({
-            completedCalls: progress.completedCalls,
-            plannedCalls: progress.plannedCalls,
-          });
-        })
-        .catch(() => {
-          // Progress is advisory; a missed poll never fails the generation itself.
-        });
-    }, generationProgressPollMs);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, [generationStartedAt, getProgress]);
-
   // Runs for each new workspace only: a page shown again re-runs its effects, and must not wipe
   // the profile being reviewed or cancel an operation still running.
   const resetWorkspaceRef = useRef<string | null>(null);
@@ -965,7 +952,7 @@ export function ProfileWorkspace({
     setDraftFacts([]);
     setDraftIssues([]);
     setProviderTransmissionApproved(false);
-    setBusy(false);
+    setBusyState(false);
     setStatusMessage("");
     setErrorMessage(null);
   }, [workspaceId]);
@@ -1052,6 +1039,13 @@ export function ProfileWorkspace({
   }, [savedSummaries, savedSummariesWorkspaceId, workspaceId, busy, profileId, loadedProfileId]);
 
   if (!available) return null;
+
+  // A hidden page runs no effects, so busy changes are reported as they happen: a generation that
+  // ends while the person is on another page frees the workspace at once.
+  const setBusy = (value: boolean): void => {
+    setBusyState(value);
+    onPendingChangeRef.current?.(workspaceIdRef.current, value);
+  };
 
   const applyRecord = (nextRecord: CanonicalCandidateProfileRecordResult): void => {
     setRecord(nextRecord);
@@ -1270,7 +1264,36 @@ export function ProfileWorkspace({
     generatingProfileIdRef.current = normalizedProfileId;
     setGenerationProgress(undefined);
     setCancelRequested(false);
-    setGenerationStartedAt(Date.now());
+    const startedAt = Date.now();
+    const generationWorkspaceId = workspaceId;
+    const report = (generation: ProfileGenerationActivity | null): void =>
+      onGenerationChangeRef.current?.(generationWorkspaceId, generation);
+    setGenerationStartedAt(startedAt);
+    report({ startedAt });
+    // Polled from here rather than from an effect, so progress keeps arriving while the person is
+    // on another page and the page shows the current count when they return.
+    const getProgress = capabilities.getCanonicalCandidateProfileProgress;
+    let polling = true;
+    const timer =
+      getProgress === undefined
+        ? undefined
+        : setInterval(() => {
+            void getProgress(normalizedProfileId)
+              .then((progress) => {
+                if (!polling || !progress.active) return;
+                if (progress.completedCalls === undefined || progress.plannedCalls === undefined)
+                  return;
+                const next = {
+                  completedCalls: progress.completedCalls,
+                  plannedCalls: progress.plannedCalls,
+                };
+                setGenerationProgress(next);
+                report({ startedAt, progress: next });
+              })
+              .catch(() => {
+                // Progress is advisory; a missed poll never fails the generation itself.
+              });
+          }, generationProgressPollMs);
     void withBusy(async () => {
       try {
         const derived = await capabilities.deriveCanonicalCandidateProfile({
@@ -1290,9 +1313,12 @@ export function ProfileWorkspace({
         refreshCatalog();
         return refreshed;
       } finally {
+        polling = false;
+        if (timer !== undefined) clearInterval(timer);
         setGenerationStartedAt(null);
         setGenerationProgress(undefined);
         setCancelRequested(false);
+        report(null);
       }
     }, "Generating profile…");
   };

@@ -58,7 +58,7 @@ export type HomeProfileStatus =
   | { readonly kind: "failed"; readonly version: number }
   | { readonly kind: "reviewed"; readonly version: number };
 
-export type HomeTone = "ready" | "attention" | "error" | "neutral";
+export type HomeTone = "ready" | "attention" | "error" | "neutral" | "progress";
 
 export interface HomeStatusPresentation {
   readonly chip: string;
@@ -120,6 +120,33 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
         description: `Version ${status.version} is reviewed and ready for applications.`,
         action: "Manage profile",
       };
+  }
+}
+
+/**
+ * The Career profile card while a generation runs: it reports the work in progress whatever the
+ * saved status was, and its action opens the live progress on the profile page.
+ */
+export const profileGenerationPresentation: HomeStatusPresentation = Object.freeze({
+  chip: "In progress",
+  tone: "progress",
+  description:
+    "Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel.",
+  action: "View progress",
+});
+
+/** The workspace operation that holds back the actions that change applications. */
+export type HomeActivity = "profile-generation" | "review-run" | "other";
+
+/** Why New application, import, archive and delete are unavailable for now. */
+export function homeActionsBlockedReason(activity: HomeActivity): string {
+  switch (activity) {
+    case "profile-generation":
+      return "New applications, imports and archiving are available again once the career profile is generated.";
+    case "review-run":
+      return "New applications, imports and archiving are available again once the running review stops.";
+    case "other":
+      return "New applications, imports and archiving are available again once the current workspace operation finishes.";
   }
 }
 
@@ -265,6 +292,9 @@ const applicationStatusLabels: Readonly<Record<ApplicationStatus, string>> = {
 export function applicationStatusLabel(status: ApplicationStatus): string {
   return applicationStatusLabels[status];
 }
+
+/** The chip of the application whose review is running, in place of its saved status. */
+export const applicationRunningLabel = "Review running";
 
 export function applicationStatusTone(status: ApplicationStatus): HomeTone {
   switch (status) {
