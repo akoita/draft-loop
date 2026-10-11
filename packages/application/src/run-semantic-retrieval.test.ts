@@ -20,6 +20,7 @@ import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import { resetRunEmbedderCacheForTests } from "./run-semantic-retrieval.js";
 import { createSourceSensitivityService } from "./source-sensitivity-service.js";
+import { writeWorkspaceEvidenceMode } from "./workspace-evidence-mode.js";
 import {
   type RetrievalMode,
   retrievalModeInvalidMessage,
@@ -162,6 +163,8 @@ describe("run semantic retrieval", () => {
     for (const id of [workspaceId, "workspace-other"]) {
       await storage.saveWorkspace({ id, state: "collecting", createdAt, updatedAt: createdAt });
     }
+    // These tests cover ranked retrieval, which full-source evidence (the default) bypasses.
+    await writeWorkspaceEvidenceMode(root, "retrieval");
     return {
       directory,
       root,

@@ -72,8 +72,20 @@ describe("full-source evidence in a run", () => {
 
   const modeLine = /^Evidence mode: full-source \(26 eligible chunks, \d+ of 240000 characters\)$/u;
 
-  it("stays silent in the default retrieval mode", async () => {
+  it("uses full source when no mode was saved", async () => {
     const { root, driver } = await workspace();
+    const lines: string[] = [];
+    const begun = await driver.begin(
+      { root, allowProviderData: false },
+      { write: (line) => lines.push(line) },
+    );
+    expect(lines.filter((line) => modeLine.test(line))).toHaveLength(1);
+    expect(await auditEvents(root, begun.runId)).toHaveLength(1);
+  });
+
+  it("stays silent when retrieval mode is chosen", async () => {
+    const { root, driver } = await workspace();
+    await writeWorkspaceEvidenceMode(root, "retrieval");
     const lines: string[] = [];
     const begun = await driver.begin(
       { root, allowProviderData: false },
@@ -107,6 +119,7 @@ describe("full-source evidence in a run", () => {
 
   it("reads the mode again when the run resumes", async () => {
     const { root, driver } = await workspace();
+    await writeWorkspaceEvidenceMode(root, "retrieval");
     const begun = await driver.begin(
       { root, allowProviderData: false },
       { write: () => undefined },
