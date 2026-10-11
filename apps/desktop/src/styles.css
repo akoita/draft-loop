@@ -751,27 +751,74 @@ input[type="checkbox"] {
   flex: 0 1 auto;
 }
 
-.workspace-title-action {
-  flex: none;
-  padding-block: 2px;
-  font-size: var(--text-xs);
+/* The name is edited in place. The pencil stays out of the way until the
+   heading is hovered or the pencil itself has keyboard focus. */
+.workspace-title-editable h1 {
+  cursor: text;
 }
 
-.workspace-title-edit {
+.workspace-title-edit-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  color: var(--text-2);
+  background: transparent;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.workspace-title-edit-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.workspace-title-editable:hover .workspace-title-edit-button,
+.workspace-title-edit-button:focus-visible {
+  opacity: 1;
+}
+
+.workspace-title-edit-button:hover {
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+.workspace-title-editing {
   position: relative;
 }
 
-.workspace-title-edit input {
-  flex: 1 1 10rem;
-  min-width: 0;
-  max-width: 22rem;
-  padding-block: 4px;
+/* The field takes the heading's own type so editing does not change the
+   page's shape. */
+input[type="text"].workspace-title-input {
+  width: auto;
+  min-width: 10rem;
+  max-width: 28rem;
+  flex: 1 1 auto;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: 1px var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
-.workspace-title-edit .button {
-  flex: none;
-  padding-block: 3px;
-  font-size: var(--text-xs);
+.spine-identity input[type="text"].workspace-title-input {
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+.home-header-identity input[type="text"].workspace-title-input {
+  font-size: 1.5rem;
 }
 
 /* The spine has a fixed height, so a validation message floats under the field
