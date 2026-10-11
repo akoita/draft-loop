@@ -42,11 +42,16 @@ function rendererUrl(): string | undefined {
     : MAIN_WINDOW_VITE_DEV_SERVER_URL;
 }
 
-async function chooseDirectory(mode: "open" | "create"): Promise<string | undefined> {
+const directoryDialogText = {
+  open: { title: "Open DraftLoop workspace" },
+  create: { title: "Choose a parent folder for the workspace" },
+  import: { title: "Choose the workspace folder to import", buttonLabel: "Import workspace" },
+} as const;
+
+async function chooseDirectory(mode: "open" | "create" | "import"): Promise<string | undefined> {
   const result = await dialog.showOpenDialog({
     properties: ["openDirectory"] as const,
-    title:
-      mode === "create" ? "Choose a parent folder for the workspace" : "Open DraftLoop workspace",
+    ...directoryDialogText[mode],
   });
   return result.canceled ? undefined : result.filePaths[0];
 }

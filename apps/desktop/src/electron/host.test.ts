@@ -2857,7 +2857,7 @@ describe("native host", () => {
     await writeFile(externalEvidence, "local evidence", "utf8");
     const fixture = service(root);
     const dialogs = {
-      chooseDirectory: vi.fn(async (mode: "open" | "create") =>
+      chooseDirectory: vi.fn(async (mode: "open" | "create" | "import") =>
         mode === "create" ? parent : root,
       ),
       chooseFiles: vi.fn(async () => [externalEvidence]),
@@ -3560,7 +3560,7 @@ describe("native host", () => {
     const customExportPath = join(parent, "selected-export.md");
     let selectedDefaultPath: string | undefined;
     const dialogs = {
-      chooseDirectory: vi.fn(async (mode: "open" | "create") =>
+      chooseDirectory: vi.fn(async (mode: "open" | "create" | "import") =>
         mode === "create" ? parent : root,
       ),
       chooseFiles: vi.fn(async () => []),

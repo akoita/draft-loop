@@ -40,6 +40,7 @@ import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
+  canStartNewReview,
   finishedRunTitle,
   inProgressStatus,
   notIndexedRetrievalText,
@@ -388,6 +389,25 @@ function PlayIcon() {
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="M8.5 6.5 17 12l-8.5 5.5V6.5Z" fill="currentColor" />
     </svg>
+  );
+}
+
+/**
+ * The row above the spine: the career flow on the left and the workspace-level actions on the
+ * right, where Home and the career pages keep them too. The spine stays about the run.
+ */
+function PageToolbar({
+  navigation,
+  children,
+}: {
+  readonly navigation: ReactNode;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div className="page-toolbar">
+      {navigation}
+      <div className="page-toolbar-actions">{children}</div>
+    </div>
   );
 }
 
@@ -1869,14 +1889,13 @@ export function ReviewWorkspace({
       id: "start",
       label: "Start a new review",
       note: "Run the author–critic loop again",
-      disabledReason:
-        state.state !== "stopped"
-          ? "A review is already under way."
-          : !transmissionReady
-            ? "Provider transmission has not been acknowledged."
-            : startDisabledReason
-              ? startDisabledReason
-              : pendingActionReason,
+      disabledReason: !canStartNewReview(state)
+        ? "A review is already under way."
+        : !transmissionReady
+          ? "Provider transmission has not been acknowledged."
+          : startDisabledReason
+            ? startDisabledReason
+            : pendingActionReason,
       run: () => onAction({ type: "start" }),
     },
     {
@@ -2488,7 +2507,10 @@ export function ReviewWorkspace({
         <SideRail onOpenSources={null} />
         <main className="app-shell app-shell-single">
           <div className="main-column">
-            {pageNavigation}
+            <PageToolbar navigation={pageNavigation}>
+              {modelSettingsAction}
+              {workspaceNavigationAction}
+            </PageToolbar>
             <header className="spine">
               <div className="spine-identity">
                 {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
@@ -2497,10 +2519,7 @@ export function ReviewWorkspace({
                 </div>
               </div>
               <div className="spine-loop" />
-              <div className="spine-meta">
-                {modelSettingsAction}
-                {workspaceNavigationAction}
-              </div>
+              <div className="spine-meta" />
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               {compact ? (
@@ -2802,7 +2821,10 @@ export function ReviewWorkspace({
       <main className="app-shell">
         {renderCommandPalette()}
         <div className="main-column">
-          {pageNavigation}
+          <PageToolbar navigation={pageNavigation}>
+            {modelSettingsAction}
+            {workspaceNavigationAction}
+          </PageToolbar>
           <header className="spine">
             <div className="spine-identity">
               {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
@@ -2837,8 +2859,6 @@ export function ReviewWorkspace({
                   </span>
                 )}
               </div>
-              {modelSettingsAction}
-              {workspaceNavigationAction}
             </div>
           </header>
 
@@ -3256,7 +3276,7 @@ export function ReviewWorkspace({
                   <PlayIcon />
                   Resume
                 </button>
-              ) : state.state === "stopped" ? (
+              ) : canStartNewReview(state) ? (
                 <button
                   className="button button-primary"
                   type="button"
@@ -3281,9 +3301,14 @@ export function ReviewWorkspace({
                   {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                 </button>
               ) : null}
-              {state.state === "stopped" && startDisabledReason !== null ? (
+              {canStartNewReview(state) && startDisabledReason !== null ? (
                 <p className="setup-note setup-blocker" role="status">
                   {startDisabledReason}
+                </p>
+              ) : runFinished ? (
+                <p className="setup-note">
+                  A new review adds another run with the models set for new runs. This run, its
+                  approval and its export are kept.
                 </p>
               ) : null}
             </div>

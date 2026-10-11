@@ -11,7 +11,7 @@ describe("packaged desktop smoke workflow", () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-packaged-smoke-"));
     const workspaceRoot = join(parent, "packaged-workspace");
     const dialogs = {
-      chooseDirectory: vi.fn(async (mode: "open" | "create") =>
+      chooseDirectory: vi.fn(async (mode: "open" | "create" | "import") =>
         mode === "create" ? parent : workspaceRoot,
       ),
       chooseFiles: vi.fn(async () => []),

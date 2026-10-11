@@ -248,7 +248,7 @@ Opening or creating a workspace lands on **Home**, never on the last review.
 Home shows what the workspace holds once for the candidate, then its
 applications:
 
-- **Header.** The workspace name, with **Rename** and **Close workspace**.
+- **Header.** The workspace name, editable in place, and **Close workspace**.
 - **Flow strip.** "Career evidence → Career profile → Applications" shows how
   the pieces relate: evidence is the raw material you provide, the profile is
   the verified record DraftLoop extracts from it and you review once, and every
@@ -269,8 +269,8 @@ applications:
   In review, Approved, Exported), last activity and run count, most recent
   first. The application whose review is running shows Review running instead.
   A workspace with nothing but its default application says so and points
-  to **New application**. Beside it, **Import from another workspace** opens a
-  folder picker and imports a workspace made for one job as an application (see
+  to **New application**. Beside it, **Import from another workspace** asks for
+  another workspace's folder and imports it as an application (see
   [Importing a workspace](#importing-a-workspace)). Each card has **Archive**,
   and **Delete** when the application can be deleted (see
   [Archiving and deleting](#archiving-and-deleting)). Archived applications sit
@@ -401,6 +401,11 @@ it appears on Home as Drafting and can be resumed there.
    the application's review once the run has begun. After approval and export,
    Home lists the application as Exported.
 
+   Once a run has stopped, finished or run out of budget, **Start a new review**
+   adds another run to the same application with the models set for new runs.
+   The earlier run, its approval and its export are kept, so there is no need
+   to duplicate the application to try another model pair.
+
    **Use a different model pair for this application** keeps the workspace's
    pair (the default) or picks a preset pair for this application alone, for
    example a stronger pair for an important role. The summary, the provider
@@ -442,6 +447,11 @@ Use **Close workspace** to return to the create/open screen. Saved workspace
 files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.
 
+The button sits at the top right of every workspace page. On an application
+page it shares the row above the run header with **Change models**, so the run
+header carries only the run itself. While a review runs, both are disabled and
+their tooltip says why.
+
 The start page lists the ten most recently opened local workspaces. Select an
 entry to reopen it, use its **Remove** button to drop just that entry, or clear
 the whole list. Removing or clearing entries only edits this history and leaves
@@ -462,8 +472,10 @@ is the workspace's display name and may contain spaces and accents (1 to 80
 characters, no slashes or control characters). The folder is a lowercase ASCII
 slug of it, or `draft-loop-workspace` when nothing safe remains.
 
-Use **Rename** beside the workspace name in the header to change the display
-name later. Enter saves, Escape cancels, and an invalid name shows a message.
+To change the display name later, double-click the workspace name in the
+header, or use the pencil that appears when you hover over it or tab to it.
+Enter or clicking away saves, Escape cancels, and an invalid name shows a
+message when you press Enter (clicking away keeps the old name).
 The name is stored in `.draft-loop/review-overrides.json` (`workspaceName`) and
 in the recent list; the folder and `workspace.json` are unchanged. A workspace
 without a stored name shows its folder name.
@@ -567,6 +579,9 @@ pnpm --filter @draft-loop/cli start application import ./home-workspace \
   --from ./hc4 --name "Hc4, Platform Engineer"
 ```
 
+- **What to choose.** The other workspace's folder, the same folder you would
+  open in DraftLoop. An application has no folder or address of its own, so
+  there is nothing else to pick.
 - **Name.** Defaults to the source workspace's display name in the desktop, then
   to the job's first Markdown heading, then to the folder name.
 - **What is copied.** The job description (stored in this workspace like pasted

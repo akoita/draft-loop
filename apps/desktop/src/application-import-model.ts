@@ -12,7 +12,7 @@ export type ApplicationImportNotice =
 const cancelledCode = "permission-denied";
 
 export const applicationImportExplanation =
-  "Used one workspace per job? Import it as an application with its job, briefs, runs and exports. The other workspace is not changed, and profiles are not merged.";
+  "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged.";
 
 export const applicationImportFailureFallback =
   "The workspace could not be imported. Try again, or choose a different workspace.";

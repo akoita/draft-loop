@@ -102,6 +102,7 @@ import {
 } from "./saved-model-profiles.js";
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { ThemeToggle } from "./theme.js";
+import { ModelsIcon } from "./workspace-action-icons.js";
 import { type WorkspaceActivity, WorkspaceActivityBar } from "./workspace-activity.js";
 import { workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
@@ -1586,6 +1587,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     profilePendingForActiveWorkspace ||
     pendingReviewAction !== null ||
     state?.execution.status === "running";
+  const modelSettingsDisabledReason =
+    state?.execution.status === "running"
+      ? "Stop the review before changing models."
+      : "Wait for the current workspace operation to finish before changing models.";
 
   const currentWorkspaceCloseGuard = () => {
     const profilePendingForActiveWorkspace =
@@ -2364,11 +2369,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const modelSettingsButton =
     activePort.configureModels === undefined ? undefined : (
       <button
-        className="button button-quiet"
+        className="button button-toolbar"
         type="button"
         disabled={modelSettingsDisabled}
+        {...(modelSettingsDisabled ? { title: modelSettingsDisabledReason } : {})}
         onClick={openModelSettings}
       >
+        <ModelsIcon />
         Change models
       </button>
     );

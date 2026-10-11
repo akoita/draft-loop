@@ -21,6 +21,7 @@ const baseProps: Props = {
   onStartEditing: () => undefined,
   onDraftChange: () => undefined,
   onSave: () => undefined,
+  onCommit: () => undefined,
   onCancel: () => undefined,
 };
 
@@ -43,69 +44,85 @@ function find(
 }
 
 describe("workspace title rename control", () => {
-  it("shows the name with an accessible Rename button that starts editing", () => {
+  it("edits the name in place from a double-click or the accessible pencil, with no Rename button", () => {
     const onStartEditing = vi.fn();
     const view = WorkspaceTitleView({ ...baseProps, onStartEditing });
     const markup = renderToStaticMarkup(view);
     expect(markup).toContain("<h1");
     expect(markup).toContain("Mergify — Staff Engineer");
     expect(markup).toContain('aria-label="Rename workspace Mergify — Staff Engineer"');
+    expect(markup).not.toContain(">Rename<");
+    expect(markup).toContain("<svg");
+
+    (find(view, (element) => element.type === "h1").props.onDoubleClick as () => void)();
     (find(view, (element) => element.type === "button").props.onClick as () => void)();
-    expect(onStartEditing).toHaveBeenCalledOnce();
+    expect(onStartEditing).toHaveBeenCalledTimes(2);
   });
 
-  it("hides Rename when the host cannot rename", () => {
-    const markup = renderToStaticMarkup(WorkspaceTitleView({ ...baseProps, canRename: false }));
+  it("shows a plain heading when the host cannot rename", () => {
+    const view = WorkspaceTitleView({ ...baseProps, canRename: false });
+    const markup = renderToStaticMarkup(view);
     expect(markup).toContain("<h1");
     expect(markup).not.toContain("Rename");
+    expect(find(view, (element) => element.type === "h1").props.onDoubleClick).toBeUndefined();
   });
 
-  it("edits in a labelled field with Save and Cancel, Enter submitting and Escape cancelling", () => {
+  it("edits in a labelled field where Enter saves, Escape cancels and leaving commits", () => {
     const onSave = vi.fn();
+    const onCommit = vi.fn();
     const onCancel = vi.fn();
-    const view = WorkspaceTitleView({ ...baseProps, editing: true, onSave, onCancel });
+    const view = WorkspaceTitleView({ ...baseProps, editing: true, onSave, onCommit, onCancel });
     const markup = renderToStaticMarkup(view);
     expect(markup).toContain('aria-label="Workspace name"');
     expect(markup).toContain('value="Mergify — Staff Engineer"');
-    expect(markup).toContain("Save");
-    expect(markup).toContain("Cancel");
+    expect(markup).not.toContain("Save");
+    expect(markup).not.toContain("Cancel");
     expect(markup).not.toContain("<h1");
-
-    const form = find(view, (element) => element.type === "form");
-    const preventDefault = vi.fn();
-    (form.props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault });
-    expect(preventDefault).toHaveBeenCalled();
-    expect(onSave).toHaveBeenCalledOnce();
 
     const input = find(view, (element) => element.type === "input");
     const keyDown = input.props.onKeyDown as (event: KeyEvent) => void;
-    const escapeKey = { key: "Escape", preventDefault: vi.fn(), stopPropagation: vi.fn() };
-    keyDown(escapeKey);
+    const enterKey = { key: "Enter", preventDefault: vi.fn(), stopPropagation: vi.fn() };
+    keyDown(enterKey);
+    expect(enterKey.preventDefault).toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledOnce();
+
+    keyDown({ ...enterKey, key: "Escape" });
     expect(onCancel).toHaveBeenCalledOnce();
-    keyDown({ ...escapeKey, key: "a" });
+    keyDown({ ...enterKey, key: "a" });
+    expect(onSave).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledOnce();
 
-    const cancel = find(
-      view,
-      (element) => element.type === "button" && element.props.type === "button",
-    );
-    (cancel.props.onClick as () => void)();
-    expect(onCancel).toHaveBeenCalledTimes(2);
+    (input.props.onBlur as () => void)();
+    expect(onCommit).toHaveBeenCalledOnce();
   });
 
-  it("shows a validation message as an alert tied to the field and locks the controls while busy", () => {
-    const markup = renderToStaticMarkup(
-      WorkspaceTitleView({
-        ...baseProps,
-        editing: true,
-        busy: true,
-        errorMessage: "Enter a name of 1 to 80 characters without slashes or control characters.",
-      }),
-    );
+  it("shows a validation message as an alert tied to the field and ignores keys while busy", () => {
+    const onSave = vi.fn();
+    const onCommit = vi.fn();
+    const onCancel = vi.fn();
+    const view = WorkspaceTitleView({
+      ...baseProps,
+      editing: true,
+      busy: true,
+      errorMessage: "Enter a name of 1 to 80 characters without slashes or control characters.",
+      onSave,
+      onCommit,
+      onCancel,
+    });
+    const markup = renderToStaticMarkup(view);
     expect(markup).toContain('role="alert"');
     expect(markup).toContain("1 to 80 characters");
     expect(markup).toContain('aria-invalid="true"');
     expect(markup).toContain('aria-describedby="workspace-title-error"');
-    expect(markup.match(/disabled=""/gu)).toHaveLength(3);
+    expect(markup).toContain("readOnly");
+
+    const input = find(view, (element) => element.type === "input");
+    const keyDown = input.props.onKeyDown as (event: KeyEvent) => void;
+    keyDown({ key: "Enter", preventDefault: vi.fn(), stopPropagation: vi.fn() });
+    keyDown({ key: "Escape", preventDefault: vi.fn(), stopPropagation: vi.fn() });
+    (input.props.onBlur as () => void)();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });

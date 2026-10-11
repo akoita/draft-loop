@@ -428,6 +428,27 @@ kbd::after {
   background: var(--red-wash);
 }
 
+/* Workspace-level actions (Change models, Close workspace): a solid raised control with an icon,
+   so it reads as a real button on the desk instead of a ghost of the background. */
+.button-toolbar {
+  border-color: var(--border-strong);
+  color: var(--text-1);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 20, 26, 0.08);
+}
+
+.button-toolbar:not(:disabled):hover {
+  border-color: var(--teal-line);
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+/* Disabled stays legible; the title and the guidance line say why. */
+.button-toolbar:disabled {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 .button svg {
   width: 14px;
   height: 14px;
@@ -751,27 +772,74 @@ input[type="checkbox"] {
   flex: 0 1 auto;
 }
 
-.workspace-title-action {
-  flex: none;
-  padding-block: 2px;
-  font-size: var(--text-xs);
+/* The name is edited in place. The pencil stays out of the way until the
+   heading is hovered or the pencil itself has keyboard focus. */
+.workspace-title-editable h1 {
+  cursor: text;
 }
 
-.workspace-title-edit {
+.workspace-title-edit-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  color: var(--text-2);
+  background: transparent;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.workspace-title-edit-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.workspace-title-editable:hover .workspace-title-edit-button,
+.workspace-title-edit-button:focus-visible {
+  opacity: 1;
+}
+
+.workspace-title-edit-button:hover {
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+.workspace-title-editing {
   position: relative;
 }
 
-.workspace-title-edit input {
-  flex: 1 1 10rem;
-  min-width: 0;
-  max-width: 22rem;
-  padding-block: 4px;
+/* The field takes the heading's own type so editing does not change the
+   page's shape. */
+input[type="text"].workspace-title-input {
+  width: auto;
+  min-width: 10rem;
+  max-width: 28rem;
+  flex: 1 1 auto;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: 1px var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
-.workspace-title-edit .button {
-  flex: none;
-  padding-block: 3px;
-  font-size: var(--text-xs);
+.spine-identity input[type="text"].workspace-title-input {
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+.home-header-identity input[type="text"].workspace-title-input {
+  font-size: 1.5rem;
 }
 
 /* The spine has a fixed height, so a validation message floats under the field
@@ -826,6 +894,35 @@ input[type="checkbox"] {
   border: 0;
   padding: 0;
   min-width: 0;
+}
+
+/* The application page's top row: the career flow on the left, workspace actions on the right. */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  flex: none;
+  min-height: 32px;
+}
+
+.page-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The toolbar row keeps one line: the close guidance stays announced but is shown as the
+   disabled button's tooltip instead of pushing the actions onto a second line. */
+.page-toolbar-actions .workspace-navigation-guidance {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .workspace-navigation-guidance {

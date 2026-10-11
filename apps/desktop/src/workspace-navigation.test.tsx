@@ -35,7 +35,9 @@ function elements(node: ReactNode): ReactElement[] {
 function button(node: ReactNode, label: string, occurrence = 0): ReactElement {
   const matches = elements(node).filter((element) => {
     if (element.type !== "button") return false;
-    return (element.props as { readonly children?: ReactNode }).children === label;
+    // A button's text sits beside its icon, so match the label among its children.
+    const children = (element.props as { readonly children?: ReactNode }).children;
+    return Children.toArray(children).includes(label);
   });
   const match = matches[occurrence];
   if (match === undefined) throw new Error(`Button not found: ${label}`);
