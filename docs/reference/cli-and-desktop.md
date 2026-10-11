@@ -389,6 +389,11 @@ it appears on Home as Drafting and can be resumed there.
    the application's review once the run has begun. After approval and export,
    Home lists the application as Exported.
 
+   Once a run has stopped, finished or run out of budget, **Start a new review**
+   adds another run to the same application with the models set for new runs.
+   The earlier run, its approval and its export are kept, so there is no need
+   to duplicate the application to try another model pair.
+
    **Use a different model pair for this application** keeps the workspace's
    pair (the default) or picks a preset pair for this application alone, for
    example a stronger pair for an important role. The summary, the provider

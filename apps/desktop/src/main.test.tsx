@@ -821,7 +821,7 @@ describe("desktop trust-centered review", () => {
     expect(html).toMatch(/3(<!-- -->)? source/u);
   });
 
-  it("reads an exported run as done, without run controls", () => {
+  it("reads an exported run as done, offering a new review instead of run controls", () => {
     const fixture = createFixtureReviewState();
     const state = {
       ...fixture,
@@ -837,6 +837,24 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Done · approved and exported");
     expect(html).not.toContain("Run progress");
     expect(html).not.toContain("Autopilot: run all");
+    expect(html).not.toContain("Stop review");
+    expect(html).toMatch(
+      /<button class="button button-primary" type="button">Start a new review</u,
+    );
+    expect(html).toContain("This run, its approval and its export are kept.");
+  });
+
+  it("offers a new review after an approved or budget-exhausted run", () => {
+    const fixture = createFixtureReviewState();
+    for (const runState of ["approved", "budget-exhausted"] as const) {
+      const state = { ...fixture, state: runState, findings: [] };
+      const html = renderToStaticMarkup(
+        <ReviewWorkspace state={state} onAction={() => undefined} />,
+      );
+      expect(html).toMatch(
+        /<button class="button button-primary" type="button">Start a new review</u,
+      );
+    }
   });
 
   it("asks the person to resume when a paused review has not critiqued the draft", () => {

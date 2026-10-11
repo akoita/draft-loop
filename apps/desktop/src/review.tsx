@@ -40,6 +40,7 @@ import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
+  canStartNewReview,
   finishedRunTitle,
   inProgressStatus,
   notIndexedRetrievalText,
@@ -1869,14 +1870,13 @@ export function ReviewWorkspace({
       id: "start",
       label: "Start a new review",
       note: "Run the author–critic loop again",
-      disabledReason:
-        state.state !== "stopped"
-          ? "A review is already under way."
-          : !transmissionReady
-            ? "Provider transmission has not been acknowledged."
-            : startDisabledReason
-              ? startDisabledReason
-              : pendingActionReason,
+      disabledReason: !canStartNewReview(state)
+        ? "A review is already under way."
+        : !transmissionReady
+          ? "Provider transmission has not been acknowledged."
+          : startDisabledReason
+            ? startDisabledReason
+            : pendingActionReason,
       run: () => onAction({ type: "start" }),
     },
     {
@@ -3256,7 +3256,7 @@ export function ReviewWorkspace({
                   <PlayIcon />
                   Resume
                 </button>
-              ) : state.state === "stopped" ? (
+              ) : canStartNewReview(state) ? (
                 <button
                   className="button button-primary"
                   type="button"
@@ -3281,9 +3281,14 @@ export function ReviewWorkspace({
                   {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                 </button>
               ) : null}
-              {state.state === "stopped" && startDisabledReason !== null ? (
+              {canStartNewReview(state) && startDisabledReason !== null ? (
                 <p className="setup-note setup-blocker" role="status">
                   {startDisabledReason}
+                </p>
+              ) : runFinished ? (
+                <p className="setup-note">
+                  A new review adds another run with the models set for new runs. This run, its
+                  approval and its export are kept.
                 </p>
               ) : null}
             </div>
