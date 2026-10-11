@@ -34,6 +34,7 @@ import {
   opportunityBriefVersionStaleErrorMessage,
 } from "./opportunity-persistence.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
+import { writeWorkspaceEvidenceMode } from "./workspace-evidence-mode.js";
 
 interface JsonRecord {
   readonly [key: string]: unknown;
@@ -903,6 +904,8 @@ describe("local application driver", () => {
         },
         silent,
       );
+      // Retrieval mode records the traces checked below; full-source evidence records none.
+      await writeWorkspaceEvidenceMode(root, "retrieval");
       await driver.start({ root, allowProviderData: true }, silent);
 
       expect(authorInputs).toHaveLength(1);

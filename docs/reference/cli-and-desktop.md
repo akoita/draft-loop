@@ -1437,13 +1437,12 @@ A workspace chooses what candidate material a run's author and critic
 receive. The setting is stored in `.draft-loop/evidence-mode.json` beside
 `workspace.json` and is read each time a run starts or resumes.
 
-- `retrieval` (the default) sends the composed top excerpts, at most twenty
-  chunks.
-- `full-source` sends every eligible chunk of the selected knowledge sources,
-  in selection, source and chunk order, instead of the top excerpts. Chunks
-  withheld by [source sensitivity](#source-sensitivity) are never included.
-  Evidence IDs, citation rules and validation are the same as in retrieval
-  mode.
+- `full-source` (the default) sends every eligible chunk of the selected
+  knowledge sources, in selection, source and chunk order. Chunks withheld by
+  [source sensitivity](#source-sensitivity) are never included. Evidence IDs,
+  citation rules and validation are the same as in retrieval mode.
+- `retrieval` sends the composed top excerpts, at most twenty chunks, plus up
+  to eight facts from a pinned reviewed profile.
 
 The evidence must fit a size budget: half of the smaller known context window
 of the author and critic profiles, at four characters per token, or 240,000
@@ -1453,8 +1452,14 @@ eligible, the run uses retrieval instead. A `full-source` run prints an
 `Evidence mode:` line in its preflight with the chunk count and the budget, or
 the reason for the fallback, and records the decision as a `run.evidence-mode`
 audit event in the workspace history. A run in `retrieval` mode prints and
-records nothing extra. A missing setting means `retrieval`; an unreadable one
+records nothing extra. A missing setting means `full-source`; an unreadable one
 stops the run before anything is sent.
+
+Full source is the default because a long career loses most of its evidence to
+the twenty-chunk limit: in two real comparisons, the author saw 20 of 282
+chunks, most of them reserved role headings, and missed everything the
+job-specific reference CVs used. Choose `retrieval` for a smaller provider
+request or when the sources exceed the budget anyway.
 
 ```sh
 pnpm --filter @draft-loop/cli start evidence mode ./workspace

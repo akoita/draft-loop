@@ -29,8 +29,8 @@ describe("workspace evidence mode", () => {
 
   const modePath = (root: string) => join(root, ".draft-loop", "evidence-mode.json");
 
-  it("defaults to retrieval when no setting was saved", async () => {
-    expect(await readWorkspaceEvidenceMode(await workspace())).toEqual({ mode: "retrieval" });
+  it("defaults to full source when no setting was saved", async () => {
+    expect(await readWorkspaceEvidenceMode(await workspace())).toEqual({ mode: "full-source" });
   });
 
   it("round-trips a saved mode with the documented file shape", async () => {

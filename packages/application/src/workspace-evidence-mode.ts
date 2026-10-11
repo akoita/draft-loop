@@ -6,14 +6,14 @@ import { CliUserError } from "./cli-user-error.js";
 
 /**
  * The workspace evidence mode decides what candidate material a run's author and critic receive.
- * `retrieval` (the default) sends the composed top excerpts; `full-source` sends every eligible
- * chunk of the selected sources when they fit the mode's budget. The setting lives beside
+ * `full-source` (the default) sends every eligible chunk of the selected sources when they fit the
+ * mode's budget; `retrieval` sends the composed top excerpts. The setting lives beside
  * `workspace.json` and is read once when a run starts or resumes.
  */
 export const evidenceModes = ["retrieval", "full-source"] as const;
 export type EvidenceMode = (typeof evidenceModes)[number];
 
-export const defaultEvidenceMode: EvidenceMode = "retrieval";
+export const defaultEvidenceMode: EvidenceMode = "full-source";
 
 const evidenceModeFilename = "evidence-mode.json";
 const evidenceModeDirectory = ".draft-loop";

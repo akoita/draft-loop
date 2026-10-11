@@ -21,6 +21,7 @@ import {
   runCandidateProfileUnavailableMessage,
   withPinnedProfileFacts,
 } from "./run-profile-fact-retrieval.js";
+import { writeWorkspaceEvidenceMode } from "./workspace-evidence-mode.js";
 
 interface JsonRecord {
   readonly [key: string]: unknown;
@@ -169,6 +170,8 @@ async function profileWorkspace() {
     },
     silent,
   );
+  // Pinned facts join ranked retrieval; full-source evidence (the default) sends chunks only.
+  await writeWorkspaceEvidenceMode(root, "retrieval");
   const derived = await driver.deriveCanonicalCandidateProfile({
     root,
     profileId: "profile-1",

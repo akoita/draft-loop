@@ -37,7 +37,7 @@ export function registerEvidenceModeCommands(
   evidence
     .command("mode")
     .description(
-      `Show or set the legacy workspace evidence mode (${evidenceModes.join(" or ")}); default retrieval`,
+      `Show or set the workspace evidence mode (${evidenceModes.join(" or ")}); default full-source`,
     )
     .argument("<workspace>", "workspace directory")
     .argument("[mode]", `new mode: ${evidenceModes.join(" or ")}; omit to show the current mode`)
