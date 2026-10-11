@@ -799,6 +799,13 @@ gap; token matching can miss equivalent phrasing. Accepting a finding does not
 change coverage or bypass the gate. Review requirements and coverage evidence;
 readiness can remain blocked after a revision or new run.
 
+Above the gate, a reviewed draft that is not yet approved shows one verdict:
+**Ready to send**, or **Not ready to send yet** followed by its reasons. The
+reasons are the unresolved blocking findings, the final-check blockers, and the
+critic's unresolved editorial warnings by kind: copied source notes or
+narration, fragments, negative asides, and job-relevant evidence left out.
+Editorial warnings alone never block approval.
+
 Once blocking findings are resolved, you can still approve a draft whose final
 checks fail. Enter a reason and choose **Approve with override**, or run
 `draft-loop approve --override-final-checks "<reason>"`. The reason and the
