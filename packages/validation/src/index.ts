@@ -8,6 +8,7 @@ import type {
   WritingPolicyRule,
 } from "@draft-loop/schemas";
 
+import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
 export { alternativeRequirementBranches } from "./alternative-coverage.js";
@@ -463,6 +464,18 @@ export function validateDraftArtifact(
         });
       } else {
         seenBlocks.add(normalized);
+      }
+      const repeated = findRepeatedPhrase(block.text);
+      if (repeated !== undefined) {
+        addIssue(issues, {
+          code: "duplicate-content",
+          category: "quality",
+          severity: "warning",
+          message: `block repeats "${repeated.phrase}" back to back`,
+          sectionId: section.id,
+          blockId: block.id,
+          location: writingPolicyLocation(block.text, repeated.start, repeated.end),
+        });
       }
     }
   }

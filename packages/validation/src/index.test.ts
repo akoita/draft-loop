@@ -412,6 +412,26 @@ describe("deterministic artifact validation", () => {
     expect(result.issues[2]).toMatchObject({ requirementId: "requirement-docker" });
   });
 
+  it("warns about a phrase repeated back to back inside one block", () => {
+    const text = "Owned the API and the Keycloak stack; the API and the Keycloak stack.";
+    const result = validateDraftArtifact(
+      artifactWithClaim(text, [evidence(text)]),
+      context({ requirements: [], outputConstraints: { requiredSections: [] } }),
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: "duplicate-content",
+        severity: "warning",
+        message: 'block repeats "the API and the Keycloak stack" back to back',
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        location: expect.objectContaining({ start: 38, end: 68, line: 1, column: 39 }),
+      }),
+    ]);
+  });
+
   it("emits an explicit critical gap as a warning instead of an uncovered error", () => {
     const result = validateDraftArtifact(
       artifactWithClaim("Built reliable systems.", [evidence("Built reliable systems.")]),
