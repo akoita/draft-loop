@@ -6626,6 +6626,123 @@ input[type="text"].workspace-title-input {
   background: transparent;
 }
 
+/* The pencil beside a card's name, like the workspace heading's, shows on hover or focus. It sits
+   above the name's card-wide hit area so it stays clickable. */
+.application-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.application-card-title .workspace-title-edit-button {
+  position: relative;
+  z-index: 1;
+}
+
+.application-card:hover .workspace-title-edit-button {
+  opacity: 1;
+}
+
+.application-card-rename {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: 1 1 auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+input[type="text"].application-card-name-input {
+  width: 100%;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: 1px var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-base);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.application-card-rename .setup-blocker {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+/* The default application asks for a name until the person chooses one. */
+.application-card-nudge {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.application-card-nudge p {
+  flex: 1 1 14rem;
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.application-card-nudge .button {
+  min-height: 28px;
+}
+
+.application-name-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border: 1px solid var(--teal-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--teal-wash);
+}
+
+.application-name-nudge-text {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.application-name-nudge-text h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.application-name-nudge-text p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.application-name-nudge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.application-name-nudge-actions .button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.application-name-nudge-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .home-archived-applications,
 .home-archived-applications-body {
   display: grid;

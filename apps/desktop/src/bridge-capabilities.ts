@@ -15,6 +15,7 @@ export const bridgeCapabilities = [
   "application.create",
   "application.import",
   "application.archive",
+  "application.rename",
   "application.delete",
   "application.set-models",
   "knowledge.create",

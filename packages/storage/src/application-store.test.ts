@@ -173,6 +173,45 @@ describe("application storage", () => {
     expect([...(await applications.listArchived(workspaceId)).keys()]).toEqual(["default"]);
   });
 
+  it("renames a created application on its row and the default application beside it", async () => {
+    const { applications } = storage;
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-a",
+      name: "Acme",
+      jobSource,
+      createdAt,
+    });
+    const renamedAt = "2030-01-03T00:00:00.000Z";
+
+    await applications.renameApplication(
+      workspaceId,
+      "app-a",
+      "  Acme — Staff Engineer ",
+      renamedAt,
+    );
+    expect(await applications.getApplication(workspaceId, "app-a")).toMatchObject({
+      name: "Acme — Staff Engineer",
+      updatedAt: renamedAt,
+    });
+
+    expect(await applications.getDefaultApplicationName(workspaceId)).toBeUndefined();
+    await applications.renameApplication(workspaceId, "default", "Beta — Designer", renamedAt);
+    await applications.renameApplication(workspaceId, "default", "Beta — Lead Designer", renamedAt);
+    expect(await applications.getDefaultApplicationName(workspaceId)).toBe("Beta — Lead Designer");
+    expect(await applications.getDefaultApplicationName("other-workspace")).toBeUndefined();
+
+    await expect(
+      applications.renameApplication(workspaceId, "missing", "Name", renamedAt),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      applications.renameApplication(workspaceId, "app-a", "   ", renamedAt),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      applications.renameApplication(workspaceId, "default", "x".repeat(121), renamedAt),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+  });
+
   it("sets, replaces and clears an application's own model pair", async () => {
     const { applications } = storage;
     await applications.insertApplication({
@@ -273,7 +312,7 @@ describe("application storage", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(34);
+    expect(storage.appliedMigrationVersions().at(-1)).toBe(35);
     expect((await storage.getWorkspace(workspaceId))?.createdAt).toBe(createdAt);
     expect(await storage.applications.listApplications(workspaceId)).toEqual([]);
     expect(await storage.applications.listRuns(workspaceId, "default")).toEqual([]);

@@ -106,6 +106,8 @@ interface ReviewWorkspaceProps {
   readonly setupSummary?: ReactNode;
   /** The flow strip linking the workspace's other pages, shown above the header. */
   readonly pageNavigation?: ReactNode;
+  /** A notice under the run header, such as the request to name the application. */
+  readonly headerNotice?: ReactNode;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -1160,6 +1162,7 @@ export function ReviewWorkspace({
   onOpenHome,
   setupSummary,
   pageNavigation,
+  headerNotice,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
@@ -2521,6 +2524,7 @@ export function ReviewWorkspace({
               <div className="spine-loop" />
               <div className="spine-meta" />
             </header>
+            {headerNotice}
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               {compact ? (
                 <>
@@ -2861,6 +2865,7 @@ export function ReviewWorkspace({
               </div>
             </div>
           </header>
+          {headerNotice}
 
           {state.state === "stopped" ? (setupSummary ?? profilePanel) : null}
 

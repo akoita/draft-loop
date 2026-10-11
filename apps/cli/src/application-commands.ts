@@ -35,7 +35,7 @@ function requireApplicationApi<Method>(method: Method | undefined): Method {
 }
 
 /**
- * Registers `application list`, `create`, `import`, `archive`, `restore` and `delete`. An
+ * Registers `application list`, `create`, `import`, `rename`, `archive`, `restore` and `delete`. An
  * application is one job inside the workspace; the workspace's own `job.md` is always listed as
  * the default application.
  */
@@ -46,7 +46,9 @@ export function registerApplicationCommands(
 ): void {
   const application = root
     .command("application")
-    .description("List, create, import, archive and delete the job applications in a workspace");
+    .description(
+      "List, create, import, rename, archive and delete the job applications in a workspace",
+    );
 
   application
     .command("list")
@@ -128,6 +130,22 @@ export function registerApplicationCommands(
           `${counts.skippedExports} completed exports were not imported because their files were missing.`,
         );
       }
+    });
+
+  application
+    .command("rename")
+    .description("Rename an application, including the default one")
+    .argument("<application>", "application id, or default")
+    .argument("<name>", "new display name, such as the role and company (1-120 characters)")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (applicationId: string, name: string, workspace: string) => {
+      const renamed = await requireApplicationApi(service.renameApplication)({
+        root: workspaceRoot(workspace),
+        applicationId,
+        name,
+      });
+      io.write("application renamed:");
+      writeApplication(io, renamed);
     });
 
   for (const [name, archived, description] of [

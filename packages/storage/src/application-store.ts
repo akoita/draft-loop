@@ -104,11 +104,30 @@ export const applicationModelProfilesMigration = {
   `.trim(),
 } as const;
 
-/** The application migrations in the order they apply. */
+/**
+ * The name a person gave the default application. It is derived from the workspace's job, so its
+ * chosen name lives here; created applications keep theirs on their own row.
+ */
+export const defaultApplicationNameMigration = {
+  version: 35,
+  sql: `
+    CREATE TABLE IF NOT EXISTS default_application_names (
+      workspace_id TEXT PRIMARY KEY NOT NULL CHECK (length(trim(workspace_id)) > 0),
+      name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120 AND name = trim(name)),
+      updated_at TEXT NOT NULL CHECK (julianday(updated_at) IS NOT NULL)
+    );
+  `.trim(),
+} as const;
+
+/**
+ * The application migrations. Each applies once by its version, so a later one joins this list
+ * even when another feature's migration took the version before it.
+ */
 export const applicationMigrations = [
   applicationMigration,
   applicationArchiveMigration,
   applicationModelProfilesMigration,
+  defaultApplicationNameMigration,
 ] as const;
 
 export interface ApplicationStoreRecord {
@@ -193,6 +212,18 @@ export interface ApplicationStoragePort extends ApplicationImportReadsPort {
   ) => Promise<void>;
   /** When each archived application of the workspace was archived, by application id. */
   readonly listArchived: (workspaceId: string) => Promise<ReadonlyMap<string, string>>;
+  /**
+   * Renames an application. A created application's own row changes; the default application's
+   * chosen name is stored beside it, since the default application itself is derived.
+   */
+  readonly renameApplication: (
+    workspaceId: string,
+    applicationId: string,
+    name: string,
+    updatedAt: string,
+  ) => Promise<void>;
+  /** The name a person gave the default application, or `undefined` before they chose one. */
+  readonly getDefaultApplicationName: (workspaceId: string) => Promise<string | undefined>;
   /** Sets a created application's model pair, or clears it with `null`. */
   readonly setModelProfiles: (
     workspaceId: string,
@@ -452,6 +483,41 @@ export function createApplicationStorage(
           .all(workspaceId)
           .map((row) => [text(row, "application_id"), text(row, "archived_at")] as const),
       );
+    },
+    renameApplication: async (workspaceId, applicationId, nameInput, updatedAt) => {
+      ensureOpen();
+      requireIdentifier(workspaceId, "workspace id");
+      requireIdentifier(applicationId, "application id");
+      let name: string;
+      try {
+        name = normalizeApplicationName(nameInput);
+      } catch (error) {
+        throw new StorageValidationError((error as Error).message);
+      }
+      if (applicationId === defaultApplicationId) {
+        database
+          .prepare(
+            `INSERT INTO default_application_names (workspace_id, name, updated_at) VALUES (?, ?, ?)
+             ON CONFLICT (workspace_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at`,
+          )
+          .run(workspaceId, name, updatedAt);
+        return;
+      }
+      const changed = database
+        .prepare(
+          "UPDATE applications SET name = ?, updated_at = ? WHERE workspace_id = ? AND application_id = ?",
+        )
+        .run(name, updatedAt, workspaceId, applicationId) as { readonly changes?: number };
+      if (changed.changes === 0) {
+        throw new StorageValidationError(`Application ${applicationId} was not found`);
+      }
+    },
+    getDefaultApplicationName: async (workspaceId) => {
+      ensureOpen();
+      const row = database
+        .prepare("SELECT name FROM default_application_names WHERE workspace_id = ?")
+        .get(workspaceId);
+      return row === undefined ? undefined : text(row, "name");
     },
     setModelProfiles: async (workspaceId, applicationId, modelProfiles, updatedAt) => {
       ensureOpen();

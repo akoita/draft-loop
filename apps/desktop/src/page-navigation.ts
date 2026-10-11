@@ -116,6 +116,30 @@ export function goBack(navigation: PageNavigation): PageNavigation {
   return withView(navigation, target, navigation.history.slice(0, -1));
 }
 
+/** Shows an application's new name wherever it appears: the page, the Back trail and Home. */
+export function renameApplicationPage(
+  navigation: PageNavigation,
+  applicationId: string,
+  name: string,
+): PageNavigation {
+  const rename = <View extends WorkspaceView>(view: View): View =>
+    view.kind === "application" && view.applicationId === applicationId && view.name !== name
+      ? { ...view, name }
+      : view;
+  const view = rename(navigation.view);
+  const history = navigation.history.map(rename);
+  const lastApplication =
+    navigation.lastApplication === null ? null : rename(navigation.lastApplication);
+  if (
+    view === navigation.view &&
+    lastApplication === navigation.lastApplication &&
+    history.every((entry, index) => entry === navigation.history[index])
+  ) {
+    return navigation;
+  }
+  return { ...navigation, view, history, lastApplication };
+}
+
 /** True while the New application flow can still be returned to, so it keeps its draft. */
 export function keepsNewApplicationFlow(navigation: PageNavigation): boolean {
   return [navigation.view, ...navigation.history].some((entry) => entry.kind === "new-application");

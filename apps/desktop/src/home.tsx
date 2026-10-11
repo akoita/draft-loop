@@ -10,13 +10,21 @@ import {
   canDeleteApplication,
   partitionApplications,
 } from "./application-archive-model.js";
-import type { ApplicationSummaryView } from "./application-contract.js";
+import {
+  type ApplicationSummaryView,
+  normalizeApplicationDisplayName,
+} from "./application-contract.js";
 import {
   type ApplicationImportNotice,
   applicationImportErrorNotice,
   applicationImportExplanation,
   applicationImportSuccessNotice,
 } from "./application-import-model.js";
+import {
+  applicationRenameFailureMessage,
+  invalidApplicationNameMessage,
+  needsApplicationName,
+} from "./application-name-model.js";
 import {
   type CareerEvidenceCapabilities,
   type CareerEvidenceStatus,
@@ -44,6 +52,7 @@ import {
   profileStatusPresentation,
   readHomeProfile,
 } from "./home-model.js";
+import { useInlineRename } from "./inline-rename.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
 import {
@@ -56,6 +65,7 @@ import {
   type ProfileGenerationActivity,
   ProfileGenerationSummary,
 } from "./profile-generation-progress.js";
+import { PencilIcon } from "./workspace-title.js";
 
 /**
  * Focus lands on the location line of a screen when it opens or is returned to, so assistive
@@ -82,6 +92,8 @@ interface WorkspaceLocationProps {
   readonly back?: WorkspaceBack;
   /** Names the screen with the page heading, for a screen with no other title. */
   readonly asHeading?: boolean;
+  /** Double-clicking the heading starts renaming what it names. */
+  readonly onHeadingDoubleClick?: () => void;
 }
 
 /** "← Previous page": returns to the page the person came from. */
@@ -100,14 +112,24 @@ export function WorkspaceBackButton({ back }: { readonly back: WorkspaceBack }) 
 }
 
 /** "← Previous page / Current screen": the way back, and the screen's label. */
-export function WorkspaceLocation({ current, back, asHeading = false }: WorkspaceLocationProps) {
+export function WorkspaceLocation({
+  current,
+  back,
+  asHeading = false,
+  onHeadingDoubleClick,
+}: WorkspaceLocationProps) {
   const ref = useRef<HTMLElement>(null);
   useFocusOnOpen(ref);
   return (
     <nav ref={ref} className="home-location" aria-label="Workspace location" tabIndex={-1}>
       {back === undefined ? null : <WorkspaceBackButton back={back} />}
       {asHeading ? (
-        <h1 className="home-location-current" title={current} aria-current="page">
+        <h1
+          className="home-location-current"
+          title={current}
+          aria-current="page"
+          onDoubleClick={onHeadingDoubleClick}
+        >
           {current}
         </h1>
       ) : (
@@ -187,6 +209,8 @@ export function ProfileFreshnessNote({
 export interface ApplicationCardActions {
   /** Archives an active application, or restores an archived one. */
   readonly onArchive?: () => void;
+  /** Stores a new name; the card's name is edited in place with the pencil beside it. */
+  readonly onRename?: (name: string) => Promise<void>;
   /** Asks to delete; present only for an application that can be deleted. */
   readonly onRequestDelete?: () => void;
   readonly onConfirmDelete?: () => void;
@@ -213,21 +237,75 @@ export function ApplicationCard({
 }) {
   const metaId = `application-meta-${application.id}`;
   const archived = application.archivedAt !== null;
-  const { onArchive, onRequestDelete, onConfirmDelete, onCancelDelete } = actions;
+  const { onArchive, onRename, onRequestDelete, onConfirmDelete, onCancelDelete } = actions;
   const busy = actions.busy === true;
+  const inputId = `application-name-input-${application.id}`;
+  const renameButtonId = `application-rename-${application.id}`;
+  const errorId = `application-name-error-${application.id}`;
+  const rename = useInlineRename({
+    name: application.name,
+    normalize: normalizeApplicationDisplayName,
+    invalidMessage: invalidApplicationNameMessage,
+    failureMessage: applicationRenameFailureMessage,
+    onRename,
+    inputId,
+    buttonId: renameButtonId,
+  });
+  const nudge = onRename !== undefined && !rename.editing && needsApplicationName(application);
   return (
     <li className={archived ? "application-card application-card-archived" : "application-card"}>
       <div className="application-card-head">
-        <h3>
-          <button
-            className="application-card-open"
-            type="button"
-            aria-describedby={metaId}
-            onClick={() => onOpen(application)}
-          >
-            {application.name}
-          </button>
-        </h3>
+        {rename.editing ? (
+          <div className="application-card-rename">
+            <input
+              id={inputId}
+              className="application-card-name-input"
+              type="text"
+              value={rename.draft}
+              readOnly={rename.busy}
+              aria-busy={rename.busy ? true : undefined}
+              aria-label="Application name"
+              aria-invalid={rename.errorMessage === null ? undefined : true}
+              aria-describedby={rename.errorMessage === null ? undefined : errorId}
+              onChange={(event) => rename.change(event.target.value)}
+              onKeyDown={rename.onKeyDown}
+              onBlur={() => {
+                if (!rename.busy) rename.commit();
+              }}
+            />
+            {rename.errorMessage === null ? null : (
+              <p className="setup-blocker" id={errorId} role="alert">
+                {rename.errorMessage}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="application-card-title workspace-title-editable">
+            <h3>
+              <button
+                className="application-card-open"
+                type="button"
+                aria-describedby={metaId}
+                onClick={() => onOpen(application)}
+              >
+                {application.name}
+              </button>
+            </h3>
+            {onRename === undefined ? null : (
+              <button
+                id={renameButtonId}
+                className="workspace-title-edit-button"
+                type="button"
+                disabled={busy}
+                aria-label={`Rename ${application.name}`}
+                title="Rename"
+                onClick={() => rename.start()}
+              >
+                <PencilIcon />
+              </button>
+            )}
+          </div>
+        )}
         {running ? (
           <Chip tone="progress">{applicationRunningLabel}</Chip>
         ) : (
@@ -249,6 +327,23 @@ export function ApplicationCard({
           </>
         ) : null}
       </p>
+      {nudge ? (
+        <div className="application-card-nudge">
+          <p>
+            {application.suggestedName === null
+              ? "Give it a name you will recognise, such as the role and the company."
+              : `Give it a name you will recognise, such as “${application.suggestedName}”.`}
+          </p>
+          <button
+            className="button button-outline"
+            type="button"
+            disabled={busy}
+            onClick={() => rename.start(application.suggestedName ?? application.name)}
+          >
+            Name it
+          </button>
+        </div>
+      ) : null}
       {actions.confirmingDelete === true && onConfirmDelete !== undefined ? (
         <fieldset className="application-card-confirm">
           <legend>{applicationDeleteConfirmation(application.name)}</legend>
@@ -306,6 +401,7 @@ function ApplicationsList({
   now,
   onOpen,
   onArchive,
+  onRename,
   onDelete,
   busyApplicationId = null,
   runningApplicationId = null,
@@ -317,6 +413,9 @@ function ApplicationsList({
   readonly onOpen: (application: ApplicationSummaryView) => void;
   readonly onArchive?:
     | ((application: ApplicationSummaryView, archived: boolean) => void)
+    | undefined;
+  readonly onRename?:
+    | ((application: ApplicationSummaryView, name: string) => Promise<void>)
     | undefined;
   readonly onDelete?: ((application: ApplicationSummaryView) => void) | undefined;
   readonly busyApplicationId?: string | null;
@@ -347,6 +446,9 @@ function ApplicationsList({
       busy: disabled || busyApplicationId !== null,
       confirmingDelete: confirmingId === application.id,
       ...(onArchive === undefined ? {} : { onArchive: () => onArchive(application, !isArchived) }),
+      ...(onRename === undefined
+        ? {}
+        : { onRename: (name: string) => onRename(application, name) }),
       ...(onDelete === undefined || !canDeleteApplication(application)
         ? {}
         : {
@@ -448,6 +550,11 @@ export interface HomeViewProps {
   readonly importNotice?: ApplicationImportNotice | null;
   /** Present when the host can archive and restore applications. */
   readonly onArchiveApplication?: (application: ApplicationSummaryView, archived: boolean) => void;
+  /** Present when the host can rename applications; rejects with the message to show. */
+  readonly onRenameApplication?: (
+    application: ApplicationSummaryView,
+    name: string,
+  ) => Promise<void>;
   /** Present when the host can delete applications; called after the person confirmed. */
   readonly onDeleteApplication?: (application: ApplicationSummaryView) => void;
   /** The application an archive, restore or delete is running on. */
@@ -482,6 +589,7 @@ export function HomeView({
   importing = false,
   importNotice = null,
   onArchiveApplication,
+  onRenameApplication,
   onDeleteApplication,
   busyApplicationId = null,
   applicationNotice = null,
@@ -621,6 +729,7 @@ export function HomeView({
               now={now}
               onOpen={onOpenApplication}
               onArchive={onArchiveApplication}
+              onRename={onRenameApplication}
               onDelete={onDeleteApplication}
               busyApplicationId={busyApplicationId}
               runningApplicationId={runningApplicationId}
@@ -665,6 +774,8 @@ export interface HomeScreenProps {
   /** Opens the guided New application flow; absent when the host cannot create applications. */
   readonly onNewApplication?: () => void;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
+  /** Told after a card renamed an application, so the window's pages use the new name. */
+  readonly onApplicationRenamed?: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
 }
@@ -686,6 +797,7 @@ export function HomeScreen({
   settings,
   onNewApplication,
   onOpenApplication,
+  onApplicationRenamed,
   onManageProfile,
   onManageEvidence,
 }: HomeScreenProps) {
@@ -702,6 +814,7 @@ export function HomeScreen({
   const importApplication = applicationCapabilities.importApplication;
   const archiveApplication = applicationCapabilities.archiveApplication;
   const deleteApplication = applicationCapabilities.deleteApplication;
+  const renameApplication = applicationCapabilities.renameApplication;
   const [busyApplicationId, setBusyApplicationId] = useState<string | null>(null);
   const [applicationNotice, setApplicationNotice] = useState<ApplicationActionNotice | null>(null);
   const [importing, setImporting] = useState(false);
@@ -751,6 +864,24 @@ export function HomeScreen({
           runApplicationAction(application, archived ? "archive" : "restore", () =>
             archiveApplication(workspaceId, application.id, archived),
           );
+  // The card shows a failed rename in its own field, so it leaves the list's notice alone.
+  const onRenameApplication =
+    renameApplication === undefined
+      ? undefined
+      : async (application: ApplicationSummaryView, name: string) => {
+          const renamed = await renameApplication(workspaceId, application.id, name);
+          setApplications((current) =>
+            current.status === "ready"
+              ? {
+                  status: "ready",
+                  applications: current.applications.map((item) =>
+                    item.id === renamed.id ? renamed : item,
+                  ),
+                }
+              : current,
+          );
+          onApplicationRenamed?.(renamed);
+        };
   const onDeleteApplication =
     deleteApplication === undefined
       ? undefined
@@ -876,6 +1007,7 @@ export function HomeScreen({
       importing={importing}
       importNotice={importNotice}
       {...(onArchiveApplication === undefined ? {} : { onArchiveApplication })}
+      {...(onRenameApplication === undefined ? {} : { onRenameApplication })}
       {...(onDeleteApplication === undefined ? {} : { onDeleteApplication })}
       busyApplicationId={busyApplicationId}
       applicationNotice={applicationNotice}

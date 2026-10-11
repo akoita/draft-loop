@@ -132,6 +132,30 @@ describe("application CLI", () => {
     ).toBe("job.md");
   });
 
+  it("renames a created application and the default one", async () => {
+    const { root, lines, run } = await setup();
+    await run("application", "create", root, "--name", "Beta", "--job-text", "Design interfaces.");
+    const id = /^app-[0-9a-f]{12}/u.exec(lines[1] ?? "")?.[0] ?? "";
+
+    lines.length = 0;
+    await run("application", "rename", id, "Beta — Lead Designer", root);
+    await run("application", "rename", "default", " Synthetic — Staff Engineer ", root);
+    await run("application", "list", root, "--json");
+    expect(lines[0]).toBe("application renamed:");
+    expect(lines[1]).toMatch(new RegExp(`^${id} {2}Beta — Lead Designer {2}`, "u"));
+    expect(lines[3]).toMatch(/^default {2}Synthetic — Staff Engineer {2}/u);
+    const listed = JSON.parse(lines[4] ?? "");
+    expect(listed.map((item: { name: string }) => item.name)).toEqual([
+      "Synthetic — Staff Engineer",
+      "Beta — Lead Designer",
+    ]);
+    expect(listed[0]).toMatchObject({ nameChosen: true, suggestedName: null });
+    await expect(run("application", "rename", id, "  ", root)).rejects.toBeInstanceOf(CliUserError);
+    await expect(run("application", "rename", "app-missing", "X", root)).rejects.toBeInstanceOf(
+      CliUserError,
+    );
+  });
+
   it("archives, restores and deletes an application", async () => {
     const { root, lines, run } = await setup();
     await run("application", "create", root, "--name", "Beta", "--job-text", "Design interfaces.");

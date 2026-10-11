@@ -42,6 +42,8 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     latestRunId: newestRunId(view),
     archivedAt: view.archivedAt,
     modelProfiles: view.modelProfiles,
+    nameChosen: view.nameChosen,
+    suggestedName: view.suggestedName,
   };
 }
 
@@ -108,6 +110,18 @@ export async function archiveApplicationSummary(
     throw new Error("This application service cannot archive applications.");
   }
   return projectApplication(await service.archiveApplication({ root, applicationId, archived }));
+}
+
+export async function renameApplicationSummary(
+  service: ApplicationService,
+  root: string,
+  applicationId: string,
+  name: string,
+): Promise<ApplicationSummaryView> {
+  if (service.renameApplication === undefined) {
+    throw new Error("This application service cannot rename applications.");
+  }
+  return projectApplication(await service.renameApplication({ root, applicationId, name }));
 }
 
 export async function setApplicationModelsSummary(
