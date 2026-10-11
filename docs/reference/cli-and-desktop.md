@@ -248,7 +248,7 @@ Opening or creating a workspace lands on **Home**, never on the last review.
 Home shows what the workspace holds once for the candidate, then its
 applications:
 
-- **Header.** The workspace name, with **Rename** and **Close workspace**.
+- **Header.** The workspace name, editable in place, and **Close workspace**.
 - **Flow strip.** "Career evidence → Career profile → Applications" shows how
   the pieces relate: evidence is the raw material you provide, the profile is
   the verified record DraftLoop extracts from it and you review once, and every
@@ -450,8 +450,10 @@ is the workspace's display name and may contain spaces and accents (1 to 80
 characters, no slashes or control characters). The folder is a lowercase ASCII
 slug of it, or `draft-loop-workspace` when nothing safe remains.
 
-Use **Rename** beside the workspace name in the header to change the display
-name later. Enter saves, Escape cancels, and an invalid name shows a message.
+To change the display name later, double-click the workspace name in the
+header, or use the pencil that appears when you hover over it or tab to it.
+Enter or clicking away saves, Escape cancels, and an invalid name shows a
+message when you press Enter (clicking away keeps the old name).
 The name is stored in `.draft-loop/review-overrides.json` (`workspaceName`) and
 in the recent list; the folder and `workspace.json` are unchanged. A workspace
 without a stored name shows its folder name.
