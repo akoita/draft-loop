@@ -28,7 +28,7 @@ import {
   careerEvidenceLockedDuringGeneration,
 } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
-import { HomeScreen, WorkspaceLocation } from "./home.js";
+import { HomeScreen, WorkspaceBackButton, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
   evidenceView,
@@ -2652,14 +2652,21 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           workspaceTitleNode
         ) : (
           <div className="application-title">
-            <WorkspaceLocation current={application.name} back={pageBack} asHeading />
+            <WorkspaceLocation current={application.name} asHeading />
           </div>
         )
       }
       {...(application === null
         ? {}
         : {
-            pageNavigation: <CareerFlowStrip current="applications" onOpen={flowStepHandlers} />,
+            // Back leads the page row, beside the career flow, as on the career pages; the run
+            // header keeps only the application and its run.
+            pageNavigation: (
+              <div className="page-toolbar-lead">
+                <WorkspaceBackButton back={pageBack} />
+                <CareerFlowStrip current="applications" onOpen={flowStepHandlers} />
+              </div>
+            ),
           })}
       {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
       {...(writingPolicyNode === undefined ? {} : { writingPolicyAction: writingPolicyNode })}
