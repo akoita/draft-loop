@@ -6362,6 +6362,21 @@ input[type="checkbox"] {
   background: var(--red-wash);
 }
 
+.home-chip-progress {
+  border-color: var(--teal-line);
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+
+.home-profile-progress {
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.home-actions-blocked {
+  margin: 0;
+}
+
 .home-applications,
 .home-settings {
   display: grid;

@@ -259,13 +259,16 @@ applications:
   (generation saved no facts), or Not yet generated. **Manage profile** opens
   the Career profile page. A freshness line under the status says whether the
   profile is current with the career evidence; see
-  [Profile freshness](#profile-freshness).
+  [Profile freshness](#profile-freshness). While a generation runs, the card
+  shows In progress with the elapsed time and parts done, and **View progress**
+  opens the live progress and **Cancel generation**.
 - **Career evidence.** The selected knowledge base, its source count and
   readiness, or an empty state with **Add career evidence**. **Manage evidence**
   opens the Career evidence page.
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
-  first. A workspace with nothing but its default application says so and points
+  first. The application whose review is running shows Review running instead.
+  A workspace with nothing but its default application says so and points
   to **New application**. Beside it, **Import from another workspace** opens a
   folder picker and imports a workspace made for one job as an application (see
   [Importing a workspace](#importing-a-workspace)). Each card has **Archive**,
@@ -356,6 +359,11 @@ is reached through Home:
   reached, open panels and the scroll position. An application you return to
   opens without reloading. Statuses and counts are read again when a page is
   shown, so they stay current.
+- **Long operations.** Profile generation and review runs keep going while you
+  move between pages, and the page you return to shows their current progress.
+  Only actions that would conflict wait: while one runs, Home keeps **New
+  application**, **Import from another workspace**, **Archive** and **Delete**
+  unavailable and says why, and Close workspace waits for it to finish.
 
 The New application flow is kept while Back can still return to it. Going Home
 discards it, and **New application** always starts an empty flow. The last

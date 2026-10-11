@@ -10,6 +10,7 @@ import {
   applicationView,
   evidencePresentation,
   evidenceView,
+  homeActionsBlockedReason,
   homeView,
   isHomeView,
   loadHomeProfileStatus,
@@ -254,5 +255,13 @@ describe("application list wording", () => {
     ]);
     expect(onlyDefaultApplication([old])).toBe(true);
     expect(onlyDefaultApplication([old, recent])).toBe(false);
+  });
+});
+
+describe("actions held back by a running operation", () => {
+  it("names the operation the person is waiting on", () => {
+    expect(homeActionsBlockedReason("profile-generation")).toContain("career profile is generated");
+    expect(homeActionsBlockedReason("review-run")).toContain("running review stops");
+    expect(homeActionsBlockedReason("other")).toContain("current workspace operation finishes");
   });
 });

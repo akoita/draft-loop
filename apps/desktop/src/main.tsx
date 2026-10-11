@@ -28,6 +28,8 @@ import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
   evidenceView,
+  type HomeActivity,
+  homeActionsBlockedReason,
   homeView,
   profileView,
   type WorkspaceView,
@@ -84,6 +86,7 @@ import {
   pageLabel,
 } from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
+import type { ProfileGenerationActivity } from "./profile-generation-progress.js";
 import { ProviderAuthentication } from "./provider-authentication.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
@@ -964,6 +967,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     readonly generation: number;
   } | null>(null);
   const profilePendingScopeRef = useRef(profilePendingScope);
+  // The profile generation running on the profile page, so Home can show it while it runs.
+  const [profileGenerationScope, setProfileGenerationScope] = useState<{
+    readonly workspaceId: string;
+    readonly generation: number;
+    readonly activity: ProfileGenerationActivity;
+  } | null>(null);
   const activeWorkspaceIdRef = useRef<string | null>(null);
   const contextGenerationRef = useRef(0);
   const [profileResetEpoch, setProfileResetEpoch] = useState(0);
@@ -1015,6 +1024,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     activeWorkspaceId !== null &&
     profilePendingScopeRef.current?.workspaceId === activeWorkspaceId &&
     profilePendingScopeRef.current.generation === workspaceGeneration;
+  const profileGenerationForActiveWorkspace =
+    activeWorkspaceId !== null &&
+    profileGenerationScope?.workspaceId === activeWorkspaceId &&
+    profileGenerationScope.generation === workspaceGeneration
+      ? profileGenerationScope.activity
+      : null;
   const previousWorkspaceIdRef = useRef<string | null>(null);
   activeWorkspaceIdRef.current = activeWorkspaceId;
   const isCurrentWorkspaceContext = useCallback(
@@ -1041,6 +1056,18 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       }
     },
     [isCurrentWorkspaceContext],
+  );
+  const onProfileGenerationChange = useCallback(
+    (workspaceId: string, generation: number, activity: ProfileGenerationActivity | null) => {
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+      setProfileGenerationScope(activity === null ? null : { workspaceId, generation, activity });
+    },
+    [isCurrentWorkspaceContext],
+  );
+  const profileGenerationChange = useMemo(
+    () => (workspaceId: string, activity: ProfileGenerationActivity | null) =>
+      onProfileGenerationChange(workspaceId, workspaceGeneration, activity),
+    [onProfileGenerationChange, workspaceGeneration],
   );
   const profilePendingChange = useMemo(
     () => (workspaceId: string, pending: boolean) =>
@@ -1073,6 +1100,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setKnowledgePending(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setBusy(false);
       setCandidateProfileSelection((current) =>
         current?.workspaceId === workspaceId ? null : current,
@@ -1483,6 +1511,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setNavigation(initialPageNavigation());
       setLoadedApplicationId(null);
       setState(loaded);
@@ -1524,6 +1553,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setError(null);
       setImportError(null);
       setNavigation(initialPageNavigation());
@@ -1597,6 +1627,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setPendingBulkFindingCount(null);
       setKnowledgePending(false);
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setCandidateProfileSelection(null);
       setAppliedModelProfiles(null);
       setSavedModelProfiles({ status: "idle" });
@@ -2422,6 +2453,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           selectedProfile={selectedCandidateProfile}
           onSelectionChange={onCandidateProfileSelectionChange}
           onPendingChange={profilePendingChange}
+          onGenerationChange={profileGenerationChange}
         />
       </fieldset>
     );
@@ -2657,6 +2689,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     applications: goHome,
   };
   const flowEpoch = navigation.newApplicationEpoch;
+  const reviewRunning = state.execution.status === "running";
+  const homeActivity: HomeActivity =
+    profileGenerationForActiveWorkspace !== null
+      ? "profile-generation"
+      : reviewRunning
+        ? "review-run"
+        : "other";
 
   if (!homeAvailable) return modelEditorScreen ?? reviewWorkspace(null);
 
@@ -2679,6 +2718,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           applicationCapabilities={activePort}
           errorMessage={importError}
           disabled={modelSettingsDisabled}
+          disabledReason={homeActionsBlockedReason(homeActivity)}
+          profileGeneration={profileGenerationForActiveWorkspace}
+          runningApplicationId={reviewRunning ? loadedApplicationId : null}
           {...(activePort.createApplication === undefined
             ? {}
             : { onNewApplication: () => setNavigation(openNewApplication) })}
