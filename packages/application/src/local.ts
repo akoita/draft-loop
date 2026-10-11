@@ -154,6 +154,7 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
@@ -1412,60 +1413,6 @@ async function collectSourceFiles(path: string): Promise<readonly string[]> {
 interface PreparedInputs {
   readonly context: ContextSnapshot;
   readonly sources: readonly NormalizedSource[];
-}
-
-function reviewedOpportunityContext(record: OpportunityBriefVersionRecord): {
-  readonly jobDescription: string;
-  readonly requirements: readonly {
-    readonly id: string;
-    readonly text: string;
-    readonly priority: "critical" | "high" | "medium" | "low";
-  }[];
-  readonly candidateInstructions: string;
-  readonly opportunityBriefReference: {
-    readonly briefId: string;
-    readonly version: number;
-    readonly checksum: string;
-  };
-} {
-  const brief = record.brief;
-  if (brief.status !== "reviewed") {
-    throw new CliUserError("The selected opportunity brief version is not reviewed.");
-  }
-  const sections = [
-    `Role: ${brief.role?.value ?? ""}`,
-    `Employer: ${brief.employer?.value ?? ""}`,
-    ...(brief.responsibilities.length === 0
-      ? []
-      : ["Responsibilities:", ...brief.responsibilities.map((item) => `- ${item.text}`)]),
-    "Requirements:",
-    ...brief.requirements.map((item) => `- [${item.priority}] ${item.text}`),
-    ...(brief.priorities.length === 0
-      ? []
-      : ["Priorities:", ...brief.priorities.map((item) => `- ${item.text}`)]),
-  ];
-  const instructions = [
-    ...(brief.candidateInstructions.tone === null
-      ? []
-      : [`Tone: ${brief.candidateInstructions.tone.value}`]),
-    ...(brief.candidateInstructions.applicationGoal === null
-      ? []
-      : [`Application goal: ${brief.candidateInstructions.applicationGoal.value}`]),
-    ...brief.candidateInstructions.forbiddenLanguage.map(
-      (item) => `Forbidden language: ${item.value}`,
-    ),
-    ...brief.candidateInstructions.focusAreas.map((item) => `Focus area: ${item.value}`),
-  ];
-  return {
-    jobDescription: sections.join("\n"),
-    requirements: brief.requirements.map(({ id, text, priority }) => ({ id, text, priority })),
-    candidateInstructions: instructions.join("\n"),
-    opportunityBriefReference: {
-      briefId: brief.id,
-      version: brief.version,
-      checksum: record.checksum,
-    },
-  };
 }
 
 async function prepareInputs(

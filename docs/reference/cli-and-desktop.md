@@ -744,6 +744,10 @@ applies. If the policy override selected for the run belongs to the reviewed
 brief, starting from the raw job description is refused. A run's preflight
 states the source: "Requirements: reviewed opportunity brief ID vN (R
 requirements)" or "Requirements: job description (unreviewed source units)".
+A reviewed brief's responsibilities are checked like requirements, at medium
+priority after the extracted requirements, so coverage and critique ask for
+them and the preflight count includes them. A responsibility that repeats a
+requirement's ID or wording is left to that requirement.
 
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins

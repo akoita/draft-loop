@@ -1567,6 +1567,35 @@ Product constraints decided with the user:
 reference application with the new inputs, and states which remaining gap
 (critic, stopping rule, or export) to address first.
 
+### Now — Tailored, sendable CVs
+
+Two comparisons with the candidate's manual CVs (TotalEnergies on 2026-10-10,
+Euronext on 2026-10-11) traced the gap to what the author receives and what it
+may do, not to the writing model. Full-source evidence is now the default
+(#1168). The remaining causes:
+
+- the job's responsibilities never become checked requirements;
+- the author prompt forbids job-specific selection, so drafts have no headline,
+  no core-areas section and no ordering by the ad;
+- nothing catches copied career notes, fragments or negative asides, and runs
+  are approved over blockers;
+- the candidate cannot see what the author received, compare runs, or tell
+  when the job text is garbled.
+
+The ordered issues (milestone "Tailored, sendable CVs"):
+
+1. count the job's responsibilities as requirements (#1171);
+2. observe a full-source frontier run on the Euronext reference (#1172);
+3. a versioned author prompt that tailors to the job (#1173);
+4. professional prose and an editorial critique with a ready-to-send verdict
+   (#728, #1174);
+5. show the evidence mode and what the author received (#904, #1175);
+6. a run picker (#1176) and a garbled job text warning (#1177).
+
+**Exit criterion:** a fresh run on a reference application covers the job's
+responsibilities, opens with a job-led headline and core areas, and contains
+no copied source notes.
+
 ### Completed — Local semantic retrieval
 
 Add learned local embeddings to CKB retrieval so evidence phrased differently
@@ -1941,6 +1970,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-11 | Opened the Tailored, sendable CVs stage (#1171 to #1177, with #728 and #904) and made a reviewed brief's responsibilities run requirements (#1171). | Both reference comparisons showed the gap comes from inputs and the no-tailoring rule. Responsibilities were sent to the author but never checked, so coverage and critique missed what the job says the candidate will do. #904 moved here from Manual parity: inputs. |
 | 2026-10-11 | Made full-source evidence the default when it fits (#1168). | Runs without a saved evidence mode send every eligible chunk of the selected sources and fall back to retrieval visibly when they exceed the budget. Two comparisons with hand-made CVs showed the twenty-chunk limit hid every job-specific achievement. `evidence mode <workspace> retrieval` keeps the old behaviour. |
 | 2026-10-10 | Closed #1053: profile windows plan on 1.6 output tokens per character after a live Mistral Large 4 check (at most 1.33 measured, no truncated calls). | A long career source takes about half the extraction calls. `pnpm test:profile-windows:live` re-checks any route on made-up text. |
 | 2026-10-10 | Completed Any-format career intake (milestone 26, 50/51 issues) in code; #1053 stays open for a live measurement. | Each source has a detected or user-set kind that guides extraction. Runs that pin a reviewed profile retrieve its verified facts first, with chunks as backup and a content-free origin trace. |
