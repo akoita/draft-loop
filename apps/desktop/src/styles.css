@@ -428,6 +428,27 @@ kbd::after {
   background: var(--red-wash);
 }
 
+/* Workspace-level actions (Change models, Close workspace): a solid raised control with an icon,
+   so it reads as a real button on the desk instead of a ghost of the background. */
+.button-toolbar {
+  border-color: var(--border-strong);
+  color: var(--text-1);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 20, 26, 0.08);
+}
+
+.button-toolbar:not(:disabled):hover {
+  border-color: var(--teal-line);
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+/* Disabled stays legible; the title and the guidance line say why. */
+.button-toolbar:disabled {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 .button svg {
   width: 14px;
   height: 14px;
@@ -826,6 +847,35 @@ input[type="checkbox"] {
   border: 0;
   padding: 0;
   min-width: 0;
+}
+
+/* The application page's top row: the career flow on the left, workspace actions on the right. */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  flex: none;
+  min-height: 32px;
+}
+
+.page-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The toolbar row keeps one line: the close guidance stays announced but is shown as the
+   disabled button's tooltip instead of pushing the actions onto a second line. */
+.page-toolbar-actions .workspace-navigation-guidance {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .workspace-navigation-guidance {

@@ -1,5 +1,6 @@
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef } from "react";
+import { CloseWorkspaceIcon } from "./workspace-action-icons.js";
 
 export interface WorkspaceCloseGuard {
   readonly busy: boolean;
@@ -66,13 +67,15 @@ export function WorkspaceNavigationContent({
       <legend className="sr-only">Workspace navigation</legend>
       <button
         ref={closeButtonRef}
-        className="button button-quiet"
+        className="button button-toolbar"
         type="button"
         disabled={closeDisabled}
+        {...(closeDisabledReason === null ? {} : { title: closeDisabledReason })}
         onClick={() => {
           if (!closeDisabled) onRequestClose();
         }}
       >
+        <CloseWorkspaceIcon />
         Close workspace
       </button>
       {closeDisabledReason === null || confirmationOpen ? null : (

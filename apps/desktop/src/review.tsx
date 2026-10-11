@@ -392,6 +392,25 @@ function PlayIcon() {
 }
 
 /**
+ * The row above the spine: the career flow on the left and the workspace-level actions on the
+ * right, where Home and the career pages keep them too. The spine stays about the run.
+ */
+function PageToolbar({
+  navigation,
+  children,
+}: {
+  readonly navigation: ReactNode;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div className="page-toolbar">
+      {navigation}
+      <div className="page-toolbar-actions">{children}</div>
+    </div>
+  );
+}
+
+/**
  * The rail is a table of contents for the workspace, not a toolbar: four destinations, each
  * one place a reviewer actually goes. It carries no section-in-view state, because the draft
  * and the queue scroll in two independent columns and are almost always both on screen —
@@ -2488,7 +2507,10 @@ export function ReviewWorkspace({
         <SideRail onOpenSources={null} />
         <main className="app-shell app-shell-single">
           <div className="main-column">
-            {pageNavigation}
+            <PageToolbar navigation={pageNavigation}>
+              {modelSettingsAction}
+              {workspaceNavigationAction}
+            </PageToolbar>
             <header className="spine">
               <div className="spine-identity">
                 {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
@@ -2497,10 +2519,7 @@ export function ReviewWorkspace({
                 </div>
               </div>
               <div className="spine-loop" />
-              <div className="spine-meta">
-                {modelSettingsAction}
-                {workspaceNavigationAction}
-              </div>
+              <div className="spine-meta" />
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               {compact ? (
@@ -2802,7 +2821,10 @@ export function ReviewWorkspace({
       <main className="app-shell">
         {renderCommandPalette()}
         <div className="main-column">
-          {pageNavigation}
+          <PageToolbar navigation={pageNavigation}>
+            {modelSettingsAction}
+            {workspaceNavigationAction}
+          </PageToolbar>
           <header className="spine">
             <div className="spine-identity">
               {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
@@ -2837,8 +2859,6 @@ export function ReviewWorkspace({
                   </span>
                 )}
               </div>
-              {modelSettingsAction}
-              {workspaceNavigationAction}
             </div>
           </header>
 
