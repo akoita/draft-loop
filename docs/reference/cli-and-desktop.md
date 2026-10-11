@@ -435,6 +435,11 @@ Use **Close workspace** to return to the create/open screen. Saved workspace
 files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.
 
+The button sits at the top right of every workspace page. On an application
+page it shares the row above the run header with **Change models**, so the run
+header carries only the run itself. While a review runs, both are disabled and
+their tooltip says why.
+
 The start page lists the ten most recently opened local workspaces. Select an
 entry to reopen it, use its **Remove** button to drop just that entry, or clear
 the whole list. Removing or clearing entries only edits this history and leaves
