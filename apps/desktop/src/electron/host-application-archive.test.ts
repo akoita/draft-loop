@@ -77,6 +77,53 @@ describe("application.archive and application.delete in the native host", () => 
     expect(await listed(host, workspaceId)).toEqual([["default", "active"]]);
   });
 
+  it("renames the default application and a created one, keeping the name as chosen", async () => {
+    const { host, workspaceId } = await openHost();
+    const created = await host.invoke({
+      type: "application.create",
+      input: { workspaceId, name: "HCcompany", jobText: "Build tools." },
+    });
+    if (!created.ok) throw new Error("Expected an application");
+    const { id } = (created.value as { application: ApplicationSummaryView }).application;
+
+    const renamedDefault = await host.invoke({
+      type: "application.rename",
+      input: { workspaceId, applicationId: "default", name: "Acme — Platform Engineer" },
+    });
+    await host.invoke({
+      type: "application.rename",
+      input: { workspaceId, applicationId: id, name: "HCcompany — Designer" },
+    });
+    expect(renamedDefault).toMatchObject({
+      ok: true,
+      value: {
+        workspaceId,
+        application: {
+          id: "default",
+          name: "Acme — Platform Engineer",
+          nameChosen: true,
+          suggestedName: null,
+        },
+      },
+    });
+    const result = await host.invoke({ type: "application.list", input: { workspaceId } });
+    if (!result.ok) throw new Error("Expected a list");
+    expect(
+      (result.value as { applications: ApplicationSummaryView[] }).applications.map(
+        (item) => item.name,
+      ),
+    ).toEqual(["Acme — Platform Engineer", "HCcompany — Designer"]);
+    await expect(
+      host.invoke({
+        type: "application.rename",
+        input: { workspaceId, applicationId: "app-missing", name: "Name" },
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { message: "Application app-missing was not found." },
+    });
+  });
+
   it("says why the default application cannot be deleted", async () => {
     const { host, workspaceId } = await openHost();
     await expect(

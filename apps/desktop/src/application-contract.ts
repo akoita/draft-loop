@@ -37,6 +37,10 @@ export interface ApplicationSummaryView {
   readonly archivedAt: string | null;
   /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
   readonly modelProfiles: ApplicationModelProfilesView | null;
+  /** False only for a default application the person has not named yet. */
+  readonly nameChosen: boolean;
+  /** A name from the newest brief's role and employer, offered while the name is not chosen. */
+  readonly suggestedName: string | null;
 }
 
 /** Exact author and critic model profile references, as the model profile picker names them. */
@@ -80,6 +84,13 @@ export interface ApplicationArchiveInput {
   readonly workspaceId: string;
   readonly applicationId: string;
   readonly archived: boolean;
+}
+
+/** Renames an application; the default application keeps the name as chosen. */
+export interface ApplicationRenameInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly name: string;
 }
 
 /** Deletes a created application that holds no run, brief or export. */
@@ -148,6 +159,11 @@ export const applicationArchiveKeys = exactKeys<ApplicationArchiveInput>()([
   "applicationId",
   "archived",
 ]);
+export const applicationRenameKeys = exactKeys<ApplicationRenameInput>()([
+  "workspaceId",
+  "applicationId",
+  "name",
+]);
 export const applicationSetModelsKeys = exactKeys<ApplicationSetModelsInput>()([
   "workspaceId",
   "applicationId",
@@ -201,6 +217,8 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "latestRunId",
   "archivedAt",
   "modelProfiles",
+  "nameChosen",
+  "suggestedName",
 ]);
 const listResultKeys = exactKeys<ApplicationListResult>()(["workspaceId", "applications"]);
 const recordResultKeys = exactKeys<ApplicationRecordResult>()(["workspaceId", "application"]);
@@ -225,7 +243,8 @@ function identifier(value: unknown): string | undefined {
   return typeof value === "string" && identifierPattern.test(value) ? value : undefined;
 }
 
-function displayName(value: unknown): string | undefined {
+/** A trimmed application name of 1 to 120 printable characters; `undefined` otherwise. */
+export function normalizeApplicationDisplayName(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   if (trimmed.length === 0 || trimmed.length > applicationNameMaxLength) return undefined;
@@ -279,7 +298,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
   const raw = record(value);
   if (raw === undefined || !onlyKeys(raw, summaryKeys)) return undefined;
   const id = identifier(raw.id);
-  const name = displayName(raw.name);
+  const name = normalizeApplicationDisplayName(raw.name);
   const jobSourceKind = oneOf(raw.jobSourceKind, applicationJobSourceKinds);
   const status = oneOf(raw.status, applicationStatuses);
   const createdAt = timestamp(raw.createdAt);
@@ -291,6 +310,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
   const archivedAt = raw.archivedAt === null ? null : timestamp(raw.archivedAt);
   const modelProfiles =
     raw.modelProfiles === null ? null : normalizeApplicationModelProfiles(raw.modelProfiles);
+  const suggestedName =
+    raw.suggestedName === null ? null : normalizeApplicationDisplayName(raw.suggestedName);
   if (
     id === undefined ||
     name === undefined ||
@@ -304,7 +325,9 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     exportCount === undefined ||
     latestRunId === undefined ||
     archivedAt === undefined ||
-    modelProfiles === undefined
+    modelProfiles === undefined ||
+    typeof raw.nameChosen !== "boolean" ||
+    suggestedName === undefined
   ) {
     return undefined;
   }
@@ -322,6 +345,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     latestRunId,
     archivedAt,
     modelProfiles,
+    nameChosen: raw.nameChosen,
+    suggestedName,
   };
 }
 

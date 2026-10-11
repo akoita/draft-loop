@@ -210,6 +210,7 @@ import {
   importApplicationSummary,
   listApplicationSummaries,
   projectApplication,
+  renameApplicationSummary,
   resolveApplicationScope,
   setApplicationModelsSummary,
   urlJobBriefStep,
@@ -4300,6 +4301,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 workspace.root,
                 command.input.applicationId,
                 command.input.archived,
+              ),
+            },
+          };
+        }
+        case "application.rename": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: await renameApplicationSummary(
+                service,
+                workspace.root,
+                command.input.applicationId,
+                command.input.name,
               ),
             },
           };

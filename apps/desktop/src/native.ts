@@ -327,6 +327,12 @@ export interface DesktopApplicationCapabilities {
     applicationId: string,
     archived: boolean,
   ) => Promise<ApplicationSummaryView>;
+  /** Renames an application, the default one included, and resolves with its summary. */
+  readonly renameApplication?: (
+    workspaceId: string,
+    applicationId: string,
+    name: string,
+  ) => Promise<ApplicationSummaryView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (workspaceId: string, applicationId: string) => Promise<void>;
   /** Sets the model pair one application's new runs use, or clears it with `null`. */
@@ -511,6 +517,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "application.archive",
                 input: { workspaceId, applicationId, archived },
+              }),
+            ).application,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.rename")
+      ? {
+          renameApplication: async (workspaceId: string, applicationId: string, name: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.rename",
+                input: { workspaceId, applicationId, name },
               }),
             ).application,
         }

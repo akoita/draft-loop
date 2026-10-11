@@ -24,6 +24,8 @@ function application(overrides: Partial<ApplicationSummaryView> = {}): Applicati
     latestRunId: null,
     archivedAt: null,
     modelProfiles: null,
+    nameChosen: true,
+    suggestedName: null,
     ...overrides,
   };
 }
