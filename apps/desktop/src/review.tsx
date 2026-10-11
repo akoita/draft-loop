@@ -48,6 +48,7 @@ import {
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
+import { sendVerdict } from "./send-verdict.js";
 import {
   LatestRequirementsBriefView,
   StartRequirementsSourceView,
@@ -106,6 +107,8 @@ interface ReviewWorkspaceProps {
   readonly setupSummary?: ReactNode;
   /** The flow strip linking the workspace's other pages, shown above the header. */
   readonly pageNavigation?: ReactNode;
+  /** A notice under the run header, such as the request to name the application. */
+  readonly headerNotice?: ReactNode;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -1160,6 +1163,7 @@ export function ReviewWorkspace({
   onOpenHome,
   setupSummary,
   pageNavigation,
+  headerNotice,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
@@ -1209,6 +1213,15 @@ export function ReviewWorkspace({
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const runInProgress = reviewInProgress(state);
   const runFinished = reviewFinished(state);
+  // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
+  const verdict =
+    hasArtifact &&
+    state.reviewComplete &&
+    !runInProgress &&
+    !roundLimitRecovery &&
+    state.approval !== "approved"
+      ? sendVerdict({ blocking: blockingFindings, warnings, readiness: approvalReadiness })
+      : null;
   const runStatusLine = runInProgress
     ? inProgressStatus(state)
     : !state.reviewComplete
@@ -2521,6 +2534,7 @@ export function ReviewWorkspace({
               <div className="spine-loop" />
               <div className="spine-meta" />
             </header>
+            {headerNotice}
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               {compact ? (
                 <>
@@ -2861,6 +2875,7 @@ export function ReviewWorkspace({
               </div>
             </div>
           </header>
+          {headerNotice}
 
           {state.state === "stopped" ? (setupSummary ?? profilePanel) : null}
 
@@ -3791,6 +3806,15 @@ export function ReviewWorkspace({
               {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
               {validationLabel}
             </p>
+            {verdict === null ? null : (
+              <p
+                className={`send-verdict ${verdict.ready ? "safe-copy" : "warning-copy"}`}
+                role="status"
+              >
+                <strong>{verdict.headline}</strong>
+                {verdict.reasons.length === 0 ? null : `: ${verdict.reasons.join("; ")}.`}
+              </p>
+            )}
             <div id="approval-gate-details" hidden={gateCollapsed}>
               {!hasArtifact ? (
                 <p className="warning-copy">

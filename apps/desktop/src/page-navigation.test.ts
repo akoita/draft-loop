@@ -20,6 +20,7 @@ import {
   pageHistoryLimit,
   pageKey,
   pageLabel,
+  renameApplicationPage,
 } from "./page-navigation.js";
 
 const acme = applicationView("app-1", "Acme — Backend Lead") as Extract<
@@ -134,6 +135,17 @@ describe("page navigation", () => {
     expect(backTarget(finished)).toBe(homeView);
     // A review started while another page was shown leaves no flow on the trail either.
     expect(keepsNewApplicationFlow(finishNewApplication(flow, acme))).toBe(false);
+  });
+
+  it("shows an application's new name on its page, on the trail and as the last application", () => {
+    const navigation = visit(acme, profileView, globex);
+    const renamed = renameApplicationPage(navigation, "app-1", "Acme — Staff Engineer");
+    expect(renamed.history.map(pageLabel)).toEqual(["Acme — Staff Engineer", "Career profile"]);
+    expect(renamed.view).toBe(globex);
+    expect(renameApplicationPage(renamed, "app-2", "Globex — SRE").lastApplication).toMatchObject({
+      name: "Globex — SRE",
+    });
+    expect(renameApplicationPage(renamed, "app-1", "Acme — Staff Engineer")).toBe(renamed);
   });
 
   it("names each page", () => {

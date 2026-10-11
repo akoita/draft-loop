@@ -34,6 +34,7 @@ import type {
   GetApplicationCommand,
   ImportedApplicationView,
   ListApplicationsCommand,
+  RenameApplicationCommand,
   SetApplicationModelsCommand,
 } from "./workspace-applications.js";
 
@@ -538,6 +539,8 @@ export interface ApplicationDriver {
   ) => Promise<ImportedApplicationView>;
   /** Hides an application from the main list, or restores it; nothing it holds changes. */
   readonly archiveApplication?: (command: ArchiveApplicationCommand) => Promise<ApplicationView>;
+  /** Renames an application, including the default one, and records the name as chosen. */
+  readonly renameApplication?: (command: RenameApplicationCommand) => Promise<ApplicationView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (command: DeleteApplicationCommand) => Promise<void>;
   /** Sets or clears the model pair a created application's new runs use. */
@@ -700,6 +703,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       }),
     archiveApplication: async (command) =>
       requireApplicationApi(driver.archiveApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    renameApplication: async (command) =>
+      requireApplicationApi(driver.renameApplication)({
         ...command,
         root: requireRoot(command.root),
       }),

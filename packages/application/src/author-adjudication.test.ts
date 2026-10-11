@@ -246,7 +246,7 @@ const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
   it("records v6 for new author runs and v3 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v6");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v7");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v3");
   });
 
@@ -463,7 +463,47 @@ describe("author prompt template versions", () => {
     expectEvidenceGroundingContract(v6.systemPrompt);
   });
 
-  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4", "cli-author-v5", "cli-author-v6"])(
+  it("records cli-author-v7 as v6 plus job-tailored selection, with the same budget and inputs", () => {
+    for (const carrier of [undefined, pendingAdjudication()]) {
+      const v6 = createAuthorAdjudicationPrompt("cli-author-v6", carrier, retryFeedback());
+      const v7 = createAuthorAdjudicationPrompt("cli-author-v7", carrier, retryFeedback());
+      expect(v7.providerInput).toEqual(v6.providerInput);
+      expect(
+        v7.systemPrompt
+          .replace(" Tailor the CV to the job in context.", "")
+          .replace(
+            / The job description, its requirements[\s\S]*?follow it over this guidance\./u,
+            "",
+          )
+          .replace(
+            " Do not invent ownership,",
+            " Do not apply job-specific formatting or selection rules, or invent ownership,",
+          ),
+      ).toBe(v6.systemPrompt);
+    }
+
+    const v7 = createAuthorAdjudicationPrompt("cli-author-v7", undefined).systemPrompt;
+    expect(v7).not.toContain("Do not apply job-specific formatting or selection rules");
+    expect(v7).toContain("are employer context, never candidate facts");
+    expect(v7).toContain("never present the target job title as a role the candidate held");
+    expect(v7).toContain('add one section of kind "alignment" titled "Core areas"');
+    expect(v7).toContain("Give a bullet a short label only when the label's words appear");
+    expect(v7).toContain("keep every role with its title, employer and dates");
+    expect(v7).toContain("Use a requirement's wording only when the cited evidence supports it.");
+    expect(v7).toContain("When context.writingPolicy sets a section order or emphasis");
+    expect(v7).toContain("write concise professional CV language");
+    expect(v7).toContain("Do not rephrase, abbreviate, translate, reorder words");
+    expectEvidenceGroundingContract(v7);
+  });
+
+  it.each([
+    "cli-author-v2",
+    "cli-author-v3",
+    "cli-author-v4",
+    "cli-author-v5",
+    "cli-author-v6",
+    "cli-author-v7",
+  ])(
     "adds structured-field guidance to %s after claim coverage and before revision and retry text",
     (version) => {
       const feedback = retryFeedback();

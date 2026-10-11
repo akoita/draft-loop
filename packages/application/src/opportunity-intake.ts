@@ -10,9 +10,11 @@ import {
 import {
   ingestFile as defaultIngestFile,
   ingestUrl as defaultIngestUrl,
+  expandLigatures,
   type IngestionIssue,
   type IngestionOptions,
   type IngestionResult,
+  looksGarbled,
   type UrlIngestionOptions,
 } from "@draft-loop/ingestion";
 import type {
@@ -44,6 +46,17 @@ export class OpportunityJobPageUnreadableError extends CliUserError {
   constructor() {
     super(opportunityJobPageUnreadableMessage);
     this.name = "OpportunityJobPageUnreadableError";
+  }
+}
+
+export const opportunityJobTextGarbledMessage =
+  "The job text looks garbled, so DraftLoop did not extract requirements from it. Import the job again from the original PDF, or paste the job text from the careers page.";
+
+/** A job source's text looks garbled; nothing was sent and no brief was saved. */
+export class OpportunityJobTextGarbledError extends CliUserError {
+  constructor() {
+    super(opportunityJobTextGarbledMessage);
+    this.name = "OpportunityJobTextGarbledError";
   }
 }
 
@@ -569,8 +582,18 @@ function extractionMaterialFor(
     status,
     mediaType: result.source.mediaType,
     checksum: result.source.checksum,
-    text: result.source.text,
+    text: expandLigatures(result.source.text),
   };
+}
+
+/** A job posting whose extracted text looks garbled, as a broken PDF text layer produces. */
+function jobTextIsGarbled(
+  input: OpportunitySourceInput,
+  result: IngestionResult | undefined,
+): boolean {
+  if (input.kind === "candidate-input" || input.classification !== "job-posting") return false;
+  const text = result?.source?.text;
+  return text !== undefined && looksGarbled(text);
 }
 
 /** A fetched or saved job page whose text, after reading its JobPosting data, is too short. */
@@ -716,6 +739,9 @@ export async function createOpportunityDraft(
   sourcesInput.forEach((sourceInput, index) => {
     if (jobPageIsUnreadable(sourceInput, sourceResults[index]?.result)) {
       throw new OpportunityJobPageUnreadableError();
+    }
+    if (jobTextIsGarbled(sourceInput, sourceResults[index]?.result)) {
+      throw new OpportunityJobTextGarbledError();
     }
   });
 

@@ -16,6 +16,7 @@ export {
   type CandidateEvidenceKindInput,
   detectCandidateEvidenceKind,
 } from "./candidate-evidence-kind-detection.js";
+export { expandLigatures, looksGarbled } from "./job-text-quality.js";
 
 export const supportedMediaTypes = [
   "text/plain",

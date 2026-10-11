@@ -3,6 +3,7 @@ import {
   EmbeddingModelInstallError,
   JobRequirementUserError,
   OpportunityJobPageUnreadableError,
+  OpportunityJobTextGarbledError,
   opportunityBriefVersionStaleErrorMessage,
   SourceIngestionUserError,
 } from "@draft-loop/application";
@@ -45,6 +46,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "application.create": "Creating the application",
   "application.import": "Importing the workspace as an application",
   "application.archive": "Archiving the application",
+  "application.rename": "Renaming the application",
   "application.delete": "Deleting the application",
   "application.set-models": "Choosing the application's models",
   "run.status": "Reading the review status",
@@ -129,7 +131,11 @@ function hasBridgeErrorCode(error: unknown): boolean {
 export function hostFailureMessage(command: BridgeCommand, error: unknown): string | undefined {
   if (error instanceof SourceIngestionUserError) return error.message;
   // An unreadable job page fails with a fixed sentence that tells the person to paste the text.
-  if (command.type === "opportunity.create" && error instanceof OpportunityJobPageUnreadableError) {
+  if (
+    command.type === "opportunity.create" &&
+    (error instanceof OpportunityJobPageUnreadableError ||
+      error instanceof OpportunityJobTextGarbledError)
+  ) {
     return error.message;
   }
   if (startsRun(command) && error instanceof JobRequirementUserError) return error.summary;
@@ -151,13 +157,14 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   if (command.type === "writing-policy.save" && error instanceof CliUserError) {
     return error.message;
   }
-  // Creating, importing, archiving, deleting or choosing models for an application fails with a
+  // Creating, importing, renaming, archiving, deleting or choosing models for an application fails with a
   // fixed sentence about the name, the pasted job text, the model pair or why it can only be
   // archived; it names no path.
   if (
     (command.type === "application.create" ||
       command.type === "application.import" ||
       command.type === "application.archive" ||
+      command.type === "application.rename" ||
       command.type === "application.delete" ||
       command.type === "application.set-models") &&
     error instanceof CliUserError

@@ -257,6 +257,82 @@ describe("workspace applications", () => {
     ).rejects.toThrow(CliUserError);
   });
 
+  it("renames applications, the default one included, and suggests a name from its brief", async () => {
+    const { root, service } = await workspace();
+    await writeFile(
+      join(root, "job.md"),
+      "Pricing Docs Sign in Products\nWe are hiring.\n",
+      "utf8",
+    );
+    const created = await service.createApplication({
+      root,
+      name: "Acme",
+      jobSource: { kind: "pasted-text", text: "Acme needs an engineer.\n" },
+    });
+    expect(created).toMatchObject({ nameChosen: true, suggestedName: null });
+    expect((await service.listApplications({ root }))[0]).toMatchObject({
+      name: "Default application",
+      nameChosen: false,
+      suggestedName: null,
+    });
+
+    const brief = await service.createOpportunity({
+      root,
+      id: "brief-default",
+      sources: [
+        {
+          id: "job",
+          kind: "pasted-content",
+          classification: "job-posting",
+          content: "Example Systems hires a Platform Engineer.",
+        },
+      ],
+    });
+    await service.editOpportunity({
+      root,
+      briefId: brief.brief.id,
+      expectedVersion: brief.brief.version,
+      patch: {
+        role: { value: "Platform Engineer", sourceIds: ["job"] },
+        employer: { value: "Example Systems", sourceIds: ["job"] },
+      },
+    });
+    expect((await service.listApplications({ root }))[0]).toMatchObject({
+      name: "Default application",
+      nameChosen: false,
+      suggestedName: "Platform Engineer at Example Systems",
+    });
+
+    const renamedDefault = await service.renameApplication?.({
+      root,
+      applicationId: "default",
+      name: " Example Systems — Platform ",
+    });
+    const renamed = await service.renameApplication?.({
+      root,
+      applicationId: created.id,
+      name: "Acme — Staff Engineer",
+    });
+    expect(renamedDefault).toMatchObject({
+      id: "default",
+      name: "Example Systems — Platform",
+      nameChosen: true,
+      suggestedName: null,
+    });
+    expect(renamed).toMatchObject({ id: created.id, name: "Acme — Staff Engineer" });
+    expect((await service.listApplications({ root })).map((item) => item.name)).toEqual([
+      "Example Systems — Platform",
+      "Acme — Staff Engineer",
+    ]);
+
+    await expect(
+      service.renameApplication?.({ root, applicationId: created.id, name: " " }),
+    ).rejects.toThrow(CliUserError);
+    await expect(
+      service.renameApplication?.({ root, applicationId: "missing", name: "Name" }),
+    ).rejects.toThrow(CliUserError);
+  });
+
   it("deletes an empty application with its stored job, and refuses the default or one with runs", async () => {
     const { root, service } = await workspace();
     const empty = await service.createApplication({

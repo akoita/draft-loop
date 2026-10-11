@@ -68,6 +68,15 @@ const compositionalTerminologyRevisionInstructions =
 const professionalCvProseInstructions =
   " For editable body prose, write concise professional CV language: a coherent summary and accomplishment bullets, not a source diary, status report, or third-person reviewer annotation. Rewrite supported descriptive sentences into candidate-focused CV prose, and use action-led accomplishment bullets. Group related supported facts into coherent summaries or bullets, preserve the candidate's agency, and avoid first-person and third-person narration. Retain material scope and limits from the evidence, including production versus staging and whether a credential was earned, in progress, or only planned. Do not apply job-specific formatting or selection rules, or invent ownership, outcomes, numbers, or technologies. All factual details remain subject to the evidence and claim-coverage rules above.";
 
+// v7 lifts v6's ban on job-specific selection: the author tailors the CV to the
+// job while every fact stays grounded and every role keeps its place.
+const jobTailoredCvInstructions =
+  professionalCvProseInstructions.replace(
+    " Do not apply job-specific formatting or selection rules, or invent ownership, outcomes, numbers, or technologies.",
+    " Do not invent ownership, outcomes, numbers, or technologies.",
+  ) +
+  " Tailor the CV to the job in context. The job description, its requirements and its responsibilities are employer context, never candidate facts. Open the summary section with a one-line headline block naming the candidate's own supported titles and the strongest skill areas the job asks for; never present the target job title as a role the candidate held. Directly after the summary, add one section of kind \"alignment\" titled \"Core areas\" with three to five bullets, each grouping supported evidence that answers one or more of the job's main requirements or responsibilities, worded differently from the experience bullets. Give a bullet a short label only when the label's words appear in cited evidence, and cover the label with its own claim citing that evidence; otherwise write the bullet without a label. Within each role, lead with the bullets most relevant to the job's requirements and responsibilities, and shorten or merge detail unrelated to the job; keep every role with its title, employer and dates, in chronological order. List the skills and certifications the job asks for first. Use a requirement's wording only when the cited evidence supports it. When context.writingPolicy sets a section order or emphasis, follow it over this guidance.";
+
 interface AuthorPromptTemplate {
   /** Version-specific guidance placed after the shared claim-coverage instructions. */
   readonly guidance: string;
@@ -97,6 +106,10 @@ const authorPromptTemplateVersions = Object.freeze({
     `${structuredFieldInstructions}${compositionalTerminologyInstructions}${professionalCvProseInstructions}`,
     32_768,
   ),
+  "cli-author-v7": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}`,
+    32_768,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -106,7 +119,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v6" : "cli-critic-v3";
+  return role === "author" ? "cli-author-v7" : "cli-critic-v3";
 }
 
 /** The template of a known author version; unknown versions fail closed. */
@@ -156,15 +169,16 @@ export function createAuthorAdjudicationPrompt(
     requestedOutputBudget === undefined
       ? template.outputBudget
       : { maxOutputTokens: requestedOutputBudget };
+  const usesV6SystemPrompt =
+    authorPromptTemplateVersion === "cli-author-v6" ||
+    authorPromptTemplateVersion === "cli-author-v7";
   const usesV5FactualityRules =
-    authorPromptTemplateVersion === "cli-author-v5" ||
-    authorPromptTemplateVersion === "cli-author-v6";
-  const systemPrompt =
-    authorPromptTemplateVersion === "cli-author-v6"
-      ? authorSystemPromptV6
-      : usesV5FactualityRules
-        ? authorSystemPromptV5
-        : authorSystemPrompt;
+    usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
+  const systemPrompt = usesV6SystemPrompt
+    ? authorSystemPromptV6
+    : usesV5FactualityRules
+      ? authorSystemPromptV5
+      : authorSystemPrompt;
   const shared = `${systemPrompt}${authorOutputBudgetInstructions(outputBudget)}${usesV5FactualityRules ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
   const revisionInstructions =
     revision === undefined

@@ -14,6 +14,8 @@ import type {
   ApplicationSummaryView,
 } from "./application-contract.js";
 import { workspacePairSides, workspaceScopedState } from "./application-model-pair.js";
+import { ApplicationNameNudge, ApplicationTitle } from "./application-name.js";
+import { needsApplicationName } from "./application-name-model.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
 import {
   type CredentialProvider,
@@ -28,7 +30,7 @@ import {
   careerEvidenceLockedDuringGeneration,
 } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
-import { HomeScreen, WorkspaceBackButton, WorkspaceLocation } from "./home.js";
+import { HomeScreen, WorkspaceBackButton } from "./home.js";
 import {
   applicationView,
   evidenceView,
@@ -88,6 +90,7 @@ import {
   type PageNavigation,
   pageKey,
   pageLabel,
+  renameApplicationPage,
 } from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import type { ProfileGenerationActivity } from "./profile-generation-progress.js";
@@ -951,8 +954,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [applicationPairs, setApplicationPairs] = useState<
     Readonly<Record<string, ApplicationModelProfilesView | null>>
   >({});
-  const rememberApplicationPair = (application: ApplicationSummaryView) =>
+  // Each application's summary as last read, for its page's name and the naming nudge.
+  const [applicationSummaries, setApplicationSummaries] = useState<
+    Readonly<Record<string, ApplicationSummaryView>>
+  >({});
+  // Bumped by the naming nudge to open the application's heading for a name of the person's own.
+  const [applicationNameEditRequest, setApplicationNameEditRequest] = useState(0);
+  const rememberApplicationPair = (application: ApplicationSummaryView) => {
     setApplicationPairs((current) => ({ ...current, [application.id]: application.modelProfiles }));
+    setApplicationSummaries((current) => ({ ...current, [application.id]: application }));
+  };
   const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
@@ -1721,6 +1732,25 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       navigateTo(current, applicationView(application.id, application.name)),
     );
   };
+
+  /** Shows an application's new name on its page, on the Back trail and in the nudge. */
+  const onApplicationRenamed = (application: ApplicationSummaryView) => {
+    rememberApplicationPair(application);
+    setNavigation((current) => renameApplicationPage(current, application.id, application.name));
+  };
+
+  const renameApplicationPort = activePort.renameApplication;
+  /** Renames an application from its page; rejects with the message to show. */
+  const renameApplication =
+    renameApplicationPort === undefined
+      ? undefined
+      : async (applicationId: string, name: string): Promise<void> => {
+          if (state === null) return;
+          const workspaceId = state.workspaceId;
+          const generation = workspaceGeneration;
+          const renamed = await renameApplicationPort(workspaceId, applicationId, name);
+          if (isCurrentWorkspaceContext(workspaceId, generation)) onApplicationRenamed(renamed);
+        };
 
   /** Returns to the previous page; an application no longer loaded is loaded again. */
   const goBackPage = () => {
@@ -2635,6 +2665,22 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   );
 
   const createApplication = activePort.createApplication;
+  /** Asks for a name while the default application still has the one DraftLoop derived. */
+  const applicationNameNudge = (
+    application: Extract<WorkspaceView, { kind: "application" }>,
+  ): ReactNode => {
+    const summary = applicationSummaries[application.applicationId];
+    if (renameApplication === undefined || summary === undefined) return undefined;
+    if (!needsApplicationName(summary)) return undefined;
+    return (
+      <ApplicationNameNudge
+        name={application.name}
+        suggestedName={summary.suggestedName}
+        onRename={(name) => renameApplication(application.applicationId, name)}
+        onChooseName={() => setApplicationNameEditRequest((current) => current + 1)}
+      />
+    );
+  };
   /** The review and setup screen, scoped to an application when Home lists them. */
   const reviewWorkspace = (
     application: Extract<WorkspaceView, { kind: "application" }> | null,
@@ -2652,13 +2698,23 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           workspaceTitleNode
         ) : (
           <div className="application-title">
-            <WorkspaceLocation current={application.name} asHeading />
+            <ApplicationTitle
+              key={application.applicationId}
+              name={application.name}
+              onRename={
+                renameApplication === undefined
+                  ? undefined
+                  : (name) => renameApplication(application.applicationId, name)
+              }
+              editRequest={applicationNameEditRequest}
+            />
           </div>
         )
       }
       {...(application === null
         ? {}
         : {
+            headerNotice: applicationNameNudge(application),
             // Back leads the page row, beside the career flow, as on the career pages; the run
             // header keeps only the application and its run.
             pageNavigation: (
@@ -2754,6 +2810,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             ? {}
             : { onNewApplication: () => setNavigation(openNewApplication) })}
           onOpenApplication={openApplication}
+          onApplicationRenamed={onApplicationRenamed}
           onManageProfile={openProfileScreen}
           onManageEvidence={openEvidenceScreen}
           settings={
