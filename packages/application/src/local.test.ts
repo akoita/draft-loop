@@ -2250,6 +2250,11 @@ describe("local application driver", () => {
               text: "Production systems experience",
               priority: "critical",
             },
+            {
+              id: "responsibility-driver",
+              text: "Operate a reliable platform",
+              priority: "medium",
+            },
           ],
           candidateInstructions: expect.stringContaining("Tone: direct"),
         });
