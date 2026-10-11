@@ -709,6 +709,14 @@ For a job page address or saved job page, extraction reads only that page:
   fails before anything is sent to a provider, and no brief is saved: "DraftLoop
   could not read enough job text from this page. It may show the job only with
   JavaScript. Paste the job text instead."
+- **Garbled text.** For any job-posting source, typographic ligatures such as
+  "ﬁ" and "ﬂ" are expanded before extraction. Text with at least 30 Latin-script
+  words of which a quarter or more are implausible (such as "FsaocG" or
+  "ViHHG", as a broken PDF text layer produces) fails before anything is sent:
+  "The job text looks garbled, so DraftLoop did not extract requirements from
+  it. Import the job again from the original PDF, or paste the job text from
+  the careers page." Camel-case names such as "JavaScript" and all-capital
+  acronyms count as plausible.
 - **No requirements found.** If extraction returns no requirements, the card
   says "No requirements were found in this job text" and offers **Extract
   again** instead of a review. The empty draft keeps offering extraction after

@@ -2,7 +2,9 @@ import {
   CliUserError,
   JobRequirementUserError,
   OpportunityJobPageUnreadableError,
+  OpportunityJobTextGarbledError,
   opportunityJobPageUnreadableMessage,
+  opportunityJobTextGarbledMessage,
 } from "@draft-loop/application";
 import { describe, expect, it } from "vitest";
 
@@ -19,6 +21,12 @@ describe("unreadable job page failure", () => {
       opportunityJobPageUnreadableMessage,
     );
     expect(opportunityJobPageUnreadableMessage).toContain("Paste the job text instead.");
+  });
+
+  it("crosses the bridge as the fixed import-again sentence for garbled job text", () => {
+    expect(hostFailureMessage(create, new OpportunityJobTextGarbledError())).toBe(
+      opportunityJobTextGarbledMessage,
+    );
   });
 
   it("does not widen to other commands or other errors", () => {
