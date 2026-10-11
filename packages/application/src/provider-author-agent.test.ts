@@ -48,6 +48,7 @@ const retryFeedback = {
   diagnostics: [{ code: "factual_invariant_violation", path: "sections.0.blocks.0.claims.0.text" }],
 } as const;
 
+/** A model-facing proposal: the author cites `E1`, the request-local alias of "chunk". */
 function proposal(text: string): JsonObject {
   return {
     sections: [
@@ -58,7 +59,7 @@ function proposal(text: string): JsonObject {
           {
             type: "paragraph",
             text,
-            claims: [{ text, substantive: true, evidenceChunkIds: ["chunk"] }],
+            claims: [{ text, substantive: true, evidenceChunkIds: ["E1"] }],
           },
         ],
       },
