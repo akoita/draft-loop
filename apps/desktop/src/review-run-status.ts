@@ -30,6 +30,14 @@ export function reviewFinished(state: Pick<DesktopReviewState, "state">): boolea
   return state.state === "approved" || state.state === "exported";
 }
 
+/**
+ * Whether this run has ended, so the person can start another review of the same application.
+ * Starting one adds a new run; this run, its approval and its export stay as they are.
+ */
+export function canStartNewReview(state: Pick<DesktopReviewState, "state">): boolean {
+  return state.state === "stopped" || state.state === "budget-exhausted" || reviewFinished(state);
+}
+
 /** The run panel's title for a finished run. */
 export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): string {
   return state.state === "exported" ? "Done · approved and exported" : "Done · approved";
