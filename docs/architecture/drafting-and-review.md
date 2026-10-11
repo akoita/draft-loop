@@ -15,7 +15,10 @@ clearer to candidates.
 ![Evaluator–optimizer loop: canonical inputs feed the author draft, a structured artifact with evidence links is evaluated by an independent critic and deterministic checks against a visible rubric, accepted findings drive a bounded revision, and the loop stops when stable, on budget exhaustion, or on early user review before human approval and local export.](../assets/evaluator-optimizer-loop.svg)
 
 The rubric covers factuality, evidence support, requirement coverage, and
-quality. Deterministic validators handle checks that do not need a model.
+quality. Deterministic validators handle checks that do not need a model,
+including duplicated blocks and claims and a phrase of three or more words
+repeated back to back inside one block, which usually means overlapping
+evidence quotes were stitched together.
 Findings are structured, actionable, severity-rated, and linked to claims,
 sections, or source locators where possible. A critic can identify a problem
 but cannot establish truth by itself; user evidence and human decisions remain
