@@ -266,8 +266,8 @@ applications:
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
   first. A workspace with nothing but its default application says so and points
-  to **New application**. Beside it, **Import from another workspace** opens a
-  folder picker and imports a workspace made for one job as an application (see
+  to **New application**. Beside it, **Import from another workspace** asks for
+  another workspace's folder and imports it as an application (see
   [Importing a workspace](#importing-a-workspace)). Each card has **Archive**,
   and **Delete** when the application can be deleted (see
   [Archiving and deleting](#archiving-and-deleting)). Archived applications sit
@@ -555,6 +555,9 @@ pnpm --filter @draft-loop/cli start application import ./home-workspace \
   --from ./hc4 --name "Hc4, Platform Engineer"
 ```
 
+- **What to choose.** The other workspace's folder, the same folder you would
+  open in DraftLoop. An application has no folder or address of its own, so
+  there is nothing else to pick.
 - **Name.** Defaults to the source workspace's display name in the desktop, then
   to the job's first Markdown heading, then to the folder name.
 - **What is copied.** The job description (stored in this workspace like pasted

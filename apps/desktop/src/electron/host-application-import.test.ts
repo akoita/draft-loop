@@ -36,7 +36,7 @@ async function openHost() {
   const host = createNativeHost({
     applicationService: createApplicationService(createLocalApplicationDriver({})),
     dialogs: {
-      chooseDirectory: async (mode) => (mode === "create" ? parent : picked),
+      chooseDirectory: async (mode) => (mode === "import" ? picked : parent),
       chooseFiles: async () => [],
     },
   });

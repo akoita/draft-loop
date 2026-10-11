@@ -336,7 +336,7 @@ interface PersistedProviderTransmissionAcknowledgement {
 }
 
 export interface NativeHostDialogs {
-  readonly chooseDirectory: (mode: "open" | "create") => Promise<string | undefined>;
+  readonly chooseDirectory: (mode: "open" | "create" | "import") => Promise<string | undefined>;
   readonly chooseFiles: (input: FileSelectInput) => Promise<readonly string[]>;
   readonly chooseKnowledgeSourceDirectory?: () => Promise<string | undefined>;
   readonly chooseKnowledgeSourceFile?: () => Promise<string | undefined>;
@@ -4271,7 +4271,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "application.import": {
           const workspace = workspaceFor(command.input.workspaceId);
-          const sourceRoot = await options.dialogs.chooseDirectory("open");
+          const sourceRoot = await options.dialogs.chooseDirectory("import");
           if (sourceRoot === undefined) {
             return fail("permission-denied", "Choosing a workspace to import was cancelled.");
           }
