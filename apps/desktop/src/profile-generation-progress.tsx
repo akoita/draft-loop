@@ -20,6 +20,15 @@ export interface ProfileGenerationCallProgress {
   readonly plannedCalls: number;
 }
 
+/**
+ * A profile generation still running, as the profile page reports it to the rest of the window so
+ * Home can show it in progress while the person works elsewhere.
+ */
+export interface ProfileGenerationActivity {
+  readonly startedAt: number;
+  readonly progress?: ProfileGenerationCallProgress;
+}
+
 /** The part label is shown only once the host has reported a bounded plan. */
 export function formatProfileGenerationPart(
   progress: ProfileGenerationCallProgress | undefined,
@@ -36,6 +45,17 @@ export function formatProfileGenerationPart(
  * once, while the visible title and the ticking elapsed time are hidden from
  * assistive technology so they never re-announce every second.
  */
+/** The elapsed time since `startedAt`, ticking once a second while the caller is shown. */
+function useElapsed(startedAt: number, now?: number): string {
+  const [current, setCurrent] = useState(() => now ?? Date.now());
+  useEffect(() => {
+    setCurrent(Date.now());
+    const timer = setInterval(() => setCurrent(Date.now()), msPerSecond);
+    return () => clearInterval(timer);
+  }, []);
+  return formatProfileGenerationElapsed(current - startedAt);
+}
+
 export function ProfileGenerationProgress({
   startedAt,
   now,
@@ -46,12 +66,7 @@ export function ProfileGenerationProgress({
   readonly progress?: ProfileGenerationCallProgress;
 }) {
   const part = formatProfileGenerationPart(progress);
-  const [current, setCurrent] = useState(() => now ?? Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrent(Date.now()), msPerSecond);
-    return () => clearInterval(timer);
-  }, []);
+  const elapsed = useElapsed(startedAt, now);
 
   return (
     <div className="profile-generation-progress">
@@ -60,7 +75,7 @@ export function ProfileGenerationProgress({
         <span className="profile-generation-spinner" aria-hidden="true" />
         <strong aria-hidden="true">Generating profile…</strong>
         <span className="profile-generation-elapsed" aria-hidden="true">
-          Elapsed {formatProfileGenerationElapsed(current - startedAt)}
+          Elapsed {elapsed}
         </span>
         {part === null ? null : (
           <span className="profile-generation-part" aria-hidden="true">
@@ -73,6 +88,38 @@ export function ProfileGenerationProgress({
         DraftLoop open.
       </p>
     </div>
+  );
+}
+
+/**
+ * The one-line progress Home shows on the Career profile card while a generation runs elsewhere:
+ * elapsed time and finished parts, without the Cancel action, which stays on the profile page.
+ */
+export function ProfileGenerationSummary({
+  activity,
+  now,
+  label = "Generating…",
+}: {
+  readonly activity: ProfileGenerationActivity;
+  readonly now?: number;
+  readonly label?: string;
+}) {
+  const part = formatProfileGenerationPart(activity.progress);
+  const elapsed = useElapsed(activity.startedAt, now);
+  return (
+    <p className="profile-generation-progress-row home-profile-progress">
+      <span className="profile-generation-spinner" aria-hidden="true" />
+      <span className="sr-only">Generating profile.</span>
+      <strong aria-hidden="true">{label}</strong>
+      <span className="profile-generation-elapsed" aria-hidden="true">
+        Elapsed {elapsed}
+      </span>
+      {part === null ? null : (
+        <span className="profile-generation-part" aria-hidden="true">
+          {part}
+        </span>
+      )}
+    </p>
   );
 }
 

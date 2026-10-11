@@ -29,6 +29,7 @@ import {
 } from "./career-flow.js";
 import {
   applicationActivityText,
+  applicationRunningLabel,
   applicationRunText,
   applicationStatusLabel,
   applicationStatusTone,
@@ -39,6 +40,7 @@ import {
   type HomeStatusPresentation,
   type HomeTone,
   onlyDefaultApplication,
+  profileGenerationPresentation,
   profileStatusPresentation,
   readHomeProfile,
 } from "./home-model.js";
@@ -50,6 +52,10 @@ import {
   profileFreshnessPresentation,
 } from "./profile-freshness.js";
 import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
+import {
+  type ProfileGenerationActivity,
+  ProfileGenerationSummary,
+} from "./profile-generation-progress.js";
 
 /**
  * Focus lands on the location line of a screen when it opens or is returned to, so assistive
@@ -191,11 +197,14 @@ export function ApplicationCard({
   now,
   onOpen,
   actions = {},
+  running = false,
 }: {
   readonly application: ApplicationSummaryView;
   readonly now: Date;
   readonly onOpen: (application: ApplicationSummaryView) => void;
   readonly actions?: ApplicationCardActions;
+  /** True while this application's review is running; the card says so in place of its status. */
+  readonly running?: boolean;
 }) {
   const metaId = `application-meta-${application.id}`;
   const archived = application.archivedAt !== null;
@@ -214,9 +223,13 @@ export function ApplicationCard({
             {application.name}
           </button>
         </h3>
-        <Chip tone={applicationStatusTone(application.status)}>
-          {applicationStatusLabel(application.status)}
-        </Chip>
+        {running ? (
+          <Chip tone="progress">{applicationRunningLabel}</Chip>
+        ) : (
+          <Chip tone={applicationStatusTone(application.status)}>
+            {applicationStatusLabel(application.status)}
+          </Chip>
+        )}
       </div>
       <p className="application-card-meta" id={metaId}>
         <span title={application.updatedAt}>
@@ -290,6 +303,7 @@ function ApplicationsList({
   onArchive,
   onDelete,
   busyApplicationId = null,
+  runningApplicationId = null,
   disabled = false,
   initialShowArchived = false,
 }: {
@@ -301,6 +315,7 @@ function ApplicationsList({
     | undefined;
   readonly onDelete?: ((application: ApplicationSummaryView) => void) | undefined;
   readonly busyApplicationId?: string | null;
+  readonly runningApplicationId?: string | null;
   readonly disabled?: boolean;
   readonly initialShowArchived?: boolean;
 }) {
@@ -346,6 +361,7 @@ function ApplicationsList({
       now={now}
       onOpen={onOpen}
       actions={actionsFor(application)}
+      running={application.id === runningApplicationId}
     />
   );
   return (
@@ -402,8 +418,17 @@ export interface HomeViewProps {
   readonly applications: HomeApplicationsState;
   readonly now: Date;
   readonly errorMessage?: string | null;
-  /** Disables navigation while a workspace operation is running. */
+  /**
+   * Disables the actions that change applications (new, import, archive, delete) while a
+   * workspace operation runs. Moving between pages always stays available.
+   */
   readonly disabled?: boolean;
+  /** Says why those actions are disabled; shown only while they are. */
+  readonly disabledReason?: string | null;
+  /** The profile generation running on the profile page, shown on the Career profile card. */
+  readonly profileGeneration?: ProfileGenerationActivity | null;
+  /** The application whose review is running, marked on its card. */
+  readonly runningApplicationId?: string | null;
   /** The profile freshness line (up to date, update available, review pending, not generated). */
   readonly profileFreshness?: ReactNode;
   /** The workspace-level settings: model pair, writing policy. */
@@ -442,6 +467,9 @@ export function HomeView({
   now,
   errorMessage = null,
   disabled = false,
+  disabledReason = null,
+  profileGeneration = null,
+  runningApplicationId = null,
   profileFreshness,
   settings,
   onNewApplication,
@@ -457,7 +485,8 @@ export function HomeView({
   onManageProfile,
   onManageEvidence,
 }: HomeViewProps) {
-  const profilePresentation = profileStatusPresentation(profile);
+  const profilePresentation =
+    profileGeneration === null ? profileStatusPresentation(profile) : profileGenerationPresentation;
   const evidenceView = evidencePresentation(evidence, legacyEvidenceSourceCount);
   return (
     <div className="app-frame">
@@ -494,12 +523,7 @@ export function HomeView({
               presentation={evidenceView}
               headline={evidenceView.headline}
               action={
-                <button
-                  className="button button-outline"
-                  type="button"
-                  disabled={disabled}
-                  onClick={onManageEvidence}
-                >
+                <button className="button button-outline" type="button" onClick={onManageEvidence}>
                   {evidenceView.action}
                 </button>
               }
@@ -517,7 +541,7 @@ export function HomeView({
                 <button
                   className="button button-outline"
                   type="button"
-                  disabled={disabled || profile.kind === "unsupported"}
+                  disabled={profile.kind === "unsupported"}
                   onClick={onManageProfile}
                 >
                   {profilePresentation.action}
@@ -525,7 +549,13 @@ export function HomeView({
               }
             >
               <p className="home-card-copy">{profilePresentation.description}</p>
-              {profileFreshness}
+              {profileGeneration === null ? (
+                profileFreshness
+              ) : (
+                <div role="status">
+                  <ProfileGenerationSummary activity={profileGeneration} />
+                </div>
+              )}
             </SummaryCard>
           </div>
 
@@ -561,6 +591,11 @@ export function HomeView({
                 {applicationImportExplanation}
               </p>
             )}
+            {!disabled || disabledReason === null ? null : (
+              <p className="home-card-copy home-actions-blocked" role="status">
+                {disabledReason}
+              </p>
+            )}
             {[importNotice, applicationNotice].map((notice, index) =>
               notice === null ? null : notice.kind === "error" ? (
                 <div className="error-banner" role="alert" key={index === 0 ? "import" : "action"}>
@@ -583,6 +618,7 @@ export function HomeView({
               onArchive={onArchiveApplication}
               onDelete={onDeleteApplication}
               busyApplicationId={busyApplicationId}
+              runningApplicationId={runningApplicationId}
               disabled={disabled}
               initialShowArchived={initialShowArchived}
             />
@@ -615,7 +651,11 @@ export interface HomeScreenProps {
   readonly legacyEvidenceSourceCount: number;
   readonly applicationCapabilities: DesktopApplicationCapabilities;
   readonly errorMessage: string | null;
+  /** Disables the actions that change applications; navigation stays available. */
   readonly disabled: boolean;
+  readonly disabledReason?: string | null;
+  readonly profileGeneration?: ProfileGenerationActivity | null;
+  readonly runningApplicationId?: string | null;
   readonly settings?: ReactNode;
   /** Opens the guided New application flow; absent when the host cannot create applications. */
   readonly onNewApplication?: () => void;
@@ -635,6 +675,9 @@ export function HomeScreen({
   applicationCapabilities,
   errorMessage,
   disabled,
+  disabledReason = null,
+  profileGeneration = null,
+  runningApplicationId = null,
   settings,
   onNewApplication,
   onOpenApplication,
@@ -735,7 +778,10 @@ export function HomeScreen({
             });
         };
 
+  // Read again when a generation ends, so a Home left open shows the profile it saved.
+  const generating = profileGeneration !== null;
   useEffect(() => {
+    if (generating) return;
     let active = true;
     void readHomeProfile(profileRef.current, workspaceId).then((loaded) => {
       if (!active) return;
@@ -745,7 +791,7 @@ export function HomeScreen({
     return () => {
       active = false;
     };
-  }, [workspaceId]);
+  }, [workspaceId, generating]);
 
   // Only a reviewed profile can be stale; the other states are known from the status alone. The
   // evidence revision re-reads it after the career evidence changes.
@@ -809,15 +855,14 @@ export function HomeScreen({
       now={new Date()}
       errorMessage={errorMessage}
       disabled={disabled}
+      disabledReason={disabledReason}
+      profileGeneration={profileGeneration}
+      runningApplicationId={runningApplicationId}
       {...(freshnessLine === undefined
         ? {}
         : {
             profileFreshness: (
-              <ProfileFreshnessNote
-                presentation={freshnessLine}
-                disabled={disabled}
-                onAction={onManageProfile}
-              />
+              <ProfileFreshnessNote presentation={freshnessLine} onAction={onManageProfile} />
             ),
           })}
       {...(settings === undefined ? {} : { settings })}

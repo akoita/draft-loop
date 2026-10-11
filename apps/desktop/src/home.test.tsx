@@ -173,9 +173,39 @@ describe("Home dashboard", () => {
     expect(render({}, false)).not.toContain("New application");
   });
 
-  it("disables navigation while a workspace operation is running", () => {
-    const html = render({ disabled: true });
-    expect(html.match(/disabled=""/gu)?.length).toBeGreaterThanOrEqual(3);
+  it("keeps navigation open and disables only application changes while an operation runs", () => {
+    const html = render({
+      disabled: true,
+      disabledReason: "Available again once the career profile is generated.",
+    });
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>New application<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Manage evidence<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Manage profile<\/button>/u);
+    expect(html).toContain("Available again once the career profile is generated.");
+    expect(render({ disabledReason: "Not shown" })).not.toContain("Not shown");
+  });
+
+  it("shows a running profile generation on the Career profile card", () => {
+    const html = render({
+      profile: { kind: "none" },
+      profileGeneration: {
+        startedAt: Date.now() - 36_000,
+        progress: { completedCalls: 3, plannedCalls: 15 },
+      },
+      disabled: true,
+    });
+    expect(html).toContain("In progress");
+    expect(html).not.toContain("Not yet generated");
+    expect(html).toContain("3 of 15 parts done");
+    expect(html).toMatch(/<button[^>]*>View progress<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>View progress<\/button>/u);
+  });
+
+  it("marks the application whose review is running", () => {
+    const html = render({ runningApplicationId: "default" });
+    expect(html).toContain("Review running");
+    expect(html).not.toContain(">Drafting<");
+    expect(render()).toContain(">Drafting<");
   });
 
   it("renders the workspace settings section only when it has content", () => {

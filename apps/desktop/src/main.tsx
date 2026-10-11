@@ -22,12 +22,18 @@ import {
   modelCompanies,
 } from "./bridge.js";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
-import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
+import {
+  type CareerFlowStep,
+  CareerFlowStrip,
+  careerEvidenceLockedDuringGeneration,
+} from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
   applicationView,
   evidenceView,
+  type HomeActivity,
+  homeActionsBlockedReason,
   homeView,
   profileView,
   type WorkspaceView,
@@ -84,6 +90,7 @@ import {
   pageLabel,
 } from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
+import type { ProfileGenerationActivity } from "./profile-generation-progress.js";
 import { ProviderAuthentication } from "./provider-authentication.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
@@ -96,6 +103,7 @@ import {
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { ThemeToggle } from "./theme.js";
 import { ModelsIcon } from "./workspace-action-icons.js";
+import { type WorkspaceActivity, WorkspaceActivityBar } from "./workspace-activity.js";
 import { workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 import {
@@ -965,6 +973,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     readonly generation: number;
   } | null>(null);
   const profilePendingScopeRef = useRef(profilePendingScope);
+  // The profile generation running on the profile page, so Home can show it while it runs.
+  const [profileGenerationScope, setProfileGenerationScope] = useState<{
+    readonly workspaceId: string;
+    readonly generation: number;
+    readonly activity: ProfileGenerationActivity;
+  } | null>(null);
   const activeWorkspaceIdRef = useRef<string | null>(null);
   const contextGenerationRef = useRef(0);
   const [profileResetEpoch, setProfileResetEpoch] = useState(0);
@@ -1016,6 +1030,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     activeWorkspaceId !== null &&
     profilePendingScopeRef.current?.workspaceId === activeWorkspaceId &&
     profilePendingScopeRef.current.generation === workspaceGeneration;
+  const profileGenerationForActiveWorkspace =
+    activeWorkspaceId !== null &&
+    profileGenerationScope?.workspaceId === activeWorkspaceId &&
+    profileGenerationScope.generation === workspaceGeneration
+      ? profileGenerationScope.activity
+      : null;
   const previousWorkspaceIdRef = useRef<string | null>(null);
   activeWorkspaceIdRef.current = activeWorkspaceId;
   const isCurrentWorkspaceContext = useCallback(
@@ -1042,6 +1062,18 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       }
     },
     [isCurrentWorkspaceContext],
+  );
+  const onProfileGenerationChange = useCallback(
+    (workspaceId: string, generation: number, activity: ProfileGenerationActivity | null) => {
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+      setProfileGenerationScope(activity === null ? null : { workspaceId, generation, activity });
+    },
+    [isCurrentWorkspaceContext],
+  );
+  const profileGenerationChange = useMemo(
+    () => (workspaceId: string, activity: ProfileGenerationActivity | null) =>
+      onProfileGenerationChange(workspaceId, workspaceGeneration, activity),
+    [onProfileGenerationChange, workspaceGeneration],
   );
   const profilePendingChange = useMemo(
     () => (workspaceId: string, pending: boolean) =>
@@ -1074,6 +1106,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setKnowledgePending(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setBusy(false);
       setCandidateProfileSelection((current) =>
         current?.workspaceId === workspaceId ? null : current,
@@ -1484,6 +1517,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setNavigation(initialPageNavigation());
       setLoadedApplicationId(null);
       setState(loaded);
@@ -1525,6 +1559,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setWorkspaceCloseConfirmationOpen(false);
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setError(null);
       setImportError(null);
       setNavigation(initialPageNavigation());
@@ -1570,8 +1605,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       running: state?.execution.status === "running",
     };
   };
-  const closeDisabledReason =
+  const closeGuardReason =
     state === null ? null : workspaceCloseDisabledReason(currentWorkspaceCloseGuard());
+  // Name the operation when it is the profile generation, which the activity bar also shows.
+  const closeDisabledReason =
+    closeGuardReason !== null && profileGenerationForActiveWorkspace !== null
+      ? "Close workspace is available again once your career profile is generated."
+      : closeGuardReason;
 
   const requestWorkspaceClose = () => {
     if (state === null) return;
@@ -1602,6 +1642,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setPendingBulkFindingCount(null);
       setKnowledgePending(false);
       setProfilePendingScope(null);
+      setProfileGenerationScope(null);
       setCandidateProfileSelection(null);
       setAppliedModelProfiles(null);
       setSavedModelProfiles({ status: "idle" });
@@ -2407,7 +2448,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       key={`semantic-retrieval-${state.workspaceId}`}
       workspaceId={state.workspaceId}
       capabilities={activePort}
-      disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+      disabled={
+        busy ||
+        profilePendingForActiveWorkspace ||
+        pendingReviewAction !== null ||
+        state.execution.status === "running"
+      }
     />
   ) : null;
 
@@ -2429,6 +2475,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           selectedProfile={selectedCandidateProfile}
           onSelectionChange={onCandidateProfileSelectionChange}
           onPendingChange={profilePendingChange}
+          onGenerationChange={profileGenerationChange}
         />
       </fieldset>
     );
@@ -2664,6 +2711,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     applications: goHome,
   };
   const flowEpoch = navigation.newApplicationEpoch;
+  const reviewRunning = state.execution.status === "running";
+  const homeActivity: HomeActivity =
+    profileGenerationForActiveWorkspace !== null
+      ? "profile-generation"
+      : reviewRunning
+        ? "review-run"
+        : "other";
 
   if (!homeAvailable) return modelEditorScreen ?? reviewWorkspace(null);
 
@@ -2686,6 +2740,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           applicationCapabilities={activePort}
           errorMessage={importError}
           disabled={modelSettingsDisabled}
+          disabledReason={homeActionsBlockedReason(homeActivity)}
+          profileGeneration={profileGenerationForActiveWorkspace}
+          runningApplicationId={reviewRunning ? loadedApplicationId : null}
           {...(activePort.createApplication === undefined
             ? {}
             : { onNewApplication: () => setNavigation(openNewApplication) })}
@@ -2726,6 +2783,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           errorMessage={importError}
           back={pageBack}
           onOpenStep={flowStepHandlers}
+          lockedReason={
+            profileGenerationForActiveWorkspace === null
+              ? null
+              : careerEvidenceLockedDuringGeneration
+          }
           card={
             <CareerEvidenceCard
               setup={state.setup}
@@ -2840,8 +2902,37 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   }
 
+  // What runs while the person moves between pages, pinned to the window with a way back to it.
+  // A running review belongs to the application the window holds, the one last opened.
+  const runningApplication =
+    reviewRunning && navigation.lastApplication?.applicationId === loadedApplicationId
+      ? navigation.lastApplication
+      : null;
+  const activity: WorkspaceActivity | null =
+    profileGenerationForActiveWorkspace !== null
+      ? { kind: "profile-generation", generation: profileGenerationForActiveWorkspace }
+      : runningApplication !== null
+        ? { kind: "review-run", applicationName: runningApplication.name }
+        : null;
+  // The bar's action opens the page showing the operation, unless that page is already shown.
+  let openActivity: (() => void) | undefined;
+  if (profileGenerationForActiveWorkspace !== null) {
+    if (view.kind !== "profile") openActivity = openProfileScreen;
+  } else if (runningApplication !== null && pageKey(view) !== pageKey(runningApplication)) {
+    openActivity = () =>
+      showApplication(runningApplication.applicationId, (current) =>
+        navigateTo(current, runningApplication),
+      );
+  }
+
   return (
     <>
+      {activity === null || modelEditorScreen !== null ? null : (
+        <WorkspaceActivityBar
+          activity={activity}
+          {...(openActivity === undefined ? {} : { onOpen: openActivity })}
+        />
+      )}
       {modelEditorScreen}
       {[...pages]
         .sort((left, right) => Number(right.active) - Number(left.active))

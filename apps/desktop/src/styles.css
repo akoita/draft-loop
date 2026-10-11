@@ -6459,6 +6459,32 @@ input[type="text"].workspace-title-input {
   background: var(--red-wash);
 }
 
+.home-chip-progress {
+  border-color: var(--teal-line);
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+
+.home-profile-progress {
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.home-actions-blocked {
+  margin: 0;
+}
+
+.career-page-locked {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-2);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
 .home-applications,
 .home-settings {
   display: grid;
@@ -6889,4 +6915,29 @@ input[type="text"].workspace-title-input {
 
 .flow-model-pair > p {
   margin: var(--space-2) 0 var(--space-3);
+}
+
+/* The long-operation bar pinned to the bottom of the window on every page. */
+.workspace-activity {
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--space-4));
+  transform: translateX(-50%);
+  border: 1px solid var(--teal-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+}
+
+/* Room below the last content so the bar never covers it. */
+body:has(.workspace-activity) .main-column {
+  padding-bottom: calc(var(--space-8) + 64px);
 }
