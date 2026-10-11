@@ -83,6 +83,8 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly knowledge?: ReactNode;
   /** The retrieval mode and embedding model panel, when the host offers it. */
   readonly retrieval?: ReactNode;
+  /** Why changes to the evidence wait for now, such as a profile generation running. */
+  readonly lockedReason?: string | null;
 }
 
 /** The raw material the candidate provides. Manage evidence opens it. */
@@ -90,6 +92,7 @@ export function CareerEvidencePage({
   card = null,
   knowledge = null,
   retrieval = null,
+  lockedReason = null,
   ...frame
 }: CareerEvidencePageProps) {
   return (
@@ -99,6 +102,11 @@ export function CareerEvidencePage({
       current="Career evidence"
       intro={careerEvidenceIntro}
     >
+      {lockedReason === null ? null : (
+        <p className="career-page-locked" role="status">
+          {lockedReason}
+        </p>
+      )}
       {card}
       {knowledge}
       {retrieval}

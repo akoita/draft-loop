@@ -6377,6 +6377,17 @@ input[type="checkbox"] {
   margin: 0;
 }
 
+.career-page-locked {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-2);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
 .home-applications,
 .home-settings {
   display: grid;

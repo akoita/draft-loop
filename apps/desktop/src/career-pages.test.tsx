@@ -7,6 +7,7 @@ import {
   CareerFlowStrip,
   careerEvidenceCardSubtitle,
   careerEvidenceIntro,
+  careerEvidenceLockedDuringGeneration,
   careerProfileCardSubtitle,
   careerProfileIntro,
 } from "./career-flow.js";
@@ -56,7 +57,10 @@ const frame = {
 };
 
 function evidencePage(
-  overrides: { onOpenStep?: Partial<Record<CareerFlowStep, () => void>> } = {},
+  overrides: {
+    onOpenStep?: Partial<Record<CareerFlowStep, () => void>>;
+    lockedReason?: string | null;
+  } = {},
 ): string {
   return renderToStaticMarkup(
     <CareerEvidencePage {...frame} knowledge={knowledge} retrieval={retrieval} {...overrides} />,
@@ -75,6 +79,13 @@ describe("Career evidence page", () => {
     expect(html).toContain('id="semantic-retrieval-heading"');
     expect(html).not.toContain("canonical-profile-title");
     expect(html).not.toContain("Configured model pair");
+  });
+
+  it("says why changes wait while the profile is generated, and only then", () => {
+    expect(evidencePage({ lockedReason: careerEvidenceLockedDuringGeneration })).toContain(
+      careerEvidenceLockedDuringGeneration,
+    );
+    expect(evidencePage()).not.toContain("career-page-locked");
   });
 
   it("starts with the one-sentence intro, then the flow with Career evidence current", () => {

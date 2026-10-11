@@ -18,6 +18,10 @@ export const careerEvidenceIntro =
 export const careerProfileIntro =
   "Your career profile is the structured, verified record DraftLoop extracts from your evidence — roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.";
 
+/** Shown on the Career evidence page while a profile generation reads the evidence. */
+export const careerEvidenceLockedDuringGeneration =
+  "Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated.";
+
 export const careerEvidenceCardSubtitle =
   "The raw material you provide: CVs, career-fact files, exports and links. DraftLoop searches it and builds your profile from it.";
 

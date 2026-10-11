@@ -22,7 +22,11 @@ import {
   modelCompanies,
 } from "./bridge.js";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
-import { type CareerFlowStep, CareerFlowStrip } from "./career-flow.js";
+import {
+  type CareerFlowStep,
+  CareerFlowStrip,
+  careerEvidenceLockedDuringGeneration,
+} from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeScreen, WorkspaceLocation } from "./home.js";
 import {
@@ -2431,7 +2435,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       key={`semantic-retrieval-${state.workspaceId}`}
       workspaceId={state.workspaceId}
       capabilities={activePort}
-      disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
+      disabled={
+        busy ||
+        profilePendingForActiveWorkspace ||
+        pendingReviewAction !== null ||
+        state.execution.status === "running"
+      }
     />
   ) : null;
 
@@ -2761,6 +2770,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           errorMessage={importError}
           back={pageBack}
           onOpenStep={flowStepHandlers}
+          lockedReason={
+            profileGenerationForActiveWorkspace === null
+              ? null
+              : careerEvidenceLockedDuringGeneration
+          }
           card={
             <CareerEvidenceCard
               setup={state.setup}

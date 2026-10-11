@@ -363,7 +363,9 @@ is reached through Home:
   move between pages, and the page you return to shows their current progress.
   Only actions that would conflict wait: while one runs, Home keeps **New
   application**, **Import from another workspace**, **Archive** and **Delete**
-  unavailable and says why, and Close workspace waits for it to finish.
+  unavailable and says why, and Close workspace waits for it to finish. During a
+  profile generation the Career evidence page opens as usual, but its add,
+  remove and retrieval settings wait, with a line saying why.
 
 The New application flow is kept while Back can still return to it. Going Home
 discards it, and **New application** always starts an empty flow. The last
