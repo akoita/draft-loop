@@ -5,6 +5,7 @@ import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { proposalIssues } from "./author-diagnostic-counts.js";
+import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
 import { ungroundedAuthorContentFindings } from "./author-grounded-filter.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
 import {
@@ -83,32 +84,35 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
       );
       const { outputBudget, groundingGuide, ...turnInput } = authorPrompt.providerInput;
+      const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
         systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
         // Members that stay the same for every round of a run come first, so a
         // provider's prompt-prefix cache can reuse them; per-call members follow.
-        input: JSON.parse(
-          JSON.stringify({
-            context: deps.promptContext,
-            retrievedEvidence,
-            achievementPlan,
-            groundingGuide,
-            outputBudget,
-            runId,
-            round,
-            executionId,
-            currentArtifact:
-              currentArtifact === null
-                ? null
-                : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
-            findings,
-            ...turnInput,
-          }),
-        ) as JsonObject,
+        input: evidenceAliases.toModel(
+          JSON.parse(
+            JSON.stringify({
+              context: deps.promptContext,
+              retrievedEvidence,
+              achievementPlan,
+              groundingGuide,
+              outputBudget,
+              runId,
+              round,
+              executionId,
+              currentArtifact:
+                currentArtifact === null
+                  ? null
+                  : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
+              findings,
+              ...turnInput,
+            }),
+          ) as JsonObject,
+        ),
         outputSchema: authorArtifactProposalJsonSchemaForEvidence(
-          retrievedEvidence.map(({ id }) => id),
+          evidenceAliases.aliases,
         ) as JsonObject,
         outputName: "author_artifact_proposal",
         maxOutputTokens: outputBudget.maxOutputTokens,
@@ -116,7 +120,11 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         ...(signal === undefined ? {} : { signal }),
       };
       const adapter = await deps.createAdapter(deps.authorCompany, deps.authorModel, "author");
-      const response = await adapter.execute(request);
+      const modelResponse = await adapter.execute(request);
+      const response = {
+        ...modelResponse,
+        output: evidenceAliases.fromModel(modelResponse.output),
+      };
       const grounded = await buildAuthorArtifactWithCapture(
         response,
         {

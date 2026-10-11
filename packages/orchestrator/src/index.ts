@@ -597,7 +597,9 @@ function retryNotBefore(value: unknown, now: string): string | undefined {
 
 const diagnosticCodePattern = /^[A-Za-z0-9_-]{1,64}$/u;
 const maxDiagnosticCountCodes = 32;
-const maxDiagnosticCount = 100_000;
+// Stream volume counts are characters, so a response that fills a 65k-token cap
+// reports well over 100,000; keep them so the cause stays visible.
+const maxDiagnosticCount = 10_000_000;
 
 function compareDiagnosticCounts(
   left: RunErrorDiagnosticCount,
@@ -661,6 +663,16 @@ function safeDiagnosticCounts(value: unknown): readonly RunErrorDiagnosticCount[
     entries.push({ code, count });
   }
   return boundedDiagnosticCounts(entries);
+}
+
+/** Executions recorded for the snapshot's current round and step. */
+function stepAttempts(snapshot: RunSnapshot): number {
+  return snapshot.executionHistory.filter(
+    (execution) =>
+      execution.runId === snapshot.runId &&
+      execution.round === snapshot.round &&
+      execution.step === snapshot.currentStep,
+  ).length;
 }
 
 function providerFailure(
@@ -1832,6 +1844,60 @@ export function createOrchestrationEngine(
     );
   };
 
+  /**
+   * Leave a retryable provider error for another attempt of the same step, or
+   * return undefined when the attempt limit or a retry cooldown forbids it.
+   */
+  const resumeFailedStep = async (
+    current: RunSnapshot,
+  ): Promise<
+    { readonly snapshot: RunSnapshot; readonly feedback?: AuthorRetryFeedback } | undefined
+  > => {
+    if (current.lastError?.retryable !== true) return undefined;
+    let feedback: AuthorRetryFeedback | undefined;
+    if (current.currentStep === "author" || current.currentStep === "revision") {
+      const diagnostics = current.lastError.diagnostics;
+      const corrections = buildAuthorRetryCorrections(diagnostics ?? []);
+      feedback = {
+        failureCode: current.lastError.code,
+        ...(current.lastError.failureStage === undefined
+          ? {}
+          : { failureStage: current.lastError.failureStage }),
+        ...(diagnostics === undefined
+          ? {}
+          : {
+              diagnostics: diagnostics.slice(0, 8).map(({ code, path }) => ({ code, path })),
+              ...(corrections.length === 0 ? {} : { corrections }),
+            }),
+      };
+    }
+    if (
+      current.currentStep === null ||
+      stepAttempts(current) >= MAX_ORCHESTRATION_ATTEMPTS ||
+      current.lastError.attempt >= current.lastError.maxAttempts
+    )
+      return undefined;
+    const retryNow = clock();
+    if (
+      current.lastError.retryNotBefore !== undefined &&
+      Date.parse(current.lastError.retryNotBefore) > Date.parse(retryNow)
+    ) {
+      return undefined;
+    }
+    const activated = activatedForTransition(
+      { ...current, state: stepStates[current.currentStep] },
+      retryNow,
+    );
+    const resumed = await save({
+      ...activated,
+      state: stepStates[current.currentStep],
+      lastError: null,
+      updatedAt: retryNow,
+    });
+    await emit(resumed, "state.changed", { to: resumed.state, reason: "retry" });
+    return { snapshot: resumed, ...(feedback === undefined ? {} : { feedback }) };
+  };
+
   const advance = async (
     snapshot: RunSnapshot,
     context: ContextSnapshot,
@@ -1840,71 +1906,44 @@ export function createOrchestrationEngine(
     let current = snapshot;
     let retryFeedback: AuthorRetryFeedback | undefined;
     if (current.state === "provider-error") {
-      if (current.lastError?.retryable !== true) return immutable(current);
-      if (current.currentStep === "author" || current.currentStep === "revision") {
-        const diagnostics = current.lastError.diagnostics;
-        const corrections = buildAuthorRetryCorrections(diagnostics ?? []);
-        retryFeedback = {
-          failureCode: current.lastError.code,
-          ...(current.lastError.failureStage === undefined
-            ? {}
-            : { failureStage: current.lastError.failureStage }),
-          ...(diagnostics === undefined
-            ? {}
-            : {
-                diagnostics: diagnostics.slice(0, 8).map(({ code, path }) => ({ code, path })),
-                ...(corrections.length === 0 ? {} : { corrections }),
-              }),
-        };
-      }
-      const attempts = current.executionHistory.filter(
-        (execution) =>
-          execution.runId === current.runId &&
-          execution.round === current.round &&
-          execution.step === current.currentStep,
-      ).length;
-      if (
-        current.currentStep === null ||
-        attempts >= MAX_ORCHESTRATION_ATTEMPTS ||
-        current.lastError.attempt >= current.lastError.maxAttempts
-      )
-        return immutable(current);
-      const retryNow = clock();
-      if (
-        current.lastError.retryNotBefore !== undefined &&
-        Date.parse(current.lastError.retryNotBefore) > Date.parse(retryNow)
-      ) {
-        return immutable(current);
-      }
-      const activated = activatedForTransition(
-        { ...current, state: stepStates[current.currentStep ?? "author"] },
-        retryNow,
-      );
-      const resumed = await save({
-        ...activated,
-        state: stepStates[current.currentStep ?? "author"],
-        lastError: null,
-        updatedAt: retryNow,
-      });
-      await emit(resumed, "state.changed", { to: resumed.state, reason: "retry" });
-      current = resumed;
+      const retried = await resumeFailedStep(current);
+      if (retried === undefined) return immutable(current);
+      current = retried.snapshot;
+      retryFeedback = retried.feedback;
     }
-    while (
-      current.currentStep !== null &&
-      !terminalStates.has(current.state) &&
-      current.state !== "paused" &&
-      current.state !== "awaiting-approval" &&
-      current.state !== "provider-error"
-    ) {
-      const stepRetryFeedback =
-        current.currentStep === "author" || current.currentStep === "revision"
-          ? retryFeedback
-          : undefined;
-      try {
-        current = await executeStep(current, context, signal, stepRetryFeedback);
-      } finally {
-        retryFeedback = undefined;
+    for (;;) {
+      while (
+        current.currentStep !== null &&
+        !terminalStates.has(current.state) &&
+        current.state !== "paused" &&
+        current.state !== "awaiting-approval" &&
+        current.state !== "provider-error"
+      ) {
+        const stepRetryFeedback =
+          current.currentStep === "author" || current.currentStep === "revision"
+            ? retryFeedback
+            : undefined;
+        try {
+          current = await executeStep(current, context, signal, stepRetryFeedback);
+        } finally {
+          retryFeedback = undefined;
+        }
       }
+      // A draft that outruns the output-token cap is usually shorter on the next
+      // attempt, which is told to be more concise, so the first such failure of a
+      // step retries without waiting for the user.
+      if (
+        current.state !== "provider-error" ||
+        current.lastError?.failureStage !== "output-token-budget-exceeded" ||
+        (current.currentStep !== "author" && current.currentStep !== "revision") ||
+        stepAttempts(current) !== 1 ||
+        signal?.aborted === true
+      )
+        break;
+      const retried = await resumeFailedStep(current);
+      if (retried === undefined) break;
+      current = retried.snapshot;
+      retryFeedback = retried.feedback;
     }
     return immutable(current);
   };

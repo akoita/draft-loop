@@ -193,6 +193,12 @@ without a finish reason, empty or invalid JSON output, or a malformed stream). Q
 authentication, and invalid-request failures are never retried, and neither are Mistral schema
 mismatches, output or context limits, refusals, or an unexpected model.
 
+A review's author or revision step that reaches the output-token limit is retried once
+automatically, with feedback asking for a more concise proposal; a second limit failure waits
+for **Retry**. To keep proposals short, author requests name retrieved evidence by request-local
+aliases (`E1`, `E2`, …) instead of 64-character chunk hashes, and citations are mapped back to
+the real chunk IDs before validation.
+
 When a provider reply is rejected as invalid, the saved extraction issue ends with
 `Reason: <code>`, a fixed diagnostic code such as `incomplete_stream`; provider text is never
 shown.

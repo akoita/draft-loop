@@ -63,7 +63,7 @@ describe("author request over full-source evidence", () => {
                     {
                       type: "paragraph",
                       text,
-                      claims: [{ text, substantive: true, evidenceChunkIds: [`chunk-${cited}`] }],
+                      claims: [{ text, substantive: true, evidenceChunkIds: [`E${cited + 1}`] }],
                     },
                   ],
                 },
@@ -122,7 +122,8 @@ describe("author request over full-source evidence", () => {
       schema.properties.sections.items.properties.blocks.items.properties.claims.items.properties
         .evidenceChunkIds.items.enum;
     expect(allowed).toHaveLength(evidenceCount);
-    expect(allowed).toContain(`chunk-${cited}`);
+    // The author cites short request-local aliases, mapped back to chunk IDs before validation.
+    expect(allowed).toContain(`E${cited + 1}`);
     const claim = execution.output.claims[0];
     expect(claim?.text).toBe(text);
     expect(claim?.evidence[0]?.excerpt).toBe(text);

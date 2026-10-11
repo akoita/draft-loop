@@ -28,6 +28,7 @@ interface JsonRecord {
 
 const silent = { write: () => undefined };
 const evidenceLine = "Built local-first TypeScript tools with deterministic testing.";
+const factText = `TypeScript\n${evidenceLine}`;
 
 function localCompletion(output: JsonRecord, id: string): unknown {
   return {
@@ -136,8 +137,7 @@ async function profileWorkspace() {
     if (source !== undefined) return localCompletion(extractionProposal(source.id), "extraction");
     const evidence = input.retrievedEvidence ?? [];
     authorInputs.push({ retrievedEvidence: evidence });
-    const cited =
-      evidence.find(({ id }) => id.startsWith(profileFactEvidenceIdPrefix)) ?? evidence[0];
+    const cited = evidence.find(({ text }) => text === factText) ?? evidence[0];
     if (cited === undefined) throw new Error("The author received no evidence.");
     return localCompletion(authorProposal(cited.id), "author");
   });
@@ -196,10 +196,9 @@ async function profileWorkspace() {
   return { root, driver, reviewed, authorInputs };
 }
 
+/** The author sees short evidence aliases, so a fact item is told apart by its fact-plus-quote text. */
 function factItems(input: AuthorInput | undefined): readonly ScoredEvidenceChunk[] {
-  return (input?.retrievedEvidence ?? []).filter(({ id }) =>
-    id.startsWith(profileFactEvidenceIdPrefix),
-  );
+  return (input?.retrievedEvidence ?? []).filter(({ text }) => text === factText);
 }
 
 describe("runs with a pinned reviewed profile", () => {
@@ -217,7 +216,7 @@ describe("runs with a pinned reviewed profile", () => {
       expect(fact).toMatchObject({
         lineStart: 3,
         lineEnd: 3,
-        text: `TypeScript\n${evidenceLine}`,
+        text: factText,
       });
       expect(authorInputs[0]?.retrievedEvidence[0]?.id).toBe(fact?.id);
       if (started.artifact === null) throw new Error("The run produced no artifact.");
@@ -227,7 +226,7 @@ describe("runs with a pinned reviewed profile", () => {
         const serialized = JSON.stringify(artifact);
         // The fact item resolves to its source version, quote locator and excerpt.
         expect(serialized).toContain('"locator":"line:3-3"');
-        expect(serialized).toContain(JSON.stringify(`TypeScript\n${evidenceLine}`));
+        expect(serialized).toContain(JSON.stringify(factText));
 
         // The origin trace pins the profile version and tells facts from chunks, content-free.
         const traces =
@@ -245,7 +244,7 @@ describe("runs with a pinned reviewed profile", () => {
           factRankingMode: "lexical",
         });
         expect(trace?.selectedItems[0]).toEqual({
-          itemId: fact?.id,
+          itemId: expect.stringMatching(new RegExp(`^${profileFactEvidenceIdPrefix}`)),
           origin: "profile-fact",
           sourceId: fact?.sourceId,
         });
@@ -271,6 +270,7 @@ describe("runs with a pinned reviewed profile", () => {
       await driver.resume({ root, runId: begun.runId, allowProviderData: true }, silent);
       expect(authorInputs.length).toBeGreaterThan(before);
       expect(factItems(authorInputs[before]).map(({ id }) => id)).toEqual([fact?.id]);
+      expect(authorInputs[before]?.retrievedEvidence[0]?.id).toBe(fact?.id);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
