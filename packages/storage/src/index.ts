@@ -1343,7 +1343,7 @@ export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
 
-export const storageSchemaVersion = 34 as const;
+export const storageSchemaVersion = 35 as const;
 
 interface Migration {
   readonly version: number;

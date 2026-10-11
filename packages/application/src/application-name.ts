@@ -19,3 +19,16 @@ export function jobHeading(jobText: string | undefined): string | undefined {
 export function defaultApplicationName(jobText: string | undefined): string {
   return jobHeading(jobText) ?? "Default application";
 }
+
+/** A name in the person's own terms, such as "Staff Engineer at Acme", from a brief's role and employer. */
+export function suggestedApplicationName(
+  role: string | undefined,
+  employer: string | undefined,
+): string | undefined {
+  const parts = [role?.trim(), employer?.trim()].filter(
+    (part): part is string => part !== undefined && part !== "",
+  );
+  if (parts.length === 0) return undefined;
+  const name = parts.join(" at ").slice(0, applicationNameMaxLength).trim();
+  return name === "" ? undefined : name;
+}

@@ -545,9 +545,9 @@ status is derived from them, never stored:
 
 An existing workspace is read as one **default** application (id `default`)
 built from its configured `job.md`, named after that file's first Markdown
-heading, or "Default application" when it has none. Its existing runs, briefs
-and exports belong to it, and listing it writes nothing. A run or brief with no application
-also belongs to the default application.
+heading, or "Default application" when it has none, until it is renamed. Its
+existing runs, briefs and exports belong to it, and listing it writes nothing. A
+run or brief with no application also belongs to the default application.
 
 ```sh
 pnpm --filter @draft-loop/cli start application list ./workspace
@@ -569,7 +569,7 @@ pnpm --filter @draft-loop/cli start start ./workspace --application app-01234567
   application.
 - **Service only.** The application service (`createApplication`,
   `listApplications`, `getApplication`, `importApplication`,
-  `archiveApplication`, `deleteApplication`) also accepts an approved URL as a job
+  `renameApplication`, `archiveApplication`, `deleteApplication`) also accepts an approved URL as a job
   source. A URL application
   starts a run only with a reviewed opportunity brief, and a brief belonging to
   another application is refused.
@@ -615,6 +615,25 @@ pnpm --filter @draft-loop/cli start application import ./home-workspace \
 - **Refusals.** A folder that is not a DraftLoop workspace, the current
   workspace itself, and a workspace without a job description are refused with a
   sentence that names no path.
+
+### Renaming
+
+Any application can be renamed, the default one included:
+
+```sh
+pnpm --filter @draft-loop/cli start application rename default "Acme, Staff Engineer" ./workspace
+```
+
+- **Name.** Trimmed, 1 to 120 characters, as when creating one. A created
+  application's name changes on its own record. The default application's name is
+  derived from `job.md`, so the chosen name is stored beside it in the history.
+- **Desktop.** Rename in place, as for the workspace: double-click the name on the
+  application's page, or use the pencil beside it there or on its Home card. Enter
+  or leaving the field saves, and Escape cancels.
+- **Naming nudge.** Until the default application has a chosen name, its page and
+  its Home card ask for one. When its newest brief names the role or the employer,
+  the page offers "Role at Employer" as one click. Keeping the current name also
+  counts as choosing it and ends the nudge.
 
 ### Archiving and deleting
 
@@ -725,6 +744,10 @@ applies. If the policy override selected for the run belongs to the reviewed
 brief, starting from the raw job description is refused. A run's preflight
 states the source: "Requirements: reviewed opportunity brief ID vN (R
 requirements)" or "Requirements: job description (unreviewed source units)".
+A reviewed brief's responsibilities are checked like requirements, at medium
+priority after the extracted requirements, so coverage and critique ask for
+them and the preflight count includes them. A responsibility that repeats a
+requirement's ID or wording is left to that requirement.
 
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins

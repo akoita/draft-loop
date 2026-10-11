@@ -28,6 +28,8 @@ const application: ApplicationSummaryView = {
   latestRunId: null,
   archivedAt: null,
   modelProfiles: null,
+  nameChosen: true,
+  suggestedName: null,
 };
 
 const brief = (status: "draft" | "reviewed"): OpportunityLatestBrief => ({

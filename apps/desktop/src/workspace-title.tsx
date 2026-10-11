@@ -1,4 +1,5 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
+import { useInlineRename } from "./inline-rename.js";
 import { invalidWorkspaceNameMessage, normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 const nameInputId = "workspace-title-input";
@@ -21,7 +22,7 @@ interface WorkspaceTitleViewProps {
   readonly onCancel: () => void;
 }
 
-function PencilIcon() {
+export function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path
@@ -126,86 +127,28 @@ interface WorkspaceTitleProps {
 }
 
 export function WorkspaceTitle({ name, onRename }: WorkspaceTitleProps) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(name);
-  const [busy, setBusy] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // Refs, because the field's blur can fire after Enter or Escape already ended editing.
-  const editingRef = useRef(false);
-  const busyRef = useRef(false);
-  const restoreFocus = useRef(false);
-
-  useEffect(() => {
-    if (editing) {
-      const input = document.getElementById(nameInputId) as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    } else if (restoreFocus.current) {
-      document.getElementById(renameButtonId)?.focus();
-    }
-    restoreFocus.current = false;
-  }, [editing]);
-
-  const finish = (returnFocus: boolean) => {
-    editingRef.current = false;
-    restoreFocus.current = returnFocus;
-    setEditing(false);
-    setErrorMessage(null);
-  };
-
-  const save = async (fromKeyboard: boolean) => {
-    if (!editingRef.current || busyRef.current) return;
-    const valid = normalizeWorkspaceDisplayName(draft);
-    if (valid === undefined) {
-      if (fromKeyboard) setErrorMessage(invalidWorkspaceNameMessage);
-      else finish(false);
-      return;
-    }
-    if (valid === name || onRename === undefined) {
-      finish(fromKeyboard);
-      return;
-    }
-    busyRef.current = true;
-    setBusy(true);
-    setErrorMessage(null);
-    try {
-      await onRename(valid);
-      finish(fromKeyboard);
-    } catch (reason: unknown) {
-      setErrorMessage(
-        reason instanceof Error && reason.message.trim() !== ""
-          ? reason.message
-          : "The workspace could not be renamed.",
-      );
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  };
-
+  const rename = useInlineRename({
+    name,
+    normalize: normalizeWorkspaceDisplayName,
+    invalidMessage: invalidWorkspaceNameMessage,
+    failureMessage: "The workspace could not be renamed.",
+    onRename,
+    inputId: nameInputId,
+    buttonId: renameButtonId,
+  });
   return (
     <WorkspaceTitleView
       name={name}
-      editing={editing}
-      draft={draft}
-      busy={busy}
-      errorMessage={errorMessage}
+      editing={rename.editing}
+      draft={rename.draft}
+      busy={rename.busy}
+      errorMessage={rename.errorMessage}
       canRename={onRename !== undefined}
-      onStartEditing={() => {
-        setDraft(name);
-        setErrorMessage(null);
-        editingRef.current = true;
-        setEditing(true);
-      }}
-      onDraftChange={(value) => {
-        setDraft(value);
-        setErrorMessage(null);
-      }}
-      onSave={() => void save(true)}
-      onCommit={() => void save(false)}
-      onCancel={() => {
-        if (editingRef.current) finish(true);
-      }}
+      onStartEditing={() => rename.start()}
+      onDraftChange={rename.change}
+      onSave={rename.save}
+      onCommit={rename.commit}
+      onCancel={rename.cancel}
     />
   );
 }

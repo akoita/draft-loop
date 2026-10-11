@@ -44,6 +44,7 @@ import {
   type ApplicationListInput,
   type ApplicationListResult,
   type ApplicationRecordResult,
+  type ApplicationRenameInput,
   type ApplicationSetModelsInput,
   applicationArchiveKeys,
   applicationCreateKeys,
@@ -51,9 +52,11 @@ import {
   applicationGetKeys,
   applicationImportKeys,
   applicationListKeys,
+  applicationRenameKeys,
   applicationSetModelsKeys,
   maximumApplicationJobTextLength,
   normalizeApplicationDeleteResult,
+  normalizeApplicationDisplayName,
   normalizeApplicationImportResult,
   normalizeApplicationListResult,
   normalizeApplicationModelProfiles,
@@ -2974,6 +2977,7 @@ export interface BridgeCommandInputMap {
   "application.create": ApplicationCreateInput;
   "application.import": ApplicationImportInput;
   "application.archive": ApplicationArchiveInput;
+  "application.rename": ApplicationRenameInput;
   "application.delete": ApplicationDeleteInput;
   "application.set-models": ApplicationSetModelsInput;
   "knowledge.create": KnowledgeStoreCreateInput;
@@ -3081,6 +3085,7 @@ export interface BridgeCommandOutputMap {
   "application.create": ApplicationRecordResult;
   "application.import": ApplicationImportResult;
   "application.archive": ApplicationRecordResult;
+  "application.rename": ApplicationRecordResult;
   "application.delete": ApplicationDeleteResult;
   "application.set-models": ApplicationRecordResult;
   "knowledge.create": KnowledgeStoreResult;
@@ -4373,6 +4378,18 @@ function validateApplicationArchiveInput(value: unknown): ApplicationArchiveInpu
   };
 }
 
+function validateApplicationRenameInput(value: unknown): ApplicationRenameInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationRenameKeys)) return invalidInput();
+  const name = normalizeApplicationDisplayName(input.name);
+  if (name === undefined) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+    name,
+  };
+}
+
 function validateApplicationSetModelsInput(value: unknown): ApplicationSetModelsInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, applicationSetModelsKeys)) return invalidInput();
@@ -5417,6 +5434,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "application.archive",
         input: validateApplicationArchiveInput(command.input),
       };
+    case "application.rename":
+      return { type: "application.rename", input: validateApplicationRenameInput(command.input) };
     case "application.delete":
       return { type: "application.delete", input: validateApplicationDeleteInput(command.input) };
     case "application.set-models":
@@ -7944,6 +7963,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.get":
     case "application.create":
     case "application.archive":
+    case "application.rename":
     case "application.set-models":
       return normalizeApplicationRecord(value);
     case "application.delete":

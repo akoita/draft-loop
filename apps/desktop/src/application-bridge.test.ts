@@ -24,6 +24,8 @@ const application: ApplicationSummaryView = {
   latestRunId: "run-2",
   archivedAt: null,
   modelProfiles: null,
+  nameChosen: true,
+  suggestedName: null,
 };
 
 function portReturning(value: unknown) {
@@ -344,6 +346,56 @@ describe("application.import", () => {
       { workspaceId: "workspace-1", application },
     ]) {
       await expect(portReturning(bad).execute(command)).resolves.toMatchObject({ ok: false });
+    }
+  });
+});
+
+describe("application.rename", () => {
+  it("is advertised, trims the name and refuses empty, long or extra input", () => {
+    expect(bridgeCapabilities).toContain("application.rename");
+    expect(
+      validateBridgeCommand({
+        type: "application.rename",
+        input: { workspaceId: "workspace-1", applicationId: "default", name: "  Acme — SRE " },
+      }),
+    ).toEqual({
+      type: "application.rename",
+      input: { workspaceId: "workspace-1", applicationId: "default", name: "Acme — SRE" },
+    });
+    for (const input of [
+      { workspaceId: "w", applicationId: "a", name: "   " },
+      { workspaceId: "w", applicationId: "a", name: "x".repeat(121) },
+      { workspaceId: "w", applicationId: "a", name: "Line\nbreak" },
+      { workspaceId: "w", applicationId: "a" },
+      { workspaceId: "w", applicationId: "a", name: "A", archived: true },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "application.rename", input })).toThrow();
+    }
+  });
+
+  it("accepts a summary with a suggested name and rejects a malformed one", async () => {
+    const unnamed = {
+      ...application,
+      id: "default",
+      name: "Default application",
+      isDefault: true,
+      nameChosen: false,
+      suggestedName: "Staff Engineer at Acme",
+    };
+    const rename = {
+      type: "application.rename",
+      input: { workspaceId: "workspace-1", applicationId: "default", name: "Acme" },
+    } as const;
+    await expect(
+      portReturning({ workspaceId: "workspace-1", application: unnamed }).execute(rename),
+    ).resolves.toEqual({ ok: true, value: { workspaceId: "workspace-1", application: unnamed } });
+    for (const broken of [
+      { ...unnamed, suggestedName: "" },
+      { ...unnamed, nameChosen: "no" },
+    ]) {
+      await expect(
+        portReturning({ workspaceId: "workspace-1", application: broken }).execute(rename),
+      ).resolves.toMatchObject({ ok: false });
     }
   });
 });

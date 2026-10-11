@@ -22,7 +22,7 @@ import type {
   ApplicationRunSummary,
   ApplicationStoragePort,
 } from "@draft-loop/storage/application-store";
-import { defaultApplicationName } from "./application-name.js";
+import { defaultApplicationName, suggestedApplicationName } from "./application-name.js";
 import {
   type CandidateProfileFreshnessSelection,
   withCandidateProfileFreshness,
@@ -48,6 +48,13 @@ export interface ApplicationView extends Application {
   readonly exports: readonly ApplicationExportSummary[];
   /** When the application was archived; null while it is on the main list. */
   readonly archivedAt: string | null;
+  /**
+   * False only for a default application the person has not named yet: its name is derived from
+   * the workspace's job, so the desktop asks for one in the person's own terms.
+   */
+  readonly nameChosen: boolean;
+  /** A name from the newest brief's role and employer, offered while the name is not chosen. */
+  readonly suggestedName: string | null;
   /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
   readonly modelProfiles: ApplicationModelProfiles | null;
 }
@@ -87,6 +94,13 @@ export interface ArchiveApplicationCommand {
   readonly archived: boolean;
 }
 
+export interface RenameApplicationCommand {
+  readonly root: string;
+  readonly applicationId: string;
+  /** The new name; keeping the current one records it as chosen. */
+  readonly name: string;
+}
+
 export interface DeleteApplicationCommand {
   readonly root: string;
   readonly applicationId: string;
@@ -106,6 +120,8 @@ export interface WorkspaceApplicationService {
   readonly get: (command: GetApplicationCommand) => Promise<ApplicationView | undefined>;
   /** Archives or restores any application, including the default one; resolves with it. */
   readonly archive: (command: ArchiveApplicationCommand) => Promise<ApplicationView>;
+  /** Renames any application, including the default one; resolves with it. */
+  readonly rename: (command: RenameApplicationCommand) => Promise<ApplicationView>;
   /**
    * Deletes a created application that holds no run, brief or export, with its stored job text.
    * The default application and applications with history can only be archived.
@@ -172,6 +188,10 @@ async function describeApplication(
   applications: ApplicationStoragePort,
   workspaceId: string,
   base: Omit<Application, "status" | "updatedAt"> & { readonly updatedAt: string },
+  naming: Pick<ApplicationView, "nameChosen" | "suggestedName"> = {
+    nameChosen: true,
+    suggestedName: null,
+  },
 ): Promise<ApplicationView> {
   const archivedAt = (await applications.listArchived(workspaceId)).get(base.id) ?? null;
   const modelProfiles = base.isDefault
@@ -199,7 +219,22 @@ async function describeApplication(
     exports,
     archivedAt,
     modelProfiles,
+    ...naming,
   };
+}
+
+/** The newest brief's role and employer as a name, unless it is the name already shown. */
+async function suggestFromBriefs(
+  storage: SqliteStorage,
+  workspaceId: string,
+  currentName: string,
+): Promise<string | null> {
+  const briefs = await storage.applications.listBriefs(workspaceId, defaultApplicationId);
+  const newest = [...briefs].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  if (newest === undefined) return null;
+  const record = await storage.getLatestOpportunityBrief(workspaceId, newest.briefId);
+  const name = suggestedApplicationName(record?.brief.role?.value, record?.brief.employer?.value);
+  return name === undefined || name === currentName ? null : name;
 }
 
 /**
@@ -222,10 +257,14 @@ async function describeDefaultApplication(
     (storage === undefined ? undefined : (await storage.getWorkspace(workspace.id))?.createdAt) ??
     jobTime ??
     epoch;
+  const chosenName =
+    storage === undefined
+      ? undefined
+      : await storage.applications.getDefaultApplicationName(workspace.id);
   const base = {
     schemaVersion: 1 as const,
     id: defaultApplicationId,
-    name: defaultApplicationName(jobText),
+    name: chosenName ?? defaultApplicationName(jobText),
     jobSource: { kind: "local-file", path: workspace.jobDescriptionPath } as const,
     createdAt,
     updatedAt: createdAt,
@@ -239,9 +278,15 @@ async function describeDefaultApplication(
       exports: [],
       archivedAt: null,
       modelProfiles: null,
+      nameChosen: false,
+      suggestedName: null,
     };
   }
-  return describeApplication(storage.applications, workspace.id, base);
+  return describeApplication(storage.applications, workspace.id, base, {
+    nameChosen: chosenName !== undefined,
+    suggestedName:
+      chosenName === undefined ? await suggestFromBriefs(storage, workspace.id, base.name) : null,
+  });
 }
 
 async function describeStoredApplication(
@@ -406,6 +451,30 @@ export function createWorkspaceApplicationService(
           applicationId,
           archived ? clock() : null,
         );
+      } finally {
+        await storage.close();
+      }
+      const view = await get({ root, applicationId });
+      if (view === undefined) throw new CliUserError("The application could not be read back.");
+      return view;
+    },
+    rename: async ({ root: rootInput, applicationId, name: nameInput }) => {
+      const root = resolve(rootInput);
+      let name: string;
+      try {
+        name = normalizeApplicationName(nameInput);
+      } catch {
+        throw new CliUserError(
+          `The application name must be between 1 and ${applicationNameMaxLength} characters.`,
+        );
+      }
+      if ((await get({ root, applicationId })) === undefined) {
+        throw new CliUserError(`Application ${applicationId} was not found.`);
+      }
+      const workspace = await dependencies.readWorkspace(root);
+      const storage = await openHistory(root);
+      try {
+        await storage.applications.renameApplication(workspace.id, applicationId, name, clock());
       } finally {
         await storage.close();
       }
@@ -605,6 +674,7 @@ export function withWorkspaceApplications(
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),
     archiveApplication: async (command) => service.archive(command),
+    renameApplication: async (command) => service.rename(command),
     deleteApplication: async (command) => service.delete(command),
     importApplication: async (command: ImportApplicationCommand) => {
       const imported = await importApplicationFromWorkspace(command, dependencies);
