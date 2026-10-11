@@ -86,5 +86,83 @@ export function diffWords(previous: string, next: string): readonly DiffOp[] {
   }
   for (; i < previousTokens.length; i += 1) appendOp(ops, "delete", previousTokens[i] ?? "");
   for (; j < nextTokens.length; j += 1) appendOp(ops, "insert", nextTokens[j] ?? "");
-  return ops;
+  return absorbShortEqualities(ops);
+}
+
+interface EditBlock {
+  readonly deleted: string;
+  readonly inserted: string;
+}
+
+type Segment =
+  | { readonly kind: "equal"; readonly text: string }
+  | ({ readonly kind: "edit" } & EditBlock);
+
+function segmentsOf(ops: readonly DiffOp[]): Segment[] {
+  const segments: Segment[] = [];
+  for (const op of ops) {
+    const last = segments[segments.length - 1];
+    if (op.kind === "equal") {
+      segments.push({ kind: "equal", text: op.text });
+    } else if (last?.kind === "edit") {
+      segments[segments.length - 1] = {
+        kind: "edit",
+        deleted: last.deleted + (op.kind === "delete" ? op.text : ""),
+        inserted: last.inserted + (op.kind === "insert" ? op.text : ""),
+      };
+    } else {
+      segments.push({
+        kind: "edit",
+        deleted: op.kind === "delete" ? op.text : "",
+        inserted: op.kind === "insert" ? op.text : "",
+      });
+    }
+  }
+  return segments;
+}
+
+function editWeight(block: EditBlock): number {
+  return Math.max(block.deleted.length, block.inserted.length);
+}
+
+/**
+ * Folds an unchanged run into its neighbouring edits when it is no longer than the larger side
+ * of the edit on each side of it. Word-level alignment otherwise anchors on lone spaces and
+ * short words such as "and", interleaving a rewritten phrase into scraps that read as noise;
+ * after folding, the phrase shows as one deletion followed by one insertion.
+ */
+function absorbShortEqualities(ops: readonly DiffOp[]): readonly DiffOp[] {
+  const segments = segmentsOf(ops);
+  let index = 1;
+  while (index < segments.length - 1) {
+    const before = segments[index - 1];
+    const current = segments[index];
+    const after = segments[index + 1];
+    if (
+      current?.kind === "equal" &&
+      before?.kind === "edit" &&
+      after?.kind === "edit" &&
+      current.text.length <= editWeight(before) &&
+      current.text.length <= editWeight(after)
+    ) {
+      segments.splice(index - 1, 3, {
+        kind: "edit",
+        deleted: before.deleted + current.text + after.deleted,
+        inserted: before.inserted + current.text + after.inserted,
+      });
+      index = Math.max(1, index - 2);
+    } else {
+      index += 1;
+    }
+  }
+  const result: DiffOp[] = [];
+  for (const segment of segments) {
+    if (segment.kind === "equal") {
+      appendOp(result, "equal", segment.text);
+      continue;
+    }
+    if (segment.deleted !== "") appendOp(result, "delete", segment.deleted);
+    if (segment.inserted !== "") appendOp(result, "insert", segment.inserted);
+  }
+  return result;
 }

@@ -115,6 +115,35 @@ describe("diffWords", () => {
     expect(kindsOf(ops)).toContain("insert");
   });
 
+  it("shows a rewritten phrase as one deletion and one insertion instead of word scraps", () => {
+    expect(
+      diffWords(
+        "Established quality tracking with solhint, static analysis and style guides, adopted by the team.",
+        "Established quality tracking with solhint and static analysis adopted by the team.",
+      ),
+    ).toEqual([
+      { kind: "equal", text: "Established quality tracking with " },
+      { kind: "delete", text: "solhint, static analysis and style guides," },
+      { kind: "insert", text: "solhint and static analysis" },
+      { kind: "equal", text: " adopted by the team." },
+    ]);
+  });
+
+  it("keeps a long unchanged run between two edits", () => {
+    expect(
+      diffWords(
+        "Led the platform migration across four regional data centres in 2021.",
+        "Owned the platform migration across four regional data centres in 2022.",
+      ),
+    ).toEqual([
+      { kind: "delete", text: "Led" },
+      { kind: "insert", text: "Owned" },
+      { kind: "equal", text: " the platform migration across four regional data centres in " },
+      { kind: "delete", text: "2021." },
+      { kind: "insert", text: "2022." },
+    ]);
+  });
+
   it("reassembles both sides losslessly for realistic CV sentence pairs", () => {
     for (const [previous, next] of cvSentencePairs) {
       const ops = diffWords(previous, next);
