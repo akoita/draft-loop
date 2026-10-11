@@ -17,6 +17,15 @@ const sourceGroundedReviewInstructions =
 const explicitEmploymentGapReviewInstructions =
   " Separately review retrievedEvidence against the complete CV artifact for explicitly stated dated employment gaps. When a source expressly marks an employment gap or says no employment in a stated field is listed during a concrete date interval and the CV does not represent that interval, emit a coverage warning and identify the source by its retrievedEvidence ID in the finding message. Preserve the source's scope: no listed software employment does not mean the candidate was unemployed. Do not infer a gap from spacing, missing dates, or ordering between listed roles, and do not treat silence as evidence of non-employment. Do not speculate about the reason for a gap or add a cause that the source does not state. This source-to-CV completeness check is the only use of uncited retrievedEvidence; use cited evidenceReferenceIds for review of all other artifact claims.";
 
+// v4 also reviews the CV as an editor. Its missing-evidence check is a second use of uncited
+// retrievedEvidence, so the v3 sentence that limited that use is reworded.
+const explicitEmploymentGapReviewInstructionsV4 = explicitEmploymentGapReviewInstructions.replace(
+  "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
+  "This source-to-CV completeness check and the editorial missing-evidence check are the only uses of uncited retrievedEvidence;",
+);
+const editorialReviewInstructions =
+  " Also review the CV as an editor deciding whether it is ready to send. Report each of these as a quality warning whose message quotes the exact offending text (at most 80 characters) and names its section: a copied source note, meta-commentary about sources, documents, repositories or the job search, or third-person narration about the candidate (code editorial-source-note); a sentence fragment, or evidence quotes stitched together with semicolons instead of written as a sentence (code editorial-fragment); a negative aside that undercuts an accomplishment instead of stating a real limit once in the candidate's voice (code editorial-negative-aside). Then compare the job's requirements with retrievedEvidence: when a retrieved chunk clearly supports a requirement or responsibility the CV does not show, report a quality warning naming the requirement and the retrievedEvidence ID (code editorial-missing-evidence). Do not report wording preferences, and never ask for content the evidence does not support.";
+
 function criticOutputInstructions(): string {
   return ` Do not rewrite content. Do not repeat deterministicFindings; return only distinct issues that require additional independent judgment. Return no more than ${maximumCritiqueFindings} findings, ordered with errors before warnings, and keep each message to ${maximumCritiqueMessageCharacters} characters or fewer. Return concise structured findings only.`;
 }
@@ -32,6 +41,9 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   }
   if (templateVersion === "cli-critic-v3") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructions}${outputInstructions}\n\n${evidenceReferenceTableInstructions}`;
+  }
+  if (templateVersion === "cli-critic-v4") {
+    return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV4}${editorialReviewInstructions}${outputInstructions}\n\n${evidenceReferenceTableInstructions}`;
   }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }

@@ -20,10 +20,9 @@ describe("critic prompt versions", () => {
     expect(createCriticAdjudicationPrompt("cli-critic-v1")).toBe(legacyPrompt);
   });
 
-  it("sets v3 for new runs and checks explicit dated employment gaps", () => {
+  it("keeps v3 claim review and its explicit dated employment gap check", () => {
     const prompt = createCriticAdjudicationPrompt("cli-critic-v3");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v3");
     expect(prompt).toContain(
       "against the source excerpts linked by that claim's evidenceReferenceIds in artifact.evidenceReferences",
     );
@@ -84,9 +83,37 @@ describe("critic prompt versions", () => {
     expect(prompt).not.toContain("explicitly stated dated employment gaps");
   });
 
+  it("sets v4 for new runs: v3 plus an editorial review", () => {
+    const v3 = createCriticAdjudicationPrompt("cli-critic-v3");
+    const v4 = createCriticAdjudicationPrompt("cli-critic-v4");
+
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v4");
+    expect(
+      v4
+        .replace(/ Also review the CV as an editor[\s\S]*?evidence does not support\./u, "")
+        .replace(
+          "This source-to-CV completeness check and the editorial missing-evidence check are the only uses of uncited retrievedEvidence;",
+          "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
+        ),
+    ).toBe(v3);
+    for (const code of [
+      "editorial-source-note",
+      "editorial-fragment",
+      "editorial-negative-aside",
+      "editorial-missing-evidence",
+    ]) {
+      expect(v4).toContain(`(code ${code})`);
+    }
+    expect(v4).toContain("quotes the exact offending text (at most 80 characters)");
+    expect(v4).toContain("never ask for content the evidence does not support");
+    expect(v4.indexOf("Also review the CV as an editor")).toBeLessThan(
+      v4.indexOf("Do not rewrite content."),
+    );
+  });
+
   it("rejects unsupported recorded critic templates", () => {
-    expect(() => createCriticAdjudicationPrompt("cli-critic-v4")).toThrow(
-      'Unsupported critic prompt template version "cli-critic-v4".',
+    expect(() => createCriticAdjudicationPrompt("cli-critic-v5")).toThrow(
+      'Unsupported critic prompt template version "cli-critic-v5".',
     );
   });
 });

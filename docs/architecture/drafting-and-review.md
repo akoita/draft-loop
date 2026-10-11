@@ -192,7 +192,7 @@ facts. The author:
 A writing policy's section order or emphasis overrides this guidance. Resumed
 v6 runs keep the v6 prompt.
 
-New runs record critic template `cli-critic-v3`. It retains evidence-linked
+Critic template `cli-critic-v3` retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also
 asks the critic to compare explicit dated employment gaps in retrieved sources
 with the complete CV. An omitted interval is a coverage warning with its
@@ -201,6 +201,21 @@ record of no listed software work into a claim of unemployment. The prompt
 does not use a fixed technology vocabulary or external verification. Findings
 use the existing structured contract; resumed v1/v2 runs retain their recorded
 prompt bytes.
+
+New runs record critic template `cli-critic-v4`: v3 plus an editorial review
+of whether the CV is ready to send. It reports quality warnings that quote the
+offending text and name its section:
+
+- `editorial-source-note`: a copied source note, meta-commentary about sources
+  or the job search, or third-person narration about the candidate;
+- `editorial-fragment`: a fragment or semicolon-stitched evidence quotes;
+- `editorial-negative-aside`: an aside that undercuts an accomplishment
+  instead of stating a real limit once;
+- `editorial-missing-evidence`: a requirement or responsibility that a
+  retrieved chunk clearly supports but the CV does not show, with the chunk ID.
+
+It never asks for content the evidence does not support. Resumed v3 runs keep
+the v3 prompt.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited

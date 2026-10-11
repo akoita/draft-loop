@@ -247,7 +247,7 @@ const retryInstruction = "When retryFeedback is present";
 describe("author prompt template versions", () => {
   it("records v6 for new author runs and v3 for the critic", () => {
     expect(promptTemplateVersion("author")).toBe("cli-author-v7");
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v3");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v4");
   });
 
   it("keeps the v1 prompt byte-identical to the prompt v1 runs were started with", () => {
