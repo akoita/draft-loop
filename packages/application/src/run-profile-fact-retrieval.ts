@@ -82,7 +82,7 @@ export async function withPinnedProfileFacts(
     readonly context: ContextSnapshot;
     readonly semanticOptions?: RunSemanticRetrievalOptions;
   },
-): Promise<RunCandidateRetrieval> {
+): Promise<RunCandidateRetrieval & { readonly knowledgeFactCount?: () => Promise<number> }> {
   const reference = request.context.candidateProfileReference;
   if (reference === undefined) return runtime;
   const profile = await loadPinnedProfile(request.storage, request.workspaceId, reference);
@@ -181,5 +181,7 @@ export async function withPinnedProfileFacts(
       );
     },
   };
-  return { ...runtime, port };
+  /** Every candidate fact of the pinned profile, whether or not a query selects it. */
+  const knowledgeFactCount = async () => (await factCandidates()).length;
+  return { ...runtime, port, knowledgeFactCount };
 }

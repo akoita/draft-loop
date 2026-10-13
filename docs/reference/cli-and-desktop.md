@@ -1516,6 +1516,11 @@ Its evidence strip and side panel show the run's chunk and source counts, for
 example "Full source: 181 chunks from 1 source", or say that retrieval was used
 and why. A `retrieval` run shows the excerpts setup selected, as before.
 
+In either mode, each author step records what it was given as a
+`run.author-input` audit event: the round, the counts of chunks and profile
+facts sent, the totals in the pinned selection, and the ids of requirements no
+sent item matched. The event holds counts and ids only, never evidence text.
+
 Full source is the default because a long career loses most of its evidence to
 the twenty-chunk limit: in two real comparisons, the author saw 20 of 282
 chunks, most of them reserved role headings, and missed everything the

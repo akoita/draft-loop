@@ -248,6 +248,8 @@ export function candidateKnowledgeRuntimeRetrieval(
       readonly loadPinnedSourceChunks: (
         references: readonly CandidateKnowledgeRetrievalSourceVersionReference[],
       ) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]>;
+      /** Eligible chunks across the pinned sources, the set full source would send; memoized. */
+      readonly knowledgeChunkCount: () => Promise<number>;
     })
   | undefined {
   const binding = config.candidateKnowledgeSelection;
@@ -735,6 +737,15 @@ export function candidateKnowledgeRuntimeRetrieval(
     return pending;
   };
 
+  const pinnedSourceReferences = () =>
+    selection.entries.flatMap((entry) =>
+      entry.sources.map((source) => ({
+        storeId: entry.storeId,
+        knowledgeBaseId: entry.knowledgeBaseId,
+        sourceId: source.sourceId,
+        versionId: source.versionId,
+      })),
+    );
   type FullSourceEvidence = {
     readonly decision: EvidenceModeDecision;
     readonly hits: readonly CandidateKnowledgeLexicalHit[];
@@ -747,16 +758,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       if (evidenceMode !== "full-source") {
         return { decision: retrievalEvidenceModeDecision, hits: [], evidence: [] };
       }
-      const chunks = await loadPinnedSourceReferences(
-        selection.entries.flatMap((entry) =>
-          entry.sources.map((source) => ({
-            storeId: entry.storeId,
-            knowledgeBaseId: entry.knowledgeBaseId,
-            sourceId: source.sourceId,
-            versionId: source.versionId,
-          })),
-        ),
-      );
+      const chunks = await loadPinnedSourceReferences(pinnedSourceReferences());
       const hits = chunks.map((chunk) =>
         createCandidateKnowledgeLexicalHit({ ...chunk, bm25Rank: 0 }),
       );
@@ -769,12 +771,20 @@ export function candidateKnowledgeRuntimeRetrieval(
     })();
     return fullSource;
   };
+  let knowledgeChunkCount: Promise<number> | undefined;
 
   return {
     reservedEvidenceIds: (text, limit = 20) =>
       reservedIdsByQuery.get(JSON.stringify([text, limit])) ?? new Set(),
     loadPinnedSourceChunks: (references) => loadPinnedSourceReferences(references),
     evidenceModeDecision: async () => (await resolveFullSource()).decision,
+    knowledgeChunkCount: (): Promise<number> => {
+      knowledgeChunkCount ??= (async () =>
+        evidenceMode === "full-source"
+          ? (await resolveFullSource()).hits.length
+          : (await loadPinnedSourceReferences(pinnedSourceReferences())).length)();
+      return knowledgeChunkCount;
+    },
     ...(semantic === undefined
       ? {}
       : {

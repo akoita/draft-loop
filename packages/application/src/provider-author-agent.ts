@@ -1,4 +1,4 @@
-import type { ContextSnapshot } from "@draft-loop/domain";
+import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorAgent } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas";
@@ -23,6 +23,14 @@ import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
 
+/** What one author step was given, handed to the optional recorder before the provider call. */
+export interface AuthorInputRecord {
+  readonly runId: string;
+  readonly round: number;
+  readonly retrievedEvidence: readonly ScoredEvidenceChunk[];
+  readonly uncoveredRequirementIds: readonly string[];
+}
+
 export interface ProviderAuthorAgentDependencies {
   readonly context: ContextSnapshot;
   /** The context with local-only selection and lineage removed. */
@@ -40,6 +48,8 @@ export interface ProviderAuthorAgentDependencies {
   readonly authorProposalCaptureDirectory: string | undefined;
   /** Build the user-facing error raised when no candidate evidence was retrieved. */
   readonly userError: (message: string) => Error;
+  /** Records the step's input in run history; a failure is dropped and never fails the run. */
+  readonly recordAuthorInput?: (input: AuthorInputRecord) => Promise<void>;
 }
 
 /**
@@ -72,6 +82,17 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       );
       if (achievementPlan.status === "no-evidence") {
         throw deps.userError("Drafting requires retrieved candidate evidence.");
+      }
+      try {
+        const { uncoveredRequirementIds } = achievementPlan;
+        await deps.recordAuthorInput?.({
+          runId,
+          round,
+          retrievedEvidence,
+          uncoveredRequirementIds,
+        });
+      } catch {
+        // Run history is best-effort here: the draft matters more than the record of its input.
       }
       const revisionKey = authorRevisionKey(runId, round);
       const revision = retryFeedback === undefined ? undefined : takeAuthorRevision(revisionKey);

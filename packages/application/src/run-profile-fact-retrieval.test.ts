@@ -17,6 +17,7 @@ import {
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import { CliUserError, createLocalApplicationDriver } from "./local.js";
 import { profileFactEvidenceIdPrefix } from "./profile-fact-evidence.js";
+import { parseRunAuthorInputPayload } from "./run-author-input.js";
 import {
   runCandidateProfileUnavailableMessage,
   withPinnedProfileFacts,
@@ -261,6 +262,16 @@ describe("runs with a pinned reviewed profile", () => {
         for (const content of ["TypeScript", "Lovelace", "deterministic", "skill-typescript"]) {
           expect(recorded).not.toContain(content);
         }
+
+        // The author step records the fact it was sent and the profile's fact total.
+        const authorInput = (await storage.listAuditEvents(reviewed.workspaceId)).find(
+          ({ eventType }) => eventType === "run.author-input",
+        );
+        expect(parseRunAuthorInputPayload(authorInput?.payload)).toMatchObject({
+          round: 1,
+          sentFactCount: 1,
+          knowledgeFactCount: 1,
+        });
       } finally {
         await storage.close();
       }
