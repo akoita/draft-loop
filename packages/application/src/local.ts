@@ -149,11 +149,11 @@ import type {
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
 import * as providerArtifactInput from "./provider-artifact-input.js";
-import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
 import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
+import { createRecordedAuthorAgent, type RecordAuthorInput } from "./run-author-input.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { announceRunEvidenceMode, withRunEvidenceMode } from "./run-evidence-mode.js";
@@ -1587,6 +1587,7 @@ function providerAgents(
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
   withheld?: CandidateKnowledgeSensitivityExclusions,
+  recordAuthorInput?: RecordAuthorInput,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const authorIdentity = runModelIdentity(
     { company: config.authorCompany, modelId: config.authorModel },
@@ -1614,15 +1615,12 @@ function providerAgents(
     return refuseWithheldText(adapter);
   }
   const promptContext = modelFacingContext(context);
-  const author = createProviderAuthorAgent({
-    context,
+  const author = createRecordedAuthorAgent(context, authorIdentity, {
     promptContext,
     dataPolicy,
     createAdapter,
-    authorCompany: authorIdentity.company,
-    authorModel: authorIdentity.modelId,
     authorProposalCaptureDirectory,
-    userError: (message) => new CliUserError(message),
+    ...(recordAuthorInput === undefined ? {} : { recordAuthorInput }),
   });
   const critic = {
     execute: async ({
@@ -1699,6 +1697,7 @@ function engine(
   localClaudeCategoryCaptureParent?: string,
   withheld?: CandidateKnowledgeSensitivityExclusions,
   coverageJudgement?: CoverageJudgementPlanner,
+  recordAuthorInput?: RecordAuthorInput,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
@@ -1715,6 +1714,7 @@ function engine(
           authorProposalCaptureDirectory,
           localClaudeCategoryCaptureParent,
           withheld,
+          recordAuthorInput,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
@@ -1959,7 +1959,7 @@ async function createRun(
       options.resolveCredential ?? environmentCredentialResolver,
       options.providerClientFactories,
       providerAuthModeConfiguration,
-      ...runEngineTail(options, candidateRetrieval?.port, withheld, root),
+      ...runEngineTail(options, candidateRetrieval, withheld, root, storage, config.id),
     );
     const request = {
       runId,
@@ -2040,7 +2040,7 @@ export async function resumeRun(
       options.resolveCredential ?? environmentCredentialResolver,
       options.providerClientFactories,
       options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
-      ...runEngineTail(options, candidateRetrieval?.port, withheld, root),
+      ...runEngineTail(options, candidateRetrieval, withheld, root, storage, config.id),
     );
     writeRunPreflight(config, io.write, budget(config), context);
     await announceRunEvidenceMode(storage, candidateRetrieval, config.id, runId, io.write);
