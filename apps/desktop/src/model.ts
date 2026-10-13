@@ -3,6 +3,7 @@ import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
+import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 
 /**
  * Renderer-safe identity for one immutable writing-policy version.
@@ -300,6 +301,8 @@ export interface DesktopReviewState {
   readonly coverage?: ReviewCoverageView | null;
   /** Safe effective/base/override policy projection for this run. */
   readonly writingPolicy?: RunWritingPolicyProjection | null;
+  /** The evidence mode this run recorded; absent for retrieval runs, which record none. */
+  readonly evidenceMode?: RunEvidenceModeView | null;
   readonly setup: WorkspaceReadiness;
 }
 

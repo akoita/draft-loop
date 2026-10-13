@@ -48,6 +48,7 @@ import {
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
+import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
 import {
   LatestRequirementsBriefView,
@@ -1180,6 +1181,7 @@ export function ReviewWorkspace({
   const [rawJobChoice, setRawJobChoice] = useState<string | null>(null);
   const [extractionSignal, setExtractionSignal] = useState(0);
   const findingSummary = reviewFindingSummary(state);
+  const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
   const { blocking: blockingFindings, warnings } = findingSummary;
   const acceptedBlockingFindings = blockingFindings.filter(
     (finding) => finding.decision === "accepted",
@@ -3008,17 +3010,21 @@ export function ReviewWorkspace({
                     strokeLinecap="round"
                   />
                 </svg>
-                <strong>Evidence retrieval</strong>
+                <strong>
+                  {evidenceMode?.kind === "full-source" ? "Full source" : "Evidence retrieval"}
+                </strong>
                 <span role="status">
-                  {state.setup.retrievalStatus === "matched"
-                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
-                    : state.setup.retrievalStatus === "fallback"
-                      ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
-                      : state.setup.retrievalStatus === "not-indexed"
-                        ? notIndexedRetrievalText(state)
-                        : state.setup.retrievalStatus === "no-query"
-                          ? "The job description has no searchable role terms"
-                          : "Retrieval readiness is unavailable"}
+                  {evidenceMode !== undefined
+                    ? evidenceMode.stripStatus
+                    : state.setup.retrievalStatus === "matched"
+                      ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                      : state.setup.retrievalStatus === "fallback"
+                        ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
+                        : state.setup.retrievalStatus === "not-indexed"
+                          ? notIndexedRetrievalText(state)
+                          : state.setup.retrievalStatus === "no-query"
+                            ? "The job description has no searchable role terms"
+                            : "Retrieval readiness is unavailable"}
                 </span>
               </section>
               <div className="doc-toolbar-views">
@@ -3412,7 +3418,12 @@ export function ReviewWorkspace({
             )}
             <div className="trust-fact">
               <span className="label">Evidence</span>
-              {state.setup.retrievalStatus === "not-indexed" ? (
+              {evidenceMode?.kind === "full-source" ? (
+                <>
+                  <strong className="numeric">{evidenceMode.panelValue}</strong>
+                  <span>{evidenceMode.panelDetail}</span>
+                </>
+              ) : state.setup.retrievalStatus === "not-indexed" ? (
                 // Setup has not searched the evidence yet, so there are no excerpt counts to show.
                 <>
                   <strong className="numeric">
@@ -3427,10 +3438,14 @@ export function ReviewWorkspace({
                     {state.setup.selectedEvidenceChunkCount} excerpt
                     {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
                   </strong>
-                  <span>
-                    from {state.setup.selectedEvidenceSourceCount} source
-                    {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
-                  </span>
+                  {evidenceMode?.kind === "fallback" ? (
+                    <span>{evidenceMode.panelDetail}</span>
+                  ) : (
+                    <span>
+                      from {state.setup.selectedEvidenceSourceCount} source
+                      {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
+                    </span>
+                  )}
                 </>
               )}
             </div>

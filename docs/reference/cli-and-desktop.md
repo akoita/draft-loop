@@ -1511,6 +1511,11 @@ audit event in the workspace history. A run in `retrieval` mode prints and
 records nothing extra. A missing setting means `full-source`; an unreadable one
 stops the run before anything is sent.
 
+The desktop review reads that recorded decision rather than a fresh retrieval.
+Its evidence strip and side panel show the run's chunk and source counts, for
+example "Full source: 181 chunks from 1 source", or say that retrieval was used
+and why. A `retrieval` run shows the excerpts setup selected, as before.
+
 Full source is the default because a long career loses most of its evidence to
 the twenty-chunk limit: in two real comparisons, the author saw 20 of 282
 chunks, most of them reserved role headings, and missed everything the

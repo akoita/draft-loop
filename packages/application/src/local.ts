@@ -94,7 +94,6 @@ import {
 } from "./critic-critique-contract.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
-import { announceRunEvidenceMode } from "./full-source-evidence.js";
 import {
   environmentCredentialResolver,
   isProviderAuthMode,
@@ -157,6 +156,7 @@ import { responseExecution, timestamp } from "./response-execution.js";
 import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
+import { announceRunEvidenceMode, withRunEvidenceMode } from "./run-evidence-mode.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   type BeginStartRunOptions,
@@ -2995,7 +2995,7 @@ export function createLocalApplicationDriver(
       return context === undefined ? undefined : runRequirementTexts(context);
     },
   };
-  return withWorkspaceApplications(driver, { readWorkspace });
+  return withRunEvidenceMode(withWorkspaceApplications(driver, { readWorkspace }));
 }
 
 function pilotReportMarkdown(report: PilotReport): string {

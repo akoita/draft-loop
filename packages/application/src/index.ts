@@ -25,6 +25,7 @@ import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persist
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 import type { RunRequirementText } from "./run-context-read.js";
+import type { RunEvidenceMode } from "./run-evidence-mode.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
@@ -525,6 +526,11 @@ export interface ApplicationDriver {
   readonly readRunRequirements?: (
     command: StatusCommand,
   ) => Promise<readonly RunRequirementText[] | undefined>;
+  /**
+   * The evidence mode a run recorded when it was sent: full source with its chunk count, or a
+   * fallback to retrieval with the reason. `undefined` for retrieval runs, which record nothing.
+   */
+  readonly readRunEvidenceMode?: (command: StatusCommand) => Promise<RunEvidenceMode | undefined>;
   /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
   readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   readonly listApplications?: (
@@ -684,6 +690,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunRequirements === undefined
         ? undefined
         : driver.readRunRequirements({ ...command, root: requireRoot(command.root) }),
+    readRunEvidenceMode: async (command) =>
+      driver.readRunEvidenceMode === undefined
+        ? undefined
+        : driver.readRunEvidenceMode({ ...command, root: requireRoot(command.root) }),
     createApplication: async (command) =>
       requireApplicationApi(driver.createApplication)({
         ...command,
@@ -757,6 +767,11 @@ export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
 export type { RunRequirementText } from "./run-context-read.js";
+export {
+  parseRunEvidenceModePayload,
+  type RunEvidenceMode,
+  readRunEvidenceMode,
+} from "./run-evidence-mode.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";
