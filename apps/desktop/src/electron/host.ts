@@ -183,6 +183,7 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
 import {
   invalidWorkspaceNameMessage,
   normalizeWorkspaceDisplayName,
@@ -1046,6 +1047,7 @@ function reviewState(
   background: BackgroundRunStatus = { running: false },
   writingPolicy?: RunWritingPolicyProjection,
   requirementTexts?: ReadonlyMap<string, string>,
+  evidenceMode: RunEvidenceModeView | null = null,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -1096,6 +1098,7 @@ function reviewState(
     exportPath,
     coverage: reviewCoverage(snapshot, requirementTexts),
     ...(writingPolicy === undefined ? {} : { writingPolicy }),
+    ...(evidenceMode === null ? {} : { evidenceMode }),
     setup,
   };
 }
@@ -2838,6 +2841,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** The evidence mode the run recorded; null for retrieval runs or when it cannot be read. */
+  async function evidenceModeForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<RunEvidenceModeView | null> {
+    if (service.readRunEvidenceMode === undefined) return null;
+    try {
+      const mode = await service.readRunEvidenceMode({ root: workspace.root, runId });
+      return mode === undefined ? null : (normalizeRunEvidenceMode(mode) ?? null);
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
+  }
+
   /** Each requirement's text by id, for the coverage panel; empty when it cannot be read. */
   async function requirementTextsForRun(
     workspace: ActiveWorkspace,
@@ -4201,6 +4220,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       backgroundStatus(workspace, snapshot.runId),
       await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
       await requirementTextsForRun(workspace, snapshot.runId, "review.dispatch"),
+      await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
     );
   }
 
@@ -5907,6 +5927,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               backgroundStatus(workspace, snapshot.runId),
               await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
               await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
+              await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
             ),
           };
         }

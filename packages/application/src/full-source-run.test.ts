@@ -113,7 +113,14 @@ describe("full-source evidence in a run", () => {
       requestedMode: "full-source",
       effectiveMode: "full-source",
       chunkCount: 26,
+      sourceCount: 1,
       budgetCharacters: 240000,
+    });
+    await expect(driver.readRunEvidenceMode?.({ root, runId: begun.runId })).resolves.toEqual({
+      requestedMode: "full-source",
+      effectiveMode: "full-source",
+      chunkCount: 26,
+      sourceCount: 1,
     });
   });
 

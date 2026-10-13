@@ -505,6 +505,9 @@ function service(
       readRunWritingPolicy: vi.fn<NonNullable<ApplicationService["readRunWritingPolicy"]>>(
         async () => undefined,
       ),
+      readRunEvidenceMode: vi.fn<NonNullable<ApplicationService["readRunEvidenceMode"]>>(
+        async () => undefined,
+      ),
       createApplication: vi.fn<ApplicationService["createApplication"]>(async () => {
         throw new Error("application fixture method was not configured");
       }),
@@ -3407,6 +3410,64 @@ describe("native host", () => {
         ok: true,
         value: { runId: "run-native", providerExposure: { independentReview: null } },
       });
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("carries the run's recorded evidence mode into the review, and omits it when unread", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-evidence-mode-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    const recorded = {
+      requestedMode: "full-source",
+      effectiveMode: "full-source",
+      chunkCount: 181,
+      sourceCount: 1,
+    } as const;
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = async () => {
+        const result = await host.invoke({
+          type: "review.load",
+          input: { workspaceId: "workspace-native", runId: "run-native" },
+        });
+        if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+        return result.value as DesktopReviewState;
+      };
+
+      // A retrieval run records no evidence mode, so the review carries none.
+      expect(await load()).not.toHaveProperty("evidenceMode");
+
+      fixture.service.readRunEvidenceMode.mockResolvedValueOnce(recorded);
+      expect((await load()).evidenceMode).toEqual(recorded);
+      expect(fixture.service.readRunEvidenceMode).toHaveBeenLastCalledWith({
+        root,
+        runId: "run-native",
+      });
+
+      fixture.service.readRunEvidenceMode.mockResolvedValueOnce({
+        ...recorded,
+        effectiveMode: "retrieval",
+        fallbackReason: "budget-exceeded",
+      });
+      expect((await load()).evidenceMode).toEqual({
+        ...recorded,
+        effectiveMode: "retrieval",
+        fallbackReason: "budget-exceeded",
+      });
+      expect(errors).toEqual([]);
+
+      fixture.service.readRunEvidenceMode.mockRejectedValueOnce(new Error("history is locked"));
+      const afterFailure = await load();
+      expect(afterFailure.runId).toBe("run-native");
+      expect(afterFailure).not.toHaveProperty("evidenceMode");
       expect(errors).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });

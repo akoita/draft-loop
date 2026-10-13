@@ -6,6 +6,7 @@ import type {
   CandidateKnowledgeRetrievalTraceInput,
   CandidateKnowledgeSelectionSnapshot,
   ContextSnapshot,
+  ScoredEvidenceChunk,
 } from "@draft-loop/domain";
 import type { SourceSensitivityRule } from "@draft-loop/domain/source-sensitivity";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -243,7 +244,7 @@ describe("full-source evidence", () => {
       expect.stringContaining(`Evidence mode: full-source (${evidence.length} eligible chunks`),
     ]);
     expect(appendAuditEvent.mock.calls[0]?.[0]).toMatchObject({
-      payload: { effectiveMode: "full-source", chunkCount: evidence.length },
+      payload: { effectiveMode: "full-source", chunkCount: evidence.length, sourceCount: 1 },
     });
   });
 
@@ -286,6 +287,17 @@ describe("full-source evidence", () => {
       defaultFullSourceBudgetCharacters,
     );
     expect(fullSourceBudgetCharacters(configuration())).toBe(240_000);
+  });
+
+  it("counts the distinct sources among the eligible chunks", () => {
+    const chunk = (id: string, sourceId: string) =>
+      ({ id, sourceId, text: "Synthetic text." }) as unknown as ScoredEvidenceChunk;
+    const evidence = [chunk("a", "source-1"), chunk("b", "source-2"), chunk("c", "source-1")];
+    expect(decideFullSourceEvidence(evidence, 100_000)).toMatchObject({
+      effectiveMode: "full-source",
+      chunkCount: 3,
+      sourceCount: 2,
+    });
   });
 
   it("falls back, with a reason, when nothing is eligible", () => {

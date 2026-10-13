@@ -37,6 +37,8 @@ export interface EvidenceModeDecision {
   readonly effectiveMode: EvidenceMode;
   /** Eligible chunks counted for full-source; zero when retrieval was requested. */
   readonly chunkCount: number;
+  /** Distinct knowledge sources among those chunks; absent when retrieval was requested. */
+  readonly sourceCount?: number;
   /** Serialized size of those chunks, the quantity compared with the budget. */
   readonly serializedCharacterCount: number;
   readonly budgetCharacters: number;
@@ -71,6 +73,7 @@ export function decideFullSourceEvidence(
   const base = {
     requestedMode: "full-source",
     chunkCount: evidence.length,
+    sourceCount: new Set(evidence.map(({ sourceId }) => sourceId)).size,
     serializedCharacterCount,
     budgetCharacters,
   } as const;
@@ -161,6 +164,7 @@ async function announceEvidenceMode(
       requestedMode: decision.requestedMode,
       effectiveMode: decision.effectiveMode,
       chunkCount: decision.chunkCount,
+      ...(decision.sourceCount === undefined ? {} : { sourceCount: decision.sourceCount }),
       serializedCharacterCount: decision.serializedCharacterCount,
       budgetCharacters: decision.budgetCharacters,
       ...(decision.fallbackReason === undefined ? {} : { fallbackReason: decision.fallbackReason }),
