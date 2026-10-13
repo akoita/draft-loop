@@ -24,6 +24,7 @@ import type {
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
@@ -531,6 +532,8 @@ export interface ApplicationDriver {
    * fallback to retrieval with the reason. `undefined` for retrieval runs, which record nothing.
    */
   readonly readRunEvidenceMode?: (command: StatusCommand) => Promise<RunEvidenceMode | undefined>;
+  /** What the run's latest author step was sent; `undefined` for runs that recorded none. */
+  readonly readRunAuthorInput?: (command: StatusCommand) => Promise<RunAuthorInput | undefined>;
   /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
   readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   readonly listApplications?: (
@@ -694,6 +697,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunEvidenceMode === undefined
         ? undefined
         : driver.readRunEvidenceMode({ ...command, root: requireRoot(command.root) }),
+    readRunAuthorInput: async (command) =>
+      driver.readRunAuthorInput === undefined
+        ? undefined
+        : driver.readRunAuthorInput({ ...command, root: requireRoot(command.root) }),
     createApplication: async (command) =>
       requireApplicationApi(driver.createApplication)({
         ...command,
@@ -771,6 +778,7 @@ export {
   type RunAuthorInput,
   summarizeAuthorInput,
 } from "./run-author-input.js";
+export { readRunAuthorInput } from "./run-author-input-read.js";
 export type { RunRequirementText } from "./run-context-read.js";
 export {
   parseRunEvidenceModePayload,

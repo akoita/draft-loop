@@ -3,6 +3,7 @@ import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
+import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 
 /**
@@ -303,6 +304,8 @@ export interface DesktopReviewState {
   readonly writingPolicy?: RunWritingPolicyProjection | null;
   /** The evidence mode this run recorded; absent for retrieval runs, which record none. */
   readonly evidenceMode?: RunEvidenceModeView | null;
+  /** What the run's latest author step was sent; absent for runs that recorded none. */
+  readonly authorInput?: RunAuthorInputView | null;
   readonly setup: WorkspaceReadiness;
 }
 

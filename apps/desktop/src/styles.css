@@ -1122,6 +1122,32 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
+/* The author-input fact spans both columns so its requirement gap list stays readable. */
+.author-input-fact {
+  grid-column: 1 / -1;
+}
+
+.author-input-gap {
+  margin-top: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.author-input-gap summary {
+  cursor: pointer;
+}
+
+.author-input-gap ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  color: var(--text-4);
+}
+
+.author-input-gap li {
+  overflow-wrap: anywhere;
+}
+
 .trust-badge {
   display: flex;
   grid-column: 1 / -1;

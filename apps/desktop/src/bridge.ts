@@ -131,6 +131,7 @@ import {
   parseRecentWorkspacesListInput,
   parseRecentWorkspacesListResult,
 } from "./recent-workspaces.js";
+import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
 import {
   type EmbeddingModelCancelResult,
@@ -1998,6 +1999,7 @@ const desktopReviewStateKeys = [
   "coverage",
   "writingPolicy",
   "evidenceMode",
+  "authorInput",
   "setup",
 ] as const;
 
@@ -7248,6 +7250,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.evidenceMode === undefined || value.evidenceMode === null
       ? value.evidenceMode
       : (normalizeRunEvidenceMode(value.evidenceMode) ?? invalidInput());
+  const authorInput =
+    value.authorInput === undefined || value.authorInput === null
+      ? value.authorInput
+      : (normalizeRunAuthorInput(value.authorInput) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -7327,6 +7333,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(approvalReadiness === undefined ? {} : { approvalReadiness }),
     ...(coverage === undefined ? {} : { coverage }),
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
+    ...(authorInput === undefined ? {} : { authorInput }),
   } as unknown as DesktopReviewState;
 }
 

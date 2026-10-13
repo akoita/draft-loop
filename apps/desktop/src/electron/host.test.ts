@@ -508,6 +508,9 @@ function service(
       readRunEvidenceMode: vi.fn<NonNullable<ApplicationService["readRunEvidenceMode"]>>(
         async () => undefined,
       ),
+      readRunAuthorInput: vi.fn<NonNullable<ApplicationService["readRunAuthorInput"]>>(
+        async () => undefined,
+      ),
       createApplication: vi.fn<ApplicationService["createApplication"]>(async () => {
         throw new Error("application fixture method was not configured");
       }),
@@ -3468,6 +3471,64 @@ describe("native host", () => {
       const afterFailure = await load();
       expect(afterFailure.runId).toBe("run-native");
       expect(afterFailure).not.toHaveProperty("evidenceMode");
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("carries what the author was sent into the review, with requirement texts resolved", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-author-input-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    const readRunRequirements = vi.fn<NonNullable<ApplicationService["readRunRequirements"]>>(
+      async () => [{ id: "req-1", text: "Lead synthetic platform migrations" }],
+    );
+    const recorded = {
+      round: 2,
+      sentChunkCount: 12,
+      sentFactCount: 3,
+      knowledgeChunkCount: 181,
+      knowledgeFactCount: 40,
+      unmatchedRequirementIds: ["req-1", "req-unknown"],
+    };
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, readRunRequirements },
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = async () => {
+        const result = await host.invoke({
+          type: "review.load",
+          input: { workspaceId: "workspace-native", runId: "run-native" },
+        });
+        if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+        return result.value as DesktopReviewState;
+      };
+
+      // A run recorded before author input was kept carries none.
+      expect(await load()).not.toHaveProperty("authorInput");
+
+      fixture.service.readRunAuthorInput.mockResolvedValueOnce(recorded);
+      expect((await load()).authorInput).toEqual({
+        sentChunkCount: 12,
+        sentFactCount: 3,
+        knowledgeChunkCount: 181,
+        knowledgeFactCount: 40,
+        unmatchedRequirements: ["Lead synthetic platform migrations", "req-unknown"],
+      });
+      expect(fixture.service.readRunAuthorInput).toHaveBeenLastCalledWith({
+        root,
+        runId: "run-native",
+      });
+      expect(errors).toEqual([]);
+
+      fixture.service.readRunAuthorInput.mockRejectedValueOnce(new Error("history is locked"));
+      const afterFailure = await load();
+      expect(afterFailure.runId).toBe("run-native");
+      expect(afterFailure).not.toHaveProperty("authorInput");
       expect(errors).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });
