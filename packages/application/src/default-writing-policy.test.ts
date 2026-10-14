@@ -1,16 +1,19 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { defaultAntiFormulaicTerms } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 import {
-  activateDefaultWritingPolicy,
   activateWritingPolicyContent,
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
-import { createApplicationService } from "./index.js";
-import { createLocalApplicationDriver } from "./local.js";
+import {
+  type ApplicationIo,
+  type ConfigureWritingPolicyCommand,
+  createApplicationService,
+} from "./index.js";
+import { configureWorkspaceWritingPolicy, createLocalApplicationDriver } from "./local.js";
 
 const silent = { write: () => undefined };
 
@@ -33,8 +36,26 @@ async function config(root: string): Promise<Record<string, unknown>> {
   >;
 }
 
-async function policyTempEntries(): Promise<string[]> {
-  return (await readdir(tmpdir())).filter((name) => name.startsWith("draft-loop-policy-"));
+interface HandedPolicyFile {
+  readonly path: string;
+  readonly content: string;
+}
+
+/**
+ * Runs the real policy import while recording the temporary file this call
+ * handed it, so cleanup is checked on that path alone and not on the shared
+ * OS temp directory, where parallel tests create their own policy folders.
+ */
+function recordingConfigure(handed: HandedPolicyFile[]) {
+  return async (command: ConfigureWritingPolicyCommand, io?: ApplicationIo) => {
+    handed.push({ path: command.sourcePath, content: await readFile(command.sourcePath, "utf8") });
+    return configureWorkspaceWritingPolicy(command, io);
+  };
+}
+
+async function expectRemoved(file: HandedPolicyFile | undefined): Promise<void> {
+  expect(file?.content).toBe(defaultWritingPolicyContent);
+  await expect(access(dirname(file?.path ?? ""))).rejects.toMatchObject({ code: "ENOENT" });
 }
 
 describe("default writing policy", () => {
@@ -128,13 +149,18 @@ describe("default writing policy", () => {
     const root = await newRoot();
     try {
       await service().initialize({ root, jobDescription: "job.md", sources: "evidence" }, silent);
-      const before = await policyTempEntries();
-      await activateDefaultWritingPolicy(root, silent);
-      expect(await policyTempEntries()).toEqual(before);
+      const handed: HandedPolicyFile[] = [];
+      const configure = recordingConfigure(handed);
+      await activateWritingPolicyContent(root, defaultWritingPolicyContent, silent, configure);
+      expect(handed).toHaveLength(1);
+      await expectRemoved(handed[0]);
 
       const missing = join(root, "missing-workspace");
-      await expect(activateDefaultWritingPolicy(missing, silent)).rejects.toThrow();
-      expect(await policyTempEntries()).toEqual(before);
+      await expect(
+        activateWritingPolicyContent(missing, defaultWritingPolicyContent, silent, configure),
+      ).rejects.toThrow();
+      expect(handed).toHaveLength(2);
+      await expectRemoved(handed[1]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
