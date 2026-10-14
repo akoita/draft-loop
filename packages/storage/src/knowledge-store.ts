@@ -110,6 +110,10 @@ import {
   type CandidateKnowledgeVectorStoragePort,
   coordinateCandidateKnowledgeVectorPort,
 } from "./knowledge-vector-index.js";
+import {
+  portableBackupTimestamp,
+  validatePortableBackupManifestTimestamps,
+} from "./portable-backup-timestamps.js";
 import { coordinateSourceEvidenceKindsPort } from "./source-evidence-kinds.js";
 import { coordinateSourceSensitivityRulesPort } from "./source-sensitivity-rules.js";
 import {
@@ -1994,56 +1998,6 @@ async function interruptPortableBackupRestoreAt(
   }
 }
 
-function portableBackupTimestamp(value: string | undefined): string {
-  const candidate = value ?? new Date().toISOString();
-  if (
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(candidate) ||
-    Number.isNaN(Date.parse(candidate)) ||
-    Date.parse(candidate) > Date.now()
-  ) {
-    throw new StorageValidationError(
-      "Portable candidate knowledge backup timestamp is invalid or in the future.",
-    );
-  }
-  return candidate;
-}
-
-function validatePortableBackupManifestTimestamps(
-  manifest: CandidateKnowledgePortableBackupManifest,
-): void {
-  const timestamps = [manifest.createdAt, manifest.descriptor.createdAt];
-  for (const entry of manifest.knowledgeBases) {
-    timestamps.push(
-      entry.knowledgeBase.createdAt,
-      entry.knowledgeBase.updatedAt,
-      ...(entry.knowledgeBase.archivedAt === null ? [] : [entry.knowledgeBase.archivedAt]),
-      entry.retentionPolicy.updatedAt,
-    );
-    for (const override of entry.retentionPolicy.activeOverrides) {
-      timestamps.push(override.changedAt);
-    }
-    for (const source of entry.sources) {
-      timestamps.push(source.createdAt);
-      if (source.refreshObservation !== null) {
-        timestamps.push(source.refreshObservation.checkedAt);
-        if (source.refreshObservation.lastRefreshedAt !== null) {
-          timestamps.push(source.refreshObservation.lastRefreshedAt);
-        }
-      }
-      if (source.retirement !== null) timestamps.push(source.retirement.retiredAt);
-      for (const version of source.versions) {
-        timestamps.push(version.createdAt);
-        if (version.urlProvenance !== undefined) {
-          timestamps.push(version.urlProvenance.fetchedAt);
-        }
-      }
-    }
-  }
-  if (timestamps.some((timestamp) => Date.parse(timestamp) > Date.now())) {
-    throw portableBackupFailure();
-  }
-}
-
 function portableBackupObjectName(checksum: string): string {
   return `${candidateKnowledgePortableBackupObjectsDirectory}/${checksum}.bin`;
 }
@@ -2252,7 +2206,7 @@ async function readPortableBackupManifest(packagePath: string): Promise<{
       throw portableBackupFailure();
     }
     const manifest = candidateKnowledgePortableBackupManifestSchema.parse(parsed);
-    validatePortableBackupManifestTimestamps(manifest);
+    validatePortableBackupManifestTimestamps(manifest, portableBackupFailure);
     validatePortableBackupManifestBounds(manifest);
     return { manifest, manifestChecksum };
   } catch (error) {
@@ -2477,7 +2431,7 @@ async function buildPortableBackupManifest(
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, object]) => ({ name, ...object })),
   });
-  validatePortableBackupManifestTimestamps(manifest);
+  validatePortableBackupManifestTimestamps(manifest, portableBackupFailure);
   return { manifest, sourceFiles };
 }
 
