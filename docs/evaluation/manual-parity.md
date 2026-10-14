@@ -1,6 +1,6 @@
 # Manual parity
 
-**Status:** Baseline and first observation recorded for reference A; references B to D unscored<br>
+**Status:** Observations recorded for references A and E; references B to D unscored<br>
 **Issue:** [#870](https://github.com/akoita/draft-loop/issues/870), part of
 [#869](https://github.com/akoita/draft-loop/issues/869)
 
@@ -11,7 +11,7 @@ loop produced for the same job post, and records the scores.
 
 ## Reference set
 
-Four private reference applications, each a job post plus the CV the manual
+Five private reference applications, each a job post plus the CV the manual
 loop produced from the same career source:
 
 | Ref | Role family                           |
@@ -20,6 +20,7 @@ loop produced from the same career source:
 | B   | Individual-contributor engineering    |
 | C   | Individual-contributor engineering    |
 | D   | Engineering leadership                |
+| E   | Individual-contributor engineering    |
 
 The job posts, reference CVs, drafts and accomplishment lists stay in a
 private local folder outside the repository. This page carries scores and
@@ -48,6 +49,9 @@ later drafts are scored against the same list.
 | ---------- | --- | ----------------------------------------------------------------------------------- | ------------- | -------------------------------- | ----- | -------------------------------------------- | -------------------- |
 | 2026-10-05 | A   | Economy author and critic, retrieval mode (20 excerpts), stale source copy, no policy, 3 rounds | 11 / 28 (39%) | 10 / 17 (59%) / 14 / 17 (82%)    | 1     | Markdown only; 5 required sections missing  | Not recorded         |
 | 2026-10-06 | A   | Economy author and critic, full-source mode (all 181 eligible chunks), live source, sensitivity rules, default policy plus punctuation rules, 3 rounds; author ran without its model profile | 13 / 28 (46%) | 11 / 17 (65%) / 14 / 17 (82%)    | 0     | Markdown only; no headline; header without contact details | Not recorded         |
+| 2026-10-11 | E   | Development author (Mistral Large 4) and economy critic (GPT-6 Luna), full-source mode (all 282 eligible chunks), 3 rounds | 20 / 22 (91%) | 12 / 17 (71%) / 14 / 17 (82%)    | 0     | Markdown only; headline and contact header present | Not recorded         |
+| 2026-10-14 | E   | Standard pair (Claude Opus 5.5 author, GPT-6.1 Sol critic), full-source mode (282 of 282 chunks, 0 of 764 profile facts), author prompt v7, coverage judgement v1, 3 rounds | 19 / 22 (86%) | 11 / 17 (65%) / 14 / 17 (82%)    | 0     | Markdown only; headline, contact header and core areas present | Not recorded         |
+| 2026-10-14 | E   | As above with coverage judgement v2 (every uncovered requirement judged against the whole draft, #1209) | 18 / 22 (82%) | 11 / 17 (65%) / 14 / 17 (82%)    | 0     | Markdown only; headline, contact header and core areas present | Not recorded         |
 
 ### Baseline observations, reference A
 
@@ -83,3 +87,42 @@ later drafts are scored against the same list.
 - Stage decision: the next gaps to address are an application plan
   (selection and framing against the job) and an editorial critic, with one
   frontier-author control run to separate model capability from workflow.
+
+### Observation, reference E (2026-10-14, #1172)
+
+Reference E is a smart-contract engineering role at a market operator. Its 17
+requirements include 10 responsibilities, which have counted as requirements
+since #1171. The accomplishment list (22 items) and the per-draft verdicts are
+frozen in the private folder.
+
+- **Inputs were complete.** Both standard-pair runs sent every eligible chunk
+  (282 of 282) to the author and recorded it (`run.author-input`, #1190).
+  Profile facts are not sent in full-source mode by design.
+- **Operational blockers came first.** The first two standard-pair runs failed
+  before any draft: the CLI session's 120-second per-call limit cut the Opus
+  author off at 2 minutes, and on Windows the timeout surfaced as an unknown,
+  non-retryable error (#1196, fixed by #1198). A successful author step took
+  166 seconds.
+- **The frontier pair writes cleaner but selects less.** Against the economy
+  draft it removed the writing defects the editorial critic targets (copied
+  working notes, negative asides, noun fragments, a repeated line) and added a
+  tailored core-areas section. It recalled fewer accomplishments (18 to 19 of
+  22 against 20 of 22) and covered no more requirements (11 of 17 against
+  12 of 17).
+- **The deterministic coverage gate misread tailored prose.** Token matching
+  left 15 of 17 requirements uncovered and relevance at 0.22 on a CV the
+  scorer judged 11 of 17. Judging every uncovered requirement against the whole
+  draft (#1209) raised the run's judged coverage from 3 to 8 requirements and
+  relevance to 0.51, and removed every blocking coverage finding.
+- **What remains is authoring, not access.** The run-6 critic judged 9
+  requirements uncovered. The scorer agrees on most: four AI-assisted
+  engineering responsibilities and the tokenisation engine are absent although
+  the career source supports part of them, and the reference CV states them.
+  The round-3 revision also dropped a line that had covered token standards in
+  round 2, which cost a requirement the earlier draft covered.
+- **Stage decision:** the gap that matters most is the author acting on judged
+  coverage. Revisions now receive the critic's verdicts (#1211) and are warned
+  when they drop a covering line (#1212). The next observation on reference E
+  confirms whether recall and requirement coverage rise. Model choice is not
+  the limiting factor: the economy draft recalled as much, and its defects are
+  what the editorial critic already catches.
