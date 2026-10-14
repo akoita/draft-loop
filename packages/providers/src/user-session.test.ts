@@ -761,13 +761,34 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       },
     ],
     [
+      "tool_use",
+      { input_tokens: 0, output_tokens: 0 },
+      {
+        code: "invalid-response",
+        retryable: true,
+        failureStage: null,
+        message: "The user-session runtime did not return a schema-valid structured response.",
+        diagnostics: [
+          {
+            code: "claude_error_subtype_error_max_structured_output_retries",
+            path: "subtype",
+          },
+          {
+            code: "claude_terminal_reason_structured_output_retry_exhausted",
+            path: "terminal_reason",
+          },
+          { code: "claude_stop_reason_tool_use", path: "stop_reason" },
+        ],
+      },
+    ],
+    [
       null,
       { input_tokens: 0, output_tokens: 0 },
       {
-        code: "unknown",
-        retryable: false,
+        code: "invalid-response",
+        retryable: true,
         failureStage: null,
-        message: "The user-session provider request failed.",
+        message: "The user-session runtime did not return a schema-valid structured response.",
         diagnostics: [
           {
             code: "claude_error_subtype_error_max_structured_output_retries",

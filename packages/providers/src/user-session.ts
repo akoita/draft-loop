@@ -26,7 +26,7 @@ import { resolveClaudeSessionProfileControls } from "./session-profile-controls.
 
 export { codexSessionModelUnsupportedDiagnosticCode } from "./codex-session-model-error.js";
 
-export const defaultUserSessionTimeoutMs = 120_000;
+export const defaultUserSessionTimeoutMs = 600_000;
 export const maximumUserSessionTimeoutMs = 1_200_000;
 const defaultMaxOutputBytes = 1_048_576;
 const maximumMaxOutputTokens = 32_768;
@@ -239,11 +239,23 @@ async function withPrivateTemporaryDirectory<T>(
 ): Promise<T> {
   const directory = await mkdtemp(join(tmpdir(), "draft-loop-provider-"));
   await chmod(directory, 0o700);
+  let output: T;
   try {
-    return await action(directory);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
+    output = await action(directory);
+  } catch (error) {
+    // On Windows a killed runtime can still hold its working directory, so
+    // cleanup may fail. That failure must never replace the request's error.
+    await rm(directory, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
   }
+  // A finished request must not fail because cleanup failed. Retry briefly
+  // while the runtime exits, then leave the private (0700) directory behind.
+  await rm(directory, { recursive: true, force: true }).catch(() =>
+    rm(directory, { recursive: true, force: true, maxRetries: 2, retryDelay: 250 }).catch(
+      () => undefined,
+    ),
+  );
+  return output;
 }
 
 function assertExactModel(
@@ -709,6 +721,16 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
           { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
         ],
       },
+    );
+  }
+  if (response.subtype === "error_max_structured_output_retries") {
+    // The runtime gave up producing a schema-valid reply for a reason other
+    // than the output budget. Another attempt can succeed, so offer a retry.
+    return new ProviderAdapterError(
+      "anthropic",
+      "invalid-response",
+      "The user-session runtime did not return a schema-valid structured response.",
+      { ...statusMetadata, retryable: true, diagnostics },
     );
   }
   return new ProviderAdapterError(
