@@ -27,6 +27,21 @@ import { type DiffOp, diffWords } from "./diff.js";
 import { earlierRunAllowsAction, earlierRunRefusal } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import {
+  ACCEPT_UNAVAILABLE_NOTE,
+  ACCEPTED_WITHOUT_REVISION_NUDGE,
+  acceptedWithoutRevision,
+  acceptUnavailable,
+  BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE,
+  bulkBlockingSkipNote,
+  bulkDecisionTargetsForDecision,
+  bulkWordMatchWarning,
+} from "./finding-decision-help.js";
+import {
+  FindingDecisionHint,
+  findingAcceptGuardId,
+  findingDecisionHintId,
+} from "./finding-decision-hint.js";
+import {
   briefOperationsOf,
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
@@ -1214,6 +1229,12 @@ export function ReviewWorkspace({
   const maximumRounds = state.providerTransmissionPreflight.budget.maxRounds;
   const roundLimitRecovery = roundLimitRecoveryRequired(state);
   const roundLimitReached = state.round >= maximumRounds;
+  // The same signal that disables Request revision: at the round limit no revision can fix an
+  // accepted finding, so Accept stops being a way to resolve a blocking one.
+  const decisionContext = useMemo(
+    () => ({ revisionAvailable: !roundLimitReached }),
+    [roundLimitReached],
+  );
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
@@ -1394,6 +1415,11 @@ export function ReviewWorkspace({
     onBulkFindingDecision !== undefined &&
     findingFilter !== "resolved" &&
     filteredFindings.some(isUnresolvedFinding);
+  const bulkWordMatchNote = bulkWordMatchWarning(filteredFindings.filter(isUnresolvedFinding));
+  const bulkBlockingNote = bulkBlockingSkipNote(
+    filteredFindings.filter(isUnresolvedFinding),
+    decisionContext,
+  );
   const previousNeedsActionCount = useRef(queueCounts.needsAction);
   const policyConfirmed =
     confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
@@ -1809,6 +1835,7 @@ export function ReviewWorkspace({
       }
       const decision = findingDecisionKeys[event.key.toLowerCase()];
       if (decision === undefined) return;
+      if (decision === "accepted" && acceptUnavailable(finding, decisionContext)) return;
       event.preventDefault();
       decideFinding(finding.id, decision);
     };
@@ -1822,6 +1849,7 @@ export function ReviewWorkspace({
     canApprove,
     canExport,
     decideFinding,
+    decisionContext,
     editingBlockId,
     expandPanel,
     expandedFindingId,
@@ -2101,7 +2129,13 @@ export function ReviewWorkspace({
               className="margin-note-action"
               type="button"
               key={decision}
-              disabled={findingDecisionsLocked}
+              disabled={
+                findingDecisionsLocked ||
+                (decision === "accepted" && acceptUnavailable(finding, decisionContext))
+              }
+              {...(decision === "accepted" && acceptUnavailable(finding, decisionContext)
+                ? { title: ACCEPT_UNAVAILABLE_NOTE }
+                : {})}
               onFocus={highlight}
               onBlur={clearHighlight}
               onClick={() => decideFinding(finding.id, decision)}
@@ -3615,10 +3649,11 @@ export function ReviewWorkspace({
                     Apply to all {filteredFindings.filter(isUnresolvedFinding).length} shown
                   </legend>
                   {directFindingDecisions.map((decision) => {
-                    const targetIds = bulkFindingDecisionTargets(
+                    const targetIds = bulkDecisionTargetsForDecision(
                       state.findings,
-                      findingFilter,
+                      bulkFindingDecisionTargets(state.findings, findingFilter, decision),
                       decision,
+                      decisionContext,
                     );
                     return (
                       <button
@@ -3632,6 +3667,14 @@ export function ReviewWorkspace({
                       </button>
                     );
                   })}
+                  {bulkWordMatchNote === null ? null : (
+                    <p className="finding-bulk-note">
+                      {bulkWordMatchNote} {BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.
+                    </p>
+                  )}
+                  {bulkBlockingNote === null ? null : (
+                    <p className="finding-bulk-note">{bulkBlockingNote}</p>
+                  )}
                 </fieldset>
               ) : null}
               <section
@@ -3710,9 +3753,11 @@ export function ReviewWorkspace({
                         </span>
                         <span className="finding-summary-footer">
                           <span className={`finding-summary-status resolution-${finding.decision}`}>
-                            {finding.severity === "error" && finding.decision === "accepted"
-                              ? "Accepted · revision required"
-                              : decisionLabels[finding.decision]}
+                            {acceptedWithoutRevision(finding, decisionContext)
+                              ? "Accepted · no revision left"
+                              : finding.severity === "error" && finding.decision === "accepted"
+                                ? "Accepted · revision required"
+                                : decisionLabels[finding.decision]}
                             <span className="finding-summary-chevron" aria-hidden="true">
                               {isExpanded ? "⌃" : "⌄"}
                             </span>
@@ -3722,6 +3767,9 @@ export function ReviewWorkspace({
                           </span>
                         </span>
                       </button>
+                      {acceptedWithoutRevision(finding, decisionContext) ? (
+                        <p className="finding-nudge">{ACCEPTED_WITHOUT_REVISION_NUDGE}</p>
+                      ) : null}
                       {isExpanded ? (
                         <section
                           className="finding-details"
@@ -3749,7 +3797,17 @@ export function ReviewWorkspace({
                                 }
                                 type="button"
                                 key={decision}
-                                disabled={findingDecisionsLocked}
+                                aria-describedby={
+                                  decision === "accepted" &&
+                                  acceptUnavailable(finding, decisionContext)
+                                    ? `${findingAcceptGuardId(detailsId)} ${findingDecisionHintId(detailsId, decision)}`
+                                    : findingDecisionHintId(detailsId, decision)
+                                }
+                                disabled={
+                                  findingDecisionsLocked ||
+                                  (decision === "accepted" &&
+                                    acceptUnavailable(finding, decisionContext))
+                                }
                                 onClick={() => decideFinding(finding.id, decision)}
                               >
                                 {decisionLabels[decision]}
@@ -3762,12 +3820,18 @@ export function ReviewWorkspace({
                                   : "button button-quiet"
                               }
                               type="button"
+                              aria-describedby={findingDecisionHintId(detailsId, "overridden")}
                               disabled={findingDecisionsLocked}
                               onClick={() => beginOverride(finding)}
                             >
                               Override
                             </button>
                           </fieldset>
+                          <FindingDecisionHint
+                            finding={finding}
+                            context={decisionContext}
+                            baseId={detailsId}
+                          />
                           {isEditingOverride ? (
                             <section
                               className="override-editor"

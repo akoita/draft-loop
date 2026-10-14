@@ -2557,6 +2557,12 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
+.coverage-information-note {
+  margin: var(--space-1) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
 .coverage-list,
 .coverage-evidence {
   display: grid;
@@ -2914,6 +2920,14 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-xs);
 }
 
+.finding-bulk-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--amber);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
 .findings-queue-scroll {
   display: grid;
   align-content: start;
@@ -3066,6 +3080,36 @@ input[type="text"].workspace-title-input {
   min-height: 30px;
   padding: 0 var(--space-2);
   font-size: var(--text-xs);
+}
+
+/* What each decision does: quiet reference copy under the decision controls. */
+.finding-decision-hint {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-3);
+  font-size: var(--text-micro);
+  line-height: 1.45;
+}
+
+.finding-decision-hint strong {
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+.finding-accept-guard,
+.finding-nudge {
+  margin: var(--space-2) 0 0;
+  color: var(--amber);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.finding-nudge {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-2);
 }
 
 .override-editor {
