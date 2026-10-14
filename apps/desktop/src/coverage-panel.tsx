@@ -14,6 +14,7 @@ import {
   coverageStatusLabels,
   type ReviewCoverageView,
 } from "./coverage-contract.js";
+import { COVERAGE_INFORMATION_NOTE } from "./finding-decision-help.js";
 import type { ReviewSection } from "./model.js";
 import { PanelToggle } from "./review-panels.js";
 
@@ -93,6 +94,7 @@ export function RequirementCoveragePanel({
             onToggle={onToggle}
           />
           <h2>Requirement coverage</h2>
+          <p className="coverage-information-note">{COVERAGE_INFORMATION_NOTE}</p>
           {summaryLine === null ? null : <p className="coverage-summary">{summaryLine}</p>}
         </div>
       </div>

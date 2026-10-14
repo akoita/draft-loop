@@ -720,7 +720,8 @@ describe("desktop trust-centered review", () => {
       findingId: "finding-unsupported-claim",
       decision: "accepted",
     });
-    const awaitingApproval = { ...accepted, state: "awaiting-approval" as const };
+    // The fixture sits at its round limit; one round earlier a revision can still fix it.
+    const awaitingApproval = { ...accepted, state: "awaiting-approval" as const, round: 1 };
 
     expect(unresolvedBlockingFindings(awaitingApproval)).toHaveLength(1);
     expect(reduceReviewState(awaitingApproval, { type: "approve" }).approval).toBe("pending");
