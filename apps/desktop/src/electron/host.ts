@@ -209,6 +209,7 @@ import {
   runBelongsToApplication,
   withEarlierRun,
 } from "./earlier-run-guard.js";
+import { executionCallLimitMs } from "./execution-call-limit.js";
 import { createApplicationRunRowsReader } from "./host-application-runs.js";
 import {
   type ApplicationReadinessScope,
@@ -788,6 +789,7 @@ function reviewExecution(
   descriptor: WorkspaceDescriptor,
   snapshot: RunSnapshot,
   { running, failure }: BackgroundRunStatus,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration,
 ): ReviewExecutionView {
   const step = snapshot.currentStep;
   const executing = executingRunStates.has(snapshot.state) && step !== null;
@@ -806,6 +808,13 @@ function reviewExecution(
     model: executing ? selection.model : null,
     attempt: executing ? attempt : null,
     elapsedMs: executing ? Math.max(0, Date.now() - Date.parse(snapshot.updatedAt)) : 0,
+    callLimitMs: executing
+      ? executionCallLimitMs(
+          selection.company,
+          descriptor.fixtureMode,
+          providerAuthModeConfiguration,
+        )
+      : null,
     timeoutRemainingMs:
       snapshot.budget.maxDurationMs === undefined
         ? null
@@ -1064,6 +1073,10 @@ function reviewState(
   evidenceMode: RunEvidenceModeView | null = null,
   authorInput: RunAuthorInputView | null = null,
   applicationRuns: readonly ApplicationRunRowView[] | null = null,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration = {
+    anthropic: "api-key",
+    openai: "api-key",
+  },
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -1081,7 +1094,7 @@ function reviewState(
     workspaceName: overrides.workspaceName ?? workspaceName(descriptor.root),
     runId: snapshot.runId,
     state: runState(snapshot),
-    execution: reviewExecution(descriptor, snapshot, background),
+    execution: reviewExecution(descriptor, snapshot, background, providerAuthModeConfiguration),
     round: snapshot.round,
     approval: snapshot.approval,
     approvalReadiness: projectApprovalReadiness(
@@ -1141,6 +1154,7 @@ function emptyReviewState(
       model: null,
       attempt: null,
       elapsedMs: 0,
+      callLimitMs: null,
       timeoutRemainingMs: null,
     },
     round: 0,
@@ -4290,6 +4304,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
       await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
       await applicationRunsFor(workspace, scope, "review.dispatch"),
+      providerAuthModeConfiguration,
     );
     return withEarlierRun(state, earlierRun);
   }
@@ -6005,6 +6020,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
             await authorInputForRun(workspace, snapshot.runId, "review.load"),
             await applicationRunsFor(workspace, scope, "review.load"),
+            providerAuthModeConfiguration,
           );
           return { ok: true, value: withEarlierRun(loaded, earlierRunFor(scope, snapshot.runId)) };
         }
