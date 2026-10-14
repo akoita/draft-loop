@@ -278,7 +278,8 @@ applications.
 | Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
 | Previous | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Completed: 51/51 issues closed, ending with source kinds (#1127–#1131), fact-first retrieval (#1132–#1135) and the live output-ratio re-measurement (#1053); the "structured in minutes" check still needs a live consented run | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
 | Previous | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Completed in code: 29/29 issues closed, ending with a per-application model pair and provider readiness in New application step 4 (#1065) | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
-| Next | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | Not started; opened 2026-10-09 | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
+| Previous | Tailored, sendable CVs ([milestone](https://github.com/akoita/draft-loop/milestone/30)) | [Completed](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172): 29/29 issues closed; exit met on reference E | Make drafts tailored to the job and sendable without hand edits to structure | A fresh run covers the job's responsibilities, opens with a job-led headline and core areas, and contains no copied source notes |
+| Now | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | In progress since 2026-10-14; review-screen clarity issues added (#1199, #1205) | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
 | Next | Manual parity: review and export | Not started | Review, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
 | Later | Harness observability and evaluation ([#1101](https://github.com/akoita/draft-loop/issues/1101)) | Not started; planned 2026-10-09 | Trace every run, measure the critic against labelled failures, explain each revision, and let the author check its own grounding | A failed author attempt is diagnosable from its trace, critic agreement is recorded on a held-out set, and the tighter loop shows fewer rejected attempts without regression (#1102–#1113) |
@@ -1567,7 +1568,17 @@ Product constraints decided with the user:
 reference application with the new inputs, and states which remaining gap
 (critic, stopping rule, or export) to address first.
 
-### Now — Tailored, sendable CVs
+### Completed — Tailored, sendable CVs
+
+Completed on 2026-10-15 with 29/29 issues closed. The exit criterion was met on
+reference E: a standard-pair run checked the job's responsibilities as
+requirements, opened with a job-led headline and core areas, and contained no
+copied source notes ([observation](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172)).
+Recall and requirement coverage did not exceed the economy pair; the author now
+receives the critic's coverage verdicts (#1211) and dropped covering lines are
+flagged (#1212), to be checked by the next reference-E observation.
+
+The stage as planned:
 
 Two comparisons with the candidate's manual CVs (TotalEnergies on 2026-10-10,
 Euronext on 2026-10-11) traced the gap to what the author receives and what it
@@ -1813,7 +1824,14 @@ reusable profile needs a journey that reuses it.
 workspace and one reviewed profile without regenerating it, and existing
 per-job workspaces can be imported.
 
-### Next — Simple guided workflow
+### Now — Simple guided workflow
+
+Real use on 2026-10-14 added review-screen work to this stage: confirm the
+models and inputs before a review starts (#1199) and rebalance the review
+screen so the side panel holds only the work (#1205). Finding decisions now
+say what they do to approval (#1202), the approval gate comes into view when
+approval is blocked (#1201), and the side panel and draft can be resized
+(#1216, #1217).
 
 Real use on 2026-10-09 showed the desktop journey is hard to follow. Features
 added stage by stage left workspace settings on the application screen, gave
