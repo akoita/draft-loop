@@ -24,6 +24,7 @@ import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
+import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
 import { earlierRunAllowsAction, earlierRunRefusal } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import {
@@ -1365,6 +1366,7 @@ export function ReviewWorkspace({
   const compareVisible = hasPreviousArtifact && compareOpen;
   const [compareSplit, setCompareSplit] = useCompareSplit();
   const sidePanel = useSidePanelWidth();
+  const draftWidth = useDraftWidth();
   const {
     collapsed: collapsedPanels,
     toggle: togglePanel,
@@ -3179,7 +3181,12 @@ export function ReviewWorkspace({
             <div
               className={`doc-grid${compareVisible ? " doc-grid-compare" : ""}`}
               ref={docGridRef}
-              style={{ "--compare-split": compareSplit } as CSSProperties}
+              style={
+                {
+                  "--compare-split": compareSplit,
+                  ...draftWidthStyle(draftWidth.width, compareVisible),
+                } as CSSProperties
+              }
             >
               {compareVisible && state.previousArtifact !== null ? (
                 <div className="diff-column">
@@ -3240,6 +3247,15 @@ export function ReviewWorkspace({
                       );
                     })}
                   </article>
+                  {compareVisible ? null : (
+                    <DraftWidthHandle
+                      width={draftWidth.reportedWidth}
+                      maximum={draftWidth.maximum}
+                      onWidthChange={draftWidth.choose}
+                      onReset={draftWidth.reset}
+                      onMeasure={draftWidth.measure}
+                    />
+                  )}
                   <div
                     className="sheet-margin"
                     ref={marginColumnRef}
