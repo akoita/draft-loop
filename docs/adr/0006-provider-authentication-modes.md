@@ -67,7 +67,7 @@ Codex reasoning lifecycle events are accepted but their content is ignored
 rather than exposed or retained. Any observed tool event fails the call.
 Raw process output and provider errors never enter history or renderer IPC.
 
-Each user-session request has a 120-second timeout by default. Application
+Each user-session request has a 10-minute (600,000 ms) timeout by default. Application
 integrations may set `userSessionTimeoutMs` to an integer from 1 through
 1,200,000 milliseconds. This per-request timeout does not replace run-level
 duration checks or caller cancellation, and it does not add an automatic retry.
