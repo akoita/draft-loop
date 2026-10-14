@@ -62,6 +62,7 @@ import {
   normalizeApplicationModelProfiles,
   normalizeApplicationRecordResult,
 } from "./application-contract.js";
+import { normalizeApplicationRuns } from "./application-run-list.js";
 import { normalizeApprovalReadiness } from "./approval-readiness.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import {
@@ -2000,6 +2001,7 @@ const desktopReviewStateKeys = [
   "writingPolicy",
   "evidenceMode",
   "authorInput",
+  "applicationRuns",
   "setup",
 ] as const;
 
@@ -7254,6 +7256,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.authorInput === undefined || value.authorInput === null
       ? value.authorInput
       : (normalizeRunAuthorInput(value.authorInput) ?? invalidInput());
+  const applicationRuns =
+    value.applicationRuns === undefined || value.applicationRuns === null
+      ? value.applicationRuns
+      : (normalizeApplicationRuns(value.applicationRuns) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -7334,6 +7340,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(coverage === undefined ? {} : { coverage }),
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
     ...(authorInput === undefined ? {} : { authorInput }),
+    ...(applicationRuns === undefined ? {} : { applicationRuns }),
   } as unknown as DesktopReviewState;
 }
 

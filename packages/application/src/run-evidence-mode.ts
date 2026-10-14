@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
+import { readRunModels } from "./run-models-read.js";
 import { evidenceModes } from "./workspace-evidence-mode.js";
 
 /** The write side lives with the decision; the local driver reaches both through this module. */
@@ -79,13 +80,14 @@ export async function readRunEvidenceMode(
 }
 
 /**
- * Adds the run-history readers, the recorded evidence mode and author input, to a local driver
- * without widening the driver itself.
+ * Adds the run-history readers, the recorded evidence mode, author input and models, to a local
+ * driver without widening the driver itself.
  */
 export function withRunHistoryReaders(driver: ApplicationDriver): ApplicationDriver {
   return {
     ...driver,
     readRunEvidenceMode: async (command) => readRunEvidenceMode(command),
     readRunAuthorInput: async (command) => readRunAuthorInput(command),
+    readRunModels: async (command) => readRunModels(command),
   };
 }
