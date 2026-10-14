@@ -1548,8 +1548,12 @@ input[type="text"].workspace-title-input {
   color: var(--text-1);
 }
 
+/* The column fills the main column's height and gives the spare room to the last row, so the
+   traceability bar rests at the foot of the review however short the draft is. */
 .review-column {
   display: grid;
+  flex: 1 0 auto;
+  grid-template-rows: auto auto 1fr;
   gap: var(--space-4);
   min-width: 0;
 }
@@ -2263,6 +2267,42 @@ input[type="text"].workspace-title-input {
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-4);
+}
+
+/* Docked: the bar stays at the foot of the review column. In flow it rests under the draft;
+   while the draft runs past the window it sticks to the bottom edge, and opening it grows a
+   bounded drawer upward that scrolls on its own. */
+.claims-panel {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  align-self: end;
+  border-bottom: 0;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-shadow: 0 -12px 20px -18px rgba(15, 23, 33, 0.45);
+}
+
+.claims-disclosure[open] .claim-list {
+  max-height: calc(50vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The bar meets the window's bottom edge, and keyboard or locate scrolling keeps its target
+   above the bar (or the open drawer) rather than under it. The root carries the same padding
+   for the narrow layout, where the page scrolls as a whole. */
+.main-column:has(> .review-column) {
+  padding-bottom: 0;
+}
+
+.main-column:has(> .review-column),
+:root:has(.review-column) {
+  scroll-padding-bottom: 5rem;
+}
+
+.main-column:has(.claims-disclosure[open]),
+:root:has(.claims-disclosure[open]) {
+  scroll-padding-bottom: calc(50vh + 1rem);
 }
 
 .claim-card {
