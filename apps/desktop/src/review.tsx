@@ -19,6 +19,8 @@ import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { type DiffOp, diffWords } from "./diff.js";
+import { earlierRunAllowsAction, earlierRunRefusal } from "./earlier-run.js";
+import { EarlierRunNotice } from "./earlier-run-view.js";
 import {
   briefOperationsOf,
   JobRequirementsExtraction,
@@ -75,6 +77,8 @@ import { ThemeToggle } from "./theme.js";
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
   readonly onAction: (action: ReviewAction) => void;
+  /** Opens one of the application's runs from the run list; `null` returns to the latest run. */
+  readonly onOpenRun?: (runId: string | null) => void;
   readonly onBulkFindingDecision?: (
     findingIds: readonly string[],
     decision: DirectFindingDecision,
@@ -1149,7 +1153,8 @@ function policyLineageLabel(policy: RunWritingPolicyProjection): string {
 
 export function ReviewWorkspace({
   state,
-  onAction,
+  onAction: dispatchReviewAction,
+  onOpenRun,
   onBulkFindingDecision,
   pendingBulkFindingCount = null,
   pendingReviewAction = null,
@@ -1169,6 +1174,16 @@ export function ReviewWorkspace({
   headerNotice,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
+  // An earlier run is read-only: its controls are hidden or disabled, every change it would send
+  // stops here, and the host refuses one that gets through.
+  const readOnly = state.earlierRun !== undefined && state.earlierRun !== null;
+  const onAction = useCallback(
+    (action: ReviewAction): void => {
+      if (readOnly && !earlierRunAllowsAction(action.type)) return;
+      dispatchReviewAction(action);
+    },
+    [readOnly, dispatchReviewAction],
+  );
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
     jobRequirements?.getLatestOpportunity,
     state.workspaceId,
@@ -1199,6 +1214,7 @@ export function ReviewWorkspace({
     [state.artifact.claims],
   );
   const canApprove =
+    !readOnly &&
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
@@ -1207,12 +1223,13 @@ export function ReviewWorkspace({
   // Final CV checks are heuristics, so a person who has reviewed the draft can
   // approve past them with a recorded reason, as with blocking findings.
   const canOverrideReadiness =
+    !readOnly &&
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
     blockingFindings.length === 0 &&
     approvalReadiness?.applicationReady === false;
-  const canExport = canExportReview(state, pendingReviewAction);
+  const canExport = !readOnly && canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
@@ -1316,6 +1333,7 @@ export function ReviewWorkspace({
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
   const showChanges = hasPreviousArtifact && draftView === "changes";
+  const draftPaneMode = `${showChanges ? "redline · " : ""}${readOnly ? "read-only" : "editable"}`;
   const compareVisible = hasPreviousArtifact && compareOpen;
   const [compareSplit, setCompareSplit] = useCompareSplit();
   const {
@@ -1354,7 +1372,9 @@ export function ReviewWorkspace({
   const queueCounts = findingQueueCounts(state.findings);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
+  const findingDecisionsLocked = readOnly || findingDecisionPending;
   const bulkDecisionAvailable =
+    !readOnly &&
     onBulkFindingDecision !== undefined &&
     findingFilter !== "resolved" &&
     filteredFindings.some(isUnresolvedFinding);
@@ -1759,7 +1779,7 @@ export function ReviewWorkspace({
       }
 
       const finding = currentIndex === -1 ? undefined : queue[currentIndex];
-      if (finding === undefined || findingDecisionPending) return;
+      if (finding === undefined || findingDecisionsLocked) return;
 
       if (event.key === "o" || event.key === "O") {
         event.preventDefault();
@@ -1783,7 +1803,7 @@ export function ReviewWorkspace({
     editingBlockId,
     expandPanel,
     expandedFindingId,
-    findingDecisionPending,
+    findingDecisionsLocked,
     findingFilter,
     findingsCollapsed,
     onAction,
@@ -1818,8 +1838,11 @@ export function ReviewWorkspace({
         onChange={(enabled) => onAction({ type: "set-autopilot", enabled })}
       />
     );
-  const pendingActionReason =
-    pendingReviewAction === null ? null : "Another review action is already running.";
+  const pendingActionReason = readOnly
+    ? earlierRunRefusal
+    : pendingReviewAction === null
+      ? null
+      : "Another review action is already running.";
   const revisionReason = !hasArtifact
     ? "No draft artifact available yet."
     : roundLimitRecovery
@@ -2054,7 +2077,7 @@ export function ReviewWorkspace({
               className="margin-note-action"
               type="button"
               key={decision}
-              disabled={findingDecisionPending}
+              disabled={findingDecisionsLocked}
               onFocus={highlight}
               onBlur={clearHighlight}
               onClick={() => decideFinding(finding.id, decision)}
@@ -2065,7 +2088,7 @@ export function ReviewWorkspace({
           <button
             className="margin-note-action"
             type="button"
-            disabled={findingDecisionPending}
+            disabled={findingDecisionsLocked}
             onFocus={highlight}
             onBlur={clearHighlight}
             onClick={() => {
@@ -2138,7 +2161,7 @@ export function ReviewWorkspace({
           type="button"
           aria-label={`Edit ${sectionTitle} text`}
           title={`Edit ${sectionTitle} text`}
-          hidden={isEditing}
+          hidden={isEditing || readOnly}
           onClick={openLine}
           onFocus={openLine}
           onMouseEnter={highlightClaim}
@@ -2881,8 +2904,12 @@ export function ReviewWorkspace({
             </div>
           </header>
           {headerNotice}
+          <EarlierRunNotice
+            earlierRun={state.earlierRun}
+            onBackToLatest={onOpenRun === undefined ? undefined : () => onOpenRun(null)}
+          />
 
-          {state.state === "stopped" ? (setupSummary ?? profilePanel) : null}
+          {state.state === "stopped" && !readOnly ? (setupSummary ?? profilePanel) : null}
 
           {errorMessage ? (
             <div className="error-banner" role="alert">
@@ -2915,40 +2942,42 @@ export function ReviewWorkspace({
                   </ul>
                 </div>
               ) : null}
-              <div className="approval-actions">
-                {state.providerFailure.availableActions.includes("retry") ? (
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    disabled={
-                      !transmissionReady || retryRemainingMs > 0 || pendingReviewAction !== null
-                    }
-                    onClick={() => onAction({ type: "resume" })}
-                  >
-                    {retryRemainingMs > 0
-                      ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
-                      : `Retry ${state.providerFailure.step}`}
-                  </button>
-                ) : null}
-                {state.providerFailure.availableActions.includes("return-to-review") ? (
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    onClick={() => onAction({ type: "recover-to-review" })}
-                  >
-                    Return to review
-                  </button>
-                ) : null}
-                {state.providerFailure.availableActions.includes("stop") ? (
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    onClick={() => onAction({ type: "stop" })}
-                  >
-                    Stop run
-                  </button>
-                ) : null}
-              </div>
+              {readOnly ? null : (
+                <div className="approval-actions">
+                  {state.providerFailure.availableActions.includes("retry") ? (
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={
+                        !transmissionReady || retryRemainingMs > 0 || pendingReviewAction !== null
+                      }
+                      onClick={() => onAction({ type: "resume" })}
+                    >
+                      {retryRemainingMs > 0
+                        ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
+                        : `Retry ${state.providerFailure.step}`}
+                    </button>
+                  ) : null}
+                  {state.providerFailure.availableActions.includes("return-to-review") ? (
+                    <button
+                      className="button button-outline"
+                      type="button"
+                      onClick={() => onAction({ type: "recover-to-review" })}
+                    >
+                      Return to review
+                    </button>
+                  ) : null}
+                  {state.providerFailure.availableActions.includes("stop") ? (
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      onClick={() => onAction({ type: "stop" })}
+                    >
+                      Stop run
+                    </button>
+                  ) : null}
+                </div>
+              )}
               {retryRemainingMs > 0 ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   Retry is paused until the provider retry window opens (
@@ -3073,7 +3102,9 @@ export function ReviewWorkspace({
                 )}
               </div>
               <span className="subtle doc-toolbar-note">
-                Edits you make here are part of the artifact you approve.
+                {readOnly
+                  ? "This run is read-only."
+                  : "Edits you make here are part of the artifact you approve."}
               </span>
             </div>
 
@@ -3113,7 +3144,7 @@ export function ReviewWorkspace({
                 <div className="pane-heading">
                   <span>Current draft</span>
                   <span>
-                    v{state.artifact.version} · {showChanges ? "redline · editable" : "editable"}
+                    v{state.artifact.version} · {draftPaneMode}
                   </span>
                 </div>
                 {/* The sheet: the document itself, on the desk, with the critique written in
@@ -3271,7 +3302,7 @@ export function ReviewWorkspace({
                 />
                 <h2>{runFinished ? finishedRunTitle(state) : stateLabel(state.state)}</h2>
               </div>
-              {state.execution.status === "interrupted" ? (
+              {readOnly ? null : state.execution.status === "interrupted" ? (
                 <div className="approval-actions">
                   <button
                     className="button button-primary"
@@ -3325,7 +3356,7 @@ export function ReviewWorkspace({
                   {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                 </button>
               ) : null}
-              {canStartNewReview(state) && startDisabledReason !== null ? (
+              {readOnly ? null : canStartNewReview(state) && startDisabledReason !== null ? (
                 <p className="setup-note setup-blocker" role="status">
                   {startDisabledReason}
                 </p>
@@ -3356,13 +3387,17 @@ export function ReviewWorkspace({
                   : ` · timeout in ${Math.ceil(state.execution.timeoutRemainingMs / 1_000)}s`}
               </p>
             )}
-            {runFinished ? null : renderAutopilotToggle()}
+            {runFinished || readOnly ? null : renderAutopilotToggle()}
             <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
               <RunTimeline events={state.events} describeState={stateLabel} />
             </div>
           </section>
 
-          <ApplicationRunList runs={state.applicationRuns} />
+          <ApplicationRunList
+            runs={state.applicationRuns}
+            viewedRunId={state.runId}
+            onOpen={onOpenRun}
+          />
 
           <section className="trust-strip" aria-label="trust and policy summary">
             {/* The lineage qualifies the identity it belongs to, so it is read here
@@ -3690,7 +3725,7 @@ export function ReviewWorkspace({
                                 }
                                 type="button"
                                 key={decision}
-                                disabled={findingDecisionPending}
+                                disabled={findingDecisionsLocked}
                                 onClick={() => decideFinding(finding.id, decision)}
                               >
                                 {decisionLabels[decision]}
@@ -3703,7 +3738,7 @@ export function ReviewWorkspace({
                                   : "button button-quiet"
                               }
                               type="button"
-                              disabled={findingDecisionPending}
+                              disabled={findingDecisionsLocked}
                               onClick={() => beginOverride(finding)}
                             >
                               Override
@@ -3720,7 +3755,7 @@ export function ReviewWorkspace({
                                   className="rationale-input"
                                   type="text"
                                   value={rationale}
-                                  disabled={findingDecisionPending}
+                                  disabled={findingDecisionsLocked}
                                   ref={(element) => {
                                     if (element === null)
                                       overrideInputRefs.current.delete(finding.id);
@@ -3739,7 +3774,7 @@ export function ReviewWorkspace({
                                 <button
                                   className="button button-quiet"
                                   type="button"
-                                  disabled={findingDecisionPending}
+                                  disabled={findingDecisionsLocked}
                                   onClick={() => {
                                     setOverrideEditingFindingId(null);
                                     setOverrideReasons((current) => {
@@ -3754,7 +3789,7 @@ export function ReviewWorkspace({
                                 <button
                                   className="button button-primary"
                                   type="button"
-                                  disabled={findingDecisionPending || rationale.trim() === ""}
+                                  disabled={findingDecisionsLocked || rationale.trim() === ""}
                                   onClick={() => {
                                     const trimmedRationale = rationale.trim();
                                     if (trimmedRationale === "") return;
@@ -3867,7 +3902,7 @@ export function ReviewWorkspace({
                   <button
                     className="button button-primary"
                     type="button"
-                    disabled={pendingReviewAction !== null}
+                    disabled={readOnly || pendingReviewAction !== null}
                     onClick={() => onAction({ type: "recover-round-limit" })}
                   >
                     Return to reviewed Round {state.round - 1}
@@ -3980,7 +4015,7 @@ export function ReviewWorkspace({
 
           {/* The gate's actions stay on screen however long the queue above them grows: the
               bar sticks to the bottom of the panel and rests under the gate when it is reached. */}
-          <section className="gate-action-bar" aria-label="approval actions">
+          <section className="gate-action-bar" aria-label="approval actions" hidden={readOnly}>
             {approvalExportErrorVisible ? (
               <div className="error-banner approval-action-error" role="alert">
                 <p>{errorMessage}</p>

@@ -332,9 +332,11 @@ flow, described next.
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
 from its own reviewed brief, or from its own job text when it has none.
-Once it has runs, the side column lists them newest first, read-only: start
-time, author and critic models, round, status, mean readiness score, and a
-mark on the latest run.
+Once it has runs, the side column lists them newest first: start time, author
+and critic models, round, status, mean readiness score, and a mark on the
+latest run. The latest run opens by default. Open on an earlier run shows its
+draft, findings and coverage read-only, with Back to latest run one click
+away; the desktop host refuses any change to an earlier run.
 The row above the run header starts with Back, which returns to the previous
 page, followed by the flow strip, which opens either career page. Focus moves to the screen's location line when
 a screen opens, so the change is announced.

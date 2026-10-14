@@ -28,7 +28,7 @@ import {
   type ReviewStateResult,
   safeBridgeError,
 } from "../bridge.js";
-import type { DesktopReviewState } from "../model.js";
+import type { DesktopReviewState, ReviewAction } from "../model.js";
 import {
   createMemoryCredentialStore,
   createNativeHost,
@@ -3675,6 +3675,116 @@ describe("native host", () => {
       expect(afterFailure.runId).toBe("run-native");
       expect(afterFailure).not.toHaveProperty("applicationRuns");
       expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("opens an earlier run of an application read-only and refuses changes to it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-earlier-run-"));
+    const fixture = service(root);
+    const older = {
+      ...(fixture.snapshot as object),
+      runId: "run-older",
+      startedAt: "2026-08-11T09:00:00.000Z",
+    };
+    fixture.service.status.mockImplementation(
+      async ({ runId }) => (runId === "run-older" ? older : fixture.snapshot) as never,
+    );
+    fixture.service.getApplication.mockImplementation(
+      async () =>
+        ({
+          id: "default",
+          name: "Default",
+          isDefault: true,
+          jobSource: { kind: "local-file", path: "job.md" },
+          status: "drafting",
+          createdAt: "2026-08-11T08:00:00.000Z",
+          updatedAt: "2026-08-12T10:00:00.000Z",
+          runs: [
+            {
+              id: "run-older",
+              state: "awaiting-approval",
+              startedAt: older.startedAt,
+              updatedAt: "",
+            },
+            {
+              id: "run-native",
+              state: "awaiting-approval",
+              startedAt: "2026-08-12T10:00:00.000Z",
+              updatedAt: "",
+            },
+          ],
+          briefs: [],
+          exports: [],
+          archivedAt: null,
+          nameChosen: true,
+          suggestedName: null,
+          modelProfiles: null,
+        }) as never,
+    );
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = (runId?: string) =>
+        host.invoke({
+          type: "review.load",
+          input: {
+            workspaceId: "workspace-native",
+            applicationId: "default",
+            ...(runId === undefined ? {} : { runId }),
+          },
+        });
+
+      const earlier = await load("run-older");
+      expect(earlier).toMatchObject({
+        ok: true,
+        value: { runId: "run-older", earlierRun: { latestRunId: "run-native" } },
+      });
+      for (const latest of [await load(), await load("run-native")]) {
+        expect(latest).toMatchObject({ ok: true, value: { runId: "run-native" } });
+        expect((latest as { value: DesktopReviewState }).value).not.toHaveProperty("earlierRun");
+      }
+      await expect(load("run-elsewhere")).resolves.toMatchObject({
+        ok: false,
+        error: { code: "not-found", message: "That run does not belong to this application." },
+      });
+
+      const findingId = (earlier as { value: DesktopReviewState }).value.findings[0]?.id;
+      if (findingId === undefined) throw new Error("finding fixture is missing");
+      const dispatch = (runId: string, action: ReviewAction) =>
+        host.invoke({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-native", applicationId: "default", runId, action },
+        });
+      const refused = {
+        ok: false,
+        error: {
+          code: "operation-failed",
+          message: "This is an earlier run. Open the latest run to change it.",
+        },
+      };
+      await expect(
+        dispatch("run-older", { type: "finding-decision", findingId, decision: "accepted" }),
+      ).resolves.toMatchObject(refused);
+      await expect(dispatch("run-older", { type: "approve" })).resolves.toMatchObject(refused);
+      expect(fixture.service.recordReviewDecision).not.toHaveBeenCalled();
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+
+      const latestFindingId = ((await load()) as { value: DesktopReviewState }).value.findings[0]
+        ?.id;
+      if (latestFindingId === undefined) throw new Error("finding fixture is missing");
+      const decided = await dispatch("run-native", {
+        type: "finding-decision",
+        findingId: latestFindingId,
+        decision: "accepted",
+      });
+      expect(decided).toMatchObject({ ok: true, value: { runId: "run-native" } });
+      expect((decided as { value: DesktopReviewState }).value).not.toHaveProperty("earlierRun");
+      expect(fixture.service.recordReviewDecision).toHaveBeenCalledTimes(1);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

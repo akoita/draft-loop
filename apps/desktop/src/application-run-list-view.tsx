@@ -29,13 +29,46 @@ function RunRow({ run }: { readonly run: ApplicationRunRowView }) {
 }
 
 /**
- * The reviewed application's runs, newest first, read-only. One run reads as a single line;
- * nothing renders outside an application.
+ * Opens an earlier run, or marks the one on screen. The latest run has neither: its "latest" chip
+ * marks it, and the earlier-run notice leads back to it.
+ */
+function OpenRun({
+  run,
+  viewed,
+  onOpen,
+}: {
+  readonly run: ApplicationRunRowView;
+  readonly viewed: boolean;
+  readonly onOpen: ((runId: string) => void) | undefined;
+}) {
+  if (run.latest || onOpen === undefined) return null;
+  if (viewed) return <span className="application-run-viewed">viewing</span>;
+  return (
+    <button
+      className="button button-quiet application-run-open"
+      type="button"
+      aria-label={`Open the run started ${runStartedLabel(run.startedAt)}`}
+      onClick={() => onOpen(run.runId)}
+    >
+      Open
+    </button>
+  );
+}
+
+/**
+ * The reviewed application's runs, newest first. One run reads as a single line; nothing renders
+ * outside an application. With `viewedRunId`, the run on screen is marked, and with `onOpen`
+ * each other earlier run can be opened, read-only.
  */
 export function ApplicationRunList({
   runs,
+  viewedRunId,
+  onOpen,
 }: {
   readonly runs: readonly ApplicationRunRowView[] | null | undefined;
+  /** The run the review shows; its row is marked. */
+  readonly viewedRunId?: string | undefined;
+  readonly onOpen?: ((runId: string) => void) | undefined;
 }) {
   if (runs === undefined || runs === null || runs.length === 0) return null;
   const [only] = runs;
@@ -57,9 +90,16 @@ export function ApplicationRunList({
           <li
             key={run.runId}
             className="application-run-row"
-            aria-current={run.latest ? "true" : undefined}
+            aria-current={
+              (viewedRunId === undefined ? run.latest : run.runId === viewedRunId)
+                ? "true"
+                : undefined
+            }
           >
             <RunRow run={run} />
+            {viewedRunId === undefined ? null : (
+              <OpenRun run={run} viewed={run.runId === viewedRunId} onOpen={onOpen} />
+            )}
           </li>
         ))}
       </ol>

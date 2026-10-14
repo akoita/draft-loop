@@ -2449,6 +2449,36 @@ input[type="text"].workspace-title-input {
   font-weight: 650;
 }
 
+.application-run-viewed {
+  color: var(--teal);
+  font-weight: 650;
+}
+
+.application-run-row .application-run-open {
+  min-height: 0;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+}
+
+/* An earlier run is read-only; the notice says so and leads back to the latest run. */
+.earlier-run-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+  border: 1px solid var(--amber-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--amber-wash);
+}
+
+.earlier-run-notice p {
+  margin: 0;
+}
+
 /* A panel's eyebrow is its disclosure: the chevron turns when the panel folds, and the heading
    under it stays on screen. */
 .panel-toggle {

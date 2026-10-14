@@ -346,6 +346,12 @@ export interface DesktopApplicationCapabilities {
    * `null`. Opening another workspace clears the scope.
    */
   readonly selectApplication?: (applicationId: string | null) => void;
+  /**
+   * Opens one of the scoped application's runs, read-only when it is not the latest, and resolves
+   * with its review; `null` returns to the latest run. Scoping another application, opening a
+   * workspace or starting a review returns to the latest run too.
+   */
+  readonly openRun?: (runId: string | null) => Promise<DesktopReviewState>;
 }
 
 /**
@@ -422,10 +428,19 @@ function unwrap<Value>(result: BridgeResult<Value>): Value {
 export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopSetupPort {
   // The application the review is scoped to; every load and run start carries it.
   let applicationId: string | undefined;
+  // An earlier run of that application opened from the run list; undefined shows the latest.
+  let runId: string | undefined;
+  const scopeTo = (selected: string | undefined) => {
+    applicationId = selected;
+    runId = undefined;
+  };
   const load = async (): Promise<DesktopReviewState> => {
     const result = await capabilityPort.execute({
       type: "review.load",
-      input: applicationId === undefined ? {} : { applicationId },
+      input:
+        applicationId === undefined
+          ? {}
+          : { applicationId, ...(runId === undefined ? {} : { runId }) },
     });
     return unwrap(result);
   };
@@ -448,7 +463,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: { selection: "native-dialog" },
         }),
       );
-      applicationId = undefined;
+      scopeTo(undefined);
       return refresh();
     },
     createWorkspace: async (name, selection) => {
@@ -458,13 +473,23 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: workspaceCreateInput(name, selection),
         }),
       );
-      applicationId = undefined;
+      scopeTo(undefined);
       return refresh();
     },
     ...(capabilityPort.hasCapability("application.list")
       ? {
           selectApplication: (selected: string | null) => {
-            applicationId = selected ?? undefined;
+            scopeTo(selected ?? undefined);
+          },
+          openRun: async (selected: string | null) => {
+            runId = selected ?? undefined;
+            try {
+              return await load();
+            } catch (error) {
+              // A run that cannot be opened leaves the review on the latest run.
+              runId = undefined;
+              throw error;
+            }
           },
           listApplications: async (workspaceId: string) =>
             unwrap(
@@ -611,7 +636,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       ? {
           openRecentWorkspace: async (id: string) => {
             unwrap(await capabilityPort.execute({ type: "workspace.recent-open", input: { id } }));
-            applicationId = undefined;
+            scopeTo(undefined);
             return refresh();
           },
         }
@@ -647,7 +672,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       const result = unwrap(
         await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "demo" } }),
       );
-      applicationId = undefined;
+      scopeTo(undefined);
       return ensureRun(result.workspace.id);
     },
     selectFiles: async (target) => {
@@ -691,7 +716,10 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           ...(applicationId === undefined ? {} : { applicationId }),
         },
       });
-      return unwrap(result);
+      const next = unwrap(result);
+      // A new review is the application's latest run, so later loads follow it.
+      if (action.type === "start") runId = undefined;
+      return next;
     },
     getCredentialStatus: async (provider) => {
       const result = await capabilityPort.execute({

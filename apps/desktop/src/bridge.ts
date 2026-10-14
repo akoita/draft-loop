@@ -76,6 +76,7 @@ import {
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
+import { normalizeEarlierRun } from "./earlier-run.js";
 import type {
   DesktopReviewState,
   IndependentReviewView,
@@ -2002,6 +2003,7 @@ const desktopReviewStateKeys = [
   "evidenceMode",
   "authorInput",
   "applicationRuns",
+  "earlierRun",
   "setup",
 ] as const;
 
@@ -7260,6 +7262,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.applicationRuns === undefined || value.applicationRuns === null
       ? value.applicationRuns
       : (normalizeApplicationRuns(value.applicationRuns) ?? invalidInput());
+  const earlierRun =
+    value.earlierRun === undefined || value.earlierRun === null
+      ? value.earlierRun
+      : (normalizeEarlierRun(value.earlierRun) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -7341,6 +7347,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
     ...(authorInput === undefined ? {} : { authorInput }),
     ...(applicationRuns === undefined ? {} : { applicationRuns }),
+    ...(earlierRun === undefined ? {} : { earlierRun }),
   } as unknown as DesktopReviewState;
 }
 
