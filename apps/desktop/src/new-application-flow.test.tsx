@@ -1,18 +1,45 @@
+import { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { OpportunityLatestBrief } from "./bridge.js";
-import type { ProviderTransmissionPreflight } from "./model.js";
+import {
+  createFixtureReviewState,
+  type DesktopReviewState,
+  type ProviderTransmissionPreflight,
+} from "./model.js";
 import {
   JobStep,
   NewApplicationFlow,
   type NewApplicationFlowProps,
+  newApplicationStartHandlers,
+  newApplicationStartSummary,
   ProfileStep,
   RequirementsStep,
   StartStep,
 } from "./new-application-flow.js";
 import { emptyNewApplicationDraft } from "./new-application-flow-model.js";
+import { StartConfirmation } from "./start-confirmation.js";
+
+/** A live workspace on both session routes whose reviewed brief is brief-1 v2. */
+function liveState(overrides: Partial<DesktopReviewState> = {}): DesktopReviewState {
+  const fixture = createFixtureReviewState();
+  return {
+    ...fixture,
+    providerRoutes: {
+      anthropic: "user-session",
+      openai: "user-session",
+      sessionCallLimitMs: 600_000,
+    },
+    ...overrides,
+    setup: {
+      ...fixture.setup,
+      reviewedOpportunity: { briefId: "brief-1", version: 2 },
+      fixtureMode: false,
+    },
+  };
+}
 
 const application: ApplicationSummaryView = {
   id: "app-1",
@@ -299,6 +326,93 @@ describe("start step", () => {
     expect(failed).toContain('role="alert"');
     expect(failed).toContain("Starting…");
   });
+
+  it("keeps the start confirmation closed until Start asks for it", () => {
+    const html = renderToStaticMarkup(<StartStep {...props} transmissionConfirmed />);
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain("Start this review?");
+  });
+
+  it("shows the start confirmation with the application's own pair once opened", () => {
+    // The host reports the loaded application's own pair; the workspace's pair is not shown.
+    const state = liveState({
+      providerTransmissionPreflight: {
+        ...createFixtureReviewState().providerTransmissionPreflight,
+        author: { company: "anthropic", model: "claude-opus-4-1", endpoint: "" },
+        critic: { company: "openai", model: "gpt-5-pro", endpoint: "" },
+      },
+    });
+    const summary = newApplicationStartSummary(state, {
+      latest: brief("reviewed"),
+      candidateProfile: { profileId: "candidate", version: 3 },
+      modelProfiles: {
+        author: { id: "premium-anthropic-author" },
+        critic: { id: "premium-openai-critic" },
+      },
+    });
+    const html = renderToStaticMarkup(
+      <StartStep
+        {...props}
+        transmissionConfirmed
+        confirmation={
+          <StartConfirmation
+            summary={summary}
+            dialogRef={createRef<HTMLDivElement>()}
+            onStart={none}
+            onCancel={none}
+          />
+        }
+      />,
+    );
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain("Start this review?");
+    expect(html).toContain("Anthropic · claude-opus-4-1 · Premium · Claude session");
+    expect(html).toContain("OpenAI · gpt-5-pro · Premium · ChatGPT session");
+    expect(html).not.toContain("claude-sonnet-4-5");
+    expect(html).toContain("<dt>Requirements</dt><dd>Reviewed brief v2 · 4 requirements</dd>");
+    expect(html).toContain("<dt>Career profile</dt><dd>v3</dd>");
+  });
+});
+
+describe("new application start confirmation", () => {
+  it("names the reviewed brief only when it is the state's reviewed selection", () => {
+    const requirements = (latest: OpportunityLatestBrief) =>
+      newApplicationStartSummary(liveState(), {
+        latest,
+        candidateProfile: null,
+        modelProfiles: null,
+      }).inputs.find((line) => line.label === "Requirements")?.value;
+    expect(requirements(brief("reviewed"))).toBe("Reviewed brief v2 · 4 requirements");
+    expect(requirements({ ...brief("reviewed"), briefId: "brief-other" })).toBe(
+      "Reviewed brief v2",
+    );
+  });
+
+  it("says no career profile is pinned when none is selected", () => {
+    const summary = newApplicationStartSummary(liveState(), {
+      latest: brief("reviewed"),
+      candidateProfile: null,
+      modelProfiles: null,
+    });
+    expect(summary.inputs).toContainEqual({ label: "Career profile", value: "None pinned" });
+    expect(summary.models.map((model) => model.tier)).toEqual([null, null]);
+  });
+
+  it("Start closes the check and starts the run once", () => {
+    const start = vi.fn();
+    const close = vi.fn();
+    newApplicationStartHandlers(start, close).onStart();
+    expect(close).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledOnce();
+  });
+
+  it("Cancel closes the check and starts nothing", () => {
+    const start = vi.fn();
+    const close = vi.fn();
+    newApplicationStartHandlers(start, close).onCancel();
+    expect(close).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
 });
 
 describe("New application screen", () => {
@@ -326,6 +440,12 @@ describe("New application screen", () => {
       fingerprint: "f".repeat(64),
     } as never,
     startDisabledReason: null,
+    startSummary: (latest) =>
+      newApplicationStartSummary(liveState(), {
+        latest,
+        candidateProfile: null,
+        modelProfiles: null,
+      }),
     onStart: async () => undefined,
     back: { label: "Home", onBack: none },
     onOpenStep: { evidence: none, profile: none, applications: none },
