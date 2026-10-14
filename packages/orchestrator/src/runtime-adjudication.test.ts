@@ -656,6 +656,55 @@ describe("adjudicated revision runtime boundary", () => {
     );
   });
 
+  it("never stamps a trace or approval before the revised artifact when the clock steps back", async () => {
+    // The engine clock reads 1.2 s earlier than the author's revised artifact.
+    const steppedBack = "2026-08-12T10:05:58.800Z";
+    const revisedCreatedAt = revisedArtifact().createdAt;
+    const fixture = await reviewed({ now: () => steppedBack });
+    await fixture.engine.requestAdjudicatedRevision("run-1", input());
+
+    const completed = await fixture.engine.resume("run-1", { context: context() });
+
+    expect(completed.state).toBe("awaiting-approval");
+    expect(completed.adjudicationRuntime?.trace).toMatchObject({
+      valid: true,
+      createdAt: revisedCreatedAt,
+    });
+    // The preserved disagreement blocks readiness, so approval records a reason.
+    const approved = await fixture.engine.approve("run-1", {
+      readinessOverrideRationale: "Accept the preserved disagreement.",
+    });
+    expect(approved.readinessDecision?.createdAt).toBe(revisedCreatedAt);
+    expect(approved.approvedArtifact?.readinessOverride?.createdAt).toBe(revisedCreatedAt);
+  });
+
+  it("plans from a report stamped just before a backward clock step", async () => {
+    const fixture = await reviewed({ now: () => "2026-08-12T10:07:00.000Z" });
+    const reportedAt = "2026-08-12T10:07:01.200Z";
+
+    const requested = await fixture.engine.requestAdjudicatedRevision(
+      "run-1",
+      input({ report: report(undefined, { createdAt: reportedAt }) }),
+    );
+
+    expect(requested.adjudicationRuntime?.plan?.createdAt).toBe(reportedAt);
+  });
+
+  it("never stamps a trace before its plan when the clock steps back during revision", async () => {
+    let clock = "2026-08-12T10:07:00.000Z";
+    const fixture = await reviewed({ now: () => clock });
+    await fixture.engine.requestAdjudicatedRevision("run-1", input());
+    clock = "2026-08-12T10:06:58.800Z";
+
+    const completed = await fixture.engine.resume("run-1", { context: context() });
+
+    expect(completed.state).toBe("awaiting-approval");
+    expect(completed.adjudicationRuntime?.trace).toMatchObject({
+      valid: true,
+      createdAt: "2026-08-12T10:07:00.000Z",
+    });
+  });
+
   it("fails closed on invalid provider lineage and bounds retries without writing a trace", async () => {
     const fixture = await reviewed({
       author: async (request) => {

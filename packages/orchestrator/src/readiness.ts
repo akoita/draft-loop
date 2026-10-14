@@ -32,6 +32,7 @@ import {
   validateDraftArtifact,
   withoutJudgedUncoveredFindings,
 } from "@draft-loop/validation";
+import { notBefore } from "./causal-timestamp.js";
 import type { CritiqueFinding, RunBudget } from "./index.js";
 
 /**
@@ -305,6 +306,11 @@ function readinessEvaluation(
 export function buildApplicationReadinessStoppingDecision(
   input: BuildApplicationReadinessDecisionInput,
 ): ApplicationReadinessStoppingDecision {
+  const createdAt = notBefore(
+    input.createdAt,
+    input.artifact.createdAt,
+    input.latestRevisionTrace?.createdAt,
+  );
   const validationContext = deterministicContext(input.context);
   const explicitGapRequirementIds = input.explicitGapRequirementIds ?? [];
   const validation = validateDraftArtifact(input.artifact, validationContext, {
@@ -331,7 +337,7 @@ export function buildApplicationReadinessStoppingDecision(
     metadata: {
       contextSnapshotId: input.context.id,
       artifact: { id: input.artifact.id, version: input.artifact.version },
-      createdAt: input.createdAt,
+      createdAt,
     },
     summary: "The current artifact was re-evaluated at the human approval boundary.",
     independentReview,
@@ -360,7 +366,7 @@ export function buildApplicationReadinessStoppingDecision(
     explicitGapRequirementIds,
     ...(judgedIds.length === 0 ? {} : { coveredRequirementIds: judgedIds }),
     agreements: projectAgreements(report, input.latestRevisionTrace),
-    createdAt: input.createdAt,
+    createdAt,
     deterministicValidationContext: validationContext,
     loopContext: {
       round: input.round,

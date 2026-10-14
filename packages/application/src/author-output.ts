@@ -6,6 +6,7 @@ import {
   type NewArtifactInput,
 } from "@draft-loop/artifacts";
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
+import { notBefore } from "@draft-loop/orchestrator";
 import {
   type JsonObject,
   type ModelResponse,
@@ -368,7 +369,9 @@ function buildArtifact(
 
   const input: NewArtifactInput = {
     id: artifactId(executionHash),
-    createdAt: options.createdAt ?? new Date().toISOString(),
+    // A revision must not precede its parent when the wall clock steps back.
+    createdAt:
+      options.createdAt ?? notBefore(new Date().toISOString(), options.currentArtifact?.createdAt),
     language: options.context.language,
     sections,
     claims,

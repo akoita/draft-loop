@@ -56,6 +56,7 @@ import {
   buildAuthorRetryCorrections,
 } from "./author-retry-feedback.js";
 import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
+import { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 import {
   activateDurationAccounting,
   createDurationAccounting,
@@ -1020,7 +1021,9 @@ function deriveAdjudicatedRevisionTrace(
       plan: pending.plan,
       sourceArtifact,
       revisedArtifact: parsedRevisedArtifact.data,
-      createdAt,
+      // A fresh stamp must not precede its plan or the author's revised artifact.
+      // A valid stored trace already satisfies this, so replay is unchanged.
+      createdAt: notBefore(createdAt, pending.plan.createdAt, parsedRevisedArtifact.data.createdAt),
       acceptedEffectOverrides: pending.acceptedEffectOverrides,
     });
   } catch (error) {
@@ -2129,7 +2132,6 @@ export function createOrchestrationEngine(
     contextsByRunId.set(runId, context);
     if (snapshot.artifact === null)
       throw new Error("A draft artifact is required before approval.");
-    const now = clock();
     const currentCritiques = snapshot.executionHistory.filter(
       (execution) =>
         execution.runId === snapshot.runId &&
@@ -2152,6 +2154,9 @@ export function createOrchestrationEngine(
       snapshot.adjudicationRuntime?.trace === undefined
         ? undefined
         : snapshot.adjudicationRuntime.trace;
+    // Approval may run in a later process whose wall clock reads earlier than
+    // the drafted artifact; one causal stamp keeps every record ordered.
+    const now = notBefore(clock(), snapshot.artifact.createdAt, latestRevisionTrace?.createdAt);
     const readinessDecision = buildApplicationReadinessStoppingDecision({
       artifact: snapshot.artifact,
       context,
@@ -2286,7 +2291,8 @@ export function createOrchestrationEngine(
     const plan = buildAuthorAdjudicationPlan({
       report,
       sourceArtifact: snapshot.artifact,
-      createdAt: now,
+      // A report stamped just before a backward clock step is not future-dated.
+      createdAt: notBeforeWithinClockStep(now, report.createdAt),
       decisions,
     });
     const acceptedEffectOverrides = canonicalAcceptedEffectOverrides(
@@ -2439,6 +2445,7 @@ export interface OrchestrationPort {
 
 export * from "./adjudication.js";
 export * from "./autopilot.js";
+export { notBefore } from "./causal-timestamp.js";
 export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,
