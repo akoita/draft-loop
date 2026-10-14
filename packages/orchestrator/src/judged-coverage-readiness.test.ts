@@ -168,15 +168,11 @@ function fixture(
     execution(critiques[Math.min(call++, critiques.length - 1)], "openai", "critic-test"),
   );
   const planCalls = vi.fn(async () => plan);
+  const author = vi.fn(async (request: { readonly round: number }) =>
+    execution(artifact(request.round, options.clarity !== undefined), "anthropic", "author-test"),
+  );
   const engine = createOrchestrationEngine({
-    author: {
-      execute: async (request: { readonly round: number }) =>
-        execution(
-          artifact(request.round, options.clarity !== undefined),
-          "anthropic",
-          "author-test",
-        ),
-    },
+    author: { execute: author },
     critic: { execute: critic as never },
     store: new InMemoryRunStore(),
     now: () => timestamp,
@@ -189,7 +185,7 @@ function fixture(
       context: options.clarity === undefined ? context : makeContext(options.clarity),
       budget: { maxRounds: options.maxRounds ?? 1 },
     });
-  return { engine, start, critic, planCalls };
+  return { engine, start, critic, planCalls, author };
 }
 
 const uncovered = (findings: readonly { code: string; requirementId?: string }[]) =>
@@ -320,6 +316,69 @@ describe("judged coverage in readiness", () => {
     expect(result.round).toBe(2);
     expect(result.state).toBe("awaiting-approval");
     await expect(engine.approve("run-1")).rejects.toThrow(/not application-ready/iu);
+  });
+});
+
+describe("judged coverage in the revision input", () => {
+  // The first round stops for approval; the user then asks for a revision.
+  const revisingRun = (critiques: readonly Critique[]) => {
+    const run = fixture({ maxRounds: 2, critiques });
+    const start = async () => {
+      await run.start();
+      await run.engine.requestRevision("run-1");
+      return run.engine.resume("run-1", { context });
+    };
+    return { ...run, start };
+  };
+  const authorRequests = (author: ReturnType<typeof fixture>["author"]) =>
+    author.mock.calls.map(([request]) => request as { readonly round: number });
+
+  it("gives the revising author the critic's verdicts, rationales and cited blocks", async () => {
+    const { start, author } = revisingRun([
+      { findings: [], coverageJudgements: [verdict("satisfied")] },
+      { findings: [] },
+    ]);
+
+    await start();
+
+    const [first, revision] = authorRequests(author);
+    expect(first).not.toHaveProperty("requirementCoverage");
+    expect(revision).toMatchObject({
+      round: 2,
+      requirementCoverage: [
+        {
+          requirementId: "requirement-1",
+          verdict: "covered",
+          rationale: "The block states the required experience.",
+          citedBlockIds: ["experience-block-1"],
+        },
+      ],
+    });
+  });
+
+  it("passes an uncovered verdict without blocks", async () => {
+    const { start, author } = revisingRun([
+      { findings: [], coverageJudgements: [verdict("not-satisfied")] },
+      { findings: [] },
+    ]);
+
+    await start();
+
+    expect(authorRequests(author)[1]).toMatchObject({
+      requirementCoverage: [
+        { requirementId: "requirement-1", verdict: "uncovered", citedBlockIds: [] },
+      ],
+    });
+  });
+
+  it("passes nothing when the revised round has no judgement", async () => {
+    const { start, author } = revisingRun([{ findings: [] }, { findings: [] }]);
+
+    await start();
+
+    const requests = authorRequests(author);
+    expect(requests).toHaveLength(2);
+    for (const request of requests) expect(request).not.toHaveProperty("requirementCoverage");
   });
 });
 

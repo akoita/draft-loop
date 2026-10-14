@@ -77,15 +77,29 @@ const jobTailoredCvInstructions =
   ) +
   " Tailor the CV to the job in context. The job description, its requirements and its responsibilities are employer context, never candidate facts. Open the summary section with a one-line headline block naming the candidate's own supported titles and the strongest skill areas the job asks for; never present the target job title as a role the candidate held. Directly after the summary, add one section of kind \"alignment\" titled \"Core areas\" with three to five bullets, each grouping supported evidence that answers one or more of the job's main requirements or responsibilities, worded differently from the experience bullets. Give a bullet a short label only when the label's words appear in cited evidence, and cover the label with its own claim citing that evidence; otherwise write the bullet without a label. Within each role, lead with the bullets most relevant to the job's requirements and responsibilities, and shorten or merge detail unrelated to the job; keep every role with its title, employer and dates, in chronological order. List the skills and certifications the job asks for first. Use a requirement's wording only when the cited evidence supports it. When context.writingPolicy sets a section order or emphasis, follow it over this guidance.";
 
+// v8 adds the critic's judged coverage of the draft being revised.
+const requirementCoverageInstructions =
+  " When requirementCoverage is present, it is the critic's judgement of the current draft. For a requirement judged uncovered, strengthen or add content that states it only when the retrieved evidence supports it; never invent or stretch facts to cover it. Keep the blocks cited as covering a requirement, or keep that coverage when you reword them, unless an accepted finding requires a change.";
+
 interface AuthorPromptTemplate {
   /** Version-specific guidance placed after the shared claim-coverage instructions. */
   readonly guidance: string;
   /** The output budget the prompt states and the provider request enforces. */
   readonly outputBudget: AuthorOutputBudget;
+  /** Whether the version states, and so may be sent, the critic's judged requirement coverage. */
+  readonly sendsRequirementCoverage: boolean;
 }
 
-function authorPromptTemplate(guidance: string, maxOutputTokens: number): AuthorPromptTemplate {
-  return Object.freeze({ guidance, outputBudget: Object.freeze({ maxOutputTokens }) });
+function authorPromptTemplate(
+  guidance: string,
+  maxOutputTokens: number,
+  sendsRequirementCoverage = false,
+): AuthorPromptTemplate {
+  return Object.freeze({
+    guidance,
+    outputBudget: Object.freeze({ maxOutputTokens }),
+    sendsRequirementCoverage,
+  });
 }
 
 /**
@@ -110,6 +124,11 @@ const authorPromptTemplateVersions = Object.freeze({
     `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}`,
     32_768,
   ),
+  "cli-author-v8": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}`,
+    32_768,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -119,7 +138,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v7" : "cli-critic-v4";
+  return role === "author" ? "cli-author-v8" : "cli-critic-v4";
 }
 
 /** The template of a known author version; unknown versions fail closed. */
@@ -144,6 +163,7 @@ export interface AuthorAdjudicationPrompt {
     readonly pendingAdjudication?: PendingAdjudication;
     readonly retryFeedback?: NonNullable<AuthorRequest["retryFeedback"]>;
     readonly revision?: AuthorRevision;
+    readonly requirementCoverage?: NonNullable<AuthorRequest["requirementCoverage"]>;
   }>;
 }
 
@@ -154,6 +174,8 @@ export interface AuthorAdjudicationPrompt {
  * started on `cli-author-v1` keeps its byte-identical v1 prompt and output
  * budget when resumed. `revision`, when present, carries an in-process
  * rejected proposal and its validation report for the author to revise.
+ * `requirementCoverage` is sent only by versions whose prompt explains it, and
+ * only when it is non-empty, so earlier versions keep their exact input.
  */
 export function createAuthorAdjudicationPrompt(
   authorPromptTemplateVersion: string,
@@ -162,6 +184,7 @@ export function createAuthorAdjudicationPrompt(
   groundingGuide: readonly AuthorGroundingGuideEntry[] = [],
   revision: AuthorRevision | undefined = undefined,
   requestedOutputBudget?: number,
+  requirementCoverage: AuthorRequest["requirementCoverage"] = undefined,
 ): AuthorAdjudicationPrompt {
   const template = versionTemplate(authorPromptTemplateVersion);
   const guidance = template.guidance;
@@ -171,7 +194,8 @@ export function createAuthorAdjudicationPrompt(
       : { maxOutputTokens: requestedOutputBudget };
   const usesV6SystemPrompt =
     authorPromptTemplateVersion === "cli-author-v6" ||
-    authorPromptTemplateVersion === "cli-author-v7";
+    authorPromptTemplateVersion === "cli-author-v7" ||
+    authorPromptTemplateVersion === "cli-author-v8";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt
@@ -190,6 +214,11 @@ export function createAuthorAdjudicationPrompt(
   const retryInput = {
     ...(retryFeedback === undefined ? {} : { retryFeedback }),
     ...(revision === undefined ? {} : { revision }),
+    ...(template.sendsRequirementCoverage &&
+    requirementCoverage !== undefined &&
+    requirementCoverage.length > 0
+      ? { requirementCoverage }
+      : {}),
   };
   if (pendingAdjudication === undefined) {
     return {

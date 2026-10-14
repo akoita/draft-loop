@@ -73,6 +73,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       findings,
       pendingAdjudication,
       retryFeedback,
+      requirementCoverage,
       retrievedEvidence = [],
       signal,
     }) => {
@@ -103,6 +104,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         createAuthorGroundingGuide(retrievedEvidence),
         revision,
         context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
+        requirementCoverage,
       );
       const { outputBudget, groundingGuide, ...turnInput } = authorPrompt.providerInput;
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));

@@ -158,13 +158,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v7`, which states and sends a
+New runs record author template `cli-author-v8`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v7 retain 32,768.
+v4 to v8 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -191,6 +191,13 @@ facts. The author:
 
 A writing policy's section order or emphasis overrides this guidance. Resumed
 v6 runs keep the v6 prompt.
+
+Author v8 keeps v7 and, on a revision, receives the critic's judged coverage of
+the draft being revised as `requirementCoverage`: each judged requirement's
+verdict, rationale and, when covered, the cited block ids. The author adds
+content for an uncovered requirement only when the evidence supports it, and
+keeps the cited covering blocks unless an accepted finding requires a change.
+Resumed v7 and earlier runs receive neither the instruction nor the input.
 
 Critic template `cli-critic-v3` retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also

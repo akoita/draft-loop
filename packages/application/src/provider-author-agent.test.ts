@@ -117,11 +117,11 @@ const rejectedText = "Built TypeScript tools in 2023.";
 const acceptedText = "Built TypeScript tools in 2021.";
 
 /** An author agent over a fake adapter that answers with the queued proposals. */
-function agent(outputs: JsonObject[]) {
+function agent(outputs: JsonObject[], agentContext: ContextSnapshot = context) {
   const requests: ModelRequest<JsonObject>[] = [];
   const author = createProviderAuthorAgent({
-    context,
-    promptContext: context,
+    context: agentContext,
+    promptContext: agentContext,
     dataPolicy: () => ({
       allowTransmission: true,
       allowedCompanies: ["anthropic"],
@@ -170,6 +170,48 @@ function request(
     ...extra,
   };
 }
+
+describe("provider author agent requirement coverage", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  const v8Context = {
+    ...context,
+    modelConfiguration: { author: { promptTemplateVersion: "cli-author-v8" } },
+  } as unknown as ContextSnapshot;
+  const requirementCoverage: NonNullable<AuthorRequest["requirementCoverage"]> = [
+    {
+      requirementId: "requirement",
+      verdict: "covered",
+      rationale: "The block states the TypeScript tooling.",
+      citedBlockIds: ["block-previous"],
+    },
+  ];
+
+  it("sends the critic's verdicts with the artifact's own block ids when given", async () => {
+    const { author, requests } = agent([proposal(acceptedText)], v8Context);
+    await author.execute({
+      ...request("run-coverage", { currentArtifact: previousArtifact() }),
+      round: 2,
+      requirementCoverage,
+    });
+
+    const input = requests[0]?.input as {
+      readonly requirementCoverage?: unknown;
+      readonly currentArtifact?: { readonly sections: { readonly blocks: { id: string }[] }[] };
+    };
+    expect(input.requirementCoverage).toEqual(requirementCoverage);
+    expect(input.currentArtifact?.sections[0]?.blocks[0]?.id).toBe("block-previous");
+    expect(requests[0]?.systemPrompt).toContain("When requirementCoverage is present");
+  });
+
+  it("sends no requirementCoverage when none is given", async () => {
+    const { author, requests } = agent([proposal(acceptedText), proposal(acceptedText)], v8Context);
+    await author.execute(request("run-no-coverage"));
+    await author.execute({ ...request("run-empty-coverage"), requirementCoverage: [] });
+
+    for (const sent of requests) expect(sent.input).not.toHaveProperty("requirementCoverage");
+  });
+});
 
 describe("provider author agent revision", () => {
   beforeEach(() => resetAuthorRevisionMemoryForTests());
