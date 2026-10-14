@@ -183,6 +183,7 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
 import {
   invalidWorkspaceNameMessage,
@@ -1048,6 +1049,7 @@ function reviewState(
   writingPolicy?: RunWritingPolicyProjection,
   requirementTexts?: ReadonlyMap<string, string>,
   evidenceMode: RunEvidenceModeView | null = null,
+  authorInput: RunAuthorInputView | null = null,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -1099,6 +1101,7 @@ function reviewState(
     coverage: reviewCoverage(snapshot, requirementTexts),
     ...(writingPolicy === undefined ? {} : { writingPolicy }),
     ...(evidenceMode === null ? {} : { evidenceMode }),
+    ...(authorInput === null ? {} : { authorInput }),
     setup,
   };
 }
@@ -2857,6 +2860,27 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** What the run's latest author step was sent; null when none was recorded or it cannot be read. */
+  async function authorInputForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<RunAuthorInputView | null> {
+    if (service.readRunAuthorInput === undefined) return null;
+    try {
+      const input = await service.readRunAuthorInput({ root: workspace.root, runId });
+      if (input === undefined) return null;
+      const texts =
+        input.unmatchedRequirementIds.length === 0
+          ? new Map<string, string>()
+          : await requirementTextsForRun(workspace, runId, capability);
+      return runAuthorInputView(input, texts) ?? null;
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
+  }
+
   /** Each requirement's text by id, for the coverage panel; empty when it cannot be read. */
   async function requirementTextsForRun(
     workspace: ActiveWorkspace,
@@ -4221,6 +4245,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
       await requirementTextsForRun(workspace, snapshot.runId, "review.dispatch"),
       await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
+      await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
     );
   }
 
@@ -5928,6 +5953,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
               await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
               await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
+              await authorInputForRun(workspace, snapshot.runId, "review.load"),
             ),
           };
         }

@@ -156,7 +156,7 @@ import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
 import { createRecordedAuthorAgent, type RecordAuthorInput } from "./run-author-input.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
-import { announceRunEvidenceMode, withRunEvidenceMode } from "./run-evidence-mode.js";
+import { announceRunEvidenceMode, withRunHistoryReaders } from "./run-evidence-mode.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   type BeginStartRunOptions,
@@ -2995,7 +2995,7 @@ export function createLocalApplicationDriver(
       return context === undefined ? undefined : runRequirementTexts(context);
     },
   };
-  return withRunEvidenceMode(withWorkspaceApplications(driver, { readWorkspace }));
+  return withRunHistoryReaders(withWorkspaceApplications(driver, { readWorkspace }));
 }
 
 function pilotReportMarkdown(report: PilotReport): string {

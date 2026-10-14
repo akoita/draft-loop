@@ -48,6 +48,7 @@ import {
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
+import { runAuthorInputDisplay } from "./run-author-input.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
 import {
@@ -1182,6 +1183,7 @@ export function ReviewWorkspace({
   const [extractionSignal, setExtractionSignal] = useState(0);
   const findingSummary = reviewFindingSummary(state);
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
+  const authorInput = runAuthorInputDisplay(state.authorInput);
   const { blocking: blockingFindings, warnings } = findingSummary;
   const acceptedBlockingFindings = blockingFindings.filter(
     (finding) => finding.decision === "accepted",
@@ -3449,6 +3451,23 @@ export function ReviewWorkspace({
                 </>
               )}
             </div>
+            {authorInput !== undefined && (
+              <div className="trust-fact author-input-fact">
+                <span className="label">Author input</span>
+                <strong className="numeric">{authorInput.value}</strong>
+                <span>{authorInput.detail}</span>
+                {authorInput.gapSummary !== undefined && (
+                  <details className="author-input-gap">
+                    <summary>{authorInput.gapSummary}</summary>
+                    <ul>
+                      {authorInput.unmatchedRequirements.map((text) => (
+                        <li key={text}>{text}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
           </section>
 
           <section

@@ -1520,6 +1520,8 @@ In either mode, each author step records what it was given as a
 `run.author-input` audit event: the round, the counts of chunks and profile
 facts sent, the totals in the pinned selection, and the ids of requirements no
 sent item matched. The event holds counts and ids only, never evidence text.
+The desktop review shows the run's latest event as "Author input": the items
+sent out of the knowledge-base totals, and the requirements no sent item matched.
 
 Full source is the default because a long career loses most of its evidence to
 the twenty-chunk limit: in two real comparisons, the author saw 20 of 282
