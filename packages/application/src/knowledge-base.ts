@@ -2837,12 +2837,12 @@ async function ingestManagedCandidateKnowledgeFile(
 }
 
 async function ingestManagedCandidateKnowledgeUrl(
-  ingest: typeof ingestUrl,
+  deps: Pick<ResolvedDependencies, "ingestUrl" | "now">,
   url: string,
 ): Promise<NonNullable<Awaited<ReturnType<typeof ingestUrl>>["source"]>> {
   let ingestion: Awaited<ReturnType<typeof ingestUrl>>;
   try {
-    ingestion = await ingest(url, { approved: true });
+    ingestion = await deps.ingestUrl(url, { approved: true, now: () => new Date(deps.now()) });
   } catch {
     throw importUrlFailure();
   }
@@ -5238,7 +5238,7 @@ export function createCandidateKnowledgeStoreService(
       ) {
         throw importUrlFailure();
       }
-      const normalized = await ingestManagedCandidateKnowledgeUrl(resolved.ingestUrl, url);
+      const normalized = await ingestManagedCandidateKnowledgeUrl(resolved, url);
       const provenance = normalized.url as NonNullable<typeof normalized.url>;
       const responseBytes = normalized.urlResponseBytes as Uint8Array;
       if (provenance.originalUrl !== canonicalRequestedUrl) throw importUrlFailure();
@@ -5491,7 +5491,7 @@ export function createCandidateKnowledgeStoreService(
             let normalized: NonNullable<Awaited<ReturnType<typeof ingestUrl>>["source"]>;
             try {
               normalized = await ingestManagedCandidateKnowledgeUrl(
-                resolved.ingestUrl,
+                resolved,
                 preflight.originalUrl,
               );
               if (

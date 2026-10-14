@@ -4672,7 +4672,10 @@ describe("candidate knowledge store application service", () => {
       displayName: "Remote evidence",
       approved: true,
     });
-    expect(ingestUrl).toHaveBeenCalledWith(originalUrl, { approved: true });
+    expect(ingestUrl).toHaveBeenCalledWith(originalUrl, {
+      approved: true,
+      now: expect.any(Function),
+    });
     expect(imported).toMatchObject({
       created: true,
       source: {
@@ -4746,7 +4749,10 @@ describe("candidate knowledge store application service", () => {
       versionId: "version-2",
     });
     expect(Object.isFrozen(refreshed)).toBe(true);
-    expect(ingestUrl).toHaveBeenLastCalledWith(originalUrl, { approved: true });
+    expect(ingestUrl).toHaveBeenLastCalledWith(originalUrl, {
+      approved: true,
+      now: expect.any(Function),
+    });
 
     const manifest = await service.listKnowledgeSourceManifests({
       storeRoot,
