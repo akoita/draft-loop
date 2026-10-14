@@ -1816,6 +1816,52 @@ input[type="text"].workspace-title-input {
   }
 }
 
+/* The reader can move the sheet's right edge. A chosen width arrives on the single-document grid
+   as `--draft-width`; Compare never carries it. It applies only where the margin is shown: below
+   1280px the margin is gone, the handle with it, and the sheet keeps the fixed measure. The sheet
+   still shrinks before the margin column does, so the notes keep their gutter however the window
+   changes between measurements. */
+@media (min-width: 1280px) {
+  .sheet {
+    flex-basis: var(--draft-width, 608px);
+    max-width: var(--draft-width, 608px);
+  }
+
+  .diff-column-current .pane-heading {
+    max-width: calc(var(--draft-width, 608px) + var(--margin-gap) + var(--margin-column));
+  }
+}
+
+/* The handle lies over the sheet's right edge. Its negative margins cancel the flex gap it would
+   otherwise add, so the margin notes stay exactly where they were. The paper is its own edge, so
+   the rule only appears while the handle is hovered or focused. */
+.draft-width-handle {
+  --draft-width-rule: transparent;
+  position: relative;
+  z-index: 1;
+  display: none;
+  flex: 0 0 8px;
+  align-self: stretch;
+  margin-right: -4px;
+  margin-left: calc(-1 * var(--margin-gap) - 4px);
+  background:
+    linear-gradient(to right, var(--draft-width-rule), var(--draft-width-rule)) center / 2px 100%
+    no-repeat;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.draft-width-handle:hover,
+.draft-width-handle:focus-visible {
+  --draft-width-rule: var(--teal);
+}
+
+@media (min-width: 1280px) {
+  .draft-width-handle {
+    display: block;
+  }
+}
+
 .sheet .artifact-section {
   padding-top: var(--space-5);
 }
