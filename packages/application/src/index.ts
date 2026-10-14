@@ -27,6 +27,7 @@ import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunit
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
+import type { RunModels } from "./run-models-read.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
@@ -534,6 +535,8 @@ export interface ApplicationDriver {
   readonly readRunEvidenceMode?: (command: StatusCommand) => Promise<RunEvidenceMode | undefined>;
   /** What the run's latest author step was sent; `undefined` for runs that recorded none. */
   readonly readRunAuthorInput?: (command: StatusCommand) => Promise<RunAuthorInput | undefined>;
+  /** The author and critic models a run was configured with; `undefined` without a context. */
+  readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
   /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
   readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   readonly listApplications?: (
@@ -701,6 +704,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunAuthorInput === undefined
         ? undefined
         : driver.readRunAuthorInput({ ...command, root: requireRoot(command.root) }),
+    readRunModels: async (command) =>
+      driver.readRunModels === undefined
+        ? undefined
+        : driver.readRunModels({ ...command, root: requireRoot(command.root) }),
     createApplication: async (command) =>
       requireApplicationApi(driver.createApplication)({
         ...command,
@@ -785,6 +792,7 @@ export {
   type RunEvidenceMode,
   readRunEvidenceMode,
 } from "./run-evidence-mode.js";
+export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";

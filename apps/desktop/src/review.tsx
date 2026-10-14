@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ApplicationRunList } from "./application-run-list-view.js";
 import {
   approvalReadinessForArtifact,
   approvalReadinessGuidance,
@@ -3360,6 +3361,8 @@ export function ReviewWorkspace({
               <RunTimeline events={state.events} describeState={stateLabel} />
             </div>
           </section>
+
+          <ApplicationRunList runs={state.applicationRuns} />
 
           <section className="trust-strip" aria-label="trust and policy summary">
             {/* The lineage qualifies the identity it belongs to, so it is read here

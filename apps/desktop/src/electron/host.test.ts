@@ -3535,6 +3535,151 @@ describe("native host", () => {
     }
   });
 
+  it("lists an application-scoped review's runs with their models, rounds and scores", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-application-runs-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    const scores = {
+      relevance: 0.8,
+      evidence: 0.6,
+      accuracy: 0.7,
+      differentiation: 0.7,
+      clarity: 0.7,
+      format: 0.7,
+      credibility: 0.7,
+    };
+    const older = {
+      ...(fixture.snapshot as object),
+      runId: "run-older",
+      state: "stopped",
+      round: 2,
+      startedAt: "2026-08-11T09:00:00.000Z",
+      latestEvaluation: { scoreVector: scores },
+    };
+    const newer = { ...(fixture.snapshot as object), runId: "run-native", round: 1 };
+    let olderUpdatedAt = "2026-08-11T10:00:00.000Z";
+    let olderUnreadable = false;
+    fixture.service.status.mockImplementation(async ({ runId }) => {
+      if (runId !== "run-older") return newer as never;
+      if (olderUnreadable) throw new Error("history is locked");
+      return older as never;
+    });
+    fixture.service.getApplication.mockImplementation(
+      async () =>
+        ({
+          id: "default",
+          name: "Default",
+          isDefault: true,
+          jobSource: { kind: "local-file", path: "job.md" },
+          status: "drafting",
+          createdAt: "2026-08-11T08:00:00.000Z",
+          updatedAt: "2026-08-12T10:00:00.000Z",
+          runs: [
+            {
+              id: "run-older",
+              state: "stopped",
+              startedAt: older.startedAt,
+              updatedAt: olderUpdatedAt,
+            },
+            {
+              id: "run-native",
+              state: "awaiting-approval",
+              startedAt: "2026-08-12T10:00:00.000Z",
+              updatedAt: "",
+            },
+          ],
+          briefs: [],
+          exports: [],
+          archivedAt: null,
+          nameChosen: true,
+          suggestedName: null,
+          modelProfiles: null,
+        }) as never,
+    );
+    const readRunModels = vi.fn<NonNullable<ApplicationService["readRunModels"]>>(
+      async ({ runId }) => ({
+        author: { company: "anthropic", modelId: `author-for-${runId}` },
+        critic: { company: "openai", modelId: `critic-for-${runId}` },
+      }),
+    );
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, readRunModels },
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = async (applicationId?: string) => {
+        const result = await host.invoke({
+          type: "review.load",
+          input: {
+            workspaceId: "workspace-native",
+            ...(applicationId === undefined ? {} : { applicationId }),
+          },
+        });
+        if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+        return result.value as DesktopReviewState;
+      };
+
+      const state = await load("default");
+      expect(state.applicationRuns).toEqual([
+        {
+          runId: "run-native",
+          startedAt: "2026-08-12T10:00:00.000Z",
+          authorModel: "author-for-run-native",
+          criticModel: "critic-for-run-native",
+          round: 1,
+          state: "awaiting-approval",
+          latest: true,
+        },
+        {
+          runId: "run-older",
+          startedAt: "2026-08-11T09:00:00.000Z",
+          authorModel: "author-for-run-older",
+          criticModel: "critic-for-run-older",
+          round: 2,
+          state: "stopped",
+          score: expect.closeTo(0.7, 10),
+          latest: false,
+        },
+      ]);
+      expect(errors).toEqual([]);
+
+      // Outside an application the review carries no run list.
+      expect(await load()).not.toHaveProperty("applicationRuns");
+
+      // Unchanged run summaries reuse earlier runs' rows and every run's models. The latest run is
+      // read fresh, since its summary can stand still while the run moves.
+      const statusCalls = (runId: string) =>
+        fixture.service.status.mock.calls.filter(([command]) => command.runId === runId).length;
+      const before = { older: statusCalls("run-older"), native: statusCalls("run-native") };
+      readRunModels.mockClear();
+      expect((await load("default")).applicationRuns).toEqual(state.applicationRuns);
+      expect(statusCalls("run-older")).toBe(before.older);
+      // The latest run: once for the review itself and once, uncached, for its row.
+      expect(statusCalls("run-native")).toBe(before.native + 2);
+      expect(readRunModels).not.toHaveBeenCalled();
+
+      // A changed summary recomputes only that run's row; its models stay cached.
+      olderUpdatedAt = "2026-08-12T11:00:00.000Z";
+      older.round = 3;
+      const changed = await load("default");
+      expect(changed.applicationRuns?.[1]).toMatchObject({ runId: "run-older", round: 3 });
+      expect(statusCalls("run-older")).toBe(before.older + 1);
+      expect(statusCalls("run-native")).toBe(before.native + 4);
+      expect(readRunModels).not.toHaveBeenCalled();
+
+      olderUpdatedAt = "2026-08-12T12:00:00.000Z";
+      olderUnreadable = true;
+      const afterFailure = await load("default");
+      expect(afterFailure.runId).toBe("run-native");
+      expect(afterFailure).not.toHaveProperty("applicationRuns");
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects bridge commands that would escape the export boundary", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-export-"));
     const fixture = service(root);

@@ -81,6 +81,7 @@ import {
   probeOpenAICodexUserSession,
   type UserSessionLoginStatus,
 } from "@draft-loop/providers";
+import type { ApplicationRunRowView } from "../application-run-list.js";
 import { isApplicationNotReadyFailure, projectApprovalReadiness } from "../approval-readiness.js";
 import {
   type BridgeCapability,
@@ -200,6 +201,7 @@ import {
   withApplicationBriefPreference,
 } from "./application-briefs.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
+import { createApplicationRunRowsReader } from "./host-application-runs.js";
 import {
   type ApplicationReadinessScope,
   type ApplicationScope,
@@ -1050,6 +1052,7 @@ function reviewState(
   requirementTexts?: ReadonlyMap<string, string>,
   evidenceMode: RunEvidenceModeView | null = null,
   authorInput: RunAuthorInputView | null = null,
+  applicationRuns: readonly ApplicationRunRowView[] | null = null,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -1102,6 +1105,7 @@ function reviewState(
     ...(writingPolicy === undefined ? {} : { writingPolicy }),
     ...(evidenceMode === null ? {} : { evidenceMode }),
     ...(authorInput === null ? {} : { authorInput }),
+    ...(applicationRuns === null ? {} : { applicationRuns }),
     setup,
   };
 }
@@ -2881,6 +2885,27 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** Reused across review actions, which reload the run list on every finding decision. */
+  const applicationRunRows = createApplicationRunRowsReader(service);
+
+  /** The application's runs for the review's run list; null without a scope or on error. */
+  async function applicationRunsFor(
+    workspace: ActiveWorkspace,
+    scope: ApplicationScope | undefined,
+    capability: BridgeCapability,
+  ): Promise<readonly ApplicationRunRowView[] | null> {
+    if (scope === undefined) return null;
+    try {
+      // Read again: a review action may have started a run since the scope was resolved.
+      const current = await resolveApplicationScope(service, workspace.root, scope.application.id);
+      if (current === null || current === undefined) return null;
+      return await applicationRunRows(workspace.root, current.application, current.latestRunId);
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
+  }
+
   /** Each requirement's text by id, for the coverage panel; empty when it cannot be read. */
   async function requirementTextsForRun(
     workspace: ActiveWorkspace,
@@ -4246,6 +4271,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await requirementTextsForRun(workspace, snapshot.runId, "review.dispatch"),
       await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
       await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
+      await applicationRunsFor(workspace, scope, "review.dispatch"),
     );
   }
 
@@ -5954,6 +5980,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
               await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
               await authorInputForRun(workspace, snapshot.runId, "review.load"),
+              await applicationRunsFor(workspace, scope, "review.load"),
             ),
           };
         }

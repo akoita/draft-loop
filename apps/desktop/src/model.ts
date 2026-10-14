@@ -1,5 +1,6 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ArtifactSection } from "@draft-loop/artifacts";
+import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
@@ -306,6 +307,8 @@ export interface DesktopReviewState {
   readonly evidenceMode?: RunEvidenceModeView | null;
   /** What the run's latest author step was sent; absent for runs that recorded none. */
   readonly authorInput?: RunAuthorInputView | null;
+  /** The reviewed application's runs, newest first; absent outside an application. */
+  readonly applicationRuns?: readonly ApplicationRunRowView[] | null;
   readonly setup: WorkspaceReadiness;
 }
 

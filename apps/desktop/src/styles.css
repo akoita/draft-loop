@@ -2410,6 +2410,45 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-md);
 }
 
+/* The application's runs: one wrapped line of facts per run, newest first. */
+.application-runs h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.application-run-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-run-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+  margin: 0;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.application-run-models {
+  color: var(--text-1);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.application-run-latest {
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: 650;
+}
+
 /* A panel's eyebrow is its disclosure: the chevron turns when the panel folds, and the heading
    under it stays on screen. */
 .panel-toggle {
