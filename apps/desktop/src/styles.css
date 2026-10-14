@@ -704,6 +704,35 @@ input[type="checkbox"] {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The review desk: the main column, a zero-width track for the resize handle, and the side
+   panel. A width the reader chose arrives as `--side-panel-width`; otherwise the stylesheet's
+   responsive `--panel-width` applies. */
+.app-shell-resizable {
+  grid-template-columns: minmax(0, 1fr) 0 var(--side-panel-width, var(--panel-width));
+}
+
+/* The handle lies over the panel's left edge, so the main column's scrollbar stays clear. Its
+   rule coincides with the panel's border and lights up the way the compare split does. */
+.side-panel-handle {
+  --side-panel-rule: var(--border);
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  width: 8px;
+  margin-right: -8px;
+  background:
+    linear-gradient(to right, var(--side-panel-rule), var(--side-panel-rule)) left / 1px 100%
+    no-repeat;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.side-panel-handle:hover,
+.side-panel-handle:focus-visible {
+  --side-panel-rule: var(--teal);
+  background-size: 2px 100%;
+}
+
 .main-column {
   position: relative;
   display: flex;
@@ -5931,8 +5960,14 @@ input[type="text"].workspace-title-input {
 }
 
 @media (max-width: 1024px) {
-  .app-shell {
+  /* One column here, so a chosen side panel width has nothing to divide. */
+  .app-shell,
+  .app-shell-resizable {
     grid-template-columns: 1fr;
+  }
+
+  .side-panel-handle {
+    display: none;
   }
 
   /* One column here, so the page scrolls as a whole again. */

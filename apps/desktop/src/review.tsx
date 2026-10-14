@@ -75,6 +75,7 @@ import {
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
+import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
 import {
   LatestRequirementsBriefView,
   StartRequirementsSourceView,
@@ -1363,6 +1364,7 @@ export function ReviewWorkspace({
   const draftPaneMode = `${showChanges ? "redline · " : ""}${readOnly ? "read-only" : "editable"}`;
   const compareVisible = hasPreviousArtifact && compareOpen;
   const [compareSplit, setCompareSplit] = useCompareSplit();
+  const sidePanel = useSidePanelWidth();
   const {
     collapsed: collapsedPanels,
     toggle: togglePanel,
@@ -2919,7 +2921,14 @@ export function ReviewWorkspace({
   return (
     <div className="app-frame">
       <SideRail onOpenSources={openTraceability} />
-      <main className="app-shell">
+      <main
+        className="app-shell app-shell-resizable"
+        style={
+          sidePanel.width === null
+            ? undefined
+            : ({ "--side-panel-width": `${sidePanel.width}px` } as CSSProperties)
+        }
+      >
         {renderCommandPalette()}
         <div className="main-column">
           <PageToolbar navigation={pageNavigation}>
@@ -3349,6 +3358,12 @@ export function ReviewWorkspace({
           </section>
         </div>
 
+        <SidePanelHandle
+          width={sidePanel.reportedWidth}
+          viewportWidth={sidePanel.viewportWidth}
+          onWidthChange={sidePanel.choose}
+          onReset={sidePanel.reset}
+        />
         <aside className="side-column">
           <section className="panel progress-panel" aria-label="run progress">
             <div className="section-heading compact">
