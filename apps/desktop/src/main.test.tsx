@@ -77,7 +77,7 @@ describe("desktop trust-centered review", () => {
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 
     expect(html).toContain("Stop review");
-    expect(html).toContain("critic · openai/gpt-5 · attempt 1 · elapsed 4s · timeout in 55s");
+    expect(html).toContain("critic · openai/gpt-5 · attempt 1 · elapsed 4s · run limit in 55s");
   });
 
   it("explains and offers recovery for an interrupted durable run", () => {

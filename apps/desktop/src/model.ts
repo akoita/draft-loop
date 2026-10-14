@@ -272,6 +272,12 @@ export interface ReviewExecutionView {
   readonly model: string | null;
   readonly attempt: number | null;
   readonly elapsedMs: number;
+  /**
+   * The time limit each provider call has on the executing step's route, or `null` when the route
+   * sets none. Absent means the same as `null`.
+   */
+  readonly callLimitMs?: number | null;
+  /** What is left of the whole run's duration budget, or `null` when the run has none. */
   readonly timeoutRemainingMs: number | null;
   /**
    * Why the last attempt to continue this run in the background failed before it could make

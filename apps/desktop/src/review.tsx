@@ -27,6 +27,7 @@ import { type DiffOp, diffWords } from "./diff.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
 import { earlierRunAllowsAction, earlierRunRefusal } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
+import { executionLimitText } from "./execution-limits.js";
 import {
   ACCEPT_UNAVAILABLE_NOTE,
   ACCEPTED_WITHOUT_REVISION_NUDGE,
@@ -3472,9 +3473,7 @@ export function ReviewWorkspace({
                 {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
                 attempt {state.execution.attempt} · elapsed{" "}
                 {Math.floor(state.execution.elapsedMs / 1_000)}s
-                {state.execution.timeoutRemainingMs === null
-                  ? " · no timeout configured"
-                  : ` · timeout in ${Math.ceil(state.execution.timeoutRemainingMs / 1_000)}s`}
+                {executionLimitText(state.execution)}
               </p>
             )}
             {runFinished || readOnly ? null : renderAutopilotToggle()}

@@ -15,6 +15,7 @@ import {
   defaultWritingPolicyContent,
   type IndependentReviewRecord,
   JobRequirementUserError,
+  type ProviderAuthModeConfiguration,
   type WorkspaceDescriptor,
   withDefaultWritingPolicy,
 } from "@draft-loop/application";
@@ -1796,6 +1797,43 @@ describe("native host", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("projects the session route's per-call limit for the executing step", async () => {
+    const executionFor = async (
+      providerAuthModeConfiguration: ProviderAuthModeConfiguration,
+      snapshotOverrides: Readonly<Record<string, unknown>>,
+    ) => {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-call-limit-"));
+      const fixture = service(root, snapshotOverrides);
+      const live = { ...descriptor(root), fixtureMode: false };
+      fixture.service.initialize.mockImplementation(async () => live);
+      fixture.service.readWorkspace.mockImplementation(async () => live);
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        providerAuthModeConfiguration,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      try {
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        const loaded = await host.invoke({ type: "review.load", input: {} });
+        if (!loaded.ok) throw new Error("Expected the review to load.");
+        return (loaded.value as DesktopReviewState).execution;
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    };
+    const drafting = { state: "drafting", currentStep: "author" };
+
+    expect(
+      await executionFor({ anthropic: "user-session", openai: "api-key" }, drafting),
+    ).toMatchObject({ step: "author", provider: "anthropic", callLimitMs: 600_000 });
+    expect(
+      await executionFor({ anthropic: "api-key", openai: "user-session" }, drafting),
+    ).toMatchObject({ step: "author", callLimitMs: null });
+    expect(
+      await executionFor({ anthropic: "user-session", openai: "user-session" }, {}),
+    ).toMatchObject({ status: "idle", step: null, callLimitMs: null });
   });
 
   it("shows why an interrupted run could not continue in the background", async () => {
