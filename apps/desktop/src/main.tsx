@@ -1418,6 +1418,33 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   };
 
+  const openRunPort = activePort.openRun;
+  /** Opens an earlier run of the application read-only, or the latest run again with `null`. */
+  const onOpenRun =
+    openRunPort === undefined
+      ? undefined
+      : (runId: string | null) => {
+          if (state === null) return;
+          const workspaceId = state.workspaceId;
+          const generation = workspaceGeneration;
+          if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+          setImportError(null);
+          void openRunPort(runId)
+            .then((loaded) => {
+              if (
+                isCurrentWorkspaceContext(workspaceId, generation) &&
+                loaded.workspaceId === workspaceId
+              ) {
+                setState(loaded);
+              }
+            })
+            .catch((reason: unknown) => {
+              if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+              if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+              setImportError(messageOf(reason, "The run could not be opened."));
+            });
+        };
+
   const onKnowledgePendingChange = (workspaceId: string, generation: number, pending: boolean) => {
     if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     knowledgePendingRef.current = pending;
@@ -2688,6 +2715,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     <ReviewWorkspace
       state={state}
       onAction={onAction}
+      {...(onOpenRun === undefined ? {} : { onOpenRun })}
       onBulkFindingDecision={onBulkFindingDecision}
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}

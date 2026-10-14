@@ -163,6 +163,7 @@ import type {
   KnowledgeEnsureDefaultResult,
   WorkspaceEvidenceMigrationResult,
 } from "../career-evidence-contract.js";
+import { earlierRunRefusal } from "../earlier-run.js";
 import type {
   DesktopReviewState,
   FindingDecision,
@@ -201,6 +202,12 @@ import {
   withApplicationBriefPreference,
 } from "./application-briefs.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
+import {
+  earlierRunFor,
+  refusesEarlierRunAction,
+  runBelongsToApplication,
+  withEarlierRun,
+} from "./earlier-run-guard.js";
 import { createApplicationRunRowsReader } from "./host-application-runs.js";
 import {
   type ApplicationReadinessScope,
@@ -3934,6 +3941,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     let workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
     const scope = await requireApplicationScope(workspace.root, input.applicationId);
+    if (refusesEarlierRunAction(scope, input.runId, input.action.type)) {
+      return fail("operation-failed", earlierRunRefusal);
+    }
     const currentSnapshot =
       input.action.type === "acknowledge-provider-transmission" ||
       input.action.type === "set-autopilot"
@@ -4253,7 +4263,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (snapshot === undefined) {
       return emptyReviewState(pairDescriptor, setup, preflight, overrides);
     }
-    return reviewState(
+    // A started run is the application's new latest; any other action keeps the run on screen.
+    const earlierRun = input.action.type === "start" ? null : earlierRunFor(scope, snapshot.runId);
+    const state = reviewState(
       pairDescriptor,
       snapshot,
       await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
@@ -4273,6 +4285,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
       await applicationRunsFor(workspace, scope, "review.dispatch"),
     );
+    return withEarlierRun(state, earlierRun);
   }
 
   async function invoke(value: unknown): Promise<BridgeResult<unknown>> {
@@ -5935,6 +5948,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           if (selectedWorkspace === undefined) return fail("not-found", "Open a workspace first.");
           const workspace = await refreshWorkspaceDescriptor(selectedWorkspace);
           const scope = await requireApplicationScope(workspace.root, command.input.applicationId);
+          if (
+            scope !== undefined &&
+            command.input.runId !== undefined &&
+            !runBelongsToApplication(scope, command.input.runId)
+          ) {
+            return fail("not-found", "That run does not belong to this application.");
+          }
           const snapshot =
             scope !== undefined && command.input.runId === undefined
               ? await latestSnapshot(workspace.root, scope)
@@ -5961,28 +5981,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               value: emptyReviewState(pairDescriptor, setup, preflight, preferences),
             };
           }
-          return {
-            ok: true,
-            value: reviewState(
-              pairDescriptor,
-              snapshot,
-              await independentReviewFor(workspace, snapshot.runId, "review.load"),
-              preferences,
-              await service.latestExportPath({
-                root: workspace.root,
-                runId: snapshot.runId,
-                format: "markdown",
-              }),
-              setup,
-              preflight,
-              backgroundStatus(workspace, snapshot.runId),
-              await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
-              await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
-              await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
-              await authorInputForRun(workspace, snapshot.runId, "review.load"),
-              await applicationRunsFor(workspace, scope, "review.load"),
-            ),
-          };
+          const loaded = reviewState(
+            pairDescriptor,
+            snapshot,
+            await independentReviewFor(workspace, snapshot.runId, "review.load"),
+            preferences,
+            await service.latestExportPath({
+              root: workspace.root,
+              runId: snapshot.runId,
+              format: "markdown",
+            }),
+            setup,
+            preflight,
+            backgroundStatus(workspace, snapshot.runId),
+            await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
+            await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
+            await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
+            await authorInputForRun(workspace, snapshot.runId, "review.load"),
+            await applicationRunsFor(workspace, scope, "review.load"),
+          );
+          return { ok: true, value: withEarlierRun(loaded, earlierRunFor(scope, snapshot.runId)) };
         }
         case "review.dispatch":
           return { ok: true, value: await dispatchReview(command.input) };

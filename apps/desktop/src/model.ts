@@ -4,6 +4,7 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
+import type { EarlierRunView } from "./earlier-run.js";
 import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 
@@ -309,6 +310,8 @@ export interface DesktopReviewState {
   readonly authorInput?: RunAuthorInputView | null;
   /** The reviewed application's runs, newest first; absent outside an application. */
   readonly applicationRuns?: readonly ApplicationRunRowView[] | null;
+  /** Set when this is an earlier run of the application: it is shown read-only. */
+  readonly earlierRun?: EarlierRunView | null;
   readonly setup: WorkspaceReadiness;
 }
 
