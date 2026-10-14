@@ -199,6 +199,13 @@ content for an uncovered requirement only when the evidence supports it, and
 keeps the cited covering blocks unless an accepted finding requires a change.
 Resumed v7 and earlier runs receive neither the instruction nor the input.
 
+After any revision, the orchestrator compares the revised draft with that
+judged coverage. When none of a covered requirement's cited blocks survives,
+by id or by identical text, it adds a content-free `coverage-block-dropped`
+warning naming the requirement id. Block ids change on every revision, so
+rewording a covering block also raises it; a later critic judgement that the
+requirement is covered clears the warning, as it clears the token-match miss.
+
 Critic template `cli-critic-v3` retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also
 asks the critic to compare explicit dated employment gaps in retrieved sources

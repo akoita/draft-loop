@@ -47,4 +47,12 @@ describe("withoutJudgedUncoveredFindings", () => {
   it("returns the findings unchanged when nothing is judged", () => {
     expect(withoutJudgedUncoveredFindings(findings, [])).toBe(findings);
   });
+
+  it("also settles a dropped-covering-block warning once the requirement is judged covered", () => {
+    const dropped = [
+      { code: "coverage-block-dropped", requirementId: "judged", severity: "warning" },
+      { code: "coverage-block-dropped", requirementId: "other", severity: "warning" },
+    ];
+    expect(withoutJudgedUncoveredFindings(dropped, ["judged"])).toEqual(dropped.slice(1));
+  });
 });

@@ -57,6 +57,7 @@ import {
 } from "./author-retry-feedback.js";
 import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
 import { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
+import { droppedCoverageFindings } from "./dropped-coverage.js";
 import {
   activateDurationAccounting,
   createDurationAccounting,
@@ -1774,11 +1775,23 @@ export function createOrchestrationEngine(
         },
         ...(context.writingPolicy === undefined ? {} : { writingPolicy: context.writingPolicy }),
       });
+      // The snapshot still holds the draft being revised; warn when a revision drops
+      // every block the critic cited as covering a requirement.
+      const previousCoverage =
+        execution.step === "revision" ? revisionRequirementCoverage(snapshot) : undefined;
+      const droppedCoverage =
+        previousCoverage === undefined || snapshot.artifact === null
+          ? []
+          : droppedCoverageFindings({
+              previousCoverage,
+              previousArtifact: snapshot.artifact,
+              revisedArtifact: artifact,
+            });
       const now = clock();
       const updated = {
         ...snapshot,
         artifact,
-        findings: [...validation.issues, ...outputFindings],
+        findings: [...validation.issues, ...outputFindings, ...droppedCoverage],
         state: "reviewing" as const,
         currentStep: "critic" as const,
         readinessDecision: null,
