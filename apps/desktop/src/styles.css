@@ -7214,3 +7214,13 @@ input[type="text"].application-card-name-input {
 body:has(.workspace-activity) .main-column {
   padding-bottom: calc(var(--space-8) + 64px);
 }
+
+/* On the review page the docked Traceability bar is the column's footer: keep it flush with the
+   window edge and float the activity bar just above it instead of reserving room below. */
+body:has(.workspace-activity) .main-column:has(> .review-column) {
+  padding-bottom: 0;
+}
+
+body:has(.review-column) .workspace-activity {
+  bottom: calc(5rem + var(--space-3));
+}
