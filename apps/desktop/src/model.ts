@@ -5,6 +5,7 @@ import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
+import type { FindingRequirement } from "./finding-requirement.js";
 import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 
@@ -120,6 +121,8 @@ export interface ReviewFinding {
   readonly rationale?: string;
   readonly claimId?: string;
   readonly sectionId?: string;
+  /** The job requirement a coverage finding is about, resolved by the host. */
+  readonly requirement?: FindingRequirement;
 }
 
 /**
