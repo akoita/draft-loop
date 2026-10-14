@@ -1,6 +1,10 @@
 import type { RequirementCoverageAssessment } from "./requirement-coverage-assessment.js";
 
-const uncoveredRequirementCode = "uncovered-requirement";
+/**
+ * Findings a later "satisfied" judgement settles: the deterministic token-match miss, and the
+ * warning that a revision dropped the block that covered the requirement (#1212).
+ */
+const judgementSettledCodes = new Set(["uncovered-requirement", "coverage-block-dropped"]);
 
 /** Requirements the critic judged satisfied; no other basis or status counts. */
 export function judgedCoveredRequirementIds(
@@ -12,9 +16,9 @@ export function judgedCoveredRequirementIds(
 }
 
 /**
- * Drops only the deterministic `uncovered-requirement` finding of each judged
- * requirement. Every other finding, including protected-rule and explicit-gap
- * findings, is kept unchanged.
+ * Drops the `uncovered-requirement` and `coverage-block-dropped` findings of each
+ * requirement judged covered. Every other finding, including protected-rule and
+ * explicit-gap findings, is kept unchanged.
  */
 export function withoutJudgedUncoveredFindings<
   Finding extends { readonly code: string; readonly requirementId?: string | undefined },
@@ -24,7 +28,7 @@ export function withoutJudgedUncoveredFindings<
   return findings.filter(
     (finding) =>
       !(
-        finding.code === uncoveredRequirementCode &&
+        judgementSettledCodes.has(finding.code) &&
         finding.requirementId !== undefined &&
         judged.has(finding.requirementId)
       ),
