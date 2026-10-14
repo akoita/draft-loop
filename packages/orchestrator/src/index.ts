@@ -71,9 +71,14 @@ import {
   buildApplicationReadinessStoppingDecision,
   readinessOverrideRationale,
 } from "./readiness.js";
+import {
+  type RevisionRequirementCoverage,
+  revisionRequirementCoverage,
+} from "./revision-coverage.js";
 
 export type RunState = WorkflowState | "provider-error";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
+export type { RevisionRequirementCoverage } from "./revision-coverage.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type ExecutionStatus = "completed" | "failed";
@@ -152,6 +157,8 @@ export interface AuthorRequest {
     "report" | "plan" | "acceptedEffectOverrides"
   >;
   readonly retryFeedback?: AuthorRetryFeedback;
+  /** On a revision, the critic's judged coverage of the draft being revised; never empty. */
+  readonly requirementCoverage?: readonly RevisionRequirementCoverage[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
@@ -1587,6 +1594,8 @@ export function createOrchestrationEngine(
             })
           : undefined;
 
+      const requirementCoverage =
+        step === "revision" ? revisionRequirementCoverage(snapshot) : undefined;
       const execution =
         step === "critic"
           ? await options.critic.execute({
@@ -1611,6 +1620,7 @@ export function createOrchestrationEngine(
               findings: snapshot.findings,
               ...(pendingAdjudication === undefined ? {} : { pendingAdjudication }),
               ...(retryFeedback === undefined ? {} : { retryFeedback }),
+              ...(requirementCoverage === undefined ? {} : { requirementCoverage }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
               ...(signal === undefined ? {} : { signal }),
             });

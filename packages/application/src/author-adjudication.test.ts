@@ -245,8 +245,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v6 for new author runs and v3 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v7");
+  it("records v8 for new author runs and v4 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v8");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v4");
   });
 
@@ -496,6 +496,70 @@ describe("author prompt template versions", () => {
     expectEvidenceGroundingContract(v7);
   });
 
+  const requirementCoverage: NonNullable<AuthorRequest["requirementCoverage"]> = [
+    {
+      requirementId: "requirement-1",
+      verdict: "covered",
+      rationale: "The block states the required experience.",
+      citedBlockIds: ["block-1"],
+    },
+    {
+      requirementId: "requirement-2",
+      verdict: "uncovered",
+      rationale: "No block states prompt hygiene.",
+      citedBlockIds: [],
+    },
+  ];
+  const coveragePrompt = (version: string, coverage: AuthorRequest["requirementCoverage"]) =>
+    createAuthorAdjudicationPrompt(
+      version,
+      pendingAdjudication(),
+      undefined,
+      [],
+      undefined,
+      undefined,
+      coverage,
+    );
+
+  it("records cli-author-v8 as v7 plus the critic's coverage verdicts, with the same budget", () => {
+    for (const carrier of [undefined, pendingAdjudication()]) {
+      const v7 = createAuthorAdjudicationPrompt("cli-author-v7", carrier, retryFeedback());
+      const v8 = createAuthorAdjudicationPrompt("cli-author-v8", carrier, retryFeedback());
+      expect(v8.providerInput).toEqual(v7.providerInput);
+      expect(
+        v8.systemPrompt.replace(
+          / When requirementCoverage is present[\s\S]*?unless an accepted finding requires a change\./u,
+          "",
+        ),
+      ).toBe(v7.systemPrompt);
+    }
+
+    const v8 = createAuthorAdjudicationPrompt("cli-author-v8", undefined).systemPrompt;
+    expect(v8).toContain("it is the critic's judgement of the current draft");
+    expect(v8).toContain("only when the retrieved evidence supports it");
+    expect(v8).toContain("never invent or stretch facts to cover it");
+    expect(v8).toContain("Keep the blocks cited as covering a requirement");
+    expectEvidenceGroundingContract(v8);
+  });
+
+  it("sends requirementCoverage to v8 only when it is non-empty", () => {
+    expect(coveragePrompt("cli-author-v8", requirementCoverage).providerInput).toMatchObject({
+      requirementCoverage,
+    });
+    expect(coveragePrompt("cli-author-v8", []).providerInput).not.toHaveProperty(
+      "requirementCoverage",
+    );
+    expect(coveragePrompt("cli-author-v8", undefined).providerInput).not.toHaveProperty(
+      "requirementCoverage",
+    );
+  });
+
+  it("keeps the v7 input of a resumed run unchanged when coverage verdicts exist", () => {
+    expect(coveragePrompt("cli-author-v7", requirementCoverage)).toEqual(
+      coveragePrompt("cli-author-v7", undefined),
+    );
+  });
+
   it.each([
     "cli-author-v2",
     "cli-author-v3",
@@ -503,6 +567,7 @@ describe("author prompt template versions", () => {
     "cli-author-v5",
     "cli-author-v6",
     "cli-author-v7",
+    "cli-author-v8",
   ])(
     "adds structured-field guidance to %s after claim coverage and before revision and retry text",
     (version) => {
