@@ -3115,6 +3115,14 @@ input[type="text"].workspace-title-input {
   margin-top: var(--space-1);
 }
 
+/* A refused approval moves focus here from a mouse click, where :focus-visible stays off; show
+   the same ring so the reviewer sees where the explanation is. */
+.approval-panel h2:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
 .approval-status {
   margin: var(--space-2) 0 0;
   overflow-wrap: anywhere;
