@@ -88,14 +88,130 @@ describe("coverageJudgementRequestsFrom", () => {
 
     const requests = coverageJudgementRequestsFrom(assessments);
 
-    expect(maximumCoverageJudgementRequests).toBe(8);
+    expect(maximumCoverageJudgementRequests).toBe(24);
     expect(requests.map(({ requirementId }) => requirementId)).toEqual(
-      assessments.slice(0, 8).map(({ requirementId }) => requirementId),
+      assessments.slice(0, 24).map(({ requirementId }) => requirementId),
     );
   });
 
-  it("returns no requests when nothing needs judgement", () => {
-    expect(coverageJudgementRequestsFrom([settled("req-1", "uncovered")])).toEqual([]);
+  it("requests lexically uncovered requirements without candidates, excluding protected rules", () => {
+    const requests = coverageJudgementRequestsFrom([
+      settled("req-uncovered", "uncovered"),
+      settled("req-rule", "uncovered", "protected-rule"),
+      settled("req-gap", "explicit-gap"),
+      settled("req-judged", "uncovered", "judgement"),
+      needsJudgement("req-1", [{ blockId: "block-a" }]),
+    ]);
+
+    expect(requests).toEqual([
+      { requirementId: "req-uncovered", candidateBlockIds: [] },
+      { requirementId: "req-1", candidateBlockIds: ["block-a"] },
+    ]);
+  });
+
+  it("keeps requests with candidates first when over the cap, in requirement order", () => {
+    const assessments = Array.from({ length: maximumCoverageJudgementRequests + 4 }, (_, index) =>
+      index % 2 === 0 ? settled(`req-${index}`, "uncovered") : needsJudgement(`req-${index}`),
+    );
+
+    const ids = coverageJudgementRequestsFrom(assessments).map(
+      ({ requirementId }) => requirementId,
+    );
+
+    const withCandidates = assessments.filter((_, index) => index % 2 === 1);
+    const withoutCandidates = assessments.filter((_, index) => index % 2 === 0);
+    const kept = new Set(
+      [...withCandidates, ...withoutCandidates.slice(0, 24 - withCandidates.length)].map(
+        ({ requirementId }) => requirementId,
+      ),
+    );
+    expect(ids).toHaveLength(24);
+    expect(ids).toEqual(
+      assessments.map(({ requirementId }) => requirementId).filter((id) => kept.has(id)),
+    );
+    expect(ids).not.toContain(`req-${maximumCoverageJudgementRequests + 2}`);
+  });
+
+  it("returns no requests when nothing is judgeable", () => {
+    expect(
+      coverageJudgementRequestsFrom([
+        settled("req-1", "covered"),
+        settled("req-2", "uncovered", "protected-rule"),
+        settled("req-3", "explicit-gap"),
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe("applyCoverageJudgements with known block ids", () => {
+  const known = ["block-a", "block-b", "block-education"];
+
+  it("accepts a satisfied citation of a non-candidate block that exists", () => {
+    const { assessments, summary } = applyCoverageJudgements(
+      [needsJudgement("req-1")],
+      [request],
+      [satisfied({ citedBlockIds: ["block-education"] })],
+      known,
+    );
+
+    expect(assessments[0]).toEqual({
+      requirementId: "req-1",
+      status: "covered",
+      basis: "judgement",
+      evidence: [{ blockId: "block-education" }],
+      rationale: "The block states the required experience.",
+    });
+    expect(summary.satisfied).toBe(1);
+  });
+
+  it("covers a lexically uncovered requirement that had no candidates", () => {
+    const uncovered = settled("req-1", "uncovered");
+    const { assessments, summary } = applyCoverageJudgements(
+      [uncovered],
+      [{ requirementId: "req-1", candidateBlockIds: [] }],
+      [satisfied({ citedBlockIds: ["block-education"] })],
+      known,
+    );
+
+    expect(assessments[0]?.status).toBe("covered");
+    expect(assessments[0]?.basis).toBe("judgement");
+    expect(assessments[0]?.evidence).toEqual([{ blockId: "block-education" }]);
+    expect(summary).toEqual({
+      judged: 1,
+      satisfied: 1,
+      notSatisfied: 0,
+      invalid: 0,
+      unanswered: 0,
+    });
+  });
+
+  it("rejects an unknown block and more than three citations", () => {
+    for (const citedBlockIds of [
+      ["block-unknown"],
+      ["block-a", "block-unknown"],
+      ["block-a", "block-b", "block-education", "block-c"],
+    ]) {
+      const assessment = needsJudgement("req-1");
+      const { assessments, summary } = applyCoverageJudgements(
+        [assessment],
+        [request],
+        [satisfied({ citedBlockIds })],
+        [...known, "block-c"].filter((id) => id !== "block-unknown"),
+      );
+
+      expect(assessments[0]).toBe(assessment);
+      expect(summary.invalid).toBe(1);
+    }
+  });
+
+  it("keeps the candidate-only rule when no block ids are given", () => {
+    const { summary } = applyCoverageJudgements(
+      [needsJudgement("req-1")],
+      [request],
+      [satisfied({ citedBlockIds: ["block-education"] })],
+    );
+
+    expect(summary.invalid).toBe(1);
   });
 });
 

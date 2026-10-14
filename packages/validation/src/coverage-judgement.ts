@@ -3,14 +3,16 @@ import type {
   RequirementCoverageEvidence,
 } from "./requirement-coverage-assessment.js";
 
-export const maximumCoverageJudgementRequests = 8;
+export const maximumCoverageJudgementRequests = 24;
 export const maximumCoverageJudgementRationaleCharacters = 240;
+/** The most distinct blocks one satisfied verdict may cite. */
+export const maximumCoverageJudgementCitedBlocks = 3;
 
 export const coverageJudgementVerdicts = ["satisfied", "not-satisfied"] as const;
 
 export type CoverageJudgementVerdict = (typeof coverageJudgementVerdicts)[number];
 
-/** Asks a critic to judge one requirement against its candidate CV blocks. */
+/** Asks a critic to judge one requirement against the whole draft; candidates are hints. */
 export interface CoverageJudgementRequest {
   readonly requirementId: string;
   readonly candidateBlockIds: readonly string[];
@@ -54,21 +56,42 @@ const hiddenReasoningMarkers = [
 
 const lineBreakPattern = /[\r\n\u2028\u2029]/;
 
-/** Requests judgement for each `needs-judgement` assessment, in order, up to the cap. */
+/**
+ * Whether an assessment may be judged: semantic candidates, and lexically uncovered requirements
+ * with or without candidates. Protected-rule, covered, and explicit-gap assessments never are.
+ */
+function isJudgeable(assessment: RequirementCoverageAssessment): boolean {
+  return (
+    assessment.status === "needs-judgement" ||
+    (assessment.status === "uncovered" && assessment.basis === "lexical")
+  );
+}
+
+/**
+ * Requests judgement for each judgeable assessment, in requirement order. Above the cap, those
+ * with candidate blocks are kept first, then the rest, each group in requirement order.
+ */
 export function coverageJudgementRequestsFrom(
   assessments: readonly RequirementCoverageAssessment[],
 ): readonly CoverageJudgementRequest[] {
-  return Object.freeze(
-    assessments
-      .filter((assessment) => assessment.status === "needs-judgement")
-      .slice(0, maximumCoverageJudgementRequests)
-      .map((assessment) =>
-        Object.freeze({
-          requirementId: assessment.requirementId,
-          candidateBlockIds: Object.freeze(assessment.evidence.map(({ blockId }) => blockId)),
-        }),
+  const requests = assessments.filter(isJudgeable).map((assessment) =>
+    Object.freeze({
+      requirementId: assessment.requirementId,
+      // Only semantic candidates are hints; lexical evidence of an uncovered match is not.
+      candidateBlockIds: Object.freeze(
+        assessment.status === "needs-judgement"
+          ? assessment.evidence.map(({ blockId }) => blockId)
+          : [],
       ),
+    }),
   );
+  const kept = new Set(
+    [
+      ...requests.filter(({ candidateBlockIds }) => candidateBlockIds.length > 0),
+      ...requests.filter(({ candidateBlockIds }) => candidateBlockIds.length === 0),
+    ].slice(0, maximumCoverageJudgementRequests),
+  );
+  return Object.freeze(requests.filter((request) => kept.has(request)));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -93,21 +116,23 @@ function validRationale(rationale: unknown): string | null {
 function validCitations(
   judgement: Record<string, unknown>,
   verdict: CoverageJudgementVerdict,
-  request: CoverageJudgementRequest,
+  citable: ReadonlySet<string>,
 ): readonly string[] | null {
   const cited = judgement.citedBlockIds;
   if (!Array.isArray(cited)) {
     return null;
   }
-  const candidates = new Set(request.candidateBlockIds);
   const unique: string[] = [];
   for (const blockId of cited as readonly unknown[]) {
-    if (typeof blockId !== "string" || !candidates.has(blockId)) {
+    if (typeof blockId !== "string" || !citable.has(blockId)) {
       return null;
     }
     if (!unique.includes(blockId)) {
       unique.push(blockId);
     }
+  }
+  if (unique.length > maximumCoverageJudgementCitedBlocks) {
+    return null;
   }
   return verdict === "satisfied" && unique.length === 0 ? null : unique;
 }
@@ -115,7 +140,7 @@ function validCitations(
 function resolveAssessment(
   assessment: RequirementCoverageAssessment,
   judgement: unknown,
-  request: CoverageJudgementRequest,
+  citable: ReadonlySet<string>,
 ): RequirementCoverageAssessment | null {
   if (!isRecord(judgement)) {
     return null;
@@ -125,7 +150,7 @@ function resolveAssessment(
     return null;
   }
   const rationale = validRationale(judgement.rationale);
-  const citations = validCitations(judgement, verdict, request);
+  const citations = validCitations(judgement, verdict, citable);
   if (rationale === null || citations === null) {
     return null;
   }
@@ -154,16 +179,21 @@ function resolveAssessment(
 }
 
 /**
- * Folds critic judgements into the assessments. Only `needs-judgement`
- * assessments that were actually requested may change; every other assessment
- * is returned as-is. An invalid, duplicated, or missing judgement leaves the
- * assessment `needs-judgement` rather than guessing a verdict.
+ * Folds critic judgements into the assessments. Only judgeable assessments that
+ * were actually requested may change; every other assessment is returned as-is.
+ * An invalid, duplicated, or missing judgement leaves the assessment unchanged
+ * rather than guessing a verdict.
+ *
+ * A satisfied verdict may cite any of `knownBlockIds`, the draft's block ids;
+ * without them, only the request's candidate blocks may be cited.
  */
 export function applyCoverageJudgements(
   assessments: readonly RequirementCoverageAssessment[],
   requests: readonly CoverageJudgementRequest[],
   judgements: readonly CoverageJudgement[],
+  knownBlockIds?: Iterable<string>,
 ): AppliedCoverageJudgements {
+  const known = knownBlockIds === undefined ? undefined : new Set(knownBlockIds);
   const requestsById = new Map(requests.map((request) => [request.requirementId, request]));
   const judgementsById = new Map<string, unknown[]>();
   for (const judgement of judgements as readonly unknown[]) {
@@ -180,7 +210,7 @@ export function applyCoverageJudgements(
 
   const next = assessments.map((assessment) => {
     const request = requestsById.get(assessment.requirementId);
-    if (assessment.status !== "needs-judgement" || request === undefined) {
+    if (!isJudgeable(assessment) || request === undefined) {
       return assessment;
     }
     const answers = judgementsById.get(assessment.requirementId) ?? [];
@@ -189,7 +219,9 @@ export function applyCoverageJudgements(
       return assessment;
     }
     const resolved =
-      answers.length === 1 ? resolveAssessment(assessment, answers[0], request) : null;
+      answers.length === 1
+        ? resolveAssessment(assessment, answers[0], known ?? new Set(request.candidateBlockIds))
+        : null;
     if (resolved === null) {
       return assessment;
     }

@@ -219,6 +219,44 @@ describe("judged coverage in readiness", () => {
     ).toEqual([]);
   });
 
+  it("accepts a satisfied verdict that cites a non-candidate block of the draft", async () => {
+    const { start } = fixture({
+      critiques: [
+        {
+          findings: [],
+          coverageJudgements: [{ ...verdict("satisfied"), citedBlockIds: ["summary-block-1"] }],
+        },
+      ],
+    });
+
+    const result = await start();
+
+    expect(uncovered(result.findings)).toEqual([]);
+    const record = result.executionHistory.find((entry) => entry.step === "critic");
+    expect(record?.coverageJudgement?.assessments[0]).toMatchObject({
+      status: "covered",
+      basis: "judgement",
+      evidence: [{ blockId: "summary-block-1" }],
+    });
+  });
+
+  it("rejects a satisfied verdict that cites a block outside the draft", async () => {
+    const { start } = fixture({
+      critiques: [
+        {
+          findings: [],
+          coverageJudgements: [{ ...verdict("satisfied"), citedBlockIds: ["missing-block"] }],
+        },
+      ],
+    });
+
+    const result = await start();
+
+    expect(uncovered(result.findings)).toMatchObject([{ severity: "error" }]);
+    const record = result.executionHistory.find((entry) => entry.step === "critic");
+    expect(record?.coverageJudgement?.summary).toMatchObject({ satisfied: 0, invalid: 1 });
+  });
+
   it.each([
     ["judged not-satisfied", [{ findings: [], coverageJudgements: [verdict("not-satisfied")] }]],
     ["left unjudged", [{ findings: [] }]],

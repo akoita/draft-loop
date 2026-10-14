@@ -135,14 +135,19 @@ describe("coverage judgement instructions", () => {
     const base = createCriticAdjudicationPrompt("cli-critic-v3");
     const prompt = withCoverageJudgementInstructions(base);
 
-    expect(coverageJudgementInstructionsVersion).toBe("coverage-judgement-v1");
-    expect(prompt.startsWith(`${base}\n\nCoverage judgement (coverage-judgement-v1):`)).toBe(true);
+    expect(coverageJudgementInstructionsVersion).toBe("coverage-judgement-v2");
+    expect(prompt.startsWith(`${base}\n\nCoverage judgement (coverage-judgement-v2):`)).toBe(true);
     expect(prompt).toContain("coverageJudgementRequests");
-    expect(prompt).toContain("Return `satisfied` only when the blocks state the requirement");
-    expect(prompt).toContain("Cite only candidate block ids");
+    expect(prompt).toContain("the whole draft artifact in the input");
+    expect(prompt).toContain("candidate blocks are only hints and may be empty");
+    expect(prompt).toContain(
+      "Return `satisfied` only when some artifact block states the requirement",
+    );
+    expect(prompt).toContain("from anywhere in the artifact");
+    expect(prompt).not.toContain("Cite only candidate block ids");
     expect(prompt).toContain(
       `${maximumCoverageJudgementRationaleCharacters} characters or fewer, with no reasoning transcript`,
     );
-    expect(prompt).toContain("degree and organisation-stage requirements are never sent");
+    expect(prompt).toContain("These verdicts are separate from findings.");
   });
 });

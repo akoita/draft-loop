@@ -84,7 +84,7 @@ describe("run coverage judgement planner", () => {
     ]);
   });
 
-  it("returns an empty request list when no candidate passes the floor", async () => {
+  it("still requests an uncovered requirement when no candidate passes the floor", async () => {
     const root = await temporaryRoot();
     const open = async () => ({ ok: true as const, embedder: fakeEmbedder() });
     const planner = createRunCoverageJudgementPlanner({
@@ -96,7 +96,7 @@ describe("run coverage judgement planner", () => {
 
     const plan = await planner.plan({ artifact, context });
 
-    expect(plan?.requests).toEqual([]);
+    expect(plan?.requests).toEqual([{ requirementId: "r-orchestration", candidateBlockIds: [] }]);
   });
 
   it("returns undefined when the model is not installed", async () => {

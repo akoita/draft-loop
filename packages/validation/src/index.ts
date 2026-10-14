@@ -23,6 +23,7 @@ export {
   applyCoverageJudgements,
   coverageJudgementRequestsFrom,
   coverageJudgementVerdicts,
+  maximumCoverageJudgementCitedBlocks,
   maximumCoverageJudgementRationaleCharacters,
   maximumCoverageJudgementRequests,
 } from "./coverage-judgement.js";

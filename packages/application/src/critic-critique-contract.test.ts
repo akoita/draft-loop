@@ -169,7 +169,7 @@ describe("coverage judgement request rendering", () => {
     ]);
   });
 
-  it("drops requests whose requirement or blocks cannot be resolved", () => {
+  it("drops unresolved requirements but keeps requests without resolvable candidates", () => {
     const requests = coverageJudgementPromptRequests(
       [
         { requirementId: "unknown", candidateBlockIds: ["b1"] },
@@ -180,7 +180,32 @@ describe("coverage judgement request rendering", () => {
       artifact,
     );
 
-    expect(requests.map((request) => request.requirementId)).toEqual(["req-2"]);
+    expect(requests.map((request) => request.requirementId)).toEqual(["req-1", "req-2"]);
+    expect(requests[0]).toEqual({
+      requirementId: "req-1",
+      requirement: "Led a platform team",
+      candidates: [],
+    });
+  });
+
+  it("sends a zero-candidate request with the v2 instructions", () => {
+    const base = createCriticAdjudicationPrompt("cli-critic-v3");
+    const parts = criticCoverageJudgementParts(
+      [{ requirementId: "req-1", candidateBlockIds: [] }],
+      context,
+      artifact,
+    );
+
+    expect(parts.input).toEqual({
+      coverageJudgementRequests: [
+        { requirementId: "req-1", requirement: "Led a platform team", candidates: [] },
+      ],
+    });
+    expect(parts.instructionsVersion).toBe("coverage-judgement-v2");
+    expect(parts.systemPrompt(base)).toContain(
+      "Coverage judgement (coverage-judgement-v2): the input includes coverageJudgementRequests. For each item, decide whether the whole draft artifact in the input shows that the requirement is met",
+    );
+    expect(parts.outputSchema).toBe(critiqueOutputSchemaWithCoverageJudgements);
   });
 
   it("falls back to the unchanged critic call when nothing resolves", () => {
@@ -197,13 +222,13 @@ describe("coverage judgement request rendering", () => {
 
   it("caps the number of requests", () => {
     const many = {
-      requirements: Array.from({ length: 12 }, (_, index) => ({
+      requirements: Array.from({ length: 30 }, (_, index) => ({
         id: `r${index}`,
         text: `Requirement ${index}`,
         priority: "low",
       })),
     } as never;
-    const requests = Array.from({ length: 12 }, (_, index) => ({
+    const requests = Array.from({ length: 30 }, (_, index) => ({
       requirementId: `r${index}`,
       candidateBlockIds: ["b1"],
     }));
@@ -230,7 +255,7 @@ describe("critique parsing", () => {
     );
 
     expect(critique.coverageJudgements).toEqual([judgement]);
-    expect(critique.coverageJudgementInstructionsVersion).toBe("coverage-judgement-v1");
+    expect(critique.coverageJudgementInstructionsVersion).toBe("coverage-judgement-v2");
   });
 
   it("keeps an empty judgement list distinct from an absent one", () => {
@@ -289,7 +314,7 @@ describe("critique parsing", () => {
   it("truncates judgements beyond the cap", () => {
     const critique = parseCritique({
       findings: [],
-      coverageJudgements: Array.from({ length: 12 }, (_, index) => ({
+      coverageJudgements: Array.from({ length: 30 }, (_, index) => ({
         ...judgement,
         requirementId: `r${index}`,
       })),

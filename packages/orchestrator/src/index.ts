@@ -1236,15 +1236,18 @@ async function requestedCoverage(
   }
 }
 
+/** A satisfied verdict may cite any block of the judged draft, not only the candidates. */
 function judgedCoverage(
   plan: CoverageJudgementPlan,
   critique: Critique | undefined,
+  artifact: DraftArtifact,
 ): ExecutionCoverageJudgement | undefined {
   try {
     const applied = applyCoverageJudgements(
       plan.assessments,
       plan.requests,
       critique?.coverageJudgements ?? [],
+      artifact.sections.flatMap((section) => section.blocks.map(({ id }) => id)),
     );
     return {
       instructionsVersion: critique?.coverageJudgementInstructionsVersion ?? null,
@@ -1620,7 +1623,11 @@ export function createOrchestrationEngine(
       const coverageJudgement =
         coverageRequests === undefined
           ? undefined
-          : judgedCoverage(coverageRequests, execution.output as Critique | undefined);
+          : judgedCoverage(
+              coverageRequests,
+              execution.output as Critique | undefined,
+              snapshot.artifact as DraftArtifact,
+            );
       const record: ExecutionRecord = {
         id,
         runId: snapshot.runId,

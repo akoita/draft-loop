@@ -11,6 +11,7 @@ import {
   type CoverageJudgement,
   type CoverageJudgementRequest,
   coverageJudgementVerdicts,
+  maximumCoverageJudgementCitedBlocks,
   maximumCoverageJudgementRequests,
 } from "@draft-loop/validation";
 
@@ -22,7 +23,7 @@ import {
   withCoverageJudgementInstructions,
 } from "./critic-adjudication.js";
 
-/** The most candidate blocks shown, and citable, for one coverage-judgement request. */
+/** The most candidate blocks shown as hints for one coverage-judgement request. */
 export const maximumCoverageJudgementCandidateBlocks = 3;
 
 /**
@@ -78,7 +79,7 @@ export const critiqueOutputSchemaWithCoverageJudgements: JsonObject = {
           verdict: { type: "string", enum: [...coverageJudgementVerdicts] },
           citedBlockIds: {
             type: "array",
-            maxItems: maximumCoverageJudgementCandidateBlocks,
+            maxItems: maximumCoverageJudgementCitedBlocks,
             items: { type: "string" },
           },
           rationale: { type: "string" },
@@ -117,7 +118,7 @@ function parseCoverageJudgements(value: unknown): readonly CoverageJudgement[] |
       typeof entry.requirementId === "string" &&
       typeof entry.verdict === "string" &&
       Array.isArray(entry.citedBlockIds) &&
-      entry.citedBlockIds.length <= maximumCoverageJudgementCandidateBlocks &&
+      entry.citedBlockIds.length <= maximumCoverageJudgementCitedBlocks &&
       entry.citedBlockIds.every((blockId: unknown) => typeof blockId === "string") &&
       typeof entry.rationale === "string"
     ) {
@@ -192,8 +193,9 @@ const noCoverageJudgementParts: CriticCoverageJudgementParts = Object.freeze({
 
 /**
  * Bounded requests with their resolved texts: at most `maximumCoverageJudgementRequests`
- * requirements and `maximumCoverageJudgementCandidateBlocks` blocks each. A request whose
- * requirement or blocks cannot be resolved is dropped.
+ * requirements and `maximumCoverageJudgementCandidateBlocks` hint blocks each. A request whose
+ * requirement cannot be resolved is dropped; one without resolvable candidates is kept with an
+ * empty list, because the critic judges it against the whole draft.
  */
 export function coverageJudgementPromptRequests(
   requests: readonly CoverageJudgementRequest[],
@@ -219,9 +221,7 @@ export function coverageJudgementPromptRequests(
         candidates.push({ blockId, text });
       }
     }
-    if (candidates.length > 0) {
-      resolved.push({ requirementId: request.requirementId, requirement, candidates });
-    }
+    resolved.push({ requirementId: request.requirementId, requirement, candidates });
   }
   return resolved.slice(0, maximumCoverageJudgementRequests);
 }

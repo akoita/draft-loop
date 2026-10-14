@@ -112,10 +112,15 @@ The rules apply in order:
    whose best block passes the tier's relevance floor becomes `needs-judgement`.
    It carries the candidate blocks. Severity is unchanged until judged, so a
    critical requirement still blocks readiness.
-4. **A judge decides.** The critic receives each `needs-judgement` requirement
-   with its candidate blocks and returns `satisfied` or `not-satisfied`, citing
-   block identifiers and a short rationale. `satisfied` becomes `covered` with
-   basis `judgement`; `not-satisfied` becomes `uncovered`.
+4. **A judge decides against the whole draft.** The critic receives every
+   lexically uncovered, non-protected requirement, up to 24 per critique, with
+   any candidate blocks as hints (#1208). Above the cap, requirements with
+   candidates go first. It judges each one against the whole artifact and
+   returns `satisfied` or `not-satisfied` with a short rationale. A `satisfied`
+   verdict cites one to three blocks that exist anywhere in the draft; an
+   unknown block makes the verdict invalid. `satisfied` becomes `covered` with
+   basis `judgement`, and `not-satisfied` becomes `uncovered`. The instructions
+   are versioned as `coverage-judgement-v2`.
 5. **No model, no change.** Without an installed embedding model, assessments
    match today's behaviour, and the run says semantic candidates were not
    available.

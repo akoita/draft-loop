@@ -14,8 +14,9 @@ import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
 /*
  * Plans the critic's coverage judgements for a run (#961).
  *
- * With an installed local embedding model, requirement assessments gain semantic candidates and
- * the `needs-judgement` ones are sent to the critic. Without a model, or on any failure, the
+ * With an installed local embedding model, requirement assessments gain semantic candidates, and
+ * every lexically uncovered requirement, with or without candidates, is sent to the critic, which
+ * judges it against the whole draft (#1208). Without a model, or on any failure, the
  * planner returns `undefined` and the run behaves as it does without semantic coverage. The
  * deterministic validation of the critic step passes no explicit gaps, so none are passed here.
  */
