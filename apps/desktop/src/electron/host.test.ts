@@ -3535,6 +3535,51 @@ describe("native host", () => {
     }
   });
 
+  it("names the requirement a coverage finding is about, omitting unknown ones", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-finding-requirement-"));
+    const fixture = service(root, {
+      findings: [
+        {
+          code: "uncovered-requirement",
+          severity: "warning",
+          category: "coverage",
+          message: "Requirement is not covered by deterministic token matching.",
+          requirementId: "req-1",
+        },
+        {
+          code: "uncovered-requirement",
+          severity: "warning",
+          category: "coverage",
+          message: "Requirement is not covered by deterministic token matching.",
+          requirementId: "req-unknown",
+        },
+      ],
+    });
+    const readRunRequirements = vi.fn<NonNullable<ApplicationService["readRunRequirements"]>>(
+      async () => [{ id: "req-1", text: "Lead synthetic\nplatform migrations" }],
+    );
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, readRunRequirements },
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const result = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+      if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+      const [known, unknown] = (result.value as DesktopReviewState).findings;
+      expect(known?.requirement).toEqual({
+        id: "req-1",
+        text: "Lead synthetic platform migrations",
+      });
+      expect(unknown).not.toHaveProperty("requirement");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("lists an application-scoped review's runs with their models, rounds and scores", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-application-runs-"));
     const fixture = service(root);

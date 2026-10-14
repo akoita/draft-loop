@@ -41,6 +41,7 @@ import {
   findingAcceptGuardId,
   findingDecisionHintId,
 } from "./finding-decision-hint.js";
+import { findingTitle } from "./finding-title.js";
 import {
   briefOperationsOf,
   JobRequirementsExtraction,
@@ -2121,7 +2122,7 @@ export function ReviewWorkspace({
             </span>
             <span className="margin-note-category">{finding.category}</span>
           </span>
-          <span className="margin-note-message">{finding.message}</span>
+          <span className="margin-note-message">{findingTitle(finding)}</span>
         </button>
         <span className="margin-note-actions">
           {directFindingDecisions.map((decision) => (
@@ -3749,7 +3750,7 @@ export function ReviewWorkspace({
                           {finding.severity === "error" ? "blocking" : "warning"}
                         </span>
                         <span className="finding-summary-content">
-                          <span className="finding-summary-message">{finding.message}</span>
+                          <span className="finding-summary-message">{findingTitle(finding)}</span>
                         </span>
                         <span className="finding-summary-footer">
                           <span className={`finding-summary-status resolution-${finding.decision}`}>

@@ -164,6 +164,7 @@ import type {
   WorkspaceEvidenceMigrationResult,
 } from "../career-evidence-contract.js";
 import { earlierRunRefusal } from "../earlier-run.js";
+import { findingRequirement } from "../finding-requirement.js";
 import type {
   DesktopReviewState,
   FindingDecision,
@@ -955,10 +956,12 @@ function reviewFinding(
   snapshot: RunSnapshot,
   index: number,
   overrides: ReviewOverrides,
+  requirementTexts?: ReadonlyMap<string, string>,
 ): ReviewFinding {
   const finding = snapshot.findings[index];
   if (finding === undefined) fail("operation-failed", "The run finding is missing.");
   const id = findingId(snapshot, index, finding.code);
+  const requirement = findingRequirement(finding.requirementId, requirementTexts);
   return {
     id,
     code: finding.code,
@@ -970,6 +973,7 @@ function reviewFinding(
     ...(overrides.rationales[id] === undefined ? {} : { rationale: overrides.rationales[id] }),
     ...(finding.claimId === undefined ? {} : { claimId: finding.claimId }),
     ...(finding.sectionId === undefined ? {} : { sectionId: finding.sectionId }),
+    ...(requirement === undefined ? {} : { requirement }),
   };
 }
 
@@ -1100,7 +1104,9 @@ function reviewState(
     providerFailure: providerFailure(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
-    findings: snapshot.findings.map((_finding, index) => reviewFinding(snapshot, index, overrides)),
+    findings: snapshot.findings.map((_finding, index) =>
+      reviewFinding(snapshot, index, overrides, requirementTexts),
+    ),
     evaluation: {
       ready: evaluation?.ready ?? false,
       stopReason: evaluation?.stopReason ?? "continue",

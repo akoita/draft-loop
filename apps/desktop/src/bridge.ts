@@ -77,6 +77,7 @@ import {
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
+import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   DesktopReviewState,
   IndependentReviewView,
@@ -85,6 +86,7 @@ import type {
   ProviderExposureView,
   ProviderFailureView,
   ReviewAction,
+  ReviewFinding,
   RunWritingPolicyProjection,
   WritingPolicyIdentity,
   WritingPolicyLineage,
@@ -2044,6 +2046,35 @@ const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
   "availableActions",
   "diagnostics",
 ]);
+
+/**
+ * Findings are checked against their key list so a field added to `ReviewFinding` without this
+ * list is a compile error, and the requirement a finding names is validated before it is shown.
+ */
+const reviewFindingResultKeys = resultKeys<ReviewFinding>()([
+  "id",
+  "code",
+  "category",
+  "severity",
+  "message",
+  "decision",
+  "agreement",
+  "rationale",
+  "claimId",
+  "sectionId",
+  "requirement",
+]);
+
+function normalizeReviewFindings(value: unknown): readonly unknown[] {
+  if (!Array.isArray(value)) return invalidInput();
+  return value.map((item) => {
+    const finding = requireRecord(item);
+    if (!hasOnlyKeys(finding, reviewFindingResultKeys)) return invalidInput();
+    if (finding.requirement === undefined) return finding;
+    const requirement = normalizeFindingRequirement(finding.requirement) ?? invalidInput();
+    return { ...finding, requirement };
+  });
+}
 
 export type ReviewStateResult = DesktopReviewState;
 
@@ -7246,6 +7277,8 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  const findings =
+    value.findings === undefined ? undefined : normalizeReviewFindings(value.findings);
   const coverage =
     value.coverage === undefined || value.coverage === null
       ? value.coverage
@@ -7343,6 +7376,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(normalizedSetup === undefined ? {} : { setup: normalizedSetup }),
     ...(normalizedRunPolicy === undefined ? {} : { writingPolicy: normalizedRunPolicy }),
     ...(approvalReadiness === undefined ? {} : { approvalReadiness }),
+    ...(findings === undefined ? {} : { findings }),
     ...(coverage === undefined ? {} : { coverage }),
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
     ...(authorInput === undefined ? {} : { authorInput }),
