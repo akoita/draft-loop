@@ -1660,7 +1660,8 @@ export function ReviewWorkspace({
     if (details === null) return;
     details.open = true;
     const summary = traceabilitySummaryRef.current;
-    summary?.scrollIntoView({ block: "center" });
+    // The bar is docked at the column's foot, so this only scrolls in the narrow layout.
+    summary?.scrollIntoView({ block: "nearest" });
     summary?.focus();
   };
 
