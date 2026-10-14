@@ -1,4 +1,7 @@
-import { maximumCoverageJudgementRationaleCharacters } from "@draft-loop/validation";
+import {
+  maximumCoverageJudgementCitedBlocks,
+  maximumCoverageJudgementRationaleCharacters,
+} from "@draft-loop/validation";
 
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
@@ -51,9 +54,9 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
 export const create = createCriticAdjudicationPrompt;
 
 /** Identifies the fixed coverage-judgement instruction block; it is separate from the template versions. */
-export const coverageJudgementInstructionsVersion = "coverage-judgement-v1";
+export const coverageJudgementInstructionsVersion = "coverage-judgement-v2";
 
-const coverageJudgementInstructions = `Coverage judgement (${coverageJudgementInstructionsVersion}): the input includes coverageJudgementRequests. For each item, decide whether the listed candidate CV blocks, and only those blocks, show that the requirement is met. Return \`satisfied\` only when the blocks state the requirement, not when they merely share words or a topic; otherwise return \`not-satisfied\`. Cite only candidate block ids from that item in citedBlockIds. Give a one-sentence user-visible rationale of ${maximumCoverageJudgementRationaleCharacters} characters or fewer, with no reasoning transcript. Return one verdict in coverageJudgements for every request and judge nothing else; degree and organisation-stage requirements are never sent. These verdicts are separate from findings.`;
+const coverageJudgementInstructions = `Coverage judgement (${coverageJudgementInstructionsVersion}): the input includes coverageJudgementRequests. For each item, decide whether the whole draft artifact in the input shows that the requirement is met; the listed candidate blocks are only hints and may be empty. Return \`satisfied\` only when some artifact block states the requirement, not when blocks merely share words or a topic; otherwise return \`not-satisfied\`. For a \`satisfied\` verdict, cite in citedBlockIds one to ${maximumCoverageJudgementCitedBlocks} ids of the artifact blocks that state the requirement, from anywhere in the artifact. Give a one-sentence user-visible rationale of ${maximumCoverageJudgementRationaleCharacters} characters or fewer, with no reasoning transcript. Return one verdict in coverageJudgements for every request and judge nothing else. These verdicts are separate from findings.`;
 
 /** Append the fixed judgement block; the template-versioned prompt is returned unchanged otherwise. */
 export function withCoverageJudgementInstructions(prompt: string): string {
