@@ -5,7 +5,13 @@ import {
   type NewArtifactInput,
 } from "@draft-loop/artifacts";
 import type { ContextSnapshot } from "@draft-loop/domain";
-import type { AgentExecution, AuthorAgent, CriticAgent, Critique } from "@draft-loop/orchestrator";
+import {
+  type AgentExecution,
+  type AuthorAgent,
+  type CriticAgent,
+  type Critique,
+  notBefore,
+} from "@draft-loop/orchestrator";
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 import { CliUserError } from "./cli-user-error.js";
@@ -50,7 +56,7 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
   const summaryText = `Profile aligned to candidate-provided materials and requirements: ${requirementText}`;
   const input: NewArtifactInput = {
     id: `artifact-${suffix}`,
-    createdAt: timestamp(),
+    createdAt: notBefore(timestamp(), current?.createdAt),
     language: context.language,
     sections: [
       {

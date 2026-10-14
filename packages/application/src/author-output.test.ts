@@ -2,7 +2,7 @@ import {
   authorArtifactProposalJsonSchema,
   authorArtifactProposalJsonSchemaForEvidence,
 } from "@draft-loop/schemas";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { buildAuthorArtifact } from "./author-output.js";
@@ -197,6 +197,31 @@ describe("live author proposal boundary", () => {
     expect(child.version).toBe(2);
     expect(child.parentVersionId).toBe(parent.id);
     expect(child.id).not.toBe(parent.id);
+  });
+
+  it("never stamps a revision before its parent when the wall clock steps back", () => {
+    const parent = buildAuthorArtifact({
+      proposal: proposal(),
+      executionId: "execution-1",
+      context,
+      retrievedEvidence,
+      createdAt: "2026-08-15T10:00:01.200Z",
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-08-15T10:00:00.000Z"));
+      const child = buildAuthorArtifact({
+        proposal: proposal("Engineer delivering dependable systems."),
+        executionId: "execution-2",
+        context,
+        retrievedEvidence,
+        currentArtifact: parent,
+      });
+
+      expect(child.createdAt).toBe(parent.createdAt);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects unknown chunk references without exposing retrieved source text", () => {
