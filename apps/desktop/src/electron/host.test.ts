@@ -512,6 +512,9 @@ function service(
       readRunAuthorInput: vi.fn<NonNullable<ApplicationService["readRunAuthorInput"]>>(
         async () => undefined,
       ),
+      previewEvidenceMode: vi.fn<NonNullable<ApplicationService["previewEvidenceMode"]>>(
+        async () => undefined,
+      ),
       createApplication: vi.fn<ApplicationService["createApplication"]>(async () => {
         throw new Error("application fixture method was not configured");
       }),
@@ -3544,6 +3547,45 @@ describe("native host", () => {
       const afterFailure = await load();
       expect(afterFailure.runId).toBe("run-native");
       expect(afterFailure).not.toHaveProperty("evidenceMode");
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("previews a start's evidence on request, never on review load", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-evidence-preview-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    const preview = {
+      requestedMode: "full-source" as const,
+      effectiveMode: "full-source" as const,
+      chunkCount: 282,
+      sourceCount: 1,
+    };
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      await host.invoke({ type: "review.load", input: { workspaceId: "workspace-native" } });
+      expect(fixture.service.previewEvidenceMode).not.toHaveBeenCalled();
+      const ask = () =>
+        host.invoke({
+          type: "review.preview-evidence",
+          input: { workspaceId: "workspace-native" },
+        });
+
+      await expect(ask()).resolves.toEqual({ ok: true, value: { preview: null } });
+      fixture.service.previewEvidenceMode.mockResolvedValueOnce(preview);
+      await expect(ask()).resolves.toEqual({ ok: true, value: { preview } });
+      expect(fixture.service.previewEvidenceMode).toHaveBeenLastCalledWith({ root });
+      expect(errors).toEqual([]);
+
+      fixture.service.previewEvidenceMode.mockRejectedValueOnce(new Error("store is locked"));
+      await expect(ask()).resolves.toEqual({ ok: true, value: { preview: null } });
       expect(errors).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });

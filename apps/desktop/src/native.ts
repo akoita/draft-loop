@@ -71,6 +71,7 @@ import {
   parseRecentWorkspacesListResult,
   type RecentWorkspaceSummary,
 } from "./recent-workspaces.js";
+import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
 
 export type { NativeBridge } from "./bridge.js";
@@ -132,6 +133,14 @@ export interface WorkspaceSetupCapabilities {
     workspaceId: string,
     modelProfiles: ModelProfileReferences | null,
   ) => Promise<SavedModelProfilesResult>;
+  /**
+   * What evidence a start of the scoped application would send with this pair; `null` when there
+   * is no preview. Asked for when the start confirmation opens.
+   */
+  readonly previewStartEvidence?: (
+    workspaceId: string,
+    modelProfiles: ModelProfileReferences | null,
+  ) => Promise<RunEvidenceModeView | null>;
 }
 
 export interface DesktopOpportunityCapabilities {
@@ -779,6 +788,24 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { author, critic },
               }),
             ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("review.preview-evidence")
+      ? {
+          previewStartEvidence: async (
+            workspaceId: string,
+            modelProfiles: ModelProfileReferences | null,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "review.preview-evidence",
+                input: {
+                  workspaceId,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                  ...(modelProfiles === null ? {} : { modelProfiles }),
+                },
+              }),
+            ).preview,
         }
       : {}),
     ...(capabilityPort.hasCapability("models.profile-support")

@@ -190,6 +190,10 @@ import type { ProviderRoutesView } from "../provider-routes.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
+import type {
+  ReviewEvidencePreviewInput,
+  ReviewEvidencePreviewResult,
+} from "../start-evidence-preview.js";
 import {
   invalidWorkspaceNameMessage,
   normalizeWorkspaceDisplayName,
@@ -3975,6 +3979,55 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     );
   }
 
+  /**
+   * The exact pair a start applies, checked against the workspace or application models. An
+   * application with its own pair runs with it; the workspace's applied pair does not apply.
+   */
+  function startModelProfiles(
+    workspace: ActiveWorkspace,
+    scope: ApplicationScope | undefined,
+    requested: ReturnType<typeof resolveWorkspaceModelProfileSelection> | undefined,
+  ): ReturnType<typeof resolveWorkspaceModelProfileSelection> | undefined {
+    const requestedProfiles =
+      scope?.created === true && scope.application.modelProfiles !== null
+        ? scope.application.modelProfiles
+        : requested;
+    return requestedProfiles === undefined
+      ? undefined
+      : resolveWorkspaceModelProfileSelection(
+          requestedProfiles,
+          applicationPairDescriptor(workspace.descriptor, scope),
+          providerAuthModeConfiguration,
+        );
+  }
+
+  /**
+   * What evidence a start would send, for the start confirmation: the same pair the start would
+   * apply, decided by the application service without starting a run. `null` when there is no
+   * knowledge selection or the preview cannot be worked out, so the confirmation omits the line.
+   */
+  async function previewStartEvidence(
+    input: ReviewEvidencePreviewInput,
+  ): Promise<ReviewEvidencePreviewResult> {
+    if (service.previewEvidenceMode === undefined) return { preview: null };
+    const workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
+    const scope = await requireApplicationScope(workspace.root, input.applicationId);
+    try {
+      const modelProfiles = startModelProfiles(workspace, scope, input.modelProfiles);
+      const preview = await service.previewEvidenceMode({
+        root: workspace.root,
+        ...(input.applicationId === undefined ? {} : { applicationId: input.applicationId }),
+        ...(modelProfiles === undefined ? {} : { modelProfiles }),
+      });
+      return {
+        preview: preview === undefined ? null : (normalizeRunEvidenceMode(preview) ?? null),
+      };
+    } catch (error) {
+      options.onError?.(error, "review.preview-evidence");
+      return { preview: null };
+    }
+  }
+
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     let workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
     const scope = await requireApplicationScope(workspace.root, input.applicationId);
@@ -4037,25 +4090,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
       case "start": {
         let modelProfiles: ReturnType<typeof resolveWorkspaceModelProfileSelection> | undefined;
-        // An application with its own pair runs with it; the workspace's applied pair does not apply.
-        const requestedProfiles =
-          scope?.created === true && scope.application.modelProfiles !== null
-            ? scope.application.modelProfiles
-            : action.modelProfiles;
-        if (requestedProfiles !== undefined) {
-          try {
-            modelProfiles = resolveWorkspaceModelProfileSelection(
-              requestedProfiles,
-              applicationPairDescriptor(workspace.descriptor, scope),
-              providerAuthModeConfiguration,
-            );
-          } catch (error) {
-            const message =
-              error instanceof RunModelProfileSelectionError
-                ? error.message
-                : "The selected model profiles are unavailable for this workspace.";
-            return fail("operation-failed", message);
-          }
+        try {
+          modelProfiles = startModelProfiles(workspace, scope, action.modelProfiles);
+        } catch (error) {
+          const message =
+            error instanceof RunModelProfileSelectionError
+              ? error.message
+              : "The selected model profiles are unavailable for this workspace.";
+          return fail("operation-failed", message);
         }
         await requireProviderTransmissionAcknowledgement(workspace, scope);
         // The person may start from the raw job description instead of the reviewed brief.
@@ -6055,6 +6097,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "review.dispatch":
           return { ok: true, value: await dispatchReview(command.input) };
+        case "review.preview-evidence":
+          return { ok: true, value: await previewStartEvidence(command.input) };
         case "file.select":
           return { ok: true, value: await selectFiles(command.input) };
         case "source.add-url":

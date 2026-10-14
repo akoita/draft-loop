@@ -4,8 +4,9 @@ import { join, resolve } from "node:path";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { z } from "zod";
 
+import { previewEvidenceMode } from "./evidence-mode-preview.js";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
-import { readWorkspace } from "./local.js";
+import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
 import { readRunModels } from "./run-models-read.js";
 import { evidenceModes } from "./workspace-evidence-mode.js";
@@ -80,12 +81,17 @@ export async function readRunEvidenceMode(
 }
 
 /**
- * Adds the run-history readers, the recorded evidence mode, author input and models, to a local
- * driver without widening the driver itself.
+ * Adds the run-history readers, the recorded evidence mode, author input and models, and the
+ * evidence-mode preview of a new run to a local driver without widening the driver itself. The
+ * preview resolves profiles with the driver's own registry and provider routes, as a start does.
  */
-export function withRunHistoryReaders(driver: ApplicationDriver): ApplicationDriver {
+export function withRunHistoryReaders(
+  driver: ApplicationDriver,
+  options: LocalApplicationDriverOptions = {},
+): ApplicationDriver {
   return {
     ...driver,
+    previewEvidenceMode: async (command) => previewEvidenceMode(command, options),
     readRunEvidenceMode: async (command) => readRunEvidenceMode(command),
     readRunAuthorInput: async (command) => readRunAuthorInput(command),
     readRunModels: async (command) => readRunModels(command),
