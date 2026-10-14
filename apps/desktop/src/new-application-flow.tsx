@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   ApplicationModelProfilesView,
@@ -13,7 +13,11 @@ import {
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
 } from "./job-requirements-extraction.js";
-import type { CandidateProfileSelection, ProviderTransmissionPreflight } from "./model.js";
+import type {
+  CandidateProfileSelection,
+  DesktopReviewState,
+  ProviderTransmissionPreflight,
+} from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
   defaultReviewedProfile,
@@ -42,11 +46,63 @@ import {
   type ProviderAuthenticationProps,
 } from "./provider-authentication.js";
 import type { ProviderAuthenticationSummary } from "./provider-authentication-summary.js";
+import { useModalFocusTrap } from "./review.js";
+import {
+  StartConfirmation,
+  type StartConfirmationSummary,
+  type StartModelProfiles,
+  type StartReviewAction,
+  startConfirmationSummary,
+} from "./start-confirmation.js";
 import {
   LatestRequirementsBriefView,
   useLatestOpportunity,
   withLatestBriefRefresh,
 } from "./start-requirements.js";
+import { reviewedRequirementsSelection } from "./start-requirements-model.js";
+
+// -- Start confirmation ----------------------------------------------------------------------
+
+export interface NewApplicationStartContext {
+  /** The application's latest brief, as step 4 shows it. */
+  readonly latest: OpportunityLatestResult | undefined;
+  readonly candidateProfile: CandidateProfileSelection | null;
+  /** The profiles the run applies: the application's own pair when it has one. */
+  readonly modelProfiles: StartModelProfiles | null;
+}
+
+/**
+ * What the start confirmation shows before an application's first run. Once the application is
+ * loaded the host reports its own pair in the review state, so the model lines name the pair that
+ * runs, as step 4's model pair does.
+ */
+export function newApplicationStartSummary(
+  state: DesktopReviewState,
+  { latest, candidateProfile, modelProfiles }: NewApplicationStartContext,
+): StartConfirmationSummary {
+  const action: StartReviewAction =
+    candidateProfile === null ? { type: "start" } : { type: "start", candidateProfile };
+  return startConfirmationSummary(state, {
+    action,
+    reviewedRequirements: reviewedRequirementsSelection(latest, state.setup.reviewedOpportunity),
+    candidateProfile,
+    ...(modelProfiles === null ? {} : { modelProfiles }),
+  });
+}
+
+/** The confirmation's buttons: Start closes it and starts the run; Cancel only closes it. */
+export function newApplicationStartHandlers(
+  start: () => void,
+  close: () => void,
+): { readonly onStart: () => void; readonly onCancel: () => void } {
+  return {
+    onStart: () => {
+      close();
+      start();
+    },
+    onCancel: close,
+  };
+}
 
 // -- Presentation ----------------------------------------------------------------------------
 
@@ -367,7 +423,10 @@ export interface StartStepProps {
   readonly startDisabledReason: string | null;
   readonly onTransmissionConfirmedChange: (confirmed: boolean) => void;
   readonly onBack: () => void;
+  /** Asks to start; the flow answers by opening the start confirmation. */
   readonly onStart: () => void;
+  /** The start confirmation while it is open. */
+  readonly confirmation?: ReactNode;
 }
 
 export function StartStep({
@@ -386,6 +445,7 @@ export function StartStep({
   onTransmissionConfirmedChange,
   onBack,
   onStart,
+  confirmation = null,
 }: StartStepProps) {
   const transmissionRequired = preflight.required && !preflight.acknowledged;
   const blocker =
@@ -467,6 +527,7 @@ export function StartStep({
           {blocker}
         </p>
       )}
+      {confirmation}
     </section>
   );
 }
@@ -507,7 +568,9 @@ export interface NewApplicationFlowProps {
   readonly preflight: ProviderTransmissionPreflight;
   /** Why a review cannot start for a reason outside the flow, such as an unsupported model. */
   readonly startDisabledReason: string | null;
-  /** Starts the review for the application; rejects with the message to show. */
+  /** What the start confirmation shows before the first run, from step 4's brief. */
+  readonly startSummary: (latest: OpportunityLatestResult | undefined) => StartConfirmationSummary;
+  /** Starts the review for the application once confirmed; rejects with the message to show. */
   readonly onStart: (
     application: ApplicationSummaryView,
     acknowledgeFingerprint: string | null,
@@ -542,6 +605,7 @@ export function NewApplicationFlow({
   providerAuthentication,
   preflight,
   startDisabledReason,
+  startSummary,
   onStart,
   back,
   onOpenStep,
@@ -554,6 +618,11 @@ export function NewApplicationFlow({
   const [reviewed, setReviewed] = useState<ReviewedProfilesState>({ status: "loading" });
   const [transmissionConfirmed, setTransmissionConfirmed] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [confirmingStart, setConfirmingStart] = useState(false);
+  const startConfirmationRef = useRef<HTMLDivElement | null>(null);
+  const closeStartConfirmation = useCallback(() => setConfirmingStart(false), []);
+  // Start takes the focus, Escape cancels, and the focus returns to step 4's Start on close.
+  useModalFocusTrap(confirmingStart, startConfirmationRef, closeStartConfirmation);
   const [startError, setStartError] = useState<string | null>(null);
   const [savingModels, setSavingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -627,6 +696,8 @@ export function NewApplicationFlow({
       setStarting(false);
     }
   };
+
+  const startHandlers = newApplicationStartHandlers(() => void start(), closeStartConfirmation);
 
   const chooseModels = async (pair: ApplicationModelProfilesView | null) => {
     if (application === null || setApplicationModels === undefined || savingModels) return;
@@ -757,7 +828,19 @@ export function NewApplicationFlow({
               startDisabledReason={savingModels ? "Saving the model pair…" : startDisabledReason}
               onTransmissionConfirmedChange={setTransmissionConfirmed}
               onBack={() => setStep("profile")}
-              onStart={() => void start()}
+              onStart={() => {
+                if (!starting) setConfirmingStart(true);
+              }}
+              confirmation={
+                confirmingStart ? (
+                  <StartConfirmation
+                    summary={startSummary(latest)}
+                    dialogRef={startConfirmationRef}
+                    onStart={startHandlers.onStart}
+                    onCancel={startHandlers.onCancel}
+                  />
+                ) : null
+              }
             />
           )}
         </div>

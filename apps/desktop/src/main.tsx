@@ -78,7 +78,7 @@ import {
   type DesktopSetupPort,
   type WorkspaceModelSelection,
 } from "./native.js";
-import { NewApplicationFlow } from "./new-application-flow.js";
+import { NewApplicationFlow, newApplicationStartSummary } from "./new-application-flow.js";
 import {
   backTarget,
   finishNewApplication,
@@ -2963,6 +2963,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           preflight={state.providerTransmissionPreflight}
           startDisabledReason={
             knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason
+          }
+          startSummary={(latest) =>
+            newApplicationStartSummary(state, {
+              latest,
+              candidateProfile: selectedCandidateProfile,
+              modelProfiles: runModelProfiles?.refs ?? null,
+            })
           }
           onStart={startNewApplication}
           back={pageBack}
