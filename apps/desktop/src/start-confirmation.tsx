@@ -1,0 +1,307 @@
+import type { ReactNode, RefObject } from "react";
+
+import { formatLimitDuration } from "./execution-limits.js";
+import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
+import type { ProviderRoute } from "./provider-routes.js";
+import type { ReviewedRequirementsSelection } from "./start-requirements-model.js";
+
+/** The action a confirmed Start dispatches, unchanged from what the trigger would have sent. */
+export type StartReviewAction = Extract<ReviewAction, { readonly type: "start" }>;
+
+export interface StartConfirmationModel {
+  readonly role: "Author" | "Critic";
+  readonly company: string;
+  readonly model: string;
+  /** The model profile tier, when the applied profile's id names one. */
+  readonly tier: string | null;
+  /** How the call is reached and billed, or `null` when the host did not say. */
+  readonly route: string | null;
+}
+
+export interface StartConfirmationLine {
+  readonly label: string;
+  readonly value: string;
+}
+
+export interface StartConfirmationSummary {
+  readonly models: readonly [StartConfirmationModel, StartConfirmationModel];
+  readonly sameCompanyWarning: string | null;
+  readonly inputs: readonly StartConfirmationLine[];
+  readonly settings: readonly StartConfirmationLine[];
+  readonly changedPairNote: string | null;
+}
+
+export interface StartConfirmationContext {
+  readonly action: StartReviewAction;
+  /** The reviewed brief the run would bind, when the screen has resolved it. */
+  readonly reviewedRequirements?: ReviewedRequirementsSelection | null;
+  /** The pinned career profile; `undefined` when the screen does not know, `null` for none. */
+  readonly candidateProfile?: StartCandidateProfile | null;
+  /** The model profiles the run applies; their ids name the tier. */
+  readonly modelProfiles?: StartModelProfiles;
+}
+
+export type StartCandidateProfile = Pick<CandidateProfileSelection, "version">;
+
+export interface StartModelProfiles {
+  readonly author?: { readonly id: string };
+  readonly critic?: { readonly id: string };
+}
+
+const tierPrefixes: readonly (readonly [string, string])[] = [
+  ["economy-", "Economy"],
+  ["balanced-", "Balanced"],
+  ["standard-", "Standard"],
+  ["premium-", "Premium"],
+  ["dev-", "Development"],
+];
+
+/** The tier a model profile id names by its prefix, or `null` when the id names none. */
+export function modelProfileTier(profileId: string | undefined): string | null {
+  if (profileId === undefined) return null;
+  return tierPrefixes.find(([prefix]) => profileId.startsWith(prefix))?.[1] ?? null;
+}
+
+const companyNames: Readonly<Record<string, string>> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+};
+
+function companyName(company: string): string {
+  return companyNames[company.trim().toLowerCase()] ?? company;
+}
+
+const sessionRouteLabels: Readonly<Record<"anthropic" | "openai", string>> = {
+  anthropic: "Claude session",
+  openai: "ChatGPT session",
+};
+
+export const apiKeyRouteLabel = "API key, billed per token";
+export const demoRouteLabel = "Demo, no provider call";
+
+function routeOf(state: DesktopReviewState, company: string): ProviderRoute | null {
+  const provider = company.trim().toLowerCase();
+  if (state.providerRoutes === undefined) return null;
+  if (provider !== "anthropic" && provider !== "openai") return null;
+  return state.providerRoutes[provider];
+}
+
+function routeLabel(state: DesktopReviewState, company: string): string | null {
+  if (state.setup.fixtureMode) return demoRouteLabel;
+  const route = routeOf(state, company);
+  if (route === null) return null;
+  if (route === "api-key") return apiKeyRouteLabel;
+  const provider = company.trim().toLowerCase() as "anthropic" | "openai";
+  return sessionRouteLabels[provider];
+}
+
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function requirementsValue(state: DesktopReviewState, context: StartConfirmationContext): string {
+  if (context.action.requirementsSource === "job-description") return "Raw job description";
+  const reviewed = context.reviewedRequirements;
+  if (reviewed !== null && reviewed !== undefined) {
+    return `Reviewed brief v${reviewed.version} · ${plural(reviewed.requirementCount, "requirement")}`;
+  }
+  const selected = state.setup.reviewedOpportunity;
+  if (selected !== null && selected !== undefined) return `Reviewed brief v${selected.version}`;
+  return "Raw job description";
+}
+
+function writingPolicyValue(state: DesktopReviewState): string {
+  if (state.setup.writingPolicyStatus === "unavailable") return "Unavailable";
+  if (state.setup.writingPolicyStatus === "active") {
+    return state.setup.writingPolicy === null
+      ? "Active"
+      : `Active, ${state.setup.writingPolicy.version}`;
+  }
+  return "None";
+}
+
+function callLimitValue(state: DesktopReviewState): string | null {
+  const routes = state.providerRoutes;
+  if (state.setup.fixtureMode || routes === undefined) return null;
+  const author = routeOf(state, state.providerTransmissionPreflight.author.company);
+  const critic = routeOf(state, state.providerTransmissionPreflight.critic.company);
+  const limit = `${formatLimitDuration(routes.sessionCallLimitMs)} per call`;
+  if (author === "user-session" && critic === "user-session") return limit;
+  if (author === "user-session") return `${limit} for the author`;
+  if (critic === "user-session") return `${limit} for the critic`;
+  return null;
+}
+
+function changedPairNote(state: DesktopReviewState): string | null {
+  const latest = state.applicationRuns?.find((row) => row.latest) ?? state.applicationRuns?.[0];
+  if (latest === undefined || latest.authorModel === "" || latest.criticModel === "") return null;
+  const { author, critic } = state.providerTransmissionPreflight;
+  if (latest.authorModel === author.model && latest.criticModel === critic.model) return null;
+  return `The last run on this application used ${latest.authorModel} → ${latest.criticModel}.`;
+}
+
+/** Everything the start confirmation shows, worked out from the review state alone. */
+export function startConfirmationSummary(
+  state: DesktopReviewState,
+  context: StartConfirmationContext,
+): StartConfirmationSummary {
+  const { author, critic } = state.providerTransmissionPreflight;
+  const model = (
+    role: "Author" | "Critic",
+    identity: { readonly company: string; readonly model: string },
+  ): StartConfirmationModel => ({
+    role,
+    company: companyName(identity.company),
+    model: identity.model,
+    tier: modelProfileTier(
+      (role === "Author" ? context.modelProfiles?.author : context.modelProfiles?.critic)?.id,
+    ),
+    route: routeLabel(state, identity.company),
+  });
+  const sameCompany = author.company.trim().toLowerCase() === critic.company.trim().toLowerCase();
+  const inputs: StartConfirmationLine[] = [
+    { label: "Requirements", value: requirementsValue(state, context) },
+  ];
+  if (context.candidateProfile !== undefined) {
+    inputs.push({
+      label: "Career profile",
+      value:
+        context.candidateProfile === null ? "None pinned" : `v${context.candidateProfile.version}`,
+    });
+  }
+  inputs.push({ label: "Writing policy", value: writingPolicyValue(state) });
+  const settings: StartConfirmationLine[] = [];
+  if (state.setup.autopilot !== undefined) {
+    settings.push({ label: "Autopilot", value: state.setup.autopilot ? "On" : "Off" });
+  }
+  settings.push({
+    label: "Round limit",
+    value: plural(state.providerTransmissionPreflight.budget.maxRounds, "round"),
+  });
+  const callLimit = callLimitValue(state);
+  if (callLimit !== null) settings.push({ label: "Call limit", value: callLimit });
+  return {
+    models: [model("Author", author), model("Critic", critic)],
+    sameCompanyWarning: sameCompany
+      ? `Author and critic are both from ${companyName(author.company)}, so the critique is not a cross-company check.`
+      : null,
+    inputs,
+    settings,
+    changedPairNote: changedPairNote(state),
+  };
+}
+
+/**
+ * What the dialog's buttons do: Start closes it and sends the trigger's own action, the same
+ * object it would have sent before the check existed; Cancel only closes it.
+ */
+export function startConfirmationHandlers(
+  action: StartReviewAction,
+  dispatch: (action: StartReviewAction) => void,
+  close: () => void,
+): { readonly onStart: () => void; readonly onCancel: () => void } {
+  return {
+    onStart: () => {
+      close();
+      dispatch(action);
+    },
+    onCancel: close,
+  };
+}
+
+export interface StartConfirmationProps {
+  readonly summary: StartConfirmationSummary;
+  readonly dialogRef: RefObject<HTMLDivElement | null>;
+  readonly onStart: () => void;
+  readonly onCancel: () => void;
+  /** The screen's existing "Change models" control, when it offers one. */
+  readonly changeModelsAction?: ReactNode;
+}
+
+function Lines({ lines }: { readonly lines: readonly StartConfirmationLine[] }) {
+  return (
+    <dl className="start-confirmation-lines">
+      {lines.map((line) => (
+        <div key={line.label}>
+          <dt>{line.label}</dt>
+          <dd>{line.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * The check a person makes before a run begins its provider calls. Start sends the trigger's own
+ * action; Cancel sends nothing. Start comes first so it takes the focus, and Enter confirms.
+ */
+export function StartConfirmation({
+  summary,
+  dialogRef,
+  onStart,
+  onCancel,
+  changeModelsAction,
+}: StartConfirmationProps) {
+  return (
+    <div className="modal-backdrop">
+      <div
+        className="modal-card start-confirmation"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="start-confirmation-title"
+        aria-describedby="start-confirmation-copy"
+        ref={dialogRef}
+      >
+        <h2 id="start-confirmation-title">Start this review?</h2>
+        <p className="modal-copy" id="start-confirmation-copy">
+          Check what the run will use. No provider call is made until you start.
+        </p>
+        <section aria-labelledby="start-confirmation-models">
+          <h3 id="start-confirmation-models">Models</h3>
+          <dl className="start-confirmation-lines">
+            {summary.models.map((model) => (
+              <div key={model.role}>
+                <dt>{model.role}</dt>
+                <dd>
+                  {[model.company, model.model, model.tier, model.route]
+                    .filter((part): part is string => part !== null)
+                    .join(" · ")}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {summary.sameCompanyWarning === null ? null : (
+            <p className="start-confirmation-warning" role="note">
+              {summary.sameCompanyWarning}
+            </p>
+          )}
+          {summary.changedPairNote === null ? null : (
+            <p className="start-confirmation-note">{summary.changedPairNote}</p>
+          )}
+        </section>
+        <section aria-labelledby="start-confirmation-inputs">
+          <h3 id="start-confirmation-inputs">Inputs</h3>
+          <Lines lines={summary.inputs} />
+        </section>
+        <section aria-labelledby="start-confirmation-settings">
+          <h3 id="start-confirmation-settings">Run settings</h3>
+          <Lines lines={summary.settings} />
+        </section>
+        <div className="start-confirmation-actions">
+          <button className="button button-primary" type="button" onClick={onStart}>
+            Start
+          </button>
+          {changeModelsAction === undefined || changeModelsAction === null ? null : (
+            // The screen's own control opens the models dialog; this one closes first.
+            <span className="start-confirmation-change-models" onClickCapture={onCancel}>
+              {changeModelsAction}
+            </span>
+          )}
+          <button className="button button-quiet" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

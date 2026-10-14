@@ -117,6 +117,7 @@ import {
   type ProfileFreshnessResult,
   profileFreshnessInputKeys,
 } from "./profile-freshness-contract.js";
+import { normalizeProviderRoutes } from "./provider-routes.js";
 import type {
   RecentWorkspaceOpenInput,
   RecentWorkspaceRemoveInput,
@@ -1993,6 +1994,7 @@ const desktopReviewStateKeys = [
   "budgetUsd",
   "providerExposure",
   "providerTransmissionPreflight",
+  "providerRoutes",
   "providerFailure",
   "previousArtifact",
   "artifact",
@@ -7295,6 +7297,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.applicationRuns === undefined || value.applicationRuns === null
       ? value.applicationRuns
       : (normalizeApplicationRuns(value.applicationRuns) ?? invalidInput());
+  const providerRoutes =
+    value.providerRoutes === undefined
+      ? undefined
+      : (normalizeProviderRoutes(value.providerRoutes) ?? invalidInput());
   const earlierRun =
     value.earlierRun === undefined || value.earlierRun === null
       ? value.earlierRun
@@ -7381,6 +7387,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
     ...(authorInput === undefined ? {} : { authorInput }),
     ...(applicationRuns === undefined ? {} : { applicationRuns }),
+    ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
   } as unknown as DesktopReviewState;
 }

@@ -6,6 +6,7 @@ import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
 import type { FindingRequirement } from "./finding-requirement.js";
+import type { ProviderRoutesView } from "./provider-routes.js";
 import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 
@@ -302,6 +303,8 @@ export interface DesktopReviewState {
   readonly budgetUsd: number | null;
   readonly providerExposure: ProviderExposureView;
   readonly providerTransmissionPreflight: ProviderTransmissionPreflight;
+  /** How the host reaches Anthropic and OpenAI on a new run; absent when the host did not say. */
+  readonly providerRoutes?: ProviderRoutesView;
   readonly providerFailure: ProviderFailureView | null;
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;

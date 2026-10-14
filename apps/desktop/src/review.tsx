@@ -79,6 +79,14 @@ import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
 import {
+  type StartCandidateProfile,
+  StartConfirmation,
+  type StartModelProfiles,
+  type StartReviewAction,
+  startConfirmationHandlers,
+  startConfirmationSummary,
+} from "./start-confirmation.js";
+import {
   LatestRequirementsBriefView,
   StartRequirementsSourceView,
   useLatestOpportunity,
@@ -120,6 +128,10 @@ interface ReviewWorkspaceProps {
   readonly startDisabledReason?: string | null;
   /** Optional native model-settings action shown in the workspace header. */
   readonly modelSettingsAction?: ReactNode;
+  /** The career profile a new run pins, for the start confirmation; `null` when none is pinned. */
+  readonly startCandidateProfile?: StartCandidateProfile | null;
+  /** The model profiles a new run applies, for the tier the start confirmation shows. */
+  readonly startModelProfiles?: StartModelProfiles;
   /** Replaces the plain workspace heading, e.g. with one that can be renamed. */
   readonly workspaceTitle?: ReactNode;
   /** Optional workspace navigation shown in the workspace header. */
@@ -1188,6 +1200,8 @@ export function ReviewWorkspace({
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
+  startCandidateProfile,
+  startModelProfiles,
   workspaceNavigationAction,
   workspaceTitle,
   profilePanel,
@@ -1353,6 +1367,10 @@ export function ReviewWorkspace({
   const [paletteQuery, setPaletteQuery] = useState("");
   const paletteDialogRef = useRef<HTMLDivElement | null>(null);
   const paletteInputRef = useRef<HTMLInputElement | null>(null);
+  // The start a person is confirming: every Start trigger opens the check first, and only its
+  // Start button sends the trigger's own action.
+  const [pendingStart, setPendingStart] = useState<StartReviewAction | null>(null);
+  const startConfirmationRef = useRef<HTMLDivElement | null>(null);
   // Where a palette command wants focus to land. Applied after the palette has returned focus
   // to wherever the reviewer was, so the destination wins.
   const paletteFocusRequest = useRef<HTMLElement | null>(null);
@@ -1635,6 +1653,15 @@ export function ReviewWorkspace({
 
   const closePalette = useCallback(() => setPaletteOpen(false), []);
   useModalFocusTrap(paletteOpen, paletteDialogRef, closePalette);
+  const closeStartConfirmation = useCallback(() => setPendingStart(null), []);
+  useModalFocusTrap(pendingStart !== null, startConfirmationRef, closeStartConfirmation);
+  const requestStart = useCallback(
+    (action: StartReviewAction): void => {
+      if (readOnly && !earlierRunAllowsAction(action.type)) return;
+      setPendingStart(action);
+    },
+    [readOnly],
+  );
 
   const submitUrl = (target: "job-description"): void => {
     const value = jobUrl.trim();
@@ -1701,7 +1728,9 @@ export function ReviewWorkspace({
   // artifact gate keeps its Alt chords, so approving is never one keystroke away.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpen) return;
+      // A key a modal already answered (Escape closing it) must not also act on the page, or it
+      // would pull focus away from the control the modal hands it back to.
+      if (paletteOpen || pendingStart !== null || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
 
       // Escape leaves the override editor even from inside its own input: that is the one
@@ -1867,6 +1896,7 @@ export function ReviewWorkspace({
     overrideEditingFindingId,
     paletteAvailable,
     paletteOpen,
+    pendingStart,
     revealApprovalGate,
     revealFindingInQueue,
     state.approval,
@@ -1995,7 +2025,7 @@ export function ReviewWorkspace({
           : startDisabledReason
             ? startDisabledReason
             : pendingActionReason,
-      run: () => onAction({ type: "start" }),
+      run: () => requestStart({ type: "start" }),
     },
     {
       id: "draft-view",
@@ -2265,6 +2295,35 @@ export function ReviewWorkspace({
           }}
         />
       </div>
+    );
+  };
+
+  const renderStartConfirmation = () => {
+    if (pendingStart === null) return null;
+    const action = pendingStart;
+    const { onStart, onCancel } = startConfirmationHandlers(
+      action,
+      onAction,
+      closeStartConfirmation,
+    );
+    return (
+      <StartConfirmation
+        summary={startConfirmationSummary(state, {
+          action,
+          reviewedRequirements: reviewedRequirementsSelection(
+            latestBrief,
+            state.setup.reviewedOpportunity,
+          ),
+          ...(startCandidateProfile === undefined
+            ? {}
+            : { candidateProfile: startCandidateProfile }),
+          ...(startModelProfiles === undefined ? {} : { modelProfiles: startModelProfiles }),
+        })}
+        dialogRef={startConfirmationRef}
+        onStart={onStart}
+        onCancel={onCancel}
+        changeModelsAction={modelSettingsAction}
+      />
     );
   };
 
@@ -2876,7 +2935,7 @@ export function ReviewWorkspace({
                     setupStartBlockers.length > 0 ? startReviewBlockersId : undefined
                   }
                   onClick={() =>
-                    onAction(
+                    requestStart(
                       startFromJobDescription
                         ? { type: "start", requirementsSource: "job-description" }
                         : { type: "start" },
@@ -2917,6 +2976,7 @@ export function ReviewWorkspace({
             </section>
           </div>
         </main>
+        {renderStartConfirmation()}
       </div>
     );
   }
@@ -2933,6 +2993,7 @@ export function ReviewWorkspace({
         }
       >
         {renderCommandPalette()}
+        {renderStartConfirmation()}
         <div className="main-column">
           <PageToolbar navigation={pageNavigation}>
             {modelSettingsAction}
@@ -3431,7 +3492,7 @@ export function ReviewWorkspace({
                     startDisabledReason !== null ||
                     pendingReviewAction !== null
                   }
-                  onClick={() => onAction({ type: "start" })}
+                  onClick={() => requestStart({ type: "start" })}
                 >
                   {pendingReviewAction?.action === "start"
                     ? "Starting new review…"

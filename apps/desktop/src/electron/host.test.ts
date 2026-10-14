@@ -1836,6 +1836,41 @@ describe("native host", () => {
     ).toMatchObject({ status: "idle", step: null, callLimitMs: null });
   });
 
+  it("reports each company's route and the session call limit for the start confirmation", async () => {
+    const routesFor = async (
+      providerAuthModeConfiguration: ProviderAuthModeConfiguration,
+      snapshotOverrides: Readonly<Record<string, unknown>> | undefined,
+    ) => {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-routes-"));
+      const fixture = service(root, snapshotOverrides);
+      if (snapshotOverrides === undefined) fixture.service.status.mockResolvedValue(undefined);
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        providerAuthModeConfiguration,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      try {
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        const loaded = await host.invoke({ type: "review.load", input: {} });
+        if (!loaded.ok) throw new Error("Expected the review to load.");
+        return (loaded.value as DesktopReviewState).providerRoutes;
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    };
+
+    expect(await routesFor({ anthropic: "user-session", openai: "api-key" }, {})).toEqual({
+      anthropic: "user-session",
+      openai: "api-key",
+      sessionCallLimitMs: 600_000,
+    });
+    expect(await routesFor({ anthropic: "api-key", openai: "user-session" }, undefined)).toEqual({
+      anthropic: "api-key",
+      openai: "user-session",
+      sessionCallLimitMs: 600_000,
+    });
+  });
+
   it("shows why an interrupted run could not continue in the background", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-background-failure-"));
     const fixture = service(root, { state: "drafting", currentStep: "author" });
