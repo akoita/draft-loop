@@ -72,6 +72,7 @@ import {
 } from "@draft-loop/ingestion";
 import { hasCompletedIndependentCritique, type RunSnapshot } from "@draft-loop/orchestrator";
 import {
+  defaultUserSessionTimeoutMs,
   listAnthropicModels,
   listLocalModels,
   listOpenAIModels,
@@ -185,6 +186,7 @@ import type {
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
+import type { ProviderRoutesView } from "../provider-routes.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
@@ -1114,6 +1116,7 @@ function reviewState(
       independentReview,
     },
     providerTransmissionPreflight: preflight,
+    providerRoutes: providerRoutesView(providerAuthModeConfiguration),
     providerFailure: providerFailure(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
@@ -1136,11 +1139,24 @@ function reviewState(
   };
 }
 
+/** How a new run reaches each company with a choice of route, for the start confirmation. */
+function providerRoutesView(configuration: ProviderAuthModeConfiguration): ProviderRoutesView {
+  return {
+    anthropic: configuration.anthropic,
+    openai: configuration.openai,
+    sessionCallLimitMs: defaultUserSessionTimeoutMs,
+  };
+}
+
 function emptyReviewState(
   descriptor: WorkspaceDescriptor,
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
   overrides: ReviewOverrides,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration = {
+    anthropic: "api-key",
+    openai: "api-key",
+  },
 ): DesktopReviewState {
   return {
     workspaceId: descriptor.id,
@@ -1172,6 +1188,7 @@ function emptyReviewState(
       independentReview: null,
     },
     providerTransmissionPreflight: preflight,
+    providerRoutes: providerRoutesView(providerAuthModeConfiguration),
     providerFailure: null,
     previousArtifact: null,
     artifact: {
@@ -4281,7 +4298,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       providerAuthModeConfiguration,
     );
     if (snapshot === undefined) {
-      return emptyReviewState(pairDescriptor, setup, preflight, overrides);
+      return emptyReviewState(
+        pairDescriptor,
+        setup,
+        preflight,
+        overrides,
+        providerAuthModeConfiguration,
+      );
     }
     // A started run is the application's new latest; any other action keeps the run on screen.
     const earlierRun = input.action.type === "start" ? null : earlierRunFor(scope, snapshot.runId);
@@ -5999,7 +6022,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           if (snapshot === undefined) {
             return {
               ok: true,
-              value: emptyReviewState(pairDescriptor, setup, preflight, preferences),
+              value: emptyReviewState(
+                pairDescriptor,
+                setup,
+                preflight,
+                preferences,
+                providerAuthModeConfiguration,
+              ),
             };
           }
           const loaded = reviewState(

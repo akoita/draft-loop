@@ -2753,6 +2753,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             ),
           })}
       {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
+      startCandidateProfile={selectedCandidateProfile}
+      {...(runModelProfiles === null ? {} : { startModelProfiles: runModelProfiles.refs })}
       {...(writingPolicyNode === undefined ? {} : { writingPolicyAction: writingPolicyNode })}
       workspaceNavigationAction={workspaceNavigationNode}
       profilePanel={

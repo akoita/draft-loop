@@ -7349,3 +7349,74 @@ body:has(.workspace-activity) .main-column:has(> .review-column) {
 body:has(.review-column) .workspace-activity {
   bottom: calc(5rem + var(--space-3));
 }
+
+/* Start confirmation: a short check of models, inputs and settings before a run begins. */
+.start-confirmation {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 560px;
+}
+
+.start-confirmation h2,
+.start-confirmation .modal-copy {
+  margin: 0;
+}
+
+.start-confirmation h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.start-confirmation-lines {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.start-confirmation-lines > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.start-confirmation-lines dt {
+  color: var(--text-3);
+}
+
+.start-confirmation-lines dd {
+  margin: 0;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+
+.start-confirmation-warning,
+.start-confirmation-note {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.start-confirmation-warning {
+  border: 1px solid var(--amber-line);
+  background: var(--amber-wash);
+}
+
+.start-confirmation-note {
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.start-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.start-confirmation-change-models {
+  display: contents;
+}
