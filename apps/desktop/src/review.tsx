@@ -11,6 +11,11 @@ import {
 } from "react";
 import { ApplicationRunList } from "./application-run-list-view.js";
 import {
+  approvalAttemptNeedsGate,
+  approvalGateHeadingId,
+  useApprovalGateFocus,
+} from "./approval-gate-focus.js";
+import {
   approvalReadinessForArtifact,
   approvalReadinessGuidance,
   formatApprovalReadinessBlocker,
@@ -1343,6 +1348,17 @@ export function ReviewWorkspace({
   } = useCollapsedReviewPanels();
   const findingsCollapsed = collapsedPanels.has("findings");
   const gateCollapsed = collapsedPanels.has("gate");
+  const expandGate = useCallback(() => expandPanel("gate"), [expandPanel]);
+  const { revealGate: revealApprovalGate, attemptApproval } = useApprovalGateFocus({
+    state,
+    needsGate: approvalAttemptNeedsGate(approvalReadiness, state.approval),
+    pending: pendingReviewAction !== null,
+    expandGate,
+  });
+  const approveArtifact = useCallback((): void => {
+    attemptApproval();
+    onAction({ type: "approve" });
+  }, [attemptApproval, onAction]);
   const locateDraftBlock = (blockId: string): void => {
     draftBlockShellRefs.current
       .get(blockId)
@@ -1683,7 +1699,10 @@ export function ReviewWorkspace({
         if (event.key === "a" || event.key === "A") {
           if (canApprove) {
             event.preventDefault();
-            onAction({ type: "approve" });
+            approveArtifact();
+          } else if (approvalAttemptNeedsGate(approvalReadiness, state.approval)) {
+            event.preventDefault();
+            revealApprovalGate();
           }
         } else if (event.key === "r" || event.key === "R") {
           if (
@@ -1797,6 +1816,8 @@ export function ReviewWorkspace({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     beginOverride,
+    approvalReadiness,
+    approveArtifact,
     canApprove,
     canExport,
     decideFinding,
@@ -1811,7 +1832,9 @@ export function ReviewWorkspace({
     overrideEditingFindingId,
     paletteAvailable,
     paletteOpen,
+    revealApprovalGate,
     revealFindingInQueue,
+    state.approval,
     state.findings,
     state.reviewComplete,
     roundLimitReached,
@@ -1873,7 +1896,7 @@ export function ReviewWorkspace({
             : state.state !== "awaiting-approval"
               ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
               : pendingActionReason,
-      run: () => onAction({ type: "approve" }),
+      run: approveArtifact,
     },
     {
       id: "recover-round-limit",
@@ -3872,7 +3895,9 @@ export function ReviewWorkspace({
               controls="approval-gate-details"
               onToggle={() => togglePanel("gate")}
             />
-            <h2>Human approval gate</h2>
+            <h2 id={approvalGateHeadingId} tabIndex={-1}>
+              Human approval gate
+            </h2>
             <p className="subtle approval-status">
               Artifact: {state.approval === "approved" ? "approved" : "not approved"} · Export:{" "}
               {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
@@ -4028,7 +4053,7 @@ export function ReviewWorkspace({
                 aria-keyshortcuts="Alt+A"
                 title="Approve artifact (Alt+A)"
                 disabled={!canApprove || pendingReviewAction !== null}
-                onClick={() => onAction({ type: "approve" })}
+                onClick={approveArtifact}
               >
                 Approve artifact
                 <kbd>Alt+A</kbd>
