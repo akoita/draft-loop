@@ -440,8 +440,9 @@ the reason, and has at most one primary action:
    URL, then extract and review its requirements (see
    [Opportunity briefs](#opportunity-briefs)). Once the job description is
    added, replacing it is behind a disclosure. The step is done when a
-   reviewed brief is selected, or when the requirements are read from the job
-   description.
+   reviewed brief is selected, or when the application has no brief and the
+   requirements are read from the job description. A draft brief keeps the
+   step open until you review it.
 
    An application created from an approved job page opens with that page as
    its source: the step says the page was approved and that DraftLoop fetches
@@ -467,6 +468,13 @@ the reason, and has at most one primary action:
    **Start author–critic review** and the start checklist. This step is current
    once the first two are done.
 
+   While the brief is a draft, **Advanced** also offers **Start from the raw
+   job description instead**, noting that coverage scoring is less reliable
+   without reviewed requirements. Choosing it unblocks Start, and the start
+   confirmation names the choice. It is never a silent fallback: the host
+   refuses a start on a draft brief that did not ask for the raw job
+   description.
+
 The step states come from the same conditions as the start checklist, so the
 two never disagree. An application opens at its first unfinished step: the
 screen scrolls to it and moves the focus to its heading, once each time the
@@ -479,6 +487,11 @@ stays visible when everything is done:
 - **Conditions.** Job requirements reviewed, a reviewed career profile
   selected, provider sign-in ready and data sent acknowledged, each marked
   **Done** or **Not done** in words.
+- **Draft brief.** While the application's brief is a draft, Job
+  requirements reviewed is not done and Start stays disabled, unless you chose
+  the raw job description under **Advanced** in step 3. An application with
+  job text and no brief reads its requirements from that text, and the start
+  confirmation says so.
 - **Fixes.** An unmet condition carries its own action: **Review
   requirements**, **Choose profile** (which moves focus to the Profile step),
   **Open provider sign-in** (Home) or **Review data sent**. Read-only runs show

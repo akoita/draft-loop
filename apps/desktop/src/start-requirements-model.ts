@@ -50,6 +50,56 @@ export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelecti
 export const rawJobDescriptionLabel =
   "Using the raw job description (unreviewed source units), not the reviewed requirements.";
 
+/** The Advanced choice to start without reviewing a draft brief, and what it costs. */
+export const rawJobDescriptionChoiceLabel = "Start from the raw job description instead";
+export const rawJobDescriptionChoiceNote =
+  "Coverage scoring is less reliable without reviewed requirements.";
+export const rawJobDescriptionOverDraftLabel =
+  "Using the raw job description (unreviewed source units), not the draft requirements.";
+
+/** Where a run's requirements may come from before the person chooses, for the start panel. */
+export interface StartRequirementsChoice {
+  /** The latest brief is a draft and no reviewed brief would bind: the start waits for review. */
+  readonly draftBrief: boolean;
+  /**
+   * The key of the brief a raw-job-description choice applies to, or `null` when the panel
+   * offers no such choice. A new brief version resets the choice.
+   */
+  readonly rawJobKey: string | null;
+}
+
+/**
+ * Whether the start waits for a draft's review, and which brief the raw-job-description choice
+ * belongs to. With a reviewed brief, the raw text is an alternative to it; with a draft, it is
+ * the Advanced choice, offered once the job text is there; with no brief, the run reads the job
+ * text and there is nothing to choose.
+ */
+export function startRequirementsChoice(
+  workspaceId: string,
+  latest: OpportunityLatestBrief | null | undefined,
+  reviewed: ReviewedRequirementsSelection | null,
+  setup: { readonly reviewedOpportunity?: unknown; readonly jobDescriptionReady: boolean },
+): StartRequirementsChoice {
+  if (reviewed !== null) {
+    return {
+      draftBrief: false,
+      rawJobKey: `${workspaceId}:${reviewed.briefId}:${reviewed.version}`,
+    };
+  }
+  const draftBrief =
+    latest !== null &&
+    latest !== undefined &&
+    latest.status === "draft" &&
+    (setup.reviewedOpportunity === null || setup.reviewedOpportunity === undefined);
+  return {
+    draftBrief,
+    rawJobKey:
+      draftBrief && setup.jobDescriptionReady
+        ? `${workspaceId}:${latest.briefId}:${latest.version}:draft`
+        : null,
+  };
+}
+
 /** What an extraction that found nothing says, so a person is never offered an empty brief to review. */
 export const noRequirementsFoundTitle = "No requirements were found in this job text";
 export const noRequirementsFoundNote =

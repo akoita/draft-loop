@@ -256,6 +256,7 @@ import {
 } from "./run-model-profile-selection.js";
 import { createSemanticRetrievalHost } from "./semantic-retrieval-host.js";
 import { createSourceEvidenceKindHost } from "./source-evidence-kind-host.js";
+import { draftBriefStartRefusalFor } from "./start-requirements-guard.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -4110,6 +4111,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ? (await applicationBriefsFor(workspace, scope.application, overrides))
                 .reviewedOpportunity
             : overrides.reviewedOpportunity;
+        const draftRefusal = await draftBriefStartRefusalFor({
+          fromJobDescription,
+          bindsReviewedBrief: reviewedOpportunity !== undefined,
+          latest: () =>
+            latestOpportunity({
+              workspaceId: input.workspaceId,
+              ...(input.applicationId === undefined ? {} : { applicationId: input.applicationId }),
+            }),
+        });
+        if (draftRefusal !== null) return fail("operation-failed", draftRefusal);
         const pendingWritingPolicyOverride =
           scope?.created === true ? undefined : overrides.pendingWritingPolicyOverride;
         if (fromJobDescription && pendingWritingPolicyOverride !== undefined) {
