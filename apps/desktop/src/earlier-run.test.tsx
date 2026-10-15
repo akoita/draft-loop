@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ApplicationRunRowView } from "./application-run-list.js";
-import { ApplicationRunList } from "./application-run-list-view.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { earlierRunAllowsAction, normalizeEarlierRun } from "./earlier-run.js";
@@ -237,37 +236,16 @@ describe("an earlier run in the review", () => {
     expect(before).not.toContain("Viewing an earlier run");
   });
 
-  it("offers Open only on earlier runs other than the one on screen", () => {
-    const third = { ...earlier, runId: "run-0", startedAt: "2026-10-12T08:00:00.000Z" };
-    const onLatest = renderToStaticMarkup(
-      <ApplicationRunList
-        runs={[latest, earlier, third]}
-        viewedRunId={latest.runId}
-        onOpen={() => undefined}
-      />,
+  it("marks the earlier run in the header's run switcher", () => {
+    const fixture = createFixtureReviewState();
+    const html = render(viewingEarlier(fixture), onOpenRun);
+    expect(html).toContain('aria-haspopup="menu" aria-expanded="false"');
+    expect(html).toContain('aria-label="Run 1 of 2"');
+    const checked = html.match(
+      /role="menuitemradio" aria-checked="true"[^>]*>.*?<strong>Run \d<\/strong>/u,
     );
-    expect(onLatest.match(/>Open<\/button>/gu)).toHaveLength(2);
-    expect(onLatest).not.toContain("viewing");
-    expect(onLatest).toContain('aria-label="Open the run started 2026-10-13 08:00 UTC"');
-
-    const onEarlier = renderToStaticMarkup(
-      <ApplicationRunList
-        runs={[latest, earlier, third]}
-        viewedRunId={earlier.runId}
-        onOpen={() => undefined}
-      />,
-    );
-    expect(onEarlier.match(/>Open<\/button>/gu)).toHaveLength(1);
-    expect(onEarlier).toContain('aria-label="Open the run started 2026-10-12 08:00 UTC"');
-    expect(onEarlier).toContain(
-      '<li class="application-run-row" aria-current="true"><time dateTime="2026-10-13',
-    );
-    expect(onEarlier).toContain('<span class="application-run-viewed">viewing</span>');
-
-    // Without a way to open runs, the list stays display-only.
-    const displayOnly = renderToStaticMarkup(
-      <ApplicationRunList runs={[latest, earlier]} viewedRunId={latest.runId} />,
-    );
-    expect(displayOnly).not.toContain("<button");
+    expect(checked?.[0]).toContain("<strong>Run 1</strong>");
+    // The side panel no longer lists the runs.
+    expect(html).not.toContain('aria-label="application runs"');
   });
 });

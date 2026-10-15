@@ -2601,55 +2601,144 @@ input[type="text"].workspace-title-input {
   display: none;
 }
 
-/* The application's runs: one wrapped line of facts per run, newest first. */
-.application-runs h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-md);
+/* The run switcher sits beside the version chips; its menu drops below the header,
+   aligned to the switcher's right edge so it opens over the draft, not off screen. */
+.run-switcher {
+  position: relative;
+  flex: none;
 }
 
-.application-run-list {
+.run-switcher-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 2px 6px 2px 10px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  font: inherit;
+  font-size: var(--text-micro);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.run-switcher-button:hover,
+.run-switcher-button[aria-expanded="true"] {
+  border-color: var(--teal-line);
+  color: var(--text-1);
+}
+
+.run-switcher-label-short {
+  display: none;
+}
+
+.run-switcher-caret {
+  color: var(--text-4);
+}
+
+.run-switcher-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 40;
   display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: 2px;
+  width: min(28rem, calc(100vw - 6rem));
+  max-height: min(26rem, calc(100vh - 10rem));
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
 }
 
-.application-run-row {
+.run-switcher-menu[hidden] {
+  display: none;
+}
+
+.run-switcher-item {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.run-switcher-item:hover,
+.run-switcher-item:focus-visible {
+  background: var(--surface-3);
+}
+
+.run-switcher-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.run-switcher-item[aria-disabled="true"] {
+  cursor: default;
+}
+
+.run-switcher-item-checked {
+  background: var(--teal-wash);
+}
+
+.run-switcher-check {
+  color: var(--teal-bright);
+  font-weight: 700;
+}
+
+.run-switcher-item-body,
+.run-switcher-item-head,
+.run-switcher-item-facts {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px var(--space-2);
-  margin: 0;
-  color: var(--text-4);
-  font-size: var(--text-xs);
-  line-height: 1.45;
+  min-width: 0;
 }
 
-.application-run-models {
+.run-switcher-item-body {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.run-switcher-item-head strong {
+  color: var(--text-1);
+}
+
+.run-switcher-models {
   color: var(--text-1);
   font-weight: 650;
   overflow-wrap: anywhere;
 }
 
-.application-run-latest {
+.run-switcher-latest {
   border-radius: var(--radius-sm);
   padding: 0 var(--space-1);
-  background: var(--surface-2);
+  background: var(--surface-3);
   color: var(--text-1);
   font-weight: 650;
 }
 
-.application-run-viewed {
-  color: var(--teal);
-  font-weight: 650;
-}
+/* Where the loop rail shares the header with the side panel open, the header is tight and the
+   switcher reads "Run 2/5"; its accessible name keeps the full words. Below 1181px the loop
+   leaves the header and the full label fits again. */
+@media (min-width: 1181px) and (max-width: 1450px), (max-width: 760px) {
+  .run-switcher-label-full {
+    display: none;
+  }
 
-.application-run-row .application-run-open {
-  min-height: 0;
-  margin-left: auto;
-  padding: 0 var(--space-2);
-  font-size: var(--text-xs);
+  .run-switcher-label-short {
+    display: inline;
+  }
 }
 
 /* An earlier run is read-only; the notice says so and leads back to the latest run. */
