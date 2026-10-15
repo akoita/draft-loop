@@ -1,4 +1,11 @@
-import { blocksStart, jobDescriptionSteps, type StartCondition } from "./start-checklist-model.js";
+import {
+  type ApplicationJobSource,
+  blocksStart,
+  jobDescriptionSteps,
+  type StartCondition,
+} from "./start-checklist-model.js";
+
+export type { ApplicationJobSource };
 
 /**
  * The application screen's three numbered steps and their states, derived from the same start
@@ -119,4 +126,24 @@ export function applicationStepStatusText(status: ApplicationStepStatus): string
     case "blocked":
       return `Blocked: ${status.reason}`;
   }
+}
+
+/** The job step's opening note for its source and whether the job description is ready. */
+export function applicationJobStepNote(source: ApplicationJobSource, ready: boolean): string {
+  if (source === "approved-page") {
+    return ready
+      ? "Job page approved when you created this application."
+      : "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.";
+  }
+  return ready
+    ? "Job description added."
+    : "Add the job description from a file or a public URL, then extract and review its requirements.";
+}
+
+/**
+ * Whether the job step offers requirements extraction: once the job description is ready, or at
+ * once for an approved job page, which has no text until extraction fetches it.
+ */
+export function jobStepOffersExtraction(source: ApplicationJobSource, ready: boolean): boolean {
+  return ready || source === "approved-page";
 }

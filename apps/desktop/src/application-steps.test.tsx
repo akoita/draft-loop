@@ -4,12 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { ApplicationStepsView, focusCurrentStep } from "./application-steps.js";
 import {
   type ApplicationStepState,
+  applicationJobStepNote,
   applicationStepStates,
   applicationStepStatusText,
+  jobStepOffersExtraction,
 } from "./application-steps-model.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
+  approvedPageRequirementsDetail,
   candidateProfilePendingBlockerMessage,
   candidateProfileStartBlockerMessage,
   jobDescriptionSteps,
@@ -138,6 +141,32 @@ describe("application step states", () => {
       "Done",
       "Current step",
     ]);
+  });
+});
+
+describe("job step source", () => {
+  it("names an approved job page without showing its address", () => {
+    const note = applicationJobStepNote("approved-page", false);
+    expect(note).toBe(
+      "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.",
+    );
+    expect(note).not.toMatch(/https?:/u);
+    expect(applicationJobStepNote("approved-page", true)).toBe(
+      "Job page approved when you created this application.",
+    );
+  });
+
+  it("keeps today's notes for a document job", () => {
+    expect(applicationJobStepNote("document", false)).toBe(
+      "Add the job description from a file or a public URL, then extract and review its requirements.",
+    );
+    expect(applicationJobStepNote("document", true)).toBe("Job description added.");
+  });
+
+  it("offers extraction for an approved page before any job text exists", () => {
+    expect(jobStepOffersExtraction("approved-page", false)).toBe(true);
+    expect(jobStepOffersExtraction("document", false)).toBe(false);
+    expect(jobStepOffersExtraction("document", true)).toBe(true);
   });
 });
 
@@ -308,5 +337,87 @@ describe("ReviewWorkspace as three steps", () => {
       /id="application-step-profile"[^>]*aria-current="step"/u,
     );
     expect(render()).toMatch(/id="application-step-review"[^>]*aria-current="step"/u);
+  });
+
+  describe("for an application created from an approved job page", () => {
+    const binding = (jobFromUrl: boolean) => ({
+      workspaceId: "workspace-1",
+      createOpportunity: vi.fn(),
+      writingModel: { company: "anthropic", model: "claude-opus" },
+      disabled: false,
+      ...(jobFromUrl ? { jobFromUrl: true } : {}),
+    });
+    const renderScreen = (jobFromUrl: boolean) =>
+      renderToStaticMarkup(
+        <ReviewWorkspace
+          state={collecting({
+            jobDescriptionReady: false,
+            ready: false,
+            reviewedOpportunity: null,
+            nextSteps: [jobDescriptionSteps[jobFromUrl ? 1 : 0] ?? ""],
+          })}
+          onAction={() => undefined}
+          onSelectFiles={() => undefined}
+          onAddUrl={() => undefined}
+          startCandidateProfile={{ version: 2 }}
+          startDisabledReason={null}
+          onOpenHome={() => undefined}
+          setupSummary={<div>SETUP SUMMARY</div>}
+          jobRequirements={binding(jobFromUrl)}
+        />,
+      );
+    const renderJob = (jobFromUrl: boolean) => stepHtml(renderScreen(jobFromUrl), "job");
+    const checklistHtml = (html: string) => html.slice(html.indexOf('id="start-checklist"'));
+
+    it("offers Extract requirements in the start checklist and names the review on Start", () => {
+      const html = renderScreen(true);
+      const checklist = checklistHtml(html);
+      expect(checklist).toContain(approvedPageRequirementsDetail);
+      expect(checklist).toMatch(/<button[^>]*>Extract requirements<\/button>/u);
+      expect(checklist).not.toContain("Add job description");
+      expect(checklist).not.toContain(jobDescriptionSteps[1]);
+      expect(html).toContain("Start review · review the requirements first");
+      expect(html).not.toContain("add the job description first");
+    });
+
+    it("keeps a document application's checklist asking for the job description", () => {
+      const html = renderScreen(false);
+      expect(checklistHtml(html)).toMatch(/<button[^>]*>Add job description<\/button>/u);
+      expect(html).toContain("Start review · add the job description first");
+    });
+
+    it("names the approved page as the source and offers extraction as the one primary action", () => {
+      const job = renderJob(true);
+      expect(job).toContain('aria-current="step"');
+      expect(job).toContain(
+        "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.",
+      );
+      expect(job).not.toContain("Add the job description from a file or a public URL");
+      // No address is shown or invented: the URL never crosses the bridge.
+      expect(job.replace(/placeholder="[^"]*"/gu, "")).not.toMatch(/https?:/u);
+      expect(job.match(/button-primary/gu)?.length).toBe(1);
+      expect(job).toMatch(/class="button button-primary"[^>]*>Extract requirements</u);
+    });
+
+    it("keeps replacing the source under the disclosure", () => {
+      const job = renderJob(true);
+      const disclosure = job.slice(job.indexOf("<summary>Replace the job description</summary>"));
+      expect(disclosure).toContain("Replace job description");
+      expect(disclosure).toContain('aria-label="Target job description URL"');
+      expect(job.indexOf("<summary>Replace the job description</summary>")).toBeLessThan(
+        job.indexOf("Extract requirements"),
+      );
+    });
+
+    it("leaves a pasted-text or file application's step 1 as it was", () => {
+      const job = renderJob(false);
+      expect(job).toContain(
+        "Add the job description from a file or a public URL, then extract and review its requirements.",
+      );
+      expect(job).not.toContain("<summary>Replace the job description</summary>");
+      expect(job).toContain('class="application-job-inputs"');
+      expect(job).not.toContain("Extract requirements");
+      expect(job).not.toContain("button-primary");
+    });
   });
 });

@@ -28,6 +28,16 @@ export const jobDescriptionSteps: readonly string[] = [
 
 const setupIncompleteFallback = "Finish the workspace setup above.";
 
+/**
+ * Where an application reads its job from. An application created from an approved job page
+ * carries only this kind across the bridge, never the address.
+ */
+export type ApplicationJobSource = "document" | "approved-page";
+
+/** The requirements detail for an approved job page that has no brief to review yet. */
+export const approvedPageRequirementsDetail =
+  "The job page was approved when you created this application. Extract its requirements, then review them.";
+
 export type StartActionId =
   | "add-job-description"
   | "review-requirements"
@@ -78,6 +88,8 @@ export interface StartChecklistInput {
   readonly canOpenProviderSignIn: boolean;
   /** The pair's sign-in as the host's status reads report it; unknown when absent. */
   readonly providerSignIn?: ProviderSignInReadiness;
+  /** The application's job source; absent reads as a document (pasted text or a file). */
+  readonly jobSource?: ApplicationJobSource;
 }
 
 const requirementsLabel = "Job requirements reviewed";
@@ -102,6 +114,25 @@ function requirementsCondition(
   steps: readonly string[],
   refusal: string | null,
 ): StartCondition {
+  if (
+    !input.setup.jobDescriptionReady &&
+    input.jobSource === "approved-page" &&
+    input.requirementAction !== "review-draft"
+  ) {
+    // The page is the source already: extraction fetches it, so nothing is left to add.
+    return {
+      id: "requirements",
+      label: requirementsLabel,
+      done: false,
+      detail: approvedPageRequirementsDetail,
+      action:
+        input.requirementAction === "extract-again"
+          ? requirementRefusalFix("extract-again")
+          : input.requirementAction === "extract"
+            ? { id: "extract-requirements", label: "Extract requirements" }
+            : null,
+    };
+  }
   if (!input.setup.jobDescriptionReady) {
     return {
       id: "requirements",
