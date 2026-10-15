@@ -124,6 +124,7 @@ import {
   withLatestBriefRefresh,
 } from "./start-requirements.js";
 import {
+  briefReviewActionKey,
   jobRequirementsExtractionId,
   offersRequirementsExtraction,
   requirementRefusalAction,
@@ -2605,7 +2606,7 @@ export function ReviewWorkspace({
             action={
               briefOperations === undefined ? null : (
                 <OpportunityBriefReviewAction
-                  key={`${requirementsBinding.workspaceId}:${latestBrief.briefId}:${latestBrief.version}`}
+                  key={briefReviewActionKey(requirementsBinding.workspaceId, latestBrief.briefId)}
                   briefId={latestBrief.briefId}
                   operations={briefOperations}
                   disabled={requirementsBinding.disabled}
@@ -2641,7 +2642,10 @@ export function ReviewWorkspace({
               Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
             </p>
             <OpportunityBriefReviewAction
-              key={`${requirementsBinding.workspaceId}:${state.setup.reviewedOpportunity.version}`}
+              key={briefReviewActionKey(
+                requirementsBinding.workspaceId,
+                state.setup.reviewedOpportunity.briefId,
+              )}
               briefId={state.setup.reviewedOpportunity.briefId}
               operations={briefOperations}
               disabled={requirementsBinding.disabled}

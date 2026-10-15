@@ -4,6 +4,7 @@ import type {
   OpportunityIssueResult,
   OpportunityRecordResult,
   OpportunityRequirementResult,
+  OpportunitySourceResult,
 } from "./bridge.js";
 
 /**
@@ -26,6 +27,35 @@ export const requirementPriorityOptions: readonly {
   { value: "medium", label: "Medium" },
   { value: "low", label: "Low" },
 ];
+
+/** A plain label for a brief source, from its kind and classification; never its internal id. */
+export function briefSourceLabel(source: OpportunitySourceResult | undefined): string {
+  if (source === undefined) return "Unlisted source";
+  if (source.classification === "candidate-instruction" || source.kind === "candidate-input") {
+    return "Your instructions";
+  }
+  if (source.classification === "social-announcement") return "Social announcement";
+  if (source.classification === "company-context") return "Company context";
+  if (source.kind === "approved-url") return "Job page";
+  if (source.kind === "pasted-content") return "Pasted job text";
+  return "Job posting";
+}
+
+/** The sources an entry cites, as distinct plain labels in citation order. */
+export function describeBriefSources(
+  sources: readonly OpportunitySourceResult[],
+  sourceIds: readonly string[],
+): string {
+  const labels = sourceIds.map((id) =>
+    briefSourceLabel(sources.find((candidate) => candidate.id === id)),
+  );
+  return [...new Set(labels)].join(", ");
+}
+
+/** The status line shown, and focused, after a save created the next draft. */
+export function savedBriefNote(version: number): string {
+  return `Saved as draft v${version}. Mark it reviewed when it is ready.`;
+}
 
 export function requirementPriorityLabel(priority: RequirementPriority): string {
   return requirementPriorityOptions.find((option) => option.value === priority)?.label ?? priority;

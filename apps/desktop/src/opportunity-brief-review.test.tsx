@@ -12,8 +12,10 @@ import {
   acknowledgeIssue,
   type BriefEditState,
   briefEditProblem,
+  briefSourceLabel,
   buildBriefEditPatch,
   createBriefEditState,
+  describeBriefSources,
   dropRequirement,
   editRequirementText,
   hasUnsavedBriefChanges,
@@ -120,7 +122,7 @@ describe("listing a draft brief", () => {
     expect(html).toContain("Draft v1");
     expect(html).toContain("Requirements (2)");
     expect(html).toContain("Five years of TypeScript");
-    expect(html).toContain("Job posting (workspace-job-description)");
+    expect(html).toContain("<span>Source</span> Pasted job text");
     expect(html).toContain(">Critical<");
     expect(html).toContain("Responsibilities (1)");
     expect(html).toContain("Run the deploy pipeline");
@@ -167,6 +169,61 @@ describe("listing a draft brief", () => {
     expect(html).not.toContain("no employer");
     expect(html).not.toContain("<input");
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Mark reviewed/u);
+  });
+});
+
+/** The text a person sees: the markup with its tags and attributes removed. */
+function visibleText(html: string): string {
+  return html.replace(/<[^>]*>/gu, " ");
+}
+
+describe("source labels", () => {
+  const source = record().sources[0];
+  if (source === undefined) throw new Error("source expected");
+
+  it("names each source by its kind, never by its id", () => {
+    expect(briefSourceLabel({ ...source, kind: "local-file" })).toBe("Job posting");
+    expect(briefSourceLabel({ ...source, kind: "approved-url" })).toBe("Job page");
+    expect(briefSourceLabel({ ...source, kind: "pasted-content" })).toBe("Pasted job text");
+    expect(briefSourceLabel({ ...source, classification: "social-announcement" })).toBe(
+      "Social announcement",
+    );
+    expect(briefSourceLabel({ ...source, classification: "company-context" })).toBe(
+      "Company context",
+    );
+    expect(
+      briefSourceLabel({
+        ...source,
+        kind: "candidate-input",
+        classification: "candidate-instruction",
+      }),
+    ).toBe("Your instructions");
+    expect(briefSourceLabel(undefined)).toBe("Unlisted source");
+  });
+
+  it("lists distinct labels in citation order", () => {
+    const sources = [
+      { ...source, id: "page-1", kind: "approved-url" as const },
+      { ...source, id: "page-2", kind: "approved-url" as const },
+      {
+        ...source,
+        id: "about",
+        kind: "approved-url" as const,
+        classification: "company-context" as const,
+      },
+    ];
+    expect(describeBriefSources(sources, ["page-1", "page-2", "about", "missing"])).toBe(
+      "Job page, Company context, Unlisted source",
+    );
+  });
+
+  it("renders no internal brief or source id in the dialog", () => {
+    const rec = record({ issues: [openIssue] });
+    for (const html of [view(rec, createBriefEditState(rec)), view(rec, null)]) {
+      expect(html).not.toContain("brief-abc");
+      expect(html).not.toContain("workspace-job-description");
+      expect(visibleText(html)).not.toMatch(/brief-/u);
+    }
   });
 });
 
@@ -454,6 +511,28 @@ describe("saving, conflicts and review", () => {
         "brief-abc",
       ),
     ).resolves.toEqual({ kind: "failed", message: "not found" });
+  });
+
+  it("stays on the saved draft with Mark reviewed one click away", () => {
+    const html = view(next, createBriefEditState(next), { savedVersion: 2 });
+    expect(html).toContain("Draft v2");
+    expect(html).toMatch(
+      /<p class="setup-note" role="status" tabindex="-1">Saved as draft v2\. Mark it reviewed when it is ready\.<\/p>/u,
+    );
+    expect(html).toMatch(/<button[^>]*>Mark reviewed<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Mark reviewed/u);
+    expect(html).not.toContain("Discard changes");
+    expect(visibleText(html)).not.toMatch(/brief-/u);
+  });
+
+  it("drops the saved note once the version changes or a new edit is staged", () => {
+    expect(view(next, createBriefEditState(next), { savedVersion: 1 })).not.toContain(
+      "Saved as draft",
+    );
+    const staged = editRequirementText(createBriefEditState(next), "req-1", "Changed again");
+    expect(view(next, staged, { savedVersion: 2 })).not.toContain("Saved as draft");
+    const reviewedNext = record({ version: 2, status: "reviewed" });
+    expect(view(reviewedNext, null, { savedVersion: 2 })).not.toContain("Saved as draft");
   });
 
   it("disables Mark reviewed while there are unsaved changes", () => {

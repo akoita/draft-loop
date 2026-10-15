@@ -110,6 +110,14 @@ export function isEmptyDraftBrief(latest: OpportunityLatestBrief): boolean {
   return latest.status === "draft" && latest.requirementCount === 0;
 }
 
+/**
+ * The React key for a brief's review action. It names the brief, not its version, so the
+ * refresh after Save changes or Mark reviewed keeps the open dialog instead of remounting it.
+ */
+export function briefReviewActionKey(workspaceId: string, briefId: string): string {
+  return `${workspaceId}:${briefId}`;
+}
+
 /** Whether setup card 01 offers extraction: no brief yet, or only an empty draft to replace. */
 export function offersRequirementsExtraction(
   latest: OpportunityLatestBrief | null | undefined,

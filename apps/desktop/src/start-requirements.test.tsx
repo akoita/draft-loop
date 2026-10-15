@@ -11,6 +11,7 @@ import {
   StartRequirementsSourceView,
 } from "./start-requirements.js";
 import {
+  briefReviewActionKey,
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
@@ -100,6 +101,16 @@ describe("setup card 01 latest brief", () => {
     expect(latestBriefNote(reviewed)).toBe(
       "18 requirements, 4 critical. Runs start from these requirements.",
     );
+  });
+});
+
+describe("the brief review action across versions", () => {
+  it("keeps one key per brief, so a save or review does not remount and close the dialog", () => {
+    const v4 = briefReviewActionKey("w", draft.briefId);
+    expect(briefReviewActionKey("w", draft.briefId)).toBe(v4);
+    expect(v4).not.toContain(String(draft.version));
+    expect(briefReviewActionKey("other", draft.briefId)).not.toBe(v4);
+    expect(briefReviewActionKey("w", "another-brief")).not.toBe(v4);
   });
 });
 
