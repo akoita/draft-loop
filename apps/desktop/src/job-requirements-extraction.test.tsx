@@ -97,6 +97,33 @@ describe("Extract requirements card states", () => {
     expect(html).toContain(">Cancel<");
   });
 
+  it("says nothing is sent in a demo workspace, from the offer to the running state", () => {
+    const view = (phase: JobRequirementsPhase) =>
+      renderToStaticMarkup(
+        <JobRequirementsExtractionView
+          phase={phase}
+          writingModel={writingModel}
+          fixtureMode
+          disabled={false}
+          onOpen={() => undefined}
+          onConfirm={() => undefined}
+          onCancel={() => undefined}
+        />,
+      );
+    for (const phase of [
+      { kind: "idle" },
+      { kind: "consent" },
+      { kind: "running" },
+    ] as const satisfies readonly JobRequirementsPhase[]) {
+      const html = view(phase);
+      expect(html).toContain("local fixtures");
+      expect(html).toContain("Nothing is sent to a provider.");
+      expect(html).not.toContain("anthropic/claude-opus-4-5");
+      expect(html).not.toContain("Anthropic");
+    }
+    expect(view({ kind: "consent" })).toContain(">Extract<");
+  });
+
   it("names the page fetch in the consent for an application whose job is a web address", () => {
     const html = renderToStaticMarkup(
       <JobRequirementsExtractionView

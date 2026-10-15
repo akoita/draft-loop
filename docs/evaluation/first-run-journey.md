@@ -19,6 +19,15 @@ The review was walked to approval on the demo's pre-seeded application, the only
 started review reachable offline. A real workspace may well complete the
 journey, but this walk did not exercise its provider steps.
 
+## Since the walk
+
+[#1251](https://github.com/akoita/draft-loop/issues/1251) gives a demo
+workspace offline profile generation and requirement extraction. An end-to-end
+test through the native host (`apps/desktop/src/demo-application.e2e.test.ts`)
+now goes from synthetic evidence to a reviewed profile, a reviewed brief and a
+started review with no provider client constructed. The walk itself has not
+been repeated in the app since.
+
 ## Setup
 
 - **Date.** 2026-10-15.

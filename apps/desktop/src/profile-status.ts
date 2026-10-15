@@ -158,6 +158,8 @@ export interface ProfileApprovalTextInput {
   readonly sourceCount?: number | undefined;
   /** The provider the profile is built with, by display name; omitted when unknown. */
   readonly providerName?: string | undefined;
+  /** A demo workspace builds the profile from local fixtures, so nothing is sent. */
+  readonly fixtureMode?: boolean | undefined;
 }
 
 /** The one approval line beside the action that sends data, worded as what is sent. */
@@ -165,7 +167,11 @@ export function profileApprovalText({
   mode,
   sourceCount,
   providerName,
+  fixtureMode = false,
 }: ProfileApprovalTextInput): string {
+  if (fixtureMode) {
+    return `${mode === "update" ? "Update" : "Build"} the profile from my career evidence with local fixtures. Nothing is sent to a provider.`;
+  }
   const sources =
     sourceCount === undefined || !Number.isSafeInteger(sourceCount) || sourceCount < 0
       ? ""

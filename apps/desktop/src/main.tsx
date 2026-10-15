@@ -2490,6 +2490,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           onGenerationChange={profileGenerationChange}
           evidence={activePort}
           providerCompany={state.providerTransmissionPreflight.author.company}
+          fixtureMode={state.setup.fixtureMode}
         />
       </fieldset>
     );
@@ -2548,6 +2549,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         .catch(() => undefined);
     },
     writingModel: state.providerTransmissionPreflight.author,
+    fixtureMode: state.setup.fixtureMode,
     disabled:
       busy ||
       knowledgePending ||

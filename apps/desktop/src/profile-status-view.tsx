@@ -58,6 +58,7 @@ export function ProfileGenerationAction({
   generating = false,
   sourceCount,
   providerName,
+  fixtureMode = false,
   onApprovalChange,
   onDerive,
 }: {
@@ -70,6 +71,8 @@ export function ProfileGenerationAction({
   readonly generating?: boolean;
   readonly sourceCount?: number | undefined;
   readonly providerName?: string | undefined;
+  /** A demo workspace: the approval says nothing is sent. */
+  readonly fixtureMode?: boolean;
   readonly onApprovalChange: (approved: boolean) => void;
   readonly onDerive: () => void;
 }) {
@@ -83,7 +86,7 @@ export function ProfileGenerationAction({
           disabled={busy}
           onChange={(event) => onApprovalChange(event.target.checked)}
         />
-        <span>{profileApprovalText({ mode, sourceCount, providerName })}</span>
+        <span>{profileApprovalText({ mode, sourceCount, providerName, fixtureMode })}</span>
       </label>
       <button
         className="button button-primary"

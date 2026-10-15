@@ -183,6 +183,22 @@ describe("profile approval text", () => {
     );
   });
 
+  it("says nothing is sent in a demo workspace, whatever provider is configured", () => {
+    expect(
+      profileApprovalText({
+        mode: "generate",
+        sourceCount: 2,
+        providerName: "Anthropic",
+        fixtureMode: true,
+      }),
+    ).toBe(
+      "Build the profile from my career evidence with local fixtures. Nothing is sent to a provider.",
+    );
+    expect(profileApprovalText({ mode: "update", fixtureMode: true })).toBe(
+      "Update the profile from my career evidence with local fixtures. Nothing is sent to a provider.",
+    );
+  });
+
   it("never guesses a count or a provider it was not given", () => {
     expect(profileApprovalText({ mode: "generate" })).toBe(
       "Send my career evidence to the configured provider to build the profile.",

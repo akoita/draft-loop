@@ -109,6 +109,8 @@ export interface ProfileWorkspaceProps {
   readonly evidence?: CareerEvidenceCapabilities;
   /** The company whose model builds the profile (the author), as the approval names it. */
   readonly providerCompany?: string;
+  /** A demo workspace builds the profile from local fixtures; the approval says nothing is sent. */
+  readonly fixtureMode?: boolean;
 }
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
@@ -749,6 +751,7 @@ export function ProfileWorkspace({
   onGenerationChange,
   evidence,
   providerCompany,
+  fixtureMode = false,
 }: ProfileWorkspaceProps) {
   const [profileId, setProfileId] = useState("");
   const [loadedProfileId, setLoadedProfileId] = useState<string | null>(null);
@@ -1319,6 +1322,7 @@ export function ProfileWorkspace({
       providerName={
         providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
       }
+      fixtureMode={fixtureMode}
       onApprovalChange={setProviderTransmissionApproved}
       onDerive={derive}
     />

@@ -296,9 +296,12 @@ told apart; the full path never reaches the interface.
 - **Open workspace.** Keeps the workspace's current model pair; canceling the
   model editor does not change it. Apply a preset or save custom settings to
   replace the pair used for future runs.
-- **Try demo workspace.** Creates a fixture workspace that runs the review
-  against local fixtures with no network. It opens with a default application
-  already in review. Packaged startup never falls back to the demo: if the
+- **Try demo workspace.** Creates a fixture workspace that runs everything
+  against local fixtures with no network: profile generation and requirement
+  extraction take facts and requirements verbatim from the synthetic sources,
+  and the review uses fixture author and critic replies. Its consent lines say
+  nothing is sent to a provider. It opens with a default application already
+  in review. Packaged startup never falls back to the demo: if the
   preload bridge is unavailable, the desktop shows a connection error instead.
 
 ### Home

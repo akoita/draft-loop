@@ -2470,7 +2470,7 @@ export interface OrchestrationPort {
 
 export * from "./adjudication.js";
 export * from "./autopilot.js";
-export { notBefore } from "./causal-timestamp.js";
+export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,
