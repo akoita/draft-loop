@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApprovalReadiness } from "./approval-readiness.js";
 
-/** The Human approval gate heading, the place a refused approval sends the reviewer. */
-export const approvalGateHeadingId = "approval-gate-heading";
+/** The review footer's one-line blocker, the place a refused approval sends the reviewer. */
+export const approvalBlockerId = "approval-blocker";
 
 /**
  * True when an approval attempt cannot go through because the final CV checks block it, so the
- * gate's explanation and its override form are what the reviewer needs to see.
+ * footer's blocker line, its Details and its override are what the reviewer needs to see.
  */
 export function approvalAttemptNeedsGate(
   readiness: ApprovalReadiness | null,
@@ -16,18 +16,19 @@ export function approvalAttemptNeedsGate(
   return readiness?.applicationReady === false && approval !== "approved";
 }
 
-/** Scrolls the gate into view and moves focus to its heading so screen readers announce it. */
+/** Scrolls the footer's blocker line into view and focuses it so screen readers announce it. */
 export function focusApprovalGate(documentRef: Document = document): boolean {
-  const heading = documentRef.getElementById(approvalGateHeadingId);
-  if (heading === null) return false;
-  heading.scrollIntoView({ behavior: "smooth", block: "center" });
-  heading.focus({ preventScroll: true });
+  const blocker = documentRef.getElementById(approvalBlockerId);
+  if (blocker === null) return false;
+  blocker.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  blocker.focus({ preventScroll: true });
   return true;
 }
 
 /**
- * Brings the gate into view when an approval is refused because the draft is not ready: at once
- * when the gate already says so, or when the host answers an approval with a not-ready draft.
+ * Brings the footer's blocker into view, with its Details opened through `expandGate`, when an
+ * approval is refused because the draft is not ready: at once when the footer already says so,
+ * or when the host answers an approval with a not-ready draft.
  * A successful approval leaves focus where it was.
  */
 export function useApprovalGateFocus<State>({
@@ -72,7 +73,7 @@ export function useApprovalGateFocus<State>({
 
   useEffect(() => {
     if (focusRequest === 0) return;
-    // After the expanded gate is laid out, and after any dialog has handed focus back.
+    // After the opened Details are laid out, and after any dialog has handed focus back.
     const frame = window.requestAnimationFrame(() => focusApprovalGate());
     return () => window.cancelAnimationFrame(frame);
   }, [focusRequest]);

@@ -81,7 +81,7 @@ describe("send verdict in the review", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={reviewed as never} onAction={() => undefined} />,
     );
-    expect(html).toContain("<strong>Ready to send</strong>");
+    expect(html).toMatch(/class="gate-blocker gate-blocker-safe"[^>]*>Ready to send/u);
   });
 
   it("lists editorial warnings as reasons the draft is not ready", () => {
@@ -91,8 +91,8 @@ describe("send verdict in the review", () => {
         onAction={() => undefined}
       />,
     );
-    expect(html).toContain(
-      "<strong>Not ready to send yet</strong>: copied source notes or narration (1).",
+    expect(html).toMatch(
+      /class="gate-blocker gate-blocker-warning"[^>]*>Not ready to send yet: copied source notes or narration \(1\)/u,
     );
   });
 });

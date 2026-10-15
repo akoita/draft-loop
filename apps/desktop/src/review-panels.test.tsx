@@ -30,8 +30,9 @@ function memoryStorage(initial: Record<string, string> = {}) {
 
 describe("review panel disclosure", () => {
   it("reads stored panel ids and ignores anything it does not know", () => {
-    expect([...parseCollapsedReviewPanels('["gate","progress"]')]).toEqual(["gate", "progress"]);
-    expect([...parseCollapsedReviewPanels('["gate","trust",3]')]).toEqual(["gate"]);
+    // "gate" was a panel id until #1235 moved the gate into the footer; stored values drop it.
+    expect([...parseCollapsedReviewPanels('["gate","progress"]')]).toEqual(["progress"]);
+    expect([...parseCollapsedReviewPanels('["coverage","trust",3]')]).toEqual(["coverage"]);
     expect(parseCollapsedReviewPanels("garbage").size).toBe(0);
     expect(parseCollapsedReviewPanels('{"gate":true}').size).toBe(0);
     expect(parseCollapsedReviewPanels(null).size).toBe(0);
@@ -39,9 +40,9 @@ describe("review panel disclosure", () => {
 
   it("round-trips the folded panels through storage in a stable order", () => {
     const storage = memoryStorage();
-    writeStoredCollapsedReviewPanels(storage, new Set(["gate", "progress"]));
-    expect(storage.values.get(collapsedReviewPanelsStorageKey)).toBe('["progress","gate"]');
-    expect([...readStoredCollapsedReviewPanels(storage)]).toEqual(["progress", "gate"]);
+    writeStoredCollapsedReviewPanels(storage, new Set(["coverage", "progress"]));
+    expect(storage.values.get(collapsedReviewPanelsStorageKey)).toBe('["progress","coverage"]');
+    expect([...readStoredCollapsedReviewPanels(storage)]).toEqual(["progress", "coverage"]);
   });
 
   it("treats an unavailable store as nothing folded", () => {
@@ -54,7 +55,7 @@ describe("review panel disclosure", () => {
       },
     };
     expect(readStoredCollapsedReviewPanels(throwing).size).toBe(0);
-    expect(() => writeStoredCollapsedReviewPanels(throwing, new Set(["gate"]))).not.toThrow();
+    expect(() => writeStoredCollapsedReviewPanels(throwing, new Set(["coverage"]))).not.toThrow();
     expect(readStoredCollapsedReviewPanels(undefined).size).toBe(0);
   });
 
