@@ -670,7 +670,7 @@ function selectionEntriesMatchSnapshot(
   });
 }
 
-async function validateConfiguredKnowledgeSelection(
+export async function validateConfiguredKnowledgeSelection(
   binding: WorkspaceKnowledgeSelectionBinding | undefined,
 ): Promise<KnowledgeSelectionSnapshot | undefined> {
   if (binding === undefined) return undefined;
@@ -2995,7 +2995,7 @@ export function createLocalApplicationDriver(
       return context === undefined ? undefined : runRequirementTexts(context);
     },
   };
-  return withRunHistoryReaders(withWorkspaceApplications(driver, { readWorkspace }));
+  return withRunHistoryReaders(withWorkspaceApplications(driver, { readWorkspace }), options);
 }
 
 function pilotReportMarkdown(report: PilotReport): string {

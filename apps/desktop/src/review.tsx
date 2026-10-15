@@ -75,7 +75,7 @@ import {
   uncritiquedStatus,
 } from "./review-run-status.js";
 import { runAuthorInputDisplay } from "./run-author-input.js";
-import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
+import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
 import {
@@ -85,6 +85,7 @@ import {
   type StartReviewAction,
   startConfirmationHandlers,
   startConfirmationSummary,
+  useStartEvidencePreview,
 } from "./start-confirmation.js";
 import {
   LatestRequirementsBriefView,
@@ -132,6 +133,8 @@ interface ReviewWorkspaceProps {
   readonly startCandidateProfile?: StartCandidateProfile | null;
   /** The model profiles a new run applies, for the tier the start confirmation shows. */
   readonly startModelProfiles?: StartModelProfiles;
+  /** What evidence a new run would send, asked for when the start confirmation opens. */
+  readonly previewStartEvidence?: () => Promise<RunEvidenceModeView | null>;
   /** Replaces the plain workspace heading, e.g. with one that can be renamed. */
   readonly workspaceTitle?: ReactNode;
   /** Optional workspace navigation shown in the workspace header. */
@@ -1202,6 +1205,7 @@ export function ReviewWorkspace({
   modelSettingsAction,
   startCandidateProfile,
   startModelProfiles,
+  previewStartEvidence,
   workspaceNavigationAction,
   workspaceTitle,
   profilePanel,
@@ -1655,6 +1659,7 @@ export function ReviewWorkspace({
   useModalFocusTrap(paletteOpen, paletteDialogRef, closePalette);
   const closeStartConfirmation = useCallback(() => setPendingStart(null), []);
   useModalFocusTrap(pendingStart !== null, startConfirmationRef, closeStartConfirmation);
+  const startEvidence = useStartEvidencePreview(pendingStart !== null, previewStartEvidence);
   const requestStart = useCallback(
     (action: StartReviewAction): void => {
       if (readOnly && !earlierRunAllowsAction(action.type)) return;
@@ -2318,6 +2323,7 @@ export function ReviewWorkspace({
             ? {}
             : { candidateProfile: startCandidateProfile }),
           ...(startModelProfiles === undefined ? {} : { modelProfiles: startModelProfiles }),
+          evidencePreview: startEvidence,
         })}
         dialogRef={startConfirmationRef}
         onStart={onStart}

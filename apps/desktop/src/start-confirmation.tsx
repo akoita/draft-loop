@@ -1,8 +1,10 @@
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 
 import { formatLimitDuration } from "./execution-limits.js";
 import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
 import type { ProviderRoute } from "./provider-routes.js";
+import type { RunEvidenceModeView } from "./run-evidence-mode.js";
+import type { StartEvidencePreview } from "./start-evidence-preview.js";
 import type { ReviewedRequirementsSelection } from "./start-requirements-model.js";
 
 /** The action a confirmed Start dispatches, unchanged from what the trigger would have sent. */
@@ -39,6 +41,8 @@ export interface StartConfirmationContext {
   readonly candidateProfile?: StartCandidateProfile | null;
   /** The model profiles the run applies; their ids name the tier. */
   readonly modelProfiles?: StartModelProfiles;
+  /** What evidence the run would send; absent or `null` omits the line. */
+  readonly evidencePreview?: StartEvidencePreview | null;
 }
 
 export type StartCandidateProfile = Pick<CandidateProfileSelection, "version">;
@@ -110,6 +114,70 @@ function requirementsValue(state: DesktopReviewState, context: StartConfirmation
   return "Raw job description";
 }
 
+/** The evidence line: the mode the run would use and how much of the source that is. */
+export function evidencePreviewValue(preview: StartEvidencePreview): string {
+  if (preview.status === "checking") return "Checking…";
+  const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } = preview.preview;
+  if (requestedMode === "retrieval") return "Retrieval";
+  if (effectiveMode === "full-source") {
+    const from = sourceCount === undefined ? "" : ` from ${plural(sourceCount, "source")}`;
+    return `Full source · ${plural(chunkCount, "chunk")}${from} (fits)`;
+  }
+  if (fallbackReason === "no-eligible-chunks") {
+    return "Full source has no eligible chunks; retrieval will be used";
+  }
+  return `Full source does not fit the budget for this pair (${plural(chunkCount, "chunk")}); retrieval will be used`;
+}
+
+/**
+ * Asks for the evidence preview each time the confirmation opens: "checking" until it answers,
+ * then the answer, or nothing when there is none or the request fails. Only opening asks again,
+ * so a caller may pass a new function on every render.
+ */
+export function useStartEvidencePreview(
+  open: boolean,
+  preview: (() => Promise<RunEvidenceModeView | null>) | undefined,
+): StartEvidencePreview | null {
+  const [current, setCurrent] = useState<StartEvidencePreview | null>(null);
+  const latest = useRef(preview);
+  // Declared first, so it runs before the request below in the same commit.
+  useEffect(() => {
+    latest.current = preview;
+  });
+  useEffect(
+    () => requestStartEvidencePreview(open ? latest.current : undefined, setCurrent),
+    [open],
+  );
+  return current;
+}
+
+/**
+ * One request for the preview: `checking` at once, then the answer, or `null` when there is no
+ * request, no preview or a failure. The returned function drops a late answer.
+ */
+export function requestStartEvidencePreview(
+  ask: (() => Promise<RunEvidenceModeView | null>) | undefined,
+  set: (preview: StartEvidencePreview | null) => void,
+): () => void {
+  if (ask === undefined) {
+    set(null);
+    return () => undefined;
+  }
+  let active = true;
+  set({ status: "checking" });
+  ask().then(
+    (result) => {
+      if (active) set(result === null ? null : { status: "ready", preview: result });
+    },
+    () => {
+      if (active) set(null);
+    },
+  );
+  return () => {
+    active = false;
+  };
+}
+
 function writingPolicyValue(state: DesktopReviewState): string {
   if (state.setup.writingPolicyStatus === "unavailable") return "Unavailable";
   if (state.setup.writingPolicyStatus === "active") {
@@ -170,6 +238,9 @@ export function startConfirmationSummary(
     });
   }
   inputs.push({ label: "Writing policy", value: writingPolicyValue(state) });
+  if (context.evidencePreview !== undefined && context.evidencePreview !== null) {
+    inputs.push({ label: "Evidence", value: evidencePreviewValue(context.evidencePreview) });
+  }
   const settings: StartConfirmationLine[] = [];
   if (state.setup.autopilot !== undefined) {
     settings.push({ label: "Autopilot", value: state.setup.autopilot ? "On" : "Off" });

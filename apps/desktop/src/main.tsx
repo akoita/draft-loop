@@ -2755,6 +2755,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
       startCandidateProfile={selectedCandidateProfile}
       {...(runModelProfiles === null ? {} : { startModelProfiles: runModelProfiles.refs })}
+      {...(activePort.previewStartEvidence === undefined
+        ? {}
+        : {
+            previewStartEvidence: () =>
+              activePort.previewStartEvidence?.(
+                state.workspaceId,
+                runModelProfiles?.refs ?? null,
+              ) ?? Promise.resolve(null),
+          })}
       {...(writingPolicyNode === undefined ? {} : { writingPolicyAction: writingPolicyNode })}
       workspaceNavigationAction={workspaceNavigationNode}
       profilePanel={

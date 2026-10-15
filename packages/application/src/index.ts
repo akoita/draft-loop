@@ -23,6 +23,7 @@ import type {
 } from "./candidate-profile-freshness.js";
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
+import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
@@ -537,6 +538,13 @@ export interface ApplicationDriver {
   readonly readRunAuthorInput?: (command: StatusCommand) => Promise<RunAuthorInput | undefined>;
   /** The author and critic models a run was configured with; `undefined` without a context. */
   readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
+  /**
+   * The evidence a run started now would send, decided as the start decides it but without
+   * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
+   */
+  readonly previewEvidenceMode?: (
+    command: EvidenceModePreviewCommand,
+  ) => Promise<EvidenceModePreview | undefined>;
   /** Job applications inside the workspace (ADR 0010); the default one is always listed first. */
   readonly createApplication?: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   readonly listApplications?: (
@@ -708,6 +716,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunModels === undefined
         ? undefined
         : driver.readRunModels({ ...command, root: requireRoot(command.root) }),
+    previewEvidenceMode: async (command) =>
+      driver.previewEvidenceMode === undefined
+        ? undefined
+        : driver.previewEvidenceMode({ ...command, root: requireRoot(command.root) }),
     createApplication: async (command) =>
       requireApplicationApi(driver.createApplication)({
         ...command,
@@ -765,6 +777,11 @@ export {
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
 export * from "./embedding-model-install.js";
+export {
+  type EvidenceModePreview,
+  type EvidenceModePreviewCommand,
+  previewEvidenceMode,
+} from "./evidence-mode-preview.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./knowledge-source-dedupe.js";

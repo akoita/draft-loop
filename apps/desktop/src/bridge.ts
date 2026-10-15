@@ -172,6 +172,12 @@ import {
   type SourceEvidenceKindsInput,
   type SourceEvidenceKindsResult,
 } from "./source-evidence-kind-contract.js";
+import {
+  type ReviewEvidencePreviewInput,
+  type ReviewEvidencePreviewResult,
+  reviewEvidencePreviewKeys,
+  reviewEvidencePreviewResultKeys,
+} from "./start-evidence-preview.js";
 import { normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
@@ -3085,6 +3091,7 @@ export interface BridgeCommandInputMap {
   "run.stop": RunLifecycleInput;
   "review.load": ReviewLoadInput;
   "review.dispatch": ReviewDispatchInput;
+  "review.preview-evidence": ReviewEvidencePreviewInput;
   "file.select": FileSelectInput;
   "source.add-url": SourceAddUrlInput;
   "export.write": ExportWriteInput;
@@ -3193,6 +3200,7 @@ export interface BridgeCommandOutputMap {
   "run.stop": RunStatus;
   "review.load": ReviewStateResult;
   "review.dispatch": ReviewStateResult;
+  "review.preview-evidence": ReviewEvidencePreviewResult;
   "file.select": FileSelectResult;
   "source.add-url": SourceAddUrlResult;
   "export.write": ExportResult;
@@ -4264,6 +4272,31 @@ function validateReviewLoadInput(value: unknown): ReviewLoadInput {
     ...(workspaceId === undefined ? {} : { workspaceId }),
     ...(runId === undefined ? {} : { runId }),
     ...(applicationId === undefined ? {} : { applicationId }),
+  };
+}
+
+function validateReviewEvidencePreviewInput(value: unknown): ReviewEvidencePreviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, reviewEvidencePreviewKeys)) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    ...(applicationId === undefined ? {} : { applicationId }),
+    ...(input.modelProfiles === undefined
+      ? {}
+      : { modelProfiles: parseModelProfileReferences(input.modelProfiles) }),
+  };
+}
+
+/** Only the preview's modes and counts cross the bridge; anything else is refused. */
+function normalizeReviewEvidencePreviewResult(value: unknown): ReviewEvidencePreviewResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, reviewEvidencePreviewResultKeys) || !("preview" in result)) {
+    return invalidInput();
+  }
+  return {
+    preview:
+      result.preview === null ? null : (normalizeRunEvidenceMode(result.preview) ?? invalidInput()),
   };
 }
 
@@ -5760,6 +5793,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "review.load", input: validateReviewLoadInput(command.input) };
     case "review.dispatch":
       return { type: "review.dispatch", input: validateReviewDispatchInput(command.input) };
+    case "review.preview-evidence":
+      return {
+        type: "review.preview-evidence",
+        input: validateReviewEvidencePreviewInput(command.input),
+      };
     case "file.select":
       return { type: "file.select", input: validateFileSelectInput(command.input) };
     case "source.add-url":
@@ -8156,6 +8194,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "review.load":
     case "review.dispatch":
       return normalizeReviewState(value);
+    case "review.preview-evidence":
+      return normalizeReviewEvidencePreviewResult(value);
     case "file.select":
       return normalizeFileResult(value);
     case "source.add-url":
