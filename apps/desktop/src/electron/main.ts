@@ -15,7 +15,7 @@ import {
   runCredentialAcceptance,
 } from "./credential-acceptance.js";
 import { createHostErrorLogger } from "./diagnostics.js";
-import { chooseMarkdownExportPath } from "./dialogs.js";
+import { chooseMarkdownExportPath, chooseMarkdownSavePath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
 import {
@@ -357,6 +357,8 @@ app.whenReady().then(async () => {
                   )[0],
                 chooseMarkdownExportPath: (defaultPath) =>
                   chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
+                chooseMarkdownSavePath: (suggestedName) =>
+                  chooseMarkdownSavePath(mainWindow, suggestedName, dialog),
               },
     credentials: credentialStore,
     ...(acceptanceEnabled

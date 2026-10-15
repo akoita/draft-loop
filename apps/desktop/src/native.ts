@@ -28,6 +28,7 @@ import {
   type KnowledgeStoreResult,
   type KnowledgeUrlImportResult,
   type KnowledgeWorkspaceSourcesImportInput,
+  type MarkdownFileSaveResult,
   type ModelCandidate,
   type ModelCompany,
   type ModelDiscoveryProvider,
@@ -366,6 +367,14 @@ export interface DesktopApplicationCapabilities {
    * leaves the review on the run it shows: later loads and changes still target that run.
    */
   readonly loadRunForComparison?: (runId: string) => Promise<DesktopReviewState>;
+  /**
+   * Saves Markdown the renderer prepared, such as a run comparison, where the person picks in a
+   * save dialog. Resolves with whether it was saved and the file's name.
+   */
+  readonly saveMarkdownFile?: (
+    suggestedName: string,
+    content: string,
+  ) => Promise<MarkdownFileSaveResult>;
 }
 
 /**
@@ -490,6 +499,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       scopeTo(undefined);
       return refresh();
     },
+    ...(capabilityPort.hasCapability("file.save-markdown")
+      ? {
+          saveMarkdownFile: async (suggestedName: string, content: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "file.save-markdown",
+                input: { suggestedName, content },
+              }),
+            ),
+        }
+      : {}),
     ...(capabilityPort.hasCapability("application.list")
       ? {
           selectApplication: (selected: string | null) => {

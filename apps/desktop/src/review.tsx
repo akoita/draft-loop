@@ -87,6 +87,7 @@ import {
 import {
   type LoadRunForComparison,
   RunComparisonView,
+  type SaveMarkdownFile,
   useRunComparison,
 } from "./run-comparison.js";
 import { comparingRunsBlocker, type RunComparisonState } from "./run-comparison-model.js";
@@ -144,6 +145,8 @@ interface ReviewWorkspaceProps {
   readonly onOpenRun?: (runId: string | null) => void;
   /** Reads another run for the run comparison without opening it; absent offers no comparison. */
   readonly onLoadRunForComparison?: LoadRunForComparison;
+  /** Saves an exported run comparison where the reviewer picks; absent offers no export. */
+  readonly onSaveMarkdownFile?: SaveMarkdownFile;
   /** The run comparison to start on; for static rendering in tests. */
   readonly initialRunComparison?: RunComparisonState | null;
   readonly onBulkFindingDecision?: (
@@ -858,6 +861,7 @@ export function ReviewWorkspace({
   onAction: dispatchReviewAction,
   onOpenRun,
   onLoadRunForComparison,
+  onSaveMarkdownFile,
   initialRunComparison = null,
   onBulkFindingDecision,
   pendingBulkFindingCount = null,
@@ -2838,6 +2842,7 @@ export function ReviewWorkspace({
               state={state}
               onSwap={runComparison.swap}
               onClose={runComparison.close}
+              {...(onSaveMarkdownFile === undefined ? {} : { onSaveMarkdown: onSaveMarkdownFile })}
             />
           )}
           {/* A jump target, so "go to the draft" can land focus here and not only scroll. */}

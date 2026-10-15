@@ -5,14 +5,26 @@
  * The right draft is marked against the left with the same redline as the version compare, so
  * a removal is struck and an addition underlined rather than told apart by colour alone.
  *
+ * Above the drafts, a table compares what each run recorded (models, rounds, readiness,
+ * coverage, blocking findings and cost) and says in words where the runs' inputs differ, so a
+ * model pair is not credited for a better input. "Export comparison" saves that table, the input
+ * differences and both drafts as a Markdown file where the reviewer picks.
+ *
  * Both drafts are read-only. The other run's draft comes from a read-only load that leaves the
  * review on the open run, and the review stops every change while the comparison is shown.
  * "Close comparison" and Escape return to the open run.
  */
-import { type JSX, useCallback, useEffect, useReducer, useRef } from "react";
+import { type JSX, useCallback, useEffect, useReducer, useRef, useState } from "react";
 
+import type { MarkdownFileSaveResult } from "./bridge.js";
 import { BlockRedline, pairDraftSections } from "./draft-redline.js";
 import type { DesktopReviewState, ReviewArtifact } from "./model.js";
+import {
+  comparisonMarkdownFits,
+  runComparisonFileName,
+  runComparisonMarkdown,
+} from "./run-comparison-export.js";
+import { type RunComparisonFacts, runComparisonFacts } from "./run-comparison-facts.js";
 import {
   type ComparisonSide,
   comparisonSides,
@@ -23,6 +35,12 @@ import {
 
 /** Reads one of the application's runs for comparison without opening it. */
 export type LoadRunForComparison = (runId: string) => Promise<DesktopReviewState>;
+
+/** Saves Markdown where the reviewer picks in a save dialog. */
+export type SaveMarkdownFile = (
+  suggestedName: string,
+  content: string,
+) => Promise<MarkdownFileSaveResult>;
 
 export interface RunComparisonControls {
   /** The comparison shown over the open run, or null when there is none. */
@@ -187,23 +205,113 @@ function MarkedDraft({
   );
 }
 
+/** What each run recorded, side by side, and where the runs' inputs differ. */
+export function RunComparisonFactsTable({
+  facts,
+}: {
+  readonly facts: RunComparisonFacts;
+}): JSX.Element {
+  return (
+    <section className="run-comparison-summary" aria-label="What each run recorded">
+      <table className="run-comparison-table">
+        <caption className="subtle">Each value is what that run recorded.</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              <span className="sr-only">Fact</span>
+            </th>
+            <th scope="col">{facts.leftLabel}</th>
+            <th scope="col">{facts.rightLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {facts.facts.map((fact) => (
+            <tr key={fact.key} data-fact={fact.key}>
+              <th scope="row">
+                {fact.label}
+                {fact.note === undefined ? null : (
+                  <span className="run-comparison-note">{fact.note}</span>
+                )}
+              </th>
+              <td data-run={facts.leftLabel}>{fact.left}</td>
+              <td data-run={facts.rightLabel}>{fact.right}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="run-comparison-inputs">
+        <h3>Input differences</h3>
+        <ul>
+          {facts.inputs.map((input) => (
+            <li key={input.key} data-input={input.key} data-status={input.status}>
+              {input.message}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+type ExportStatus =
+  | { readonly kind: "idle" }
+  | { readonly kind: "saving" }
+  | { readonly kind: "saved"; readonly fileName: string | null }
+  | { readonly kind: "cancelled" }
+  | { readonly kind: "failed"; readonly message: string };
+
+function ExportStatusLine({ status }: { readonly status: ExportStatus }): JSX.Element | null {
+  switch (status.kind) {
+    case "idle":
+      return null;
+    case "saving":
+      return (
+        <p className="subtle run-comparison-export-status" role="status">
+          Saving the comparison…
+        </p>
+      );
+    case "saved":
+      return (
+        <p className="subtle run-comparison-export-status" role="status">
+          Comparison saved{status.fileName === null ? "" : ` as ${status.fileName}`}.
+        </p>
+      );
+    case "cancelled":
+      return (
+        <p className="subtle run-comparison-export-status" role="status">
+          Export cancelled; nothing was saved.
+        </p>
+      );
+    case "failed":
+      return (
+        <p className="warning-copy run-comparison-export-status" role="alert">
+          The comparison could not be saved: {status.message}
+        </p>
+      );
+  }
+}
+
 /**
- * The comparison itself: a header with the swap and close controls, room for what later
- * compares the runs' facts, and the two drafts. It carries no edit, decision, approval or
- * export control.
+ * The comparison itself: a header with the swap, export and close controls, the runs' recorded
+ * facts and input differences, and the two drafts. It carries no edit, decision or approval
+ * control; the export only writes the file the reviewer picks.
  */
 export function RunComparisonView({
   comparison,
   state,
   onSwap,
   onClose,
+  onSaveMarkdown,
 }: {
   readonly comparison: RunComparisonState;
   readonly state: DesktopReviewState;
   readonly onSwap: () => void;
   readonly onClose: () => void;
+  /** Saves the exported comparison; absent when the host cannot save a file. */
+  readonly onSaveMarkdown?: SaveMarkdownFile;
 }): JSX.Element {
   const { left, right } = comparisonSides(comparison, state);
+  const [exportStatus, setExportStatus] = useState<ExportStatus>({ kind: "idle" });
   const closeRef = useRef<HTMLButtonElement>(null);
   // Entering the comparison moves focus into it, so Tab continues from the comparison.
   useEffect(() => {
@@ -211,6 +319,40 @@ export function RunComparisonView({
   }, []);
   const leftArtifact = left.draft.status === "loaded" ? left.draft.artifact : null;
   const rightArtifact = right.draft.status === "loaded" ? right.draft.artifact : null;
+  const facts =
+    left.state === null || right.state === null
+      ? null
+      : runComparisonFacts(left.state, right.state, {
+          left: left.facts.label,
+          right: right.facts.label,
+        });
+
+  const exportComparison = (): void => {
+    if (onSaveMarkdown === undefined || facts === null) return;
+    const content = runComparisonMarkdown({ facts, left: leftArtifact, right: rightArtifact });
+    if (!comparisonMarkdownFits(content)) {
+      setExportStatus({
+        kind: "failed",
+        message: "it is larger than the 2 MB a saved file can be.",
+      });
+      return;
+    }
+    setExportStatus({ kind: "saving" });
+    void onSaveMarkdown(runComparisonFileName(facts.leftLabel, facts.rightLabel), content).then(
+      (result) =>
+        setExportStatus(
+          result.saved ? { kind: "saved", fileName: result.fileName } : { kind: "cancelled" },
+        ),
+      (reason: unknown) =>
+        setExportStatus({
+          kind: "failed",
+          message:
+            reason instanceof Error && reason.message !== ""
+              ? reason.message
+              : "The file could not be written.",
+        }),
+    );
+  };
 
   return (
     <section className="run-comparison" aria-label="Run comparison">
@@ -234,6 +376,16 @@ export function RunComparisonView({
           >
             Swap sides
           </button>
+          {onSaveMarkdown === undefined ? null : (
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={facts === null || exportStatus.kind === "saving"}
+              onClick={exportComparison}
+            >
+              Export comparison
+            </button>
+          )}
           <button
             className="button button-outline"
             type="button"
@@ -245,6 +397,8 @@ export function RunComparisonView({
           </button>
         </div>
       </header>
+      <ExportStatusLine status={exportStatus} />
+      {facts === null ? null : <RunComparisonFactsTable facts={facts} />}
       <div className="run-comparison-grid">
         <div className="diff-column run-comparison-side">
           <SideHeading side={left} id="run-comparison-left" />

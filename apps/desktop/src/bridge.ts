@@ -983,6 +983,21 @@ const fileSelectKeys = inputKeys<FileSelectInput>()([
   "target",
 ]);
 
+/**
+ * Markdown the renderer prepared, saved where the person picks in a save dialog. The host writes
+ * nothing when the dialog is cancelled.
+ */
+export interface MarkdownFileSaveInput {
+  /** A plain `.md` file name the dialog suggests; never a path. */
+  readonly suggestedName: string;
+  readonly content: string;
+}
+
+const markdownFileSaveKeys = inputKeys<MarkdownFileSaveInput>()(["suggestedName", "content"]);
+
+/** The most Markdown one save writes, in UTF-8 bytes. */
+export const maximumMarkdownFileSaveBytes = 2_000_000;
+
 export interface SourceAddUrlInput {
   readonly workspaceId: string;
   readonly url: string;
@@ -2098,6 +2113,14 @@ export interface FileSelectResult {
   readonly files: readonly SelectedFile[];
 }
 
+/** Whether the file was saved, and the name the person gave it; no folder crosses back. */
+export interface MarkdownFileSaveResult {
+  readonly saved: boolean;
+  readonly fileName: string | null;
+}
+
+const markdownFileSaveResultKeys = resultKeys<MarkdownFileSaveResult>()(["saved", "fileName"]);
+
 const fileSelectResultKeys = resultKeys<FileSelectResult>()(["files"]);
 const selectedFileKeys = resultKeys<SelectedFile>()([
   "id",
@@ -3093,6 +3116,7 @@ export interface BridgeCommandInputMap {
   "review.dispatch": ReviewDispatchInput;
   "review.preview-evidence": ReviewEvidencePreviewInput;
   "file.select": FileSelectInput;
+  "file.save-markdown": MarkdownFileSaveInput;
   "source.add-url": SourceAddUrlInput;
   "export.write": ExportWriteInput;
   "credential.status": CredentialStatusInput;
@@ -3202,6 +3226,7 @@ export interface BridgeCommandOutputMap {
   "review.dispatch": ReviewStateResult;
   "review.preview-evidence": ReviewEvidencePreviewResult;
   "file.select": FileSelectResult;
+  "file.save-markdown": MarkdownFileSaveResult;
   "source.add-url": SourceAddUrlResult;
   "export.write": ExportResult;
   "credential.status": CredentialStatus;
@@ -5229,6 +5254,22 @@ function validateCanonicalCandidateProfileReviewInput(
   };
 }
 
+function validateMarkdownFileSaveInput(value: unknown): MarkdownFileSaveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, markdownFileSaveKeys)) return invalidInput();
+  const suggestedName = pathSegment(input.suggestedName);
+  if (!suggestedName.toLowerCase().endsWith(".md") || suggestedName.length > 120) {
+    return invalidInput();
+  }
+  if (
+    typeof input.content !== "string" ||
+    new TextEncoder().encode(input.content).length > maximumMarkdownFileSaveBytes
+  ) {
+    return invalidInput();
+  }
+  return { suggestedName, content: input.content };
+}
+
 function validateExportWriteInput(value: unknown): ExportWriteInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, exportWriteKeys)) return invalidInput();
@@ -5800,6 +5841,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       };
     case "file.select":
       return { type: "file.select", input: validateFileSelectInput(command.input) };
+    case "file.save-markdown":
+      return { type: "file.save-markdown", input: validateMarkdownFileSaveInput(command.input) };
     case "source.add-url":
       return { type: "source.add-url", input: validateSourceAddUrlInput(command.input) };
     case "export.write":
@@ -7430,6 +7473,16 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   } as unknown as DesktopReviewState;
 }
 
+function normalizeMarkdownFileSaveResult(value: unknown): MarkdownFileSaveResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, markdownFileSaveResultKeys) || typeof result.saved !== "boolean") {
+    return invalidInput();
+  }
+  if (!result.saved)
+    return result.fileName === null ? { saved: false, fileName: null } : invalidInput();
+  return { saved: true, fileName: pathSegment(result.fileName) };
+}
+
 function normalizeFileResult(value: unknown): FileSelectResult {
   const result = requireRecord(value);
   if (
@@ -8198,6 +8251,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeReviewEvidencePreviewResult(value);
     case "file.select":
       return normalizeFileResult(value);
+    case "file.save-markdown":
+      return normalizeMarkdownFileSaveResult(value);
     case "source.add-url":
       return normalizeSourceAddUrlResult(value);
     case "export.write":
