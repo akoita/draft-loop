@@ -1,5 +1,6 @@
 import {
   CliUserError,
+  canonicalCandidateProfileTimestampErrorMessage,
   EmbeddingModelInstallError,
   JobRequirementUserError,
   OpportunityJobPageUnreadableError,
@@ -207,6 +208,14 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
   }
   // The retrieval-mode file's own validation message names the setting, never a path.
   if (command.type.startsWith("workspace.retrieval-mode.") && error instanceof CliUserError) {
+    return error.message;
+  }
+  // A profile edit or review dated well before its parent version is refused with a fixed sentence.
+  if (
+    (command.type === "profile.edit" || command.type === "profile.review") &&
+    error instanceof Error &&
+    error.message === canonicalCandidateProfileTimestampErrorMessage
+  ) {
     return error.message;
   }
   // A stale brief version is the one opportunity failure a person can act on: reload and retry.

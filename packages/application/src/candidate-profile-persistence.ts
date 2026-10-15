@@ -1,3 +1,4 @@
+import { notBeforeWithinClockStep } from "@draft-loop/orchestrator";
 import type {
   CanonicalCandidateProfile,
   CanonicalCandidateProfileInput,
@@ -58,6 +59,8 @@ export const canonicalCandidateProfileCorruptRecordErrorMessage =
   "The stored canonical candidate profile record is invalid.";
 export const canonicalCandidateProfilePatchErrorMessage =
   "The canonical candidate profile patch is invalid.";
+export const canonicalCandidateProfileTimestampErrorMessage =
+  "The canonical candidate profile timestamp precedes its previous version.";
 export const canonicalCandidateProfileIdentityErrorMessage =
   "The canonical candidate profile identity is invalid.";
 
@@ -212,14 +215,20 @@ function nextVersion(version: number): number {
   return version + 1;
 }
 
-function assertTimestampNotBefore(value: string, previous: string): void {
-  if (
-    !canonicalCandidateProfileTimestampPattern.test(value) ||
-    Number.isNaN(Date.parse(value)) ||
-    Date.parse(value) < Date.parse(previous)
-  ) {
+/**
+ * Date a new version no earlier than its parent. A wall clock that stepped back
+ * a moment (about 1.2 s under load) is clamped to the parent; a stamp well
+ * before it is still refused.
+ */
+function versionTimestamp(value: string, previous: string): string {
+  if (!canonicalCandidateProfileTimestampPattern.test(value) || Number.isNaN(Date.parse(value))) {
     throw new Error(canonicalCandidateProfilePatchErrorMessage);
   }
+  const stamped = notBeforeWithinClockStep(value, previous);
+  if (Date.parse(stamped) < Date.parse(previous)) {
+    throw new Error(canonicalCandidateProfileTimestampErrorMessage);
+  }
+  return stamped;
 }
 
 function assertEditablePatch(patch: CanonicalCandidateProfilePatch): void {
@@ -314,14 +323,14 @@ export function createCanonicalCandidateProfilePersistenceService(
     );
     assertExpectedVersion(command.expectedVersion, latest.profile.version);
     assertEditablePatch(command.patch);
-    assertTimestampNotBefore(command.updatedAt, latest.profile.updatedAt);
+    const updatedAt = versionTimestamp(command.updatedAt, latest.profile.updatedAt);
     const edited = buildCanonicalCandidateProfile({
       ...latest.profile,
       ...command.patch,
       version: nextVersion(latest.profile.version),
       parentVersion: latest.profile.version,
       status: "draft",
-      updatedAt: command.updatedAt,
+      updatedAt,
       reviewedAt: undefined,
     });
     return saveCanonicalCandidateProfile(command.workspaceId, edited);
@@ -340,14 +349,14 @@ export function createCanonicalCandidateProfilePersistenceService(
     if (latest.profile.status !== "draft") {
       throw new Error("Only a draft canonical candidate profile can be reviewed.");
     }
-    assertTimestampNotBefore(command.reviewedAt, latest.profile.updatedAt);
+    const reviewedAt = versionTimestamp(command.reviewedAt, latest.profile.updatedAt);
     const reviewed = buildCanonicalCandidateProfile({
       ...latest.profile,
       version: nextVersion(latest.profile.version),
       parentVersion: latest.profile.version,
       status: "reviewed",
-      updatedAt: command.reviewedAt,
-      reviewedAt: command.reviewedAt,
+      updatedAt: reviewedAt,
+      reviewedAt,
     });
     return saveCanonicalCandidateProfile(command.workspaceId, reviewed);
   };

@@ -1,5 +1,6 @@
 import {
   CliUserError,
+  canonicalCandidateProfileTimestampErrorMessage,
   JobRequirementUserError,
   OpportunityJobPageUnreadableError,
   OpportunityJobTextGarbledError,
@@ -36,6 +37,18 @@ describe("unreadable job page failure", () => {
     );
     expect(hostFailureMessage(create, new Error("private page text"))).toBe(
       "The opportunity action failed with an unexpected error.",
+    );
+  });
+});
+
+describe("a profile version dated before its parent", () => {
+  it("shows the fixed refusal on an edit or a review only", () => {
+    const error = new Error(canonicalCandidateProfileTimestampErrorMessage);
+    for (const type of ["profile.edit", "profile.review"]) {
+      expect(hostFailureMessage({ type, input: {} } as never, error)).toBe(error.message);
+    }
+    expect(hostFailureMessage({ type: "profile.derive", input: {} } as never, error)).toBe(
+      "Generating the candidate profile failed with an unexpected error.",
     );
   });
 });

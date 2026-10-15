@@ -23,6 +23,7 @@ import {
   canonicalCandidateProfileIdentityErrorMessage,
   canonicalCandidateProfileNotFoundErrorMessage,
   canonicalCandidateProfilePatchErrorMessage,
+  canonicalCandidateProfileTimestampErrorMessage,
   canonicalCandidateProfileVersionStaleErrorMessage,
   createCanonicalCandidateProfilePersistenceService,
 } from "./candidate-profile-persistence.js";
@@ -357,6 +358,64 @@ describe("canonical candidate profile persistence service", () => {
       (await service.getLatestCanonicalCandidateProfile("workspace-1", initial.profile.id))?.profile
         .extraction,
     ).toEqual(extraction);
+  });
+
+  it("clamps an edit and a review to their parent when the clock steps back a moment", async () => {
+    const { storage } = createMemoryStorage();
+    const service = createCanonicalCandidateProfilePersistenceService(storage);
+    const stepBack = (iso: string) => new Date(Date.parse(iso) - 1_200).toISOString();
+    await service.saveCanonicalCandidateProfile("workspace-1", profile());
+
+    const edited = await service.editLatestCanonicalCandidateProfile({
+      workspaceId: "workspace-1",
+      profileId: "profile-1",
+      expectedVersion: 1,
+      updatedAt: stepBack(createdAt),
+      patch: { issues: [] },
+    });
+    const reviewed = await service.reviewLatestCanonicalCandidateProfile({
+      workspaceId: "workspace-1",
+      profileId: "profile-1",
+      expectedVersion: 2,
+      reviewedAt: stepBack(edited.profile.updatedAt),
+    });
+
+    expect(edited.profile.updatedAt).toBe(createdAt);
+    expect(reviewed.profile.updatedAt).toBe(createdAt);
+    expect(reviewed.profile.reviewedAt).toBe(createdAt);
+    expect(reviewed.profile.status).toBe("reviewed");
+  });
+
+  it("still refuses a version dated well before its parent", async () => {
+    const { storage } = createMemoryStorage();
+    const service = createCanonicalCandidateProfilePersistenceService(storage);
+    const anHourEarlier = new Date(Date.parse(createdAt) - 3_600_000).toISOString();
+    await service.saveCanonicalCandidateProfile("workspace-1", profile());
+
+    await expect(
+      service.editLatestCanonicalCandidateProfile({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        expectedVersion: 1,
+        updatedAt: anHourEarlier,
+        patch: { issues: [] },
+      }),
+    ).rejects.toThrow(canonicalCandidateProfileTimestampErrorMessage);
+    await service.editLatestCanonicalCandidateProfile({
+      workspaceId: "workspace-1",
+      profileId: "profile-1",
+      expectedVersion: 1,
+      updatedAt: editedAt,
+      patch: { issues: [] },
+    });
+    await expect(
+      service.reviewLatestCanonicalCandidateProfile({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        expectedVersion: 2,
+        reviewedAt: anHourEarlier,
+      }),
+    ).rejects.toThrow(canonicalCandidateProfileTimestampErrorMessage);
   });
 
   it("rejects empty or unknown patches and stale or missing optimistic operations", async () => {
