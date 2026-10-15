@@ -1,4 +1,3 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,10 +7,8 @@ import {
   normalizeApplicationRuns,
   orderApplicationRuns,
 } from "./application-run-list.js";
-import { ApplicationRunList, runStartedLabel } from "./application-run-list-view.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
-import { ReviewWorkspace } from "./review.js";
+import { createFixtureReviewState } from "./model.js";
 
 function run(runId: string, startedAt: string, extra: Partial<ApplicationRunInput> = {}) {
   return {
@@ -146,65 +143,5 @@ describe("the run list over the bridge", () => {
         ok: false,
       });
     }
-  });
-});
-
-function render(applicationRuns?: readonly ApplicationRunRowView[] | null): string {
-  const state: DesktopReviewState = {
-    ...createFixtureReviewState(),
-    ...(applicationRuns === undefined ? {} : { applicationRuns }),
-  };
-  return renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
-}
-
-describe("the run list in the review", () => {
-  it("lists two runs newest first with models, round, status, score and the latest badge", () => {
-    const html = renderToStaticMarkup(<ApplicationRunList runs={[latest, earlier]} />);
-    expect(html).toContain("<h2>Runs (2)</h2>");
-    expect(html).toContain(
-      '<li class="application-run-row" aria-current="true">' +
-        '<time dateTime="2026-10-14T09:30:00.000Z">2026-10-14 09:30 UTC</time>' +
-        '<span class="application-run-models">claude-opus-4-1 → gpt-5</span>' +
-        "<span>round 2</span>" +
-        '<span class="application-run-state">awaiting approval</span>' +
-        '<span class="numeric" title="Mean of the latest evaluation&#x27;s readiness dimensions">' +
-        "mean score 0.72</span>" +
-        '<span class="application-run-latest">latest</span></li>',
-    );
-    expect(html).toContain(
-      '<li class="application-run-row">' +
-        '<time dateTime="2026-10-13T08:00:00.000Z">2026-10-13 08:00 UTC</time>' +
-        '<span class="application-run-models">claude-opus-4-1 → gpt-5</span>' +
-        "<span>round 1</span>" +
-        '<span class="application-run-state">stopped</span></li>',
-    );
-    expect(html.indexOf('run-row" aria-current')).toBeLessThan(html.indexOf("2026-10-13"));
-    expect(render([latest, earlier])).toContain('aria-label="application runs"');
-  });
-
-  it("shows one run as a single compact line", () => {
-    const html = renderToStaticMarkup(<ApplicationRunList runs={[latest]} />);
-    expect(html).not.toContain("<ol");
-    expect(html).not.toContain("<h2");
-    expect(html).toContain('<p class="application-run-row"><span class="label">Runs (1)</span>');
-    expect(html).toContain('<span class="application-run-latest">latest</span></p>');
-  });
-
-  it("says when a run recorded no models", () => {
-    const html = renderToStaticMarkup(
-      <ApplicationRunList runs={[{ ...latest, authorModel: "", criticModel: "" }]} />,
-    );
-    expect(html).toContain("models not recorded");
-  });
-
-  it("leaves a review outside an application exactly as before", () => {
-    const before = render();
-    expect(render(null)).toBe(before);
-    expect(render([])).toBe(before);
-    expect(before).not.toContain("application runs");
-  });
-
-  it("keeps an unreadable start time as recorded", () => {
-    expect(runStartedLabel("not a date")).toBe("not a date");
   });
 });

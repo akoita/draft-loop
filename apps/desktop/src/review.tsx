@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { ApplicationRunList } from "./application-run-list-view.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
 import {
   approvalReadinessForArtifact,
@@ -83,6 +82,7 @@ import {
 } from "./review-work-tabs.js";
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
+import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
 import {
@@ -3054,6 +3054,11 @@ export function ReviewWorkspace({
               <LoopRail activeIndex={loopStageIndex(state)} round={state.round} />
             </div>
             <div className="spine-meta">
+              <RunSwitcher
+                runs={state.applicationRuns}
+                viewedRunId={state.runId}
+                onOpenRun={onOpenRun}
+              />
               <div className="spine-versions">
                 {state.previousArtifact === null ? null : (
                   <span className="spine-version">v{state.previousArtifact.version}</span>
@@ -3585,12 +3590,6 @@ export function ReviewWorkspace({
               <RunTimeline events={state.events} describeState={stateLabel} />
             </div>
           </section>
-
-          <ApplicationRunList
-            runs={state.applicationRuns}
-            viewedRunId={state.runId}
-            onOpen={onOpenRun}
-          />
 
           <section className="trust-strip" aria-label="trust and policy summary">
             {/* The lineage qualifies the identity it belongs to, so it is read here
