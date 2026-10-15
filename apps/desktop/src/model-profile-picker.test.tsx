@@ -60,13 +60,14 @@ describe("desktop model profile picker rendering", () => {
     );
     expect(legacyHtml).not.toContain("Illustrative public API token-cost scenario");
     const html = renderPicker(supportState(true), economy);
-    expect(html).toContain("Applied next-run profiles");
+    // The applied pair is the editor's one "Now:" line, outside the picker.
+    expect(html).not.toContain("Applied next-run profiles");
     expect(html).toContain("Choose a model pair");
-    expect(html).toContain("Applied: Economy — Claude Haiku 5.5 writes, GPT-6 Luna reviews");
-    expect(html).toContain("Quality unvalidated; account availability unchecked");
-    expect(html).toContain("effort medium; output 32768 tokens; thinking provider-default");
-    expect(html).toContain("<summary>Details</summary>");
     expect(html).not.toContain("<details open");
+    // The quality and sign-in note is one line; its full, unchanged text waits behind More.
+    expect(html).toMatch(
+      /<details class="model-profile-picker-notice"><summary><span[^>]*>Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions\.<\/span> <span[^>]*>More<\/span><\/summary>/,
+    );
     expect(html).toContain("Quality for real CVs has not been validated");
     expect(html).toContain("DraftLoop never switches your sign-in automatically.");
     expect(html).toContain("Sending candidate material still asks for your approval each time.");
@@ -105,6 +106,15 @@ describe("desktop model profile picker rendering", () => {
     );
     expect(cards).toContain("Writer $0.75 / $3.75");
     expect(cards).toContain("Writer $1.36 / $4.18");
+    // Compact cards: an arrow and one short price line on screen, the full wording for assistive tech.
+    expect(cards).toContain('<span aria-hidden="true">Claude Haiku 5.5 → GPT-6 Luna</span>');
+    expect(cards).toContain(
+      '<span aria-hidden="true">$0.10/$0.50 · $0.10/$0.50 per M tokens</span><span class="sr-only">Writer $0.10 / $0.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)</span>',
+    );
+    expect(cards).toContain(
+      'title="Writer $4 / $20 · Reviewer $2 / $10 per million tokens (input / output)"',
+    );
+    expect(cards).toContain(">$4/$20 · $2/$10 per M tokens<");
     expect(cards).toContain("Unvalidated");
     expect(cards).toContain("Development</span>");
     expect(cards).not.toContain("economy-anthropic-author");
@@ -116,7 +126,8 @@ describe("desktop model profile picker rendering", () => {
   it("checks the applied preset and hides the exact selects", () => {
     const html = renderPicker(supportState(true), economy);
     expect(html).toMatch(/checked="" value="economy"/);
-    expect(html.match(/<summary>Details<\/summary>/g)).toHaveLength(1);
+    // The applied pair's details live under the editor's "Now:" line; an unchanged draft adds none.
+    expect(html).not.toContain("<summary>Details</summary>");
     expect(html).not.toMatch(/checked="" value="custom"/);
     expect(html).not.toContain('aria-label="Author profile"');
     expect(html).not.toContain('aria-label="Critic profile"');
@@ -137,18 +148,13 @@ describe("desktop model profile picker rendering", () => {
     const mixedHtml = renderPicker(supportState(true), mixed);
     expect(mixedHtml).toMatch(/checked="" value="custom"/);
     expect(mixedHtml).toContain('aria-label="Author profile"');
-    expect(mixedHtml).toContain(
-      "Applied: Custom pair — Claude Haiku 5.5 writes, GPT-6.1 Sol reviews",
-    );
   });
 
   it("marks presets unavailable for the current sign-in and keeps Apply disabled", () => {
     const html = renderPicker(supportState(false), economy);
     expect(html).toContain("Not available with your current sign-in");
-    expect(html).toContain("Unsupported with the configured authentication route");
     expect(html).toContain("The configured authentication route does not support");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Apply for future runs/);
-    expect(html).toContain("Applied next-run profiles");
     const custom = renderPicker(supportState(false), null);
     expect(custom).toContain("unsupported with current route");
   });
@@ -170,6 +176,19 @@ describe("desktop model profile picker rendering", () => {
     expect(html).not.toContain("Use workspace models");
   });
 
+  it("keeps Cancel and Apply together in the actions bar, after every option", () => {
+    const html = renderPicker(supportState(true), economy, false, true);
+    const actions = html.slice(html.indexOf('<div class="model-profile-picker-actions">'));
+    expect(actions).toMatch(
+      /^<div class="model-profile-picker-actions"><button[^>]*>Cancel<\/button>/,
+    );
+    expect(actions).toContain(">Apply for future runs</button>");
+    expect(html.indexOf("model-profile-picker-actions")).toBeGreaterThan(
+      html.indexOf('value="custom"'),
+    );
+    expect(html.indexOf(">Cancel</button>")).toBeGreaterThan(html.indexOf("</fieldset>"));
+  });
+
   it("shows why a saved pair is not used while nothing is applied", () => {
     const html = renderToStaticMarkup(
       <ModelProfilePicker
@@ -189,12 +208,10 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain("is not used because the critic changed.");
   });
 
-  it("shows the saved pair as applied with its exact versions after a reopen", () => {
+  it("checks the saved pair's preset after a reopen without the legacy message", () => {
     const html = renderPicker(supportState(true), economy);
 
-    expect(html).toContain("Applied next-run profiles");
-    expect(html).toContain(`${economy.author.id}@${economy.author.version}`);
-    expect(html).toContain(`${economy.critic.id}@${economy.critic.version}`);
+    expect(html).toMatch(/checked="" value="economy"/);
     expect(html).not.toContain("legacy path");
   });
 });

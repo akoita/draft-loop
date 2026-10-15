@@ -1267,12 +1267,25 @@ The native host can report which registered exact profiles the active
 workspace's configured authentication routes support. This is local metadata
 and makes no credential or provider calls. The editor's **Presets** view offers
 presets and role-specific exact profile choices when both model-configuration
-and route-support capabilities are available. Each preset is a card that names
-the writing and reviewing models in plain language, shows the providers and
-public per-million-token prices, and carries **Unvalidated**, **Development**,
-and **Not available with your current sign-in** badges where they apply. A
-**Custom pair** card reveals the exact author and critic profile selects, and
-exact IDs and runtime controls sit in a collapsed **Details** disclosure.
+and route-support capabilities are available.
+
+The editor fits a 1280×800 window without scrolling:
+
+- **One summary line** names what new runs use now, for example "Now: Standard —
+  Claude Opus 5.5 writes · GPT-6.1 Sol reviews". Exact model IDs, profile
+  versions and runtime controls sit under its collapsed **Details** disclosure.
+- **Compact preset cards** sit in up to three columns. Each names the writer →
+  reviewer pair, the providers, and the public per-million-token prices as one
+  short line; the full wording stays available to screen readers and on hover.
+  Cards carry **Unvalidated**, **Development**, and **Not available with your
+  current sign-in** badges where they apply.
+- **Custom pair** is a card of the same size that reveals the exact author and
+  critic profile selects.
+- **The quality and sign-in note** is one line, with the full text behind
+  **More**.
+- **Cancel** and **Apply for future runs** sit in a bar pinned to the bottom of
+  the window.
+
 Choices stay a draft until **Apply for future runs** saves their provider/model
 destinations and the pair itself. Existing run records remain unchanged.
 Unsupported or unavailable routes block profile-backed starts, and
@@ -1283,7 +1296,7 @@ switched automatically.
 The applied pair is the one the CLI saves in `.draft-loop/model-profile-selection.json`
 (see [Applied profile pair](#applied-profile-pair)). The desktop reads it when a
 workspace opens, so after reopening the workspace or restarting the app the
-dialog shows **Applied next-run profiles** with the exact versions, and new
+editor's summary line names that pair, its **Details** list the exact versions, and new
 runs send that pair. If the pair cannot be saved, the dialog says so and does
 not show it as applied, although the models themselves were already changed.
 Saving custom models clears the pair. A saved pair that no longer matches the

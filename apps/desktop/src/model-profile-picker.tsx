@@ -1,15 +1,14 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ModelProfileSupportResult } from "./bridge.js";
 import { customPresetValue, ModelPresetCards } from "./model-preset-cards.js";
 import { ModelProfileBudget } from "./model-profile-budget.js";
+import { ProfileDetails } from "./model-profile-details.js";
 import {
   type ModelProfileSupportState,
   modelProfileApplyDisabledMessage,
   modelProfileApplyErrorMessage,
   modelProfileCatalog,
-  modelProfileEntryForReference,
   modelProfileNotSupportedMessage,
   modelProfilePresetReferences,
   modelProfilePresets,
@@ -17,7 +16,6 @@ import {
   modelProfileRouteIsSupported,
   modelProfileSupportForContext,
 } from "./model-profile-picker-state.js";
-import { modelDisplayName, presetDisplayName } from "./model-profile-presentation.js";
 
 interface ModelProfilePickerProps {
   readonly workspaceId: string;
@@ -69,80 +67,6 @@ function presetForReferences(references: ModelProfileReferences | null): string 
       const presetReferences = modelProfilePresetReferences(preset);
       return modelProfileReferencesEqual(references, presetReferences);
     })?.id ?? ""
-  );
-}
-
-function appliedPresetName(presetId: string): string {
-  const preset = modelProfilePresets.find((entry) => entry.id === presetId);
-  return preset === undefined ? "Custom pair" : presetDisplayName(preset.label);
-}
-
-function appliedModelName(
-  reference: { readonly id: string; readonly version: number },
-  role: "author" | "critic",
-): string {
-  const entry = modelProfileEntryForReference(reference, role);
-  return entry === undefined ? reference.id : modelDisplayName(entry.profile.modelId);
-}
-
-function ProfileDetails({
-  reference,
-  profileRole,
-  support,
-}: {
-  readonly reference: { readonly id: string; readonly version: number };
-  readonly profileRole: "author" | "critic";
-  readonly support: ModelProfileSupportResult | undefined;
-}) {
-  const entry = modelProfileEntryForReference(reference, profileRole);
-  if (entry === undefined) return null;
-  const { profile } = entry;
-  const supported =
-    support === undefined ? undefined : modelProfileRouteIsSupported(reference, support);
-  const thinking = profile.runtime.thinking;
-  const thinkingDescription =
-    thinking.mode === "budgeted" ? `budgeted (${thinking.maxTokens} tokens)` : thinking.mode;
-  return (
-    <div className="model-profile-picker-details">
-      <strong>
-        {profile.id}@{profile.version}
-      </strong>
-      <dl>
-        <div>
-          <dt>Provider and model</dt>
-          <dd>
-            {profile.provider}/{profile.modelId}
-          </dd>
-        </div>
-        <div>
-          <dt>Tier and role</dt>
-          <dd>
-            {profile.tier} · {profile.roles.join(", ")}
-          </dd>
-        </div>
-        <div>
-          <dt>Runtime controls</dt>
-          <dd>
-            effort {profile.runtime.effort}; output {profile.runtime.maxOutputTokens} tokens;
-            thinking {thinkingDescription}
-          </dd>
-        </div>
-        <div>
-          <dt>Route support</dt>
-          <dd>
-            {supported === undefined
-              ? "Not checked"
-              : supported
-                ? "Supported with the configured authentication route"
-                : "Unsupported with the configured authentication route"}
-          </dd>
-        </div>
-        <div>
-          <dt>Validation and availability</dt>
-          <dd>Quality unvalidated; account availability unchecked</dd>
-        </div>
-      </dl>
-    </div>
   );
 }
 
@@ -212,7 +136,6 @@ export function ModelProfilePicker({
 
   const matchedPresetId = presetForReferences(selectedProfiles);
   const showCustom = customMode || matchedPresetId === "";
-  const appliedPresetId = presetForReferences(applied);
 
   const onPresetChange = (presetId: string) => {
     if (presetId === customPresetValue) {
@@ -284,22 +207,20 @@ export function ModelProfilePicker({
             Use workspace models
           </button>
         )}
-        {onCancel === undefined ? null : (
-          <button
-            className="button button-quiet"
-            type="button"
-            disabled={disabled || saving}
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        )}
       </div>
-      <p className="model-profile-picker-notice">
-        Quality for real CVs has not been validated for these presets, and account availability is
-        not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never
-        switches your sign-in automatically.
-      </p>
+      <details className="model-profile-picker-notice">
+        <summary>
+          <span className="model-profile-picker-notice-line">
+            Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.
+          </span>{" "}
+          <span className="model-profile-picker-notice-more">More</span>
+        </summary>
+        <p>
+          Quality for real CVs has not been validated for these presets, and account availability is
+          not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never
+          switches your sign-in automatically.
+        </p>
+      </details>
       {supportMessage === null ? null : (
         <p className="model-profile-picker-status" role="status">
           {supportMessage}
@@ -332,31 +253,7 @@ export function ModelProfilePicker({
             </p>
           )}
         </div>
-      ) : (
-        <div className="model-profile-picker-applied">
-          <strong>Applied next-run profiles</strong>
-          <p className="model-profile-picker-applied-summary">
-            Applied: {appliedPresetName(appliedPresetId)} —{" "}
-            {appliedModelName(applied.author, "author")} writes,{" "}
-            {appliedModelName(applied.critic, "critic")} reviews
-          </p>
-          <details className="model-profile-picker-more">
-            <summary>Details</summary>
-            <div className="model-profile-picker-profile-pair">
-              <ProfileDetails
-                reference={applied.author}
-                profileRole="author"
-                support={supportResult}
-              />
-              <ProfileDetails
-                reference={applied.critic}
-                profileRole="critic"
-                support={supportResult}
-              />
-            </div>
-          </details>
-        </div>
-      )}
+      ) : null}
       <ModelPresetCards
         groupName={`model-preset-${workspaceId}`}
         checkedValue={showCustom ? customPresetValue : matchedPresetId}
@@ -450,6 +347,16 @@ export function ModelProfilePicker({
         </p>
       )}
       <div className="model-profile-picker-actions">
+        {onCancel === undefined ? null : (
+          <button
+            className="button button-quiet"
+            type="button"
+            disabled={disabled || saving}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
         <button
           className="button button-primary"
           type="button"
