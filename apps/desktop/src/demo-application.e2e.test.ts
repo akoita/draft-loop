@@ -124,7 +124,11 @@ async function addSyntheticEvidence({ host, workspaceId }: DemoHost): Promise<vo
 }
 
 /** Generate profile with the demo's approval, then review it. */
-async function generateAndReviewProfile({ host, workspaceId }: DemoHost) {
+async function generateAndReviewProfile(
+  { host, workspaceId }: DemoHost,
+  /** Called before the edit and the review, so a test can move the wall clock. */
+  beforeStep: () => void = () => undefined,
+) {
   const derived = await invoke<{
     profileId: string;
     version: number;
@@ -146,6 +150,7 @@ async function generateAndReviewProfile({ host, workspaceId }: DemoHost) {
   // The open issues are the derivation's own omission warnings; the person acknowledges them,
   // sending the whole profile back as the Career profile page does.
   expect(derived.issues.every((issue) => issue.code === "omission")).toBe(true);
+  beforeStep();
   const acknowledged = await invoke<{ version: number }>(host, {
     type: "profile.edit",
     input: {
@@ -158,6 +163,7 @@ async function generateAndReviewProfile({ host, workspaceId }: DemoHost) {
       },
     },
   });
+  beforeStep();
   const reviewed = await invoke<{ status: string; version: number }>(host, {
     type: "profile.review",
     input: { workspaceId, profileId: derived.profileId, expectedVersion: acknowledged.version },
@@ -166,6 +172,22 @@ async function generateAndReviewProfile({ host, workspaceId }: DemoHost) {
 }
 
 describe("a demo workspace, offline end to end", () => {
+  it("reviews a profile although the wall clock steps back between its steps (#1299)", async () => {
+    const demo = await openDemoHost();
+    await addSyntheticEvidence(demo);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      let now = Date.parse("2026-10-15T10:00:00.000Z");
+      vi.setSystemTime(now);
+      await generateAndReviewProfile(demo, () => {
+        now -= 1_200;
+        vi.setSystemTime(now);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("adds evidence, builds a profile, extracts requirements and starts a review with no provider", async () => {
     const demo = await openDemoHost();
     const { port, workspaceId } = demo;
