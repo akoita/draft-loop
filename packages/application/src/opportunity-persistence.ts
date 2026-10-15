@@ -1,3 +1,4 @@
+import { notBeforeWithinClockStep } from "@draft-loop/orchestrator";
 import type { OpportunityBrief } from "@draft-loop/schemas";
 import type {
   OpportunityBriefStoragePort,
@@ -213,7 +214,9 @@ export function createOpportunityPersistenceService(
       { workspaceId: command.workspaceId, briefId: command.briefId },
     );
     assertExpectedVersion(command.expectedVersion, latest.brief.version);
-    const edited = editOpportunityDraft(latest.brief, command.patch, command.createdAt);
+    // A backward wall-clock step must not make a new version precede its parent.
+    const createdAt = notBeforeWithinClockStep(command.createdAt, latest.brief.createdAt);
+    const edited = editOpportunityDraft(latest.brief, command.patch, createdAt);
     return saveOpportunityBrief(command.workspaceId, edited);
   };
 
@@ -225,7 +228,8 @@ export function createOpportunityPersistenceService(
       { workspaceId: command.workspaceId, briefId: command.briefId },
     );
     assertExpectedVersion(command.expectedVersion, latest.brief.version);
-    const reviewed = reviewOpportunityDraft(latest.brief, command.reviewedAt);
+    const reviewedAt = notBeforeWithinClockStep(command.reviewedAt, latest.brief.createdAt);
+    const reviewed = reviewOpportunityDraft(latest.brief, reviewedAt);
     return saveOpportunityBrief(command.workspaceId, reviewed);
   };
 

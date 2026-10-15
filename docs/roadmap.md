@@ -1858,8 +1858,10 @@ The ordered issues ([#1092](https://github.com/akoita/draft-loop/issues/1092)):
 The fixture walk on 2026-10-15 is recorded in
 [First-run journey walk](evaluation/first-run-journey.md). It did not meet the
 exit criterion: in a demo workspace, profile generation has no fixture path, so
-a new application cannot start a review offline (#1251). The walk's other
-findings are #1252 to #1254.
+a new application cannot start a review offline. #1251 adds that offline path,
+and an end-to-end test now reaches a started review with no provider; a repeat
+walk in the app confirms the exit. The walk's other findings are #1252
+to #1254.
 
 It follows #1065 and comes ahead of the remaining Any-format career intake
 issues, because people must be able to use what already works.

@@ -40,6 +40,8 @@ export interface JobRequirementsExtractionBinding {
   readonly writingModel: { readonly company: string; readonly model: string };
   /** The job is an approved web address: extraction fetches the page before sending its text. */
   readonly jobFromUrl?: boolean;
+  /** A demo workspace extracts with local fixtures, so nothing is sent to a provider. */
+  readonly fixtureMode?: boolean;
   readonly disabled: boolean;
 }
 
@@ -132,6 +134,7 @@ export interface JobRequirementsExtractionViewProps {
   readonly phase: JobRequirementsPhase;
   readonly writingModel: JobRequirementsExtractionBinding["writingModel"];
   readonly jobFromUrl?: boolean;
+  readonly fixtureMode?: boolean;
   readonly disabled: boolean;
   /** The "Review requirements" action shown once a draft brief was saved. */
   readonly reviewAction?: ReactNode;
@@ -142,10 +145,44 @@ export interface JobRequirementsExtractionViewProps {
   readonly onCancelExtraction?: () => void;
 }
 
+const fixtureExtractionNote =
+  "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider.";
+
+/** The demo's consent step: the same Extract choice, worded as a local, offline action. */
+function FixtureExtractionConsent({
+  disabled,
+  onConfirm,
+  onCancel,
+}: Pick<JobRequirementsExtractionViewProps, "disabled" | "onConfirm" | "onCancel">) {
+  return (
+    <section className="job-extraction" aria-label="Extract requirements consent">
+      <p className="job-extraction-title">Extract requirements with local fixtures?</p>
+      <p className="setup-note">
+        Extract splits this application's job text into a draft opportunity brief on this computer.
+        Nothing is sent to a provider.
+      </p>
+      <div className="job-extraction-actions">
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={disabled}
+          onClick={onConfirm}
+        >
+          Extract
+        </button>
+        <button className="button button-quiet" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function JobRequirementsExtractionView({
   phase,
   writingModel,
   jobFromUrl = false,
+  fixtureMode = false,
   disabled,
   reviewAction = null,
   onOpen,
@@ -160,9 +197,11 @@ export function JobRequirementsExtractionView({
       return (
         <div className="job-extraction">
           <p className="setup-note">
-            {jobFromUrl
-              ? "Your writing model splits the job page into requirements you review."
-              : "Long or pasted job pages can be split into reviewable requirements with your writing model."}
+            {fixtureMode
+              ? fixtureExtractionNote
+              : jobFromUrl
+                ? "Your writing model splits the job page into requirements you review."
+                : "Long or pasted job pages can be split into reviewable requirements with your writing model."}
           </p>
           {phase.notice === undefined ? null : (
             <p className="setup-note" role="status">
@@ -181,6 +220,11 @@ export function JobRequirementsExtractionView({
         </div>
       );
     case "consent":
+      if (fixtureMode) {
+        return (
+          <FixtureExtractionConsent disabled={disabled} onConfirm={onConfirm} onCancel={onCancel} />
+        );
+      }
       return (
         <section className="job-extraction" aria-label="Extract requirements consent">
           <p className="job-extraction-title">Send the job description to the writing model?</p>
@@ -220,8 +264,9 @@ export function JobRequirementsExtractionView({
             <strong>Extracting requirements…</strong>
           </div>
           <p className="setup-note">
-            Waiting for {providerName} ({modelName}). Cancel to stop the request; nothing is saved
-            unless extraction finishes.
+            {fixtureMode
+              ? "Splitting the job text with local fixtures. Nothing is sent to a provider."
+              : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
           </p>
           {onCancelExtraction === undefined ? null : (
             <button
@@ -358,6 +403,7 @@ export function JobRequirementsExtraction({
       phase={phase}
       writingModel={binding.writingModel}
       {...(binding.jobFromUrl === true ? { jobFromUrl: true } : {})}
+      {...(binding.fixtureMode === true ? { fixtureMode: true } : {})}
       disabled={binding.disabled}
       reviewAction={
         briefOperations === undefined || phase.kind !== "done" ? null : (

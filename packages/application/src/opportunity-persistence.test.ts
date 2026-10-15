@@ -383,6 +383,58 @@ describe("opportunity persistence service", () => {
     expect(storage.saveOpportunityBrief).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps a new version from preceding its parent across a backward clock step", async () => {
+    const { storage } = createMemoryStorage();
+    const service = createOpportunityPersistenceService(storage);
+    const initial = await service.saveOpportunityBrief("workspace-1", opportunityBrief());
+    const parentTime = Date.parse(initial.brief.createdAt);
+    const stepBack = (time: number) => new Date(time - 1_200).toISOString();
+
+    const edited = await service.editLatestOpportunityBrief({
+      workspaceId: "workspace-1",
+      briefId: initial.brief.id,
+      expectedVersion: 1,
+      createdAt: stepBack(parentTime),
+      patch: {
+        role: { value: "Platform Engineer", sourceIds: ["job-source"] },
+        employer: { value: "Example Systems", sourceIds: ["job-source"] },
+        requirements: [
+          {
+            id: "requirement-1",
+            text: "Production systems experience",
+            priority: "critical",
+            sourceIds: ["job-source"],
+          },
+        ],
+      },
+    });
+    expect(edited.brief.createdAt).toBe(initial.brief.createdAt);
+
+    const reviewed = await service.reviewLatestOpportunityBrief({
+      workspaceId: "workspace-1",
+      briefId: initial.brief.id,
+      expectedVersion: 2,
+      reviewedAt: stepBack(Date.parse(edited.brief.createdAt)),
+    });
+    expect(reviewed.brief.createdAt).toBe(edited.brief.createdAt);
+  });
+
+  it("still rejects a version dated well before its parent", async () => {
+    const { storage } = createMemoryStorage();
+    const service = createOpportunityPersistenceService(storage);
+    const initial = await service.saveOpportunityBrief("workspace-1", opportunityBrief());
+
+    await expect(
+      service.editLatestOpportunityBrief({
+        workspaceId: "workspace-1",
+        briefId: initial.brief.id,
+        expectedVersion: 1,
+        createdAt: new Date(Date.parse(initial.brief.createdAt) - 3_600_000).toISOString(),
+        patch: { employer: { value: "Example Systems", sourceIds: ["job-source"] } },
+      }),
+    ).rejects.toThrow(/must be valid and not precede its parent/iu);
+  });
+
   it("propagates existing brief validation failures without saving", async () => {
     const { storage } = createMemoryStorage();
     const service = createOpportunityPersistenceService(storage);
