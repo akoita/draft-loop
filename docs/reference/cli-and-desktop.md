@@ -354,6 +354,20 @@ The latest run opens by default. Choosing an earlier run shows its draft,
 findings and coverage read-only, with Back to latest run one click away;
 choosing the latest run returns to it. The desktop host refuses any change to
 an earlier run.
+
+Beside it, **Run details** summarises the run in one line, such as
+"Opus 5.5 → GPT-6.1 Sol · full source, 282 chunks · policy active", and opens
+a drawer from the right with the run's provenance:
+
+- the author and critic with their claimed lineages;
+- the data and writing policy;
+- the evidence mode and the author input;
+- the event timeline, once the run is not executing;
+- **Start a new review**.
+
+What needs you stays outside the drawer. While a run executes, the side panel
+shows its progress, timeline and Stop. A paused or interrupted run keeps
+Resume in the side panel, and a shared-lineage warning stays there too.
 The row above the run header starts with Back, which returns to the previous
 page, followed by the flow strip, which opens either career page. Focus moves to the screen's location line when
 a screen opens, so the change is announced.
@@ -448,9 +462,10 @@ it appears on Home as Drafting and can be resumed there.
    Home lists the application as Exported.
 
    Once a run has stopped, finished or run out of budget, **Start a new review**
-   adds another run to the same application with the models set for new runs.
+   in **Run details** adds another run to the same application with the models set for new runs.
    The earlier run, its approval and its export are kept, so there is no need
-   to duplicate the application to try another model pair.
+   to duplicate the application to try another model pair. When it is the
+   next step, the side panel's "Next: start a new review" line opens the drawer.
 
    **Use a different model pair for this application** keeps the workspace's
    pair (the default) or picks a preset pair for this application alone, for
@@ -558,7 +573,7 @@ An autopilot review still pauses early when:
 
 The last round always ends in review, and approval and export stay with you.
 Turn it on in the desktop with the **Autopilot** checkbox on the start screen
-or in **Run progress**. In the CLI, pass `--autopilot` to `init`, or switch an
+or in **Run progress** (in **Run details** once the run stops executing). In the CLI, pass `--autopilot` to `init`, or switch an
 existing workspace:
 
 ```sh
@@ -1552,7 +1567,7 @@ records nothing extra. A missing setting means `full-source`; an unreadable one
 stops the run before anything is sent.
 
 The desktop review reads that recorded decision rather than a fresh retrieval.
-Its evidence strip and side panel show the run's chunk and source counts, for
+Its evidence strip and **Run details** show the run's chunk and source counts, for
 example "Full source: 181 chunks from 1 source", or say that retrieval was used
 and why. A `retrieval` run shows the excerpts setup selected, as before.
 
@@ -1560,7 +1575,7 @@ In either mode, each author step records what it was given as a
 `run.author-input` audit event: the round, the counts of chunks and profile
 facts sent, the totals in the pinned selection, and the ids of requirements no
 sent item matched. The event holds counts and ids only, never evidence text.
-The desktop review shows the run's latest event as "Author input": the items
+**Run details** shows the run's latest event as "Author input": the items
 sent out of the knowledge-base totals, and the requirements no sent item matched.
 
 Full source is the default because a long career loses most of its evidence to

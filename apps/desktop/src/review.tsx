@@ -4,6 +4,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -53,7 +54,6 @@ import {
   type ReviewArtifact,
   type ReviewBlock,
   type ReviewFinding,
-  type RunWritingPolicyProjection,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -63,10 +63,8 @@ import { footerBlocker, ReviewFooter } from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
-  finishedRunTitle,
   inProgressStatus,
   notIndexedRetrievalText,
-  reviewFinished,
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
@@ -80,7 +78,14 @@ import {
   reviewWorkPanelProps,
   useReviewWorkTab,
 } from "./review-work-tabs.js";
-import { runAuthorInputDisplay } from "./run-author-input.js";
+import {
+  nextStepOpensRunDetails,
+  policyChecksumLabel,
+  RunDetailsButton,
+  RunDetailsDrawer,
+  RunTrustWarning,
+  runDetailsSummary,
+} from "./run-details.js";
 import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
@@ -603,31 +608,6 @@ function LoopRail({
   );
 }
 
-/** How the trust panel presents a recorded independence claim. */
-type IndependenceTone = "independent" | "shared" | "unrecorded";
-
-interface IndependenceSummary {
-  readonly tone: IndependenceTone;
-  readonly mark: string;
-  readonly detail: string;
-  readonly overrideRationale: string | null;
-}
-
-/**
- * Read the run's recorded independence claim, rather than re-deriving one.
- *
- * This panel used to compare provider companies. That proxy is wrong in both
- * directions, and the damaging direction is that it reports "independent" for
- * two vendors serving one open-weights base model, on the surface a person
- * reads immediately before approving. Independence is now model lineage and it
- * is recorded by the domain (ADR 0005), so the only correct thing to do here is
- * report the record.
- *
- * A lineage is an operator label that nothing verifies, so no branch may read
- * as proof, and no shared lineage may read as independent whatever rationale
- * was recorded against it. An absent record is its own state: it is not
- * evidence of independence and not evidence against it.
- */
 /**
  * The approval-gate label for the recorded independence claim.
  *
@@ -644,53 +624,6 @@ function independenceGateLabel(view: IndependentReviewView | null): string {
     return "Shared lineage overridden on a recorded rationale; critique was not independent";
   }
   return "Author and critic share one lineage; critique was not independent";
-}
-
-function independenceSummary(view: IndependentReviewView | null): IndependenceSummary {
-  if (view === null) {
-    return {
-      tone: "unrecorded",
-      mark: "not recorded",
-      detail:
-        "No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
-      overrideRationale: null,
-    };
-  }
-  if (!view.required) {
-    return {
-      tone: "unrecorded",
-      mark: "not required",
-      detail: `Independent review was not required for this run; the claimed lineages ${
-        view.lineagesDistinct ? "differ" : "are the same"
-      }.`,
-      overrideRationale: null,
-    };
-  }
-  if (view.lineagesDistinct) {
-    return {
-      tone: "independent",
-      mark: "lineages differ",
-      detail:
-        "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
-      overrideRationale: null,
-    };
-  }
-  if (view.overrideRationale !== null) {
-    return {
-      tone: "shared",
-      mark: "overridden",
-      detail:
-        "Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.",
-      overrideRationale: view.overrideRationale,
-    };
-  }
-  return {
-    tone: "shared",
-    mark: "not independent",
-    detail:
-      "Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.",
-    overrideRationale: null,
-  };
 }
 
 function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
@@ -728,7 +661,7 @@ export function useModalFocusTrap(
     const focusableElements = (): readonly HTMLElement[] =>
       Array.from(
         dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [href], select, textarea, [tabindex]:not([tabindex="-1"])',
+          'button:not([disabled]), input:not([disabled]), [href], select, textarea, summary, [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
 
@@ -1203,15 +1136,6 @@ function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
 }
 
-function policyChecksumLabel(checksum: string): string {
-  return `${checksum.slice(0, 12)}…`;
-}
-
-function policyLineageLabel(policy: RunWritingPolicyProjection): string {
-  if (policy.lineage.kind === "workspace") return "Workspace policy";
-  return `Base ${policy.base?.version ?? policy.lineage.base.version} → override ${policy.override?.version ?? policy.lineage.override.version}`;
-}
-
 export function ReviewWorkspace({
   state,
   onAction: dispatchReviewAction,
@@ -1263,7 +1187,6 @@ export function ReviewWorkspace({
   const [extractionSignal, setExtractionSignal] = useState(0);
   const findingSummary = reviewFindingSummary(state);
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
-  const authorInput = runAuthorInputDisplay(state.authorInput);
   const { blocking: blockingFindings, warnings } = findingSummary;
   const acceptedBlockingFindings = blockingFindings.filter(
     (finding) => finding.decision === "accepted",
@@ -1304,7 +1227,6 @@ export function ReviewWorkspace({
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const runInProgress = reviewInProgress(state);
-  const runFinished = reviewFinished(state);
   // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
   const verdict =
     hasArtifact &&
@@ -1526,8 +1448,6 @@ export function ReviewWorkspace({
     state.budgetUsd === null || state.budgetUsd <= 0
       ? null
       : Math.min(1, state.totalCostUsd / state.budgetUsd);
-  // Independence is what the run recorded, never something this renderer infers.
-  const independence = independenceSummary(state.providerExposure.independentReview);
 
   useEffect(() => {
     const nextContext = `${state.workspaceId}:${state.runId}`;
@@ -1694,6 +1614,11 @@ export function ReviewWorkspace({
     },
     [readOnly],
   );
+  const [runDetailsOpen, setRunDetailsOpen] = useState(false);
+  const runDetailsButtonRef = useRef<HTMLButtonElement>(null);
+  const runDetailsId = `${useId()}-run-details`;
+  const openRunDetails = useCallback(() => setRunDetailsOpen(true), []);
+  const closeRunDetails = useCallback(() => setRunDetailsOpen(false), []);
 
   const submitUrl = (target: "job-description"): void => {
     const value = jobUrl.trim();
@@ -1971,6 +1896,17 @@ export function ReviewWorkspace({
         onChange={(enabled) => onAction({ type: "set-autopilot", enabled })}
       />
     );
+  const resumeButton = (
+    <button
+      className="button button-primary"
+      type="button"
+      disabled={!transmissionReady}
+      onClick={() => onAction({ type: "resume" })}
+    >
+      <PlayIcon />
+      Resume
+    </button>
+  );
   const pendingActionReason = readOnly
     ? earlierRunRefusal
     : pendingReviewAction === null
@@ -2985,6 +2921,32 @@ export function ReviewWorkspace({
       >
         {renderCommandPalette()}
         {renderStartConfirmation()}
+        <RunDetailsDrawer
+          id={runDetailsId}
+          open={runDetailsOpen}
+          onClose={closeRunDetails}
+          returnFocusRef={runDetailsButtonRef}
+          state={state}
+          describeState={stateLabel}
+          start={
+            readOnly
+              ? null
+              : {
+                  disabled:
+                    !transmissionReady ||
+                    startDisabledReason !== null ||
+                    pendingReviewAction !== null,
+                  pending: pendingReviewAction?.action === "start",
+                  blockedReason: startDisabledReason,
+                  onStart: () => {
+                    // The start confirmation is its own dialog, so this one closes first.
+                    closeRunDetails();
+                    requestStart({ type: "start" });
+                  },
+                }
+          }
+          autopilot={renderAutopilotToggle()}
+        />
         <div className="main-column">
           <PageToolbar navigation={pageNavigation}>
             {modelSettingsAction}
@@ -3006,6 +2968,13 @@ export function ReviewWorkspace({
                 runs={state.applicationRuns}
                 viewedRunId={state.runId}
                 onOpenRun={onOpenRun}
+              />
+              <RunDetailsButton
+                summary={runDetailsSummary(state)}
+                open={runDetailsOpen}
+                controls={runDetailsId}
+                buttonRef={runDetailsButtonRef}
+                onOpen={openRunDetails}
               />
               <div className="spine-versions">
                 {state.previousArtifact === null ? null : (
@@ -3439,221 +3408,98 @@ export function ReviewWorkspace({
           onReset={sidePanel.reset}
         />
         <aside className="side-column">
-          <section className="panel progress-panel" aria-label="run progress">
-            <div className="section-heading compact">
-              <div>
-                <PanelToggle
-                  label={runFinished ? "Run history" : "Run progress"}
-                  collapsed={collapsedPanels.has("progress")}
-                  controls="run-progress-events"
-                  onToggle={() => togglePanel("progress")}
-                />
-                <h2>{runFinished ? finishedRunTitle(state) : stateLabel(state.state)}</h2>
-              </div>
-              {readOnly ? null : state.execution.status === "interrupted" ? (
-                <div className="approval-actions">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    disabled={pendingReviewAction !== null || !transmissionReady}
-                    onClick={() => onAction({ type: "resume" })}
-                  >
-                    Resume interrupted review
-                  </button>
+          {/* Run progress sits here only while the run executes; afterwards its timeline is in
+              Run details, and only a paused or interrupted run keeps its way back in. */}
+          {runInProgress ? (
+            <section className="panel progress-panel" aria-label="run progress">
+              <div className="section-heading compact">
+                <div>
+                  <PanelToggle
+                    label="Run progress"
+                    collapsed={collapsedPanels.has("progress")}
+                    controls="run-progress-events"
+                    onToggle={() => togglePanel("progress")}
+                  />
+                  <h2>{stateLabel(state.state)}</h2>
+                </div>
+                {readOnly ? null : state.state === "paused" ? (
+                  resumeButton
+                ) : state.execution.status === "running" ? (
                   <button
                     className="button button-quiet"
                     type="button"
                     disabled={pendingReviewAction !== null}
                     onClick={() => onAction({ type: "stop" })}
                   >
-                    Stop review
+                    {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                   </button>
-                </div>
-              ) : state.state === "paused" ? (
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={!transmissionReady}
-                  onClick={() => onAction({ type: "resume" })}
-                >
-                  <PlayIcon />
-                  Resume
-                </button>
-              ) : canStartNewReview(state) ? (
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={
-                    !transmissionReady ||
-                    startDisabledReason !== null ||
-                    pendingReviewAction !== null
-                  }
-                  onClick={() => requestStart({ type: "start" })}
-                >
-                  {pendingReviewAction?.action === "start"
-                    ? "Starting new review…"
-                    : "Start a new review"}
-                </button>
-              ) : state.execution.status === "running" ? (
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  disabled={pendingReviewAction !== null}
-                  onClick={() => onAction({ type: "stop" })}
-                >
-                  {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
-                </button>
-              ) : null}
-              {readOnly ? null : canStartNewReview(state) && startDisabledReason !== null ? (
-                <p className="setup-note setup-blocker" role="status">
-                  {startDisabledReason}
-                </p>
-              ) : runFinished ? (
-                <p className="setup-note">
-                  A new review adds another run with the models set for new runs. This run, its
-                  approval and its export are kept.
-                </p>
-              ) : null}
-            </div>
-            {state.execution.status === "interrupted" && state.execution.failure !== undefined ? (
-              <p className="pending-action-status setup-blocker" role="alert">
-                The review could not continue: {state.execution.failure} Fix this, then resume the
-                review, or stop it without losing history.
-              </p>
-            ) : state.execution.status === "interrupted" ? (
-              <p className="pending-action-status" role="status">
-                This review was interrupted when the previous app session ended. Resume it to
-                continue from the durable step, or stop it without losing history.
-              </p>
-            ) : state.execution.step === null ? null : (
-              <p className="pending-action-status" role="status" aria-live="polite">
-                {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
-                attempt {state.execution.attempt} · elapsed{" "}
-                {Math.floor(state.execution.elapsedMs / 1_000)}s
-                {executionLimitText(state.execution)}
-              </p>
-            )}
-            {runFinished || readOnly ? null : renderAutopilotToggle()}
-            <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
-              <RunTimeline events={state.events} describeState={stateLabel} />
-            </div>
-          </section>
-
-          <section className="trust-strip" aria-label="trust and policy summary">
-            {/* The lineage qualifies the identity it belongs to, so it is read here
-                with the company and the model rather than apart from them. */}
-            <div className="trust-fact">
-              <span className="label">Author</span>
-              <strong>{state.providerExposure.author.company}</strong>
-              <span>{state.providerExposure.author.model}</span>
-              {state.providerExposure.independentReview === null ? null : (
-                <span>
-                  claimed lineage {state.providerExposure.independentReview.authorLineage}
-                </span>
-              )}
-            </div>
-            <div className="trust-fact">
-              <span className="label">Critic</span>
-              <strong>{state.providerExposure.critic.company}</strong>
-              <span>{state.providerExposure.critic.model}</span>
-              {state.providerExposure.independentReview === null ? null : (
-                <span>
-                  claimed lineage {state.providerExposure.independentReview.criticLineage}
-                </span>
-              )}
-            </div>
-            <div className={`trust-badge trust-badge-${independence.tone}`}>
-              <span className="trust-badge-mark">{independence.mark}</span>
-              <span>{independence.detail}</span>
-            </div>
-            {/* Operator prose, shown because a person about to approve has to weigh it.
-                It is displayed locally and is never part of any provider request. */}
-            {independence.overrideRationale === null ? null : (
-              <div className="trust-override">
-                <span className="trust-override-label">Override rationale</span>
-                <p>{independence.overrideRationale}</p>
+                ) : null}
               </div>
-            )}
-            <div className="trust-fact">
-              <span className="label">Data policy</span>
-              <strong>
-                {state.providerExposure.transmissionAllowed
-                  ? "Transmission approved"
-                  : "Local only"}
-              </strong>
-              <span>
-                {state.providerExposure.requestedRetention} · sensitive material{" "}
-                {state.providerExposure.sensitiveData ? "present" : "absent"}
-              </span>
-            </div>
-            {state.writingPolicy === undefined || state.writingPolicy === null ? null : (
-              <div className="trust-fact">
-                <span className="label">Writing policy</span>
-                <strong>{state.writingPolicy.effective.version}</strong>
-                <span>
-                  Effective checksum {policyChecksumLabel(state.writingPolicy.effective.checksum)}
-                </span>
-                <span>{policyLineageLabel(state.writingPolicy)}</span>
-              </div>
-            )}
-            <div className="trust-fact">
-              <span className="label">Evidence</span>
-              {evidenceMode?.kind === "full-source" ? (
-                <>
-                  <strong className="numeric">{evidenceMode.panelValue}</strong>
-                  <span>{evidenceMode.panelDetail}</span>
-                </>
-              ) : state.setup.retrievalStatus === "not-indexed" ? (
-                // Setup has not searched the evidence yet, so there are no excerpt counts to show.
-                <>
-                  <strong className="numeric">
-                    {state.setup.evidenceSourceCount} source
-                    {state.setup.evidenceSourceCount === 1 ? "" : "s"}
-                  </strong>
-                  <span>{notIndexedRetrievalText(state)}</span>
-                </>
-              ) : (
-                <>
-                  <strong className="numeric">
-                    {state.setup.selectedEvidenceChunkCount} excerpt
-                    {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
-                  </strong>
-                  {evidenceMode?.kind === "fallback" ? (
-                    <span>{evidenceMode.panelDetail}</span>
-                  ) : (
-                    <span>
-                      from {state.setup.selectedEvidenceSourceCount} source
-                      {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
-                    </span>
-                  )}
-                </>
+              {state.execution.step === null ? null : (
+                <p className="pending-action-status" role="status" aria-live="polite">
+                  {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
+                  attempt {state.execution.attempt} · elapsed{" "}
+                  {Math.floor(state.execution.elapsedMs / 1_000)}s
+                  {executionLimitText(state.execution)}
+                </p>
               )}
-            </div>
-            {authorInput !== undefined && (
-              <div className="trust-fact author-input-fact">
-                <span className="label">Author input</span>
-                <strong className="numeric">{authorInput.value}</strong>
-                <span>{authorInput.detail}</span>
-                {authorInput.gapSummary !== undefined && (
-                  <details className="author-input-gap">
-                    <summary>{authorInput.gapSummary}</summary>
-                    <ul>
-                      {authorInput.unmatchedRequirements.map((text) => (
-                        <li key={text}>{text}</li>
-                      ))}
-                    </ul>
-                  </details>
+              {readOnly ? null : renderAutopilotToggle()}
+              <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
+                <RunTimeline events={state.events} describeState={stateLabel} />
+              </div>
+            </section>
+          ) : readOnly ||
+            (state.execution.status !== "interrupted" && state.state !== "paused") ? null : (
+            <section className="panel run-recovery-panel" aria-label="run recovery">
+              <div className="section-heading compact">
+                <h2>{stateLabel(state.state)}</h2>
+                {state.execution.status === "interrupted" ? (
+                  <div className="approval-actions">
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={pendingReviewAction !== null || !transmissionReady}
+                      onClick={() => onAction({ type: "resume" })}
+                    >
+                      Resume interrupted review
+                    </button>
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      disabled={pendingReviewAction !== null}
+                      onClick={() => onAction({ type: "stop" })}
+                    >
+                      Stop review
+                    </button>
+                  </div>
+                ) : (
+                  resumeButton
                 )}
               </div>
-            )}
-          </section>
+              {state.execution.status !== "interrupted" ? null : state.execution.failure !==
+                undefined ? (
+                <p className="pending-action-status setup-blocker" role="alert">
+                  The review could not continue: {state.execution.failure} Fix this, then resume the
+                  review, or stop it without losing history.
+                </p>
+              ) : (
+                <p className="pending-action-status" role="status">
+                  This review was interrupted when the previous app session ended. Resume it to
+                  continue from the durable step, or stop it without losing history.
+                </p>
+              )}
+            </section>
+          )}
+          <RunTrustWarning independentReview={state.providerExposure.independentReview} />
 
           <ReviewWorkTabs
             next={nextStepLine(state, gateBlocker, approvalReadiness)}
             onNext={
-              { findings: openFindings, "approval-gate": revealApprovalGate, none: null }[
-                nextStepTarget(gateBlocker) ?? "none"
-              ]
+              !readOnly && nextStepOpensRunDetails(state, gateBlocker)
+                ? openRunDetails
+                : { findings: openFindings, "approval-gate": revealApprovalGate, none: null }[
+                    nextStepTarget(gateBlocker) ?? "none"
+                  ]
             }
             selected={workTab}
             onSelect={selectWorkTab}
