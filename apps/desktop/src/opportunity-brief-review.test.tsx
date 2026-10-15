@@ -18,6 +18,7 @@ import {
   editRequirementText,
   hasUnsavedBriefChanges,
   loadBrief,
+  markReviewedDisabledReason,
   opportunityVersionConflictMessage,
   restoreRequirement,
   reviewBlockers,
@@ -130,15 +131,42 @@ describe("listing a draft brief", () => {
   });
 
   it("explains what blocks review instead of failing at the host", () => {
-    const rec = record({ employer: null, issues: [openIssue] });
+    const rec = record({ role: null, issues: [openIssue] });
     expect(reviewBlockers(rec)).toEqual([
-      "The brief has no employer.",
+      "The brief has no role.",
       "Acknowledge or resolve the open issue first.",
     ]);
     const html = view(rec, createBriefEditState(rec));
-    expect(html).toContain("The brief has no employer.");
+    expect(html).toContain("The brief has no role.");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Mark reviewed/u);
     expect(html).toContain("The source was only partially processed.");
+  });
+
+  it("names the reason beside a disabled Mark reviewed", () => {
+    const rec = record({ issues: [openIssue] });
+    expect(markReviewedDisabledReason(rec, false)).toBe(
+      "Acknowledge or resolve the open issue first.",
+    );
+    expect(markReviewedDisabledReason(record({ requirements: [] }), false)).toBe(
+      "Keep at least one requirement.",
+    );
+    expect(markReviewedDisabledReason(record(), false)).toBeNull();
+    expect(view(rec, createBriefEditState(rec))).toMatch(
+      /<button[^>]*disabled=""[^>]*aria-describedby="brief-review-disabled-reason"[^>]*>Mark reviewed<\/button><p[^>]*id="brief-review-disabled-reason">Acknowledge or resolve the open issue first\.<\/p>/u,
+    );
+    const ready = view(record(), createBriefEditState(record()));
+    expect(ready).not.toContain("brief-review-disabled-reason");
+  });
+
+  it("lets a brief whose job posting names no employer be reviewed", () => {
+    const rec = record({ employer: null });
+    expect(reviewBlockers(rec)).toEqual([]);
+    expect(markReviewedDisabledReason(rec, false)).toBeNull();
+    const html = view(rec, createBriefEditState(rec));
+    expect(html).toContain("Not named in the job posting");
+    expect(html).not.toContain("no employer");
+    expect(html).not.toContain("<input");
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Mark reviewed/u);
   });
 });
 

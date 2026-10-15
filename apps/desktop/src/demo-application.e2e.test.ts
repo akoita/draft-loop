@@ -203,15 +203,10 @@ describe("a demo workspace, offline end to end", () => {
       "Kubernetes operations",
       "TypeScript services",
     ]);
-    // The job text names no employer and the fixture invents none, so the person adds it.
+    // The job text names no employer and the fixture invents none; the brief is reviewed as is.
     expect(draft?.employer).toBeNull();
-    const edited = await port.editOpportunity?.({
-      briefId: phase.summary.briefId,
-      expectedVersion: phase.summary.version,
-      patch: { employer: { value: "Example Systems", sourceIds: draft?.role?.sourceIds ?? [] } },
-    });
-    const reviewed = await port.reviewOpportunity?.(phase.summary.briefId, edited?.version ?? 0);
-    expect(reviewed?.status).toBe("reviewed");
+    const reviewed = await port.reviewOpportunity?.(phase.summary.briefId, phase.summary.version);
+    expect(reviewed).toMatchObject({ status: "reviewed", employer: null });
 
     // Start the review.
     const state = await port.load();

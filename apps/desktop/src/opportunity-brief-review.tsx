@@ -13,6 +13,7 @@ import {
   editRequirementText,
   hasUnsavedBriefChanges,
   loadBrief,
+  markReviewedDisabledReason,
   maximumRequirementTextLength,
   type RequirementDraft,
   type RequirementPriority,
@@ -202,6 +203,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
   const dirty = record !== null && edit !== null && hasUnsavedBriefChanges(record, edit);
   const problem = edit === null ? null : briefEditProblem(edit);
   const blockers = record === null ? [] : reviewBlockers(record);
+  const reviewReason = record === null ? null : markReviewedDisabledReason(record, dirty);
   const pending = busy !== null;
   const openIssues = record?.issues.filter((issue) => issue.status === "open") ?? [];
   const requirements: readonly RequirementDraft[] =
@@ -271,7 +273,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
               </div>
               <div>
                 <dt>Employer</dt>
-                <dd>{record.employer?.value ?? "Not found in the job description"}</dd>
+                <dd>{record.employer?.value ?? "Not named in the job posting"}</dd>
               </div>
             </dl>
             {record.sources.some((source) => source.textOrigin === "job-posting-json-ld") ? (
@@ -418,14 +420,24 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                       Cancel editing
                     </button>
                   ) : (
-                    <button
-                      className="button button-outline"
-                      type="button"
-                      disabled={pending || dirty || blockers.length > 0}
-                      onClick={onReview}
-                    >
-                      {busy === "reviewing" ? "Marking reviewed…" : "Mark reviewed"}
-                    </button>
+                    <>
+                      <button
+                        className="button button-outline"
+                        type="button"
+                        disabled={pending || dirty || blockers.length > 0}
+                        aria-describedby={
+                          reviewReason === null ? undefined : "brief-review-disabled-reason"
+                        }
+                        onClick={onReview}
+                      >
+                        {busy === "reviewing" ? "Marking reviewed…" : "Mark reviewed"}
+                      </button>
+                      {reviewReason === null ? null : (
+                        <p className="brief-review-reason" id="brief-review-disabled-reason">
+                          {reviewReason}
+                        </p>
+                      )}
+                    </>
                   )}
                 </>
               )}

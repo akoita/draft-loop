@@ -67,6 +67,15 @@ describe("reviewed opportunity context", () => {
     expect(context.requirements.map(({ id }) => id)).toEqual(["shared-id", "solidity", "kept-id"]);
   });
 
+  it("names the employer, or says the job posting names none", () => {
+    expect(reviewedOpportunityContext(record()).jobDescription).toContain(
+      "Employer: Example Systems",
+    );
+    const unnamed = reviewedOpportunityContext(record({ employer: null })).jobDescription;
+    expect(unnamed).toContain("Employer: not named in the job posting");
+    expect(unnamed.split("\n")).not.toContain("Employer: ");
+  });
+
   it("keeps responsibilities in the job description text", () => {
     const context = reviewedOpportunityContext(record());
     expect(context.jobDescription).toContain(

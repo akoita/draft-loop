@@ -441,13 +441,6 @@ export const opportunityBriefSchema = z
           message: "reviewed opportunity briefs require a role",
         });
       }
-      if (brief.employer === null) {
-        context.addIssue({
-          code: "custom",
-          path: ["employer"],
-          message: "reviewed opportunity briefs require an employer",
-        });
-      }
       if (brief.requirements.length === 0) {
         context.addIssue({
           code: "custom",

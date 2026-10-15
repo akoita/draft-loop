@@ -881,20 +881,31 @@ requirements**. The host remembers only the brief ID for this.
 
 **Review requirements** opens the brief with each requirement's text, priority
 (critical, high, medium or low) and source reference, plus the responsibilities.
+
 Where the extraction found one, each requirement and responsibility also shows
 the exact job-text quotation it came from under "From the job text". The
 application keeps a quotation only after checking that it appears, ignoring
 whitespace differences, in a source the entry cites and is at most 300
 characters; otherwise it is left out rather than corrected. Briefs saved before
 this check have no quotations and stay valid. Editing a requirement's wording
-keeps its quotation. While the version is a draft, edit a requirement's text, change its priority,
+keeps its quotation.
+
+While the version is a draft, edit a requirement's text, change its priority,
 drop it, restore it, or acknowledge an open issue, then **Save changes** to
-create the next draft version; saving uses the version you read, and a version
+create the next draft version. Saving uses the version you read, and a version
 conflict reloads the latest one. Requirements cannot be added by hand, because
-every requirement must cite a source. **Mark reviewed** creates the immutable
-reviewed version once the brief has a role, an employer, at least one
-requirement and no open issues. A reviewed version is read-only; **Edit** and
-**Save as new draft** create a draft successor that must be reviewed again.
+every requirement must cite a source.
+
+When the job posting names no employer, the brief shows "Not named in the job
+posting". The employer cannot be typed in, since every brief fact must cite the
+material it came from, and a missing employer does not block review. The
+author's job context then says "Employer: not named in the job posting".
+
+**Mark reviewed** creates the immutable reviewed version once the brief has a
+role, at least one requirement and no open issues. While it is disabled, the
+reason appears beside it, such as "Acknowledge or resolve the open issue
+first." A reviewed version is read-only; **Edit** and **Save as new draft**
+create a draft successor that must be reviewed again.
 
 When the latest brief is reviewed, the **Job & requirements** step shows
 "Using reviewed requirements: brief vN · R requirements · C critical" and

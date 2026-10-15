@@ -155,11 +155,13 @@ export function buildBriefEditPatch(
   };
 }
 
-/** What stops a saved draft from being marked reviewed; empty when it is ready. */
+/**
+ * What stops a saved draft from being marked reviewed; empty when it is ready. A job posting that
+ * names no employer does not block review: nobody may fill the employer in on its behalf.
+ */
 export function reviewBlockers(record: OpportunityRecordResult): readonly string[] {
   const blockers: string[] = [];
   if (record.role === null) blockers.push("The brief has no role.");
-  if (record.employer === null) blockers.push("The brief has no employer.");
   if (record.requirements.length === 0) blockers.push("Keep at least one requirement.");
   const open = record.issues.filter((issue) => issue.status === "open").length;
   if (open > 0) {
@@ -168,6 +170,18 @@ export function reviewBlockers(record: OpportunityRecordResult): readonly string
     );
   }
   return blockers;
+}
+
+/**
+ * The reason shown beside a disabled Mark reviewed, or `null` when none is needed. Unsaved
+ * changes have their own note above the actions, so they add no reason here.
+ */
+export function markReviewedDisabledReason(
+  record: OpportunityRecordResult,
+  dirty: boolean,
+): string | null {
+  if (record.status === "reviewed" || dirty) return null;
+  return reviewBlockers(record)[0] ?? null;
 }
 
 export type BriefOperationOutcome =
