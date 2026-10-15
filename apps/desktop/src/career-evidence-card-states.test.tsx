@@ -53,16 +53,19 @@ describe("Career evidence card without a selected base", () => {
     expect(html).toContain("Required");
   });
 
-  it("ignores legacy workspace evidence: no import offer, and the first add still creates a base", () => {
+  it("lists workspace evidence files read-only: no import offer, and the first add still creates a base", () => {
     const html = render(fresh, {
       automatic: true,
       setup: { ...setup, evidenceSourceCount: 3 },
     });
-    expect(html).toContain("No career evidence yet");
+    expect(html).toContain("Workspace evidence files: 3 files");
+    expect(html).toContain("Runs use these files while no knowledge base is selected.");
+    expect(html).not.toContain("No career evidence yet");
     expect(html).toContain(">Add files<");
     expect(html).not.toContain("legacy");
+    expect(html).not.toContain("Import legacy evidence");
     expect(html).not.toContain("Keep using");
-    expect(html).toContain("Required");
+    expect(html).toContain("Ready");
   });
 
   it("takes several URLs and says how many it will fetch", () => {

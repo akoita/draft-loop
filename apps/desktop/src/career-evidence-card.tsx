@@ -136,8 +136,8 @@ export function CareerEvidenceCardView({
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
-  // Without a base the first add creates one; legacy workspace evidence no longer counts here.
-  const ready = mode !== "first-add" && careerEvidenceReady(status, legacyCount);
+  // Runs read the workspace evidence files while no base is selected, so they count as ready.
+  const ready = careerEvidenceReady(status, legacyCount);
   const intoKnowledgeBase = status.kind === "selected" || status.kind === "loading";
   const inKnowledgeBase = intoKnowledgeBase || mode === "first-add";
   const showAdd = status.kind !== "unavailable";
@@ -187,6 +187,25 @@ export function CareerEvidenceCardView({
           The selected knowledge base could not be opened. Open its store in the Knowledge base
           section below.
         </span>
+      ) : status.kind === "none" && mode === "first-add" && legacyCount > 0 ? (
+        <>
+          <span>
+            Workspace evidence files: {legacyCount} file{legacyCount === 1 ? "" : "s"}
+          </span>
+          <span className="setup-retrieval-status setup-card-line" role="status">
+            Runs use these files while no knowledge base is selected. Adding a source creates a
+            knowledge base for this workspace in {defaultKnowledgeStoreDestinationLabel}; runs then
+            use it instead, and these files are not copied into it.
+          </span>
+          <button
+            className="button button-quiet"
+            type="button"
+            disabled={blocked}
+            onClick={onChooseKnowledgeBase}
+          >
+            Create or choose a knowledge base
+          </button>
+        </>
       ) : status.kind === "none" && mode === "first-add" ? (
         <>
           <span role="status">

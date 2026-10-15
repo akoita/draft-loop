@@ -1791,11 +1791,13 @@ and keeps paths local.
   Career evidence page and follows the workspace's selected CKB. With none
   selected, the first added file, folder or URL creates a default CKB ("Career
   evidence") in DraftLoop application data, imports into it, and selects it;
-  the card says so without showing a path. Legacy workspace `evidence` files
-  are ignored by the card: it offers no import of them and no way to keep
-  them. A workspace with no CKB selected still runs on the legacy path, and
-  its preflight prints
+  the card says so without showing a path.
+- **Legacy workspace evidence.** A workspace with no CKB selected still runs on
+  its workspace `evidence` files, and its preflight prints
   `Career evidence: legacy workspace evidence (no knowledge base selected)`.
+  The card lists them read-only as "Workspace evidence files" with a count and
+  counts them as Ready, as Home does. It offers no import of them: the first
+  add creates a CKB, which runs then use instead.
 
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
   returns only opaque source and version identities, plus whether the file was
