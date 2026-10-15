@@ -1,7 +1,7 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { applicationStepStates } from "./application-steps-model.js";
 import { urlJobBriefStep } from "./electron/host-applications.js";
 import { createFixtureReviewState } from "./model.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
@@ -11,6 +11,7 @@ import {
   approvedPageRequirementsDetail,
   candidateProfilePendingBlockerMessage,
   candidateProfileStartBlockerMessage,
+  draftBriefStartDetail,
   firstUnmetStartCondition,
   jobDescriptionSteps,
   type StartActionId,
@@ -91,6 +92,69 @@ describe("start checklist conditions", () => {
     expect(startButtonLabel(conditions, false)).toBe(
       "Start review · review the requirements first",
     );
+  });
+
+  describe("while the application's brief is a draft", () => {
+    const withDraft: StartChecklistInput = {
+      ...allDone,
+      setup: { ...allDone.setup, reviewedOpportunity: null },
+      requirementAction: "review-draft",
+      draftBrief: true,
+    };
+
+    it("blocks the start with Review requirements", () => {
+      const conditions = startChecklist(withDraft);
+      expect(condition(conditions, "requirements")).toEqual({
+        id: "requirements",
+        label: "Job requirements reviewed",
+        done: false,
+        detail: draftBriefStartDetail,
+        action: { id: "review-requirements", label: "Review requirements" },
+      });
+      expect(startButtonLabel(conditions, false)).toBe(
+        "Start review · review the requirements first",
+      );
+      expect(startChecklistTooltip(conditions)).toBe(`Can't start yet: ${draftBriefStartDetail}`);
+      expect(applicationStepStates(conditions).map((step) => step.status)).toEqual([
+        { kind: "current" },
+        { kind: "done" },
+        { kind: "blocked", reason: "finish step 1 first." },
+      ]);
+    });
+
+    it("offers a fresh extraction for an empty draft, still blocked", () => {
+      const conditions = startChecklist({ ...withDraft, requirementAction: "extract-again" });
+      expect(condition(conditions, "requirements")).toMatchObject({
+        done: false,
+        detail: draftBriefStartDetail,
+        action: { id: "extract-requirements", label: "Extract requirements again" },
+      });
+    });
+
+    it("starts from the raw job description only when the person chose it", () => {
+      const conditions = startChecklist({ ...withDraft, startFromJobDescription: true });
+      expect(condition(conditions, "requirements")).toEqual({
+        id: "requirements",
+        label: "Job requirements read from the job description",
+        done: true,
+        action: null,
+      });
+      expect(firstUnmetStartCondition(conditions)).toBeNull();
+    });
+
+    it("keeps today's path for an application with job text and no brief", () => {
+      const conditions = startChecklist({
+        ...allDone,
+        setup: { ...allDone.setup, reviewedOpportunity: null },
+        requirementAction: "extract",
+        draftBrief: false,
+      });
+      expect(condition(conditions, "requirements")).toMatchObject({
+        label: "Job requirements read from the job description",
+        done: true,
+      });
+      expect(firstUnmetStartCondition(conditions)).toBeNull();
+    });
   });
 
   it("keeps the extraction and reviewed-brief fixes for the parser refusal", () => {

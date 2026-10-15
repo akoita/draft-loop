@@ -103,15 +103,21 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+/** The requirements line when the person chose the raw job description explicitly. */
+export const chosenRawJobDescriptionValue =
+  "Raw job description, chosen under Advanced (coverage scoring is less reliable)";
+/** The requirements line when the application has no brief, so the run reads the job text. */
+export const jobTextRequirementsValue = "Read from the job text (no requirements brief)";
+
 function requirementsValue(state: DesktopReviewState, context: StartConfirmationContext): string {
-  if (context.action.requirementsSource === "job-description") return "Raw job description";
+  if (context.action.requirementsSource === "job-description") return chosenRawJobDescriptionValue;
   const reviewed = context.reviewedRequirements;
   if (reviewed !== null && reviewed !== undefined) {
     return `Reviewed brief v${reviewed.version} · ${plural(reviewed.requirementCount, "requirement")}`;
   }
   const selected = state.setup.reviewedOpportunity;
   if (selected !== null && selected !== undefined) return `Reviewed brief v${selected.version}`;
-  return "Raw job description";
+  return jobTextRequirementsValue;
 }
 
 /** The evidence line: the mode the run would use and how much of the source that is. */

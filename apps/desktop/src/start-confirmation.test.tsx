@@ -9,6 +9,8 @@ import type { ProviderRoutesView } from "./provider-routes.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   apiKeyRouteLabel,
+  chosenRawJobDescriptionValue,
+  jobTextRequirementsValue,
   modelProfileTier,
   StartConfirmation,
   type StartReviewAction,
@@ -201,10 +203,15 @@ describe("start confirmation summary", () => {
       candidateProfile: null,
     });
     expect(raw.inputs).toEqual([
-      { label: "Requirements", value: "Raw job description" },
+      { label: "Requirements", value: chosenRawJobDescriptionValue },
       { label: "Career profile", value: "None pinned" },
       { label: "Writing policy", value: "None" },
     ]);
+    const noBrief = startConfirmationSummary(
+      liveState({ setup: { ...liveState().setup, reviewedOpportunity: null } }),
+      { action: start, reviewedRequirements: null },
+    );
+    expect(noBrief.inputs[0]).toEqual({ label: "Requirements", value: jobTextRequirementsValue });
   });
 
   it("lists autopilot and the round limit", () => {

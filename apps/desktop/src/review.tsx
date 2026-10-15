@@ -118,6 +118,7 @@ import {
 } from "./start-confirmation.js";
 import {
   LatestRequirementsBriefView,
+  StartFromJobDescriptionChoice,
   StartRequirementsSourceView,
   useLatestOpportunity,
   withLatestBriefRefresh,
@@ -127,6 +128,7 @@ import {
   offersRequirementsExtraction,
   requirementRefusalAction,
   reviewedRequirementsSelection,
+  startRequirementsChoice,
 } from "./start-requirements-model.js";
 import { ThemeToggle } from "./theme.js";
 
@@ -2550,10 +2552,13 @@ export function ReviewWorkspace({
       latestBrief,
       state.setup.reviewedOpportunity,
     );
-    const rawJobKey =
-      reviewedRequirements === null
-        ? null
-        : `${state.workspaceId}:${reviewedRequirements.briefId}:${reviewedRequirements.version}`;
+    // A draft waits for its review; only the explicit Advanced choice starts from the job text.
+    const { draftBrief, rawJobKey } = startRequirementsChoice(
+      state.workspaceId,
+      latestBrief,
+      reviewedRequirements,
+      state.setup,
+    );
     const startFromJobDescription = rawJobKey !== null && rawJobChoice === rawJobKey;
     const jobSource = requirementsBinding?.jobFromUrl === true ? "approved-page" : "document";
     const startConditions = startChecklist({
@@ -2570,6 +2575,7 @@ export function ReviewWorkspace({
       canOpenProviderSignIn: onOpenHome !== undefined,
       ...(providerSignInReadiness === undefined ? {} : { providerSignIn: providerSignInReadiness }),
       jobSource,
+      draftBrief,
     });
     const startPending = pendingReviewAction?.action === "start";
     const startTooltip = startChecklistTooltip(startConditions);
@@ -2655,11 +2661,17 @@ export function ReviewWorkspace({
       else revealStartTarget(startActionTargets[id] ?? []);
     };
     const requirementsSource =
-      reviewedRequirements === null || rawJobKey === null ? null : (
+      rawJobKey === null ? null : reviewedRequirements === null ? (
+        <StartFromJobDescriptionChoice
+          chosen={startFromJobDescription}
+          disabled={readOnly || startPending}
+          onChange={(chosen) => setRawJobChoice(chosen ? rawJobKey : null)}
+        />
+      ) : (
         <StartRequirementsSourceView
           selection={reviewedRequirements}
           useJobDescription={startFromJobDescription}
-          disabled={pendingReviewAction?.action === "start"}
+          disabled={startPending}
           onUseJobDescription={() => setRawJobChoice(rawJobKey)}
           onUseReviewed={() => setRawJobChoice(null)}
         />

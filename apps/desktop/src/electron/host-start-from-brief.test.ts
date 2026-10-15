@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNativeHost } from "./host.js";
+import { draftBriefStartRefusal } from "./start-requirements-guard.js";
 
 let parent: string;
 let root: string;
@@ -303,6 +304,47 @@ describe("starting from the reviewed brief", () => {
   it("starts without a brief when none was reviewed", async () => {
     const { host, workspaceId, begin } = await createWorkspace("- TypeScript\n");
     await host.invoke(startAction(workspaceId, {}) as never);
+    const command = (begin.mock.calls as unknown as readonly [Record<string, unknown>][])[0]?.[0];
+    expect(command).not.toHaveProperty("opportunityBrief");
+  });
+
+  async function withDraftBrief() {
+    const draft = briefRecord(1, "draft");
+    const created = await createWorkspace("- TypeScript\n", {
+      createOpportunity: vi.fn(async () => draft),
+      getOpportunity: vi.fn(async () => draft),
+    });
+    await created.host.invoke({
+      type: "opportunity.create",
+      input: {
+        workspaceId: created.workspaceId,
+        sources: [
+          {
+            id: "workspace-job-description",
+            kind: "workspace-job-description",
+            classification: "job-posting",
+          },
+        ],
+        providerTransmissionApproved: true,
+      },
+    });
+    return created;
+  }
+
+  it("refuses an implicit start while the brief is a draft", async () => {
+    const { host, workspaceId, begin } = await withDraftBrief();
+    const result = await host.invoke(startAction(workspaceId, {}) as never);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "operation-failed", message: draftBriefStartRefusal },
+    });
+    expect(begin).not.toHaveBeenCalled();
+  });
+
+  it("starts from the raw job description on a draft brief only when chosen", async () => {
+    const { host, workspaceId, begin } = await withDraftBrief();
+    await host.invoke(startAction(workspaceId, { requirementsSource: "job-description" }) as never);
+    expect(begin).toHaveBeenCalledTimes(1);
     const command = (begin.mock.calls as unknown as readonly [Record<string, unknown>][])[0]?.[0];
     expect(command).not.toHaveProperty("opportunityBrief");
   });

@@ -7,7 +7,10 @@ import {
   latestBriefNote,
   latestBriefTitle,
   type ReviewedRequirementsSelection,
+  rawJobDescriptionChoiceLabel,
+  rawJobDescriptionChoiceNote,
   rawJobDescriptionLabel,
+  rawJobDescriptionOverDraftLabel,
   reviewedRequirementsLabel,
 } from "./start-requirements-model.js";
 
@@ -129,6 +132,46 @@ export function StartRequirementsSourceView({
           ? `Use the reviewed requirements (brief v${selection.version})`
           : "Use the raw job description instead"}
       </button>
+    </section>
+  );
+}
+
+export interface StartFromJobDescriptionChoiceProps {
+  /** The person chose to start from the raw job description instead of reviewing the draft. */
+  readonly chosen: boolean;
+  readonly disabled?: boolean;
+  readonly onChange: (chosen: boolean) => void;
+}
+
+/**
+ * The explicit choice, folded under Advanced in the review step, to start from the raw job
+ * description while the brief is still a draft. It is never a silent fallback.
+ */
+export function StartFromJobDescriptionChoice({
+  chosen,
+  disabled = false,
+  onChange,
+}: StartFromJobDescriptionChoiceProps) {
+  return (
+    <section aria-label="Requirements for this run">
+      <details className="setup-details setup-advanced">
+        <summary>Advanced: requirements for this run</summary>
+        <label className="start-raw-choice">
+          <input
+            type="checkbox"
+            checked={chosen}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          <span>{rawJobDescriptionChoiceLabel}</span>
+        </label>
+        <p className="setup-note">{rawJobDescriptionChoiceNote}</p>
+      </details>
+      {chosen ? (
+        <p className="start-requirements-line" role="status">
+          {rawJobDescriptionOverDraftLabel}
+        </p>
+      ) : null}
     </section>
   );
 }

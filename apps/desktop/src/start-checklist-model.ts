@@ -90,7 +90,16 @@ export interface StartChecklistInput {
   readonly providerSignIn?: ProviderSignInReadiness;
   /** The application's job source; absent reads as a document (pasted text or a file). */
   readonly jobSource?: ApplicationJobSource;
+  /**
+   * The application's latest brief is a draft and no reviewed brief would bind. The run then
+   * waits for the review unless the person chose the raw job description under Advanced.
+   */
+  readonly draftBrief?: boolean;
 }
+
+/** Why a draft brief blocks the start, with the explicit alternative. */
+export const draftBriefStartDetail =
+  "The requirements brief is a draft. Review it before starting, or choose to start from the raw job description under Advanced.";
 
 const requirementsLabel = "Job requirements reviewed";
 
@@ -153,6 +162,16 @@ function requirementsCondition(
       label: requirementsLabel,
       done: false,
       detail: refusal,
+      action: requirementRefusalFix(input.requirementAction),
+    };
+  }
+  if (input.draftBrief === true && !input.startFromJobDescription) {
+    // A draft is never skipped silently: only the explicit raw-text choice starts without it.
+    return {
+      id: "requirements",
+      label: requirementsLabel,
+      done: false,
+      detail: draftBriefStartDetail,
       action: requirementRefusalFix(input.requirementAction),
     };
   }

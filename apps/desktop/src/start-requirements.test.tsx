@@ -5,16 +5,24 @@ import type { OpportunityLatestBrief } from "./bridge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import { startChecklist } from "./start-checklist-model.js";
-import { LatestRequirementsBriefView, StartRequirementsSourceView } from "./start-requirements.js";
+import {
+  LatestRequirementsBriefView,
+  StartFromJobDescriptionChoice,
+  StartRequirementsSourceView,
+} from "./start-requirements.js";
 import {
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
   offersRequirementsExtraction,
+  rawJobDescriptionChoiceLabel,
+  rawJobDescriptionChoiceNote,
   rawJobDescriptionLabel,
+  rawJobDescriptionOverDraftLabel,
   requirementRefusalAction,
   reviewedRequirementsLabel,
   reviewedRequirementsSelection,
+  startRequirementsChoice,
 } from "./start-requirements-model.js";
 
 const reviewed: OpportunityLatestBrief = {
@@ -125,6 +133,80 @@ describe("start panel requirements source", () => {
     expect(html).toContain("Use the reviewed requirements (brief v3)");
   });
 });
+
+describe("the raw job description over a draft brief", () => {
+  const ready = { reviewedOpportunity: null, jobDescriptionReady: true };
+
+  it("waits for a draft's review and keys the Advanced choice to its version", () => {
+    expect(startRequirementsChoice("w", draft, null, ready)).toEqual({
+      draftBrief: true,
+      rawJobKey: "w:target-role:4:draft",
+    });
+    // An approved job page has no job text before extraction: nothing to start from yet.
+    expect(
+      startRequirementsChoice("w", draft, null, { ...ready, jobDescriptionReady: false }),
+    ).toEqual({ draftBrief: true, rawJobKey: null });
+  });
+
+  it("keeps the reviewed alternative and the no-brief path", () => {
+    const selection = reviewedRequirementsSelection(reviewed, {
+      briefId: "target-role",
+      version: 3,
+    });
+    expect(startRequirementsChoice("w", reviewed, selection, ready)).toEqual({
+      draftBrief: false,
+      rawJobKey: "w:target-role:3",
+    });
+    expect(startRequirementsChoice("w", null, null, ready)).toEqual({
+      draftBrief: false,
+      rawJobKey: null,
+    });
+    expect(startRequirementsChoice("w", undefined, null, ready)).toEqual({
+      draftBrief: false,
+      rawJobKey: null,
+    });
+  });
+
+  it("offers the choice under Advanced with its cost, and states it once chosen", () => {
+    const changes: boolean[] = [];
+    const unchosen = StartFromJobDescriptionChoice({
+      chosen: false,
+      onChange: (chosen) => changes.push(chosen),
+    });
+    const html = renderToStaticMarkup(unchosen);
+    expect(html).toContain("<summary>Advanced: requirements for this run</summary>");
+    expect(html).toContain(rawJobDescriptionChoiceLabel);
+    expect(html).toContain(rawJobDescriptionChoiceNote);
+    expect(html).not.toContain(rawJobDescriptionOverDraftLabel);
+    const chosen = renderToStaticMarkup(
+      <StartFromJobDescriptionChoice chosen onChange={() => undefined} />,
+    );
+    expect(chosen).toContain('checked=""');
+    expect(chosen).toContain(rawJobDescriptionOverDraftLabel);
+    const input = findCheckbox(unchosen);
+    input.props.onChange({ target: { checked: true } });
+    expect(changes).toEqual([true]);
+  });
+});
+
+function findCheckbox(node: unknown): {
+  props: { onChange: (event: { target: { checked: boolean } }) => void };
+} {
+  const queue: unknown[] = [node];
+  while (queue.length > 0) {
+    const current = queue.shift() as { type?: unknown; props?: Record<string, unknown> } | null;
+    if (current === null || typeof current !== "object") continue;
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+    if (current.type === "input" && current.props?.type === "checkbox") {
+      return current as never;
+    }
+    queue.push(current.props?.children);
+  }
+  throw new Error("checkbox not found");
+}
 
 describe("guided requirement blocker", () => {
   const problem =
