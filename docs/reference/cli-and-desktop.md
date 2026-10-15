@@ -244,11 +244,58 @@ that is too long to match keeps the Start button disabled and shows that
 message under **Job requirements reviewed** in the start checklist, so the
 problem appears before you click. The condition's action fixes it: **Review
 requirements** for a waiting draft, or **Extract requirements into a brief**,
-which opens the extraction consent step on the **Target job description** card
-instead of asking for hand edits. The CLI message ends with the `opportunity
+which opens the extraction consent step in the application's **Job &
+requirements** step instead of asking for hand edits. The CLI message ends with the `opportunity
 create` command to run.
 
 ## Desktop workspace navigation
+
+The desktop follows one journey, and this section follows it in order:
+
+1. [Start page](#start-page): create, open or try a workspace.
+2. [Home](#home): what the workspace holds and its applications.
+3. [Career evidence page](#career-evidence-page): add the raw material.
+4. [Career profile page](#career-profile-page): generate and review the profile once.
+5. [New application](#new-application): name a role and give its job posting.
+6. [The application's three steps](#the-applications-three-steps): requirements,
+   profile, then start.
+7. [Review screen](#review-screen): findings, approval and export.
+
+A fixture walk of this journey, with its open dead ends, is recorded in
+[First-run journey walk](../evaluation/first-run-journey.md).
+[Moving between pages](#moving-between-pages) and
+[Closing and reopening](#closing-and-reopening) apply throughout.
+
+### Start page
+
+The start page lists the ten most recently opened local workspaces. Select an
+entry to reopen it, use its **Remove** button to drop just that entry, or clear
+the whole list. Removing or clearing entries only edits this history and leaves
+workspace files untouched.
+
+Most people keep one main workspace, so when there is history the start page
+leads with it: the most recent entry is marked **Last used**, **Open workspace**
+and **Try demo workspace** follow, and the name and round-limit fields sit in a
+closed **Create a new workspace** section. With no history, creating a
+workspace is the first thing on the page.
+
+Entries show the workspace's display name. When two or more entries share a
+name, each also shows the name of its parent folder ("in hc5") so they can be
+told apart; the full path never reaches the interface.
+
+- **Create workspace.** Asks only for a name and the maximum review rounds. The
+  name is the workspace's display name and may contain spaces and accents (1 to
+  80 characters, no slashes or control characters). The folder is a lowercase
+  ASCII slug of it, or `draft-loop-workspace` when nothing safe remains. After a
+  real workspace is created, choose **Presets** or **Custom** in the model
+  editor.
+- **Open workspace.** Keeps the workspace's current model pair; canceling the
+  model editor does not change it. Apply a preset or save custom settings to
+  replace the pair used for future runs.
+- **Try demo workspace.** Creates a fixture workspace that runs the review
+  against local fixtures with no network. It opens with a default application
+  already in review. Packaged startup never falls back to the demo: if the
+  preload bridge is unavailable, the desktop shows a connection error instead.
 
 ### Home
 
@@ -263,16 +310,16 @@ applications:
   application reuses the reviewed version. The current step is marked, and each
   other step opens its page; Applications opens Home's list. See
   [Moving between pages](#moving-between-pages).
-- **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
-  (generation saved no facts), or Not yet generated. **Manage profile** opens
-  the Career profile page. A freshness line under the status says whether the
-  profile is current with the career evidence; see
-  [Profile freshness](#profile-freshness). While a generation runs, the card
-  shows In progress with the elapsed time and parts done, and **View progress**
-  opens the live progress and **Cancel generation**.
 - **Career evidence.** The selected knowledge base, its source count and
   readiness, or an empty state with **Add career evidence**. **Manage evidence**
   opens the Career evidence page.
+- **Career profile.** The newest saved profile version: Reviewed, Draft, Failed
+  (generation saved no facts), or Not yet generated, with **Generate profile**
+  or **Manage profile** to open the Career profile page. A freshness line under
+  the status says whether the profile is current with the career evidence; see
+  [Profile freshness](#profile-freshness). While a generation runs, the card
+  shows In progress with the elapsed time and parts done, and **View progress**
+  opens the live progress and **Cancel generation**.
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
   first. The application whose review is running shows Review running instead.
@@ -288,6 +335,8 @@ applications:
   the provider sign-in dialog described under
   [Provider credentials](#provider-credentials). A line above the button
   summarizes whether the configured pair can run.
+
+Choosing an application card opens that application.
 
 #### Profile freshness
 
@@ -314,71 +363,75 @@ a state and counts only: no source names, ids, text or paths. Home asks the host
 only when the newest version is reviewed, because it already knows the other
 two states from the saved profile list.
 
-Two pages sit behind the cards, each with a Back action, a one-sentence intro
-and the flow strip:
+### Career evidence page
 
-- **Career evidence page.** One Career evidence card, then the retrieval mode
-  and embedding model. The card shows the base in use and holds every add
-  action (files, a folder, public URLs) and the first add. Its **Knowledge
-  base** section chooses the base and switches the store; it has no add
-  buttons.
-- **Career profile page.** Leads with the profile's status in words: Ready,
-  Needs review (with the number of open issues), Out of date with your
-  evidence, or No profile yet. One primary action follows: **Review issues**,
-  **Update profile** or **Generate profile**. The facts by category and the
-  issues come next.
-  - The action that sends data has one approval checkbox beside it, worded as
-    what is sent, for example "Send my career evidence (up to 12 sources) to
-    Anthropic to build the profile." The count and provider are omitted when
-    the host cannot report them.
-  - A **Details** disclosure holds the profile name, the saved and reviewed
-    profile pickers, version history, version metadata and checksum, and
-    **Re-extract all sources**. A first profile is named `career-profile`
-    unless another name is entered there.
+The page has a Back action, a one-sentence intro and the flow strip, then:
 
-The configured model pair is shown under Workspace settings on Home, not on
-these pages.
+- **Career evidence card.** Shows the base in use and holds every add action:
+  **Add files**, **Add folder** and public URLs, one per line. With no base
+  selected, the first add creates one; see
+  [Desktop knowledge operations](#desktop-knowledge-operations). Each source
+  lists its detected kind, which you can correct; see
+  [Source evidence kind](#source-evidence-kind).
+- **Knowledge base section.** Chooses the base and switches the store; it has
+  no add buttons.
+- **Semantic retrieval.** The embedding model and retrieval mode; see
+  [Desktop semantic retrieval controls](#desktop-semantic-retrieval-controls).
 
-Choosing a card opens that application. **New application** opens a short
-form, described in [New application](#new-application).
+### Career profile page
 
-An application screen is the existing review and setup screen scoped to that
-application: runs started there belong to it, and a created application starts
-from its own reviewed brief, or from its own job text when it has none.
-Once it has two or more runs, the run header carries a run switcher beside
-the version chips, such as "Run 2 of 5", with runs numbered from the oldest.
-Its menu lists the runs newest first: start time, author and critic models,
-round, status, mean readiness score, and "latest" on the latest run.
+The page has the same Back action, intro and flow strip. It leads with the
+profile's status in words: Ready, Needs review (with the number of open
+issues), Out of date with your evidence, or No profile yet. One primary action
+follows: **Review issues**, **Update profile** or **Generate profile**. The
+facts by category and the issues come next.
 
-The latest run opens by default. Choosing an earlier run shows its draft,
-findings and coverage read-only, with Back to latest run one click away;
-choosing the latest run returns to it. The desktop host refuses any change to
-an earlier run.
+- **Approval.** The action that sends data has one approval checkbox beside it,
+  worded as what is sent, for example "Send my career evidence (up to 12
+  sources) to Anthropic to build the profile." The count and provider are
+  omitted when the host cannot report them. Until it is ticked, a line under
+  the button says so.
+- **Details.** A disclosure holds the profile name, the saved and reviewed
+  profile pickers, version history, version metadata and checksum, and
+  **Re-extract all sources**. A first profile is named `career-profile` unless
+  another name is entered there.
 
-Beside it, **Run details** summarises the run in one line, such as
-"Opus 5.5 → GPT-6.1 Sol · full source, 282 chunks · policy active", and opens
-a drawer from the right with the run's provenance:
+Generation and review are described under
+[Candidate profiles](#candidate-profiles). In a demo workspace, generation
+still calls the configured provider; it has no fixture path.
 
-- the author and critic with their claimed lineages;
-- the data and writing policy;
-- the evidence mode and the author input;
-- the event timeline, once the run is not executing;
-- **Start a new review**.
+### New application
 
-What needs you stays outside the drawer. While a run executes, the side panel
-shows its progress, timeline and Stop. A paused or interrupted run keeps
-Resume in the side panel, and a shared-lineage warning stays there too.
-The row above the run header starts with Back, which returns to the previous
-page, followed by the flow strip, which opens either career page. Focus moves
-to the screen's location line when a screen opens, so the change is announced.
-Before a run, it moves to the current step instead, as described next.
+**New application** on Home opens a form that asks for two things:
+
+- **Name.** For example a company and role. Until it is filled in,
+  **Create application** is disabled and the form says why.
+- **Job posting.** Paste the job text, or give a job page address and approve
+  fetching it. The address is stored with that approval and fetched only when
+  requirements are extracted on the application's first step, never before.
+
+**Create application** creates it and opens its screen at its first unfinished
+step. A problem with the form, or the host's refusal, is shown in the form. The
+application appears on Home as Drafting and can be resumed there.
+
+A second application reuses the same reviewed profile and has its own brief.
+Applications, their statuses and the bridge commands are described under
+[Applications](#applications).
+
+### The application's three steps
+
+An application screen is scoped to that application: runs started there belong
+to it, and a created application starts from its own reviewed brief, or from
+its own job text when it has none. The row above the screen starts with Back,
+followed by the flow strip, **Change models** and **Close workspace**.
 
 Before a run, the screen shows three numbered steps, top to bottom. Each step
 says in words whether it is **Done**, the **Current step** or **Blocked**, with
 the reason, and has at most one primary action:
 
 1. **Job & requirements.** Add the job description from a file or a public
-   URL, then extract and review its requirements. Once the job description is
+   URL, then extract and review its requirements (see
+   [Opportunity briefs](#opportunity-briefs)). Once the job description is
    added, replacing it is behind a disclosure. The step is done when a
    reviewed brief is selected, or when the requirements are read from the job
    description.
@@ -403,14 +456,15 @@ the reason, and has at most one primary action:
    pending. The data-sent summary names the writer and reviewer; the full
    transmission detail is behind **See exactly what is sent**, and the
    acknowledgement stays visible while it is required. The per-job writing
-   policy override sits under **Advanced**, then autopilot, **Start
-   author–critic review** and the start checklist. This step is current once
-   the first two are done.
+   policy override sits under **Advanced**, then [autopilot](#autopilot),
+   **Start author–critic review** and the start checklist. This step is current
+   once the first two are done.
 
 The step states come from the same conditions as the start checklist, so the
 two never disagree. An application opens at its first unfinished step: the
 screen scrolls to it and moves the focus to its heading, once each time the
-screen opens.
+screen opens. Otherwise focus moves to the screen's location line, so the
+change is announced.
 
 The start checklist, **Before you can start**, sits under the Start button and
 stays visible when everything is done:
@@ -419,10 +473,13 @@ stays visible when everything is done:
   selected, provider sign-in ready and data sent acknowledged, each marked
   **Done** or **Not done** in words.
 - **Fixes.** An unmet condition carries its own action: **Review
-  requirements**, **Choose profile**, **Open provider sign-in** (Home) or
-  **Review data sent**. Read-only runs show no actions.
+  requirements**, **Choose profile** (which moves focus to the Profile step),
+  **Open provider sign-in** (Home) or **Review data sent**. Read-only runs show
+  no actions.
 - **Host reasons.** A refused start and any other setup step the host reports
-  appear in the same list, so no blocker is reachable only elsewhere.
+  appear in the same list, so no blocker is reachable only elsewhere. A job
+  description with a requirement too long to match is one of them; see
+  [Desktop diagnostics](#desktop-diagnostics).
 - **Button.** While blocked, the button names the first unmet condition, for
   example "Start review · review the requirements first".
 
@@ -432,13 +489,69 @@ returning from Home; it is not polled.
 
 - **Done.** Every route reports ready: an API key stored in the app or set in
   the environment, or a Claude or Codex CLI that reports a signed-in session.
-  The key is not checked against the provider at this point.
+  The key is not checked against the provider at this point. A demo workspace
+  is always done, because it sends nothing.
 - **Not done.** A route reports no key or no signed-in session. The row offers
   **Open provider sign-in**, but it does not disable Start, because the host
   checks sign-in again when the review starts.
 - **Checked when the review starts.** The read failed, has not answered yet,
   or the host has no status reads. A refusal from the host then appears at the
   top of the checklist.
+
+### Review screen
+
+Once a run exists, the application screen shows the review: the draft in the
+middle, the work area in the side panel, and the approval gate in a footer
+pinned under it.
+
+- **Run header.** The application name and status, the loop rail (Draft,
+  Critique, Revise, Approve) with the round, the version chips and the cost.
+- **Run switcher.** Once the application has two or more runs, the header
+  carries a switcher beside the version chips, such as "Run 2 of 5", with runs
+  numbered from the oldest. Its menu lists the runs newest first: start time,
+  author and critic models, round, status, mean readiness score, and "latest"
+  on the latest run. The latest run opens by default. Choosing an earlier run
+  shows its draft, findings and coverage read-only, with Back to latest run one
+  click away. The desktop host refuses any change to an earlier run.
+- **Run details.** Summarises the run in one line, such as "Opus 5.5 → GPT-6.1
+  Sol · full source, 282 chunks · policy active", and opens a drawer from the
+  right with the run's provenance: the author and critic with their claimed
+  lineages, the data and writing policy, the evidence mode and author input,
+  the event timeline once the run is not executing, and **Start a new review**.
+- **Side panel.** A one-line "Next:" status names the next step, such as "Next:
+  decide 1 blocking finding", and matches the footer's gate. Below it,
+  **Findings** and **Coverage** share the panel as tabs; with no requirement
+  coverage recorded, only Findings shows. Findings filter by Needs action,
+  Blocking, Warnings and Resolved, and each has **Accept**, **Reject**,
+  **Defer** and **Override**, with keyboard shortcuts. Coverage is described
+  under [Requirement coverage in run output](#requirement-coverage-in-run-output).
+- **Run state.** While a run executes, the side panel shows its progress,
+  timeline and Stop. A paused or interrupted run keeps Resume in the side
+  panel, and a shared-lineage warning stays there too.
+
+What needs you stays outside the drawer.
+
+### Approval and export
+
+The footer holds the approval gate and stays in view while you scroll:
+
+- **Approve artifact.** Disabled while a blocking finding is undecided, with
+  the count above it, and while the final CV checks block approval, with their
+  reasons ("Not ready: …").
+- **Approve with override….** Offered when the final CV checks block approval.
+  It asks for a required reason and records it with the approval.
+- **Request revision.** Sends the draft back to the author for another round.
+- **Export locally.** **Export Markdown** is available after approval and asks
+  for a destination in a Save dialog. A **Details** disclosure lists the
+  artifact, export and validation state and the approval conditions.
+
+After approval and export, Home lists the application as Exported.
+
+Once a run has stopped, finished or run out of budget, **Start a new review**
+in **Run details** adds another run to the same application with the models set
+for new runs. The earlier run, its approval and its export are kept, so there is
+no need to duplicate the application to try another model pair. When it is the
+next step, the side panel's "Next: start a new review" line opens the drawer.
 
 ### Moving between pages
 
@@ -466,112 +579,28 @@ is reached through Home:
 
 The last application opened is kept until another application is opened.
 
-### New application
-
-**New application** on Home opens a form that asks for two things:
-
-- **Name.** For example a company and role.
-- **Job posting.** Paste the job text, or give a job page address and approve
-  fetching it. The address is stored with that approval and fetched only when
-  requirements are extracted on the application's first step, never before.
-
-**Create application** creates it and opens its screen at its first unfinished
-step (see the three steps above). A problem with the form, or the host's
-refusal, is shown in the form. The application appears on Home as Drafting
-and can be resumed there.
-
-Extracting and reviewing the requirements, choosing the profile and starting
-the review happen on the application screen. For a job page address, **Extract
-requirements** says that the page is fetched first. After approval and export,
-Home lists the application as Exported.
-
-Once a run has stopped, finished or run out of budget, **Start a new review**
-in **Run details** adds another run to the same application with the models set
-for new runs. The earlier run, its approval and its export are kept, so there is
-no need to duplicate the application to try another model pair. When it is the
-next step, the side panel's "Next: start a new review" line opens the drawer.
-
-A second application reuses the same reviewed profile and has its own brief.
-
-A created application can also hold its own model pair: exact author and critic
-model profiles from two different companies. Its new runs use and record that
-pair instead of the workspace's, even when a start names the workspace's applied
-profiles, and a resumed run keeps the pair it recorded. Its review state and
-provider-transmission consent follow the pair, so switching to it asks for
-consent again. The default application always uses the workspace's pair.
-
-Briefs belong to applications. `opportunity.create`, `opportunity.latest`,
-`opportunity.edit` and `opportunity.review` accept an optional `applicationId`.
-Each created application keeps its own latest and reviewed brief, and an edit
-or review of another application's brief is refused. Without an `applicationId`
-the default application keeps the workspace's own latest and reviewed brief.
-
-The bridge exposes `application.list`, `application.get`,
-`application.create`, `application.import`, `application.archive` (with
-`archived: true` or `false`), `application.delete` and `application.set-models`
-(with `modelProfiles: { author, critic }` profile references, or `null` to use
-the workspace's pair again). `application.create` takes the job
-as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
-takes only the workspace id: the host shows the folder picker, so no path crosses
-the bridge in either direction. Results carry the name, job source kind,
-status, timestamps, run, brief and export counts, the latest run id, when it
-was archived and its own model pair, never a
-path, URL or job text. An import also returns content-free counts of what it
-copied. `review.load`, `review.dispatch` and `run.start` accept an
-optional `applicationId`.
-
 ### Closing and reopening
 
-Use **Close workspace** to return to the create/open screen. Saved workspace
-files, run history, and profile versions remain on this device; unsaved setup or
-profile form edits are discarded. Closing does not rewrite persisted run state.
+Use **Close workspace** to return to the start page. Saved workspace files, run
+history, and profile versions remain on this device; unsaved setup or profile
+form edits are discarded. Closing does not rewrite persisted run state.
 
 The button sits at the top right of every workspace page. On an application
 page it shares the row above the run header with **Change models**, so the run
 header carries only the run itself. While a review runs, both are disabled and
 their tooltip says why.
 
-The start page lists the ten most recently opened local workspaces. Select an
-entry to reopen it, use its **Remove** button to drop just that entry, or clear
-the whole list. Removing or clearing entries only edits this history and leaves
-workspace files untouched.
+Stop a running review with its **Stop review** control before closing. The
+desktop keeps the workspace open while a review action, knowledge update, or
+candidate-profile operation is pending and says when to wait for it to finish.
 
-Most people keep one main workspace, so when there is history the start page
-leads with it: the most recent entry is marked **Last used**, **Open workspace**
-and **Try demo workspace** follow, and the name and round-limit fields sit in a
-closed **Create a new workspace** section. With no history, creating a
-workspace is the first thing on the page.
-
-Entries show the workspace's display name. When two or more entries share a
-name, each also shows the name of its parent folder ("in hc5") so they can be
-told apart; the full path never reaches the interface.
-
-Creating a workspace asks only for its name and maximum review rounds. The name
-is the workspace's display name and may contain spaces and accents (1 to 80
-characters, no slashes or control characters). The folder is a lowercase ASCII
-slug of it, or `draft-loop-workspace` when nothing safe remains.
-
-To change the display name later, double-click the workspace name in the
+To change the workspace's display name, double-click the workspace name in the
 header, or use the pencil that appears when you hover over it or tab to it.
 Enter or clicking away saves, Escape cancels, and an invalid name shows a
 message when you press Enter (clicking away keeps the old name).
 The name is stored in `.draft-loop/review-overrides.json` (`workspaceName`) and
 in the recent list; the folder and `workspace.json` are unchanged. A workspace
 without a stored name shows its folder name.
-
-After a real workspace is created, choose **Presets** or **Custom** in the model editor.
-Opening an existing workspace keeps its current model pair; canceling the editor
-does not change that pair. Apply a preset or save custom settings to replace the
-pair used for future runs.
-
-Stop a running review with its existing **Stop review** control before closing.
-The desktop keeps the workspace open while a review action, knowledge update, or
-candidate-profile operation is pending and says when to wait for it to finish.
-
-Packaged desktop startup uses the native workspace setup. If the preload bridge
-is unavailable, the desktop shows a connection error instead of loading the
-browser fixture or creating a demo workspace. Choose **Try demo workspace**
-explicitly when you want the fixture.
 
 ## Autopilot
 
@@ -590,7 +619,7 @@ An autopilot review still pauses early when:
 - a provider or validation error stops a step, as without autopilot.
 
 The last round always ends in review, and approval and export stay with you.
-Turn it on in the desktop with the **Autopilot** checkbox on the start screen
+Turn it on in the desktop with the **Autopilot** checkbox in an application's Review step
 or in **Run progress** (in **Run details** once the run stops executing). In the CLI, pass `--autopilot` to `init`, or switch an
 existing workspace:
 
@@ -646,6 +675,33 @@ pnpm --filter @draft-loop/cli start start ./workspace --application app-01234567
   source. A URL application
   starts a run only with a reviewed opportunity brief, and a brief belonging to
   another application is refused.
+
+A created application can also hold its own model pair: exact author and critic
+model profiles from two different companies. Its new runs use and record that
+pair instead of the workspace's, even when a start names the workspace's applied
+profiles, and a resumed run keeps the pair it recorded. Its review state and
+provider-transmission consent follow the pair, so switching to it asks for
+consent again. The default application always uses the workspace's pair.
+
+Briefs belong to applications. `opportunity.create`, `opportunity.latest`,
+`opportunity.edit` and `opportunity.review` accept an optional `applicationId`.
+Each created application keeps its own latest and reviewed brief, and an edit
+or review of another application's brief is refused. Without an `applicationId`
+the default application keeps the workspace's own latest and reviewed brief.
+
+The bridge exposes `application.list`, `application.get`,
+`application.create`, `application.import`, `application.archive` (with
+`archived: true` or `false`), `application.delete` and `application.set-models`
+(with `modelProfiles: { author, critic }` profile references, or `null` to use
+the workspace's pair again). `application.create` takes the job
+as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
+takes only the workspace id: the host shows the folder picker, so no path crosses
+the bridge in either direction. Results carry the name, job source kind,
+status, timestamps, run, brief and export counts, the latest run id, when it
+was archived and its own model pair, never a
+path, URL or job text. An import also returns content-free counts of what it
+copied. `review.load`, `review.dispatch` and `run.start` accept an
+optional `applicationId`.
 
 ### Importing a workspace
 
@@ -756,16 +812,16 @@ pnpm --filter @draft-loop/cli start start ./workspace \
   --allow-provider-data
 ```
 
-In the desktop, the **Job and requirements** card offers **Extract
-requirements** when the workspace has a job description and no reviewed brief
+In the desktop, the application's **Job & requirements** step offers **Extract
+requirements** when the application has a job description and no reviewed brief
 is selected. It asks for consent first, naming the configured writing model and
 saying that only the job description is sent, never career evidence. **Extract**
-then creates a draft brief from the workspace's own job document with the same
+then creates a draft brief from the application's own job document with the same
 structured extraction. The host reads that document itself, so no file dialog
 or path is involved, and a document over the 64 KiB limit fails with a message.
-The card shows the draft brief ID, version, requirement and responsibility
+The step shows the draft brief ID, version, requirement and responsibility
 counts, and any open extraction issues. While extraction runs, **Cancel**
-aborts the provider request and saves no brief; the card returns to idle with
+aborts the provider request and saves no brief; the step returns to idle with
 "Extraction cancelled. No brief was saved." The draft cannot start a run until
 it is reviewed.
 
@@ -790,12 +846,12 @@ For a job page address or saved job page, extraction reads only that page:
   it. Import the job again from the original PDF, or paste the job text from
   the careers page." Camel-case names such as "JavaScript" and all-capital
   acronyms count as plausible.
-- **No requirements found.** If extraction returns no requirements, the card
+- **No requirements found.** If extraction returns no requirements, the step
   says "No requirements were found in this job text" and offers **Extract
   again** instead of a review. The empty draft keeps offering extraction after
   a restart, and the start checklist offers **Extract requirements again**.
 
-The card also shows the workspace's latest brief as "Requirements brief vN
+The step also shows the application's latest brief as "Requirements brief vN
 (draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review
 requirements** after the app restarts; a reviewed brief offers **View
 requirements**. The host remembers only the brief ID for this.
@@ -817,7 +873,7 @@ reviewed version once the brief has a role, an employer, at least one
 requirement and no open issues. A reviewed version is read-only; **Edit** and
 **Save as new draft** create a draft successor that must be reviewed again.
 
-When the workspace's latest brief is reviewed, the desktop start panel shows
+When the latest brief is reviewed, the **Job & requirements** step shows
 "Using reviewed requirements: brief vN · R requirements · C critical" and
 starts the run with that exact version. **Use the raw job description instead**
 starts without the brief; the local parser, including its refusals, then
@@ -1731,19 +1787,20 @@ Requirement coverage (round 1):
   [uncovered] req-2 — strict rule — Not covered under the strict degree rule.
 ```
 
-The desktop review panel shows the same assessments in a **Requirement
-coverage** section, chosen the same way as `status`. Unlike `status`, it names
+The desktop review screen shows the same assessments in the side panel's
+**Coverage** tab, under the heading **Requirement coverage**, chosen the same
+way as `status`. Unlike `status`, it names
 each requirement by the text the run recorded (its id only when none was
 recorded) and each cited block by its section and opening words. Each row has a
 status badge, the basis, the rationale, and the cited blocks, which jump to the
 block when it is in the draft, under a summary such as
-`3 judged · 2 satisfied · 1 not satisfied`. The section is hidden when no
-critic judgement was recorded for the round.
+`3 judged · 2 satisfied · 1 not satisfied`. Without a recorded coverage
+judgement there is no Coverage tab, and the side panel shows Findings alone.
 
 ### Desktop semantic retrieval controls
 
-When a workspace is collecting or stopped, the desktop shows a **Semantic
-retrieval** section under the knowledge store. It uses the same application
+The Career evidence page shows a **Semantic retrieval** section under the
+Career evidence card. It uses the same application
 contracts as the `embeddings` and `retrieval mode` commands above.
 
 - **Model status** for the chosen tier (`311m`, `97m`, or `eg2-text`) appears as a badge:
@@ -1777,15 +1834,13 @@ and keeps paths local.
   Archival requires confirmation and cannot target the default CKB.
 
 - **Saved store on reopen.** When a workspace opens, the **Knowledge base**
-  section of the Career evidence card (the **Manage career evidence** panel on
-  the application screen) reopens the store saved with its selection, marks the
-  selected CKB "In use", and shows no path. It reloads when the Career evidence
-  card creates or selects a CKB, and the create-or-open form sits behind **Use a different
-  knowledge store…** (shown directly only when the host cannot create a CKB
-  itself). The panel and the card read the store one after another, so a store
-  shared with another workspace shows the same CKB in both. If the saved
-  location is no longer readable, the panel asks you to open the store again,
-  also after a reload. Only the first saved entry's store is restored.
+  section of the Career evidence card reopens the store saved with its
+  selection, marks the selected CKB "In use", and shows no path. It reloads
+  when the card creates or selects a CKB, and the create-or-open form sits
+  behind **Use a different knowledge store…** (shown directly only when the
+  host cannot create a CKB itself). A store shared with another workspace shows
+  the same CKB in both. If the saved location is no longer readable, the
+  section asks you to open the store again, also after a reload. Only the first saved entry's store is restored.
 
 - **Automatic knowledge base.** The Career evidence card sits at the top of the
   Career evidence page and follows the workspace's selected CKB. With none
