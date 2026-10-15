@@ -29,6 +29,7 @@ import {
   revisionDirectionsUnavailableNote,
 } from "./revision-direction.js";
 import type { SendVerdict } from "./send-verdict.js";
+import { CONSENSUS_READY_REASON, PERSISTING_FINDINGS_REASON } from "./stop-reason.js";
 
 export type FooterBlockerKind =
   | "ready"
@@ -138,6 +139,11 @@ export function footerBlocker(
       revisionLeft && accepted === blocking.length
         ? `${plural(accepted, "accepted blocking finding")} ${accepted === 1 ? "needs" : "need"} a revision`
         : `${plural(blocking.length, "blocking finding")} ${blocking.length === 1 ? "needs" : "need"} a decision`;
+    // The run paused because the same finding came back; say so until the reviewer decides it.
+    const undecided = blocking.some((finding) => finding.decision === "pending");
+    if (undecided && state.evaluation.stopReason === "persisting-findings") {
+      return { kind: "findings", text: PERSISTING_FINDINGS_REASON, tone: "warning" };
+    }
     return {
       kind: "findings",
       text: revisionLeft ? text : `${text} · ${ACCEPT_UNAVAILABLE_NOTE}`,
@@ -155,7 +161,12 @@ export function footerBlocker(
     return { kind: "waiting", text: "Provider recovery remains before approval", tone: "warning" };
   }
   if (verdict === null || verdict.ready) {
-    return { kind: "ready", text: `Ready to send${noRevision}`, tone: "safe" };
+    const agreed = state.evaluation.stopReason === "consensus-ready";
+    return {
+      kind: "ready",
+      text: `${agreed ? CONSENSUS_READY_REASON : "Ready to send"}${noRevision}`,
+      tone: "safe",
+    };
   }
   return {
     kind: "ready",

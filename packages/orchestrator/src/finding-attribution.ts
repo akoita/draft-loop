@@ -113,7 +113,7 @@ export function findingIdentity(finding: IdentifiableFinding, artifact: DraftArt
 }
 
 /** Where a validation or critique finding points, with the same precedence the readiness report uses. */
-function targetOf(
+export function targetOf(
   artifact: DraftArtifact,
   finding: {
     readonly claimId?: string | undefined;

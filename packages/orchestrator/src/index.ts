@@ -63,6 +63,11 @@ import {
   normalizeCandidateDirectionText,
 } from "./candidate-direction.js";
 import { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
+import {
+  assessConsensus,
+  type FindingDecisionEntry,
+  findingDecisionsFromPayloads,
+} from "./consensus-stop.js";
 import { droppedCoverageFindings } from "./dropped-coverage.js";
 import {
   activateDurationAccounting,
@@ -396,6 +401,8 @@ export interface RunStore {
   ) => Promise<ExecutionRecord | undefined>;
   readonly appendEvent: (event: RunEventInput) => Promise<RunEvent>;
   readonly listEvents: (runId: string) => Promise<readonly RunEvent[]>;
+  /** The candidate's recorded finding decisions for the run, oldest first; absent when not kept. */
+  readonly listFindingDecisions?: (runId: string) => Promise<readonly FindingDecisionEntry[]>;
 }
 
 export interface OrchestrationRequest {
@@ -475,6 +482,7 @@ interface AuditStorage extends StoragePort {
   readonly appendAuditEvent: (input: AuditEventInput) => Promise<unknown>;
   readonly listAuditEvents: (workspaceId: string) => Promise<readonly AuditRecord[]>;
   readonly saveRunSnapshot?: (input: RunSnapshotRecordInput) => Promise<unknown>;
+  readonly listDecisions?: (runId: string) => Promise<readonly { readonly payload: JsonValue }[]>;
   readonly getLatestRunSnapshot?: (runId: string) => Promise<
     | {
         readonly payload: JsonValue;
@@ -1126,6 +1134,12 @@ export class InMemoryRunStore implements RunStore {
   private readonly runs = new Map<string, RunSnapshot>();
   private readonly executions = new Map<string, ExecutionRecord>();
   private readonly runEvents = new Map<string, RunEvent[]>();
+  /** Finding decisions a test records for a run, oldest first. */
+  public readonly findingDecisions = new Map<string, FindingDecisionEntry[]>();
+
+  public async listFindingDecisions(runId: string): Promise<readonly FindingDecisionEntry[]> {
+    return this.findingDecisions.get(runId) ?? [];
+  }
 
   public async loadRun(runId: string): Promise<RunSnapshot | undefined> {
     const value = this.runs.get(runId);
@@ -1277,6 +1291,10 @@ export function createStorageRunStore(
     },
     async listEvents(runId) {
       return listEvents(runId);
+    },
+    async listFindingDecisions(runId) {
+      const records = (await storage.listDecisions?.(runId)) ?? [];
+      return findingDecisionsFromPayloads(records.map(({ payload }) => payload));
     },
   };
   return store;
@@ -1460,6 +1478,7 @@ export function createOrchestrationEngine(
     snapshot: RunSnapshot,
     reason: string,
     now = clock(),
+    details: RunEventInput["details"] = {},
   ): Promise<RunSnapshot> => {
     const settled = settledForTransition(snapshot, now);
     const updated = {
@@ -1470,7 +1489,7 @@ export function createOrchestrationEngine(
       updatedAt: now,
       lastError: null,
     };
-    await saveAndEmit(updated, "state.changed", { to: "awaiting-approval", reason });
+    await saveAndEmit(updated, "state.changed", { to: "awaiting-approval", reason, ...details });
     return updated;
   };
 
@@ -1972,17 +1991,26 @@ export function createOrchestrationEngine(
       },
     );
     const now = clock();
+    const consensus = assessConsensus(evaluation, {
+      runId: snapshot.runId,
+      artifact: snapshot.artifact as DraftArtifact,
+      findings: combined,
+      decisions: (await options.store.listFindingDecisions?.(snapshot.runId)) ?? [],
+      previousEvaluation: snapshot.latestEvaluation,
+      classification: execution.findingClassification,
+    });
+    const settledEvaluation = consensus.evaluation;
     const updated = {
       ...snapshot,
       findings: combined,
-      latestEvaluation: evaluation,
+      latestEvaluation: settledEvaluation,
       scoreHistory: [...snapshot.scoreHistory, evaluation.scoreVector],
       updatedAt: now,
     };
     if (evaluation.ready)
       return transitionToAwaitingApproval(
         { ...updated, state: "awaiting-approval" as const, currentStep: null },
-        "ready",
+        settledEvaluation.stopReason,
         now,
       );
     const autopilot =
@@ -1992,13 +2020,17 @@ export function createOrchestrationEngine(
             round: snapshot.round,
             maxRounds: snapshot.budget.maxRounds,
             conflicts: autopilotConflicts(updated.artifact, combined),
+            persistingFindings: consensus.persisting.length,
           })
         : "stop";
     if (evaluation.shouldStop && autopilot !== "continue")
       return transitionToAwaitingApproval(
         { ...updated, state: "awaiting-approval" as const, currentStep: null },
-        autopilot === "pause-on-conflict" ? "autopilot-conflict" : evaluation.stopReason,
+        autopilot === "pause-on-conflict" ? "autopilot-conflict" : settledEvaluation.stopReason,
         now,
+        consensus.persisting.length === 0
+          ? {}
+          : { persistingFindings: consensus.persisting.join("; ") },
       );
     return saveAndEmit(
       {
@@ -2624,6 +2656,7 @@ export * from "./adjudication.js";
 export * from "./autopilot.js";
 export * from "./candidate-direction.js";
 export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
+export * from "./consensus-stop.js";
 export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,

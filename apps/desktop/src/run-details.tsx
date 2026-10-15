@@ -37,6 +37,7 @@ import {
 } from "./review-run-status.js";
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
+import { plainStopReason } from "./stop-reason.js";
 
 /** The time a direction was given, in the reader's locale; the recorded text when unreadable. */
 function formatDirectionTime(createdAt: string): string {
@@ -454,6 +455,7 @@ export function RunDetailsDrawer({
   const runInProgress = reviewInProgress(state);
   const runFinished = reviewFinished(state);
   const startable = start !== null && canStartNewReview(state);
+  const stopReason = runInProgress ? null : plainStopReason(state.evaluation.stopReason);
 
   return (
     <div className="run-details-layer" hidden={!open}>
@@ -500,6 +502,11 @@ export function RunDetailsDrawer({
                 approval and its export are kept.
               </p>
             ) : null}
+            {stopReason === null ? null : (
+              <p className="setup-note" role="status">
+                {stopReason}
+              </p>
+            )}
             {runFinished || runInProgress ? null : autopilot}
             {/* While the run executes, its progress and timeline are in the side panel. */}
             {runInProgress ? (

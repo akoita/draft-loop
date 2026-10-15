@@ -40,23 +40,27 @@ export function hasAutopilotConflict(conflicts: AutopilotConflicts): boolean {
   return conflicts.disputedClaims > 0 || conflicts.factualityErrors > 0;
 }
 
-export type AutopilotDecision = "continue" | "pause-on-conflict" | "stop";
+export type AutopilotDecision = "continue" | "pause-on-conflict" | "pause-on-persisting" | "stop";
 
 /**
  * Whether an autopilot run revises again instead of pausing for the candidate.
  *
  * It continues only below the round limit, so the last round always ends in
- * review rather than in an empty round past the limit. A conflict pauses a run
- * that would otherwise have continued.
+ * review rather than in an empty round past the limit. A blocking finding that
+ * persisted from the previous round, or a conflict, pauses a run that would
+ * otherwise have continued; a persisting finding is the more specific reason.
  */
 export function autopilotDecision(input: {
   readonly stopReason: ReadinessStopReason;
   readonly round: number;
   readonly maxRounds: number;
   readonly conflicts: AutopilotConflicts;
+  /** Blocking findings that blocked this round and the one before, matched exactly. */
+  readonly persistingFindings?: number;
 }): AutopilotDecision {
   if (!autopilotContinuableStops.has(input.stopReason) || input.round >= input.maxRounds) {
     return "stop";
   }
+  if ((input.persistingFindings ?? 0) > 0) return "pause-on-persisting";
   return hasAutopilotConflict(input.conflicts) ? "pause-on-conflict" : "continue";
 }

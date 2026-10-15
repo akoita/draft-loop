@@ -749,12 +749,14 @@ finding, blocking or warning, on its own.
 An autopilot review still pauses early when:
 
 - the draft is ready;
+- the same blocking finding persists for two rounds in a row;
 - a claim is disputed;
 - a blocking factuality finding says the draft contradicts your materials, such
   as a date or metric that disagrees with the source;
 - a provider or validation error stops a step, as without autopilot.
 
 The last round always ends in review, and approval and export stay with you.
+
 Turn it on in the desktop with the **Autopilot** checkbox in an application's Review step
 or in **Run progress** (in **Run details** once the run stops executing). In the CLI, pass `--autopilot` to `init`, or switch an
 existing workspace:
@@ -766,6 +768,19 @@ pnpm --filter @draft-loop/cli start autopilot off ./workspace
 
 The setting applies from the next run action, including **Request revision** on
 a run already awaiting approval.
+
+### Stop and pause reasons
+
+The review states why the loop stopped or paused, in **Run details** and in the
+footer:
+
+- **Stopped: author and critic agree it's ready** (`consensus-ready`): the draft
+  is ready and the blocking findings from the previous round are resolved.
+- **Paused: the same blocking finding persisted for two rounds — decide it to
+  continue** (`persisting-findings`): the same finding blocked two rounds in a
+  row, with or without autopilot. Only an exact match counts; the footer line
+  clears once you decide the finding. The CLI run output shows the raw reason
+  after `stop=`.
 
 ## Applications
 

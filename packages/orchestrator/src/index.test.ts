@@ -2163,6 +2163,78 @@ describe("uncapped diagnostic counts", () => {
     });
   });
 
+  it("lists the finding decisions the review recorded in storage, oldest first", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-finding-decisions-"));
+    const storage = openSqliteStorage(join(root, "history.sqlite"));
+    try {
+      await storage.saveWorkspace({
+        id: "workspace-1",
+        state: "collecting",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+      await storage.saveContextSnapshot({
+        id: "context-1",
+        workspaceId: "workspace-1",
+        schemaVersion: 1,
+        createdAt: timestamp,
+        payload: { fixture: true },
+      });
+      await storage.saveRun({
+        id: "run-1",
+        workspaceId: "workspace-1",
+        contextSnapshotId: "context-1",
+        state: "drafting",
+        round: 1,
+        currentStep: "author",
+        budget: { maxRounds: 3 },
+        artifactId: null,
+        approval: "pending",
+        totalCostUsd: 0,
+        startedAt: timestamp,
+        updatedAt: timestamp,
+        lastError: null,
+        payload: { fixture: true },
+      });
+      const decision = (id: string, createdAt: string, payload: JsonValue) =>
+        storage.saveDecision({
+          id,
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          roundId: null,
+          artifactId: null,
+          type: "reject-finding",
+          rationale: "Candidate decided the finding.",
+          actor: "user:desktop",
+          createdAt,
+          payload,
+        });
+      await decision("decision-2", "2026-08-12T10:00:02.000Z", {
+        action: "finding-decision",
+        findingId: "run-1:finding:scope:0:weak-claim",
+        decision: "accepted",
+      });
+      await decision("decision-1", "2026-08-12T10:00:01.000Z", {
+        action: "finding-decision",
+        findingId: "run-1:finding:scope:0:weak-claim",
+        decision: "overridden",
+      });
+      await decision("decision-3", "2026-08-12T10:00:03.000Z", {
+        action: "edit-block",
+        blockId: "block-1",
+        replacementText: "Edited.",
+      });
+
+      expect(await createStorageRunStore(storage).listFindingDecisions?.("run-1")).toEqual([
+        { findingId: "run-1:finding:scope:0:weak-claim", decision: "overridden" },
+        { findingId: "run-1:finding:scope:0:weak-claim", decision: "accepted" },
+      ]);
+    } finally {
+      await storage.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("persists codes that storage key filters reject because codes are values, not keys", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-diagnostic-counts-"));
     const storage = openSqliteStorage(join(root, "history.sqlite"));
@@ -2226,9 +2298,9 @@ describe("uncapped diagnostic counts", () => {
 });
 
 describe("autopilot", () => {
-  const blockingFinding = (category: "coverage" | "factuality") => ({
+  const blockingFinding = (category: "coverage" | "factuality", code = `critic-${category}`) => ({
     id: `finding-${category}`,
-    code: `critic-${category}`,
+    code,
     category,
     severity: "error" as const,
     message: `A blocking ${category} finding.`,
@@ -2238,8 +2310,8 @@ describe("autopilot", () => {
     critic: (request: { readonly round: number }) => Critique,
     author: (request: AuthorRequest) => DraftArtifact = (request) => artifact(request.round),
     autopilot = true,
+    store = new InMemoryRunStore(),
   ) {
-    const store = new InMemoryRunStore();
     const authorAgent = vi.fn(async (request: AuthorRequest) =>
       execution(author(request), "anthropic", "author-test"),
     );
@@ -2270,8 +2342,9 @@ describe("autopilot", () => {
   });
 
   it("revises through blocking findings up to the round limit and passes them to the author", async () => {
-    const { engine, author } = autopilotFixture(() => ({
-      findings: [blockingFinding("coverage")],
+    // A different finding each round is a near-miss, never a persisting finding.
+    const { engine, author } = autopilotFixture((request) => ({
+      findings: [blockingFinding("coverage", `critic-coverage-${request.round}`)],
     }));
 
     const result = await engine.start(request({ budget: { maxRounds: 3 } }));
@@ -2290,6 +2363,125 @@ describe("autopilot", () => {
       to: "awaiting-approval",
       reason: "blocked-findings",
     });
+  });
+
+  it("pauses for the candidate when the same blocking finding persists for two rounds", async () => {
+    const { engine, author } = autopilotFixture(() => ({
+      findings: [blockingFinding("coverage")],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 4 } }));
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 2, currentStep: null });
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(result.latestEvaluation).toMatchObject({
+      stopReason: "persisting-findings",
+      persistingFindingIdentities: ["critic-coverage|artifact|artifact"],
+    });
+    expect((await engine.events("run-1")).at(-1)?.details).toMatchObject({
+      to: "awaiting-approval",
+      reason: "persisting-findings",
+      persistingFindings: "critic-coverage|artifact|artifact",
+    });
+  });
+
+  // The candidate decides every finding of the previous round, as the review records it.
+  class DecidingStore extends InMemoryRunStore {
+    public constructor(private readonly decision: string) {
+      super();
+    }
+
+    public override async listFindingDecisions(runId: string) {
+      const run = await this.loadRun(runId);
+      return (run?.latestEvaluation?.blockingFindingRefs ?? []).map(({ findingId }) => ({
+        findingId,
+        decision: this.decision,
+      }));
+    }
+  }
+
+  it("does not pause again on a blocking finding the candidate overrode", async () => {
+    const { engine, author } = autopilotFixture(
+      () => ({ findings: [blockingFinding("coverage")] }),
+      undefined,
+      true,
+      new DecidingStore("overridden"),
+    );
+
+    const result = await engine.start(request({ budget: { maxRounds: 3 } }));
+
+    expect(result.round).toBe(3);
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(result.latestEvaluation?.stopReason).toBe("blocked-findings");
+  });
+
+  it("pauses on a blocking finding the candidate accepted that persists", async () => {
+    const { engine, author } = autopilotFixture(
+      () => ({ findings: [blockingFinding("coverage")] }),
+      undefined,
+      true,
+      new DecidingStore("accepted"),
+    );
+
+    const result = await engine.start(request({ budget: { maxRounds: 4 } }));
+
+    expect(result.round).toBe(2);
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(result.latestEvaluation?.stopReason).toBe("persisting-findings");
+  });
+
+  it("does not pause when a persisting finding changes its target between rounds", async () => {
+    const { engine, author } = autopilotFixture((request) => ({
+      findings: [
+        {
+          ...blockingFinding("coverage"),
+          // The same code on a different requirement is a different identity.
+          requirementId: `requirement-${request.round}`,
+        },
+      ],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 3 } }));
+
+    expect(result.round).toBe(3);
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(result.latestEvaluation?.stopReason).toBe("blocked-findings");
+  });
+
+  it("stops at the round limit with the persisting reason when the finding persists on the last round", async () => {
+    const { engine, author } = autopilotFixture(() => ({
+      findings: [blockingFinding("coverage")],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 2 } }));
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 2 });
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(result.latestEvaluation?.stopReason).toBe("persisting-findings");
+  });
+
+  it("stops early with consensus-ready once the blocking findings are resolved", async () => {
+    const { engine, author } = autopilotFixture((request) => ({
+      findings: request.round === 1 ? [blockingFinding("coverage")] : [],
+    }));
+
+    const result = await engine.start(request({ budget: { maxRounds: 4 } }));
+
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 2 });
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(result.latestEvaluation).toMatchObject({ ready: true, stopReason: "consensus-ready" });
+    expect((await engine.events("run-1")).at(-1)?.details).toMatchObject({
+      to: "awaiting-approval",
+      reason: "consensus-ready",
+    });
+  });
+
+  it("keeps the plain ready reason when nothing was blocking before", async () => {
+    const { engine } = autopilotFixture(() => ({ findings: [] }));
+
+    const result = await engine.start(request());
+
+    expect(result.latestEvaluation?.stopReason).toBe("ready");
   });
 
   it("pauses on a blocking factuality finding before the round limit", async () => {
