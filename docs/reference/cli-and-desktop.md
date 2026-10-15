@@ -279,6 +279,10 @@ and **Try demo workspace** follow, and the name and round-limit fields sit in a
 closed **Create a new workspace** section. With no history, creating a
 workspace is the first thing on the page.
 
+Under the heading, one line says what to do first: create a workspace, open a
+recent one, or try the demo. Having no workspace open on a fresh install is not
+an error; a host refusal appears only after an action fails.
+
 Entries show the workspace's display name. When two or more entries share a
 name, each also shows the name of its parent folder ("in hc5") so they can be
 told apart; the full path never reaches the interface.
