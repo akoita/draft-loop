@@ -34,6 +34,7 @@ import {
   careerEvidenceLockedDuringGeneration,
 } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
+import { CompactHistoryAction } from "./compact-history.js";
 import { HomeScreen, WorkspaceBackButton } from "./home.js";
 import {
   applicationRunToOpen,
@@ -2894,6 +2895,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               <div className="home-settings-actions">
                 {modelSettingsButton}
                 {writingPolicyNode}
+                {activePort.compactHistory === undefined ? null : (
+                  <CompactHistoryAction
+                    key={state.workspaceId}
+                    workspaceId={state.workspaceId}
+                    compactHistory={activePort.compactHistory}
+                    disabled={modelSettingsDisabled || reviewRunning}
+                    disabledReason={modelSettingsDisabledReason}
+                  />
+                )}
               </div>
               {providerAuthentication}
             </>

@@ -807,6 +807,33 @@ export interface WorkspaceRenameResult {
 const workspaceRenameResultKeys = resultKeys<WorkspaceRenameResult>()(["name"]);
 
 /**
+ * Shrinks the open workspace's run history. The host keeps a verified backup beside the history
+ * file and refuses while a run is working; only sizes and the backup's file name come back.
+ */
+export interface WorkspaceCompactHistoryInput {
+  readonly workspaceId: string;
+}
+
+const workspaceCompactHistoryKeys = inputKeys<WorkspaceCompactHistoryInput>()(["workspaceId"]);
+
+export interface WorkspaceCompactHistoryResult {
+  readonly workspaceId: string;
+  readonly beforeBytes: number;
+  readonly afterBytes: number;
+  /** The backup's file name inside the workspace's history folder; never a path. */
+  readonly backupFileName: string;
+  readonly runsVerified: number;
+}
+
+const workspaceCompactHistoryResultKeys = resultKeys<WorkspaceCompactHistoryResult>()([
+  "workspaceId",
+  "beforeBytes",
+  "afterBytes",
+  "backupFileName",
+  "runsVerified",
+]);
+
+/**
  * The models an already-created workspace should use from its next run.
  *
  * Unlike `WorkspaceCreateInput` the pairing is required in full, because the
@@ -3056,6 +3083,7 @@ export interface BridgeCommandInputMap {
   "workspace.recent-remove": RecentWorkspaceRemoveInput;
   "workspace.recent-clear": RecentWorkspacesClearInput;
   "workspace.rename": WorkspaceRenameInput;
+  "workspace.compact-history": WorkspaceCompactHistoryInput;
   "application.list": ApplicationListInput;
   "application.get": ApplicationGetInput;
   "application.create": ApplicationCreateInput;
@@ -3167,6 +3195,7 @@ export interface BridgeCommandOutputMap {
   "workspace.recent-remove": RecentWorkspaceRemoveResult;
   "workspace.recent-clear": RecentWorkspacesClearResult;
   "workspace.rename": WorkspaceRenameResult;
+  "workspace.compact-history": WorkspaceCompactHistoryResult;
   "application.list": ApplicationListResult;
   "application.get": ApplicationRecordResult;
   "application.create": ApplicationRecordResult;
@@ -4144,6 +4173,35 @@ function normalizeWorkspaceRenameResult(value: unknown): WorkspaceRenameResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, workspaceRenameResultKeys)) return invalidInput();
   return { name: workspaceDisplayName(result.name) };
+}
+
+function validateWorkspaceCompactHistoryInput(value: unknown): WorkspaceCompactHistoryInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceCompactHistoryKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
+}
+
+const compactionBackupFileName = /^history\.sqlite\.pre-compaction-[0-9]{8}T[0-9]{6}Z$/u;
+
+function byteCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return invalidInput();
+  return value;
+}
+
+function normalizeWorkspaceCompactHistoryResult(value: unknown): WorkspaceCompactHistoryResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, workspaceCompactHistoryResultKeys)) return invalidInput();
+  const backupFileName = result.backupFileName;
+  if (typeof backupFileName !== "string" || !compactionBackupFileName.test(backupFileName)) {
+    return invalidInput();
+  }
+  return {
+    workspaceId: identifier(result.workspaceId),
+    beforeBytes: byteCount(result.beforeBytes),
+    afterBytes: byteCount(result.afterBytes),
+    backupFileName,
+    runsVerified: byteCount(result.runsVerified),
+  };
 }
 
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
@@ -5570,6 +5628,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       };
     case "workspace.rename":
       return { type: "workspace.rename", input: validateWorkspaceRenameInput(command.input) };
+    case "workspace.compact-history":
+      return {
+        type: "workspace.compact-history",
+        input: validateWorkspaceCompactHistoryInput(command.input),
+      };
     case "application.list":
       return { type: "application.list", input: validateApplicationListInput(command.input) };
     case "application.get":
@@ -8163,6 +8226,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesClearResult(value);
     case "workspace.rename":
       return normalizeWorkspaceRenameResult(value);
+    case "workspace.compact-history":
+      return normalizeWorkspaceCompactHistoryResult(value);
     case "application.list":
       return normalizeApplicationList(value);
     case "application.get":

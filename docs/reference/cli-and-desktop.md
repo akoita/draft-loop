@@ -343,7 +343,9 @@ applications:
   writing policy editor, and **Manage provider authentication**, which opens
   the provider sign-in dialog described under
   [Provider credentials](#provider-credentials). A line above the button
-  summarizes whether the configured pair can run.
+  summarizes whether the configured pair can run. **Compact run history**
+  shrinks an older, large history file; see
+  [Compacting run history](#compacting-run-history).
 
 Choosing an application card opens that application.
 
@@ -875,6 +877,34 @@ pnpm --filter @draft-loop/cli start application delete app-0123456789ab ./worksp
   workspace's own job and is never deleted.
 - **Desktop.** Home asks for confirmation before deleting, naming the
   application.
+
+## Compacting run history
+
+Workspaces created before run snapshots became slim keep a full copy of each
+run's draft and steps in every snapshot row and audit event, which can grow a
+history file to gigabytes. Compaction rewrites that history to the slim shape:
+
+```sh
+pnpm --filter @draft-loop/cli start workspace compact ./workspace --yes
+```
+
+- **Backup first.** The command refuses without `--yes`. It then copies
+  `.draft-loop/history.sqlite` to `history.sqlite.pre-compaction-<UTC time>`
+  beside it and checks the copy. Delete the backup yourself once you are
+  satisfied; it needs as much disk space as the history had.
+- **Refusals.** It refuses while a run is working, when the audit chain does
+  not verify, or when the disk cannot hold the backup and the working copy.
+  Any failure leaves the history file as it was.
+- **What changes.** The live file is never edited. A copy is rewritten, then
+  checked: its audit chain verifies, and every run and snapshot reads back equal
+  to the original. Only then does it replace the history file. The new chain's
+  `workspace.history-compacted` event records the old chain's head checksum, the
+  backup's file name and the sizes. The old chain survives whole in the backup.
+- **Output.** The command prints the sizes before and after (`--json` for
+  machine-readable output).
+- **Desktop.** **Compact run history** in Home's Workspace settings asks for
+  confirmation, stating that a backup is kept, then shows the same sizes. It is
+  disabled while a run is working.
 
 ## Opportunity briefs
 

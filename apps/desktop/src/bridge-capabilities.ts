@@ -10,6 +10,7 @@ export const bridgeCapabilities = [
   "workspace.recent-remove",
   "workspace.recent-clear",
   "workspace.rename",
+  "workspace.compact-history",
   "application.list",
   "application.get",
   "application.create",

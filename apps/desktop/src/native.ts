@@ -52,6 +52,7 @@ import {
   type SourceEvidenceKindSetInput,
   type SourceEvidenceKindSetResult,
   type SourceEvidenceKindsResult,
+  type WorkspaceCompactHistoryResult,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
   type WorkspaceRetrievalModeResult,
@@ -310,6 +311,11 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
     readonly clearRecentWorkspaces?: () => Promise<void>;
     /** Renames the open workspace and resolves with the stored name. */
     readonly renameWorkspace?: (workspaceId: string, name: string) => Promise<string>;
+    /**
+     * Shrinks the workspace's run history behind a verified backup the host keeps beside it.
+     * Resolves with the sizes and the backup's file name; refuses while a run is working.
+     */
+    readonly compactHistory?: (workspaceId: string) => Promise<WorkspaceCompactHistoryResult>;
   } & DesktopApplicationCapabilities;
 
 /** Job applications inside the open workspace (ADR 0010), present when the host offers them. */
@@ -737,6 +743,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           clearRecentWorkspaces: async () => {
             unwrap(await capabilityPort.execute({ type: "workspace.recent-clear", input: {} }));
           },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.compact-history")
+      ? {
+          compactHistory: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.compact-history",
+                input: { workspaceId },
+              }),
+            ),
         }
       : {}),
     ...(capabilityPort.hasCapability("workspace.rename")

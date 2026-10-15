@@ -1,6 +1,10 @@
 import { auditEventChecksum, checksum, serialize } from "./audit-event-write.js";
 import type { AuditEvent } from "./index.js";
-import { runSnapshotAuditEventType, runSnapshotTarget } from "./run-snapshot-audit.js";
+import {
+  runSnapshotAuditEventType,
+  runSnapshotTarget,
+  runSnapshotTargetFromText,
+} from "./run-snapshot-audit.js";
 
 type JsonValue = AuditEvent["payload"];
 
@@ -31,7 +35,8 @@ export interface AuditChainVerification {
   readonly problems: readonly AuditChainProblem[];
 }
 
-const pageSize = 500;
+// Legacy snapshot events held whole snapshots of many megabytes, so a page must stay small.
+const pageSize = 2;
 
 function parseJson(text: string): JsonValue | undefined {
   try {
@@ -45,25 +50,45 @@ function nullableJson(value: unknown): JsonValue {
   return value === null || value === undefined ? null : (parseJson(String(value)) ?? null);
 }
 
+function snapshotRowRecord(row: Record<string, unknown>, payload: JsonValue): JsonValue {
+  return {
+    workspaceId: String(row.workspace_id),
+    runId: String(row.run_id),
+    contextSnapshotId: String(row.context_snapshot_id),
+    state: String(row.state),
+    round: Number(row.round),
+    currentStep: row.current_step === null ? null : String(row.current_step),
+    budget: nullableJson(row.budget_json),
+    artifactId: row.artifact_id === null ? null : String(row.artifact_id),
+    approval: String(row.approval),
+    totalCostUsd: Number(row.total_cost_usd),
+    startedAt: String(row.started_at),
+    updatedAt: String(row.updated_at),
+    lastError: nullableJson(row.last_error_json),
+    payload,
+  };
+}
+
 /** Recomputes a snapshot row's own checksum the way `saveRunSnapshot` computed it. */
-function snapshotRowChecksum(row: Record<string, unknown>): string {
+export function snapshotRowChecksum(row: Record<string, unknown>): string {
+  return checksum(serialize(snapshotRowRecord(row, nullableJson(row.payload_json))));
+}
+
+const payloadPlaceholder = "\u0000payload";
+
+/**
+ * The same checksum computed without parsing the payload: the payload is stored already
+ * serialized, so its text is spliced into the serialized record. A multi-megabyte legacy payload
+ * then costs string copies instead of a parsed and canonicalized object graph. When the text is not
+ * the canonical form the result differs, and the caller falls back to `snapshotRowChecksum`.
+ */
+function snapshotRowChecksumFromText(row: Record<string, unknown>): string | undefined {
+  const record = serialize(snapshotRowRecord(row, payloadPlaceholder));
+  const quoted = JSON.stringify(payloadPlaceholder);
+  const at = record.indexOf(quoted);
+  if (at < 0) return undefined;
   return checksum(
-    serialize({
-      workspaceId: String(row.workspace_id),
-      runId: String(row.run_id),
-      contextSnapshotId: String(row.context_snapshot_id),
-      state: String(row.state),
-      round: Number(row.round),
-      currentStep: row.current_step === null ? null : String(row.current_step),
-      budget: nullableJson(row.budget_json),
-      artifactId: row.artifact_id === null ? null : String(row.artifact_id),
-      approval: String(row.approval),
-      totalCostUsd: Number(row.total_cost_usd),
-      startedAt: String(row.started_at),
-      updatedAt: String(row.updated_at),
-      lastError: nullableJson(row.last_error_json),
-      payload: nullableJson(row.payload_json),
-    }),
+    `${record.slice(0, at)}${String(row.payload_json)}${record.slice(at + quoted.length)}`,
   );
 }
 
@@ -99,10 +124,16 @@ export function verifyAuditChain(
       };
       lastSequence = sequence;
       eventCount += 1;
-      const payload = parseJson(String(row.payload_json));
+      const payloadText = String(row.payload_json);
       const payloadChecksum = String(row.payload_checksum);
-      if (payload === undefined || checksum(serialize(payload)) !== payloadChecksum) {
-        report("payload-checksum", `audit event ${id} payload does not match its checksum`);
+      // The stored text is the canonical form, so hashing it directly is the cheap path; only text
+      // that does not hash to the stored checksum is parsed and canonicalized, as it always was.
+      const canonical = checksum(payloadText) === payloadChecksum;
+      if (!canonical) {
+        const parsed = parseJson(payloadText);
+        if (parsed === undefined || checksum(serialize(parsed)) !== payloadChecksum) {
+          report("payload-checksum", `audit event ${id} payload does not match its checksum`);
+        }
       }
       const previous =
         row.previous_event_checksum === null ? null : String(row.previous_event_checksum);
@@ -123,8 +154,14 @@ export function verifyAuditChain(
         report("chain-link", `audit event ${id} does not follow the previous event`);
       }
       previousChecksum = String(row.event_checksum);
-      if (row.event_type !== runSnapshotAuditEventType || payload === undefined) continue;
-      const target = runSnapshotTarget(payload);
+      if (row.event_type !== runSnapshotAuditEventType) continue;
+      // A verified payload is read by scanning its text, since a legacy one holds a whole snapshot.
+      let target = canonical ? runSnapshotTargetFromText(payloadText) : undefined;
+      if (target === undefined) {
+        const parsed = parseJson(payloadText);
+        if (parsed === undefined) continue;
+        target = runSnapshotTarget(parsed);
+      }
       if (target === undefined) {
         report("snapshot-missing", `audit event ${id} does not name a run snapshot`);
         continue;
@@ -134,7 +171,8 @@ export function verifyAuditChain(
         report("snapshot-missing", `run snapshot ${target.snapshotId} is missing`);
       } else if (
         String(snapshot.record_checksum) !== target.checksum ||
-        snapshotRowChecksum(snapshot) !== target.checksum
+        (snapshotRowChecksumFromText(snapshot) !== target.checksum &&
+          snapshotRowChecksum(snapshot) !== target.checksum)
       ) {
         report(
           "snapshot-checksum",
