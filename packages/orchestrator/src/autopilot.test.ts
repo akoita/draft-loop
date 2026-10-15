@@ -38,6 +38,20 @@ describe("autopilot decision", () => {
     ).toBe("pause-on-conflict");
   });
 
+  it("pauses on a persisting blocking finding, before the conflict reason", () => {
+    const input = {
+      stopReason: "blocked-findings",
+      round: 1,
+      maxRounds: 3,
+      persistingFindings: 1,
+    } as const;
+    expect(autopilotDecision({ ...input, conflicts: none })).toBe("pause-on-persisting");
+    expect(
+      autopilotDecision({ ...input, conflicts: { disputedClaims: 1, factualityErrors: 0 } }),
+    ).toBe("pause-on-persisting");
+    expect(autopilotDecision({ ...input, round: 3, conflicts: none })).toBe("stop");
+  });
+
   it("counts disputed claims and blocking factuality findings only", () => {
     expect(
       autopilotConflicts({ claims: [{ status: "disputed" }, { status: "verified" }] as never }, [

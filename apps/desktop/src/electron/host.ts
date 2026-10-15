@@ -71,7 +71,11 @@ import {
   type UrlFetcher,
   type UrlHostnameResolver,
 } from "@draft-loop/ingestion";
-import { hasCompletedIndependentCritique, type RunSnapshot } from "@draft-loop/orchestrator";
+import {
+  hasCompletedIndependentCritique,
+  type RunSnapshot,
+  reviewFindingId,
+} from "@draft-loop/orchestrator";
 import {
   defaultUserSessionTimeoutMs,
   listAnthropicModels,
@@ -1001,9 +1005,8 @@ function previousArtifact(snapshot: RunSnapshot, current: ReviewArtifact): Revie
 }
 
 function findingId(snapshot: RunSnapshot, index: number, code: string): string {
-  const artifactIdentity = snapshot.artifact?.id ?? `round-${snapshot.round}`;
-  const artifactScope = createHash("sha256").update(artifactIdentity).digest("hex").slice(0, 16);
-  return `${snapshot.runId}:finding:${artifactScope}:${index}:${code}`;
+  // Shared with the orchestrator, which matches the candidate's decisions to findings by this id.
+  return reviewFindingId(snapshot, snapshot.artifact, index, code);
 }
 
 function reviewFinding(

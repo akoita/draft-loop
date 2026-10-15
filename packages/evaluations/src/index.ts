@@ -70,6 +70,10 @@ export interface ReadinessEvaluationOptions {
 
 export type ReadinessStopReason =
   | "ready"
+  /** Ready, and every blocking finding of the previous round is resolved (the orchestrator sets it). */
+  | "consensus-ready"
+  /** The same blocking finding persisted for two rounds (the orchestrator sets it). */
+  | "persisting-findings"
   | "stable-convergence"
   | "max-rounds"
   | "blocked-findings"
@@ -101,6 +105,17 @@ export interface ReadinessEvaluation {
   readonly shouldStop: boolean;
   readonly status: ReadinessStatus;
   readonly bestAvailable: boolean;
+  /** Identities of the blocking findings of this round; set by the orchestrator, not by `evaluateReadiness`. */
+  readonly blockingFindingIdentities?: readonly string[];
+  /** Each blocking finding's identity with the id the review gave it, to find the candidate's decisions. */
+  readonly blockingFindingRefs?: readonly {
+    readonly identity: string;
+    readonly findingId: string;
+  }[];
+  /** Identities the candidate rejected, overrode or deferred; they never cause a persisting pause. */
+  readonly settledFindingIdentities?: readonly string[];
+  /** Identities of the blocking findings that also blocked the previous round, matched exactly. */
+  readonly persistingFindingIdentities?: readonly string[];
 }
 
 const stopWords = new Set([

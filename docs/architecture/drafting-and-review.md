@@ -44,9 +44,10 @@ versions recorded in run history. The orchestrator stops at configured round,
 cost, or time limits, when quality is stable, or when the user reviews early.
 With the off-by-default workspace autopilot, it keeps revising through blocking
 findings and stable scores until the round limit, and pauses earlier only when
-the draft is ready or on a conflict: a disputed claim or a blocking factuality
-finding. It never loops indefinitely to optimize a subjective score. See [ADR
-0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
+the draft is ready, a blocking finding persists, or on a conflict: a disputed
+claim or a blocking factuality finding. It never loops indefinitely to optimize
+a subjective score. See [stop and pause on findings](#stop-and-pause-on-findings-1113)
+and [ADR 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
 
 ### Degree coverage
 
@@ -643,6 +644,35 @@ severity are ignored, so near-duplicates in one block collapse into one
 finding. The key is positional and code-based: a critic that rewords a code, or
 a revision that inserts or reorders blocks, makes a real match fail and reads as
 one `resolved` plus one `new`.
+
+### Stop and pause on findings (#1113)
+
+The `stable-convergence` score-delta rule is unchanged and still stops a run
+whose scores stop moving. Two rules read the blocking findings instead, using
+the exact `findingIdentity` from the previous section. They live in
+`packages/orchestrator/src/consensus-stop.ts` and run after each critic pass.
+
+- **`consensus-ready`**: the draft is ready (no blocking finding, rubric met)
+  and the blocking findings of the previous round are resolved. A ready draft
+  with nothing resolved keeps the plain `ready` reason.
+- **`persisting-findings`**: a blocking finding with the same identity blocked
+  two consecutive rounds. The run pauses for the candidate, autopilot included,
+  and the pause event records the identities in `persistingFindings`.
+
+After an adjudicated revision only accepted blocking findings count, so a
+recurrence the candidate rejected is a preserved disagreement and never pauses.
+Without adjudication, as in autopilot rounds, the previous round's blocking
+identities (kept on `latestEvaluation.blockingFindingIdentities`) are compared
+with this round's. The candidate's decision sticks: an identity the candidate
+rejected, overrode or deferred in the review never pauses again, in that round
+or later. Only accepted or undecided findings do. The run store lists the
+recorded finding decisions (`RunStore.listFindingDecisions`), and
+`latestEvaluation.blockingFindingRefs` maps each identity to the review's
+finding id so a decision can be matched to it. Identities use positional block keys, so inserting a block
+can turn one finding into a resolved-plus-new pair. That near-miss does not
+match and never pauses. Round, cost and time limits apply as before. The final
+reason is stored on `latestEvaluation.stopReason`, and the desktop words it in
+plain language.
 
 ### Application-readiness stopping decision boundary
 

@@ -338,6 +338,21 @@ describe("RunDetailsDrawer", () => {
     expect(blocked).toMatch(/type="button" disabled="">Start a new review</u);
   });
 
+  it("states the stop reason in plain words once the loop stopped or paused on findings", () => {
+    const withReason = (stopReason: string): DesktopReviewState => ({
+      ...fixture,
+      state: "awaiting-approval",
+      evaluation: { ...fixture.evaluation, stopReason },
+    });
+    expect(renderDrawer(withReason("consensus-ready"))).toContain(
+      "Stopped: author and critic agree it&#x27;s ready",
+    );
+    expect(renderDrawer(withReason("persisting-findings"))).toContain(
+      "Paused: the same blocking finding persisted for two rounds — decide it to continue",
+    );
+    expect(renderDrawer(withReason("blocked-findings"))).not.toContain("Paused:");
+  });
+
   it("leaves the timeline to the side panel while the run executes", () => {
     const html = renderDrawer(running);
     expect(html).not.toContain('<ol class="event-list">');

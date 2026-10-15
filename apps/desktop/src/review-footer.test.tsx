@@ -144,6 +144,32 @@ describe("footerBlocker", () => {
     );
   });
 
+  it("says in plain words that the loop stopped on agreement or paused on a persisting finding", () => {
+    const withReason = (stopReason: string, findings: DesktopReviewState["findings"]) => ({
+      ...reviewed,
+      findings,
+      evaluation: { ...reviewed.evaluation, stopReason },
+    });
+    expect(footerBlocker(withReason("consensus-ready", []), null, ready)).toEqual({
+      kind: "ready",
+      text: "Stopped: author and critic agree it's ready",
+      tone: "safe",
+    });
+    expect(footerBlocker(withReason("persisting-findings", fixture.findings), null, null)).toEqual({
+      kind: "findings",
+      text: "Paused: the same blocking finding persisted for two rounds — decide it to continue",
+      tone: "warning",
+    });
+    // Once the reviewer has decided the finding, the usual line returns.
+    const decided = fixture.findings.map((finding) => ({
+      ...finding,
+      decision: "accepted" as const,
+    }));
+    expect(footerBlocker(withReason("persisting-findings", decided), null, null).text).toBe(
+      "1 accepted blocking finding needs a revision",
+    );
+  });
+
   it("explains the wait while the run cannot be approved yet", () => {
     expect(
       footerBlocker(
