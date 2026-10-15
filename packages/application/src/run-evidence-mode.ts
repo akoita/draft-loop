@@ -8,6 +8,7 @@ import { previewEvidenceMode } from "./evidence-mode-preview.js";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
+import { readRunInputs } from "./run-inputs-read.js";
 import { readRunModels } from "./run-models-read.js";
 import { evidenceModes } from "./workspace-evidence-mode.js";
 
@@ -98,5 +99,6 @@ export function withRunHistoryReaders(
     readRunEvidenceMode: async (command) => readRunEvidenceMode(command),
     readRunAuthorInput: async (command) => readRunAuthorInput(command),
     readRunModels: async (command) => readRunModels(command),
+    readRunInputs: async (command) => readRunInputs(command),
   };
 }

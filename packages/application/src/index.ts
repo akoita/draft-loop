@@ -29,6 +29,7 @@ import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunit
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
+import type { RunInputs } from "./run-inputs-read.js";
 import type { RunModels } from "./run-models-read.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
@@ -540,6 +541,11 @@ export interface ApplicationDriver {
   /** The author and critic models a run was configured with; `undefined` without a context. */
   readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
   /**
+   * The requirements brief and career profile version a run recorded when it started;
+   * `undefined` without a context.
+   */
+  readonly readRunInputs?: (command: StatusCommand) => Promise<RunInputs | undefined>;
+  /**
    * The evidence a run started now would send, decided as the start decides it but without
    * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
    */
@@ -721,6 +727,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunModels === undefined
         ? undefined
         : driver.readRunModels({ ...command, root: requireRoot(command.root) }),
+    readRunInputs: async (command) =>
+      driver.readRunInputs === undefined
+        ? undefined
+        : driver.readRunInputs({ ...command, root: requireRoot(command.root) }),
     previewEvidenceMode: async (command) =>
       driver.previewEvidenceMode === undefined
         ? undefined
@@ -820,6 +830,12 @@ export {
   type RunEvidenceMode,
   readRunEvidenceMode,
 } from "./run-evidence-mode.js";
+export {
+  type RunBriefInput,
+  type RunInputs,
+  type RunProfileInput,
+  readRunInputs,
+} from "./run-inputs-read.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";

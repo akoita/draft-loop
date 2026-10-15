@@ -9,6 +9,7 @@ import type { FindingRequirement } from "./finding-requirement.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
 import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
+import type { RunInputsView } from "./run-inputs.js";
 
 /**
  * Renderer-safe identity for one immutable writing-policy version.
@@ -322,6 +323,8 @@ export interface DesktopReviewState {
   readonly authorInput?: RunAuthorInputView | null;
   /** The reviewed application's runs, newest first; absent outside an application. */
   readonly applicationRuns?: readonly ApplicationRunRowView[] | null;
+  /** The brief and career profile version this run recorded at start; absent without a context. */
+  readonly runInputs?: RunInputsView | null;
   /** Set when this is an earlier run of the application: it is shown read-only. */
   readonly earlierRun?: EarlierRunView | null;
   readonly setup: WorkspaceReadiness;
