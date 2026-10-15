@@ -70,10 +70,13 @@ export async function readRunEvidenceMode(
   }
   const storage = openSqliteStorage(historyPath(root));
   try {
-    const event = (await storage.listAuditEvents(config.id)).findLast(
-      ({ eventType, entityType, entityId }) =>
-        eventType === "run.evidence-mode" && entityType === "run" && entityId === runId,
-    );
+    // One targeted read: listing the whole trail would parse every run snapshot it repeats.
+    const event = await storage.auditEvents.findLatestAuditEvent({
+      workspaceId: config.id,
+      eventType: "run.evidence-mode",
+      entityType: "run",
+      entityId: runId,
+    });
     return event === undefined ? undefined : parseRunEvidenceModePayload(event.payload);
   } finally {
     await storage.close();

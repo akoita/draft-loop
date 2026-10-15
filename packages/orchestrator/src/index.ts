@@ -1128,7 +1128,9 @@ export function createStorageRunStore(storage: AuditStorage): StorageRunStore {
   const store: StorageRunStore = {
     async loadRun(runId) {
       const value = await storage.get(runKey(runId));
-      if (value !== undefined) return immutable(JSON.parse(value) as RunSnapshot);
+      // A freshly parsed value shares nothing, so freezing it is enough; cloning a run snapshot
+      // that carries its whole execution history would double the cost of every status read.
+      if (value !== undefined) return freeze(JSON.parse(value) as RunSnapshot);
       const projected = await storage.getLatestRunSnapshot?.(runId);
       return projected === undefined
         ? undefined

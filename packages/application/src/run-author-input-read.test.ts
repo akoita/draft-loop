@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type JsonValue, openSqliteStorage } from "@draft-loop/storage";
-import { afterEach, describe, expect, it } from "vitest";
+import { type JsonValue, openSqliteStorage, SqliteStorage } from "@draft-loop/storage";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApplicationService } from "./index.js";
 import { createLocalApplicationDriver, readWorkspace } from "./local.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
@@ -99,6 +99,19 @@ describe("run author input reader", () => {
     const root = await workspace();
     await rm(join(root, ".draft-loop", "history.sqlite"), { force: true });
     await expect(readRunAuthorInput({ root, runId: "run-a" })).resolves.toBeUndefined();
+  });
+
+  it("reads one event without listing the run snapshots in the audit trail", async () => {
+    const root = await workspace();
+    await record(root, "run-a", roundOne);
+    await record(root, "run-a", { snapshot: "synthetic" }, "run-snapshot.appended");
+    const listing = vi.spyOn(SqliteStorage.prototype, "listAuditEvents");
+    try {
+      await expect(readRunAuthorInput({ root, runId: "run-a" })).resolves.toEqual(roundOne);
+      expect(listing).not.toHaveBeenCalled();
+    } finally {
+      listing.mockRestore();
+    }
   });
 
   it("is offered by the local driver through the application service", async () => {
