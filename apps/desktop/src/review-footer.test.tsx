@@ -325,4 +325,38 @@ describe("the review footer in the workspace", () => {
     expect(html).toContain(">Not ready: relevance 22% (80% needed)</p>");
     expect(html).toContain(">Approve with override…</button>");
   });
+
+  it("sits below the side panel's scroll area, never over its tabs (#1253)", () => {
+    const state: DesktopReviewState = {
+      ...reviewed,
+      approvalReadiness: relevanceBlocked,
+      coverage: {
+        instructionsVersion: null,
+        summary: { judged: 2, satisfied: 1, notSatisfied: 1, invalid: 0, unanswered: 0 },
+        assessments: [0, 1].map((index) => ({
+          requirementId: `req-${index}`,
+          requirementText: `Requirement ${index}`,
+          status: index === 0 ? ("covered" as const) : ("uncovered" as const),
+          basis: "judgement" as const,
+          evidence: [],
+          rationale: `Rationale ${index}.`,
+        })),
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+    const aside = /<aside class="side-column">.*<\/aside>/su.exec(html)?.[0] ?? "";
+    const footerAt = aside.indexOf('<section class="gate-action-bar"');
+    const scrollArea = aside.slice(0, footerAt);
+    const footer = aside.slice(footerAt);
+
+    // The panel's content, tabs included, lives in its own scroll area; the footer is the
+    // column's next child, so a taller footer shrinks that area instead of covering it.
+    expect(scrollArea.startsWith('<aside class="side-column"><div class="side-scroll">')).toBe(
+      true,
+    );
+    expect(scrollArea.endsWith("</div>")).toBe(true);
+    expect(scrollArea).toContain('role="tablist"');
+    expect(footer).not.toContain('role="tablist"');
+    expect(footer.endsWith("</section></aside>")).toBe(true);
+  });
 });

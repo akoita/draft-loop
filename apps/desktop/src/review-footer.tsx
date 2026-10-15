@@ -1,5 +1,5 @@
 /**
- * The review's sticky footer: the approval gate in one place.
+ * The review's footer: the approval gate in one place, always at the window's bottom edge.
  *
  * The footer states what blocks approval in one line above the buttons, so a refused approval
  * explains itself where the reviewer clicked. An override of the final CV checks opens an inline
@@ -223,8 +223,8 @@ function usePublishedHeight(ref: RefObject<HTMLElement | null>): void {
 }
 
 /**
- * The footer at the foot of the review's side panel: sticky in the two-column desk, and fixed to
- * the window's bottom edge in the stacked layout.
+ * The footer at the foot of the review's side panel: below the panel's scroll area in the two-column desk,
+ * and fixed to the window's bottom edge in the stacked layout.
  */
 export function ReviewFooter({
   blocker,

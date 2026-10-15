@@ -388,6 +388,15 @@ kbd::after {
   font-weight: 650;
 }
 
+/* Disabled, the primary drops its signal fill for the neutral one, so in either theme it
+   never reads as the live action; the base rule's dimming and not-allowed cursor still apply. */
+.button-primary:disabled {
+  border-color: var(--border-strong);
+  color: var(--text-3);
+  background: var(--surface-3);
+  opacity: 0.6;
+}
+
 .button-primary:not(:disabled):hover {
   border-color: var(--teal-bright);
   color: var(--teal-ink);
@@ -752,30 +761,40 @@ input[type="checkbox"] {
 }
 
 /* =========================================================================
-   Spine: one fixed-height row carrying run identity, the loop, and cost.
-   The row never wraps; the application name may take two lines before it is cut.
+   Spine: run identity and the run's controls on the first row, the loop on
+   its own row beneath them. The application name keeps one line and is cut.
    ========================================================================= */
 
-/* The right zone is sized intrinsically so it can never collapse under its own
-   nowrap content and paint back over the loop; the loop is what degrades. */
+/* The identity column never shrinks below its status pill and round chip, so neither is
+   clipped. The controls zone takes at most a little over half the row, so a long application
+   name keeps room too; where that is short the Run details summary is cut first. The loop
+   has a row of its own, so its step labels fit wherever it is shown (#1253). */
 .spine {
   display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(0, auto) auto;
+  grid-template-columns: minmax(min-content, 1fr) fit-content(60%);
+  grid-template-areas:
+    "identity meta"
+    "loop loop";
   align-items: center;
-  gap: var(--space-5);
+  gap: var(--space-2) var(--space-5);
   flex: none;
-  height: var(--spine-height);
   min-height: var(--spine-height);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0 var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-2);
   background: var(--surface);
 }
 
 .spine-identity {
+  grid-area: identity;
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+/* The name has no intrinsic width, so a long one is cut rather than widening its column. */
+.spine-identity > :not(.spine-identity-meta) {
+  contain: inline-size;
 }
 
 .spine-identity h1 {
@@ -891,27 +910,30 @@ input[type="text"].workspace-title-input {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 0;
-  overflow: hidden;
 }
 
-.spine-identity-meta .meta-chip {
-  min-width: 0;
+.spine-identity-meta > * {
+  flex: none;
 }
 
+/* The loop's row is a size container, so its labels give way to the room it really has,
+   whatever the window and the side panel's chosen width. */
 .spine-loop {
+  grid-area: loop;
   display: grid;
-  align-items: center;
+  justify-items: start;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .spine-meta {
+  grid-area: meta;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  white-space: normal;
+  min-width: 0;
 }
 
 .workspace-navigation {
@@ -1027,6 +1049,7 @@ input[type="text"].workspace-title-input {
 .loop-rail {
   position: relative;
   min-width: 0;
+  max-width: 100%;
   padding-bottom: var(--space-4);
 }
 
@@ -2491,28 +2514,42 @@ input[type="text"].workspace-title-input {
    Review panel (right column)
    ========================================================================= */
 
-/* Positioned so absolutely positioned descendants are clipped by the panel's own scroll. */
+/* The panel is a column: its scroll area above, the approval footer below. The footer takes the
+   height it needs and the scroll area the rest, so a growing footer (the override reason, an
+   open Details) shrinks the scroll area instead of covering the tabs inside it. */
 .side-column {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100vh;
   max-height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
   border-left: 1px solid var(--border);
   background: var(--surface);
 }
 
-.side-column > .panel {
+/* Positioned so absolutely positioned descendants are clipped by the panel's own scroll. It
+   keeps a few lines of room however tall the footer grows, so the tabs stay reachable. */
+.side-scroll {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: min(10rem, 25vh);
+  overflow-y: auto;
+}
+
+.side-scroll > .panel {
   border: 0;
   border-radius: 0;
   padding: var(--space-4) var(--space-5) var(--space-5);
   background: transparent;
 }
 
-.side-column > .panel + .panel,
-.side-column > .panel + .trust-strip,
-.side-column > .trust-strip + .panel {
+.side-scroll > .panel + .panel,
+.side-scroll > .panel + .trust-strip,
+.side-scroll > .trust-strip + .panel {
   border-top: 1px solid var(--border);
 }
 
@@ -2526,7 +2563,7 @@ input[type="text"].workspace-title-input {
 }
 
 /* The work area (#1236): a "Next:" line over the Findings and Coverage tabs. */
-.side-column > .review-work {
+.side-scroll > .review-work {
   border-top: 1px solid var(--border);
 }
 
@@ -2593,11 +2630,11 @@ input[type="text"].workspace-title-input {
 }
 
 /* The tablist's rule already separates a tab's panel from the tabs. */
-.side-column > .panel[role="tabpanel"] {
+.side-scroll > .panel[role="tabpanel"] {
   border-top: 0;
 }
 
-.side-column > .panel[role="tabpanel"][hidden] {
+.side-scroll > .panel[role="tabpanel"][hidden] {
   display: none;
 }
 
@@ -2750,6 +2787,7 @@ input[type="text"].workspace-title-input {
   gap: var(--space-2);
   min-width: 0;
   max-width: min(26rem, 32vw);
+  overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   padding: 2px 10px;
@@ -2779,18 +2817,6 @@ input[type="text"].workspace-title-input {
   overflow: hidden;
   color: var(--text-4);
   text-overflow: ellipsis;
-}
-
-/* Where the loop rail shares the header, the meta zone keeps one row and the summary is cut
-   shorter; the loop rail is what gives way. */
-@media (min-width: 1181px) and (max-width: 1450px) {
-  .spine-meta {
-    flex-wrap: nowrap;
-  }
-
-  .run-details-button {
-    max-width: 13rem;
-  }
 }
 
 /* The drawer slides over the side panel from the right. Closed, it stays mounted and hidden,
@@ -2875,20 +2901,20 @@ input[type="text"].workspace-title-input {
 
 /* Outside the drawer the side panel keeps only what needs the reviewer: a paused or
    interrupted run's way back in, and a shared-lineage warning. */
-.side-column > .run-recovery-panel .section-heading {
+.side-scroll > .run-recovery-panel .section-heading {
   margin-bottom: 0;
 }
 
-.side-column > .run-recovery-panel .pending-action-status {
+.side-scroll > .run-recovery-panel .pending-action-status {
   margin-top: var(--space-3);
 }
 
-.side-column > .trust-warning {
+.side-scroll > .trust-warning {
   grid-template-columns: minmax(0, 1fr);
   padding-block: var(--space-3);
 }
 
-.side-column > .panel + .trust-warning {
+.side-scroll > .panel + .trust-warning {
   border-top: 1px solid var(--border);
 }
 
@@ -3710,13 +3736,15 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
-/* The gate's actions, kept on screen at the foot of the review panel. In flow it rests under
-   the gate; while the panel is scrolled above that point it sticks to the bottom edge. */
+/* The gate's actions, kept at the foot of the review panel and the window's bottom edge. It sits
+   below the panel's scroll area rather than over it; when it outgrows the room left above the
+   scroll area's minimum, the footer scrolls on its own. */
 .gate-action-bar {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 2;
-  margin-top: auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   border-top: 1px solid var(--border);
   padding: var(--space-3) var(--space-5) var(--space-4);
   background: var(--surface);
@@ -6484,11 +6512,11 @@ input[type="text"].workspace-title-input {
    Responsive
    ========================================================================= */
 
-/* Loop degradation in the spine. The step labels are the first thing to go and
-   they stay in the accessibility tree, because LoopRail carries aria-current on
-   the active step and that step needs a name. Below the narrow breakpoint the
+/* Loop degradation in the spine. Where its row is too narrow for the labels, the steps
+   compact to dots first; the labels stay in the accessibility tree, because LoopRail carries
+   aria-current on the active step and that step needs a name. Below the narrow breakpoint the
    loop leaves the spine entirely rather than squeezing the run identity out. */
-@media (max-width: 1450px) {
+@container (max-width: 34rem) {
   .loop-step > span:not(.loop-node) {
     position: absolute;
     width: 1px;
@@ -6506,7 +6534,8 @@ input[type="text"].workspace-title-input {
 
 @media (max-width: 1180px) {
   .spine {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "identity meta";
+    padding-block: var(--space-2);
   }
 
   .spine-loop {
@@ -6539,7 +6568,10 @@ input[type="text"].workspace-title-input {
   }
 
   .main-column,
-  .side-column {
+  .side-column,
+  .side-scroll {
+    height: auto;
+    min-height: 0;
     max-height: none;
     overflow: visible;
   }
@@ -6547,6 +6579,10 @@ input[type="text"].workspace-title-input {
   .side-column {
     border-left: 0;
     border-top: 1px solid var(--border);
+  }
+
+  .side-scroll {
+    flex: none;
   }
 
   /* Stacked, the page scrolls as a whole, and a sticky footer would ride up to its column's top
@@ -6558,11 +6594,20 @@ input[type="text"].workspace-title-input {
     bottom: 0;
     left: var(--rail-width);
     z-index: 3;
-    margin-top: 0;
+    max-height: 70vh;
   }
 
   .side-column:has(> .gate-action-bar) {
     padding-bottom: var(--gate-bar-height, 12rem);
+  }
+
+  /* Scrolling a target into view, the tabs included, stops above the fixed bar, not under it. */
+  :root:has(.gate-action-bar) {
+    scroll-padding-bottom: calc(var(--gate-bar-height, 12rem) + var(--space-3));
+  }
+
+  :root:has(.gate-action-bar):has(.claims-disclosure[open]) {
+    scroll-padding-bottom: max(calc(var(--gate-bar-height, 12rem) + var(--space-3)), 50vh + 1rem);
   }
 
   .setup-grid {
@@ -6592,6 +6637,12 @@ input[type="text"].workspace-title-input {
 
   .doc-toolbar-note {
     text-align: left;
+  }
+
+  /* Too narrow for one row of run controls: they wrap, and the spine grows to hold them. */
+  .spine-meta {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
   }
 
   .doc-toolbar-views {
@@ -7076,14 +7127,9 @@ input[type="text"].workspace-title-input {
   font-weight: 650;
   letter-spacing: -0.005em;
   text-transform: none;
-  /* The name may use two lines before it is cut, so a short name is never ellipsised
-     ("Acme …") while the loop and the header actions share the row. */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  /* One line, cut with an ellipsis; the heading's title keeps the whole name. The loop has
+     its own row, so a short name always has room. */
   line-height: 1.2;
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .home-settings .workspace-model-summary {
