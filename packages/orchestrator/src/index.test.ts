@@ -1151,6 +1151,91 @@ describe("durable orchestration", () => {
     });
   });
 
+  it("pauses on a subscription usage limit, keeps completed steps, and retries the step on resume", async () => {
+    const resetsAt = "2026-10-16T15:00:00.000Z";
+    let criticCalls = 0;
+    const { engine, author, critic, store } = engineFixture({
+      critic: async () => {
+        criticCalls += 1;
+        if (criticCalls === 1) {
+          throw Object.assign(new Error("private CLI output"), {
+            code: "usage-limit",
+            retryable: false,
+            usageLimitResetsAt: resetsAt,
+          });
+        }
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const paused = await engine.start(request());
+
+    expect(paused.state).toBe("paused");
+    expect(paused.currentStep).toBe("critic");
+    expect(paused.lastError).toMatchObject({
+      code: "usage-limit",
+      provider: "openai",
+      step: "critic",
+      usageLimitResetsAt: resetsAt,
+    });
+    expect(JSON.stringify(paused)).not.toContain("private CLI output");
+    // The author step stays completed; the interrupted critic step left no failed record.
+    expect(paused.artifact).not.toBeNull();
+    expect(paused.executionHistory.map(({ step, status }) => `${step}:${status}`)).toEqual([
+      "author:completed",
+    ]);
+    expect((await store.listEvents("run-1")).map(({ type }) => type)).toContain(
+      "provider.usage-limit",
+    );
+
+    const resumed = await engine.resume("run-1", { context: context() });
+
+    expect(author).toHaveBeenCalledOnce();
+    expect(critic).toHaveBeenCalledTimes(2);
+    expect(resumed.state).toBe("awaiting-approval");
+    expect(resumed.lastError).toBeNull();
+    expect(resumed.executionHistory.map(({ step, status }) => `${step}:${status}`)).toEqual([
+      "author:completed",
+      "critic:completed",
+    ]);
+  });
+
+  it("pauses again, without using up attempts, when the usage limit is still in effect", async () => {
+    const { engine, author } = engineFixture({
+      author: async () => {
+        throw Object.assign(new Error("limit"), { code: "usage-limit" });
+      },
+    });
+
+    let snapshot = await engine.start(request());
+    for (let resume = 0; resume < 5; resume += 1) {
+      expect(snapshot.state).toBe("paused");
+      snapshot = await engine.resume("run-1", { context: context() });
+    }
+
+    expect(snapshot.state).toBe("paused");
+    expect(snapshot.executionHistory).toEqual([]);
+    expect(snapshot.lastError).toMatchObject({ code: "usage-limit", attempt: 1 });
+    expect(snapshot.lastError?.usageLimitResetsAt).toBeUndefined();
+    expect(author).toHaveBeenCalledTimes(6);
+  });
+
+  it("drops a usage-limit reset time that is not a strict UTC instant", async () => {
+    const { engine } = engineFixture({
+      author: async () => {
+        throw Object.assign(new Error("limit"), {
+          code: "usage-limit",
+          usageLimitResetsAt: "tomorrow at 3pm",
+        });
+      },
+    });
+
+    const paused = await engine.start(request());
+
+    expect(paused.state).toBe("paused");
+    expect(paused.lastError?.usageLimitResetsAt).toBeUndefined();
+  });
+
   it("bounds orchestration retries at three attempts across persisted resumes", async () => {
     const failure = Object.assign(new Error("secret provider response"), {
       code: "transient",

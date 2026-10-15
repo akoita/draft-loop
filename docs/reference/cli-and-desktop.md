@@ -607,6 +607,14 @@ pinned under it.
 - **Run state.** While a run executes, the side panel shows its progress,
   timeline and Stop. A paused or interrupted run keeps Resume in the side
   panel, and a shared-lineage warning stays there too.
+- **Usage limit.** When a Claude or Codex subscription session reaches its
+  usage limit mid-run, the run pauses instead of failing. The side panel says
+  "Usage limit reached on Anthropic · try again after <time>", or "later"
+  when the CLI reported no valid reset time. Completed steps are kept, and
+  **Resume** retries the interrupted step. Nothing switches to the API route
+  for you. The CLI prints the same reason after the run summary. API-credit
+  exhaustion (`quota-exhausted`) and rate limits stay ordinary provider
+  failures with their own retry guidance.
 
 What needs you stays outside the drawer.
 

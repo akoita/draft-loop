@@ -276,6 +276,7 @@ const safeFailureCodes = new Set<ProviderErrorCode>([
   "permission",
   "rate-limit",
   "quota-exhausted",
+  "usage-limit",
   "timeout",
   "cancelled",
   "transient",

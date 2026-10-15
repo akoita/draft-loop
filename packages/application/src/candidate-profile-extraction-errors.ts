@@ -254,6 +254,8 @@ function providerFailureMessage(error: ProviderAdapterError): string {
     case "rate-limit":
     case "quota-exhausted":
       return "The provider rate limit or quota was reached. Check the account limit and retry later.";
+    case "usage-limit":
+      return "The subscription usage limit was reached. Wait for the limit to reset, then retry.";
     case "timeout":
     case "transient":
       return "The provider request timed out or failed temporarily. Retry in a moment.";

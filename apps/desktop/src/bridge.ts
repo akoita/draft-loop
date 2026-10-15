@@ -91,6 +91,7 @@ import type {
   ReviewAction,
   ReviewFinding,
   RunWritingPolicyProjection,
+  UsageLimitView,
   WritingPolicyIdentity,
   WritingPolicyLineage,
   WritingPolicyVersionMetadata,
@@ -2049,6 +2050,7 @@ const desktopReviewStateKeys = [
   "providerTransmissionPreflight",
   "providerRoutes",
   "providerFailure",
+  "usageLimit",
   "previousArtifact",
   "artifact",
   "findings",
@@ -2088,6 +2090,13 @@ const independentReviewResultKeys = resultKeys<IndependentReviewView>()([
   "lineagesDistinct",
   "required",
   "overrideRationale",
+]);
+
+const usageLimitResultKeys = resultKeys<UsageLimitView>()([
+  "provider",
+  "model",
+  "step",
+  "resetsAt",
 ]);
 
 const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
@@ -7541,6 +7550,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
       "permission",
       "rate-limit",
       "quota-exhausted",
+      "usage-limit",
       "timeout",
       "cancelled",
       "transient",
@@ -7581,6 +7591,22 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
       if (!/^[A-Za-z0-9_-]+$/u.test(diagnosticCode) || !/^[A-Za-z0-9_.-]*$/u.test(diagnosticPath)) {
         return invalidInput();
       }
+    }
+  }
+  const usageLimit = value.usageLimit;
+  if (usageLimit !== null && usageLimit !== undefined) {
+    const record = requireRecord(usageLimit);
+    if (!hasOnlyKeys(record, usageLimitResultKeys)) return invalidInput();
+    identifier(record.provider);
+    identifier(record.model);
+    enumValue(record.step, ["author", "critic", "revision"] as const);
+    if (
+      record.resetsAt !== null &&
+      (typeof record.resetsAt !== "string" ||
+        record.resetsAt.length > 64 ||
+        !Number.isFinite(Date.parse(record.resetsAt)))
+    ) {
+      return invalidInput();
     }
   }
   return {

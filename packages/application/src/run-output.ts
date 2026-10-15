@@ -59,6 +59,11 @@ export function outputSnapshot(snapshot: RunSnapshot, io: ApplicationIo): void {
     io.write(
       `providerFailure: code=${snapshot.lastError.code} provider=${snapshot.lastError.provider} step=${snapshot.lastError.step} attempt=${snapshot.lastError.attempt}/${snapshot.lastError.maxAttempts} retryable=${snapshot.lastError.retryable}`,
     );
+    if (snapshot.state === "paused" && snapshot.lastError.code === "usage-limit") {
+      io.write(
+        `paused: usage limit reached on ${snapshot.lastError.provider}; resume after ${snapshot.lastError.usageLimitResetsAt ?? "later"} to retry the ${snapshot.lastError.step} step`,
+      );
+    }
   }
 }
 

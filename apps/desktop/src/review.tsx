@@ -147,6 +147,7 @@ import {
   startRequirementsChoice,
 } from "./start-requirements-model.js";
 import { ThemeToggle } from "./theme.js";
+import { usageLimitText } from "./usage-limit.js";
 
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
@@ -3259,6 +3260,12 @@ export function ReviewWorkspace({
                     resumeButton
                   )}
                 </div>
+                {state.state !== "paused" || state.usageLimit == null ? null : (
+                  <p className="pending-action-status" role="status">
+                    {usageLimitText(state.usageLimit)}. Nothing is lost: Resume retries the{" "}
+                    {state.usageLimit.step} step where it stopped.
+                  </p>
+                )}
                 {state.execution.status !== "interrupted" ? null : state.execution.failure !==
                   undefined ? (
                   <p className="pending-action-status setup-blocker" role="alert">

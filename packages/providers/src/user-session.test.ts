@@ -427,7 +427,7 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     });
   });
 
-  it("maps a successful-process Claude weekly-limit envelope to quota exhaustion", async () => {
+  it("maps a successful-process Claude weekly-limit envelope to a usage limit", async () => {
     const adapter = new AnthropicClaudeUserSessionAdapter({
       configuredModel: anthropicModel,
       runner: async () => ({
@@ -447,7 +447,7 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       await adapter.execute(request(anthropicModel));
       throw new Error("expected rejection");
     } catch (error) {
-      expect(error).toMatchObject({ code: "quota-exhausted", retryable: false });
+      expect(error).toMatchObject({ code: "usage-limit", retryable: false });
       expect((error as Error).message).not.toContain("Sensitive");
     }
   });
@@ -462,7 +462,7 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     ],
     [
       429,
-      "usage limit reached",
+      "quota exceeded",
       "quota-exhausted",
       false,
       "The user-session provider quota is exhausted.",
@@ -1764,7 +1764,7 @@ describe("user-session error normalization and login probes", () => {
     for (const [stderr, code] of [
       ["secret detail: login required", "authentication"],
       ["secret detail: insufficient_quota", "quota-exhausted"],
-      ['{"api_error_status":429,"result":"weekly limit"}', "quota-exhausted"],
+      ['{"api_error_status":429,"result":"weekly limit"}', "usage-limit"],
     ] as const) {
       const adapter = new OpenAICodexUserSessionAdapter({
         configuredModel: openAIModel,

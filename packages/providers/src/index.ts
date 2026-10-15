@@ -134,6 +134,7 @@ export type ProviderErrorCode =
   | "permission"
   | "rate-limit"
   | "quota-exhausted"
+  | "usage-limit"
   | "timeout"
   | "cancelled"
   | "transient"
@@ -156,6 +157,7 @@ export interface ProviderErrorMetadata {
   readonly status?: number;
   readonly requestId?: string;
   readonly retryAfterMs?: number;
+  readonly usageLimitResetsAt?: string;
   readonly failureStage?: ProviderFailureStage;
   readonly diagnostics?: readonly ProviderValidationDiagnostic[];
   /** Exact, content-free issue counts per diagnostic code across the whole rejection. */
@@ -180,6 +182,8 @@ export class ProviderAdapterError extends Error {
   readonly status: number | null;
   readonly requestId: string | null;
   readonly retryAfterMs: number | null;
+  /** ISO time a subscription usage limit resets, when the CLI reported a valid one. */
+  readonly usageLimitResetsAt: string | null;
   readonly failureStage: ProviderFailureStage | null;
   readonly diagnostics: readonly ProviderValidationDiagnostic[];
   readonly diagnosticCounts: readonly ProviderDiagnosticCount[];
@@ -194,6 +198,7 @@ export class ProviderAdapterError extends Error {
       readonly status?: number;
       readonly requestId?: string;
       readonly retryAfterMs?: number;
+      readonly usageLimitResetsAt?: string;
       readonly failureStage?: ProviderFailureStage;
       readonly diagnostics?: readonly ProviderValidationDiagnostic[];
       readonly diagnosticCounts?: readonly ProviderDiagnosticCount[];
@@ -207,6 +212,7 @@ export class ProviderAdapterError extends Error {
     this.status = options.status ?? null;
     this.requestId = options.requestId ?? null;
     this.retryAfterMs = sanitizeRetryAfterMs(options.retryAfterMs) ?? null;
+    this.usageLimitResetsAt = options.usageLimitResetsAt ?? null;
     this.failureStage = options.failureStage ?? null;
     this.diagnostics = options.diagnostics ?? [];
     this.diagnosticCounts = options.diagnosticCounts ?? Object.freeze([]);
@@ -214,6 +220,7 @@ export class ProviderAdapterError extends Error {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
       ...(this.retryAfterMs === null ? {} : { retryAfterMs: this.retryAfterMs }),
+      ...(this.usageLimitResetsAt === null ? {} : { usageLimitResetsAt: this.usageLimitResetsAt }),
       ...(this.failureStage === null ? {} : { failureStage: this.failureStage }),
       ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
       ...(options.diagnosticCounts === undefined

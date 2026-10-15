@@ -23,8 +23,10 @@ import {
 } from "./index.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveClaudeSessionProfileControls } from "./session-profile-controls.js";
+import { isUsageLimitText, usageLimitError } from "./usage-limit.js";
 
 export { codexSessionModelUnsupportedDiagnosticCode } from "./codex-session-model-error.js";
+export { usageLimitDiagnosticCode } from "./usage-limit.js";
 
 export const defaultUserSessionTimeoutMs = 600_000;
 export const maximumUserSessionTimeoutMs = 1_200_000;
@@ -442,7 +444,9 @@ function resultOrError(
     const unsupportedModelError = codexSessionModelUnsupportedError(provider, result);
     if (unsupportedModelError !== undefined) throw unsupportedModelError;
   }
-  const details = `${result.stdout}\n${result.stderr}`.toLowerCase();
+  const rawDetails = `${result.stdout}\n${result.stderr}`;
+  const details = rawDetails.toLowerCase();
+  if (isUsageLimitText(details)) throw usageLimitError(provider, rawDetails);
   let code: "authentication" | "quota-exhausted" | "rate-limit" | "unknown" = "unknown";
   if (
     details.includes("not logged in") ||
@@ -454,9 +458,7 @@ function resultOrError(
   } else if (
     details.includes("insufficient_quota") ||
     details.includes("quota exhausted") ||
-    details.includes("quota exceeded") ||
-    details.includes("weekly limit") ||
-    details.includes("usage limit")
+    details.includes("quota exceeded")
   ) {
     code = "quota-exhausted";
   } else if (
@@ -641,11 +643,11 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
   const statusMetadata = status === undefined ? {} : { status };
   const diagnostics = claudeStructuredErrorDiagnostics(response);
   const safeResult = typeof response.result === "string" ? response.result.toLowerCase() : "";
+  if ((status === 429 || status === undefined) && isUsageLimitText(safeResult)) {
+    return usageLimitError("anthropic", safeResult, { ...statusMetadata, diagnostics });
+  }
   if (status === 429) {
-    const quota =
-      safeResult.includes("weekly limit") ||
-      safeResult.includes("usage limit") ||
-      safeResult.includes("quota");
+    const quota = safeResult.includes("quota");
     return new ProviderAdapterError(
       "anthropic",
       quota ? "quota-exhausted" : "rate-limit",
@@ -762,6 +764,7 @@ async function mapClaudeStructuredErrorWithLocalCapture(
     ...(error.status === null ? {} : { status: error.status }),
     ...(error.requestId === null ? {} : { requestId: error.requestId }),
     ...(error.retryAfterMs === null ? {} : { retryAfterMs: error.retryAfterMs }),
+    ...(error.usageLimitResetsAt === null ? {} : { usageLimitResetsAt: error.usageLimitResetsAt }),
     ...(error.failureStage === null ? {} : { failureStage: error.failureStage }),
     diagnostics: [
       ...error.diagnostics,
