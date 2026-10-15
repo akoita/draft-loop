@@ -31,6 +31,7 @@ export const requirementPriorityOptions: readonly {
 /** A plain label for a brief source, from its kind and classification; never its internal id. */
 export function briefSourceLabel(source: OpportunitySourceResult | undefined): string {
   if (source === undefined) return "Unlisted source";
+  if (source.classification === "candidate-provided-fact") return "Entered by you";
   if (source.classification === "candidate-instruction" || source.kind === "candidate-input") {
     return "Your instructions";
   }
@@ -75,12 +76,38 @@ export interface RequirementDraft {
 export interface BriefEditState {
   readonly requirements: readonly RequirementDraft[];
   readonly acknowledgedIssueIds: readonly string[];
+  /** The employer the person typed for a brief that names none; empty when they typed nothing. */
+  readonly employer: string;
 }
+
+/** Whether the brief has no employer, so the person may enter the one they know. */
+export function canEnterEmployer(record: OpportunityRecordResult): boolean {
+  return record.employer === null;
+}
+
+/** Whether the employer was typed by the person rather than read from the job posting. */
+export function isEmployerEnteredByYou(record: OpportunityRecordResult): boolean {
+  const cited = record.employer?.sourceIds ?? [];
+  return (
+    cited.length > 0 &&
+    cited.every(
+      (id) =>
+        record.sources.find((source) => source.id === id)?.classification ===
+        "candidate-provided-fact",
+    )
+  );
+}
+
+export const editEmployer = (state: BriefEditState, employer: string): BriefEditState => ({
+  ...state,
+  employer,
+});
 
 export function createBriefEditState(record: OpportunityRecordResult): BriefEditState {
   return {
     requirements: record.requirements.map((requirement) => ({ ...requirement, dropped: false })),
     acknowledgedIssueIds: [],
+    employer: "",
   };
 }
 
@@ -138,11 +165,21 @@ function requirementsChanged(record: OpportunityRecordResult, state: BriefEditSt
   );
 }
 
+/** The trimmed employer to record, or `null` when none was typed or the brief already has one. */
+function enteredEmployer(record: OpportunityRecordResult, state: BriefEditState): string | null {
+  const typed = state.employer.trim();
+  return canEnterEmployer(record) && typed !== "" ? typed : null;
+}
+
 export function hasUnsavedBriefChanges(
   record: OpportunityRecordResult,
   state: BriefEditState,
 ): boolean {
-  return state.acknowledgedIssueIds.length > 0 || requirementsChanged(record, state);
+  return (
+    state.acknowledgedIssueIds.length > 0 ||
+    requirementsChanged(record, state) ||
+    enteredEmployer(record, state) !== null
+  );
 }
 
 /** Why the staged edit cannot be saved, or `null` when it can. */
@@ -154,12 +191,17 @@ export function briefEditProblem(state: BriefEditState): string | null {
   if (kept.some((requirement) => requirement.text.trim().length > maximumRequirementTextLength)) {
     return `A requirement can be at most ${maximumRequirementTextLength} characters.`;
   }
+  if (state.employer.trim().length > maximumRequirementTextLength) {
+    return `The employer can be at most ${maximumRequirementTextLength} characters.`;
+  }
   return null;
 }
 
 /**
  * The `opportunity.edit` patch for the staged changes. Dropped requirements are omitted from the
- * list; kept ones keep their id and source references, so an edit never invents a source.
+ * list; kept ones keep their id and source references, so an edit never invents a source. An
+ * employer the person typed is sent as `candidateEmployer`, which the application records as
+ * theirs and never as something the job posting says.
  */
 export function buildBriefEditPatch(
   record: OpportunityRecordResult,
@@ -169,7 +211,9 @@ export function buildBriefEditPatch(
     issue.status === "open" && state.acknowledgedIssueIds.includes(issue.id)
       ? { ...issue, status: "acknowledged" }
       : issue;
+  const employer = enteredEmployer(record, state);
   return {
+    ...(employer === null ? {} : { candidateEmployer: employer }),
     ...(requirementsChanged(record, state)
       ? {
           requirements: keptRequirements(state).map((requirement) => ({
@@ -187,7 +231,7 @@ export function buildBriefEditPatch(
 
 /**
  * What stops a saved draft from being marked reviewed; empty when it is ready. A job posting that
- * names no employer does not block review: nobody may fill the employer in on its behalf.
+ * names no employer does not block review: only the person may enter one, as their own.
  */
 export function reviewBlockers(record: OpportunityRecordResult): readonly string[] {
   const blockers: string[] = [];

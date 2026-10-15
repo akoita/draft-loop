@@ -8,11 +8,14 @@ import {
   type BriefOperationOutcome,
   type BriefOperations,
   briefEditProblem,
+  canEnterEmployer,
   createBriefEditState,
   describeBriefSources,
   dropRequirement,
+  editEmployer,
   editRequirementText,
   hasUnsavedBriefChanges,
+  isEmployerEnteredByYou,
   loadBrief,
   markReviewedDisabledReason,
   maximumRequirementTextLength,
@@ -49,6 +52,8 @@ export interface OpportunityBriefReviewViewProps {
   readonly savedVersion?: number | null;
   readonly savedNoteRef?: RefObject<HTMLParagraphElement | null>;
   readonly onText: (id: string, text: string) => void;
+  /** Stages the employer the person typed for a brief that names none. */
+  readonly onEmployer?: (employer: string) => void;
   readonly onPriority: (id: string, priority: RequirementPriority) => void;
   readonly onDrop: (id: string) => void;
   readonly onRestore: (id: string) => void;
@@ -179,6 +184,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
     savedVersion = null,
     savedNoteRef,
     onAcknowledge,
+    onEmployer,
     onSave,
     onReview,
     onStartEdit,
@@ -262,7 +268,32 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
               </div>
               <div>
                 <dt>Employer</dt>
-                <dd>{record.employer?.value ?? "Not named in the job posting"}</dd>
+                {edit !== null && canEnterEmployer(record) ? (
+                  <dd>
+                    <label className="brief-employer-field">
+                      <span>Entered by you</span>
+                      <input
+                        type="text"
+                        value={edit.employer}
+                        maxLength={maximumRequirementTextLength + 200}
+                        disabled={pending}
+                        placeholder="Not named in the job posting"
+                        aria-label="Employer (entered by you)"
+                        onChange={(event) => onEmployer?.(event.target.value)}
+                      />
+                    </label>
+                    <span className="setup-note">
+                      Saved as your own entry, never as something the job posting says.
+                    </span>
+                  </dd>
+                ) : (
+                  <dd>
+                    {record.employer?.value ?? "Not named in the job posting"}
+                    {isEmployerEnteredByYou(record) ? (
+                      <span className="brief-entered-tag">Entered by you</span>
+                    ) : null}
+                  </dd>
+                )}
               </div>
             </dl>
             {record.sources.some((source) => source.textOrigin === "job-posting-json-ld") ? (
@@ -579,6 +610,7 @@ export function OpportunityBriefReview({
       savedVersion={savedVersion}
       savedNoteRef={savedNoteRef}
       onText={(id, text) => stage((state) => editRequirementText(state, id, text))}
+      onEmployer={(employer) => stage((state) => editEmployer(state, employer))}
       onPriority={(id, priority) => stage((state) => setRequirementPriority(state, id, priority))}
       onDrop={(id) => stage((state) => dropRequirement(state, id))}
       onRestore={(id) => stage((state) => restoreRequirement(state, id))}

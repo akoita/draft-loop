@@ -10,7 +10,11 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApplicationSummaryView } from "../application-contract.js";
-import type { OpportunityLatestResult, OpportunityRecordResult } from "../bridge.js";
+import {
+  createCapabilityPort,
+  type OpportunityLatestResult,
+  type OpportunityRecordResult,
+} from "../bridge.js";
 import type { DesktopReviewState } from "../model.js";
 import { createNativeHost } from "./host.js";
 
@@ -415,5 +419,36 @@ describe("a second application in the same workspace", () => {
       candidateProfile: profile,
       opportunityBrief: { briefId: secondBrief.briefId, version: secondReviewed.version },
     });
+  });
+});
+
+describe("an employer the candidate enters", () => {
+  it("is saved through the bridge as a candidate-provided fact, not the posting's", async () => {
+    const harness = await openHost();
+    const application = await createApplication(harness, "Acme");
+    const record = await value<OpportunityRecordResult>(extract(harness, application.id));
+    expect(record.employer).toBeNull();
+    const port = createCapabilityPort({
+      capabilities: ["opportunity.edit"],
+      invoke: (command) => harness.host.invoke(command),
+    });
+
+    const edited = await port.execute({
+      type: "opportunity.edit",
+      input: {
+        workspaceId: harness.workspaceId,
+        briefId: record.briefId,
+        expectedVersion: record.version,
+        patch: { candidateEmployer: "  Example Systems " },
+        applicationId: application.id,
+      },
+    });
+
+    if (!edited.ok) throw new Error(`Expected the edit: ${JSON.stringify(edited)}`);
+    const entered = edited.value.employer;
+    expect(entered?.value).toBe("Example Systems");
+    const cited = edited.value.sources.filter((source) => entered?.sourceIds.includes(source.id));
+    expect(cited.map((source) => source.classification)).toEqual(["candidate-provided-fact"]);
+    expect(entered?.sourceIds).not.toContain("posting");
   });
 });

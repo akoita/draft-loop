@@ -1,4 +1,4 @@
-import type { JobRequirement } from "@draft-loop/schemas";
+import { isCandidateProvidedSourcedText, type JobRequirement } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 
 import { CliUserError } from "./cli-user-error.js";
@@ -33,7 +33,13 @@ export function reviewedOpportunityContext(
   const sections = [
     `Role: ${brief.role?.value ?? ""}`,
     // A reviewed brief may have no employer; say so rather than leave the author a blank to fill.
-    `Employer: ${brief.employer?.value ?? "not named in the job posting"}`,
+    `Employer: ${
+      brief.employer === null
+        ? "not named in the job posting"
+        : isCandidateProvidedSourcedText(brief.employer, brief.sources)
+          ? `${brief.employer.value} (entered by the candidate)`
+          : brief.employer.value
+    }`,
     ...(brief.responsibilities.length === 0
       ? []
       : ["Responsibilities:", ...brief.responsibilities.map((item) => `- ${item.text}`)]),

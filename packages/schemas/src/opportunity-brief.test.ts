@@ -544,3 +544,73 @@ describe("opportunity brief schemas", () => {
     ).toBe(false);
   });
 });
+
+describe("candidate-provided employer", () => {
+  const enteredSource = {
+    id: "entered-employer",
+    classification: "candidate-provided-fact" as const,
+    status: "available" as const,
+    provenance: { kind: "candidate-input" as const, capturedAt: createdAt, checksum },
+  };
+  const withSource = (overrides: Partial<OpportunityBriefInput>) => {
+    const base = brief();
+    return brief({ sources: [...base.sources, enteredSource], ...overrides });
+  };
+  const messages = (input: OpportunityBriefInput) => {
+    const result = opportunityBriefSchema.safeParse(input);
+    return result.success ? [] : result.error.issues.map((issue) => issue.message);
+  };
+
+  it("validates an employer that cites only a candidate-provided source", () => {
+    const input = withSource({ employer: sourced("Example Systems", ["entered-employer"]) });
+    expect(opportunityBriefSchema.parse(input).employer?.sourceIds).toEqual(["entered-employer"]);
+  });
+
+  it("refuses an extracted fact that cites a candidate-provided source", () => {
+    const input = withSource({
+      role: sourced("Senior Platform Engineer", ["entered-employer"]),
+    });
+    expect(messages(input)).toContain(
+      "extracted opportunity facts must not cite candidate-provided sources",
+    );
+  });
+
+  it("refuses a candidate-provided employer that also cites the job posting", () => {
+    const input = withSource({
+      employer: sourced("Example Systems", ["entered-employer", "job-source"]),
+    });
+    expect(messages(input)).toContain(
+      "a candidate-provided employer must cite only candidate-provided sources",
+    );
+  });
+
+  it("refuses a candidate instruction field that cites a candidate-provided source", () => {
+    const base = brief();
+    const input = withSource({
+      candidateInstructions: {
+        ...base.candidateInstructions,
+        tone: sourced("Warm", ["entered-employer"]),
+      },
+    });
+    expect(messages(input)).toContain(
+      "candidate instruction fields must cite candidate-instruction sources",
+    );
+  });
+
+  it("only allows the classification on a candidate-input source", () => {
+    const result = opportunityBriefSourceSchema.safeParse({
+      ...enteredSource,
+      provenance: { kind: "pasted-content", capturedAt: createdAt, checksum },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("never reports a candidate-entered employer as the posting's", () => {
+    const input = opportunityBriefSchema.parse(
+      withSource({ employer: sourced("Example Systems", ["entered-employer"]) }),
+    );
+    const cited = input.sources.filter((source) => input.employer?.sourceIds.includes(source.id));
+    expect(cited.map((source) => source.classification)).toEqual(["candidate-provided-fact"]);
+    expect(cited.some((source) => source.classification === "job-posting")).toBe(false);
+  });
+});

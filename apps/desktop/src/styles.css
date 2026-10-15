@@ -7229,7 +7229,8 @@ input[type="text"].workspace-title-input {
 }
 
 .brief-priority,
-.brief-dropped-tag {
+.brief-dropped-tag,
+.brief-entered-tag {
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   padding: 1px 8px;
@@ -7250,6 +7251,17 @@ input[type="text"].workspace-title-input {
 .brief-priority-high {
   color: var(--amber);
   background: var(--amber-wash);
+}
+
+.brief-employer-field {
+  display: grid;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: var(--text-micro);
+}
+
+.brief-entered-tag {
+  margin-left: var(--space-2);
 }
 
 .brief-priority-field select {

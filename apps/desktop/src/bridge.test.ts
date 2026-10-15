@@ -276,7 +276,30 @@ describe("workspace model reconfiguration", () => {
       input: { expectedVersion: 1, patch: { role: { value: "Senior platform engineer" } } },
     });
 
+    const entered = validateBridgeCommand({
+      type: "opportunity.edit",
+      input: {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: { candidateEmployer: "Example Systems" },
+      },
+    });
+    expect(entered).toMatchObject({ input: { patch: { candidateEmployer: "Example Systems" } } });
+
     for (const input of [
+      {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: { candidateEmployer: "   " },
+      },
+      {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: { candidateEmployer: 7 },
+      },
       { workspaceId: "workspace-1", briefId: "brief-1", patch: {} },
       {
         workspaceId: "workspace-1",

@@ -115,6 +115,18 @@ import {
 
 export { opportunityBriefMaximumExcerptLength } from "./opportunity-brief-fields.js";
 
+import {
+  addOpportunityBriefSourceReferenceIssues,
+  candidateProvidedSourceViolation,
+  employerReferenceMode,
+  opportunityBriefSourceClassificationValues,
+} from "./opportunity-brief-candidate-fact.js";
+
+export {
+  candidateProvidedFactClassification,
+  isCandidateProvidedSourcedText,
+} from "./opportunity-brief-candidate-fact.js";
+
 import { opportunityBriefProvenanceSchema } from "./opportunity-brief-provenance.js";
 
 export {
@@ -207,7 +219,7 @@ export type JobRequirementInput = z.input<typeof jobRequirementInputSchema>;
 
 export const opportunityBriefStatusSchema = z.enum(opportunityBriefStatuses);
 export const opportunityBriefSourceClassificationSchema = z.enum(
-  opportunityBriefSourceClassifications,
+  opportunityBriefSourceClassificationValues,
 );
 export const opportunityBriefProvenanceKindSchema = z.enum(opportunityBriefProvenanceKinds);
 export const opportunityBriefSourceStatusSchema = z.enum(opportunityBriefSourceStatuses);
@@ -223,6 +235,10 @@ export const opportunityBriefSourceSchema = z
     provenance: opportunityBriefProvenanceSchema,
   })
   .superRefine((source, context) => {
+    const violation = candidateProvidedSourceViolation(source);
+    if (violation !== undefined) {
+      context.addIssue({ code: "custom", path: ["classification"], message: violation });
+    }
     const checksumField =
       source.provenance.kind === "approved-url" ? "contentChecksum" : "checksum";
     const checksum =
@@ -319,42 +335,6 @@ function addOpportunityBriefDuplicateIdIssues(
       });
     }
     seen.add(value.id);
-  }
-}
-
-function addOpportunityBriefSourceReferenceIssues(
-  references: readonly string[],
-  path: readonly PropertyKey[],
-  sourcesById: ReadonlyMap<string, OpportunityBriefSource>,
-  context: z.RefinementCtx,
-  mode: "any" | "extracted" | "candidate-instruction",
-): void {
-  for (const [index, sourceId] of references.entries()) {
-    const source = sourcesById.get(sourceId);
-    const referencePath = [...path, "sourceIds", index];
-    if (source === undefined) {
-      context.addIssue({
-        code: "custom",
-        path: referencePath,
-        message: "sourceId must resolve to a source",
-      });
-      continue;
-    }
-    const isCandidateInstruction = source.classification === "candidate-instruction";
-    if (
-      mode !== "any" &&
-      ((mode === "extracted" && isCandidateInstruction) ||
-        (mode === "candidate-instruction" && !isCandidateInstruction))
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: referencePath,
-        message:
-          mode === "extracted"
-            ? "extracted opportunity facts must not cite candidate-instruction sources"
-            : "candidate instruction fields must cite candidate-instruction sources",
-      });
-    }
   }
 }
 
@@ -469,9 +449,6 @@ export const opportunityBriefSchema = z
       readonly path: readonly PropertyKey[];
     }> = [];
     if (brief.role !== null) extractedReferences.push({ value: brief.role, path: ["role"] });
-    if (brief.employer !== null) {
-      extractedReferences.push({ value: brief.employer, path: ["employer"] });
-    }
     for (const [index, responsibility] of brief.responsibilities.entries()) {
       extractedReferences.push({
         value: { value: responsibility.text, sourceIds: responsibility.sourceIds },
@@ -489,6 +466,11 @@ export const opportunityBriefSchema = z
         value: { value: priority.text, sourceIds: priority.sourceIds },
         path: ["priorities", index],
       });
+    }
+    if (brief.employer !== null) {
+      const { sourceIds } = brief.employer;
+      const mode = employerReferenceMode(brief.employer, sourcesById);
+      addOpportunityBriefSourceReferenceIssues(sourceIds, ["employer"], sourcesById, context, mode);
     }
     for (const reference of extractedReferences) {
       addOpportunityBriefSourceReferenceIssues(
@@ -3759,7 +3741,21 @@ export type ArtifactKind = (typeof artifactKinds)[number];
 
 // biome-ignore format: frozen hotspot keeps semantic variants compact.
 export const artifactSectionKinds = [
-  "summary", "experience", "education", "skills", "projects", "custom", "header", "certifications", "languages", "salutation", "hook", "alignment", "closing", "question", "answer",
+  "summary",
+  "experience",
+  "education",
+  "skills",
+  "projects",
+  "custom",
+  "header",
+  "certifications",
+  "languages",
+  "salutation",
+  "hook",
+  "alignment",
+  "closing",
+  "question",
+  "answer",
 ] as const;
 
 export const artifactBlockTypes = ["paragraph", "bullet"] as const;

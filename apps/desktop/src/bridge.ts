@@ -2381,6 +2381,11 @@ export interface OpportunityIssueInput {
 }
 
 export interface OpportunityEditPatch {
+  /**
+   * An employer the candidate typed in for a brief that names none. The application records it as
+   * a candidate-provided fact, never as something the job posting says.
+   */
+  readonly candidateEmployer?: string;
   readonly role?: OpportunitySourcedTextInput | null;
   readonly employer?: OpportunitySourcedTextInput | null;
   readonly responsibilities?: readonly OpportunityResponsibilityInput[];
@@ -2443,6 +2448,7 @@ const opportunityIssueKeys = inputKeys<OpportunityIssueInput>()([
   "sourceIds",
 ]);
 const opportunityEditPatchKeys = inputKeys<OpportunityEditPatch>()([
+  "candidateEmployer",
   "role",
   "employer",
   "responsibilities",
@@ -2468,7 +2474,10 @@ const opportunityReviewKeys = inputKeys<OpportunityReviewInput>()([
 export interface OpportunitySourceResult {
   readonly id: string;
   readonly kind: OpportunitySourceKind;
-  readonly classification: OpportunitySourceClassification | "candidate-instruction";
+  readonly classification:
+    | OpportunitySourceClassification
+    | "candidate-instruction"
+    | "candidate-provided-fact";
   readonly status: "available" | "inaccessible" | "unsupported" | "failed" | "partial" | "stale";
   readonly checksum: string | null;
   readonly capturedAt: string;
@@ -4889,6 +4898,10 @@ function validateOpportunityEditPatch(value: unknown): OpportunityEditPatch {
       : input.employer === null
         ? null
         : validateOpportunitySourcedTextInput(input.employer);
+  const candidateEmployer =
+    input.candidateEmployer === undefined
+      ? undefined
+      : opportunityTextValue(input.candidateEmployer);
   const responsibilities = normalizeCollection(
     input.responsibilities,
     validateOpportunityResponsibilityInput,
@@ -4901,6 +4914,7 @@ function validateOpportunityEditPatch(value: unknown): OpportunityEditPatch {
       : validateOpportunityCandidateInstructionsPatch(input.candidateInstructions);
   const issues = normalizeCollection(input.issues, validateOpportunityIssueInput);
   return {
+    ...(candidateEmployer === undefined ? {} : { candidateEmployer }),
     ...(role === undefined ? {} : { role }),
     ...(employer === undefined ? {} : { employer }),
     ...(responsibilities === undefined ? {} : { responsibilities }),
@@ -7647,8 +7661,9 @@ function normalizeOpportunitySourceResult(value: unknown): OpportunitySourceResu
     id: identifier(result.id),
     kind: enumValue(result.kind, opportunitySourceKinds),
     classification:
-      result.classification === "candidate-instruction"
-        ? "candidate-instruction"
+      result.classification === "candidate-instruction" ||
+      result.classification === "candidate-provided-fact"
+        ? result.classification
         : enumValue(result.classification, opportunitySourceClassifications),
     status: enumValue(result.status, [
       "available",
