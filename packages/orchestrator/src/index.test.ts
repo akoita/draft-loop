@@ -29,6 +29,7 @@ import {
   hasCompletedIndependentCritique,
   InMemoryRunStore,
   type RunSnapshot,
+  resolveSnapshotPayload,
 } from "./index.js";
 
 const timestamp = "2026-08-12T10:00:00.000Z";
@@ -1474,7 +1475,12 @@ describe("durable orchestration", () => {
 
     expect(await store.loadRun("run-1")).toEqual(snapshot);
     expect(savedSnapshots).toHaveLength(1);
-    expect(savedSnapshots[0]?.payload).toEqual(snapshot);
+    expect(
+      await resolveSnapshotPayload(
+        { get: async (key) => values.get(key) },
+        savedSnapshots[0]?.payload,
+      ),
+    ).toEqual(snapshot);
     expect(await store.listEvents("run-1")).toEqual([savedEvent]);
     await expect(
       store.saveExecution({

@@ -2,7 +2,14 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { applicationNameMaxLength, normalizeApplicationName } from "@draft-loop/domain/application";
-import { createStorageRunStore } from "@draft-loop/orchestrator";
+import {
+  createSnapshotReferenceCache,
+  createStorageRunStore,
+  isSlimSnapshotPayload,
+  resolveSnapshotPayload,
+  slimSnapshotPayload,
+  snapshotPayloadArtifactId,
+} from "@draft-loop/orchestrator";
 import {
   type ArtifactVersionRecord,
   openSqliteStorage,
@@ -206,11 +213,8 @@ async function copyRun(context: CopyContext, runId: string): Promise<void> {
   }
   for (const item of exports) remember(item.artifactId);
   for (const item of snapshots) {
-    const payload = item.payload as {
-      artifact?: { id?: unknown };
-      approvedArtifact?: { id?: unknown };
-    };
-    remember(typeof payload.artifact?.id === "string" ? payload.artifact.id : undefined);
+    const payload = item.payload as { approvedArtifact?: { id?: unknown } };
+    remember(snapshotPayloadArtifactId(item.payload));
     remember(
       typeof payload.approvedArtifact?.id === "string" ? payload.approvedArtifact.id : undefined,
     );
@@ -219,9 +223,39 @@ async function copyRun(context: CopyContext, runId: string): Promise<void> {
 
   const { checksum: _runChecksum, ...runInput } = run;
   await target.saveRun(retarget(runInput, sourceId, targetId));
+  // The orchestration state a run is read from: its latest snapshot, executions and event log.
+  // Executions go in first because slim snapshot rows reference them.
+  const sourceStore = createStorageRunStore(source);
+  // A run imported from legacy rows keeps writing legacy rows so its final snapshot still matches
+  // the row that was copied for it.
+  const targetStore = createStorageRunStore(target, {
+    slimSnapshots: snapshots.some((item) => isSlimSnapshotPayload(item.payload)),
+  });
+  const loaded = await sourceStore.loadRun(runId);
+  const moved = loaded === undefined ? undefined : retarget(loaded, sourceId, targetId);
+  if (moved !== undefined) {
+    for (const execution of moved.executionHistory) await targetStore.saveExecution(execution);
+  }
+  const sourceReferences = createSnapshotReferenceCache();
+  const targetReferences = createSnapshotReferenceCache();
   for (const item of snapshots) {
-    const { id: _id, sequence: _sequence, checksum: _checksum, ...input } = item;
-    await target.saveRunSnapshot(retarget(input, sourceId, targetId));
+    const { id: _id, sequence: _sequence, checksum: _checksum, payload, ...input } = item;
+    // A slim row's references name content under the source workspace, so it is rebuilt, moved
+    // and written again as a slim row whose checksums describe the moved content.
+    await target.saveRunSnapshot({
+      ...retarget(input, sourceId, targetId),
+      payload: isSlimSnapshotPayload(payload)
+        ? await slimSnapshotPayload(
+            target,
+            retarget(
+              await resolveSnapshotPayload(source, payload, sourceReferences),
+              sourceId,
+              targetId,
+            ),
+            targetReferences,
+          )
+        : retarget(payload, sourceId, targetId),
+    });
   }
   for (const item of rounds) {
     const { checksum: _checksum, ...input } = item;
@@ -240,14 +274,8 @@ async function copyRun(context: CopyContext, runId: string): Promise<void> {
     await target.saveDecision(retarget(input, sourceId, targetId));
   }
 
-  // The orchestration state a run is read from: its latest snapshot, executions and event log.
-  const sourceStore = createStorageRunStore(source);
-  const targetStore = createStorageRunStore(target);
-  const snapshot = await sourceStore.loadRun(runId);
-  if (snapshot !== undefined) {
-    const moved = retarget(snapshot, sourceId, targetId);
+  if (moved !== undefined) {
     await targetStore.saveRun(moved);
-    for (const execution of moved.executionHistory) await targetStore.saveExecution(execution);
     const events = await sourceStore.listEvents(runId);
     const present = (await targetStore.listEvents(runId)).length;
     for (const event of events.slice(present)) {
