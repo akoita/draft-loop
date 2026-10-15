@@ -1,14 +1,36 @@
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
+  ApplicationProfileChoice,
   ApplicationSetupSummaryView,
   type ApplicationSetupSummaryViewProps,
+  WorkspaceSettingsLinks,
 } from "./application-setup-summary.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();
+
+function elements(node: ReactNode): ReactElement[] {
+  return Children.toArray(node).flatMap((child) => {
+    if (!isValidElement(child)) return [];
+    const props = child.props as { readonly children?: ReactNode };
+    return [child, ...elements(props.children)];
+  });
+}
+
+function buttons(node: ReactNode): ReactElement[] {
+  return elements(node).filter((element) => element.type === "button");
+}
+
+function textOf(element: ReactElement): string {
+  const children = (element.props as { readonly children?: ReactNode }).children;
+  return Children.toArray(children)
+    .filter((child) => typeof child === "string")
+    .join("");
+}
 
 function summaryProps(
   overrides: Partial<ApplicationSetupSummaryViewProps> = {},
@@ -32,10 +54,7 @@ function summaryProps(
       ],
     },
     selectedProfile: { profileId: "fx11", version: 3 },
-    author: fixture.providerTransmissionPreflight.author,
-    critic: fixture.providerTransmissionPreflight.critic,
     writingPolicyStatus: "active",
-    writingPolicyVersion: "sha256:0949b3e22cfe",
     disabled: false,
     onSelectProfile: () => undefined,
     onManageEvidence: () => undefined,
@@ -81,30 +100,47 @@ describe("ApplicationSetupSummaryView", () => {
       />,
     );
 
-    expect(html).toContain(
-      `This application: Writer ${fixture.providerTransmissionPreflight.author.model}`,
-    );
-    expect(html).toContain("Preset Standard, chosen for this application.");
+    expect(html).toContain("This application uses Preset Standard.");
     expect(renderToStaticMarkup(<ApplicationSetupSummaryView {...summaryProps()} />)).not.toContain(
-      "This application:",
+      "This application uses",
     );
   });
 
-  it("shows each workspace input as one card that opens its own screen", () => {
+  it("shows the reviewed profile, then one line per workspace setting", () => {
     const html = renderToStaticMarkup(<ApplicationSetupSummaryView {...summaryProps()} />);
 
-    expect(html).toContain("Career evidence");
-    expect(html).toContain("Open Career evidence");
     expect(html).toContain("Using fx11 · version 3 · reviewed 2026-10-09");
-    expect(html).toContain("Open Career profile");
     expect(html).toContain("Reviewed version");
-    expect(html).toContain(`Writer ${fixture.providerTransmissionPreflight.author.model}`);
-    expect(html).toContain("Writing policy sha256:0949b3e22cfe is active.");
-    expect(html).toContain("Open Home settings");
-    // No full controls from the dedicated screens.
+    expect(html).toContain("Update in Career profile");
+    expect(html).toContain("Career evidence: Main career evidence · 4 sources");
+    expect(html).toContain(">Manage</button>");
+    expect(html).toContain("Models, writing policy and sign-in are set on Home");
+    expect(html).toContain(">Open Home</button>");
+    // No summary cards and no full controls from the dedicated screens.
+    expect(html).not.toContain("home-card");
     expect(html).not.toContain("Add file");
     expect(html).not.toContain("Replace policy");
     expect(html).not.toContain("Facts by category");
+    // At most one primary action in the profile step.
+    expect(html).not.toContain("button-primary");
+  });
+
+  it("opens each page from its own link", () => {
+    const calls: string[] = [];
+    const props = summaryProps({
+      onManageEvidence: () => calls.push("evidence"),
+      onManageProfile: () => calls.push("profile"),
+      onOpenSettings: () => calls.push("home"),
+    });
+    const click = (node: ReactNode, label: string) => {
+      const button = buttons(node).find((element) => textOf(element) === label);
+      if (button === undefined) throw new Error(`No button: ${label}`);
+      (button.props as { readonly onClick: () => void }).onClick();
+    };
+    click(ApplicationProfileChoice(props), "Update in Career profile");
+    click(WorkspaceSettingsLinks(props), "Manage");
+    click(WorkspaceSettingsLinks(props), "Open Home");
+    expect(calls).toEqual(["profile", "evidence", "home"]);
   });
 
   it("asks for a reviewed profile when none exists", () => {
@@ -142,7 +178,7 @@ describe("ReviewWorkspace with setup summary", () => {
     );
 
     expect(html).toContain("Start the review");
-    expect(html).toContain("Job and requirements");
+    expect(html).toContain("Job &amp; requirements");
     expect(html).toContain("SETUP SUMMARY");
     expect(html).not.toContain("FULL PROFILE PANEL");
     // Workspace-level writing policy controls live on Home.

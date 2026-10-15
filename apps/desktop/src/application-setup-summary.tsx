@@ -7,10 +7,10 @@ import {
   type CareerEvidenceStatus,
   loadCareerEvidenceStatus,
 } from "./career-evidence.js";
-import { SummaryCard } from "./home.js";
+import { Chip } from "./home.js";
 import { evidencePresentation, type HomeTone } from "./home-model.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
-import type { CandidateProfileSelection, ProviderTransmissionIdentity } from "./model.js";
+import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
   defaultReviewedProfile,
@@ -28,12 +28,9 @@ export interface ApplicationSetupSummaryViewProps {
   readonly legacyEvidenceSourceCount: number;
   readonly reviewed: ReviewedProfilesState;
   readonly selectedProfile: CandidateProfileSelection | null;
-  readonly author: ProviderTransmissionIdentity;
-  readonly critic: ProviderTransmissionIdentity;
-  /** The application's own model pair; `author` and `critic` are then that pair's. */
+  /** The application's own model pair, when it has one rather than the workspace's. */
   readonly applicationPair?: ApplicationModelProfilesView | null;
   readonly writingPolicyStatus: WritingPolicySummaryStatus;
-  readonly writingPolicyVersion: string | null;
   readonly disabled: boolean;
   readonly onSelectProfile: (selection: CandidateProfileSelection) => void;
   readonly onManageEvidence: () => void;
@@ -41,7 +38,7 @@ export interface ApplicationSetupSummaryViewProps {
   readonly onOpenSettings: () => void;
 }
 
-function profileCardState(
+function profileState(
   reviewed: ReviewedProfilesState,
   selected: CandidateProfileSelection | null,
 ): { readonly chip: string; readonly tone: HomeTone; readonly text: string } {
@@ -77,127 +74,164 @@ function profileCardState(
   }
 }
 
-function writingPolicyText(status: WritingPolicySummaryStatus, version: string | null): string {
-  if (status === "unavailable") return "Writing policy needs attention: it cannot be read.";
-  if (status === "none" || version === null) return "No writing policy (optional).";
-  return `Writing policy ${version} is active.`;
+export interface ApplicationProfileChoiceProps {
+  readonly reviewed: ReviewedProfilesState;
+  readonly selectedProfile: CandidateProfileSelection | null;
+  readonly disabled: boolean;
+  readonly onSelectProfile: (selection: CandidateProfileSelection) => void;
+  readonly onManageProfile: () => void;
 }
 
 /**
- * The workspace-level inputs of an application, each as one compact card with the action that
- * opens its own screen. The application screen keeps only what starting a review needs.
+ * The reviewed career profile this review writes from: the latest one, chosen automatically,
+ * with a picker when there are several and a link to the Career profile page to update it.
+ */
+export function ApplicationProfileChoice({
+  reviewed,
+  selectedProfile,
+  disabled,
+  onSelectProfile,
+  onManageProfile,
+}: ApplicationProfileChoiceProps) {
+  const state = profileState(reviewed, selectedProfile);
+  const choices = reviewed.status === "ready" ? reviewed.choices : [];
+  return (
+    <section className="application-profile" aria-labelledby="application-profile-title">
+      <div className="application-profile-head">
+        <strong id="application-profile-title">Reviewed career profile</strong>
+        <Chip tone={state.tone}>{state.chip}</Chip>
+      </div>
+      <p className="application-profile-text">{state.text}</p>
+      {choices.length > 1 ? (
+        <label className="application-summary-select">
+          <span>Reviewed version</span>
+          <select
+            value={selectedProfile === null ? "" : reviewedProfileKey(selectedProfile)}
+            disabled={disabled}
+            onChange={(event) => {
+              const choice = choices.find(
+                (candidate) => reviewedProfileKey(candidate) === event.target.value,
+              );
+              if (choice !== undefined) {
+                onSelectProfile({ profileId: choice.profileId, version: choice.version });
+              }
+            }}
+          >
+            {selectedProfile === null ? <option value="">Choose a profile</option> : null}
+            {choices.map((choice) => (
+              <option key={reviewedProfileKey(choice)} value={reviewedProfileKey(choice)}>
+                {reviewedProfileLabel(choice)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <div>
+        <button
+          className="button button-outline"
+          type="button"
+          disabled={disabled || reviewed.status === "unsupported"}
+          onClick={onManageProfile}
+        >
+          Update in Career profile
+        </button>
+      </div>
+    </section>
+  );
+}
+
+export interface WorkspaceSettingsLinksProps {
+  readonly evidence: CareerEvidenceStatus;
+  readonly legacyEvidenceSourceCount: number;
+  readonly applicationPair?: ApplicationModelProfilesView | null;
+  readonly writingPolicyStatus: WritingPolicySummaryStatus;
+  readonly disabled: boolean;
+  readonly onManageEvidence: () => void;
+  readonly onOpenSettings: () => void;
+}
+
+/** The workspace-level inputs, each as one line that opens the page where it is changed. */
+export function WorkspaceSettingsLinks({
+  evidence,
+  legacyEvidenceSourceCount,
+  applicationPair = null,
+  writingPolicyStatus,
+  disabled,
+  onManageEvidence,
+  onOpenSettings,
+}: WorkspaceSettingsLinksProps) {
+  const evidenceView = evidencePresentation(evidence, legacyEvidenceSourceCount);
+  return (
+    <ul className="application-workspace-links">
+      <li>
+        <span>Career evidence: {evidenceView.headline}</span>
+        <span aria-hidden="true"> · </span>
+        <button
+          className="link-action"
+          type="button"
+          disabled={disabled}
+          onClick={onManageEvidence}
+        >
+          Manage
+        </button>
+      </li>
+      <li>
+        <span>Models, writing policy and sign-in are set on Home</span>
+        <span aria-hidden="true"> · </span>
+        <button className="link-action" type="button" disabled={disabled} onClick={onOpenSettings}>
+          Open Home
+        </button>
+      </li>
+      {applicationPair === null ? null : (
+        <li className="application-workspace-note">
+          This application uses {applicationPairLabel(applicationPair)}. Other applications use the
+          workspace&apos;s pair.
+        </li>
+      )}
+      {writingPolicyStatus === "unavailable" ? (
+        <li className="application-workspace-attention">
+          Writing policy needs attention: it cannot be read.
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+/**
+ * The profile step of an application: the reviewed profile it writes from, then one line per
+ * workspace-level input with the link that opens its own page.
  */
 export function ApplicationSetupSummaryView({
   evidence,
   legacyEvidenceSourceCount,
   reviewed,
   selectedProfile,
-  author,
-  critic,
   applicationPair = null,
   writingPolicyStatus,
-  writingPolicyVersion,
   disabled,
   onSelectProfile,
   onManageEvidence,
   onManageProfile,
   onOpenSettings,
 }: ApplicationSetupSummaryViewProps) {
-  const evidenceView = evidencePresentation(evidence, legacyEvidenceSourceCount);
-  const profileState = profileCardState(reviewed, selectedProfile);
-  const choices = reviewed.status === "ready" ? reviewed.choices : [];
-  const settingsTone: HomeTone = writingPolicyStatus === "unavailable" ? "attention" : "ready";
   return (
     <div className="application-summary">
-      <SummaryCard
-        id="application-evidence-title"
-        title="Career evidence"
-        subtitle="What DraftLoop may quote. Shared by every application."
-        presentation={evidenceView}
-        headline={evidenceView.headline}
-        action={
-          <button
-            className="button button-outline"
-            type="button"
-            disabled={disabled}
-            onClick={onManageEvidence}
-          >
-            Open Career evidence
-          </button>
-        }
+      <ApplicationProfileChoice
+        reviewed={reviewed}
+        selectedProfile={selectedProfile}
+        disabled={disabled}
+        onSelectProfile={onSelectProfile}
+        onManageProfile={onManageProfile}
       />
-      <SummaryCard
-        id="application-profile-title"
-        title="Career profile"
-        subtitle="The reviewed record this review writes from."
-        presentation={profileState}
-        headline={profileState.text}
-        action={
-          <button
-            className="button button-outline"
-            type="button"
-            disabled={disabled || reviewed.status === "unsupported"}
-            onClick={onManageProfile}
-          >
-            Open Career profile
-          </button>
-        }
-      >
-        {choices.length > 1 ? (
-          <label className="application-summary-select">
-            <span>Reviewed version</span>
-            <select
-              value={selectedProfile === null ? "" : reviewedProfileKey(selectedProfile)}
-              disabled={disabled}
-              onChange={(event) => {
-                const choice = choices.find(
-                  (candidate) => reviewedProfileKey(candidate) === event.target.value,
-                );
-                if (choice !== undefined) {
-                  onSelectProfile({ profileId: choice.profileId, version: choice.version });
-                }
-              }}
-            >
-              {selectedProfile === null ? <option value="">Choose a profile</option> : null}
-              {choices.map((choice) => (
-                <option key={reviewedProfileKey(choice)} value={reviewedProfileKey(choice)}>
-                  {reviewedProfileLabel(choice)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </SummaryCard>
-      <SummaryCard
-        id="application-settings-title"
-        title="Workspace settings"
-        subtitle="Models, writing policy and provider sign-in. Set once on Home."
-        presentation={{
-          chip: writingPolicyStatus === "unavailable" ? "Check" : "Set",
-          tone: settingsTone,
-        }}
-        headline={`${applicationPair === null ? "" : "This application: "}Writer ${author.model} · Reviewer ${critic.model}`}
-        action={
-          <button
-            className="button button-outline"
-            type="button"
-            disabled={disabled}
-            onClick={onOpenSettings}
-          >
-            Open Home settings
-          </button>
-        }
-      >
-        {applicationPair === null ? null : (
-          <p className="home-card-copy">
-            {applicationPairLabel(applicationPair)}, chosen for this application. Other applications
-            use the workspace&apos;s pair.
-          </p>
-        )}
-        <p className="home-card-copy">
-          {writingPolicyText(writingPolicyStatus, writingPolicyVersion)}
-        </p>
-      </SummaryCard>
+      <WorkspaceSettingsLinks
+        evidence={evidence}
+        legacyEvidenceSourceCount={legacyEvidenceSourceCount}
+        applicationPair={applicationPair}
+        writingPolicyStatus={writingPolicyStatus}
+        disabled={disabled}
+        onManageEvidence={onManageEvidence}
+        onOpenSettings={onOpenSettings}
+      />
     </div>
   );
 }

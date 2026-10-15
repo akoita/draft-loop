@@ -372,19 +372,29 @@ The row above the run header starts with Back, which returns to the previous
 page, followed by the flow strip, which opens either career page. Focus moves to the screen's location line when
 a screen opens, so the change is announced.
 
-Before a run, the screen keeps only what starting a review needs:
+Before a run, the screen shows three numbered steps, top to bottom. Each step
+says in words whether it is **Done**, the **Current step** or **Blocked**, with
+the reason, and has at most one primary action:
 
-- **Job and requirements.** The requirements brief and its review action;
-  replacing the job description is behind a disclosure.
-- **Summary cards.** Career evidence, Career profile and Workspace settings
-  (model pair, writing policy, provider sign-in) each show their status and
-  open their own screen. The Career profile card selects the latest reviewed
-  profile, as New application does, and offers the other reviewed versions.
-- **Data sent.** One line names the writer and reviewer; the full transmission
-  detail is behind **See exactly what is sent**, and the acknowledgement stays
-  visible while it is required.
-- **Start.** The per-job writing policy override sits under **Advanced**, then
-  autopilot, **Start author–critic review** and the start checklist.
+1. **Job & requirements.** Add the job description from a file or a public
+   URL, then extract and review its requirements. Once the job description is
+   added, replacing it is behind a disclosure. The step is done when a
+   reviewed brief is selected, or when the requirements are read from the job
+   description.
+2. **Profile.** The latest reviewed career profile is selected automatically,
+   as New application does, with a picker when there are several and
+   **Update in Career profile**. Workspace-level inputs are one-line links:
+   career evidence (**Manage**) and models, writing policy and sign-in
+   (**Open Home**).
+3. **Review.** The data-sent summary names the writer and reviewer; the full
+   transmission detail is behind **See exactly what is sent**, and the
+   acknowledgement stays visible while it is required. The per-job writing
+   policy override sits under **Advanced**, then autopilot, **Start
+   author–critic review** and the start checklist. This step is current once
+   the first two are done.
+
+The step states come from the same conditions as the start checklist, so the
+two never disagree.
 
 The start checklist, **Before you can start**, sits under the Start button and
 stays visible when everything is done:

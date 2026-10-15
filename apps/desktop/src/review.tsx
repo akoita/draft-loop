@@ -10,6 +10,13 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  ApplicationJobStep,
+  ApplicationStepsView,
+  JobDescriptionInputs,
+  OpportunityOverrideDisclosure,
+} from "./application-steps.js";
+import { applicationStepStates } from "./application-steps-model.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
 import {
   approvalReadinessForArtifact,
@@ -2508,7 +2515,7 @@ export function ReviewWorkspace({
               </span>
             </label>
             <button
-              className="button button-primary"
+              className={`button ${compact ? "button-outline" : "button-primary"}`}
               type="button"
               disabled={!policyConfirmed}
               onClick={() =>
@@ -2561,63 +2568,72 @@ export function ReviewWorkspace({
     };
     const compact = setupSummary !== undefined;
     const jobDescriptionInputs = (
-      <>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={onSelectFiles === undefined}
-          onClick={() => onSelectFiles?.("job-description")}
-        >
-          {state.setup.jobDescriptionReady ? "Replace job description" : "Add job description"}
-        </button>
-        <label className="url-input-label">
-          <span>Or provide a public URL</span>
-          <input
-            className="url-input"
-            type="url"
-            placeholder="https://…"
-            value={jobUrl}
-            onChange={(event) => setJobUrl(event.target.value)}
-            aria-label="Target job description URL"
-          />
-        </label>
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={onAddUrl === undefined || jobUrl.trim() === ""}
-          onClick={() => submitUrl("job-description")}
-        >
-          Review and fetch job URL
-        </button>
-      </>
+      <JobDescriptionInputs
+        ready={state.setup.jobDescriptionReady}
+        url={jobUrl}
+        onUrlChange={setJobUrl}
+        {...(onSelectFiles === undefined
+          ? {}
+          : { onChooseFile: () => onSelectFiles("job-description") })}
+        {...(onAddUrl === undefined ? {} : { onFetchUrl: () => submitUrl("job-description") })}
+      />
     );
-    // The writing policy is workspace-level and lives on Home; only the per-job override stays.
-    const renderOpportunityOverride = () => (
-      <details className="setup-details setup-advanced">
-        <summary>Advanced: writing policy override for this job</summary>
-        <p className="setup-note">
-          Import a policy version for this reviewed job without changing the workspace policy.
-        </p>
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={onSelectFiles === undefined || state.setup.reviewedOpportunity == null}
-          onClick={() => onSelectFiles?.("writing-policy-override")}
-        >
-          Import opportunity override
-        </button>
-        {state.setup.reviewedOpportunity == null ? (
-          <span className="setup-retrieval-status">
-            Review the requirements before importing an override.
-          </span>
+    const requirementsControls = (
+      <>
+        {latestBrief != null && requirementsBinding !== undefined ? (
+          <LatestRequirementsBriefView
+            latest={latestBrief}
+            action={
+              briefOperations === undefined ? null : (
+                <OpportunityBriefReviewAction
+                  key={`${requirementsBinding.workspaceId}:${latestBrief.briefId}:${latestBrief.version}`}
+                  briefId={latestBrief.briefId}
+                  operations={briefOperations}
+                  disabled={requirementsBinding.disabled}
+                  label={
+                    latestBrief.status === "draft" ? "Review requirements" : "View requirements"
+                  }
+                  {...(requirementsBinding.onBriefChanged === undefined
+                    ? {}
+                    : { onBriefChanged: requirementsBinding.onBriefChanged })}
+                />
+              )
+            }
+          />
         ) : null}
-        {state.setup.pendingWritingPolicyOverride == null ? null : (
-          <span className="setup-retrieval-status" role="status">
-            Selected override {state.setup.pendingWritingPolicyOverride.version} (
-            {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)}).
-          </span>
-        )}
-      </details>
+        {offersRequirementsExtraction(latestBrief) &&
+        state.setup.jobDescriptionReady &&
+        !state.setup.reviewedOpportunity &&
+        requirementsBinding?.createOpportunity !== undefined ? (
+          <div id={jobRequirementsExtractionId}>
+            <JobRequirementsExtraction
+              key={requirementsBinding.workspaceId}
+              binding={requirementsBinding}
+              openSignal={extractionSignal}
+            />
+          </div>
+        ) : null}
+        {latestBrief == null &&
+        state.setup.reviewedOpportunity != null &&
+        requirementsBinding !== undefined &&
+        briefOperations !== undefined ? (
+          <div className="job-extraction">
+            <p className="setup-note">
+              Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
+            </p>
+            <OpportunityBriefReviewAction
+              key={`${requirementsBinding.workspaceId}:${state.setup.reviewedOpportunity.version}`}
+              briefId={state.setup.reviewedOpportunity.briefId}
+              operations={briefOperations}
+              disabled={requirementsBinding.disabled}
+              label="View requirements"
+              {...(requirementsBinding.onBriefChanged === undefined
+                ? {}
+                : { onBriefChanged: requirementsBinding.onBriefChanged })}
+            />
+          </div>
+        ) : null}
+      </>
     );
     const runStartAction = (id: StartActionId) => {
       if (id === "extract-requirements") extractRequirements();
@@ -2625,6 +2641,64 @@ export function ReviewWorkspace({
       else if (id === "open-provider-sign-in") onOpenHome?.();
       else revealStartTarget(startActionTargets[id] ?? []);
     };
+    const requirementsSource =
+      reviewedRequirements === null || rawJobKey === null ? null : (
+        <StartRequirementsSourceView
+          selection={reviewedRequirements}
+          useJobDescription={startFromJobDescription}
+          disabled={pendingReviewAction?.action === "start"}
+          onUseJobDescription={() => setRawJobChoice(rawJobKey)}
+          onUseReviewed={() => setRawJobChoice(null)}
+        />
+      );
+    const startControls = (
+      <>
+        <div className="onboarding-footer">
+          <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
+          <span>
+            {state.setup.requiredSections.length > 0
+              ? `Required sections: ${state.setup.requiredSections.join(", ")}`
+              : "No required sections"}
+          </span>
+          {renderAutopilotToggle()}
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={startTooltip !== undefined || startPending}
+            title={startTooltip}
+            aria-describedby={startChecklistId}
+            onClick={() =>
+              requestStart(
+                startFromJobDescription
+                  ? { type: "start", requirementsSource: "job-description" }
+                  : { type: "start" },
+              )
+            }
+          >
+            {startButtonLabel(startConditions, startPending)}
+          </button>
+        </div>
+        <StartChecklistView
+          id={startChecklistId}
+          conditions={startConditions}
+          errorMessage={errorMessage ?? null}
+          readOnly={readOnly}
+          isActionDisabled={(id) =>
+            id === "extract-requirements" && requirementsBinding?.disabled === true
+          }
+          onAction={runStartAction}
+        />
+        {startPending ? (
+          <p className="pending-action-status" role="status" aria-live="polite">
+            Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
+            {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while the
+            review starts.
+          </p>
+        ) : null}
+      </>
+    );
+    const pendingOverride = state.setup.pendingWritingPolicyOverride;
+    const jobReady = state.setup.jobDescriptionReady;
     return (
       <div className="app-frame">
         <SideRail onOpenSources={null} />
@@ -2651,9 +2725,41 @@ export function ReviewWorkspace({
                   <p className="eyebrow">Before the review</p>
                   <h2 id="onboarding-title">Start the review</h2>
                   <p className="onboarding-copy">
-                    Check what this review uses, then start it. Each card opens the screen where you
-                    change it.
+                    Finish the three steps in order. Career evidence, models, writing policy and
+                    sign-in are workspace settings with their own pages.
                   </p>
+                  <ApplicationStepsView
+                    steps={applicationStepStates(startConditions)}
+                    content={{
+                      job: (
+                        <ApplicationJobStep id={startJobCardId} ready={jobReady}>
+                          {jobDescriptionInputs}
+                          {requirementsControls}
+                        </ApplicationJobStep>
+                      ),
+                      profile: setupSummary,
+                      review: (
+                        <>
+                          {renderProviderTransmissionPreflight(true)}
+                          {requirementsSource}
+                          <OpportunityOverrideDisclosure
+                            reviewed={state.setup.reviewedOpportunity != null}
+                            pending={
+                              pendingOverride == null
+                                ? null
+                                : {
+                                    version: pendingOverride.version,
+                                    checksumLabel: policyChecksumLabel(pendingOverride.checksum),
+                                  }
+                            }
+                            disabled={onSelectFiles === undefined}
+                            onImport={() => onSelectFiles?.("writing-policy-override")}
+                          />
+                          {startControls}
+                        </>
+                      ),
+                    }}
+                  />
                 </>
               ) : (
                 <>
@@ -2664,242 +2770,115 @@ export function ReviewWorkspace({
                     workspace. DraftLoop will not invent missing experience or start an agent run
                     until the target job and career evidence are present.
                   </p>
+                  <div className="setup-grid">
+                    <article
+                      id={startJobCardId}
+                      className={`setup-card${jobReady ? " setup-card-ready" : ""}`}
+                    >
+                      <div className="setup-card-head">
+                        <span className={`setup-state${jobReady ? " setup-state-ready" : ""}`}>
+                          {jobReady ? "Ready" : "Required"}
+                        </span>
+                      </div>
+                      <strong>Target job description</strong>
+                      <span>{jobReady ? "Ready for review" : "Required input missing"}</span>
+                      {jobDescriptionInputs}
+                      {requirementsControls}
+                    </article>
+                    <article
+                      className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
+                    >
+                      <div className="setup-card-head">
+                        <span
+                          className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
+                        >
+                          {state.setup.writingPolicyStatus === "active"
+                            ? "Active"
+                            : state.setup.writingPolicyStatus === "unavailable"
+                              ? "Needs attention"
+                              : "Optional"}
+                        </span>
+                      </div>
+                      <strong>Writing policy</strong>
+                      <span>
+                        {state.setup.writingPolicyStatus === "unavailable"
+                          ? "The configured policy cannot be read; replace it before starting"
+                          : state.setup.writingPolicy === null
+                            ? "Add explicit rules for both author and critic"
+                            : `Applied as ${state.setup.writingPolicy.version}`}
+                      </span>
+                      <span className="setup-note">
+                        Policy content stays local to this workspace and is kept separate from
+                        career evidence. Runs record only its version and checksum in ordinary
+                        review status.
+                      </span>
+                      {state.setup.writingPolicy === null ? null : (
+                        <span className="setup-retrieval-status" role="status">
+                          Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
+                        </span>
+                      )}
+                      {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
+                        <span className="setup-retrieval-status" role="status">
+                          History:{" "}
+                          {state.setup.writingPolicyHistory
+                            ?.map(
+                              (policy) =>
+                                `${policy.version} (${policyChecksumLabel(policy.checksum)})`,
+                            )
+                            .join(" · ")}
+                        </span>
+                      ) : null}
+                      <button
+                        className="button button-quiet"
+                        type="button"
+                        disabled={onSelectFiles === undefined}
+                        onClick={() => onSelectFiles?.("writing-policy")}
+                      >
+                        {state.setup.writingPolicyStatus === "none"
+                          ? "Choose policy file"
+                          : "Replace policy"}
+                      </button>
+                      {writingPolicyAction}
+                      <button
+                        className="button button-outline"
+                        type="button"
+                        disabled={
+                          onSelectFiles === undefined || state.setup.reviewedOpportunity == null
+                        }
+                        title={
+                          state.setup.reviewedOpportunity == null
+                            ? "Review an opportunity before importing an override."
+                            : "Import a policy version for this reviewed opportunity without changing the global policy."
+                        }
+                        onClick={() => onSelectFiles?.("writing-policy-override")}
+                      >
+                        Import opportunity override
+                      </button>
+                      {state.setup.reviewedOpportunity == null ? (
+                        <span className="setup-retrieval-status">
+                          Review an opportunity before importing an override.
+                        </span>
+                      ) : null}
+                      {state.setup.pendingWritingPolicyOverride == null ? null : (
+                        <span className="setup-retrieval-status" role="status">
+                          Selected override {state.setup.pendingWritingPolicyOverride.version} (
+                          {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
+                          bound to brief{" "}
+                          {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
+                          {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
+                        </span>
+                      )}
+                      <span className="setup-note">
+                        Importing an opportunity override does not change the global policy.
+                      </span>
+                    </article>
+                  </div>
+                  {renderProviderTransmissionPreflight()}
+                  {profilePanel}
+                  {requirementsSource}
+                  {startControls}
                 </>
               )}
-              <div className={compact ? "application-setup" : "setup-grid"}>
-                <article
-                  id={startJobCardId}
-                  className={`setup-card${state.setup.jobDescriptionReady ? " setup-card-ready" : ""}`}
-                  {...(compact ? { "aria-labelledby": "application-job-title" } : {})}
-                >
-                  <div className="setup-card-head">
-                    {compact ? (
-                      <strong id="application-job-title">Job and requirements</strong>
-                    ) : (
-                      <span className="setup-number">01</span>
-                    )}
-                    <span
-                      className={`setup-state${state.setup.jobDescriptionReady ? " setup-state-ready" : ""}`}
-                    >
-                      {state.setup.jobDescriptionReady ? "Ready" : "Required"}
-                    </span>
-                  </div>
-                  {compact ? null : <strong>Target job description</strong>}
-                  <span>
-                    {state.setup.jobDescriptionReady
-                      ? "Ready for review"
-                      : "Required input missing"}
-                  </span>
-                  {compact && state.setup.jobDescriptionReady ? (
-                    <details className="setup-details">
-                      <summary>Replace the job description</summary>
-                      {jobDescriptionInputs}
-                    </details>
-                  ) : (
-                    jobDescriptionInputs
-                  )}
-                  {latestBrief != null && requirementsBinding !== undefined ? (
-                    <LatestRequirementsBriefView
-                      latest={latestBrief}
-                      action={
-                        briefOperations === undefined ? null : (
-                          <OpportunityBriefReviewAction
-                            key={`${requirementsBinding.workspaceId}:${latestBrief.briefId}:${latestBrief.version}`}
-                            briefId={latestBrief.briefId}
-                            operations={briefOperations}
-                            disabled={requirementsBinding.disabled}
-                            label={
-                              latestBrief.status === "draft"
-                                ? "Review requirements"
-                                : "View requirements"
-                            }
-                            {...(requirementsBinding.onBriefChanged === undefined
-                              ? {}
-                              : { onBriefChanged: requirementsBinding.onBriefChanged })}
-                          />
-                        )
-                      }
-                    />
-                  ) : null}
-                  {offersRequirementsExtraction(latestBrief) &&
-                  state.setup.jobDescriptionReady &&
-                  !state.setup.reviewedOpportunity &&
-                  requirementsBinding?.createOpportunity !== undefined ? (
-                    <div id={jobRequirementsExtractionId}>
-                      <JobRequirementsExtraction
-                        key={requirementsBinding.workspaceId}
-                        binding={requirementsBinding}
-                        openSignal={extractionSignal}
-                      />
-                    </div>
-                  ) : null}
-                  {latestBrief == null &&
-                  state.setup.reviewedOpportunity != null &&
-                  requirementsBinding !== undefined &&
-                  briefOperations !== undefined ? (
-                    <div className="job-extraction">
-                      <p className="setup-note">
-                        Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
-                      </p>
-                      <OpportunityBriefReviewAction
-                        key={`${requirementsBinding.workspaceId}:${state.setup.reviewedOpportunity.version}`}
-                        briefId={state.setup.reviewedOpportunity.briefId}
-                        operations={briefOperations}
-                        disabled={requirementsBinding.disabled}
-                        label="View requirements"
-                        {...(requirementsBinding.onBriefChanged === undefined
-                          ? {}
-                          : { onBriefChanged: requirementsBinding.onBriefChanged })}
-                      />
-                    </div>
-                  ) : null}
-                </article>
-                {compact ? (
-                  setupSummary
-                ) : (
-                  <article
-                    className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
-                  >
-                    <div className="setup-card-head">
-                      <span className="setup-number">02</span>
-                      <span
-                        className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
-                      >
-                        {state.setup.writingPolicyStatus === "active"
-                          ? "Active"
-                          : state.setup.writingPolicyStatus === "unavailable"
-                            ? "Needs attention"
-                            : "Optional"}
-                      </span>
-                    </div>
-                    <strong>Writing policy</strong>
-                    <span>
-                      {state.setup.writingPolicyStatus === "unavailable"
-                        ? "The configured policy cannot be read; replace it before starting"
-                        : state.setup.writingPolicy === null
-                          ? "Add explicit rules for both author and critic"
-                          : `Applied as ${state.setup.writingPolicy.version}`}
-                    </span>
-                    <span className="setup-note">
-                      Policy content stays local to this workspace and is kept separate from career
-                      evidence. Runs record only its version and checksum in ordinary review status.
-                    </span>
-                    {state.setup.writingPolicy === null ? null : (
-                      <span className="setup-retrieval-status" role="status">
-                        Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
-                      </span>
-                    )}
-                    {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
-                      <span className="setup-retrieval-status" role="status">
-                        History:{" "}
-                        {state.setup.writingPolicyHistory
-                          ?.map(
-                            (policy) =>
-                              `${policy.version} (${policyChecksumLabel(policy.checksum)})`,
-                          )
-                          .join(" · ")}
-                      </span>
-                    ) : null}
-                    <button
-                      className="button button-quiet"
-                      type="button"
-                      disabled={onSelectFiles === undefined}
-                      onClick={() => onSelectFiles?.("writing-policy")}
-                    >
-                      {state.setup.writingPolicyStatus === "none"
-                        ? "Choose policy file"
-                        : "Replace policy"}
-                    </button>
-                    {writingPolicyAction}
-                    <button
-                      className="button button-outline"
-                      type="button"
-                      disabled={
-                        onSelectFiles === undefined || state.setup.reviewedOpportunity == null
-                      }
-                      title={
-                        state.setup.reviewedOpportunity == null
-                          ? "Review an opportunity before importing an override."
-                          : "Import a policy version for this reviewed opportunity without changing the global policy."
-                      }
-                      onClick={() => onSelectFiles?.("writing-policy-override")}
-                    >
-                      Import opportunity override
-                    </button>
-                    {state.setup.reviewedOpportunity == null ? (
-                      <span className="setup-retrieval-status">
-                        Review an opportunity before importing an override.
-                      </span>
-                    ) : null}
-                    {state.setup.pendingWritingPolicyOverride == null ? null : (
-                      <span className="setup-retrieval-status" role="status">
-                        Selected override {state.setup.pendingWritingPolicyOverride.version} (
-                        {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
-                        bound to brief{" "}
-                        {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
-                        {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
-                      </span>
-                    )}
-                    <span className="setup-note">
-                      Importing an opportunity override does not change the global policy.
-                    </span>
-                  </article>
-                )}
-              </div>
-              {renderProviderTransmissionPreflight(compact)}
-              {compact ? null : profilePanel}
-              {reviewedRequirements === null || rawJobKey === null ? null : (
-                <StartRequirementsSourceView
-                  selection={reviewedRequirements}
-                  useJobDescription={startFromJobDescription}
-                  disabled={pendingReviewAction?.action === "start"}
-                  onUseJobDescription={() => setRawJobChoice(rawJobKey)}
-                  onUseReviewed={() => setRawJobChoice(null)}
-                />
-              )}
-              {compact ? renderOpportunityOverride() : null}
-              <div className="onboarding-footer">
-                <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
-                <span>
-                  {state.setup.requiredSections.length > 0
-                    ? `Required sections: ${state.setup.requiredSections.join(", ")}`
-                    : "No required sections"}
-                </span>
-                {renderAutopilotToggle()}
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={startTooltip !== undefined || startPending}
-                  title={startTooltip}
-                  aria-describedby={startChecklistId}
-                  onClick={() =>
-                    requestStart(
-                      startFromJobDescription
-                        ? { type: "start", requirementsSource: "job-description" }
-                        : { type: "start" },
-                    )
-                  }
-                >
-                  {startButtonLabel(startConditions, startPending)}
-                </button>
-              </div>
-              <StartChecklistView
-                id={startChecklistId}
-                conditions={startConditions}
-                errorMessage={errorMessage ?? null}
-                readOnly={readOnly}
-                isActionDisabled={(id) =>
-                  id === "extract-requirements" && requirementsBinding?.disabled === true
-                }
-                onAction={runStartAction}
-              />
-              {startPending ? (
-                <p className="pending-action-status" role="status" aria-live="polite">
-                  Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
-                  {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
-                  the review starts.
-                </p>
-              ) : null}
             </section>
           </div>
         </main>
