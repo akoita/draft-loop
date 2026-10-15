@@ -141,7 +141,13 @@ export function WorkspaceLocation({
   );
 }
 
-function Chip({ tone, children }: { readonly tone: HomeTone; readonly children: ReactNode }) {
+export function Chip({
+  tone,
+  children,
+}: {
+  readonly tone: HomeTone;
+  readonly children: ReactNode;
+}) {
   return <span className={`home-chip home-chip-${tone}`}>{children}</span>;
 }
 

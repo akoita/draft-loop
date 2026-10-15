@@ -2790,11 +2790,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 profileCapabilities={activePort}
                 selectedProfile={selectedCandidateProfile}
                 onSelectProfile={onCandidateProfileSelectionChange}
-                author={state.providerTransmissionPreflight.author}
-                critic={state.providerTransmissionPreflight.critic}
                 applicationPair={loadedApplicationPair}
                 writingPolicyStatus={state.setup.writingPolicyStatus}
-                writingPolicyVersion={state.setup.writingPolicy?.version ?? null}
                 disabled={modelSettingsDisabled}
                 onManageEvidence={openEvidenceScreen}
                 onManageProfile={openProfileScreen}
