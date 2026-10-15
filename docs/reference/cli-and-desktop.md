@@ -329,7 +329,9 @@ applications:
   opens the live progress and **Cancel generation**.
 - **Applications.** One card per application with its name, status (Drafting,
   In review, Approved, Exported), last activity and run count, most recent
-  first. The application whose review is running shows Review running instead.
+  first. When you chose an earlier run's draft, the card says which, such as
+  "Using Run 2", and opening the card opens that run. The application whose
+  review is running shows Review running instead.
   A workspace with nothing but its default application says so and points
   to **New application**. Beside it, **Import from another workspace** asks for
   another workspace's folder and imports it as an application (see
@@ -530,9 +532,11 @@ pinned under it.
   carries a switcher beside the version chips, such as "Run 2 of 5", with runs
   numbered from the oldest. Its menu lists the runs newest first: start time,
   author and critic models, round, status, mean readiness score, and "latest"
-  on the latest run. The latest run opens by default. Choosing an earlier run
-  shows its draft, findings and coverage read-only, with Back to latest run one
-  click away. The desktop host refuses any change to an earlier run.
+  on the latest run, and "chosen" on the run whose draft you chose. The latest
+  run opens by default. Choosing an earlier run shows its draft, findings and
+  coverage read-only, with Back to latest run one click away. The desktop host
+  refuses any change to an earlier run, except approval and export on the
+  chosen one.
 - **Run comparison.** **Compare with…** at the end of the switcher's menu
   lists the other runs. Choosing one shows the two drafts side by side: the
   chosen run on the left, the open run on the right, each headed with its run
@@ -555,6 +559,11 @@ pinned under it.
   drafts' text as a Markdown file where you pick in a save dialog. It names
   runs by number and models by id, and carries no other identifier, critic
   rationale or finding text. Cancelling the dialog writes nothing.
+- **Use this run's draft.** Each side offers **Use this run's draft**, except
+  the run already chosen and the latest run while no other run is chosen. It
+  asks you to confirm, with an optional reason of up to 500 characters, then
+  opens that run for approval and export. See
+  [Keeping an earlier run's draft](#keeping-an-earlier-runs-draft).
 - **Comparison is read-only.** Neither draft can be edited. The side panel and
   the open run's validation banner step aside so the drafts take the full
   width, and the footer reads "Comparing runs — read-only" with its approval
@@ -600,6 +609,30 @@ The footer holds the approval gate and stays in view while you scroll:
   opened on another machine, the footer says the previous export can't be found.
 
 After approval and export, Home lists the application as Exported.
+
+#### Keeping an earlier run's draft
+
+When an earlier run's draft is the better one, choose it with **Use this run's
+draft** in the run comparison. With no choice, the application uses its latest
+run, as before.
+
+- **What the chosen run allows.** It opens with a notice, "Using this earlier
+  run's draft", and takes the finding decisions approval needs, **Approve
+  artifact** and **Export Markdown**. Edits, **Request revision**, Resume and
+  new rounds stay on the latest run, and the host refuses them on the chosen
+  run.
+- **What is recorded.** The application stores the chosen run, when it was
+  chosen and your reason, if you gave one. The choice and an
+  `application.run-chosen` audit event naming the run and the reason are written
+  together. A later choice replaces the earlier one.
+- **Where it opens.** Opening the application opens the chosen run; the run
+  switcher still reaches the latest run.
+- **When it ends.** Starting a new review makes the new run the active one. It
+  clears the choice and adds an `application.run-choice-cleared` audit event
+  naming the run that was chosen. Choosing the latest run also returns to the
+  default.
+- **What is kept.** Choosing never deletes or changes a run, and other earlier
+  runs stay read-only.
 
 Once a run has stopped, finished or run out of budget, **Start a new review**
 in **Run details** adds another run to the same application with the models set

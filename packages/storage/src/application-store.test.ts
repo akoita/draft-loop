@@ -357,6 +357,191 @@ describe("application storage", () => {
     ]);
   });
 
+  it("records, replaces and reads an application's chosen run, and refuses another's run", async () => {
+    const { applications } = storage;
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-a",
+      name: "A",
+      jobSource,
+      createdAt,
+    });
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-b",
+      name: "B",
+      jobSource,
+      createdAt,
+    });
+    await storage.saveContextSnapshot({
+      id: "context-chosen",
+      workspaceId,
+      schemaVersion: 1,
+      createdAt,
+      payload: { job: "fixture" },
+    });
+    for (const id of ["run-a1", "run-a2", "run-default"]) {
+      await storage.saveRun({
+        id,
+        workspaceId,
+        contextSnapshotId: "context-chosen",
+        state: "awaiting-approval",
+        round: 1,
+        currentStep: "author",
+        budget: { maxRounds: 3 },
+        artifactId: null,
+        approval: "pending",
+        totalCostUsd: 0,
+        startedAt: createdAt,
+        updatedAt: createdAt,
+        lastError: null,
+        payload: {},
+      });
+    }
+    for (const runId of ["run-a1", "run-a2"]) {
+      await applications.bindRun({ workspaceId, applicationId: "app-a", runId, createdAt });
+    }
+
+    const event = (id: string, applicationId: string, runId = "run") => ({
+      id,
+      workspaceId,
+      eventType: "application.run-chosen",
+      entityType: "application",
+      entityId: applicationId,
+      payload: { applicationId, runId },
+      createdAt,
+    });
+    const eventIds = async () =>
+      (await storage.listAuditEvents(workspaceId))
+        .filter((item) => item.entityType === "application")
+        .map((item) => item.id);
+
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toBeUndefined();
+    await applications.setChosenRun(
+      workspaceId,
+      "app-a",
+      {
+        runId: "run-a1",
+        chosenAt: createdAt,
+        reason: "Tighter summary",
+      },
+      event("chosen-1", "app-a"),
+    );
+    await applications.setChosenRun(
+      workspaceId,
+      "default",
+      {
+        runId: "run-default",
+        chosenAt: createdAt,
+        reason: null,
+      },
+      event("chosen-2", "default"),
+    );
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toEqual({
+      runId: "run-a1",
+      chosenAt: createdAt,
+      reason: "Tighter summary",
+    });
+    await applications.setChosenRun(
+      workspaceId,
+      "app-a",
+      {
+        runId: "run-a2",
+        chosenAt: "2030-01-02T00:00:00.000Z",
+        reason: null,
+      },
+      event("chosen-3", "app-a"),
+    );
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toEqual({
+      runId: "run-a2",
+      chosenAt: "2030-01-02T00:00:00.000Z",
+      reason: null,
+    });
+    expect(await applications.getChosenRun(workspaceId, "default")).toMatchObject({
+      runId: "run-default",
+    });
+    // Choosing never removes a run.
+    expect((await applications.listRuns(workspaceId, "app-a")).map((run) => run.id)).toEqual([
+      "run-a1",
+      "run-a2",
+    ]);
+
+    for (const [applicationId, runId] of [
+      ["app-b", "run-a1"],
+      ["app-a", "run-default"],
+      ["app-a", "run-missing"],
+    ] as const) {
+      await expect(
+        applications.setChosenRun(
+          workspaceId,
+          applicationId,
+          {
+            runId,
+            chosenAt: createdAt,
+            reason: null,
+          },
+          event("chosen-4", applicationId),
+        ),
+      ).rejects.toBeInstanceOf(StorageValidationError);
+    }
+    for (const reason of ["", "x".repeat(501)]) {
+      await expect(
+        applications.setChosenRun(
+          workspaceId,
+          "app-a",
+          {
+            runId: "run-a1",
+            chosenAt: createdAt,
+            reason,
+          },
+          event("chosen-5", "app-a"),
+        ),
+      ).rejects.toBeInstanceOf(StorageValidationError);
+    }
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toMatchObject({
+      runId: "run-a2",
+    });
+    // Each recorded choice wrote its audit event; refused ones wrote none.
+    expect(await eventIds()).toEqual(["chosen-1", "chosen-2", "chosen-3"]);
+
+    // The choice and its event are one transaction: an event that cannot be written leaves the
+    // choice as it was.
+    await expect(
+      applications.setChosenRun(
+        workspaceId,
+        "app-a",
+        { runId: "run-a1", chosenAt: createdAt, reason: null },
+        { ...event("chosen-1", "app-a"), payload: { applicationId: "app-a", runId: "changed" } },
+      ),
+    ).rejects.toBeInstanceOf(StorageConflictError);
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toMatchObject({
+      runId: "run-a2",
+    });
+
+    // Clearing removes the choice and appends the event built from it, together.
+    const cleared = await applications.clearChosenRun(workspaceId, "app-a", (choice) => ({
+      ...event("cleared-1", "app-a", choice.runId),
+      eventType: "application.run-choice-cleared",
+    }));
+    expect(cleared).toMatchObject({ runId: "run-a2" });
+    expect(await applications.getChosenRun(workspaceId, "app-a")).toBeUndefined();
+    expect((await storage.listAuditEvents(workspaceId)).at(-1)).toMatchObject({
+      id: "cleared-1",
+      eventType: "application.run-choice-cleared",
+      payload: { applicationId: "app-a", runId: "run-a2" },
+    });
+    expect(
+      await applications.clearChosenRun(workspaceId, "app-a", () => event("cleared-2", "app-a")),
+    ).toBeUndefined();
+    await expect(
+      applications.clearChosenRun(workspaceId, "default", () => event("chosen-2", "app-a")),
+    ).rejects.toBeInstanceOf(StorageConflictError);
+    expect(await applications.getChosenRun(workspaceId, "default")).toMatchObject({
+      runId: "run-default",
+    });
+    expect(await eventIds()).toEqual(["chosen-1", "chosen-2", "chosen-3", "cleared-1"]);
+  });
+
   it("applies migration 30 to an existing database without touching existing rows", async () => {
     storage.close();
     // A v29 database has no application tables or migration row; every other table is the same.
@@ -373,7 +558,7 @@ describe("application storage", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(35);
+    expect(storage.appliedMigrationVersions().at(-1)).toBe(36);
     expect((await storage.getWorkspace(workspaceId))?.createdAt).toBe(createdAt);
     expect(await storage.applications.listApplications(workspaceId)).toEqual([]);
     expect(await storage.applications.listRuns(workspaceId, "default")).toEqual([]);

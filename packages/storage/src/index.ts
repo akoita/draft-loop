@@ -52,6 +52,13 @@ import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-his
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
 import { auditFromRow, createAuditEventReads } from "./audit-event-reads.js";
 import {
+  checksum,
+  insertAuditEventRow,
+  payloadChecksum,
+  sensitiveKeyPattern,
+  serialize,
+} from "./audit-event-write.js";
+import {
   dropCandidateKnowledgeDeletionImmutableDeleteTriggers,
   recreateCandidateKnowledgeDeletionImmutableDeleteTriggers,
 } from "./candidate-knowledge-deletion-triggers.js";
@@ -1344,7 +1351,7 @@ export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
 
-export const storageSchemaVersion = 35 as const;
+export const storageSchemaVersion = 36 as const;
 
 interface Migration {
   readonly version: number;
@@ -3288,63 +3295,12 @@ const migrations: readonly Migration[] = [
   sourceEvidenceKindOverridesMigration,
   originTrace.retrievalOriginTraceMigration,
 ];
-const sensitiveKeyPattern =
-  /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
-const hiddenContentKeyPattern =
-  /(?:^|[-_.])(?:prompt|response|raw[-_ ]?response|chain[-_ ]?of[-_ ]?thought|reasoning)(?:$|[-_ ])/iu;
-
 function now(): string {
   return new Date().toISOString();
 }
 
-function checksum(value: string): string {
-  return createHash("sha256").update(value, "utf8").digest("hex");
-}
-
-function canonicalize(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) {
-    return value.map(canonicalize);
-  }
-  if (typeof value !== "object" || value === null) {
-    return value;
-  }
-  return Object.fromEntries(
-    Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => [key, canonicalize(child)]),
-  );
-}
-
-function serialize(value: JsonValue): string {
-  return JSON.stringify(canonicalize(value));
-}
-
-function assertSafePayload(value: JsonValue): void {
-  if (Array.isArray(value)) {
-    value.forEach(assertSafePayload);
-    return;
-  }
-  if (typeof value !== "object" || value === null) {
-    return;
-  }
-  for (const [key, child] of Object.entries(value)) {
-    if (sensitiveKeyPattern.test(key)) {
-      throw new StorageSecurityError(`Sensitive field ${key} is not persisted.`);
-    }
-    if (hiddenContentKeyPattern.test(key)) {
-      throw new StorageSecurityError(`Raw model content field ${key} is not persisted.`);
-    }
-    assertSafePayload(child);
-  }
-}
-
 function parse(value: string): JsonValue {
   return JSON.parse(value) as JsonValue;
-}
-
-function payloadChecksum(payload: JsonValue): string {
-  assertSafePayload(payload);
-  return checksum(serialize(payload));
 }
 
 function validatedOpportunityBrief(value: unknown): OpportunityBrief {
@@ -12474,70 +12430,7 @@ export class SqliteStorage
   }
 
   private insertAuditEvent(input: AuditEventInput): AuditEvent {
-    requireNonEmpty(input.id, "audit event id");
-    const payloadChecksumValue = payloadChecksum(input.payload);
-    const existing = this.database
-      .prepare(
-        "SELECT sequence, id, workspace_id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE id = ?",
-      )
-      .get(input.id);
-    if (existing !== undefined) {
-      const existingEvent = auditFromRow(existing);
-      if (
-        existingEvent.workspaceId !== input.workspaceId ||
-        existingEvent.eventType !== input.eventType ||
-        existingEvent.entityType !== input.entityType ||
-        existingEvent.entityId !== input.entityId ||
-        existingEvent.payloadChecksum !== payloadChecksumValue ||
-        existingEvent.createdAt !== input.createdAt
-      ) {
-        throw new StorageConflictError(`audit event ${input.id} is immutable`);
-      }
-      return existingEvent;
-    }
-    const previousEventChecksum =
-      this.database
-        .prepare(
-          "SELECT event_checksum FROM audit_events WHERE workspace_id = ? ORDER BY sequence DESC LIMIT 1",
-        )
-        .get<{ readonly event_checksum: string }>(input.workspaceId)?.event_checksum ?? null;
-    const eventChecksum = checksum(
-      serialize({
-        createdAt: input.createdAt,
-        entityId: input.entityId,
-        entityType: input.entityType,
-        eventType: input.eventType,
-        id: input.id,
-        payloadChecksum: payloadChecksumValue,
-        previousEventChecksum,
-        workspaceId: input.workspaceId,
-      }),
-    );
-    this.database
-      .prepare(
-        "INSERT INTO audit_events (id, workspace_id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      )
-      .run(
-        input.id,
-        input.workspaceId,
-        input.eventType,
-        input.entityType,
-        input.entityId,
-        serialize(input.payload),
-        payloadChecksumValue,
-        previousEventChecksum,
-        eventChecksum,
-        input.createdAt,
-      );
-    const row = this.database
-      .prepare(
-        "SELECT sequence, id, workspace_id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE id = ?",
-      )
-      .get(input.id);
-    if (row === undefined) {
-      throw new StorageConflictError(`audit event ${input.id} could not be read after insert`);
-    }
-    return auditFromRow(row);
+    return insertAuditEventRow(this.database, input);
   }
 
   private requireManagedCandidateKnowledgeWriteOperation(

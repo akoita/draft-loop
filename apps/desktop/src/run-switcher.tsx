@@ -144,6 +144,7 @@ function RunFacts({
         <strong>Run {number}</strong>
         <time dateTime={run.startedAt}>{runStartedLabel(run.startedAt)}</time>
         {run.latest ? <span className="run-switcher-latest">latest</span> : null}
+        {run.chosen === true ? <span className="run-switcher-chosen">chosen</span> : null}
       </span>
       <span className="run-switcher-item-facts">
         <span className="run-switcher-models">{runModelsLabel(run)}</span>

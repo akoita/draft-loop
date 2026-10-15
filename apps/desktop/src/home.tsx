@@ -37,6 +37,7 @@ import {
 } from "./career-flow.js";
 import {
   applicationActivityText,
+  applicationChosenRunText,
   applicationRunningLabel,
   applicationRunText,
   applicationStatusLabel,
@@ -259,6 +260,7 @@ export function ApplicationCard({
     buttonId: renameButtonId,
   });
   const nudge = onRename !== undefined && !rename.editing && needsApplicationName(application);
+  const chosenRunText = applicationChosenRunText(application);
   return (
     <li className={archived ? "application-card application-card-archived" : "application-card"}>
       <div className="application-card-head">
@@ -327,6 +329,12 @@ export function ApplicationCard({
         </span>
         <span aria-hidden="true"> · </span>
         <span>{applicationRunText(application.runCount)}</span>
+        {chosenRunText === null ? null : (
+          <>
+            <span aria-hidden="true"> · </span>
+            <span className="application-card-chosen-run">{chosenRunText}</span>
+          </>
+        )}
         {application.isDefault ? (
           <>
             <span aria-hidden="true"> · </span>

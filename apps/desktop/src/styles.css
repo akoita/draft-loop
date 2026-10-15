@@ -2988,6 +2988,33 @@ input[type="text"].workspace-title-input {
   font-weight: 650;
 }
 
+.run-switcher-chosen {
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  background: var(--teal-wash);
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+/* "Use this run's draft" and its confirm sit under the side's heading facts. */
+.use-run-draft-confirm {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.use-run-draft-confirm p {
+  margin: 0;
+}
+
+.use-run-draft-confirm textarea {
+  width: 100%;
+  resize: vertical;
+}
+
 /* Where the loop rail shares the header with the side panel open, the header is tight and the
    switcher reads "Run 2/5"; its accessible name keeps the full words. Below 1181px the loop
    leaves the header and the full label fits again. */

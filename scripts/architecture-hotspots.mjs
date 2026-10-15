@@ -8,7 +8,7 @@ export const hotspotLineLimits = Object.freeze({
   "packages/application/src/local.ts": 3_004,
   "packages/domain/src/index.ts": 4_490,
   "packages/schemas/src/index.ts": 4_404,
-  "packages/storage/src/index.ts": 14_672,
+  "packages/storage/src/index.ts": 14_565,
   "packages/storage/src/knowledge-store.ts": 5_902,
 });
 

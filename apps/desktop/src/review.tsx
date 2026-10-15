@@ -28,7 +28,13 @@ import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
-import { earlierRunAllowsAction, earlierRunRefusal } from "./earlier-run.js";
+import {
+  chosenRunAllowsAction,
+  chosenRunRefusal,
+  earlierRunAllowsAction,
+  earlierRunRefusal,
+  isChosenEarlierRun,
+} from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { executionLimitText } from "./execution-limits.js";
 import {
@@ -85,6 +91,7 @@ import {
   useReviewWorkTab,
 } from "./review-work-tabs.js";
 import {
+  type ChooseRunDraft,
   type LoadRunForComparison,
   RunComparisonView,
   type SaveMarkdownFile,
@@ -147,6 +154,11 @@ interface ReviewWorkspaceProps {
   readonly onLoadRunForComparison?: LoadRunForComparison;
   /** Saves an exported run comparison where the reviewer picks; absent offers no export. */
   readonly onSaveMarkdownFile?: SaveMarkdownFile;
+  /**
+   * Uses a run's draft for approval and export, with an optional reason, and opens that run;
+   * absent offers no choice in the run comparison.
+   */
+  readonly onChooseRun?: ChooseRunDraft;
   /** The run comparison to start on; for static rendering in tests. */
   readonly initialRunComparison?: RunComparisonState | null;
   readonly onBulkFindingDecision?: (
@@ -862,6 +874,7 @@ export function ReviewWorkspace({
   onOpenRun,
   onLoadRunForComparison,
   onSaveMarkdownFile,
+  onChooseRun,
   initialRunComparison = null,
   onBulkFindingDecision,
   pendingBulkFindingCount = null,
@@ -893,12 +906,17 @@ export function ReviewWorkspace({
   // The comparison takes the desk: the side panel and the open run's banners step aside.
   const comparing = runComparison.active !== null;
   const readOnly = (state.earlierRun !== undefined && state.earlierRun !== null) || comparing;
+  // The earlier run the person chose stays read-only but for approval, export and the finding
+  // decisions approval needs; revision and new rounds stay on the latest run.
+  const chosenRunOpen = !comparing && isChosenEarlierRun(state.earlierRun);
+  const approvalOpen = !readOnly || chosenRunOpen;
   const onAction = useCallback(
     (action: ReviewAction): void => {
-      if (readOnly && !earlierRunAllowsAction(action.type)) return;
+      const allowed = chosenRunOpen ? chosenRunAllowsAction : earlierRunAllowsAction;
+      if (readOnly && !allowed(action.type)) return;
       dispatchReviewAction(action);
     },
-    [readOnly, dispatchReviewAction],
+    [readOnly, chosenRunOpen, dispatchReviewAction],
   );
   const { latest: latestBrief, refresh: refreshLatestBrief } = useLatestOpportunity(
     jobRequirements?.getLatestOpportunity,
@@ -935,7 +953,7 @@ export function ReviewWorkspace({
     [state.artifact.claims],
   );
   const canApprove =
-    !readOnly &&
+    approvalOpen &&
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
@@ -944,13 +962,13 @@ export function ReviewWorkspace({
   // Final CV checks are heuristics, so a person who has reviewed the draft can
   // approve past them with a recorded reason, as with blocking findings.
   const canOverrideReadiness =
-    !readOnly &&
+    approvalOpen &&
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
     blockingFindings.length === 0 &&
     approvalReadiness?.applicationReady === false;
-  const canExport = !readOnly && canExportReview(state, pendingReviewAction);
+  const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
@@ -1114,9 +1132,9 @@ export function ReviewWorkspace({
   const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
-  const findingDecisionsLocked = readOnly || findingDecisionPending;
+  const findingDecisionsLocked = !approvalOpen || findingDecisionPending;
   const bulkDecisionAvailable =
-    !readOnly &&
+    approvalOpen &&
     onBulkFindingDecision !== undefined &&
     findingFilter !== "resolved" &&
     filteredFindings.some(isUnresolvedFinding);
@@ -1635,11 +1653,14 @@ export function ReviewWorkspace({
       Resume
     </button>
   );
-  const pendingActionReason = readOnly
-    ? earlierRunRefusal
-    : pendingReviewAction === null
-      ? null
-      : "Another review action is already running.";
+  const pendingActionReason =
+    readOnly && !chosenRunOpen
+      ? earlierRunRefusal
+      : pendingReviewAction === null
+        ? null
+        : "Another review action is already running.";
+  // On the chosen earlier run, approval and export are open but every other change is not.
+  const runChangeReason = chosenRunOpen ? chosenRunRefusal : pendingActionReason;
   const revisionReason = !hasArtifact
     ? "No draft artifact available yet."
     : roundLimitRecovery
@@ -1652,7 +1673,7 @@ export function ReviewWorkspace({
             ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
             : !transmissionReady
               ? "Provider transmission has not been acknowledged."
-              : pendingActionReason;
+              : runChangeReason;
   const comparisonReason = hasPreviousArtifact
     ? null
     : "There is no previous version to compare with.";
@@ -1676,9 +1697,7 @@ export function ReviewWorkspace({
       id: "recover-round-limit",
       label: `Return to reviewed Round ${Math.max(1, state.round - 1)}`,
       note: "Undo an empty round opened after the configured limit",
-      disabledReason: roundLimitRecovery
-        ? pendingActionReason
-        : "Round-limit recovery is not needed.",
+      disabledReason: roundLimitRecovery ? runChangeReason : "Round-limit recovery is not needed.",
       run: () => onAction({ type: "recover-round-limit" }),
     },
     {
@@ -1710,7 +1729,7 @@ export function ReviewWorkspace({
           ? "This run is neither paused nor interrupted."
           : !transmissionReady
             ? "Provider transmission has not been acknowledged."
-            : pendingActionReason,
+            : runChangeReason,
       run: () => onAction({ type: "resume" }),
     },
     {
@@ -1720,7 +1739,7 @@ export function ReviewWorkspace({
       disabledReason:
         state.execution.status !== "running" && state.execution.status !== "interrupted"
           ? "Nothing is running to stop."
-          : pendingActionReason,
+          : runChangeReason,
       run: () => onAction({ type: "stop" }),
     },
     {
@@ -2843,6 +2862,7 @@ export function ReviewWorkspace({
               onSwap={runComparison.swap}
               onClose={runComparison.close}
               {...(onSaveMarkdownFile === undefined ? {} : { onSaveMarkdown: onSaveMarkdownFile })}
+              {...(onChooseRun === undefined ? {} : { onChooseRun })}
             />
           )}
           {/* A jump target, so "go to the draft" can land focus here and not only scroll. */}
@@ -2930,9 +2950,11 @@ export function ReviewWorkspace({
                 )}
               </div>
               <span className="subtle doc-toolbar-note">
-                {readOnly
-                  ? "This run is read-only."
-                  : "Edits you make here are part of the artifact you approve."}
+                {chosenRunOpen
+                  ? "This draft is approved and exported as it is."
+                  : readOnly
+                    ? "This run is read-only."
+                    : "Edits you make here are part of the artifact you approve."}
               </span>
             </div>
 
@@ -3636,7 +3658,7 @@ export function ReviewWorkspace({
               however long the queue above them grows. */}
           <ReviewFooter
             blocker={comparing ? comparingRunsBlocker : gateBlocker}
-            readOnly={readOnly}
+            readOnly={!approvalOpen}
             errorMessage={approvalExportErrorVisible ? (errorMessage ?? null) : null}
             statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath !== null ? "exported" : state.state === "exported" ? "exported, file not found" : "not exported"} · Validation: ${validationLabel}`}
             detail={
@@ -3699,7 +3721,7 @@ export function ReviewWorkspace({
               roundLimitRecovery
                 ? {
                     round: state.round - 1,
-                    disabled: pendingReviewAction !== null,
+                    disabled: chosenRunOpen || pendingReviewAction !== null,
                     onRecover: () => onAction({ type: "recover-round-limit" }),
                   }
                 : null
@@ -3724,6 +3746,7 @@ export function ReviewWorkspace({
             }
             revision={{
               disabled:
+                chosenRunOpen ||
                 state.state !== "awaiting-approval" ||
                 !state.reviewComplete ||
                 roundLimitReached ||

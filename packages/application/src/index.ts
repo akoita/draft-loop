@@ -23,6 +23,7 @@ import type {
 } from "./candidate-profile-freshness.js";
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
+import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 import type { RunAuthorInput } from "./run-author-input.js";
@@ -567,6 +568,10 @@ export interface ApplicationDriver {
   readonly setApplicationModels?: (
     command: SetApplicationModelsCommand,
   ) => Promise<ApplicationView>;
+  /** Uses one of an application's runs for approval and export; records why, when given. */
+  readonly chooseApplicationRun?: (
+    command: ChooseApplicationRunCommand,
+  ) => Promise<ApplicationView>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -757,6 +762,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
         ...command,
         root: requireRoot(command.root),
       }),
+    chooseApplicationRun: async (command) =>
+      requireApplicationApi(driver.chooseApplicationRun)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
   };
   return Object.freeze(service);
 }
@@ -770,6 +780,7 @@ export type {
   CanonicalProfileExtractionProgress,
   CanonicalProfileExtractionProgressListener,
 } from "./canonical-profile-extraction-progress.js";
+export * from "./chosen-run.js";
 export {
   activateDefaultWritingPolicy,
   activateWritingPolicyContent,
