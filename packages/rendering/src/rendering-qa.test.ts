@@ -569,7 +569,9 @@ describe("controlled layout profiles and rendering QA", () => {
           title: "Résumé",
           kind: "summary",
           order: 0,
-          blocks: [{ id: "unicode-1", type: "paragraph", text: "Élève — façade.", claimIds: [] }],
+          blocks: [
+            { id: "unicode-1", type: "paragraph", text: "Élève — façade 日本語.", claimIds: [] },
+          ],
         },
       ],
     });

@@ -16,7 +16,7 @@ import {
   runCredentialAcceptance,
 } from "./credential-acceptance.js";
 import { createHostErrorLogger } from "./diagnostics.js";
-import { chooseMarkdownExportPath, chooseMarkdownSavePath } from "./dialogs.js";
+import { chooseExportPath, chooseMarkdownSavePath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
 import {
@@ -380,6 +380,12 @@ app.whenReady().then(async () => {
                   input.target === "job-description" ? [liveE2eJobPath] : [liveE2eCandidatePath],
                 chooseMarkdownExportPath: async () =>
                   join(liveE2eWorkspace, "exports", "live-e2e.md"),
+                chooseExportPath: async (_defaultPath, format) =>
+                  join(
+                    liveE2eWorkspace,
+                    "exports",
+                    `live-e2e.${format === "markdown" ? "md" : format}`,
+                  ),
               }
             : {
                 chooseDirectory,
@@ -393,8 +399,8 @@ app.whenReady().then(async () => {
                       title: "Add file to candidate knowledge base",
                     })
                   )[0],
-                chooseMarkdownExportPath: (defaultPath) =>
-                  chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
+                chooseExportPath: (defaultPath, format) =>
+                  chooseExportPath(mainWindow, defaultPath, dialog, format),
                 chooseMarkdownSavePath: (suggestedName) =>
                   chooseMarkdownSavePath(mainWindow, suggestedName, dialog),
               },

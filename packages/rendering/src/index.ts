@@ -20,6 +20,10 @@ import {
   renderingQaViewerObservationSchema,
 } from "@draft-loop/schemas";
 
+import { isTitleBlockSection } from "./document-layout.js";
+import { buildDocx } from "./docx-document.js";
+import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
+
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
 export const renderTemplateVersion = "cv-controlled-v1";
@@ -477,277 +481,23 @@ ul { margin: 0 0 5pt; padding-left: 17pt; }
 `;
 }
 
-interface LayoutLine {
-  readonly text: string;
-  readonly kind: "heading" | "body" | "bullet";
-}
-
-function wrapText(text: string, maxCharacters: number): readonly string[] {
-  const words = text.split(/\s+/u);
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    if (line !== "" && line.length + word.length + 1 > maxCharacters) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = line === "" ? word : `${line} ${word}`;
-    }
-  }
-  if (line !== "") lines.push(line);
-  return lines.length === 0 ? [""] : lines;
-}
-
-function layoutLines(
-  artifact: DraftArtifact,
-  profile: RenderingLayoutProfile,
-): readonly LayoutLine[] {
-  const lines: LayoutLine[] = [];
-  for (const section of orderedSections(artifact)) {
-    lines.push({ text: section.title, kind: "heading" });
-    for (const block of section.blocks) {
-      const prefix = block.type === "bullet" ? "• " : "";
-      const wrapped = wrapText(
-        block.text,
-        block.type === "bullet"
-          ? profile.wrapping.bulletMaxCharacters
-          : profile.wrapping.bodyMaxCharacters,
-      );
-      wrapped.forEach((line, index) => {
-        lines.push({ text: `${index === 0 ? prefix : "  "}${line}`, kind: "body" });
-      });
-    }
-    lines.push({ text: "", kind: "body" });
-  }
-  return lines;
-}
-
-function escapePdfText(value: string): string {
-  const normalized = value
-    .replaceAll("“", '"')
-    .replaceAll("”", '"')
-    .replaceAll("‘", "'")
-    .replaceAll("’", "'")
-    .replaceAll("—", " - ")
-    .replaceAll("–", " - ")
-    .replaceAll("•", "*")
-    .replaceAll("…", "...");
-  const ascii = normalized
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^\x20-\x7e]/gu, "?");
-  return ascii.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
-}
-
-function pdfBytes(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Array {
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
-  const pageWidthPt = (profile.pageWidthMm * 72) / 25.4;
-  const pageHeightPt = (profile.pageHeightMm * 72) / 25.4;
-  const leftMarginPt = (profile.marginsMm.left * 72) / 25.4;
-  const topMarginPt = (profile.marginsMm.top * 72) / 25.4;
-  const bottomMarginPt = (profile.marginsMm.bottom * 72) / 25.4;
-  const lines = layoutLines(artifact, profile);
-  const pages: readonly LayoutLine[][] = (() => {
-    const result: LayoutLine[][] = [[]];
-    let used = 0;
-    const availableHeight = pageHeightPt - topMarginPt - bottomMarginPt;
-    for (const line of lines) {
-      const height =
-        line.kind === "heading" ? profile.lineMetricsPt.heading : profile.lineMetricsPt.body;
-      if (used + height > availableHeight && result.at(-1)?.length !== 0) {
-        result.push([]);
-        used = 0;
-      }
-      result.at(-1)?.push(line);
-      used += height;
-    }
-    return result;
-  })();
-  const objects: string[] = [];
-  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-  objects[2] = "";
-  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-  const pageIds: number[] = [];
-  for (const page of pages) {
-    const pageId = objects.length;
-    const contentId = pageId + 1;
-    pageIds.push(pageId);
-    let y = pageHeightPt - topMarginPt;
-    const commands = ["BT"];
-    for (const line of page) {
-      if (line.kind === "heading") {
-        commands.push(
-          `/F1 ${profile.typography.headingFontSizePt} Tf 1 0 0 1 ${leftMarginPt.toFixed(4)} ${y.toFixed(4)} Tm (${escapePdfText(line.text)}) Tj`,
-        );
-        y -= profile.lineMetricsPt.heading;
-      } else {
-        commands.push(
-          `/F1 ${profile.typography.bodyFontSizePt} Tf 1 0 0 1 ${leftMarginPt.toFixed(4)} ${y.toFixed(4)} Tm (${escapePdfText(line.text)}) Tj`,
-        );
-        y -= profile.lineMetricsPt.body;
-      }
-    }
-    commands.push("ET");
-    const stream = commands.join("\n");
-    objects[pageId] =
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidthPt.toFixed(4)} ${pageHeightPt.toFixed(4)}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`;
-    objects[contentId] =
-      `<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}\nendstream`;
-  }
-  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
-
-  const infoId = objects.length;
-  const createdDateStr = options.generatedAt
-    ? options.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
-    : "20260813120000";
-  const defaultTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
-  const title = artifact.sections[0]?.title ?? defaultTitle;
-  objects[infoId] =
-    `<< /Title (${escapePdfText(title)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDateStr}Z) >>`;
-
-  let pdf = "%PDF-1.4\n%\xFF\xFF\xFF\xFF\n";
-  const offsets: number[] = [0];
-  for (let index = 1; index < objects.length; index += 1) {
-    offsets[index] = pdf.length;
-    pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
-  }
-  const xrefOffset = pdf.length;
-  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
-  for (let index = 1; index < objects.length; index += 1) {
-    pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-  return new TextEncoder().encode(pdf);
-}
-
-function crc32(bytes: Uint8Array): number {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function littleEndian(value: number, length: number): Uint8Array {
-  const result = new Uint8Array(length);
-  let remaining = value >>> 0;
-  for (let index = 0; index < length; index += 1) {
-    result[index] = remaining & 0xff;
-    remaining >>>= 8;
-  }
-  return result;
-}
-
-function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
-  const result = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
-  let offset = 0;
-  for (const part of parts) {
-    result.set(part, offset);
-    offset += part.length;
-  }
-  return result;
-}
-
-function zipStored(entries: Readonly<Record<string, string>>): Uint8Array {
-  const encoder = new TextEncoder();
-  const local: Uint8Array[] = [];
-  const central: Uint8Array[] = [];
-  let offset = 0;
-  for (const [name, content] of Object.entries(entries)) {
-    const nameBytes = encoder.encode(name);
-    const contentBytes = encoder.encode(content);
-    const header = concatBytes(
-      new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
-      littleEndian(20, 2),
-      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0]),
-      littleEndian(crc32(contentBytes), 4),
-      littleEndian(contentBytes.length, 4),
-      littleEndian(contentBytes.length, 4),
-      littleEndian(nameBytes.length, 2),
-      littleEndian(0, 2),
-      nameBytes,
-      contentBytes,
-    );
-    local.push(header);
-    const directory = concatBytes(
-      new Uint8Array([0x50, 0x4b, 0x01, 0x02]),
-      littleEndian(20, 2),
-      littleEndian(20, 2),
-      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0]),
-      littleEndian(crc32(contentBytes), 4),
-      littleEndian(contentBytes.length, 4),
-      littleEndian(contentBytes.length, 4),
-      littleEndian(nameBytes.length, 2),
-      littleEndian(0, 2),
-      littleEndian(0, 2),
-      littleEndian(0, 2),
-      littleEndian(0, 2),
-      littleEndian(0, 4),
-      littleEndian(offset, 4),
-      nameBytes,
-    );
-    central.push(directory);
-    offset += header.length;
-  }
-  const localBytes = concatBytes(...local);
-  const centralBytes = concatBytes(...central);
-  const end = concatBytes(
-    new Uint8Array([0x50, 0x4b, 0x05, 0x06]),
-    littleEndian(0, 2),
-    littleEndian(0, 2),
-    littleEndian(central.length, 2),
-    littleEndian(central.length, 2),
-    littleEndian(centralBytes.length, 4),
-    littleEndian(localBytes.length, 4),
-    littleEndian(0, 2),
-  );
-  return concatBytes(localBytes, centralBytes, end);
-}
-
-function renderDocx(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Array {
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
-  const body = orderedSections(artifact)
-    .map((section) => {
-      const heading = `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">${escapeHtml(section.title)}</w:t></w:r></w:p>`;
-      const blocks = section.blocks
-        .map((block) => {
-          const style =
-            block.type === "bullet" ? `<w:pPr><w:pStyle w:val="ListBullet"/></w:pPr>` : "";
-          return `<w:p>${style}<w:r><w:t xml:space="preserve">${escapeHtml(block.text)}</w:t></w:r></w:p>`;
-        })
-        .join("");
-      return `${heading}${blocks}`;
-    })
-    .join("");
-  const defaultTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
-  const title = artifact.sections[0]?.title ?? defaultTitle;
-  const createdDate = options.generatedAt ?? "2026-08-13T12:00:00.000Z";
-  const marginTwips = (millimeters: number): number => Math.round(millimeters * 56.6929134);
-  const { top, right, bottom, left } = profile.marginsMm;
-  const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${marginTwips(top)}" w:right="${marginTwips(right)}" w:bottom="${marginTwips(bottom)}" w:left="${marginTwips(left)}"/></w:sectPr></w:body></w:document>`;
-  const coreProps = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/coreProperties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${escapeHtml(title)}</dc:title><dc:creator>DraftLoop</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${createdDate}</dcterms:created></cp:coreProperties>`;
-
-  return zipStored({
-    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`,
-    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`,
-    "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
-    "word/document.xml": document,
-    "word/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="${Math.round(profile.typography.bodyFontSizePt * 2)}"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:b/><w:sz w:val="${Math.round(profile.typography.headingFontSizePt * 2)}"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="ListBullet"><w:name w:val="List Bullet"/><w:basedOn w:val="Normal"/></w:style></w:styles>`,
-    "docProps/core.xml": coreProps,
-  });
-}
-
 function bytesForFormat(
   artifact: DraftArtifact,
   format: OutputFormat,
   options: RenderOptions = {},
 ): Uint8Array {
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
-  if (format === "pdf") return pdfBytes(artifact, options);
-  return renderDocx(artifact, options);
+  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
+  if (format === "pdf") {
+    return buildPdf({ artifact, profile, documentTitle, generatedAt: options.generatedAt });
+  }
+  return buildDocx({
+    artifact,
+    profile,
+    documentTitle,
+    generatedAt: options.generatedAt ?? "2026-08-13T12:00:00.000Z",
+  });
 }
 
 interface VisibleTextUnit {
@@ -756,7 +506,7 @@ interface VisibleTextUnit {
 }
 
 function decodePdfText(value: string): string {
-  return value.replaceAll("\\(", "(").replaceAll("\\)", ")").replaceAll("\\\\", "\\");
+  return decodePdfLiteralEscapes(value);
 }
 
 function decodeXmlText(value: string): string {
@@ -790,7 +540,7 @@ function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
     const start = match.index ?? 0;
     const lineStart = raw.lastIndexOf("\n", start) + 1;
     const prefix = raw.slice(lineStart, start);
-    const fontSize = Number(prefix.match(/\/F1\s+([0-9.]+)\s+Tf/u)?.[1] ?? 0);
+    const fontSize = Number(prefix.match(/\/F\d+\s+([0-9.]+)\s+Tf/u)?.[1] ?? 0);
     units.push({
       text: decodePdfText(escaped),
       kind: fontSize >= 12 ? "heading" : "body",
@@ -812,7 +562,7 @@ function extractDocxUnits(raw: string): readonly VisibleTextUnit[] {
     if (text !== "") {
       units.push({
         text,
-        kind: /w:pStyle\s+w:val="Heading1"/u.test(xmlParagraph) ? "heading" : "body",
+        kind: /w:pStyle\s+w:val="(?:Heading1|Title)"/u.test(xmlParagraph) ? "heading" : "body",
       });
     }
   }
@@ -868,7 +618,11 @@ export function validateAtsExtractability(
       if (firstBlockWord !== "" && !normalizedExtracted.includes(firstBlockWord)) {
         missingSections.push(section.title);
       }
-    } else if (!normalizedExtracted.includes(normalizeText(section.title))) {
+    } else if (
+      // A header section is drawn as the headline and contact lines, without a section heading.
+      !(rendered.metadata.format !== "markdown" && isTitleBlockSection(section)) &&
+      !normalizedExtracted.includes(normalizeText(section.title))
+    ) {
       missingSections.push(section.title);
     }
   }
@@ -927,6 +681,13 @@ function expectedVisibleTextUnits(
       (section.kind === "salutation" || section.kind === "closing")
     );
   return orderedSections(artifact).flatMap((section) => {
+    if (format !== "markdown" && isTitleBlockSection(section)) {
+      // A header section is the headline and contact lines: the first block is the title.
+      return section.blocks.map((block, index) => ({
+        text: block.text,
+        kind: index === 0 ? ("heading" as const) : ("body" as const),
+      }));
+    }
     const heading = includeHeading(section)
       ? [{ text: section.title, kind: "heading" as const }]
       : [];
@@ -1377,3 +1138,4 @@ export function renderArtifact(
 }
 
 export * from "./controlled-document-inspector.js";
+export * from "./document-layout.js";

@@ -13,6 +13,7 @@ import {
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   defaultWritingPolicyContent,
+  exportLengthWarningPrefix,
   type IndependentReviewRecord,
   JobRequirementUserError,
   type ProviderAuthModeConfiguration,
@@ -487,7 +488,7 @@ function service(
           throw new Error("profile fixture method was not configured");
         },
       ),
-      export: vi.fn(
+      export: vi.fn<ApplicationService["export"]>(
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
       latestExportPath: vi.fn(async () => null),
@@ -4334,6 +4335,63 @@ describe("native host", () => {
       expect(fixture.service.export).toHaveBeenCalledWith(
         expect.objectContaining({ outputPath: join(root, "exports", "custom.md") }),
         expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("exports a DOCX through the chosen format's Save As path and surfaces the length warning", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-docx-"));
+    const customPath = join(root, "exports", "custom.docx");
+    const fixture = service(root, { state: "approved", approval: "approved" });
+    fixture.service.export.mockImplementation(async (command, io) => {
+      io?.write("Exported approved artifact v1 as docx");
+      io?.write(
+        `${exportLengthWarningPrefix}Estimated length is about 3 pages. This is an estimate.`,
+      );
+      return command.outputPath ?? "unexpected";
+    });
+    const chooseExportPath = vi.fn(async (defaultPath: string, format: string) => {
+      expect(defaultPath).toBe(join(root, "exports", "run-native.docx"));
+      expect(format).toBe("docx");
+      return customPath;
+    });
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseExportPath,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const dispatch = (action: unknown) =>
+        host.invoke({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-native", runId: "run-native", action },
+        });
+
+      await expect(dispatch({ type: "export", format: "docx" })).resolves.toMatchObject({
+        ok: true,
+        value: {
+          exportPath: customPath,
+          exportNote: "Estimated length is about 3 pages. This is an estimate.",
+        },
+      });
+      expect(fixture.service.export).toHaveBeenCalledWith(
+        { root, runId: "run-native", format: "docx", outputPath: customPath },
+        expect.anything(),
+      );
+      // The bridge allowlist rejects formats the host does not export.
+      await expect(dispatch({ type: "export", format: "rtf" })).resolves.toMatchObject({
+        ok: false,
+      });
+      await expect(dispatch({ type: "export", format: "pdf", extra: true })).resolves.toMatchObject(
+        {
+          ok: false,
+        },
       );
     } finally {
       await rm(root, { recursive: true, force: true });

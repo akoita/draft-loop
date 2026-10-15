@@ -7,6 +7,7 @@ import {
 } from "@draft-loop/schemas";
 
 import type { RenderedDocument } from "./index.js";
+import { decodePdfLiteralEscapes } from "./pdf-document.js";
 
 interface VisibleTextUnit {
   readonly text: string;
@@ -287,22 +288,7 @@ function observationForPages(
 }
 
 function decodePdfLiteral(value: string): string {
-  return value.replace(/\\([\\()nrtbf])/gu, (_, escaped: string) => {
-    switch (escaped) {
-      case "n":
-        return "\n";
-      case "r":
-        return "\r";
-      case "t":
-        return "\t";
-      case "b":
-        return "\b";
-      case "f":
-        return "\f";
-      default:
-        return escaped;
-    }
-  });
+  return decodePdfLiteralEscapes(value);
 }
 
 function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
@@ -361,7 +347,7 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
       const escaped = match[1] ?? "";
       const text = decodePdfLiteral(escaped);
       const prefix = stream.slice(0, match.index ?? 0);
-      const fontSizes = [...prefix.matchAll(/\/F1\s+([-+]?\d+(?:\.\d+)?)\s+Tf/gu)];
+      const fontSizes = [...prefix.matchAll(/\/F\d+\s+([-+]?\d+(?:\.\d+)?)\s+Tf/gu)];
       const transforms = [
         ...prefix.matchAll(/1\s+0\s+0\s+1\s+([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+Tm/gu),
       ];
@@ -395,7 +381,9 @@ function parseDocxPages(content: Uint8Array): readonly InspectedPage[] {
     if (text !== "") {
       pages.at(-1)?.units.push({
         text,
-        kind: /<w:pStyle\b[^>]*w:val\s*=\s*["']Heading1["']/u.test(xml) ? "heading" : "body",
+        kind: /<w:pStyle\b[^>]*w:val\s*=\s*["'](?:Heading1|Title)["']/u.test(xml)
+          ? "heading"
+          : "body",
       });
     }
     const pageBreaks = [

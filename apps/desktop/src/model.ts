@@ -313,6 +313,11 @@ export interface DesktopReviewState {
   readonly evaluation: ReviewEvaluation;
   readonly events: readonly ReviewEvent[];
   readonly exportPath: string | null;
+  /**
+   * A note about the export just made, such as an estimated-length warning. Set only on the
+   * response to an export; absent or null otherwise.
+   */
+  readonly exportNote?: string | null;
   /** The latest same-round critic coverage judgement; null when none was recorded. */
   readonly coverage?: ReviewCoverageView | null;
   /** Safe effective/base/override policy projection for this run. */
@@ -371,7 +376,24 @@ export type ReviewAction =
       /** Reason for approving past failing final CV checks, recorded with the approval. */
       readonly readinessOverrideRationale?: string;
     }
-  | { readonly type: "export" };
+  | { readonly type: "export"; readonly format?: ExportFormat };
+
+/** The formats an approved artifact can be exported to; Markdown is the default. */
+export const exportFormats = ["markdown", "docx", "pdf"] as const;
+export type ExportFormat = (typeof exportFormats)[number];
+
+export const exportFormatLabels: Readonly<Record<ExportFormat, string>> = {
+  markdown: "Markdown",
+  docx: "DOCX",
+  pdf: "PDF",
+};
+
+/** The file extension an export in this format is saved with. */
+export const exportFormatExtensions: Readonly<Record<ExportFormat, string>> = {
+  markdown: "md",
+  docx: "docx",
+  pdf: "pdf",
+};
 
 export interface DesktopReviewPort {
   readonly load: () => Promise<DesktopReviewState>;
@@ -548,7 +570,11 @@ export function reduceReviewState(
         : state;
     case "export":
       return (state.state === "approved" || state.state === "exported") && state.reviewComplete
-        ? { ...state, state: "exported", exportPath: `exports/${state.runId}.md` }
+        ? {
+            ...state,
+            state: "exported",
+            exportPath: `exports/${state.runId}.${exportFormatExtensions[action.format ?? "markdown"]}`,
+          }
         : state;
   }
 }

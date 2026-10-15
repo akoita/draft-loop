@@ -397,7 +397,7 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Disagreement · critic-only finding");
     expect(html).toContain("Resolve or override 1 blocking finding before approval.");
     expect(html).toContain('disabled=""');
-    expect(html).toContain("Export Markdown");
+    expect(html).toContain("Export as Markdown");
     expect(html).toContain("source linked");
     expect(html).toContain("not linked to candidate materials");
     expect(html).not.toContain(">verified<");
@@ -482,7 +482,7 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain("Final CV checks block approval");
     expect(html).not.toContain("Approve with override");
     expect(html).toContain("Final CV checks overridden with a recorded reason");
-    expect(html).toMatch(/title="Export Markdown \(Alt\+E\)"(?! disabled)/u);
+    expect(html).toMatch(/title="Export as Markdown \(Alt\+E\)"(?! disabled)/u);
   });
 
   it("ignores readiness projected for an older artifact version", () => {
@@ -872,7 +872,7 @@ describe("desktop trust-centered review", () => {
       findings: [],
     };
     const exportAgainButton =
-      /aria-keyshortcuts="Alt\+E" title="Export Markdown again \(Alt\+E\)">Export again<kbd>/u;
+      /aria-keyshortcuts="Alt\+E" title="Export as Markdown again \(Alt\+E\)">Export again…<kbd>/u;
 
     const readable = { ...exported, exportPath: "exports/run-demo-1.md" };
     expect(canExportReview(readable, null)).toBe(true);
@@ -952,7 +952,7 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Unavailable until independent critique completes");
     expect(html).not.toContain("Available now");
     expect(html).not.toContain("All findings have a recorded decision.");
-    expect(html).toContain("Export Markdown");
+    expect(html).toContain("Export as Markdown");
     expect(html).toMatch(/aria-keyshortcuts="Alt\+E"[^>]*disabled=""/u);
   });
 

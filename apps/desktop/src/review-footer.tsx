@@ -17,6 +17,9 @@ import {
 import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
 import {
   type DesktopReviewState,
+  type ExportFormat,
+  exportFormatLabels,
+  exportFormats,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -215,6 +218,11 @@ export interface ReviewFooterProps {
     readonly again: boolean;
     /** Elapsed seconds while an export is pending, or null. */
     readonly pendingSeconds: number | null;
+    /** The format the next export is saved in. */
+    readonly format: ExportFormat;
+    readonly onFormatChange: (format: ExportFormat) => void;
+    /** An estimated-length warning from the export just made, or null. */
+    readonly note: string | null;
     readonly onExport: () => void;
   };
 }
@@ -404,27 +412,55 @@ export function ReviewFooter({
               {exportAction.pathLabel}
             </span>
           </div>
+          <label className="export-format">
+            <span className="sr-only">Export format</span>
+            <select
+              value={exportAction.format}
+              disabled={exportAction.disabled}
+              aria-label="Export format"
+              onChange={(event) => {
+                const chosen = exportFormats.find((format) => format === event.target.value);
+                if (chosen !== undefined) exportAction.onFormatChange(chosen);
+              }}
+            >
+              {exportFormats.map((format) => (
+                <option key={format} value={format}>
+                  {exportFormatLabels[format]}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             className="button button-outline"
             type="button"
             aria-keyshortcuts="Alt+E"
-            title={exportAction.again ? "Export Markdown again (Alt+E)" : "Export Markdown (Alt+E)"}
+            title={
+              exportAction.again
+                ? `Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
+                : `Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
+            }
             disabled={exportAction.disabled}
             onClick={exportAction.onExport}
           >
             {exportPending ? (
-              "Exporting Markdown…"
+              `Exporting ${exportFormatLabels[exportAction.format]}…`
             ) : (
               <>
-                {exportAction.again ? "Export again" : "Export Markdown"}
+                {exportAction.again ? "Export again…" : "Export…"}
                 <kbd>Alt+E</kbd>
               </>
             )}
           </button>
         </div>
+        {exportAction.note === null ? null : (
+          <p className="export-note" role="status">
+            {exportAction.note}
+          </p>
+        )}
         {exportAction.pendingSeconds === null ? null : (
           <p className="pending-action-status" role="status" aria-live="polite">
-            Exporting Markdown… Elapsed {exportAction.pendingSeconds} second
+            Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
+            {exportAction.pendingSeconds} second
             {exportAction.pendingSeconds === 1 ? "" : "s"}. Choose a destination in the Save As
             dialog; the approved artifact will be written after you confirm.
           </p>

@@ -388,7 +388,8 @@ export interface ExportCommand {
 export interface LatestExportPathCommand {
   readonly root: string;
   readonly runId: string;
-  readonly format: OutputFormat;
+  /** Omit to find the latest completed export of any format. */
+  readonly format?: OutputFormat;
 }
 
 export interface QueryEvidenceCommand {
@@ -810,6 +811,7 @@ export {
   type EvidenceModePreviewCommand,
   previewEvidenceMode,
 } from "./evidence-mode-preview.js";
+export { exportLengthWarningPrefix } from "./export-document.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./history-compaction.js";
 export * from "./knowledge-base.js";

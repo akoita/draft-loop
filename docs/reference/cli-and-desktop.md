@@ -628,11 +628,24 @@ The footer holds the approval gate and stays in view while you scroll:
   add a fact your sources do not hold. Runs started before this field existed
   cannot take directions: the field is disabled with a note, and starting a new
   review enables it.
-- **Export locally.** **Export Markdown** is available after approval and asks
-  for a destination in a Save dialog. A **Details** disclosure lists the
-  artifact, export and validation state and the approval conditions.
+- **Export locally.** After approval, choose a format (Markdown, DOCX or PDF)
+  beside **Export…** and pick a destination in the Save dialog. A **Details**
+  disclosure lists the artifact, export and validation state and the approval
+  conditions.
+- **DOCX and PDF layout.** Both formats are laid out from the approved artifact
+  alone: headline and contact lines first, then your sections in order, with
+  consistent headings and bullets, Arial text and A4 margins. There are no
+  tables, text boxes, comments, source annotations or block ids, so an
+  applicant tracking system reads the text in order.
+- **Length estimate.** When the run's writing policy sets a page target and the
+  content clearly exceeds it, the footer shows an estimated-length warning. It
+  is an estimate from line and word counts; open the file to confirm the real
+  page count. With no page target, nothing is shown.
+- **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md`
+  writes the same files (`md` is short for `markdown`, the default) and prints
+  the estimated-length warning when it applies.
 - **Export again.** An exported run shows its export path and offers **Export
-  again** through the same Save dialog. Each export adds a record; earlier ones
+  again…** through the same Save dialog. Each export adds a record; earlier ones
   are kept. If the previous file was moved or deleted, or the workspace was
   opened on another machine, the footer says the previous export can't be found.
 
@@ -646,7 +659,7 @@ run, as before.
 
 - **What the chosen run allows.** It opens with a notice, "Using this earlier
   run's draft", and takes the finding decisions approval needs, **Approve
-  artifact** and **Export Markdown**. Edits, **Request revision**, Resume and
+  artifact** and **Export…**. Edits, **Request revision**, Resume and
   new rounds stay on the latest run, and the host refuses them on the chosen
   run.
 - **What is recorded.** The application stores the chosen run, when it was
