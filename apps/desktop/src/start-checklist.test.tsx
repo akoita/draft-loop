@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { urlJobBriefStep } from "./electron/host-applications.js";
 import { createFixtureReviewState } from "./model.js";
+import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import { ReviewWorkspace } from "./review.js";
 import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
 import {
@@ -205,6 +206,67 @@ describe("start checklist conditions", () => {
     expect(condition(demo, "provider-sign-in").done).toBe(true);
   });
 
+  it("marks provider sign-in done when the status reads report the pair signed in", () => {
+    const conditions = startChecklist({
+      ...allDone,
+      providerSignIn: {
+        state: "ready",
+        summary: "Anthropic Claude session & OpenAI API key configured",
+      },
+    });
+    expect(condition(conditions, "provider-sign-in")).toEqual({
+      id: "provider-sign-in",
+      label: "Provider sign-in ready",
+      done: true,
+      detail: "Anthropic Claude session & OpenAI API key configured.",
+      action: null,
+    });
+    expect(firstUnmetStartCondition(conditions)).toBeNull();
+  });
+
+  it("shows missing sign-in as not done without blocking the host's start", () => {
+    const missing = {
+      ...allDone,
+      providerSignIn: {
+        state: "missing" as const,
+        summary: "Configure OpenAI Codex session for live review",
+      },
+    };
+    const signIn = condition(startChecklist(missing), "provider-sign-in");
+    expect(signIn).toMatchObject({
+      done: false,
+      advisory: true,
+      detail: "Configure OpenAI Codex session for live review.",
+      action: { id: "open-provider-sign-in", label: "Open provider sign-in" },
+    });
+    expect(signIn.checkedAtStart).toBeUndefined();
+    // The host stays the authority: the button and its hover text leave this row out.
+    expect(firstUnmetStartCondition(startChecklist(missing))).toBeNull();
+    expect(startChecklistTooltip(startChecklist(missing))).toBeUndefined();
+    const alsoUnacknowledged = startChecklist({
+      ...missing,
+      transmission: { required: true, acknowledged: false },
+    });
+    expect(startButtonLabel(alsoUnacknowledged, false)).toBe(
+      "Start review · review the data sent first",
+    );
+    expect(startChecklistTooltip(alsoUnacknowledged)).toBe(
+      "Can't start yet: Acknowledge provider transmission above.",
+    );
+  });
+
+  it("keeps sign-in checked at start when the read is unknown", () => {
+    const signIn = condition(
+      startChecklist({ ...allDone, providerSignIn: { state: "unknown", summary: null } }),
+      "provider-sign-in",
+    );
+    expect(signIn).toMatchObject({
+      done: false,
+      checkedAtStart: true,
+      detail: "Sign-in is on Home, under Workspace settings.",
+    });
+  });
+
   it("asks to review the data sent until transmission is acknowledged", () => {
     const conditions = startChecklist({
       ...allDone,
@@ -389,6 +451,54 @@ describe("ReviewWorkspace start checklist", () => {
     );
     expect(html).toContain("Start review · review the data sent first");
     expect(html).toContain(">Review data sent</button>");
+  });
+
+  const signInRow = (readiness?: ProviderSignInReadiness) => {
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={collecting({ reviewedOpportunity: { briefId: "target-role", version: 3 } })}
+        onAction={() => undefined}
+        startCandidateProfile={{ version: 2 }}
+        onOpenHome={() => undefined}
+        {...(readiness === undefined ? {} : { providerSignInReadiness: readiness })}
+      />,
+    );
+    const row = html.slice(html.lastIndexOf("<li", html.indexOf(">Provider sign-in ready<")));
+    return { html, row: row.slice(0, row.indexOf("</li>")) };
+  };
+
+  it("renders provider sign-in as Done when the reads report it ready", () => {
+    const { html, row } = signInRow({
+      state: "ready",
+      summary: "Anthropic API key & OpenAI API key configured",
+    });
+    expect(row).toContain('class="start-check start-check-done"');
+    expect(row).toContain(">Done<");
+    expect(row).toContain("Anthropic API key &amp; OpenAI API key configured.");
+    expect(row).not.toContain("Open provider sign-in");
+    expect(html).toContain(">Start author–critic review</button>");
+  });
+
+  it("renders missing sign-in as Not done with Open provider sign-in, the button enabled", () => {
+    const { html, row } = signInRow({
+      state: "missing",
+      summary: "Configure Anthropic Claude session for live review",
+    });
+    expect(row).toContain('class="start-check start-check-todo"');
+    expect(row).toContain(">Not done<");
+    expect(row).toContain("Configure Anthropic Claude session for live review.");
+    expect(row).toContain(">Open provider sign-in</button>");
+    expect(html).toContain(">Start author–critic review</button>");
+    expect(html).not.toContain("start-checklist-blocked");
+  });
+
+  it("renders unknown sign-in as checked when the review starts", () => {
+    for (const readiness of [undefined, { state: "unknown" as const, summary: null }]) {
+      const { row } = signInRow(readiness);
+      expect(row).toContain('class="start-check start-check-at-start"');
+      expect(row).toContain(">Checked when the review starts<");
+      expect(row).toContain(">Open provider sign-in</button>");
+    }
   });
 
   it("shows a refused start in the checklist, not above the setup cards", () => {

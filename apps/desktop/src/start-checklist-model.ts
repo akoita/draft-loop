@@ -1,4 +1,5 @@
 import type { WorkspaceReadiness } from "./model.js";
+import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { RequirementRefusalAction } from "./start-requirements-model.js";
 
 /**
@@ -50,6 +51,12 @@ export interface StartCondition {
    * not done but never blocks the button; a host refusal names it instead.
    */
   readonly checkedAtStart?: boolean;
+  /**
+   * The renderer read that this is not done, but the host is the authority and checks it again
+   * when the review starts. Such a condition shows as not done but never blocks the button on its
+   * own: the read may be stale, for example after signing in from a terminal.
+   */
+  readonly advisory?: boolean;
   readonly action: StartConditionAction | null;
   readonly detail?: string;
 }
@@ -69,6 +76,8 @@ export interface StartChecklistInput {
   /** The host's refusal to start, such as a missing profile or an unsupported model pair. */
   readonly startDisabledReason: string | null;
   readonly canOpenProviderSignIn: boolean;
+  /** The pair's sign-in as the host's status reads report it; unknown when absent. */
+  readonly providerSignIn?: ProviderSignInReadiness;
 }
 
 const requirementsLabel = "Job requirements reviewed";
@@ -169,15 +178,38 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
       action: null,
     };
   }
+  const state = input.providerSignIn?.state ?? "unknown";
+  const summary = input.providerSignIn?.summary ?? null;
+  if (state === "ready") {
+    return {
+      id: "provider-sign-in",
+      label,
+      done: true,
+      ...(summary === null ? {} : { detail: `${summary}.` }),
+      action: null,
+    };
+  }
+  const action: StartConditionAction | null = input.canOpenProviderSignIn
+    ? { id: "open-provider-sign-in", label: "Open provider sign-in" }
+    : null;
+  if (state === "missing") {
+    return {
+      id: "provider-sign-in",
+      label,
+      done: false,
+      advisory: true,
+      detail: summary === null ? "Sign in on Home, under Workspace settings." : `${summary}.`,
+      action,
+    };
+  }
+  // The read failed or has not answered: the host checks sign-in when the review starts.
   return {
     id: "provider-sign-in",
     label,
     done: false,
     checkedAtStart: true,
     detail: "Sign-in is on Home, under Workspace settings.",
-    action: input.canOpenProviderSignIn
-      ? { id: "open-provider-sign-in", label: "Open provider sign-in" }
-      : null,
+    action,
   };
 }
 
@@ -244,8 +276,16 @@ export function startChecklist(input: StartChecklistInput): readonly StartCondit
   ];
 }
 
-/** Whether a condition stops the review from starting. */
+/**
+ * Whether a condition stops the review from starting. Only conditions the renderer itself is
+ * sure of block; a condition the host checks at start, read or not, leaves the button to the host.
+ */
 export function blocksStart(condition: StartCondition): boolean {
+  return !condition.done && condition.checkedAtStart !== true && condition.advisory !== true;
+}
+
+/** Whether the checklist shows a condition as not done, whether or not it blocks the start. */
+export function shownUnmet(condition: StartCondition): boolean {
   return !condition.done && condition.checkedAtStart !== true;
 }
 

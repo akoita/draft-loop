@@ -1,8 +1,8 @@
 import {
-  blocksStart,
   firstUnmetStartCondition,
   type StartActionId,
   type StartCondition,
+  shownUnmet,
   startJobCardId,
 } from "./start-checklist-model.js";
 
@@ -53,12 +53,13 @@ export function StartChecklistView({
       ) : null}
       <ul aria-labelledby={titleId}>
         {conditions.map((condition) => {
-          const tone = condition.done ? "done" : blocksStart(condition) ? "todo" : "at-start";
+          // A not-done row that leaves the start to the host still reads as not done.
+          const tone = condition.done ? "done" : shownUnmet(condition) ? "todo" : "at-start";
           const action = readOnly ? null : condition.action;
           return (
             <li className={`start-check start-check-${tone}`} key={condition.id}>
               <span className="gate-mark" aria-hidden="true">
-                {condition.done ? "✓" : blocksStart(condition) ? "!" : "·"}
+                {condition.done ? "✓" : shownUnmet(condition) ? "!" : "·"}
               </span>
               <span className="start-check-body">
                 <span className="start-check-label">{condition.label}</span>
