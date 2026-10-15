@@ -224,7 +224,11 @@ describe("the run switcher in the review", () => {
     const before = render();
     expect(render(null)).toBe(before);
     expect(render([])).toBe(before);
-    expect(render(runs.slice(0, 1))).toBe(before);
+    // A run that recorded models names them in Run details, so compare one that recorded none.
+    const [only] = runs;
+    if (only === undefined) throw new Error("Expected a run.");
+    expect(render([{ ...only, authorModel: "", criticModel: "" }])).toBe(before);
+    expect(render([only])).not.toContain("run-switcher");
     expect(before).not.toContain("run-switcher");
   });
 });

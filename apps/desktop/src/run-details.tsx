@@ -2,6 +2,9 @@
  * Run provenance in a drawer: the review header summarises the run in one line, and **Run
  * details** opens a drawer from the right with the rest.
  *
+ * Both name the models the run on screen recorded, read from its row in the application's run
+ * list, never the pair configured for new runs; a run with no recorded models says so.
+ *
  * The drawer holds the author and critic with their claimed lineages, the data and writing
  * policy, the evidence mode, the author input, the run's event timeline once it is not running,
  * and **Start a new review**. What the reviewer must act on or weigh stays outside it: run
@@ -44,9 +47,35 @@ export function shortModelName(modelId: string): string {
   return modelDisplayName(modelId).replace(/^Claude /u, "");
 }
 
+/** The author and critic model ids the run recorded; an empty id means that role is unknown. */
+export interface RecordedRunModels {
+  readonly author: string;
+  readonly critic: string;
+}
+
+/**
+ * The models the run on screen recorded, from its row in the application's run list, or null when
+ * it recorded none. The configured pair in `providerExposure` follows new runs, so it is never a
+ * stand-in for what this run used.
+ */
+export function recordedRunModels(
+  state: Pick<DesktopReviewState, "runId" | "applicationRuns">,
+): RecordedRunModels | null {
+  const row = state.applicationRuns?.find((run) => run.runId === state.runId);
+  if (row === undefined || (row.authorModel === "" && row.criticModel === "")) return null;
+  return { author: row.authorModel, critic: row.criticModel };
+}
+
+const modelsNotRecorded = "models not recorded";
+
+/** One role's recorded model, or "unknown" when only the other role's was recorded. */
+function recordedModelLabel(modelId: string, name: (id: string) => string = (id) => id): string {
+  return modelId === "" ? "unknown" : name(modelId);
+}
+
 type RunDetailsSummaryInput = Pick<
   DesktopReviewState,
-  "state" | "providerExposure" | "setup" | "evidenceMode" | "writingPolicy"
+  "runId" | "applicationRuns" | "state" | "setup" | "evidenceMode" | "writingPolicy"
 >;
 
 /** The evidence part of the header line, from the mode the run recorded or the setup's excerpts. */
@@ -67,14 +96,18 @@ function evidenceSummary(state: RunDetailsSummaryInput): string {
  * policy active". The drawer has the detail behind each part.
  */
 export function runDetailsSummary(state: RunDetailsSummaryInput): string {
-  const { author, critic } = state.providerExposure;
+  const recorded = recordedRunModels(state);
+  const models =
+    recorded === null
+      ? modelsNotRecorded
+      : `${recordedModelLabel(recorded.author, shortModelName)} → ${recordedModelLabel(recorded.critic, shortModelName)}`;
   const policy =
     state.writingPolicy === undefined || state.writingPolicy === null
       ? "no policy"
       : state.writingPolicy.lineage.kind === "workspace"
         ? "policy active"
         : "policy override";
-  return `${shortModelName(author.model)} → ${shortModelName(critic.model)} · ${evidenceSummary(state)} · ${policy}`;
+  return `${models} · ${evidenceSummary(state)} · ${policy}`;
 }
 
 /**
@@ -219,26 +252,40 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
   const authorInput = runAuthorInputDisplay(state.authorInput);
   // Independence is what the run recorded, never something this renderer infers.
   const independence = independenceSummary(state.providerExposure.independentReview);
+  const recorded = recordedRunModels(state);
+  const { author: configuredAuthor, critic: configuredCritic } = state.providerExposure;
+  const configuredDiffers =
+    recorded === null ||
+    recorded.author !== configuredAuthor.model ||
+    recorded.critic !== configuredCritic.model;
   return (
     <section className="trust-strip" aria-label="trust and policy summary">
       {/* The lineage qualifies the identity it belongs to, so it is read here
           with the company and the model rather than apart from them. */}
+      {/* The run's recorded models, never the configured pair. The run list records no company. */}
       <div className="trust-fact">
         <span className="label">Author</span>
-        <strong>{state.providerExposure.author.company}</strong>
-        <span>{state.providerExposure.author.model}</span>
+        <strong>
+          {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.author)}
+        </strong>
         {state.providerExposure.independentReview === null ? null : (
           <span>claimed lineage {state.providerExposure.independentReview.authorLineage}</span>
         )}
       </div>
       <div className="trust-fact">
         <span className="label">Critic</span>
-        <strong>{state.providerExposure.critic.company}</strong>
-        <span>{state.providerExposure.critic.model}</span>
+        <strong>
+          {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.critic)}
+        </strong>
         {state.providerExposure.independentReview === null ? null : (
           <span>claimed lineage {state.providerExposure.independentReview.criticLineage}</span>
         )}
       </div>
+      {configuredDiffers ? (
+        <p className="setup-note">
+          New runs use: {configuredAuthor.model} → {configuredCritic.model}
+        </p>
+      ) : null}
       {/* A shared lineage is a warning, so the side panel shows it instead (RunTrustWarning). */}
       {independence.tone === "shared" ? null : <IndependenceBadge summary={independence} />}
       <div className="trust-fact">

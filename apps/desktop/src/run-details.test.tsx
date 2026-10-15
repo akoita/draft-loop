@@ -2,6 +2,7 @@ import { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import type { ApplicationRunRowView } from "./application-run-list.js";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
@@ -26,13 +27,39 @@ const policy: WritingPolicyVersionMetadata = {
   priorChecksum: null,
 };
 
+/** The application's runs, newest first: the fixture's run is the latest, with an earlier one. */
+const applicationRuns: readonly ApplicationRunRowView[] = [
+  {
+    runId: fixture.runId,
+    startedAt: "2026-10-02T00:00:00.000Z",
+    authorModel: "claude-opus-5-5",
+    criticModel: "gpt-6.1-sol",
+    round: 1,
+    state: "awaiting-approval",
+    latest: true,
+  },
+  {
+    runId: "run-earlier",
+    startedAt: "2026-10-01T00:00:00.000Z",
+    authorModel: "claude-sonnet-4-5",
+    criticModel: "gpt-5",
+    round: 2,
+    state: "approved",
+    latest: false,
+  },
+];
+
+/** The pair configured for new runs, which differs from every run's recorded models. */
+const configuredMistral: DesktopReviewState["providerExposure"] = {
+  ...fixture.providerExposure,
+  author: { company: "Mistral", model: "mistral-large-4" },
+  critic: { company: "OpenAI", model: "gpt-6-luna" },
+};
+
 const fullSource: DesktopReviewState = {
   ...fixture,
-  providerExposure: {
-    ...fixture.providerExposure,
-    author: { company: "Anthropic", model: "claude-opus-5-5" },
-    critic: { company: "OpenAI", model: "gpt-6.1-sol" },
-  },
+  providerExposure: configuredMistral,
+  applicationRuns,
   evidenceMode: {
     requestedMode: "full-source",
     effectiveMode: "full-source",
@@ -88,7 +115,9 @@ describe("runDetailsSummary", () => {
   });
 
   it("reads a retrieval run's excerpts and a run without a policy", () => {
-    expect(runDetailsSummary(fixture)).toBe("Sonnet 4.5 → GPT-5 · 1 excerpt · no policy");
+    expect(runDetailsSummary({ ...fixture, applicationRuns })).toBe(
+      "Opus 5.5 → GPT-6.1 Sol · 1 excerpt · no policy",
+    );
   });
 
   it("says retrieval was used when full source fell back", () => {
@@ -120,11 +149,96 @@ describe("runDetailsSummary", () => {
         },
       },
     };
-    expect(runDetailsSummary(state)).toBe("Sonnet 4.5 → GPT-5 · 3 sources · policy override");
+    expect(runDetailsSummary(state)).toBe("models not recorded · 3 sources · policy override");
   });
 
   it("keeps an unknown model id as it is", () => {
     expect(shortModelName("acme-model-1")).toBe("acme-model-1");
+  });
+});
+
+describe("the run's recorded models, not the pair configured for new runs", () => {
+  const earlier: DesktopReviewState = {
+    ...fullSource,
+    runId: "run-earlier",
+    earlierRun: { latestRunId: fixture.runId },
+    evidenceMode: null,
+    writingPolicy: null,
+  };
+  const unrecorded: DesktopReviewState = {
+    ...fullSource,
+    applicationRuns: applicationRuns.map((run) =>
+      run.runId === fixture.runId ? { ...run, authorModel: "", criticModel: "" } : run,
+    ),
+  };
+
+  function trustFacts(state: DesktopReviewState): string {
+    const html = render(state);
+    const start = html.indexOf('aria-label="trust and policy summary"');
+    if (start < 0) throw new Error("Expected the trust facts.");
+    return html.slice(start, html.indexOf("</section>", start));
+  }
+
+  it("names the latest run's recorded models in the summary and the drawer", () => {
+    expect(runDetailsSummary(fullSource)).toMatch(/^Opus 5\.5 → GPT-6\.1 Sol · /u);
+    const facts = trustFacts(fullSource);
+    expect(facts).toContain("<strong>claude-opus-5-5</strong>");
+    expect(facts).toContain("<strong>gpt-6.1-sol</strong>");
+    expect(facts).toContain("claimed lineage anthropic:claude-sonnet-4-5");
+    expect(facts).toContain("New runs use: mistral-large-4 → gpt-6-luna");
+    expect(facts).not.toContain("<strong>mistral-large-4</strong>");
+    expect(runDetailsSummary(fullSource)).not.toContain("Mistral");
+  });
+
+  it("names an earlier run's recorded models when it is opened read-only", () => {
+    expect(runDetailsSummary(earlier)).toBe("Sonnet 4.5 → GPT-5 · 1 excerpt · no policy");
+    const facts = trustFacts(earlier);
+    expect(facts).toContain("<strong>claude-sonnet-4-5</strong>");
+    expect(facts).toContain("<strong>gpt-5</strong>");
+    expect(facts).toContain("New runs use: mistral-large-4 → gpt-6-luna");
+  });
+
+  it("says the models were not recorded rather than borrowing the configured pair", () => {
+    expect(runDetailsSummary(unrecorded)).toMatch(/^models not recorded · /u);
+    expect(runDetailsSummary({ ...fullSource, applicationRuns: null })).toMatch(
+      /^models not recorded · /u,
+    );
+    const facts = trustFacts(unrecorded);
+    expect(facts.match(/<strong>models not recorded<\/strong>/gu)).toHaveLength(2);
+    expect(facts).not.toContain("<strong>mistral-large-4</strong>");
+    expect(facts).toContain("New runs use: mistral-large-4 → gpt-6-luna");
+  });
+
+  it("adds no new-runs line when the configured pair is the one the run recorded", () => {
+    const same: DesktopReviewState = {
+      ...fullSource,
+      providerExposure: {
+        ...configuredMistral,
+        author: { company: "Anthropic", model: "claude-opus-5-5" },
+        critic: { company: "OpenAI", model: "gpt-6.1-sol" },
+      },
+    };
+    expect(trustFacts(same)).not.toContain("New runs use:");
+  });
+
+  it("keeps the shared-lineage warning on the run's recorded lineages", () => {
+    const shared: DesktopReviewState = {
+      ...earlier,
+      providerExposure: {
+        ...configuredMistral,
+        independentReview: {
+          authorLineage: "open-weights:base",
+          criticLineage: "open-weights:base",
+          lineagesDistinct: false,
+          required: true,
+          overrideRationale: null,
+        },
+      },
+    };
+    const html = render(shared);
+    expect(sidePanelOf(html)).toContain('aria-label="independence warning"');
+    expect(trustFacts(shared)).toContain("claimed lineage open-weights:base");
+    expect(sidePanelOf(render(earlier))).not.toContain('aria-label="independence warning"');
   });
 });
 

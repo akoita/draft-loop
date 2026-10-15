@@ -525,6 +525,9 @@ pinned under it.
   right with the run's provenance: the author and critic with their claimed
   lineages, the data and writing policy, the evidence mode and author input,
   the event timeline once the run is not executing, and **Start a new review**.
+  Both name the models the run on screen recorded, not the pair set for new
+  runs, and say "models not recorded" when it recorded none. When the pair for
+  new runs differs, the drawer adds "New runs use: author → critic".
 - **Side panel.** A one-line "Next:" status names the next step, such as "Next:
   decide 1 blocking finding", and matches the footer's gate. Below it,
   **Findings** and **Coverage** share the panel as tabs; with no requirement
