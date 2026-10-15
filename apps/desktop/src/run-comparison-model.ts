@@ -113,6 +113,8 @@ export interface ComparedRunFacts {
   readonly round: string;
   readonly status: string;
   readonly latest: boolean;
+  /** The run whose draft the application uses for approval and export. */
+  readonly chosen: boolean;
 }
 
 /** A run's facts from the run list; a run missing from the list still names itself. */
@@ -131,6 +133,7 @@ export function comparedRunFacts(
       round: "round unknown",
       status: "status unknown",
       latest: false,
+      chosen: false,
     };
   }
   return {
@@ -140,6 +143,7 @@ export function comparedRunFacts(
     round: `round ${run.round}`,
     status: run.state.replaceAll("-", " "),
     latest: run.latest,
+    chosen: run.chosen === true,
   };
 }
 

@@ -164,7 +164,7 @@ import type {
   KnowledgeEnsureDefaultResult,
   WorkspaceEvidenceMigrationResult,
 } from "../career-evidence-contract.js";
-import { earlierRunRefusal } from "../earlier-run.js";
+import { chosenRunRefusal, earlierRunRefusal } from "../earlier-run.js";
 import { findingRequirement } from "../finding-requirement.js";
 import type {
   DesktopReviewState,
@@ -211,6 +211,7 @@ import {
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import {
   earlierRunFor,
+  isChosenEarlierRunId,
   refusesEarlierRunAction,
   runBelongsToApplication,
   withEarlierRun,
@@ -224,6 +225,7 @@ import {
   applicationPairDescriptor,
   applicationReadinessScope,
   archiveApplicationSummary,
+  chooseApplicationRunSummary,
   createApplicationSummary,
   deleteApplicationRecord,
   importApplicationSummary,
@@ -4035,7 +4037,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     let workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
     const scope = await requireApplicationScope(workspace.root, input.applicationId);
     if (refusesEarlierRunAction(scope, input.runId, input.action.type)) {
-      return fail("operation-failed", earlierRunRefusal);
+      return fail(
+        "operation-failed",
+        isChosenEarlierRunId(scope, input.runId) ? chosenRunRefusal : earlierRunRefusal,
+      );
     }
     const currentSnapshot =
       input.action.type === "acknowledge-provider-transmission" ||
@@ -4499,6 +4504,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 workspace.root,
                 command.input.applicationId,
                 command.input.name,
+              ),
+            },
+          };
+        }
+        case "application.choose-run": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              application: await chooseApplicationRunSummary(
+                service,
+                workspace.root,
+                command.input.applicationId,
+                command.input.runId,
+                command.input.reason,
               ),
             },
           };

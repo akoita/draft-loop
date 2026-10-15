@@ -8,7 +8,11 @@ import {
   type ModelProfileRegistry,
 } from "@draft-loop/application/model-profiles";
 
-import type { ApplicationImportCounts, ApplicationSummaryView } from "../application-contract.js";
+import type {
+  ApplicationChosenRunView,
+  ApplicationImportCounts,
+  ApplicationSummaryView,
+} from "../application-contract.js";
 
 /**
  * Host-side projection of job applications (ADR 0010).
@@ -27,7 +31,24 @@ function newestRunId(view: ApplicationView): string | null {
   return newest?.id ?? null;
 }
 
+/**
+ * The chosen run with its number among the application's runs, oldest = 1, as the run switcher
+ * numbers them; undefined when the application uses its newest run.
+ */
+function chosenRunSummary(view: ApplicationView): ApplicationChosenRunView | undefined {
+  const chosen = view.chosenRun;
+  if (chosen === null || chosen === undefined) return undefined;
+  const oldestFirst = [...view.runs].sort((left, right) => {
+    const byTime = Date.parse(left.startedAt) - Date.parse(right.startedAt);
+    if (byTime !== 0 && !Number.isNaN(byTime)) return byTime;
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+  });
+  const index = oldestFirst.findIndex((run) => run.id === chosen.runId);
+  return index < 0 ? undefined : { runId: chosen.runId, runNumber: index + 1 };
+}
+
 export function projectApplication(view: ApplicationView): ApplicationSummaryView {
+  const chosenRun = chosenRunSummary(view);
   return {
     id: view.id,
     name: view.name,
@@ -44,6 +65,7 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     modelProfiles: view.modelProfiles,
     nameChosen: view.nameChosen,
     suggestedName: view.suggestedName,
+    ...(chosenRun === undefined ? {} : { chosenRun }),
   };
 }
 
@@ -138,6 +160,30 @@ export async function setApplicationModelsSummary(
   );
 }
 
+/**
+ * Uses one of the application's runs for approval and export, with the person's optional reason.
+ * The application service checks that the run is the application's own and has a draft.
+ */
+export async function chooseApplicationRunSummary(
+  service: ApplicationService,
+  root: string,
+  applicationId: string,
+  runId: string,
+  reason: string | undefined,
+): Promise<ApplicationSummaryView> {
+  if (service.chooseApplicationRun === undefined) {
+    throw new Error("This application service cannot choose an application's run.");
+  }
+  return projectApplication(
+    await service.chooseApplicationRun({
+      root,
+      applicationId,
+      runId,
+      ...(reason === undefined ? {} : { reason }),
+    }),
+  );
+}
+
 export async function deleteApplicationRecord(
   service: ApplicationService,
   root: string,
@@ -154,6 +200,8 @@ export interface ApplicationScope {
   readonly application: ApplicationView;
   /** The application's newest run; undefined before its first run. */
   readonly latestRunId: string | undefined;
+  /** The run whose draft the person chose for approval and export; undefined uses the latest. */
+  readonly chosenRunId: string | undefined;
   /** False for the default application, which reads the workspace's own job and brief. */
   readonly created: boolean;
 }
@@ -173,6 +221,7 @@ export async function resolveApplicationScope(
   return {
     application,
     latestRunId: newestRunId(application) ?? undefined,
+    chosenRunId: application.chosenRun?.runId ?? undefined,
     created: !application.isDefault,
   };
 }

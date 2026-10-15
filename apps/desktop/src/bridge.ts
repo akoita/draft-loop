@@ -35,6 +35,7 @@ import {
 } from "@draft-loop/domain";
 import {
   type ApplicationArchiveInput,
+  type ApplicationChooseRunInput,
   type ApplicationCreateInput,
   type ApplicationDeleteInput,
   type ApplicationDeleteResult,
@@ -47,6 +48,7 @@ import {
   type ApplicationRenameInput,
   type ApplicationSetModelsInput,
   applicationArchiveKeys,
+  applicationChooseRunKeys,
   applicationCreateKeys,
   applicationDeleteKeys,
   applicationGetKeys,
@@ -61,6 +63,7 @@ import {
   normalizeApplicationListResult,
   normalizeApplicationModelProfiles,
   normalizeApplicationRecordResult,
+  normalizeChosenRunReasonInput,
 } from "./application-contract.js";
 import { normalizeApplicationRuns } from "./application-run-list.js";
 import { normalizeApprovalReadiness } from "./approval-readiness.js";
@@ -3050,6 +3053,7 @@ export interface BridgeCommandInputMap {
   "application.rename": ApplicationRenameInput;
   "application.delete": ApplicationDeleteInput;
   "application.set-models": ApplicationSetModelsInput;
+  "application.choose-run": ApplicationChooseRunInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3160,6 +3164,7 @@ export interface BridgeCommandOutputMap {
   "application.rename": ApplicationRecordResult;
   "application.delete": ApplicationDeleteResult;
   "application.set-models": ApplicationRecordResult;
+  "application.choose-run": ApplicationRecordResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4489,6 +4494,19 @@ function validateApplicationRenameInput(value: unknown): ApplicationRenameInput 
   };
 }
 
+function validateApplicationChooseRunInput(value: unknown): ApplicationChooseRunInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationChooseRunKeys)) return invalidInput();
+  const reason = input.reason === undefined ? null : normalizeChosenRunReasonInput(input.reason);
+  if (reason === undefined) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+    runId: identifier(input.runId),
+    ...(reason === null ? {} : { reason }),
+  };
+}
+
 function validateApplicationSetModelsInput(value: unknown): ApplicationSetModelsInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, applicationSetModelsKeys)) return invalidInput();
@@ -5557,6 +5575,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "application.set-models",
         input: validateApplicationSetModelsInput(command.input),
+      };
+    case "application.choose-run":
+      return {
+        type: "application.choose-run",
+        input: validateApplicationChooseRunInput(command.input),
       };
     case "workspace.recent-remove":
       return {
@@ -8125,6 +8148,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.archive":
     case "application.rename":
     case "application.set-models":
+    case "application.choose-run":
       return normalizeApplicationRecord(value);
     case "application.delete":
       return normalizeApplicationDelete(value);

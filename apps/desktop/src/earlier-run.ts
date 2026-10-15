@@ -13,6 +13,11 @@ import type { ReviewAction } from "./model.js";
 export interface EarlierRunView {
   /** The application's latest run, which takes every change. */
   readonly latestRunId: string;
+  /**
+   * True when the person chose this earlier run's draft for the application: it can then be
+   * approved and exported, with the finding decisions approval needs, but not revised.
+   */
+  readonly chosen?: boolean;
 }
 
 function exactKeys<Shape extends object>() {
@@ -23,7 +28,7 @@ function exactKeys<Shape extends object>() {
   ): Keys => keys;
 }
 
-export const earlierRunKeys = exactKeys<EarlierRunView>()(["latestRunId"]);
+export const earlierRunKeys = exactKeys<EarlierRunView>()(["latestRunId", "chosen"]);
 
 const maximumRunIdLength = 200;
 
@@ -42,11 +47,21 @@ export function normalizeEarlierRun(value: unknown): EarlierRunView | undefined 
   ) {
     return undefined;
   }
-  return { latestRunId };
+  if (raw.chosen !== undefined && typeof raw.chosen !== "boolean") return undefined;
+  return raw.chosen === true ? { latestRunId, chosen: true } : { latestRunId };
 }
 
 /** Why an earlier run refuses a change; the host and the review say the same thing. */
 export const earlierRunRefusal = "This is an earlier run. Open the latest run to change it.";
+
+/** Why the chosen earlier run refuses a change other than approval and export. */
+export const chosenRunRefusal =
+  "This earlier run can only be approved and exported. Open the latest run to revise it.";
+
+/** Whether the earlier-run marker is for the run the person chose. */
+export function isChosenEarlierRun(earlierRun: EarlierRunView | null | undefined): boolean {
+  return earlierRun?.chosen === true;
+}
 
 /**
  * Whether an action may be taken while an earlier run is open. Only actions that change no run
@@ -56,5 +71,19 @@ export const earlierRunRefusal = "This is an earlier run. Open the latest run to
 export function earlierRunAllowsAction(type: ReviewAction["type"]): boolean {
   return (
     type === "acknowledge-provider-transmission" || type === "set-autopilot" || type === "start"
+  );
+}
+
+/**
+ * Whether an action may be taken on the earlier run the person chose for the application:
+ * approval, export and the finding decisions approval needs, besides what any earlier run allows.
+ * Revision, edits, resuming and new rounds stay on the latest run.
+ */
+export function chosenRunAllowsAction(type: ReviewAction["type"]): boolean {
+  return (
+    earlierRunAllowsAction(type) ||
+    type === "approve" ||
+    type === "export" ||
+    type === "finding-decision"
   );
 }

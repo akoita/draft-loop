@@ -4,6 +4,7 @@ import { createFixtureReviewState } from "../model.js";
 import {
   type EarlierRunScope,
   earlierRunFor,
+  isChosenEarlierRunId,
   refusesEarlierRunAction,
   runBelongsToApplication,
   withEarlierRun,
@@ -51,6 +52,26 @@ describe("the earlier-run guard", () => {
       expect(refusesEarlierRunAction(twoRuns, "run-a", type)).toBe(false);
     }
     expect(refusesEarlierRunAction(undefined, "run-a", "approve")).toBe(false);
+  });
+
+  it("lets only the chosen earlier run take approval, export and finding decisions", () => {
+    const chosen = { ...scope("run-c", ["run-a", "run-b", "run-c"]), chosenRunId: "run-b" };
+    expect(earlierRunFor(chosen, "run-b")).toEqual({ latestRunId: "run-c", chosen: true });
+    expect(earlierRunFor(chosen, "run-a")).toEqual({ latestRunId: "run-c" });
+    for (const type of ["approve", "export", "finding-decision"] as const) {
+      expect(refusesEarlierRunAction(chosen, "run-b", type)).toBe(false);
+      expect(refusesEarlierRunAction(chosen, "run-a", type)).toBe(true);
+    }
+    for (const type of ["request-revision", "edit-block", "resume", "pause", "stop"] as const) {
+      expect(refusesEarlierRunAction(chosen, "run-b", type)).toBe(true);
+      expect(refusesEarlierRunAction(chosen, "run-c", type)).toBe(false);
+    }
+    expect(isChosenEarlierRunId(chosen, "run-b")).toBe(true);
+    expect(isChosenEarlierRunId(chosen, "run-a")).toBe(false);
+    // A choice of the latest run leaves it the latest, with every change open.
+    const latestChosen = { ...chosen, chosenRunId: "run-c" };
+    expect(earlierRunFor(latestChosen, "run-c")).toBeNull();
+    expect(isChosenEarlierRunId(latestChosen, "run-c")).toBe(false);
   });
 
   it("adds the marker to a review state only when there is one", () => {

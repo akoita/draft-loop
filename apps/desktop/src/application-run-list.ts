@@ -21,6 +21,8 @@ export interface ApplicationRunRowView {
   readonly score?: number;
   /** The application's newest run; exactly one row carries it. */
   readonly latest: boolean;
+  /** The run whose draft the person chose for approval and export; at most one row carries it. */
+  readonly chosen?: boolean;
 }
 
 function exactKeys<Shape extends object>() {
@@ -40,6 +42,7 @@ export const applicationRunRowKeys = exactKeys<ApplicationRunRowView>()([
   "state",
   "score",
   "latest",
+  "chosen",
 ]);
 
 /** The most runs the host sends and the bridge accepts. */
@@ -90,7 +93,8 @@ function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
     round === undefined ||
     state === undefined ||
     (raw.score !== undefined && rowScore === undefined) ||
-    typeof raw.latest !== "boolean"
+    typeof raw.latest !== "boolean" ||
+    (raw.chosen !== undefined && typeof raw.chosen !== "boolean")
   ) {
     return undefined;
   }
@@ -103,6 +107,7 @@ function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
     state,
     ...(rowScore === undefined ? {} : { score: rowScore }),
     latest: raw.latest,
+    ...(raw.chosen === true ? { chosen: true } : {}),
   };
 }
 
@@ -120,11 +125,23 @@ export function normalizeApplicationRuns(
     if (row === undefined) return undefined;
     rows.push(row);
   }
-  return rows.filter((row) => row.latest).length > 1 ? undefined : rows;
+  return rows.filter((row) => row.latest).length > 1 ||
+    rows.filter((row) => row.chosen === true).length > 1
+    ? undefined
+    : rows;
 }
 
-/** One run before ordering: everything but the latest marker. */
-export type ApplicationRunInput = Omit<ApplicationRunRowView, "latest">;
+/** One run before ordering: everything but the latest and chosen markers. */
+export type ApplicationRunInput = Omit<ApplicationRunRowView, "latest" | "chosen">;
+
+/** The rows with the chosen run marked; unchanged without a chosen run. */
+export function markChosenRun(
+  rows: readonly ApplicationRunRowView[],
+  chosenRunId: string | undefined,
+): readonly ApplicationRunRowView[] {
+  if (chosenRunId === undefined) return rows;
+  return rows.map((row) => (row.runId === chosenRunId ? { ...row, chosen: true } : row));
+}
 
 function startedTime(row: ApplicationRunInput): number {
   const time = Date.parse(row.startedAt);

@@ -32,6 +32,9 @@ import {
   runComparisonActive,
   runComparisonReducer,
 } from "./run-comparison-model.js";
+import { type ChooseRunDraft, RunDraftChoice, runDraftChoiceOffered } from "./run-draft-choice.js";
+
+export type { ChooseRunDraft };
 
 /** Reads one of the application's runs for comparison without opening it. */
 export type LoadRunForComparison = (runId: string) => Promise<DesktopReviewState>;
@@ -112,17 +115,26 @@ export function useRunComparison(
 function SideHeading({
   side,
   id,
+  runs,
+  onChooseRun,
 }: {
   readonly side: ComparisonSide;
   readonly id: string;
+  readonly runs: DesktopReviewState["applicationRuns"];
+  readonly onChooseRun: ChooseRunDraft | undefined;
 }): JSX.Element {
   const { facts } = side;
+  const offered =
+    onChooseRun !== undefined &&
+    side.draft.status === "loaded" &&
+    runDraftChoiceOffered(facts, runs);
   return (
     <div className="pane-heading run-comparison-heading">
       <span className="run-comparison-heading-title" id={id}>
         <strong>{facts.label}</strong>
         {side.open ? <span className="run-comparison-tag">open run</span> : null}
         {facts.latest ? <span className="run-switcher-latest">latest</span> : null}
+        {facts.chosen ? <span className="run-switcher-chosen">chosen</span> : null}
       </span>
       <span className="run-comparison-facts">
         <span className="run-switcher-models">{facts.models}</span>
@@ -130,6 +142,9 @@ function SideHeading({
         <span>{facts.status}</span>
         {side.draft.status === "loaded" ? <span>v{side.draft.artifact.version}</span> : null}
       </span>
+      {offered ? (
+        <RunDraftChoice runId={facts.runId} label={facts.label} onChoose={onChooseRun} />
+      ) : null}
     </div>
   );
 }
@@ -294,7 +309,8 @@ function ExportStatusLine({ status }: { readonly status: ExportStatus }): JSX.El
 /**
  * The comparison itself: a header with the swap, export and close controls, the runs' recorded
  * facts and input differences, and the two drafts. It carries no edit, decision or approval
- * control; the export only writes the file the reviewer picks.
+ * control; the export only writes the file the reviewer picks, and "Use this run's draft" only
+ * records which run the application approves and exports.
  */
 export function RunComparisonView({
   comparison,
@@ -302,6 +318,7 @@ export function RunComparisonView({
   onSwap,
   onClose,
   onSaveMarkdown,
+  onChooseRun,
 }: {
   readonly comparison: RunComparisonState;
   readonly state: DesktopReviewState;
@@ -309,6 +326,8 @@ export function RunComparisonView({
   readonly onClose: () => void;
   /** Saves the exported comparison; absent when the host cannot save a file. */
   readonly onSaveMarkdown?: SaveMarkdownFile;
+  /** Uses one side's draft for approval and export; absent offers no choice. */
+  readonly onChooseRun?: ChooseRunDraft;
 }): JSX.Element {
   const { left, right } = comparisonSides(comparison, state);
   const [exportStatus, setExportStatus] = useState<ExportStatus>({ kind: "idle" });
@@ -401,14 +420,24 @@ export function RunComparisonView({
       {facts === null ? null : <RunComparisonFactsTable facts={facts} />}
       <div className="run-comparison-grid">
         <div className="diff-column run-comparison-side">
-          <SideHeading side={left} id="run-comparison-left" />
+          <SideHeading
+            side={left}
+            id="run-comparison-left"
+            runs={state.applicationRuns}
+            onChooseRun={onChooseRun}
+          />
           <article className="artifact-pane" aria-labelledby="run-comparison-left">
             {leftArtifact === null ? <DraftUnavailable side={left} /> : null}
             {leftArtifact === null ? null : <PlainDraft artifact={leftArtifact} />}
           </article>
         </div>
         <div className="diff-column run-comparison-side">
-          <SideHeading side={right} id="run-comparison-right" />
+          <SideHeading
+            side={right}
+            id="run-comparison-right"
+            runs={state.applicationRuns}
+            onChooseRun={onChooseRun}
+          />
           <article className="artifact-pane" aria-labelledby="run-comparison-right">
             {rightArtifact === null ? <DraftUnavailable side={right} /> : null}
             {rightArtifact !== null && leftArtifact !== null ? (

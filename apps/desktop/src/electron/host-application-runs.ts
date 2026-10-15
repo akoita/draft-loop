@@ -3,6 +3,7 @@ import type { ApplicationService, ApplicationView, RunModels } from "@draft-loop
 import {
   type ApplicationRunInput,
   type ApplicationRunRowView,
+  markChosenRun,
   maximumApplicationRuns,
   meanReadinessScore,
   normalizeApplicationRuns,
@@ -25,7 +26,9 @@ function remember<Value>(cache: Map<string, Value>, key: string, value: Value): 
 
 export type ApplicationRunRowsReader = (
   root: string,
-  application: Pick<ApplicationView, "runs">,
+  application: Pick<ApplicationView, "runs"> & {
+    readonly chosenRun?: { readonly runId: string } | null;
+  },
   latestRunId: string | undefined,
 ) => Promise<readonly ApplicationRunRowView[] | null>;
 
@@ -103,6 +106,10 @@ export function createApplicationRunRowsReader(
       );
       if (row !== undefined) read.push(row);
     }
-    return normalizeApplicationRuns(orderApplicationRuns(read, latestRunId)) ?? null;
+    return (
+      normalizeApplicationRuns(
+        markChosenRun(orderApplicationRuns(read, latestRunId), application.chosenRun?.runId),
+      ) ?? null
+    );
   };
 }

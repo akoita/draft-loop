@@ -400,6 +400,57 @@ describe("application.rename", () => {
   });
 });
 
+describe("application.choose-run", () => {
+  it("is advertised and accepts ids with an optional, bounded reason", () => {
+    expect(bridgeCapabilities).toContain("application.choose-run");
+    const base = { workspaceId: "workspace-1", applicationId: "default", runId: "run-1" };
+    expect(validateBridgeCommand({ type: "application.choose-run", input: base })).toEqual({
+      type: "application.choose-run",
+      input: base,
+    });
+    expect(
+      validateBridgeCommand({
+        type: "application.choose-run",
+        input: { ...base, reason: "  Tighter summary\nand skills " },
+      }),
+    ).toEqual({
+      type: "application.choose-run",
+      input: { ...base, reason: "Tighter summary\nand skills" },
+    });
+    // An empty reason is no reason.
+    expect(
+      validateBridgeCommand({ type: "application.choose-run", input: { ...base, reason: "  " } }),
+    ).toEqual({ type: "application.choose-run", input: base });
+    for (const input of [
+      { workspaceId: "w", applicationId: "a" },
+      { ...base, reason: "x".repeat(501) },
+      { ...base, reason: "bell\u0007" },
+      { ...base, reason: 3 },
+      { ...base, runId: "../run" },
+      { ...base, archived: true },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "application.choose-run", input })).toThrow();
+    }
+  });
+
+  it("returns the summary with the chosen run through the real port", async () => {
+    const chosen = { ...application, chosenRun: { runId: "run-1", runNumber: 1 } };
+    const command = {
+      type: "application.choose-run",
+      input: { workspaceId: "workspace-1", applicationId: application.id, runId: "run-1" },
+    } as const;
+    await expect(
+      portReturning({ workspaceId: "workspace-1", application: chosen }).execute(command),
+    ).resolves.toEqual({ ok: true, value: { workspaceId: "workspace-1", application: chosen } });
+    await expect(
+      portReturning({
+        workspaceId: "workspace-1",
+        application: { ...application, chosenRun: { runId: "run-1", runNumber: 0 } },
+      }).execute(command),
+    ).resolves.toMatchObject({ ok: false });
+  });
+});
+
 describe("application.archive and application.delete", () => {
   it("are advertised and accept only ids and the archive flag", () => {
     expect(bridgeCapabilities).toContain("application.archive");

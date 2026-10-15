@@ -49,6 +49,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "application.rename": "Renaming the application",
   "application.delete": "Deleting the application",
   "application.set-models": "Choosing the application's models",
+  "application.choose-run": "Choosing the run whose draft the application uses",
   "run.status": "Reading the review status",
   "run.start": "Starting the review",
   "run.pause": "Pausing the review",
@@ -166,7 +167,8 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
       command.type === "application.archive" ||
       command.type === "application.rename" ||
       command.type === "application.delete" ||
-      command.type === "application.set-models") &&
+      command.type === "application.set-models" ||
+      command.type === "application.choose-run") &&
     error instanceof CliUserError
   ) {
     return error.message;

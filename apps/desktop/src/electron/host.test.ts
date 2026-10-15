@@ -3950,6 +3950,192 @@ describe("native host", () => {
     }
   });
 
+  it("approves and exports the chosen earlier run, and still refuses revising it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-chosen-run-"));
+    const fixture = service(root);
+    const older = {
+      ...(fixture.snapshot as object),
+      runId: "run-older",
+      startedAt: "2026-08-11T09:00:00.000Z",
+    };
+    const oldest = {
+      ...(fixture.snapshot as object),
+      runId: "run-oldest",
+      startedAt: "2026-08-10T09:00:00.000Z",
+    };
+    fixture.service.status.mockImplementation(
+      async ({ runId }) =>
+        (runId === "run-older"
+          ? older
+          : runId === "run-oldest"
+            ? oldest
+            : fixture.snapshot) as never,
+    );
+    let chosenRun: { runId: string; chosenAt: string; reason: string | null } | null = null;
+    const application = () =>
+      ({
+        id: "default",
+        name: "Default",
+        isDefault: true,
+        jobSource: { kind: "local-file", path: "job.md" },
+        status: "drafting",
+        createdAt: "2026-08-10T08:00:00.000Z",
+        updatedAt: "2026-08-12T10:00:00.000Z",
+        runs: [
+          {
+            id: "run-oldest",
+            state: "awaiting-approval",
+            startedAt: oldest.startedAt,
+            updatedAt: "",
+          },
+          {
+            id: "run-older",
+            state: "awaiting-approval",
+            startedAt: older.startedAt,
+            updatedAt: "",
+          },
+          {
+            id: "run-native",
+            state: "awaiting-approval",
+            startedAt: "2026-08-12T10:00:00.000Z",
+            updatedAt: "",
+          },
+        ],
+        briefs: [],
+        exports: [],
+        archivedAt: null,
+        nameChosen: true,
+        suggestedName: null,
+        modelProfiles: null,
+        chosenRun,
+      }) as never;
+    fixture.service.getApplication.mockImplementation(async () => application());
+    const chooseApplicationRun = vi.fn(async (command: { runId: string; reason?: string }) => {
+      if (command.runId === "run-elsewhere") {
+        throw new CliUserError("That run does not belong to this application.");
+      }
+      chosenRun = {
+        runId: command.runId,
+        chosenAt: "2026-08-13T09:00:00.000Z",
+        reason: command.reason ?? null,
+      };
+      return application();
+    });
+    const chooseMarkdownExportPath = vi.fn(async (defaultPath: string) => defaultPath);
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, chooseApplicationRun },
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseMarkdownExportPath,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const dispatch = (runId: string, action: ReviewAction) =>
+        host.invoke({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-native", applicationId: "default", runId, action },
+        });
+      const choose = (runId: string, reason?: string) =>
+        host.invoke({
+          type: "application.choose-run",
+          input: {
+            workspaceId: "workspace-native",
+            applicationId: "default",
+            runId,
+            ...(reason === undefined ? {} : { reason }),
+          },
+        });
+
+      await expect(choose("run-elsewhere")).resolves.toMatchObject({
+        ok: false,
+        error: { message: "That run does not belong to this application." },
+      });
+      await expect(choose("run-older", "Tighter summary")).resolves.toMatchObject({
+        ok: true,
+        value: {
+          workspaceId: "workspace-native",
+          application: { id: "default", chosenRun: { runId: "run-older", runNumber: 2 } },
+        },
+      });
+      expect(chooseApplicationRun).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          applicationId: "default",
+          runId: "run-older",
+          reason: "Tighter summary",
+        }),
+      );
+
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", applicationId: "default", runId: "run-older" },
+      });
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: { runId: "run-older", earlierRun: { latestRunId: "run-native", chosen: true } },
+      });
+      const state = (loaded as { value: DesktopReviewState }).value;
+      expect(state.applicationRuns?.find((run) => run.runId === "run-older")).toMatchObject({
+        chosen: true,
+      });
+      expect(state.applicationRuns?.filter((run) => run.chosen === true)).toHaveLength(1);
+
+      // Revision, edits and new rounds stay on the latest run.
+      const chosenRefusal = {
+        ok: false,
+        error: {
+          code: "operation-failed",
+          message:
+            "This earlier run can only be approved and exported. Open the latest run to revise it.",
+        },
+      };
+      await expect(dispatch("run-older", { type: "request-revision" })).resolves.toMatchObject(
+        chosenRefusal,
+      );
+      await expect(dispatch("run-older", { type: "resume" })).resolves.toMatchObject(chosenRefusal);
+      const findingId = state.findings[0]?.id;
+      if (findingId === undefined) throw new Error("finding fixture is missing");
+      await expect(
+        dispatch("run-older", { type: "edit-block", blockId: "block-1", text: "Changed" }),
+      ).resolves.toMatchObject(chosenRefusal);
+      // An unchosen earlier run is still refused everything.
+      await expect(dispatch("run-oldest", { type: "approve" })).resolves.toMatchObject({
+        ok: false,
+        error: { message: "This is an earlier run. Open the latest run to change it." },
+      });
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+
+      // The chosen run takes the finding decision approval needs, then approval and export.
+      await expect(
+        dispatch("run-older", {
+          type: "finding-decision",
+          findingId,
+          decision: "rejected",
+          rationale: "Not needed",
+        }),
+      ).resolves.toMatchObject({ ok: true, value: { runId: "run-older" } });
+      await expect(dispatch("run-older", { type: "approve" })).resolves.toMatchObject({
+        ok: true,
+        value: { runId: "run-older", earlierRun: { chosen: true } },
+      });
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        expect.objectContaining({ runId: "run-older", action: "approve" }),
+        expect.anything(),
+      );
+      await expect(dispatch("run-older", { type: "export" })).resolves.toMatchObject({
+        ok: true,
+        value: { runId: "run-older" },
+      });
+      expect(fixture.service.export).toHaveBeenCalledWith(
+        expect.objectContaining({ runId: "run-older", format: "markdown" }),
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects bridge commands that would escape the export boundary", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-export-"));
     const fixture = service(root);

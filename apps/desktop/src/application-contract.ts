@@ -41,7 +41,29 @@ export interface ApplicationSummaryView {
   readonly nameChosen: boolean;
   /** A name from the newest brief's role and employer, offered while the name is not chosen. */
   readonly suggestedName: string | null;
+  /** The run whose draft the person chose for approval and export; absent uses the latest run. */
+  readonly chosenRun?: ApplicationChosenRunView;
 }
+
+/** The run an application uses, and its number among the runs (oldest = 1). */
+export interface ApplicationChosenRunView {
+  readonly runId: string;
+  readonly runNumber: number;
+}
+
+/**
+ * Uses one of the application's runs for approval and export. The reason is the person's own
+ * short text; the host refuses a run of another application or one without a draft.
+ */
+export interface ApplicationChooseRunInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly runId: string;
+  readonly reason?: string;
+}
+
+/** The longest reason the application service stores for a chosen run. */
+export const maximumChosenRunReasonLength = 500;
 
 /** Exact author and critic model profile references, as the model profile picker names them. */
 export interface ApplicationModelProfilesView {
@@ -169,6 +191,13 @@ export const applicationSetModelsKeys = exactKeys<ApplicationSetModelsInput>()([
   "applicationId",
   "modelProfiles",
 ]);
+export const applicationChooseRunKeys = exactKeys<ApplicationChooseRunInput>()([
+  "workspaceId",
+  "applicationId",
+  "runId",
+  "reason",
+]);
+const chosenRunKeys = exactKeys<ApplicationChosenRunView>()(["runId", "runNumber"]);
 const modelProfilesKeys = exactKeys<ApplicationModelProfilesView>()(["author", "critic"]);
 const modelProfileReferenceKeys = ["id", "version"] as const;
 export const applicationDeleteKeys = exactKeys<ApplicationDeleteInput>()([
@@ -219,6 +248,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "modelProfiles",
   "nameChosen",
   "suggestedName",
+  "chosenRun",
 ]);
 const listResultKeys = exactKeys<ApplicationListResult>()(["workspaceId", "applications"]);
 const recordResultKeys = exactKeys<ApplicationRecordResult>()(["workspaceId", "application"]);
@@ -293,6 +323,32 @@ export function normalizeApplicationModelProfiles(
   return author === undefined || critic === undefined ? undefined : { author, critic };
 }
 
+/** A chosen run from the host, or `undefined` when it is malformed. */
+function normalizeChosenRun(value: unknown): ApplicationChosenRunView | undefined {
+  const raw = record(value);
+  if (raw === undefined || !onlyKeys(raw, chosenRunKeys)) return undefined;
+  const runId = identifier(raw.runId);
+  const runNumber = count(raw.runNumber);
+  if (runId === undefined || runNumber === undefined || runNumber < 1) return undefined;
+  return { runId, runNumber };
+}
+
+/**
+ * The reason for choosing a run as the host takes it: trimmed, omitted when empty, and
+ * `undefined` when it is too long or holds control characters other than line breaks and tabs.
+ */
+export function normalizeChosenRunReasonInput(value: unknown): string | null | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  if (trimmed.length > maximumChosenRunReasonLength) return undefined;
+  const plain = [...trimmed].every(
+    (character) =>
+      character === "\n" || character === "\t" || (character >= " " && character !== "\u007f"),
+  );
+  return plain ? trimmed : undefined;
+}
+
 /** Validates one summary received from the host; `undefined` means the host answered wrongly. */
 export function normalizeApplicationSummary(value: unknown): ApplicationSummaryView | undefined {
   const raw = record(value);
@@ -312,6 +368,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     raw.modelProfiles === null ? null : normalizeApplicationModelProfiles(raw.modelProfiles);
   const suggestedName =
     raw.suggestedName === null ? null : normalizeApplicationDisplayName(raw.suggestedName);
+  const chosenRun = raw.chosenRun === undefined ? undefined : normalizeChosenRun(raw.chosenRun);
+  if (raw.chosenRun !== undefined && chosenRun === undefined) return undefined;
   if (
     id === undefined ||
     name === undefined ||
@@ -347,6 +405,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     modelProfiles,
     nameChosen: raw.nameChosen,
     suggestedName,
+    ...(chosenRun === undefined ? {} : { chosenRun }),
   };
 }
 

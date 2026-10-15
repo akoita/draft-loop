@@ -36,6 +36,7 @@ import {
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeScreen, WorkspaceBackButton } from "./home.js";
 import {
+  applicationRunToOpen,
   applicationView,
   evidenceView,
   type HomeActivity,
@@ -1456,6 +1457,34 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             });
         };
 
+  const chooseRunPort = activePort.chooseRun;
+  /**
+   * Uses a run's draft for the application's approval and export, then opens that run. A failure
+   * rejects, so the comparison's confirm can say why.
+   */
+  const onChooseRun =
+    chooseRunPort === undefined
+      ? undefined
+      : async (runId: string, reason: string | null): Promise<void> => {
+          if (state === null) return;
+          const workspaceId = state.workspaceId;
+          const generation = workspaceGeneration;
+          if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+          setImportError(null);
+          try {
+            const loaded = await chooseRunPort(workspaceId, runId, reason);
+            if (
+              isCurrentWorkspaceContext(workspaceId, generation) &&
+              loaded.workspaceId === workspaceId
+            ) {
+              setState(loaded);
+            }
+          } catch (reason: unknown) {
+            if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+            throw new Error(messageOf(reason, "The run could not be chosen."));
+          }
+        };
+
   const onKnowledgePendingChange = (workspaceId: string, generation: number, pending: boolean) => {
     if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     knowledgePendingRef.current = pending;
@@ -1731,6 +1760,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const showApplication = (
     applicationId: string,
     move: (current: PageNavigation) => PageNavigation,
+    openRunId?: string,
   ) => {
     if (state === null) return;
     const workspaceId = state.workspaceId;
@@ -1741,7 +1771,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setNavigation(move);
       return;
     }
-    activePort.selectApplication?.(applicationId);
+    activePort.selectApplication?.(applicationId, openRunId);
     setLoadedApplicationId(null);
     setNavigation(move);
     void activePort
@@ -1766,8 +1796,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   const openApplication = (application: ApplicationSummaryView) => {
     rememberApplicationPair(application);
-    showApplication(application.id, (current) =>
-      navigateTo(current, applicationView(application.id, application.name)),
+    // An application whose chosen run is not the latest opens on the chosen run.
+    showApplication(
+      application.id,
+      (current) => navigateTo(current, applicationView(application.id, application.name)),
+      applicationRunToOpen(application),
     );
   };
 
@@ -2685,6 +2718,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       state={state}
       onAction={onAction}
       {...(onOpenRun === undefined ? {} : { onOpenRun })}
+      {...(onChooseRun === undefined ? {} : { onChooseRun })}
       {...(activePort.loadRunForComparison === undefined
         ? {}
         : { onLoadRunForComparison: activePort.loadRunForComparison })}

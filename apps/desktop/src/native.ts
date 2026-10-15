@@ -353,9 +353,10 @@ export interface DesktopApplicationCapabilities {
   ) => Promise<ApplicationSummaryView>;
   /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
-   * `null`. Opening another workspace clears the scope.
+   * `null`. Opening another workspace clears the scope. `openRunId` opens that run of the
+   * application instead of its latest, such as the run whose draft the person chose.
    */
-  readonly selectApplication?: (applicationId: string | null) => void;
+  readonly selectApplication?: (applicationId: string | null, openRunId?: string) => void;
   /**
    * Opens one of the scoped application's runs, read-only when it is not the latest, and resolves
    * with its review; `null` returns to the latest run. Scoping another application, opening a
@@ -367,6 +368,15 @@ export interface DesktopApplicationCapabilities {
    * leaves the review on the run it shows: later loads and changes still target that run.
    */
   readonly loadRunForComparison?: (runId: string) => Promise<DesktopReviewState>;
+  /**
+   * Uses one of the scoped application's runs for approval and export, with the person's
+   * optional reason, then opens it; resolves with its review. Nothing about any run changes.
+   */
+  readonly chooseRun?: (
+    workspaceId: string,
+    runId: string,
+    reason: string | null,
+  ) => Promise<DesktopReviewState>;
   /**
    * Saves Markdown the renderer prepared, such as a run comparison, where the person picks in a
    * save dialog. Resolves with whether it was saved and the file's name.
@@ -512,8 +522,9 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(capabilityPort.hasCapability("application.list")
       ? {
-          selectApplication: (selected: string | null) => {
+          selectApplication: (selected: string | null, openRunId?: string) => {
             scopeTo(selected ?? undefined);
+            if (selected !== null) runId = openRunId;
           },
           openRun: async (selected: string | null) => {
             runId = selected ?? undefined;
@@ -525,6 +536,33 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               throw error;
             }
           },
+          ...(capabilityPort.hasCapability("application.choose-run")
+            ? {
+                chooseRun: async (workspaceId: string, selected: string, reason: string | null) => {
+                  if (applicationId === undefined) {
+                    throw new Error("Open an application before choosing one of its runs.");
+                  }
+                  unwrap(
+                    await capabilityPort.execute({
+                      type: "application.choose-run",
+                      input: {
+                        workspaceId,
+                        applicationId,
+                        runId: selected,
+                        ...(reason === null ? {} : { reason }),
+                      },
+                    }),
+                  );
+                  runId = selected;
+                  try {
+                    return await load();
+                  } catch (error) {
+                    runId = undefined;
+                    throw error;
+                  }
+                },
+              }
+            : {}),
           loadRunForComparison: async (selected: string) =>
             unwrap(
               await capabilityPort.execute({

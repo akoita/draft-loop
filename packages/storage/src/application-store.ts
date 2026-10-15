@@ -10,6 +10,8 @@ import {
   type ApplicationImportReadsPort,
   createApplicationImportReads,
 } from "./application-import-reads.js";
+import { insertAuditEventRow } from "./audit-event-write.js";
+import type { AuditEventInput } from "./index.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
 /**
@@ -120,6 +122,26 @@ export const defaultApplicationNameMigration = {
 } as const;
 
 /**
+ * The run whose draft an application uses for approval and export, when the person chose one
+ * other than its newest. One row per application, replaced by a later choice; no row means the
+ * newest run. The default application's id is allowed, as for archives. A choice never deletes
+ * or changes a run, and the reason is the person's own short, user-visible text.
+ */
+export const applicationChosenRunMigration = {
+  version: 36,
+  sql: `
+    CREATE TABLE IF NOT EXISTS application_chosen_runs (
+      workspace_id TEXT NOT NULL CHECK (length(trim(workspace_id)) > 0),
+      application_id TEXT NOT NULL CHECK (length(trim(application_id)) > 0),
+      run_id TEXT NOT NULL CHECK (length(trim(run_id)) > 0),
+      reason TEXT CHECK (reason IS NULL OR length(reason) BETWEEN 1 AND 500),
+      chosen_at TEXT NOT NULL CHECK (julianday(chosen_at) IS NOT NULL),
+      PRIMARY KEY (workspace_id, application_id)
+    );
+  `.trim(),
+} as const;
+
+/**
  * The application migrations. Each applies once by its version, so a later one joins this list
  * even when another feature's migration took the version before it.
  */
@@ -128,6 +150,7 @@ export const applicationMigrations = [
   applicationArchiveMigration,
   applicationModelProfilesMigration,
   defaultApplicationNameMigration,
+  applicationChosenRunMigration,
 ] as const;
 
 export interface ApplicationStoreRecord {
@@ -174,6 +197,17 @@ export interface ApplicationBriefSummary {
   readonly status: string;
   readonly createdAt: string;
 }
+
+/** The run an application uses instead of its newest, as the person chose it. */
+export interface ApplicationChosenRunRecord {
+  readonly runId: string;
+  readonly chosenAt: string;
+  /** The person's reason, or null when they gave none. */
+  readonly reason: string | null;
+}
+
+/** The longest reason a person can give for choosing a run. */
+export const maximumChosenRunReasonLength = 500;
 
 export interface ApplicationStoragePort extends ApplicationImportReadsPort {
   /** A second application with the same id is a conflict; the default id is reserved. */
@@ -236,6 +270,31 @@ export interface ApplicationStoragePort extends ApplicationImportReadsPort {
     workspaceId: string,
     applicationId: string,
   ) => Promise<ApplicationModelProfiles | undefined>;
+  /**
+   * Records the run whose draft the application uses, replacing any earlier choice, and its audit
+   * event in the same transaction. The run must be one of the application's own runs; nothing
+   * about any run changes.
+   */
+  readonly setChosenRun: (
+    workspaceId: string,
+    applicationId: string,
+    chosen: ApplicationChosenRunRecord,
+    auditEvent: AuditEventInput,
+  ) => Promise<void>;
+  /**
+   * Clears the application's chosen run, appending the audit event built from it in the same
+   * transaction. Resolves with the cleared choice, or `undefined` when there was none.
+   */
+  readonly clearChosenRun: (
+    workspaceId: string,
+    applicationId: string,
+    auditEvent: (cleared: ApplicationChosenRunRecord) => AuditEventInput,
+  ) => Promise<ApplicationChosenRunRecord | undefined>;
+  /** The application's chosen run, or `undefined` while it uses its newest run. */
+  readonly getChosenRun: (
+    workspaceId: string,
+    applicationId: string,
+  ) => Promise<ApplicationChosenRunRecord | undefined>;
   /**
    * Deletes a stored application that holds nothing. Runs and briefs are bound by append-only
    * rows, so an application with any of them is a conflict: archive it instead.
@@ -337,6 +396,23 @@ export function createApplicationStorage(
       .prepare(`SELECT application_id FROM ${table} WHERE workspace_id = ? AND ${column} = ?`)
       .get(workspaceId, entityId);
     return row === undefined ? defaultApplicationId : text(row, "application_id");
+  };
+
+  const readChosenRun = (
+    workspaceId: string,
+    applicationId: string,
+  ): ApplicationChosenRunRecord | undefined => {
+    const row = database
+      .prepare(
+        "SELECT run_id, reason, chosen_at FROM application_chosen_runs WHERE workspace_id = ? AND application_id = ?",
+      )
+      .get(workspaceId, applicationId);
+    if (row === undefined) return undefined;
+    return {
+      runId: text(row, "run_id"),
+      chosenAt: text(row, "chosen_at"),
+      reason: row.reason === null ? null : text(row, "reason"),
+    };
   };
 
   return {
@@ -579,6 +655,59 @@ export function createApplicationStorage(
       }
       return parsed.data;
     },
+    setChosenRun: async (workspaceId, applicationId, chosen, auditEvent) => {
+      ensureOpen();
+      requireIdentifier(workspaceId, "workspace id");
+      requireIdentifier(applicationId, "application id");
+      requireIdentifier(chosen.runId, "run id");
+      if (
+        chosen.reason !== null &&
+        (chosen.reason.length === 0 || chosen.reason.length > maximumChosenRunReasonLength)
+      ) {
+        throw new StorageValidationError(
+          `The reason must be between 1 and ${maximumChosenRunReasonLength} characters`,
+        );
+      }
+      database.transaction(() => {
+        const owner = database
+          .prepare(
+            `SELECT COALESCE(b.application_id, '${defaultApplicationId}') AS application_id FROM runs r
+             LEFT JOIN application_run_bindings b ON b.workspace_id = r.workspace_id AND b.run_id = r.id
+             WHERE r.workspace_id = ? AND r.id = ?`,
+          )
+          .get(workspaceId, chosen.runId);
+        if (owner === undefined || owner.application_id !== applicationId) {
+          throw new StorageValidationError(`Run ${chosen.runId} is not a run of this application`);
+        }
+        database
+          .prepare(
+            `INSERT INTO application_chosen_runs (workspace_id, application_id, run_id, reason, chosen_at)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT (workspace_id, application_id) DO UPDATE SET
+               run_id = excluded.run_id, reason = excluded.reason, chosen_at = excluded.chosen_at`,
+          )
+          .run(workspaceId, applicationId, chosen.runId, chosen.reason, chosen.chosenAt);
+        insertAuditEventRow(database, auditEvent);
+      })();
+    },
+    getChosenRun: async (workspaceId, applicationId) => {
+      ensureOpen();
+      return readChosenRun(workspaceId, applicationId);
+    },
+    clearChosenRun: async (workspaceId, applicationId, auditEvent) => {
+      ensureOpen();
+      return database.transaction(() => {
+        const cleared = readChosenRun(workspaceId, applicationId);
+        if (cleared === undefined) return undefined;
+        database
+          .prepare(
+            "DELETE FROM application_chosen_runs WHERE workspace_id = ? AND application_id = ?",
+          )
+          .run(workspaceId, applicationId);
+        insertAuditEventRow(database, auditEvent(cleared));
+        return cleared;
+      })();
+    },
     deleteApplication: async (workspaceId, applicationId) => {
       ensureOpen();
       if (applicationId === defaultApplicationId) {
@@ -611,6 +740,11 @@ export function createApplicationStorage(
         database
           .prepare(
             "DELETE FROM application_model_profiles WHERE workspace_id = ? AND application_id = ?",
+          )
+          .run(workspaceId, applicationId);
+        database
+          .prepare(
+            "DELETE FROM application_chosen_runs WHERE workspace_id = ? AND application_id = ?",
           )
           .run(workspaceId, applicationId);
         database

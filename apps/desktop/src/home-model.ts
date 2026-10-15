@@ -310,6 +310,31 @@ export function applicationRunText(runCount: number): string {
   return runCount === 0 ? "No runs yet" : plural(runCount, "run");
 }
 
+/**
+ * "Using Run 2" when the person chose an earlier run's draft for approval and export; null when
+ * the application uses its latest run, as it does by default.
+ */
+/**
+ * The run opening the application shows: the chosen run when it is not the latest, so the card's
+ * "Using Run N" matches what opens; undefined opens the latest run.
+ */
+export function applicationRunToOpen(
+  application: Pick<ApplicationSummaryView, "chosenRun" | "latestRunId">,
+): string | undefined {
+  const chosen = application.chosenRun;
+  return chosen === undefined || chosen.runId === application.latestRunId
+    ? undefined
+    : chosen.runId;
+}
+
+export function applicationChosenRunText(
+  application: Pick<ApplicationSummaryView, "chosenRun" | "latestRunId">,
+): string | null {
+  const chosen = application.chosenRun;
+  if (chosen === undefined || chosen.runId === application.latestRunId) return null;
+  return `Using Run ${chosen.runNumber}`;
+}
+
 const minute = 60_000;
 const hour = 60 * minute;
 const day = 24 * hour;

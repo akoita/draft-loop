@@ -166,6 +166,7 @@ describe("choosing the run to compare with", () => {
       round: "round 1",
       status: "stopped",
       latest: false,
+      chosen: false,
     });
     expect(comparedRunFacts(runs, "run-first").models).toBe("models not recorded");
     expect(comparedRunFacts(runs, fixture.runId).status).toBe("awaiting approval");

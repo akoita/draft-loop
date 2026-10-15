@@ -27,6 +27,13 @@ import {
   type CandidateProfileFreshnessSelection,
   withCandidateProfileFreshness,
 } from "./candidate-profile-freshness.js";
+import {
+  type ApplicationChosenRun,
+  type ChooseApplicationRunCommand,
+  chooseApplicationRun,
+  clearChosenRunForNewRun,
+  currentChosenRun,
+} from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
@@ -57,6 +64,8 @@ export interface ApplicationView extends Application {
   readonly suggestedName: string | null;
   /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
   readonly modelProfiles: ApplicationModelProfiles | null;
+  /** The run whose draft the person chose to approve and export; null uses the newest run. */
+  readonly chosenRun: ApplicationChosenRun | null;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -129,6 +138,20 @@ export interface WorkspaceApplicationService {
   readonly delete: (command: DeleteApplicationCommand) => Promise<void>;
   /** Sets or clears the model pair a created application's new runs use; resolves with it. */
   readonly setModels: (command: SetApplicationModelsCommand) => Promise<ApplicationView>;
+  /**
+   * Uses one of the application's runs for approval and export, with an optional reason, and
+   * records the choice in the audit trail; resolves with the application. No run is deleted.
+   */
+  readonly chooseRun: (
+    command: ChooseApplicationRunCommand,
+    hasArtifact: (runId: string) => Promise<boolean>,
+  ) => Promise<ApplicationView>;
+  /** Clears the application's chosen run because `newRunId` was started for it. */
+  readonly clearChosenRunForNewRun: (
+    root: string,
+    applicationId: string,
+    newRunId: string,
+  ) => Promise<void>;
 }
 
 export interface WorkspaceApplicationDependencies {
@@ -197,10 +220,11 @@ async function describeApplication(
   const modelProfiles = base.isDefault
     ? null
     : ((await applications.getModelProfiles(workspaceId, base.id)) ?? null);
-  const [briefs, runs, exports] = await Promise.all([
+  const [briefs, runs, exports, storedChoice] = await Promise.all([
     applications.listBriefs(workspaceId, base.id),
     applications.listRuns(workspaceId, base.id),
     applications.listExports(workspaceId, base.id),
+    applications.getChosenRun(workspaceId, base.id),
   ]);
   const status = deriveApplicationStatus(
     runs,
@@ -219,6 +243,10 @@ async function describeApplication(
     exports,
     archivedAt,
     modelProfiles,
+    chosenRun: currentChosenRun(
+      storedChoice,
+      runs.map((run) => run.id),
+    ),
     ...naming,
   };
 }
@@ -278,6 +306,7 @@ async function describeDefaultApplication(
       exports: [],
       archivedAt: null,
       modelProfiles: null,
+      chosenRun: null,
       nameChosen: false,
       suggestedName: null,
     };
@@ -410,6 +439,40 @@ export function createWorkspaceApplicationService(
   return {
     list,
     get,
+    clearChosenRunForNewRun: async (rootInput, applicationId, newRunId) => {
+      const root = resolve(rootInput);
+      if (!(await historyExists(root))) return;
+      const workspace = await dependencies.readWorkspace(root);
+      const storage = await openHistory(root);
+      try {
+        await clearChosenRunForNewRun(storage, workspace.id, applicationId, newRunId, clock);
+      } finally {
+        await storage.close();
+      }
+    },
+    chooseRun: async (command, hasArtifact) => {
+      const root = resolve(command.root);
+      const application = await get({ root, applicationId: command.applicationId });
+      if (application === undefined) {
+        throw new CliUserError(`Application ${command.applicationId} was not found.`);
+      }
+      const workspace = await dependencies.readWorkspace(root);
+      const storage = await openHistory(root);
+      try {
+        await chooseApplicationRun(command, {
+          storage,
+          workspaceId: workspace.id,
+          runIds: application.runs.map((run) => run.id),
+          hasArtifact,
+          now: clock,
+        });
+      } finally {
+        await storage.close();
+      }
+      const view = await get({ root, applicationId: command.applicationId });
+      if (view === undefined) throw new CliUserError("The application could not be read back.");
+      return view;
+    },
     setModels: async ({ root: rootInput, applicationId, modelProfiles }) => {
       const root = resolve(rootInput);
       if (applicationId === defaultApplicationId) {
@@ -665,11 +728,30 @@ export function withWorkspaceApplications(
     if (application === undefined || application.modelProfiles === null) return command;
     return { ...command, modelProfiles: application.modelProfiles };
   };
+  const clearChoiceFor = async <Snapshot extends { readonly runId: string }>(
+    command: StartRunCommand,
+    snapshot: Snapshot,
+  ): Promise<Snapshot> => {
+    await service.clearChosenRunForNewRun(
+      command.root,
+      command.applicationId ?? defaultApplicationId,
+      snapshot.runId,
+    );
+    return snapshot;
+  };
   const withApplications: ApplicationDriver = {
     ...driver,
-    begin: async (command, io) => driver.begin(await withApplicationModels(command), io),
-    start: async (command, io) => driver.start(await withApplicationModels(command), io),
+    // A started run becomes the application's active run and clears any chosen run.
+    begin: async (command, io) =>
+      clearChoiceFor(command, await driver.begin(await withApplicationModels(command), io)),
+    start: async (command, io) =>
+      clearChoiceFor(command, await driver.start(await withApplicationModels(command), io)),
     setApplicationModels: async (command) => service.setModels(command),
+    chooseApplicationRun: async (command) =>
+      service.chooseRun(command, async (runId) => {
+        const snapshot = await driver.status({ root: command.root, runId });
+        return snapshot !== undefined && snapshot.artifact !== null;
+      }),
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),
