@@ -84,6 +84,7 @@ import {
 } from "./critic-critique-contract.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
+import { exportRecordId } from "./export-record.js";
 import {
   environmentCredentialResolver,
   isProviderAuthMode,
@@ -2263,7 +2264,7 @@ export async function exportRun(
     await writeFile(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
-      id: `export-${runId}-${outputChecksum.slice(0, 12)}`,
+      id: exportRecordId(runId, outputChecksum, outputPath, rendered.metadata.generatedAt),
       workspaceId: config.id,
       runId,
       artifactId: snapshot.artifact.id,
@@ -2281,10 +2282,7 @@ export async function exportRun(
         renderingQa,
       },
     });
-    const transitionEngine = createOrchestrationEngine({
-      ...noopAgents(),
-      store: runStore,
-    });
+    const transitionEngine = createOrchestrationEngine({ ...noopAgents(), store: runStore });
     await transitionEngine.markExported(runId);
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,

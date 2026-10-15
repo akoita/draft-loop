@@ -41,6 +41,10 @@ export interface FooterBlocker {
 
 export const NO_REVISION_LEFT = "No revision left";
 
+/** The export line for an exported run whose recorded export file is no longer readable. */
+export const MISSING_EXPORT_LABEL =
+  "The previous export can't be found. Export again to save a new copy.";
+
 function percent(value: number): string {
   return `${(value * 100).toFixed(0)}%`;
 }
@@ -82,6 +86,14 @@ export function footerBlocker(
   }
   if (state.exportPath !== null) {
     return { kind: "exported", text: `Exported to ${state.exportPath}`, tone: "safe" };
+  }
+  // A moved or deleted export file, or a workspace opened on another machine.
+  if (state.state === "exported") {
+    return {
+      kind: "exported",
+      text: "Exported · the previous export can't be found",
+      tone: "warning",
+    };
   }
   if (state.approval === "approved") {
     return {
@@ -187,6 +199,8 @@ export interface ReviewFooterProps {
   readonly exportAction: {
     readonly disabled: boolean;
     readonly pathLabel: string;
+    /** The run is already exported, so the button offers to export again. */
+    readonly again: boolean;
     /** Elapsed seconds while an export is pending, or null. */
     readonly pendingSeconds: number | null;
     readonly onExport: () => void;
@@ -361,7 +375,7 @@ export function ReviewFooter({
             className="button button-outline"
             type="button"
             aria-keyshortcuts="Alt+E"
-            title="Export Markdown (Alt+E)"
+            title={exportAction.again ? "Export Markdown again (Alt+E)" : "Export Markdown (Alt+E)"}
             disabled={exportAction.disabled}
             onClick={exportAction.onExport}
           >
@@ -369,7 +383,7 @@ export function ReviewFooter({
               "Exporting Markdown…"
             ) : (
               <>
-                Export Markdown
+                {exportAction.again ? "Export again" : "Export Markdown"}
                 <kbd>Alt+E</kbd>
               </>
             )}

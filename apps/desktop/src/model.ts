@@ -540,7 +540,7 @@ export function reduceReviewState(
         ? { ...state, state: "approved", approval: "approved" }
         : state;
     case "export":
-      return state.state === "approved" && state.reviewComplete
+      return (state.state === "approved" || state.state === "exported") && state.reviewComplete
         ? { ...state, state: "exported", exportPath: `exports/${state.runId}.md` }
         : state;
   }
