@@ -360,7 +360,11 @@ export type ReviewAction =
   | { readonly type: "recover-to-review" }
   | { readonly type: "recover-round-limit" }
   | { readonly type: "stop" }
-  | { readonly type: "request-revision" }
+  | {
+      readonly type: "request-revision";
+      /** The candidate's short direction for the author of the next round; never evidence. */
+      readonly candidateDirection?: string;
+    }
   | { readonly type: "set-autopilot"; readonly enabled: boolean }
   | {
       readonly type: "approve";

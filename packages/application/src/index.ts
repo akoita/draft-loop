@@ -290,6 +290,8 @@ export interface LifecycleCommand {
   readonly runId?: string;
   /** Approval only: the person's reason for approving past failing final CV checks. */
   readonly readinessOverrideRationale?: string;
+  /** Revision only: the candidate's short direction for the author of the next round. */
+  readonly candidateDirection?: string;
 }
 
 export interface StatusCommand {

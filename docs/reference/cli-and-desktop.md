@@ -605,6 +605,14 @@ The footer holds the approval gate and stays in view while you scroll:
 - **Approve with override….** Offered when the final CV checks block approval.
   It asks for a required reason and records it with the approval.
 - **Request revision.** Sends the draft back to the author for another round.
+  The optional **Directions for the author** field beside it (up to 1,000
+  characters) steers that round, for example "lead with tokenisation" or "drop
+  certification dates". The author and the next critic both see the text, which
+  is recorded with the round and shown in **Run details**. Directions steer
+  selection and framing only: they are not evidence, so the author still cannot
+  add a fact your sources do not hold. Runs started before this field existed
+  cannot take directions: the field is disabled with a note, and starting a new
+  review enables it.
 - **Export locally.** **Export Markdown** is available after approval and asks
   for a destination in a Save dialog. A **Details** disclosure lists the
   artifact, export and validation state and the approval conditions.

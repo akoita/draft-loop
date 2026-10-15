@@ -158,13 +158,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v8`, which states and sends a
+New runs record author template `cli-author-v9`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v8 retain 32,768.
+v4 to v9 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -198,6 +198,19 @@ verdict, rationale and, when covered, the cited block ids. The author adds
 content for an uncovered requirement only when the evidence supports it, and
 keeps the cited covering blocks unless an accepted finding requires a change.
 Resumed v7 and earlier runs receive neither the instruction nor the input.
+
+Author v9 keeps v8 and adds the candidate's directions for the next round, given
+with **Request revision** (at most 1,000 characters). They arrive in a separate
+`candidateDirection.instructions` input, and the prompt tells the author to
+follow them for selection, emphasis, ordering, omission and framing within the
+retrieved evidence. They are instructions, not evidence: a direction cannot add
+a fact, and the claim grounding checks still reject one that does. The next
+round's critic receives the same text with a rule not to flag a requested change
+as a defect, and still reports unsupported claims. The direction is stored on
+the run for that round only, recorded as a revision decision (round, text and
+time) and with the round's `run.author-input` event, and shown in Run details.
+Runs that started on v8 or earlier cannot take directions; requesting a revision
+with one is refused rather than silently ignored.
 
 After any revision, the orchestrator compares the revised draft with that
 judged coverage. When none of a covered requirement's cited blocks survives,

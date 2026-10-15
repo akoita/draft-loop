@@ -179,7 +179,10 @@ export interface CriticCoverageJudgementParts {
   /** Applies the fixed instruction block to the version-pinned prompt, or returns it as is. */
   readonly systemPrompt: (prompt: string) => string;
   /** Extra input properties; empty when nothing is requested. */
-  readonly input: { readonly coverageJudgementRequests?: JsonValue };
+  readonly input: {
+    readonly coverageJudgementRequests?: JsonValue;
+    readonly candidateDirection?: JsonValue;
+  };
   readonly outputSchema: JsonObject;
   /** Set only when the instruction block was sent. */
   readonly instructionsVersion?: string;

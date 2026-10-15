@@ -68,6 +68,6 @@ describe("review state run inputs over the bridge", () => {
   });
 
   it("names exactly the interface's keys", () => {
-    expect([...runInputsKeys].sort()).toEqual(["brief", "profile"]);
+    expect([...runInputsKeys].sort()).toEqual(["authorDirections", "brief", "profile"]);
   });
 });

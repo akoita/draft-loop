@@ -3243,6 +3243,40 @@ describe("native host", () => {
     }
   });
 
+  it("passes the candidate's directions for the author through to the application lifecycle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-revision-direction-"));
+    const fixture = service(root, { findings: [] });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const dispatch = (action: object) =>
+        host.invoke({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-native", runId: "run-native", action },
+        } as never);
+      await dispatch({ type: "request-revision", candidateDirection: "Lead with tokenisation." });
+      expect(fixture.service.lifecycle).toHaveBeenLastCalledWith(
+        {
+          root,
+          runId: "run-native",
+          action: "revision",
+          candidateDirection: "Lead with tokenisation.",
+        },
+        expect.anything(),
+      );
+      await dispatch({ type: "request-revision" });
+      expect(fixture.service.lifecycle).toHaveBeenLastCalledWith(
+        { root, runId: "run-native", action: "revision" },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not turn unrelated or stale-artifact approval failures into review states", async () => {
     for (const scenario of [
       {
@@ -3677,10 +3711,12 @@ describe("native host", () => {
       fixture.service.readRunInputs.mockResolvedValueOnce({
         brief: { briefId: "target-role", version: 3 },
         profile: { profileId: "profile-1", version: 2 },
+        authorDirections: false,
       });
       expect((await load()).runInputs).toEqual({
         brief: { briefId: "target-role", version: 3 },
         profile: { profileId: "profile-1", version: 2 },
+        authorDirections: false,
       });
       expect(fixture.service.readRunInputs).toHaveBeenLastCalledWith({
         root,
@@ -3688,8 +3724,16 @@ describe("native host", () => {
       });
 
       // A run started from raw job text recorded no brief.
-      fixture.service.readRunInputs.mockResolvedValueOnce({ brief: null, profile: null });
-      expect((await load()).runInputs).toEqual({ brief: null, profile: null });
+      fixture.service.readRunInputs.mockResolvedValueOnce({
+        brief: null,
+        profile: null,
+        authorDirections: true,
+      });
+      expect((await load()).runInputs).toEqual({
+        brief: null,
+        profile: null,
+        authorDirections: true,
+      });
       expect(errors).toEqual([]);
 
       fixture.service.readRunInputs.mockRejectedValueOnce(new Error("history is locked"));

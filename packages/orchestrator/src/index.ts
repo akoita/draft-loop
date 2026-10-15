@@ -56,6 +56,11 @@ import {
   buildAuthorRetryCorrections,
 } from "./author-retry-feedback.js";
 import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
+import {
+  activeCandidateDirection,
+  type CandidateDirection,
+  normalizeCandidateDirectionText,
+} from "./candidate-direction.js";
 import { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 import { droppedCoverageFindings } from "./dropped-coverage.js";
 import {
@@ -165,6 +170,8 @@ export interface AuthorRequest {
     "report" | "plan" | "acceptedEffectOverrides"
   >;
   readonly retryFeedback?: AuthorRetryFeedback;
+  /** The candidate's direction for this revision round, when they gave one. */
+  readonly candidateDirection?: CandidateDirection;
   /** On a revision, the critic's judged coverage of the draft being revised; never empty. */
   readonly requirementCoverage?: readonly RevisionRequirementCoverage[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
@@ -180,6 +187,8 @@ export interface CriticRequest {
   readonly deterministicFindings: readonly ValidationIssue[];
   /** Requirements the critic is asked to judge against their candidate blocks. */
   readonly coverageJudgementRequests?: readonly CoverageJudgementRequest[];
+  /** The candidate's direction for this round, so a requested change is not flagged as a defect. */
+  readonly candidateDirection?: CandidateDirection;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
@@ -322,6 +331,8 @@ export interface RunSnapshot {
   readonly readinessDecision?: ApplicationReadinessStoppingDecision | null;
   /** Exact content binding for the artifact approved by the human. */
   readonly approvedArtifact?: ApprovedArtifactBinding | null;
+  /** The candidate's direction for the round in `candidateDirection.round`; absent without one. */
+  readonly candidateDirection?: CandidateDirection | null;
 }
 
 export type RunEventType =
@@ -387,6 +398,14 @@ export interface ResumeOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface RequestRevisionOptions {
+  /**
+   * The candidate's short direction for the author of the next round. It is sent to the revising
+   * author and to the critic of that round, and is never treated as evidence.
+   */
+  readonly candidateDirection?: string;
+}
+
 export interface ApproveOptions {
   /**
    * The person's reason for approving even though final CV checks fail. It is
@@ -406,7 +425,10 @@ export interface OrchestrationEngine {
   readonly recoverRoundBudget: (runId: string) => Promise<RunSnapshot>;
   readonly approve: (runId: string, options?: ApproveOptions) => Promise<RunSnapshot>;
   readonly markExported: (runId: string) => Promise<RunSnapshot>;
-  readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
+  readonly requestRevision: (
+    runId: string,
+    options?: RequestRevisionOptions,
+  ) => Promise<RunSnapshot>;
   readonly requestAdjudicatedRevision: (
     runId: string,
     input: RequestAdjudicatedRevisionInput,
@@ -1618,6 +1640,7 @@ export function createOrchestrationEngine(
 
       const requirementCoverage =
         step === "revision" ? revisionRequirementCoverage(snapshot) : undefined;
+      const candidateDirection = activeCandidateDirection(snapshot);
       const execution =
         step === "critic"
           ? await options.critic.execute({
@@ -1627,6 +1650,7 @@ export function createOrchestrationEngine(
               context,
               artifact: snapshot.artifact as DraftArtifact,
               deterministicFindings: snapshot.findings,
+              ...(candidateDirection === undefined ? {} : { candidateDirection }),
               ...(coverageRequests === undefined
                 ? {}
                 : { coverageJudgementRequests: coverageRequests.requests }),
@@ -1640,6 +1664,7 @@ export function createOrchestrationEngine(
               context,
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
+              ...(candidateDirection === undefined ? {} : { candidateDirection }),
               ...(pendingAdjudication === undefined ? {} : { pendingAdjudication }),
               ...(retryFeedback === undefined ? {} : { retryFeedback }),
               ...(requirementCoverage === undefined ? {} : { requirementCoverage }),
@@ -2385,7 +2410,11 @@ export function createOrchestrationEngine(
     return saved;
   };
 
-  const requestRevision = async (runId: string): Promise<RunSnapshot> => {
+  const requestRevision = async (
+    runId: string,
+    revisionOptions: RequestRevisionOptions = {},
+  ): Promise<RunSnapshot> => {
+    const directionText = normalizeCandidateDirectionText(revisionOptions.candidateDirection);
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
       throw new Error("Only a run awaiting approval can request revision.");
@@ -2404,7 +2433,7 @@ export function createOrchestrationEngine(
     if (exhaustedReason !== undefined) {
       throw new Error(`Cannot request revision: ${exhaustedReason}.`);
     }
-    const activated = activatedForTransition(snapshot, now);
+    const { candidateDirection: _earlier, ...activated } = activatedForTransition(snapshot, now);
     const updated = {
       ...activated,
       state: "revising" as const,
@@ -2415,8 +2444,19 @@ export function createOrchestrationEngine(
       readinessDecision: null,
       approvedArtifact: null,
       updatedAt: now,
+      ...(directionText === undefined
+        ? {}
+        : {
+            candidateDirection: { round: snapshot.round + 1, text: directionText, createdAt: now },
+          }),
     };
-    await saveAndEmit(updated, "user.revision-requested");
+    await saveAndEmit(
+      updated,
+      "user.revision-requested",
+      directionText === undefined
+        ? undefined
+        : { candidateDirectionCharacters: directionText.length },
+    );
     await emit(updated, "state.changed", { to: "revising" });
     return updated;
   };
@@ -2489,6 +2529,7 @@ export interface OrchestrationPort {
 
 export * from "./adjudication.js";
 export * from "./autopilot.js";
+export * from "./candidate-direction.js";
 export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 export * from "./duration-accounting.js";
 export type {
