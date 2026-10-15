@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { useState } from "react";
 
 import type { ApplicationModelProfilesView } from "./application-contract.js";
 import type { ModelProfileSupportResult } from "./bridge.js";
@@ -91,6 +92,8 @@ export interface ApplicationModelPairChoiceProps {
   readonly support: ModelProfileSupportResult | undefined;
   readonly saving: boolean;
   readonly errorMessage: string | null;
+  /** Holds the choice without the saving line, for example while a start is pending. */
+  readonly disabled?: boolean;
   readonly onChoose: (pair: ApplicationModelProfilesView | null) => void;
 }
 
@@ -101,9 +104,11 @@ export function ApplicationModelPairChoice({
   support,
   saving,
   errorMessage,
+  disabled = false,
   onChoose,
 }: ApplicationModelPairChoiceProps) {
   const checked = applicationPairValue(pair);
+  const locked = saving || disabled;
   return (
     <details className="flow-model-pair" open={pair !== null}>
       <summary>
@@ -119,7 +124,7 @@ export function ApplicationModelPairChoice({
         groupName="application-model-pair"
         legend="Model pair for this application"
         checkedValue={checked}
-        disabled={saving}
+        disabled={locked}
         support={support}
         includeCustom={false}
         leading={
@@ -129,7 +134,7 @@ export function ApplicationModelPairChoice({
               name="application-model-pair"
               value={workspacePairValue}
               checked={checked === workspacePairValue}
-              disabled={saving}
+              disabled={locked}
               onChange={() => onChoose(null)}
             />
             <span className="model-preset-card-title">Workspace pair</span>
@@ -156,6 +161,63 @@ export function ApplicationModelPairChoice({
         </p>
       )}
     </details>
+  );
+}
+
+/**
+ * Saves the application's pair through the host's `setApplicationModels`; resolves with the
+ * message to show when it fails, or null.
+ */
+export async function saveApplicationModelPair(
+  pair: ApplicationModelProfilesView | null,
+  save: (pair: ApplicationModelProfilesView | null) => Promise<unknown>,
+): Promise<string | null> {
+  try {
+    await save(pair);
+    return null;
+  } catch (reason: unknown) {
+    return reason instanceof Error && reason.message.trim() !== ""
+      ? reason.message
+      : "The model pair could not be saved.";
+  }
+}
+
+export interface ApplicationModelPairControlProps {
+  readonly pair: ApplicationModelProfilesView | null;
+  readonly workspace: ModelPairSides;
+  readonly support: ModelProfileSupportResult | undefined;
+  readonly disabled: boolean;
+  /** Sets or clears the pair, then reloads the review state so the preflight follows it. */
+  readonly onSave: (pair: ApplicationModelProfilesView | null) => Promise<unknown>;
+}
+
+/** The pair choice with its own saving state and failure, for the application screen. */
+export function ApplicationModelPairControl({
+  pair,
+  workspace,
+  support,
+  disabled,
+  onSave,
+}: ApplicationModelPairControlProps) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const choose = async (next: ApplicationModelProfilesView | null) => {
+    if (saving || disabled) return;
+    setSaving(true);
+    setError(null);
+    setError(await saveApplicationModelPair(next, onSave));
+    setSaving(false);
+  };
+  return (
+    <ApplicationModelPairChoice
+      pair={pair}
+      workspace={workspace}
+      support={support}
+      saving={saving}
+      errorMessage={error}
+      disabled={disabled}
+      onChoose={(next) => void choose(next)}
+    />
   );
 }
 

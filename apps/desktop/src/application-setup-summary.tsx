@@ -19,7 +19,7 @@ import {
   type ReviewedProfilesState,
   reviewedProfileKey,
   reviewedProfileLabel,
-} from "./new-application-flow-model.js";
+} from "./new-application-model.js";
 
 export type WritingPolicySummaryStatus = "none" | "active" | "unavailable";
 

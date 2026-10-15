@@ -55,6 +55,7 @@ import {
 import { useInlineRename } from "./inline-rename.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
+import { NewApplicationDialog } from "./new-application-form.js";
 import {
   loadProfileFreshness,
   type ProfileFreshnessPresentation,
@@ -777,8 +778,8 @@ export interface HomeScreenProps {
   readonly profileGeneration?: ProfileGenerationActivity | null;
   readonly runningApplicationId?: string | null;
   readonly settings?: ReactNode;
-  /** Opens the guided New application flow; absent when the host cannot create applications. */
-  readonly onNewApplication?: () => void;
+  /** Opens an application the New application form created; the form needs the host's create. */
+  readonly onApplicationCreated?: (application: ApplicationSummaryView) => void;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   /** Told after a card renamed an application, so the window's pages use the new name. */
   readonly onApplicationRenamed?: (application: ApplicationSummaryView) => void;
@@ -801,7 +802,7 @@ export function HomeScreen({
   profileGeneration = null,
   runningApplicationId = null,
   settings,
-  onNewApplication,
+  onApplicationCreated,
   onOpenApplication,
   onApplicationRenamed,
   onManageProfile,
@@ -821,6 +822,8 @@ export function HomeScreen({
   const archiveApplication = applicationCapabilities.archiveApplication;
   const deleteApplication = applicationCapabilities.deleteApplication;
   const renameApplication = applicationCapabilities.renameApplication;
+  const createApplication = applicationCapabilities.createApplication;
+  const [creatingApplication, setCreatingApplication] = useState(false);
   const [busyApplicationId, setBusyApplicationId] = useState<string | null>(null);
   const [applicationNotice, setApplicationNotice] = useState<ApplicationActionNotice | null>(null);
   const [importing, setImporting] = useState(false);
@@ -986,7 +989,8 @@ export function HomeScreen({
   }, [workspaceId, listApplications, applicationsRevision]);
 
   const freshnessLine = profileFreshnessPresentation(profile, freshness);
-  return (
+  const canCreate = createApplication !== undefined && onApplicationCreated !== undefined;
+  const homeView = (
     <HomeView
       workspaceTitle={workspaceTitle}
       workspaceNavigation={workspaceNavigation}
@@ -1008,7 +1012,7 @@ export function HomeScreen({
             ),
           })}
       {...(settings === undefined ? {} : { settings })}
-      {...(onNewApplication === undefined ? {} : { onNewApplication })}
+      {...(canCreate ? { onNewApplication: () => setCreatingApplication(true) } : {})}
       {...(runImport === undefined ? {} : { onImportApplication: runImport })}
       importing={importing}
       importNotice={importNotice}
@@ -1021,5 +1025,20 @@ export function HomeScreen({
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}
     />
+  );
+  if (!creatingApplication || !canCreate) return homeView;
+  return (
+    <>
+      {homeView}
+      <NewApplicationDialog
+        createApplication={(name, job) => createApplication(workspaceId, name, job)}
+        onCreated={(application) => {
+          // Home lists the new application when the person comes back to it.
+          setApplicationsRevision((revision) => revision + 1);
+          onApplicationCreated(application);
+        }}
+        onClose={() => setCreatingApplication(false)}
+      />
+    </>
   );
 }

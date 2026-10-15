@@ -14,7 +14,6 @@ import {
   homeView,
   isHomeView,
   loadHomeProfileStatus,
-  newApplicationView,
   onlyDefaultApplication,
   profileStatusPresentation,
   profileView,
@@ -64,11 +63,6 @@ describe("workspace navigation", () => {
     expect(profileView).toEqual({ kind: "profile" });
     expect(evidenceView).not.toEqual(profileView);
     expect(isHomeView(evidenceView)).toBe(false);
-  });
-
-  it("opens the guided New application flow as its own view", () => {
-    expect(newApplicationView).toEqual({ kind: "new-application" });
-    expect(isHomeView(newApplicationView)).toBe(false);
   });
 });
 

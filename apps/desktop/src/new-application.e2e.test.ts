@@ -9,26 +9,30 @@ import {
 } from "@draft-loop/application";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { applicationStepStates } from "./application-steps-model.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { createNativeHost } from "./electron/host.js";
 import { runJobRequirementsExtraction } from "./job-requirements-extraction.js";
+import type { DesktopReviewState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
+import { submitNewApplication } from "./new-application-form.js";
 import {
   defaultReviewedProfile,
+  emptyNewApplicationDraft,
   loadReviewedProfileChoices,
-  newApplicationStartBlocker,
-  requirementsReviewed,
-} from "./new-application-flow-model.js";
+} from "./new-application-model.js";
+import { candidateProfileStartBlockerMessage, startChecklist } from "./start-checklist-model.js";
 
 /*
- * The renderer's New application flow, driven through its real model and port against the real
- * native host. Only the model providers and the run itself are stubbed.
+ * Home's New application form and the application screen's three steps, driven through their
+ * real models and port against the real native host. Only the model providers and the run itself
+ * are stubbed.
  */
 
 let parent: string;
 
 beforeEach(async () => {
-  parent = await mkdtemp(join(tmpdir(), "draft-loop-new-application-flow-"));
+  parent = await mkdtemp(join(tmpdir(), "draft-loop-new-application-"));
 });
 
 afterEach(async () => {
@@ -121,23 +125,60 @@ async function openFlowHost() {
 
 type Flow = Awaited<ReturnType<typeof openFlowHost>>;
 
-/** Everything the New application flow does for one application, in the order of its steps. */
+/** The step the application screen opens at, from the loaded state as the screen derives it. */
+function currentStep(
+  state: DesktopReviewState,
+  candidateProfile: { readonly version: number } | null,
+) {
+  const steps = applicationStepStates(
+    startChecklist({
+      setup: state.setup,
+      startFromJobDescription: false,
+      requirementAction: null,
+      candidateProfile,
+      transmission: state.providerTransmissionPreflight,
+      // The screen holds Start until a reviewed profile is selected.
+      startDisabledReason: candidateProfile === null ? candidateProfileStartBlockerMessage : null,
+      canOpenProviderSignIn: false,
+    }),
+  );
+  return steps.find((step) => step.status.kind === "current")?.id;
+}
+
+/** One application from Home's form to its first review, in the order of the screen's steps. */
 async function runFlow(flow: Flow, name: string, jobText: string) {
   const { port, workspaceId } = flow;
-  // Step 1: name and job.
-  const application = await port.createApplication?.(workspaceId, name, jobText);
-  if (application === undefined) throw new Error("The host offers no applications.");
-  port.selectApplication?.(application.id);
-  expect(await port.getLatestOpportunity?.()).toBeNull();
+  const createApplication = port.createApplication;
+  if (createApplication === undefined) throw new Error("The host offers no applications.");
+  const profiles = await loadReviewedProfileChoices(port, workspaceId);
+  if (profiles.status !== "ready") throw new Error(`Expected profiles: ${profiles.status}`);
+  const chosen = defaultReviewedProfile(profiles.choices);
+  if (chosen === undefined) throw new Error("Expected a reviewed profile.");
+  const profile = { profileId: chosen.profileId, version: chosen.version };
 
-  // Step 2: extract with consent, then review the brief.
+  // Home's form: a name and the job, then the application opens.
+  const created = await submitNewApplication(
+    { ...emptyNewApplicationDraft, name: `  ${name} `, jobText },
+    (applicationName, job) => createApplication(workspaceId, applicationName, job),
+  );
+  if (created.kind !== "created") throw new Error(`Expected creation: ${JSON.stringify(created)}`);
+  const application = created.application;
+  expect(application.name).toBe(name);
+  port.selectApplication?.(application.id);
+  const opened = await port.load();
+  expect(opened.state).toBe("collecting");
+  expect(await port.getLatestOpportunity?.()).toBeNull();
+  // It opens at its first unfinished step. Pasted text already gives step 1 requirements to read,
+  // so the profile is next until the latest reviewed one is selected.
+  expect(currentStep(opened, null)).toBe("profile");
+
+  // Step 1: extract with consent, then review the brief.
   const phase = await runJobRequirementsExtraction(
     port.createOpportunity ?? (() => Promise.reject(new Error("no extraction"))),
   );
   if (phase.kind !== "done") throw new Error(`Expected extraction: ${JSON.stringify(phase)}`);
   const draft = await port.getLatestOpportunity?.();
   expect(draft).toMatchObject({ briefId: phase.summary.briefId, status: "draft" });
-  expect(requirementsReviewed(draft)).toBe(false);
   const edited = await port.editOpportunity?.({
     briefId: phase.summary.briefId,
     expectedVersion: phase.summary.version,
@@ -152,25 +193,14 @@ async function runFlow(flow: Flow, name: string, jobText: string) {
   const reviewed = await port.reviewOpportunity?.(phase.summary.briefId, edited?.version ?? 0);
   const latest = await port.getLatestOpportunity?.();
   expect(latest).toMatchObject({ briefId: phase.summary.briefId, status: "reviewed" });
-  expect(requirementsReviewed(latest)).toBe(true);
 
-  // Step 3: the latest reviewed profile is selected without generating anything.
-  const profiles = await loadReviewedProfileChoices(port, workspaceId);
-  if (profiles.status !== "ready") throw new Error(`Expected profiles: ${profiles.status}`);
-  const chosen = defaultReviewedProfile(profiles.choices);
-  if (chosen === undefined) throw new Error("Expected a reviewed profile.");
-  const profile = { profileId: chosen.profileId, version: chosen.version };
-  expect(
-    newApplicationStartBlocker({
-      requirementsReady: true,
-      profile,
-      transmissionRequired: false,
-      transmissionConfirmed: false,
-    }),
-  ).toBeNull();
-
-  // Step 4: acknowledge the provider transmission, then start the review.
+  // Reopened, it resumes at its first unfinished step: the profile, or the review once the
+  // latest reviewed profile is selected without generating anything.
   const state = await port.load();
+  expect(currentStep(state, null)).toBe("profile");
+  expect(currentStep(state, profile)).toBe("review");
+
+  // Step 3: acknowledge the provider transmission, then start the review.
   const preflight = state.providerTransmissionPreflight;
   const acknowledged =
     preflight.required && !preflight.acknowledged
@@ -189,8 +219,8 @@ async function runFlow(flow: Flow, name: string, jobText: string) {
   return { application, briefId: phase.summary.briefId, version: reviewed?.version, profile };
 }
 
-describe("the New application flow, end to end", () => {
-  it("creates an application, reviews its brief and starts a run bound to all three", async () => {
+describe("a new application, end to end", () => {
+  it("creates an application, opens it at its first unfinished step and starts a bound run", async () => {
     const flow = await openFlowHost();
 
     const first = await runFlow(
@@ -210,6 +240,29 @@ describe("the New application flow, end to end", () => {
       opportunityBrief: { briefId: first.briefId, version: first.version },
       candidateProfile: first.profile,
     });
+  });
+
+  it("opens an application from an approved job page at step 1, fetching nothing yet", async () => {
+    const flow = await openFlowHost();
+    const createApplication = flow.port.createApplication;
+    if (createApplication === undefined) throw new Error("The host offers no applications.");
+    const created = await submitNewApplication(
+      {
+        ...emptyNewApplicationDraft,
+        name: "Gamma",
+        jobKind: "url",
+        jobUrl: "https://jobs.example.test/platform",
+        urlApproved: true,
+      },
+      (name, job) => createApplication(flow.workspaceId, name, job),
+    );
+    if (created.kind !== "created")
+      throw new Error(`Expected creation: ${JSON.stringify(created)}`);
+    expect(created.application.jobSourceKind).toBe("approved-url");
+    flow.port.selectApplication?.(created.application.id);
+    const opened = await flow.port.load();
+    expect(currentStep(opened, { version: 1 })).toBe("job");
+    expect(flow.extractions).toHaveLength(0);
   });
 
   it("starts a second application with its own brief and the same profile, regenerating nothing", async () => {

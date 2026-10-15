@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 import {
   type ApplicationStepId,
@@ -14,12 +14,36 @@ export interface ApplicationStepsViewProps {
 }
 
 /**
+ * Brings the current step into view and moves the focus to its heading when the steps open, so
+ * an application resumes at its first unfinished step. It runs once per open, not on every
+ * render: finishing a step later never moves the focus.
+ */
+export function useCurrentStepOnOpen(listRef: RefObject<HTMLOListElement | null>): void {
+  useEffect(() => {
+    focusCurrentStep(listRef.current);
+  }, [listRef]);
+}
+
+/** Scrolls to the current step's heading and focuses it; false when no step is current. */
+export function focusCurrentStep(list: Pick<ParentNode, "querySelector"> | null): boolean {
+  const step = list?.querySelector<HTMLElement>('[aria-current="step"]') ?? null;
+  const heading = step?.querySelector<HTMLElement>("h3") ?? null;
+  if (step === null || heading === null) return false;
+  // The whole step comes into view, its border included; the focus goes to its heading.
+  step.scrollIntoView?.({ block: "start" });
+  heading.focus({ preventScroll: true });
+  return true;
+}
+
+/**
  * The application screen as three numbered steps, top to bottom. Each step states whether it is
  * done, the current step or blocked, and the current one carries `aria-current="step"`.
  */
 export function ApplicationStepsView({ steps, content }: ApplicationStepsViewProps) {
+  const listRef = useRef<HTMLOListElement | null>(null);
+  useCurrentStepOnOpen(listRef);
   return (
-    <ol className="application-steps">
+    <ol className="application-steps" ref={listRef}>
       {steps.map((step) => {
         const id = applicationStepIds[step.id];
         const titleId = `${id}-title`;
@@ -33,7 +57,7 @@ export function ApplicationStepsView({ steps, content }: ApplicationStepsViewPro
             {...(current ? { "aria-current": "step" as const } : {})}
           >
             <div className="application-step-head">
-              <h3 id={titleId}>
+              <h3 id={titleId} {...(current ? { tabIndex: -1 } : {})}>
                 <span className="application-step-number">{step.number}</span> {step.title}
               </h3>
               <p className="application-step-status">{applicationStepStatusText(step.status)}</p>

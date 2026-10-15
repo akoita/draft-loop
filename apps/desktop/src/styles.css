@@ -7603,77 +7603,19 @@ input[type="text"].application-card-name-input {
   min-height: 12em;
 }
 
-.flow-progress {
-  margin: 0;
-}
-
-.flow-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.flow-step {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-3);
-  font-size: var(--text-sm);
-}
-
-.flow-step-number {
-  display: inline-grid;
-  place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.flow-step-current {
-  color: var(--text-1);
-  font-weight: 700;
-}
-
-.flow-step-current .flow-step-number {
-  border-color: var(--teal);
-  background: var(--teal);
-  color: var(--teal-ink);
-}
-
-.flow-step-done .flow-step-number {
-  border-color: var(--teal);
-  color: var(--teal);
-}
-
-.flow-panel {
+/* Home's New application form, shown as a modal. */
+.new-application-form {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.flow-panel h2 {
+.new-application-form h2,
+.new-application-form .modal-copy {
   margin: 0;
 }
 
-.flow-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-/* Step 4's provider readiness sits in the panel's own rhythm, not Home's settings spacing. */
-.flow-panel .provider-authentication {
-  margin: 0 0 var(--space-2);
-}
-
-.flow-approval,
-.flow-choice {
+.new-application-approval {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
@@ -7681,61 +7623,19 @@ input[type="text"].application-card-name-input {
   font-size: var(--text-sm);
 }
 
-.flow-choices {
-  display: grid;
+.new-application-actions {
+  display: flex;
+  justify-content: flex-end;
   gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
-.flow-choices legend {
-  padding: 0;
-  margin-bottom: var(--space-2);
-  font-weight: 600;
-}
-
-.flow-latest {
-  margin-left: var(--space-2);
-}
-
-.flow-status,
-.flow-summary {
+.flow-status {
   margin: 0;
   color: var(--text-2);
   font-size: var(--text-sm);
 }
 
-.flow-facts {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.flow-facts div {
-  display: grid;
-  grid-template-columns: 9rem 1fr;
-  gap: var(--space-3);
-}
-
-.flow-facts dt {
-  color: var(--text-3);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.flow-facts dd {
-  margin: 0;
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
-}
-
 @media (max-width: 760px) {
-  .flow-facts div {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
   /* The actions stay beside the title; the title gives way and truncates. */
   .home-header {
     gap: var(--space-3);

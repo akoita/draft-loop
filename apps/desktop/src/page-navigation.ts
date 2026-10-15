@@ -3,11 +3,11 @@
  *
  * Every page offers the flow strip (Career evidence → Career profile → Applications) and a Back
  * action that returns to the page the person came from. The pages they visited stay mounted but
- * hidden, so returning to one finds it as it was left: the New application step and its draft, an
- * application's review queue, the profile being reviewed. This module holds that history and
+ * hidden, so returning to one finds it as it was left: an application's review queue, the
+ * profile being reviewed. This module holds that history and
  * decides which pages are kept; the window renders them.
  */
-import { homeView, newApplicationView, type WorkspaceView } from "./home-model.js";
+import { homeView, type WorkspaceView } from "./home-model.js";
 
 /** The longest Back trail kept; older pages drop off the front. */
 export const pageHistoryLimit = 10;
@@ -20,8 +20,6 @@ export interface PageNavigation {
   readonly visited: readonly ("home" | "evidence" | "profile")[];
   /** The application last opened, kept while it is still the one the window has loaded. */
   readonly lastApplication: Extract<WorkspaceView, { kind: "application" }> | null;
-  /** Bumped by every New application, so each one starts from an empty flow. */
-  readonly newApplicationEpoch: number;
 }
 
 /** Opening or creating a workspace lands on Home with nothing to go back to. */
@@ -31,7 +29,6 @@ export function initialPageNavigation(): PageNavigation {
     history: [],
     visited: ["home"],
     lastApplication: null,
-    newApplicationEpoch: 0,
   };
 }
 
@@ -49,8 +46,6 @@ export function pageLabel(view: WorkspaceView): string {
       return "Career evidence";
     case "profile":
       return "Career profile";
-    case "new-application":
-      return "New application";
     case "application":
       return view.name;
   }
@@ -74,34 +69,6 @@ export function navigateTo(navigation: PageNavigation, to: WorkspaceView): PageN
         ? navigation.history
         : [...navigation.history, navigation.view].slice(-pageHistoryLimit);
   return withView(navigation, to, history);
-}
-
-/** Opens an empty New application flow, dropping any flow left on the trail. */
-export function openNewApplication(navigation: PageNavigation): PageNavigation {
-  const history = navigation.history.filter((entry) => entry.kind !== "new-application");
-  return navigateTo(
-    {
-      ...navigation,
-      view: navigation.view.kind === "new-application" ? homeView : navigation.view,
-      history,
-      newApplicationEpoch: navigation.newApplicationEpoch + 1,
-    },
-    newApplicationView,
-  );
-}
-
-/**
- * Shows the application whose review the New application flow just started, in place of the
- * flow: the finished flow is no longer on the trail, so Back skips it.
- */
-export function finishNewApplication(
-  navigation: PageNavigation,
-  application: Extract<WorkspaceView, { kind: "application" }>,
-): PageNavigation {
-  const history = navigation.history.filter(
-    (entry) => entry.kind !== "new-application" && pageKey(entry) !== pageKey(application),
-  );
-  return withView(navigation, application, history);
 }
 
 /** Where Back leads, or null on Home. Home is the target once the trail is empty. */
@@ -138,11 +105,6 @@ export function renameApplicationPage(
     return navigation;
   }
   return { ...navigation, view, history, lastApplication };
-}
-
-/** True while the New application flow can still be returned to, so it keeps its draft. */
-export function keepsNewApplicationFlow(navigation: PageNavigation): boolean {
-  return [navigation.view, ...navigation.history].some((entry) => entry.kind === "new-application");
 }
 
 function withView(
