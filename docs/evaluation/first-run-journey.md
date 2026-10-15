@@ -1,34 +1,116 @@
 # First-run journey walk
 
-A fixture walk of the desktop first-run journey, recorded as evidence for the
-Simple guided workflow stage (rollup #1092). It is implementation evidence from
-a fixture walk, not validated outcome evidence: no real person, real material
-or provider took part.
+Fixture walks of the desktop first-run journey, recorded as evidence for the
+Simple guided workflow stage (rollup #1092). They are implementation evidence
+from fixture walks, not validated outcome evidence: no real person, real
+material or provider took part.
 
 ## Verdict
 
-**The #1092 exit criterion is not met in fixture mode.** A first-time user in a
-demo workspace cannot start a review on an application they created:
+**The #1092 exit criterion is still not met in fixture mode.** The
+[repeat walk](#repeat-walk-2026-10-15-base-ad82177) got further than the
+original walk:
+
+- A new application in a demo workspace now reaches a started review offline,
+  and every Start blocker is explained.
+- Reviewing the extracted requirements is a dead end. The brief cannot be marked
+  reviewed because it has no employer, and the review dialog has no way to add
+  one (R1).
+- Start stays available, because the run falls back to the raw job description.
+  Step 1 says the opposite: "A draft cannot start a run until you review it"
+  (R2).
+
+The criterion asks for a started review with no dead end and every disabled
+control offering its fix. R1 fails both.
+
+## Repeat walk (2026-10-15, base `ad82177`)
+
+### Setup
+
+- **Base commit.** `ad82177`: `main` at `a7031e3` plus #1251 (offline profile
+  generation and requirement extraction in a demo workspace).
+- **Mode, material and viewport.** As in the
+  [original walk](#original-walk-2026-10-15-base-bde5022): a demo
+  workspace reporting `local fixture (no network)`, one synthetic career-facts
+  file and a synthetic job description, 1280 x 800 px in light and dark themes.
+- **How it was driven.** The same Chrome DevTools Protocol harness against the
+  real Electron main process and preload, with a fresh user-data directory.
+  The host log shows no provider call during the walk.
+
+### Steps walked
+
+| # | Step | Outcome | What the person sees |
+|---|---|---|---|
+| 1 | Start page | Done | "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material." No host error. |
+| 2 | Try demo workspace | Done | After choosing a parent folder, Home shows Career evidence Ready, Career profile Not yet generated, and the pre-seeded Default application In review. |
+| 3 | Add career evidence | Done | **Add files** created and selected the "Career evidence" knowledge base; the file is Ready with its detected kind. |
+| 4 | Generate the profile | Done, offline | The consent box reads "Build the profile from my career evidence with local fixtures. Nothing is sent to a provider." Generation produced 9 facts and 11 open warnings. |
+| 5 | Review the profile | Done | "Set all 11: Acknowledged", **Save draft edits**, then **Mark latest draft reviewed**. The status reads "Ready. Reviewed version 3 is used for new applications." |
+| 6 | New application | Done | Home's form with a name and pasted job text. The application opened at step 3, with steps 1 and 2 already Done and the checklist "Ready to start the review". |
+| 7 | Extract requirements | Done, offline | A confirmation says nothing is sent. The result is "Requirements brief v1 (draft) · 4 requirements, 0 critical. A draft cannot start a run until you review it." |
+| 8 | Review the brief | **Dead end** | The dialog lists the 4 requirements and "Employer: Not found in the job description". **Mark reviewed** is disabled, with "The brief has no employer." above it and no field to add one. |
+| 9 | Profile (step 2) | Done | "Reviewed career profile · Selected · Using career-profile · version 3". |
+| 10 | Data sent (step 3) | Done | "Demo remains local · No network transmission". **See exactly what is sent** lists both destinations as `local fixture (no network)`. The checklist already marks the acknowledgement Done, so there is nothing to tick. |
+| 11 | Start | Done | The confirmation lists the models as "Demo, no provider call" and the requirements as "Raw job description". **Start** opened the review screen: Awaiting approval, Round 1, version 1, two blocking findings. |
+| 12 | Home after start | Done, with a mismatch | The new application shows "1 run", but its chip says Drafting while the review screen says Awaiting approval (R3). |
+
+### New findings
+
+Each finding has a disposition: the issue that owns it, or a note.
+
+| ID | Finding | Disposition |
+|---|---|---|
+| R1 | **Dead end.** The brief review cannot be completed when the brief has no employer. The demo's extraction never sets one, so every demo brief hits this. The dialog shows the reason but offers no fix: it has no employer field. | [#1265](https://github.com/akoita/draft-loop/issues/1265) |
+| R2 | Step 1 says "A draft cannot start a run until you review it", yet the checklist says "Ready to start the review" and Start is enabled. Only the Start confirmation reveals that the run uses the raw job description. | [#1265](https://github.com/akoita/draft-loop/issues/1265), with a product decision on draft briefs |
+| R3 | Home labels the new application Drafting after its review started and awaits approval. The mismatch survives a renderer reload; the pre-seeded application with a run shows In review. | [#1266](https://github.com/akoita/draft-loop/issues/1266) |
+| R4 | The demo profile fixture files every line under Achievement, headings included ("Skills"), and raises 11 omission warnings for employers, roles, dates and skills that the file names. Bulk acknowledgement makes this quick. | Noted; demo realism only |
+| R5 | The first profile a person reviews is called "version 3", because generation, the issue save and the review each create a version. | Noted |
+| R6 | **Mark reviewed** on the brief and **Update profile** under the profile's Details are disabled without a linked reason. The brief's reason sits in the list above its buttons; Update profile has none nearby. | [#1265](https://github.com/akoita/draft-loop/issues/1265) |
+
+### Earlier findings rechecked
+
+- **Resolved.** D1 and D2 (#1251): generation and extraction run offline, and
+  the consent copy says nothing is sent. D4 and D6 (#1253): the review header
+  shows the Round 1 chip and loop-rail labels at 1280 px, and the dark theme's
+  disabled **Approve artifact** looks disabled. D7 (#1254): the start page leads
+  with guidance.
+- **Not rechecked.** D3 (#1252), because the walk added evidence before opening
+  the Career evidence page. D5, because the walk did not open the override form.
+- **Unchanged.** D8: the demo still opens with the Default application In
+  review.
+
+### Disabled controls and overflow
+
+- **Explained in place.** Clear recent workspaces, Generate profile (tick the
+  approval box), Mark latest draft reviewed (open issues, then unsaved
+  decisions), Approve artifact (blocking findings), Export Markdown (available
+  after approval), and Changes only (no previous version).
+- **Self-evident.** Review and fetch job URL with an empty address box, Import
+  opportunity override with nothing chosen, Save changes with no edits, and the
+  current choice in "Set all".
+- **Unexplained or unfixable.** The brief's Mark reviewed (R1, R6) and Update
+  profile (R6).
+- **Overflow.** No page overflowed horizontally at 1280 px.
+
+## Original walk (2026-10-15, base `bde5022`)
+
+The original walk stopped at profile generation, which then had no fixture
+path. Its record is kept as history.
+
+### Original verdict
+
+**The #1092 exit criterion was not met in fixture mode.** A first-time user in a
+demo workspace could not start a review on an application they created:
 
 - Start requires a reviewed career profile.
-- Profile generation has no fixture path. In a demo workspace it calls the
+- Profile generation had no fixture path. In a demo workspace it called the
   configured provider, so the walk stopped there.
 
-Everything else in the journey has a next action that is visible and explained.
+Everything else in the journey had a next action that was visible and explained.
 The review was walked to approval on the demo's pre-seeded application, the only
-started review reachable offline. A real workspace may well complete the
-journey, but this walk did not exercise its provider steps.
+started review reachable offline.
 
-## Since the walk
-
-[#1251](https://github.com/akoita/draft-loop/issues/1251) gives a demo
-workspace offline profile generation and requirement extraction. An end-to-end
-test through the native host (`apps/desktop/src/demo-application.e2e.test.ts`)
-now goes from synthetic evidence to a reviewed profile, a reviewed brief and a
-started review with no provider client constructed. The walk itself has not
-been repeated in the app since.
-
-## Setup
+### Original setup
 
 - **Date.** 2026-10-15.
 - **Base commit.** `bde5022`: `main` at `2676ed0` plus #1089 (Home's New
@@ -45,7 +127,7 @@ been repeated in the app since.
   by a test shim. The native Save dialog of the export was not automated.
 - **Screenshots.** Kept outside the repository, which stores no PNG evidence.
 
-## Steps walked
+### Original steps walked
 
 | # | Step | Outcome | What the person sees |
 |---|---|---|---|
@@ -61,7 +143,7 @@ been repeated in the app since.
 | 10 | Export | Reached | "Next: export"; **Export Markdown** opened the native Save dialog, which the walk did not drive. |
 | 11 | Run details | Done | The drawer shows the run timeline, the author and critic with their lineages, the data policy and **Start a new review**. |
 
-## Dead ends and unclear controls
+### Dead ends and unclear controls
 
 Each finding has a disposition: the issue that owns it.
 
@@ -76,9 +158,9 @@ Each finding has a disposition: the issue that owns it.
 | D7 | The first-run screen leads with the host refusal "Open a workspace first." as its intro line. It reads as an instruction, but it is an error message in a place for guidance. | [#1254](https://github.com/akoita/draft-loop/issues/1254) |
 | D8 | The demo workspace opens with a Default application already In review, before any profile exists. It is not a dead end, but it is not the empty start the journey assumes. | Noted; decide with A |
 
-No trivial copy or wiring fix was found, so this change contains no code fix.
+No trivial copy or wiring fix was found, so that change contained no code fix.
 
-### Disabled controls
+#### Disabled controls
 
 Every disabled control had a reason on screen or was self-evident:
 
@@ -97,7 +179,7 @@ Every disabled control had a reason on screen or was self-evident:
 
 No page overflowed horizontally at 1280 px apart from D4.
 
-## Not exercisable in fixture mode
+### Not exercisable in fixture mode
 
 - Profile generation, and so profile review.
 - Requirement extraction and requirement review.
@@ -105,7 +187,7 @@ No page overflowed horizontally at 1280 px apart from D4.
 - Completing the export, because the walk did not drive the native Save
   dialog. The fixture export path is covered by `pnpm desktop:smoke`.
 
-## Follow-up issues
+### Follow-up issues
 
 - **[#1251](https://github.com/akoita/draft-loop/issues/1251) Demo workspace reaches a started review offline.** Outcome: in a demo
   workspace, Generate profile and Extract requirements run against local

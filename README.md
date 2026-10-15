@@ -15,9 +15,10 @@ candidate-provided evidence, provider and model identities are visible, and the
 candidate decides what to approve and export.
 
 > **Current maturity:** DraftLoop is an alpha-stage local-first CV tool. Its
-> bounded capabilities are integrated and deterministically validated, but
-> the latest fictional two-profile reference observation did not meet its
-> coverage exit. No representative consented outcome has been recorded. The
+> bounded capabilities are integrated and deterministically validated. Private
+> manual-parity observations show tailored, grounded drafts that still cover
+> fewer job requirements than the CV the manual loop produced. No
+> representative consented outcome has been recorded. The
 > [roadmap and current status](docs/roadmap.md) record the evidence and
 > remaining gaps. This project is not production-ready.
 

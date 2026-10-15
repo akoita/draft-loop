@@ -1,8 +1,8 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-10-09<br>
-**Current stage:** Manual parity: inputs
+**Last reviewed:** 2026-10-15<br>
+**Current stage:** Simple guided workflow
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -1858,10 +1858,11 @@ The ordered issues ([#1092](https://github.com/akoita/draft-loop/issues/1092)):
 The fixture walk on 2026-10-15 is recorded in
 [First-run journey walk](evaluation/first-run-journey.md). It did not meet the
 exit criterion: in a demo workspace, profile generation has no fixture path, so
-a new application cannot start a review offline. #1251 adds that offline path,
-and an end-to-end test now reaches a started review with no provider; a repeat
-walk in the app confirms the exit. The walk's other findings are #1252
-to #1254.
+a new application cannot start a review offline. #1251 added that path, and
+the repeat walk the same day reached a started review offline, but the exit is
+still not met: a brief whose job text names no employer cannot be reviewed in
+the app (#1265). The walks' other findings are #1252 to #1254 and #1266. The
+v0.8.0-alpha.4 release is a checkpoint of this stage, not its exit.
 
 It follows #1065 and comes ahead of the remaining Any-format career intake
 issues, because people must be able to use what already works.
