@@ -2,7 +2,9 @@
  * The run switcher in the review header: "Run 2 of 5 ▾" opens a menu of the application's runs.
  *
  * Choosing the latest run returns to the live run, and choosing any other run opens it read-only
- * through the same callback the earlier-run notice uses to lead back. The menu follows the ARIA
+ * through the same callback the earlier-run notice uses to lead back. "Compare with…" turns the
+ * menu into a list of the other runs, and choosing one compares it with the shown run. The menu
+ * follows the ARIA
  * menu-button pattern: arrow keys, Home and End move focus, Enter or Space chooses, and Escape or
  * a click outside closes it and returns focus to the button.
  */
@@ -58,6 +60,23 @@ export function runSwitcherPosition(
 /** The run's number, oldest = 1, from its index in the newest-first list. */
 export function runNumber(index: number, total: number): number {
   return total - index;
+}
+
+/** One run the shown run can be compared with, as the "Compare with…" menu lists it. */
+export interface ComparisonCandidate {
+  readonly run: ApplicationRunRowView;
+  readonly number: number;
+}
+
+/** Every listed run except the one shown, newest first, with its number (oldest = 1). */
+export function comparisonCandidates(
+  runs: readonly ApplicationRunRowView[] | null | undefined,
+  shownRunId: string | undefined,
+): readonly ComparisonCandidate[] {
+  if (runs === null || runs === undefined || runs.length < 2) return [];
+  return runs.flatMap((run, index) =>
+    run.runId === shownRunId ? [] : [{ run, number: runNumber(index, runs.length) }],
+  );
 }
 
 /**
@@ -143,22 +162,29 @@ function RunFacts({
 /**
  * The header control over the application's runs, newest first. Nothing renders with fewer than
  * two runs. `viewedRunId` is the run the review shows; without `onOpenRun` the menu only lists
- * the runs and its items are disabled.
+ * the runs and its items are disabled. Without `onCompareRun` the menu offers no comparison.
  */
 export function RunSwitcher({
   runs,
   viewedRunId,
   onOpenRun,
+  onCompareRun,
   initiallyOpen = false,
+  initialMenu = "runs",
 }: {
   readonly runs: readonly ApplicationRunRowView[] | null | undefined;
   readonly viewedRunId?: string | undefined;
   readonly onOpenRun?: ((runId: string | null) => void) | undefined;
+  /** Compares the chosen run with the shown run. */
+  readonly onCompareRun?: ((runId: string) => void) | undefined;
   /** Render with the menu open; for static rendering in tests. */
   readonly initiallyOpen?: boolean;
+  /** Which list the open menu starts on; for static rendering in tests. */
+  readonly initialMenu?: "runs" | "compare";
 }): JSX.Element | null {
   const position = runSwitcherPosition(runs, viewedRunId);
   const [open, setOpen] = useState(initiallyOpen);
+  const [menu, setMenu] = useState<"runs" | "compare">(initialMenu);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -169,6 +195,7 @@ export function RunSwitcher({
 
   const close = useCallback((returnFocus: boolean) => {
     setOpen(false);
+    setMenu("runs");
     setFocusIndex(null);
     if (returnFocus) buttonRef.current?.focus();
   }, []);
@@ -187,6 +214,7 @@ export function RunSwitcher({
       const root = rootRef.current;
       if (root === null || (event.target instanceof Node && root.contains(event.target))) return;
       setOpen(false);
+      setMenu("runs");
       setFocusIndex(null);
       // The click moves focus after this handler, so the check waits for it.
       setTimeout(() => {
@@ -203,6 +231,11 @@ export function RunSwitcher({
   if (position === null || runs === null || runs === undefined) return null;
   const shownRunId = runs[position.index]?.runId;
   const label = `Run ${position.number} of ${position.total}`;
+  const candidates = onCompareRun === undefined ? [] : comparisonCandidates(runs, shownRunId);
+  const comparing = menu === "compare" && candidates.length > 0;
+  // The runs list ends with "Compare with…"; the compare list holds only the other runs.
+  const itemCount = comparing ? candidates.length : runs.length + (candidates.length > 0 ? 1 : 0);
+  const compareItemIndex = runs.length;
 
   const choose = (run: ApplicationRunRowView): void => {
     if (onOpenRun === undefined) return;
@@ -210,6 +243,24 @@ export function RunSwitcher({
     const choice = runSwitcherChoice(run, shownRunId);
     if (choice !== null) onOpenRun(choice.openRunId);
   };
+
+  const showCompareList = (): void => {
+    setMenu("compare");
+    setFocusIndex(0);
+  };
+
+  const compareWith = (runId: string): void => {
+    if (onCompareRun === undefined) return;
+    close(true);
+    onCompareRun(runId);
+  };
+
+  const itemRef =
+    (index: number) =>
+    (element: HTMLElement | null): void => {
+      if (element === null) itemRefs.current.delete(index);
+      else itemRefs.current.set(index, element);
+    };
 
   const onButtonKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
     if (open) {
@@ -228,7 +279,7 @@ export function RunSwitcher({
 
   const onItemKeyDown = (
     event: KeyboardEvent<HTMLElement>,
-    run: ApplicationRunRowView,
+    choose: () => void,
     index: number,
   ): void => {
     if (event.key === "Escape") {
@@ -242,10 +293,10 @@ export function RunSwitcher({
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      choose(run);
+      choose();
       return;
     }
-    const target = runSwitcherKeyTarget(event.key, index, runs.length);
+    const target = runSwitcherKeyTarget(event.key, index, itemCount);
     if (target === undefined) return;
     event.preventDefault();
     setFocusIndex(target);
@@ -291,32 +342,72 @@ export function RunSwitcher({
         // A press inside the menu never drops focus to the page; choosing returns it to the button.
         onMouseDown={(event) => event.preventDefault()}
       >
-        {runs.map((run, index) => {
-          const checked = index === position.index;
-          return (
-            <div
-              key={run.runId}
-              className={`run-switcher-item${checked ? " run-switcher-item-checked" : ""}`}
-              role="menuitemradio"
-              aria-checked={checked}
-              aria-disabled={onOpenRun === undefined ? true : undefined}
-              tabIndex={-1}
-              ref={(element) => {
-                if (element === null) itemRefs.current.delete(index);
-                else itemRefs.current.set(index, element);
-              }}
-              onClick={() => choose(run)}
-              onKeyDown={(event) => onItemKeyDown(event, run, index)}
-            >
-              <span className="run-switcher-check" aria-hidden="true">
-                {checked ? "✓" : ""}
-              </span>
-              <span className="run-switcher-item-body">
-                <RunFacts run={run} number={runNumber(index, runs.length)} />
-              </span>
+        {comparing ? (
+          <>
+            <div className="run-switcher-menu-title" role="presentation">
+              Compare Run {position.number} with…
             </div>
-          );
-        })}
+            {candidates.map((candidate, index) => (
+              <div
+                key={candidate.run.runId}
+                className="run-switcher-item"
+                role="menuitem"
+                tabIndex={-1}
+                ref={itemRef(index)}
+                onClick={() => compareWith(candidate.run.runId)}
+                onKeyDown={(event) =>
+                  onItemKeyDown(event, () => compareWith(candidate.run.runId), index)
+                }
+              >
+                <span className="run-switcher-check" aria-hidden="true" />
+                <span className="run-switcher-item-body">
+                  <RunFacts run={candidate.run} number={candidate.number} />
+                </span>
+              </div>
+            ))}
+          </>
+        ) : null}
+        {comparing
+          ? null
+          : runs.map((run, index) => {
+              const checked = index === position.index;
+              return (
+                <div
+                  key={run.runId}
+                  className={`run-switcher-item${checked ? " run-switcher-item-checked" : ""}`}
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  aria-disabled={onOpenRun === undefined ? true : undefined}
+                  tabIndex={-1}
+                  ref={itemRef(index)}
+                  onClick={() => choose(run)}
+                  onKeyDown={(event) => onItemKeyDown(event, () => choose(run), index)}
+                >
+                  <span className="run-switcher-check" aria-hidden="true">
+                    {checked ? "✓" : ""}
+                  </span>
+                  <span className="run-switcher-item-body">
+                    <RunFacts run={run} number={runNumber(index, runs.length)} />
+                  </span>
+                </div>
+              );
+            })}
+        {comparing || candidates.length === 0 ? null : (
+          <>
+            <hr className="run-switcher-separator" />
+            <div
+              className="run-switcher-item run-switcher-compare"
+              role="menuitem"
+              tabIndex={-1}
+              ref={itemRef(compareItemIndex)}
+              onClick={showCompareList}
+              onKeyDown={(event) => onItemKeyDown(event, showCompareList, compareItemIndex)}
+            >
+              <span className="run-switcher-check" aria-hidden="true" />
+              <span className="run-switcher-item-body">Compare with…</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
