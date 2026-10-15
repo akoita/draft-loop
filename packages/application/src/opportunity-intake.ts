@@ -29,6 +29,7 @@ import type {
 } from "@draft-loop/schemas";
 import { CliUserError } from "./cli-user-error.js";
 import { buildOpportunityBrief } from "./opportunity-brief.js";
+import { candidateEmployerFields } from "./opportunity-candidate-employer.js";
 import {
   type OpportunityExtractionPort,
   type OpportunityExtractionSource,
@@ -147,9 +148,16 @@ export type OpportunityDraftPatch = Partial<
     | "candidateInstructions"
     | "issues"
   >
->;
+> & {
+  /**
+   * An employer the candidate typed in for a brief that names none. It is recorded as a
+   * candidate-provided fact with its own source, never as something the posting says.
+   */
+  readonly candidateEmployer?: string;
+};
 
 const editableOpportunityDraftFields = new Set([
+  "candidateEmployer",
   "role",
   "employer",
   "responsibilities",
@@ -816,10 +824,18 @@ export function editOpportunityDraft(
   const base = buildOpportunityBrief(current);
   assertEditablePatch(patch);
   assertTimestampNotBefore(createdAt, base.createdAt);
+  const { candidateEmployer, ...fields } = patch;
+  if (candidateEmployer !== undefined && fields.employer !== undefined) {
+    throw new Error("Enter the employer or edit it, not both.");
+  }
+  const version = nextOpportunityBriefVersion(base.version);
   return buildOpportunityBrief({
     ...base,
-    ...patch,
-    version: nextOpportunityBriefVersion(base.version),
+    ...fields,
+    ...(candidateEmployer === undefined
+      ? {}
+      : candidateEmployerFields(base, candidateEmployer, version, createdAt)),
+    version,
     priorVersion: base.version,
     status: "draft",
     createdAt,

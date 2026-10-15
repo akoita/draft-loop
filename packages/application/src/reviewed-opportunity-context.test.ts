@@ -10,7 +10,11 @@ const record = (overrides: Record<string, unknown> = {}) =>
       version: 3,
       status: "reviewed",
       role: { value: "Platform Engineer" },
-      employer: { value: "Example Systems" },
+      sources: [
+        { id: "posting", classification: "job-posting" },
+        { id: "entered", classification: "candidate-provided-fact" },
+      ],
+      employer: { value: "Example Systems", sourceIds: ["posting"] },
       responsibilities: [
         { id: "extraction-responsibility-audit", text: "Prepare contracts for external audit" },
         { id: "extraction-responsibility-invariants", text: "Write invariant tests" },
@@ -74,6 +78,16 @@ describe("reviewed opportunity context", () => {
     const unnamed = reviewedOpportunityContext(record({ employer: null })).jobDescription;
     expect(unnamed).toContain("Employer: not named in the job posting");
     expect(unnamed.split("\n")).not.toContain("Employer: ");
+  });
+
+  it("says an employer the candidate entered was entered by the candidate, not the posting", () => {
+    const entered = reviewedOpportunityContext(
+      record({ employer: { value: "Example Systems", sourceIds: ["entered"] } }),
+    ).jobDescription;
+    expect(entered).toContain("Employer: Example Systems (entered by the candidate)");
+    const extracted = reviewedOpportunityContext(record()).jobDescription;
+    expect(extracted).toContain("Employer: Example Systems");
+    expect(extracted).not.toContain("entered by the candidate");
   });
 
   it("keeps responsibilities in the job description text", () => {

@@ -17,6 +17,7 @@ import {
   createBriefEditState,
   describeBriefSources,
   dropRequirement,
+  editEmployer,
   editRequirementText,
   hasUnsavedBriefChanges,
   loadBrief,
@@ -167,7 +168,9 @@ describe("listing a draft brief", () => {
     const html = view(rec, createBriefEditState(rec));
     expect(html).toContain("Not named in the job posting");
     expect(html).not.toContain("no employer");
-    expect(html).not.toContain("<input");
+    // The only input is the candidate's own entry; the app never fills the employer in.
+    expect(html.match(/<input/gu)).toHaveLength(1);
+    expect(html).toContain('value=""');
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Mark reviewed/u);
   });
 });
@@ -572,5 +575,81 @@ describe("load states", () => {
     const failed = view(null, null, { load: "failed", loadMessage: "No such brief." });
     expect(failed).toContain("No such brief.");
     expect(failed).toContain("Try again");
+  });
+});
+
+describe("an employer the candidate enters", () => {
+  const unnamed = record({ employer: null });
+  const entered = record({
+    employer: { value: "Example Systems", sourceIds: ["entered-employer"] },
+    sources: [
+      ...record().sources,
+      {
+        id: "entered-employer",
+        kind: "candidate-input",
+        classification: "candidate-provided-fact",
+        status: "available",
+        checksum: "c".repeat(64),
+        capturedAt: "2026-10-07T10:00:00.000Z",
+      },
+    ],
+  });
+
+  it("offers an Entered by you field only while the brief has no employer", () => {
+    const html = view(unnamed, createBriefEditState(unnamed), { onEmployer: () => undefined });
+    expect(html).toContain("Entered by you");
+    expect(html).toContain('aria-label="Employer (entered by you)"');
+    expect(html).toContain("never as something the job posting says");
+
+    const named = record();
+    expect(view(named, createBriefEditState(named))).not.toContain("Entered by you");
+    expect(view(unnamed, null)).not.toContain('aria-label="Employer (entered by you)"');
+    expect(view(unnamed, null)).toContain("Not named in the job posting");
+  });
+
+  it("saves the typed employer as a candidate-provided entry and nothing else", () => {
+    const state = editEmployer(createBriefEditState(unnamed), "  Example Systems ");
+    expect(hasUnsavedBriefChanges(unnamed, state)).toBe(true);
+    const patch = buildBriefEditPatch(unnamed, state);
+    expect(patch).toEqual({ candidateEmployer: "Example Systems" });
+    expect(patch).not.toHaveProperty("employer");
+    expect(
+      validateBridgeCommand({
+        type: "opportunity.edit",
+        input: { workspaceId: "workspace-1", briefId: "brief-abc", expectedVersion: 1, patch },
+      }),
+    ).toMatchObject({ input: { patch: { candidateEmployer: "Example Systems" } } });
+  });
+
+  it("sends nothing for an empty entry, or when the brief already names an employer", () => {
+    expect(hasUnsavedBriefChanges(unnamed, editEmployer(createBriefEditState(unnamed), "  "))).toBe(
+      false,
+    );
+    const named = record();
+    const typed = editEmployer(createBriefEditState(named), "Other");
+    expect(buildBriefEditPatch(named, typed)).toEqual({});
+  });
+
+  it("shows Entered by you beside an employer the candidate entered, not the posting's", () => {
+    const html = view(entered, null);
+    expect(html).toContain("Example Systems");
+    expect(html).toContain('<span class="brief-entered-tag">Entered by you</span>');
+    expect(view(record(), null)).not.toContain("Entered by you");
+    expect(briefSourceLabel(entered.sources[1])).toBe("Entered by you");
+  });
+
+  it("keeps the candidate-provided classification through the bridge result allowlist", async () => {
+    const port = createCapabilityPort({
+      capabilities: [...bridgeCapabilities],
+      invoke: async () => ({ ok: true, value: entered }) as never,
+    });
+    const result = await port.execute({
+      type: "opportunity.get",
+      input: { workspaceId: "workspace-1", briefId: "brief-abc" },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: { sources: [{}, { classification: "candidate-provided-fact" }] },
+    });
   });
 });

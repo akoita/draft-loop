@@ -967,9 +967,13 @@ the version you read, and a version conflict reloads the latest one. Requirement
 every requirement must cite a source.
 
 When the job posting names no employer, the brief shows "Not named in the job
-posting". The employer cannot be typed in, since every brief fact must cite the
-material it came from, and a missing employer does not block review. The
-author's job context then says "Employer: not named in the job posting".
+posting" and, while you edit it, an employer field marked "Entered by you".
+What you type is saved as your own entry on a source of its own, never as
+something the job posting says, and the brief then shows "Entered by you" beside
+it. The field appears only while the brief has no employer; an employer the
+posting names is not overwritten. A missing employer does not block review. The
+author's job context says "Employer: not named in the job posting", or
+"Employer: Name (entered by the candidate)" for an entry.
 
 **Mark reviewed** creates the immutable reviewed version once the brief has a
 role, at least one requirement and no open issues. While it is disabled, the
