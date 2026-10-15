@@ -230,6 +230,17 @@ describe("a demo workspace, offline end to end", () => {
       },
       { timeout: 30_000, interval: 50 },
     );
+    const finished = await port.load();
+    expect(finished.state).toBe("awaiting-approval");
+
+    // Home's card follows the run: its first draft awaits the candidate, so it is in review.
+    const applications = await port.listApplications?.(workspaceId);
+    const listed = applications?.find((item) => item.id === created.application.id);
+    expect(listed).toMatchObject({
+      status: "in-review",
+      runCount: 1,
+      latestRunId: started.runId,
+    });
 
     for (const route of Object.values(demo.providerRoutes)) {
       expect(route).not.toHaveBeenCalled();

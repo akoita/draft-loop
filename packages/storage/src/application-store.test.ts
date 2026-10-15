@@ -296,6 +296,67 @@ describe("application storage", () => {
     ]);
   });
 
+  it("lists a run with the state of its latest snapshot, not the state it was appended with", async () => {
+    const { applications } = storage;
+    await applications.insertApplication({
+      workspaceId,
+      id: "app-run",
+      name: "Run",
+      jobSource,
+      createdAt,
+    });
+    await storage.saveContextSnapshot({
+      id: "context-1",
+      workspaceId,
+      schemaVersion: 1,
+      createdAt,
+      payload: { job: "fixture" },
+    });
+    const record = {
+      workspaceId,
+      contextSnapshotId: "context-1",
+      round: 1,
+      currentStep: "author",
+      budget: { maxRounds: 3 },
+      artifactId: null,
+      approval: "pending",
+      totalCostUsd: 0,
+      startedAt: createdAt,
+      lastError: null,
+    } as const;
+    await storage.saveRun({
+      ...record,
+      id: "run-1",
+      state: "collecting",
+      updatedAt: createdAt,
+      payload: {},
+    });
+    await applications.bindRun({
+      workspaceId,
+      applicationId: "app-run",
+      runId: "run-1",
+      createdAt,
+    });
+    expect(await applications.listRuns(workspaceId, "app-run")).toEqual([
+      { id: "run-1", state: "collecting", startedAt: createdAt, updatedAt: createdAt },
+    ]);
+
+    for (const [state, updatedAt] of [
+      ["drafting", "2030-01-01T00:01:00.000Z"],
+      ["awaiting-approval", "2030-01-01T00:02:00.000Z"],
+    ] as const) {
+      await storage.saveRunSnapshot({ ...record, runId: "run-1", state, updatedAt, payload: {} });
+    }
+    expect(await applications.listRuns(workspaceId, "app-run")).toEqual([
+      {
+        id: "run-1",
+        state: "awaiting-approval",
+        startedAt: createdAt,
+        updatedAt: "2030-01-01T00:02:00.000Z",
+      },
+    ]);
+  });
+
   it("applies migration 30 to an existing database without touching existing rows", async () => {
     storage.close();
     // A v29 database has no application tables or migration row; every other table is the same.

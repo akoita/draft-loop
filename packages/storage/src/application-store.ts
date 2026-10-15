@@ -402,10 +402,17 @@ export function createApplicationStorage(
       boundApplicationId("application_brief_bindings", "brief_id", workspaceId, briefId),
     listRuns: async (workspaceId, applicationId) => {
       ensureOpen();
+      // A run row is immutable and keeps the state it was appended with; its current state is
+      // its latest snapshot, as the review reads it.
       return database
         .prepare(
-          `SELECT r.id, r.state, r.started_at, r.updated_at FROM runs r
+          `SELECT r.id, COALESCE(s.state, r.state) AS state, r.started_at,
+             COALESCE(s.updated_at, r.updated_at) AS updated_at FROM runs r
            LEFT JOIN application_run_bindings b ON b.workspace_id = r.workspace_id AND b.run_id = r.id
+           LEFT JOIN run_snapshots s ON s.sequence = (
+             SELECT MAX(latest.sequence) FROM run_snapshots latest
+             WHERE latest.workspace_id = r.workspace_id AND latest.run_id = r.id
+           )
            WHERE r.workspace_id = ? AND COALESCE(b.application_id, '${defaultApplicationId}') = ?
            ORDER BY r.started_at, r.id`,
         )
