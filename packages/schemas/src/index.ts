@@ -143,11 +143,13 @@ export {
 } from "./opportunity-extraction.js";
 
 import { candidateKnowledgeSelectionLifecycleRevisionSchema } from "./candidate-knowledge-selection-lifecycle.js";
+import { checkRevisionAttribution, revisionAttributionTraceShape } from "./finding-attribution.js";
 import { modelSelectionSchema } from "./model-selection.js";
 import { nonEmptyString, strictTimestampSchema } from "./schema-primitives.js";
 
 export type { RenderingLayoutProfileId } from "@draft-loop/domain";
 export * from "./canonical-candidate-profile.js";
+export * from "./finding-attribution.js";
 export type { ModelSelection } from "./model-selection.js";
 export { modelSelectionSchema } from "./model-selection.js";
 
@@ -2605,11 +2607,6 @@ export const artifactDiffSchema = z
 
 export type ArtifactDiff = z.infer<typeof artifactDiffSchema>;
 
-// Descriptive alias for callers that want to distinguish this from the full
-// in-memory artifact diff helper.
-export const artifactDiffProjectionSchema = artifactDiffSchema;
-export type ArtifactDiffProjection = ArtifactDiff;
-
 const authorAdjudicationDecisionInputShape = {
   findingId: independentReadinessReportNonEmptyString,
   disposition: z.enum(authorAdjudicationDispositions),
@@ -2765,7 +2762,7 @@ const revisedArtifactIdentitySchema = z.strictObject({
 /** Versioned, strict projection of one adjudication's artifact revision. */
 export const adjudicatedRevisionTraceSchema = z
   .strictObject({
-    schemaVersion: z.literal(adjudicatedRevisionTraceSchemaVersion),
+    ...revisionAttributionTraceShape,
     adjudication: authorAdjudicationPlanSchema,
     revisedArtifact: revisedArtifactIdentitySchema,
     createdAt: strictTimestampSchema,
@@ -2774,6 +2771,7 @@ export const adjudicatedRevisionTraceSchema = z
     valid: z.boolean(),
   })
   .superRefine((trace, context) => {
+    checkRevisionAttribution(trace, context);
     if (trace.revisedArtifact.id === trace.adjudication.sourceArtifact.id) {
       context.addIssue({
         code: "custom",

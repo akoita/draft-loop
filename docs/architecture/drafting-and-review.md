@@ -572,6 +572,7 @@ was supplied. The persisted approved override is retained; duplicate, unknown,
 malformed, and non-accepted overrides still fail validation. A trace is valid
 only when no accepted effect is missing. Verification records structural
 changes, not semantic resolution of findings; it never exposes a `resolved` flag.
+Resolution is judged only by the next critic pass; see below.
 
 The orchestrator exposes a `requestAdjudicatedRevision` runtime carrier. It
 persists the exact report, canonical plan, accepted-effect overrides, and
@@ -589,6 +590,37 @@ the existing provider-independent runtime validation and durable run history
 without opening a provider. CLI and desktop controls and report generation
 remain deferred. It stores no raw prompts, raw responses, or hidden reasoning;
 duration accounting issue #278 remains ordered after this staging prerequisite.
+
+### Finding attribution and classification (#1108)
+
+A version 2 revision trace carries `attribution`: every changed block (by
+positional `blockKey`) with the ids of the accepted findings that targeted it,
+the accepted findings no changed block could be tied to, and a
+`findingIdentity` for every adjudicated finding. The author's structured output
+is a plain artifact proposal and cannot name finding ids, so attribution is
+derived from the block diff plus each finding's target: a claim finding maps to
+that claim's block, a section finding to every changed block of the section.
+Version 1 traces have no `attribution` and still load and replay unchanged.
+
+After the critic pass that reviews the revised artifact, the orchestrator stores
+a content-free `findingClassification` on that critic execution. An accepted
+finding is `persisting` when the pass raises a finding with the same identity
+and `resolved` otherwise. A finding of the pass that matches no adjudicated
+finding is `new`; a recurring rejected or nuanced finding is a preserved
+disagreement and is not classified. Entries carry ids, identity, severity and
+counts only, so #1112 and #1113 can consume them directly.
+
+Artifact, section, block and claim ids are minted per execution and change on
+every revision, so findings are matched by `findingIdentity`, not by id:
+`normalizedCode|targetKind|locator`. The code is lower-cased with punctuation
+runs collapsed to `-`. A claim target locates its block as
+`<sectionKind>#<n>/b<i>` (the n-th section of that kind, the i-th block), a
+section target as `<sectionKind>#<n>`, requirement, evidence and rubric targets
+keep their stable ids, and an artifact target is `artifact`. Messages and
+severity are ignored, so near-duplicates in one block collapse into one
+finding. The key is positional and code-based: a critic that rewords a code, or
+a revision that inserts or reorders blocks, makes a real match fail and reads as
+one `resolved` plus one `new`.
 
 ### Application-readiness stopping decision boundary
 

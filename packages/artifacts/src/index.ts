@@ -1,5 +1,6 @@
 import type { EvidenceReference } from "@draft-loop/evidence";
 import {
+  type AdjudicatedRevisionAttribution,
   type AdjudicatedRevisionEffectOverride,
   type AdjudicatedRevisionTrace,
   type ArtifactClaim,
@@ -364,6 +365,8 @@ export interface TraceAdjudicatedRevisionInput {
   readonly revisedArtifact: DraftArtifact;
   readonly createdAt: string;
   readonly acceptedEffectOverrides?: readonly AdjudicatedRevisionEffectOverride[];
+  /** Block-level finding attribution; its presence makes the trace version 2. */
+  readonly attribution?: AdjudicatedRevisionAttribution;
 }
 
 function directEffectForFinding(
@@ -479,7 +482,8 @@ export function traceAdjudicatedRevision(
 
   return deepFreeze(
     adjudicatedRevisionTraceSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: input.attribution === undefined ? 1 : 2,
+      ...(input.attribution === undefined ? {} : { attribution: input.attribution }),
       adjudication: parsedPlan,
       revisedArtifact: {
         id: parsedRevised.id,
