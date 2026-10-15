@@ -35,6 +35,19 @@ export interface SqliteStorageOpenOptions {
   readonly fileMustExist?: boolean;
 }
 
+let skipCommitSync = false;
+
+/**
+ * Makes history databases opened from now on skip the disk sync on each commit, and returns the
+ * previous setting. Only for tests that drive many commits and assert behaviour, not durability:
+ * on a busy disk those syncs, not the work under test, set their run time.
+ */
+export function setSqliteCommitSyncSkippedForTests(skipped: boolean): boolean {
+  const previous = skipCommitSync;
+  skipCommitSync = skipped;
+  return previous;
+}
+
 function moduleRequire(): NodeRequire {
   try {
     return createRequire(import.meta.url);
@@ -75,5 +88,7 @@ export function loadSqlite(filename: string, options: SqliteStorageOpenOptions =
   const sqliteOptions: { readonly?: boolean; fileMustExist?: boolean } = {};
   if (options.readOnly !== undefined) sqliteOptions.readonly = options.readOnly;
   if (options.fileMustExist !== undefined) sqliteOptions.fileMustExist = options.fileMustExist;
-  return new (Constructor as SqliteConstructor)(filename, sqliteOptions);
+  const handle = new (Constructor as SqliteConstructor)(filename, sqliteOptions);
+  if (skipCommitSync && options.readOnly !== true) handle.pragma("synchronous = OFF");
+  return handle;
 }

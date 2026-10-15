@@ -21,6 +21,19 @@ import { runModelIdentity } from "./run-model-profiles.js";
 
 /** Deterministic synthetic author and critic used by fixture-mode workspaces. */
 
+/** Each synthetic step waits this long so that a running fixture review can be cancelled. */
+let fixtureStepDelayMs = 500;
+
+/**
+ * Sets the synthetic step delay and returns the previous one. Tests that never cancel a review
+ * set it to 0, because the delay otherwise dominates every fixture run they drive.
+ */
+export function setFixtureStepDelayForTests(milliseconds: number): number {
+  const previous = fixtureStepDelayMs;
+  fixtureStepDelayMs = milliseconds;
+  return previous;
+}
+
 function execution<T>(output: T, provider: string, modelId: string): AgentExecution<T> {
   const serialized = JSON.stringify(output);
   const digest = createHash("sha256").update(serialized, "utf8").digest("hex");
@@ -157,7 +170,7 @@ export function fixtureAgents(
       const timer = setTimeout(() => {
         signal?.removeEventListener("abort", onAbort);
         resolveDelay();
-      }, 500);
+      }, fixtureStepDelayMs);
       const onAbort = () => {
         clearTimeout(timer);
         reject(signal?.reason);

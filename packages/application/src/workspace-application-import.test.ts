@@ -8,9 +8,11 @@ import {
   resolveSnapshotPayload,
 } from "@draft-loop/orchestrator";
 import { openSqliteStorage } from "@draft-loop/storage";
-import { afterEach, describe, expect, it } from "vitest";
+import { setSqliteCommitSyncSkippedForTests } from "@draft-loop/storage/sqlite-handle";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { type ApplicationService, createApplicationService } from "./index.js";
 import { createLocalApplicationDriver } from "./local.js";
+import { setFixtureStepDelayForTests } from "./local-fixture-agents.js";
 import {
   importApplicationFromWorkspace,
   importedApplicationId,
@@ -21,6 +23,20 @@ const silent = { write: () => undefined };
 describe("importing a workspace as an application", () => {
   const directories: string[] = [];
   const service: ApplicationService = createApplicationService(createLocalApplicationDriver());
+  let fixtureStepDelayMs = 0;
+  let commitSyncSkipped = false;
+
+  // Each test builds whole workspaces through a fixture review, hundreds of SQLite commits. None
+  // cancels a review or asserts durability, so skip the synthetic step pauses and the per-commit
+  // disk syncs that otherwise made these tests time out on a busy machine.
+  beforeAll(() => {
+    fixtureStepDelayMs = setFixtureStepDelayForTests(0);
+    commitSyncSkipped = setSqliteCommitSyncSkippedForTests(true);
+  });
+  afterAll(() => {
+    setFixtureStepDelayForTests(fixtureStepDelayMs);
+    setSqliteCommitSyncSkippedForTests(commitSyncSkipped);
+  });
 
   afterEach(async () => {
     await Promise.all(
