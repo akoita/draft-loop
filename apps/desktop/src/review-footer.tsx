@@ -6,7 +6,7 @@
  * reason field, and the checklist and the longer explanation sit under a compact "Details"
  * disclosure that scrolls on its own and never pushes the buttons off screen.
  */
-import type { JSX, ReactNode } from "react";
+import { type JSX, type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 import { approvalBlockerId } from "./approval-gate-focus.js";
 import {
@@ -193,7 +193,39 @@ export interface ReviewFooterProps {
   };
 }
 
-/** The sticky footer at the foot of the review's side panel. */
+/** CSS variable holding the footer's rendered height, for the room the page keeps below it. */
+export const gateBarHeightVariable = "--gate-bar-height";
+
+/**
+ * Publish the footer's height on the document root while it is mounted. In the stacked layout
+ * the footer is fixed to the window's bottom edge, and the page keeps this much room under its
+ * last content so nothing stays hidden behind the bar.
+ */
+function usePublishedHeight(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const element = ref.current;
+    if (element === null || typeof ResizeObserver === "undefined") return undefined;
+    const root = document.documentElement;
+    const publish = () => {
+      root.style.setProperty(
+        gateBarHeightVariable,
+        `${Math.ceil(element.getBoundingClientRect().height)}px`,
+      );
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(gateBarHeightVariable);
+    };
+  }, [ref]);
+}
+
+/**
+ * The footer at the foot of the review's side panel: sticky in the two-column desk, and fixed to
+ * the window's bottom edge in the stacked layout.
+ */
 export function ReviewFooter({
   blocker,
   readOnly,
@@ -211,8 +243,10 @@ export function ReviewFooter({
   exportAction,
 }: ReviewFooterProps): JSX.Element {
   const exportPending = exportAction.pendingSeconds !== null;
+  const barRef = useRef<HTMLElement>(null);
+  usePublishedHeight(barRef);
   return (
-    <section className="gate-action-bar" aria-label="approval and export">
+    <section className="gate-action-bar" aria-label="approval and export" ref={barRef}>
       <p
         id={approvalBlockerId}
         className={`gate-blocker gate-blocker-${blocker.tone}`}

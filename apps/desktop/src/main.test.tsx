@@ -725,7 +725,9 @@ describe("desktop trust-centered review", () => {
       <ReviewWorkspace state={resolved} onAction={() => undefined} />,
     );
     expect(html).toContain("2 of 2 resolved · all findings resolved");
-    expect(html.match(/aria-expanded="false"/gu)).toHaveLength(2);
+    // Below the header, whose closed Run details button is not a finding.
+    const belowHeader = html.slice(html.indexOf("</header>"));
+    expect(belowHeader.match(/aria-expanded="false"/gu)).toHaveLength(2);
     expect(html).not.toContain("Linked claim:");
   });
 

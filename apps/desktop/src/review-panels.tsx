@@ -1,8 +1,9 @@
 /**
  * Review panel disclosure and the run timeline.
  *
- * The right-hand review panel holds the run progress over the Findings and Coverage tabs
- * (`review-work-tabs.tsx`); the approval gate lives in the sticky footer (#1235).
+ * While a run executes, the right-hand review panel holds its progress over the Findings and
+ * Coverage tabs (`review-work-tabs.tsx`); otherwise the timeline is in Run details
+ * (`run-details.tsx`). The approval gate lives in the sticky footer (#1235).
  * The run progress can grow without bound on a long run, so it folds to its heading. Which
  * panels are folded is a reading preference, stored app-wide in `localStorage` like the theme
  * and the compare split: it never reaches the main process and changes nothing about the run.
@@ -16,7 +17,7 @@ import { type JSX, useCallback, useState } from "react";
 import type { ReviewEvent } from "./model.js";
 
 /**
- * The review panels a reviewer can fold. The trust strip is a fixed-height summary and stays;
+ * The review panels a reviewer can fold. The trust facts moved into Run details (#1238);
  * Findings and Coverage became tabs in #1236, so stored "findings" and "coverage" ids drop.
  */
 export type ReviewPanelId = "progress";

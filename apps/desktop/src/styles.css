@@ -2741,6 +2741,157 @@ input[type="text"].workspace-title-input {
   }
 }
 
+/* Run details (#1238): the header button carries the run's one-line summary, cut with an
+   ellipsis where the header is tight; its title keeps the whole line. */
+.run-details-button {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: min(26rem, 32vw);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  font: inherit;
+  font-size: var(--text-micro);
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.run-details-button:hover,
+.run-details-button[aria-expanded="true"] {
+  border-color: var(--teal-line);
+  color: var(--text-1);
+}
+
+.run-details-button-label {
+  flex: none;
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.run-details-button-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-4);
+  text-overflow: ellipsis;
+}
+
+/* Where the loop rail shares the header, the meta zone keeps one row and the summary is cut
+   shorter; the loop rail is what gives way. */
+@media (min-width: 1181px) and (max-width: 1450px) {
+  .spine-meta {
+    flex-wrap: nowrap;
+  }
+
+  .run-details-button {
+    max-width: 13rem;
+  }
+}
+
+/* The drawer slides over the side panel from the right. Closed, it stays mounted and hidden,
+   so nothing inside it is in the tab order. */
+.run-details-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.run-details-layer[hidden] {
+  display: none;
+}
+
+.run-details-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: fade-in var(--dur) var(--ease);
+}
+
+.run-details-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--side-panel-width, var(--panel-width)), 100vw);
+  min-width: min(360px, 100vw);
+  border-left: 1px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+  animation: run-details-slide var(--dur) var(--ease);
+}
+
+@keyframes run-details-slide {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.run-details-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) var(--space-5);
+}
+
+.run-details-head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.run-details-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.run-details-run {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.run-details-run .section-heading {
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.run-details-run h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.run-details-body > .trust-strip {
+  border-top: 1px solid var(--border);
+}
+
+/* Outside the drawer the side panel keeps only what needs the reviewer: a paused or
+   interrupted run's way back in, and a shared-lineage warning. */
+.side-column > .run-recovery-panel .section-heading {
+  margin-bottom: 0;
+}
+
+.side-column > .run-recovery-panel .pending-action-status {
+  margin-top: var(--space-3);
+}
+
+.side-column > .trust-warning {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: var(--space-3);
+}
+
+.side-column > .panel + .trust-warning {
+  border-top: 1px solid var(--border);
+}
+
 /* An earlier run is read-only; the notice says so and leads back to the latest run. */
 .earlier-run-notice {
   display: flex;
@@ -6406,6 +6557,22 @@ input[type="text"].workspace-title-input {
     border-top: 1px solid var(--border);
   }
 
+  /* Stacked, the page scrolls as a whole, and a sticky footer would ride up to its column's top
+     edge. The bar is fixed to the window's bottom edge across the content, clear of the side
+     rail, and the column keeps the bar's measured height free under its last content. */
+  .gate-action-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: var(--rail-width);
+    z-index: 3;
+    margin-top: 0;
+  }
+
+  .side-column:has(> .gate-action-bar) {
+    padding-bottom: var(--gate-bar-height, 12rem);
+  }
+
   .setup-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6507,7 +6674,9 @@ input[type="text"].workspace-title-input {
   .boot-loading::before,
   .profile-generation-spinner,
   .modal-backdrop,
-  .modal-card {
+  .modal-card,
+  .run-details-backdrop,
+  .run-details-drawer {
     animation: none;
   }
 
