@@ -880,7 +880,9 @@ requirements** after the app restarts; a reviewed brief offers **View
 requirements**. The host remembers only the brief ID for this.
 
 **Review requirements** opens the brief with each requirement's text, priority
-(critical, high, medium or low) and source reference, plus the responsibilities.
+(critical, high, medium or low) and source, plus the responsibilities. Sources
+carry plain labels such as "Job posting", "Job page" or "Pasted job text"; the
+dialog shows no internal brief or source ids.
 
 Where the extraction found one, each requirement and responsibility also shows
 the exact job-text quotation it came from under "From the job text". The
@@ -892,8 +894,9 @@ keeps its quotation.
 
 While the version is a draft, edit a requirement's text, change its priority,
 drop it, restore it, or acknowledge an open issue, then **Save changes** to
-create the next draft version. Saving uses the version you read, and a version
-conflict reloads the latest one. Requirements cannot be added by hand, because
+create the next draft version. The dialog stays open on the new version and
+says "Saved as draft vN", so **Mark reviewed** is one click away. Saving uses
+the version you read, and a version conflict reloads the latest one. Requirements cannot be added by hand, because
 every requirement must cite a source.
 
 When the job posting names no employer, the brief shows "Not named in the job

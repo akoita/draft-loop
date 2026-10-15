@@ -1,7 +1,7 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { OpportunityRecordResult, OpportunitySourceResult } from "./bridge.js";
+import type { OpportunityRecordResult } from "./bridge.js";
 import {
   acknowledgeIssue,
   type BriefEditState,
@@ -9,6 +9,7 @@ import {
   type BriefOperations,
   briefEditProblem,
   createBriefEditState,
+  describeBriefSources,
   dropRequirement,
   editRequirementText,
   hasUnsavedBriefChanges,
@@ -23,26 +24,10 @@ import {
   reviewBlockers,
   reviewBrief,
   saveBriefEdits,
+  savedBriefNote,
   setRequirementPriority,
 } from "./opportunity-brief-review-model.js";
 import { useModalFocusTrap } from "./review.js";
-
-const classificationLabels: Readonly<Record<string, string>> = {
-  "job-posting": "Job posting",
-  "social-announcement": "Social announcement",
-  "company-context": "Company context",
-  "candidate-instruction": "Your instructions",
-};
-
-/** A source reference a person can read: what kind of material it is, and its id. */
-export function describeBriefSource(
-  sources: readonly OpportunitySourceResult[],
-  sourceId: string,
-): string {
-  const source = sources.find((candidate) => candidate.id === sourceId);
-  const label = source === undefined ? undefined : classificationLabels[source.classification];
-  return label === undefined ? sourceId : `${label} (${sourceId})`;
-}
 
 export type BriefLoad = "loading" | "failed" | "ready";
 
@@ -60,6 +45,9 @@ export interface OpportunityBriefReviewViewProps {
   readonly busy: "saving" | "reviewing" | null;
   readonly notice?: BriefNotice | null;
   readonly discardArmed?: boolean;
+  /** The draft version the last save created; shows "Saved as draft vN" while it is current. */
+  readonly savedVersion?: number | null;
+  readonly savedNoteRef?: RefObject<HTMLParagraphElement | null>;
   readonly onText: (id: string, text: string) => void;
   readonly onPriority: (id: string, priority: RequirementPriority) => void;
   readonly onDrop: (id: string) => void;
@@ -107,7 +95,6 @@ function RequirementRow({
   readonly onRestore: OpportunityBriefReviewViewProps["onRestore"];
 }) {
   const position = index + 1;
-  const sources = requirement.sourceIds.map((id) => describeBriefSource(record.sources, id));
   return (
     <li className="brief-item" data-dropped={requirement.dropped ? "true" : "false"}>
       <div className="brief-item-head">
@@ -130,7 +117,7 @@ function RequirementRow({
       )}
       <BriefExcerpt excerpt={requirement.excerpt} />
       <p className="brief-source">
-        <span>Source</span> {sources.join(", ")}
+        <span>Source</span> {describeBriefSources(record.sources, requirement.sourceIds)}
       </p>
       {editing ? (
         <div className="brief-item-actions">
@@ -189,6 +176,8 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
     busy,
     notice = null,
     discardArmed = false,
+    savedVersion = null,
+    savedNoteRef,
     onAcknowledge,
     onSave,
     onReview,
@@ -205,6 +194,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
   const blockers = record === null ? [] : reviewBlockers(record);
   const reviewReason = record === null ? null : markReviewedDisabledReason(record, dirty);
   const pending = busy !== null;
+  const saved = record !== null && record.status === "draft" && savedVersion === record.version;
   const openIssues = record?.issues.filter((issue) => issue.status === "open") ?? [];
   const requirements: readonly RequirementDraft[] =
     edit !== null
@@ -264,7 +254,6 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
               <span className="status-badge">
                 {reviewed ? `Reviewed v${record.version}` : `Draft v${record.version}`}
               </span>
-              <code>{record.briefId}</code>
             </p>
             <dl className="brief-facts">
               <div>
@@ -323,9 +312,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                       <BriefExcerpt excerpt={responsibility.excerpt} />
                       <p className="brief-source">
                         <span>Source</span>{" "}
-                        {responsibility.sourceIds
-                          .map((id) => describeBriefSource(record.sources, id))
-                          .join(", ")}
+                        {describeBriefSources(record.sources, responsibility.sourceIds)}
                       </p>
                     </li>
                   ))}
@@ -384,6 +371,11 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
             {discardArmed ? (
               <p className="setup-note" role="status">
                 You have unsaved changes. Choose Discard changes to close without saving.
+              </p>
+            ) : null}
+            {saved && !dirty ? (
+              <p className="setup-note" role="status" tabIndex={-1} ref={savedNoteRef}>
+                {savedBriefNote(record.version)}
               </p>
             ) : null}
             <div className="approval-actions">
@@ -471,8 +463,10 @@ export function OpportunityBriefReview({
   const [busy, setBusy] = useState<"saving" | "reviewing" | null>(null);
   const [notice, setNotice] = useState<BriefNotice | null>(null);
   const [discardArmed, setDiscardArmed] = useState(false);
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const savedNoteRef = useRef<HTMLParagraphElement | null>(null);
   const mounted = useRef(true);
   const operationsRef = useRef(operations);
   operationsRef.current = operations;
@@ -522,6 +516,11 @@ export function OpportunityBriefReview({
     onClose();
   }, [busy, dirty, discardArmed, onClose]);
   useModalFocusTrap(true, dialogRef, requestClose);
+  // After a save the dialog stays open on the new draft; move focus to the status line, from
+  // which Tab reaches Mark reviewed, so the disabled Save button does not drop focus out.
+  useEffect(() => {
+    if (savedVersion !== null) savedNoteRef.current?.focus();
+  }, [savedVersion]);
 
   const stage = (change: (state: BriefEditState) => BriefEditState) => {
     setEdit((current) => (current === null ? current : change(current)));
@@ -529,12 +528,15 @@ export function OpportunityBriefReview({
     setDiscardArmed(false);
   };
 
-  const settle = (outcome: BriefOperationOutcome) => {
+  const settle = (operation: "saving" | "reviewing", outcome: BriefOperationOutcome) => {
     if (!mounted.current) return;
     setBusy(null);
     if (outcome.kind === "done") {
       setNotice(null);
       show(outcome.record);
+      setSavedVersion(
+        operation === "saving" && outcome.record.status === "draft" ? outcome.record.version : null,
+      );
       changedRef.current?.();
       return;
     }
@@ -551,14 +553,18 @@ export function OpportunityBriefReview({
     if (busy !== null || record === null || edit === null) return;
     setBusy("saving");
     setNotice(null);
-    void saveBriefEdits(operationsRef.current, record, edit).then(settle);
+    setSavedVersion(null);
+    void saveBriefEdits(operationsRef.current, record, edit).then((outcome) =>
+      settle("saving", outcome),
+    );
   };
 
   const review = () => {
     if (busy !== null || record === null) return;
     setBusy("reviewing");
     setNotice(null);
-    void reviewBrief(operationsRef.current, record).then(settle);
+    setSavedVersion(null);
+    void reviewBrief(operationsRef.current, record).then((outcome) => settle("reviewing", outcome));
   };
 
   return (
@@ -570,6 +576,8 @@ export function OpportunityBriefReview({
       busy={busy}
       notice={notice}
       discardArmed={discardArmed}
+      savedVersion={savedVersion}
+      savedNoteRef={savedNoteRef}
       onText={(id, text) => stage((state) => editRequirementText(state, id, text))}
       onPriority={(id, priority) => stage((state) => setRequirementPriority(state, id, priority))}
       onDrop={(id) => stage((state) => dropRequirement(state, id))}
