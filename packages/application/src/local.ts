@@ -38,12 +38,7 @@ import {
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest } from "@draft-loop/providers";
-import {
-  extensionForFormat,
-  type OutputFormat,
-  outputFormats,
-  renderArtifact,
-} from "@draft-loop/rendering";
+import { extensionForFormat, type OutputFormat, renderArtifact } from "@draft-loop/rendering";
 import { contextSnapshotSchema } from "@draft-loop/schemas";
 import {
   type CanonicalCandidateProfileVersionRecord,
@@ -83,6 +78,7 @@ import {
   invalidCritiqueError,
   parseCritique,
 } from "./critic-critique-contract.js";
+import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { exportRecordId } from "./export-record.js";
@@ -2238,10 +2234,8 @@ export async function exportRun(
     if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
     const readinessFailure = exactApprovedArtifactFailure(snapshot);
     if (readinessFailure !== null) throw new CliUserError(readinessFailure);
-    if (!outputFormats.includes(formatInput as OutputFormat)) {
-      throw new CliUserError(`Unsupported export format: ${formatInput}.`);
-    }
-    const format = formatInput as OutputFormat;
+    const format = parseExportFormat(formatInput);
+    if (format === undefined) throw new CliUserError(`Unsupported export format: ${formatInput}.`);
     const outputPath =
       outputPathInput === undefined
         ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
@@ -2281,6 +2275,8 @@ export async function exportRun(
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
     );
+    const lengthWarning = await exportLengthWarningLine(storage, snapshot);
+    if (lengthWarning !== undefined) io.write(lengthWarning);
     return outputPath;
   } finally {
     await storage.close();
@@ -2290,7 +2286,7 @@ export async function exportRun(
 export async function latestExportPath(
   rootInput: string,
   runId: string,
-  format: OutputFormat,
+  format?: OutputFormat,
 ): Promise<string | null> {
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
@@ -2300,7 +2296,7 @@ export async function latestExportPath(
       .filter(
         (record) =>
           record.workspaceId === config.id &&
-          record.format === format &&
+          (format === undefined || record.format === format) &&
           record.status === "completed" &&
           record.outputPath !== null,
       )

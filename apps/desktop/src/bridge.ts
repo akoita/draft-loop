@@ -2055,6 +2055,7 @@ const desktopReviewStateKeys = [
   "evaluation",
   "events",
   "exportPath",
+  "exportNote",
   "coverage",
   "writingPolicy",
   "evidenceMode",
@@ -4441,9 +4442,6 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "recover-to-review":
     case "recover-round-limit":
     case "stop":
-    case "export":
-      if (!hasOnlyKeys(action, ["type"])) return invalidInput();
-      return { type: action.type };
     case "request-revision": {
       if (!hasOnlyKeys(action, ["type", "candidateDirection"])) return invalidInput();
       const candidateDirection =
@@ -4453,6 +4451,13 @@ function validateReviewAction(value: unknown): ReviewAction {
       return {
         type: action.type,
         ...(candidateDirection === undefined ? {} : { candidateDirection }),
+      };
+    }
+    case "export": {
+      if (!hasOnlyKeys(action, ["type", "format"])) return invalidInput();
+      return {
+        type: action.type,
+        ...(action.format === undefined ? {} : { format: enumValue(action.format, exportFormats) }),
       };
     }
     case "set-autopilot":
@@ -7376,6 +7381,9 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     return invalidInput();
   }
   if (value.workspaceName !== undefined) workspaceDisplayName(value.workspaceName);
+  if (value.exportNote !== undefined && value.exportNote !== null) {
+    stringValue(value.exportNote, 1_000);
+  }
   const setup = value.setup;
   let normalizedSetup: Record<string, unknown> | undefined;
   if (setup !== undefined) {

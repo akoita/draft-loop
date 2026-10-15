@@ -208,6 +208,9 @@ function footerProps(overrides: Partial<ReviewFooterProps> = {}): ReviewFooterPr
       pathLabel: "Available after approval",
       again: false,
       pendingSeconds: null,
+      format: "markdown",
+      onFormatChange: noop,
+      note: null,
       onExport: noop,
     },
     ...overrides,
@@ -274,12 +277,18 @@ describe("ReviewFooter", () => {
         pathLabel: "Available now",
         again: false,
         pendingSeconds: null,
+        format: "markdown",
+        onFormatChange: noop,
+        note: null,
         onExport: noop,
       },
     });
     expect(approved).toContain('class="gate-blocker gate-blocker-safe"');
     expect(approved).toContain(">Approved · ready to export</p>");
-    expect(approved).toMatch(/title="Export Markdown \(Alt\+E\)">/u);
+    expect(approved).toMatch(/title="Export as Markdown \(Alt\+E\)">Export…<kbd>/u);
+    expect(approved).toContain('aria-label="Export format"');
+    expect(approved).toContain('<option value="docx">DOCX</option>');
+    expect(approved).toContain('<option value="pdf">PDF</option>');
 
     const exported = render({
       blocker: { kind: "exported", text: "Exported to /tmp/cv.md", tone: "safe" },
@@ -288,12 +297,33 @@ describe("ReviewFooter", () => {
         pathLabel: "/tmp/cv.md",
         again: true,
         pendingSeconds: null,
+        format: "markdown",
+        onFormatChange: noop,
+        note: null,
         onExport: noop,
       },
     });
     expect(exported).toContain(">Exported to /tmp/cv.md</p>");
     expect(exported).toContain('<span class="export-path" aria-live="polite">/tmp/cv.md</span>');
-    expect(exported).toMatch(/title="Export Markdown again \(Alt\+E\)">Export again<kbd>/u);
+    expect(exported).toMatch(/title="Export as Markdown again \(Alt\+E\)">Export again…<kbd>/u);
+  });
+
+  it("names the chosen format and shows an estimated-length note after an export", () => {
+    const html = render({
+      exportAction: {
+        disabled: false,
+        pathLabel: "/tmp/cv.docx",
+        again: true,
+        pendingSeconds: null,
+        format: "docx",
+        onFormatChange: noop,
+        note: "Estimated length is about 3 pages, over the 2-page target. This is an estimate.",
+        onExport: noop,
+      },
+    });
+    expect(html).toContain('<option value="docx" selected="">DOCX</option>');
+    expect(html).toContain('title="Export as DOCX again (Alt+E)"');
+    expect(html).toContain('<p class="export-note" role="status">Estimated length is about 3');
   });
 
   it("offers the round-limit repair and reports a pending export", () => {
@@ -305,6 +335,9 @@ describe("ReviewFooter", () => {
         pathLabel: "Available now",
         again: false,
         pendingSeconds: 1,
+        format: "markdown",
+        onFormatChange: noop,
+        note: null,
         onExport: noop,
       },
     });

@@ -1,7 +1,7 @@
 import type { BrowserWindow, SaveDialogOptions } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import { chooseMarkdownExportPath, chooseMarkdownSavePath, type ExportDialog } from "./dialogs.js";
+import { chooseExportPath, chooseMarkdownSavePath, type ExportDialog } from "./dialogs.js";
 
 describe("Markdown save dialog", () => {
   it("starts on the suggested name and returns the picked path", async () => {
@@ -57,12 +57,12 @@ function dialogDouble(result: {
   };
 }
 
-describe("Markdown export dialog", () => {
+describe("Export dialog", () => {
   it("uses the supplied live BrowserWindow as the dialog parent", async () => {
     const parent = windowDouble();
     const exportDialog = dialogDouble({ canceled: false, filePath: "/tmp/export.md" });
 
-    await chooseMarkdownExportPath(parent, "/tmp/default.md", exportDialog);
+    await chooseExportPath(parent, "/tmp/default.md", exportDialog);
 
     expect(exportDialog.showSaveDialog).toHaveBeenCalledWith(
       parent,
@@ -74,7 +74,7 @@ describe("Markdown export dialog", () => {
     const parent = windowDouble({ isMinimized: vi.fn(() => true) });
     const exportDialog = dialogDouble({ canceled: false, filePath: "/tmp/export.md" });
 
-    await chooseMarkdownExportPath(parent, "/tmp/default.md", exportDialog);
+    await chooseExportPath(parent, "/tmp/default.md", exportDialog);
 
     expect(parent.restore).toHaveBeenCalledOnce();
     expect(parent.show).toHaveBeenCalledOnce();
@@ -85,7 +85,7 @@ describe("Markdown export dialog", () => {
     const parent = windowDouble();
     const exportDialog = dialogDouble({ canceled: false, filePath: "/tmp/selected.md" });
 
-    await expect(chooseMarkdownExportPath(parent, "/tmp/default.md", exportDialog)).resolves.toBe(
+    await expect(chooseExportPath(parent, "/tmp/default.md", exportDialog)).resolves.toBe(
       "/tmp/selected.md",
     );
     expect(exportDialog.showSaveDialog).toHaveBeenCalledWith(parent, {
@@ -95,12 +95,29 @@ describe("Markdown export dialog", () => {
     });
   });
 
+  it.each([
+    ["docx", "Word document", "Export approved DOCX"],
+    ["pdf", "PDF document", "Export approved PDF"],
+  ] as const)("offers only .%s files for a %s export", async (format, name, title) => {
+    const parent = windowDouble();
+    const exportDialog = dialogDouble({ canceled: false, filePath: `/tmp/selected.${format}` });
+
+    await expect(
+      chooseExportPath(parent, `/tmp/default.${format}`, exportDialog, format),
+    ).resolves.toBe(`/tmp/selected.${format}`);
+    expect(exportDialog.showSaveDialog).toHaveBeenCalledWith(parent, {
+      defaultPath: `/tmp/default.${format}`,
+      filters: [{ name, extensions: [format] }],
+      title,
+    });
+  });
+
   it("returns undefined when the Save As dialog is cancelled", async () => {
     const parent = windowDouble();
     const exportDialog = dialogDouble({ canceled: true, filePath: "" });
 
     await expect(
-      chooseMarkdownExportPath(parent, "/tmp/default.md", exportDialog),
+      chooseExportPath(parent, "/tmp/default.md", exportDialog),
     ).resolves.toBeUndefined();
   });
 
@@ -110,8 +127,8 @@ describe("Markdown export dialog", () => {
   ] as const)("rejects when the parent window is %s", async (_state, parent) => {
     const exportDialog = dialogDouble({ canceled: false, filePath: "/tmp/export.md" });
 
-    await expect(chooseMarkdownExportPath(parent, "/tmp/default.md", exportDialog)).rejects.toThrow(
-      "Markdown export requires a live parent window.",
+    await expect(chooseExportPath(parent, "/tmp/default.md", exportDialog)).rejects.toThrow(
+      "Export requires a live parent window.",
     );
     expect(exportDialog.showSaveDialog).not.toHaveBeenCalled();
   });

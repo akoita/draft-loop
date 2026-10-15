@@ -79,6 +79,12 @@ describe("application export rendering QA", () => {
       expect((await stat(docxPath)).isFile()).toBe(true);
       expect((await readFile(pdfPath)).byteLength).toBeGreaterThan(0);
       expect((await readFile(docxPath)).byteLength).toBeGreaterThan(0);
+      // Without a format, the latest completed export of any format is found.
+      const latestAny = await driver.latestExportPath({ root, runId: started.runId });
+      expect([pdfPath, docxPath]).toContain(latestAny);
+      await expect(
+        driver.latestExportPath({ root, runId: started.runId, format: "docx" }),
+      ).resolves.toBe(docxPath);
 
       const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
       try {

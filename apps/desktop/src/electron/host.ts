@@ -20,6 +20,7 @@ import {
   describeModelProfileSelectionMismatch,
   type EmbeddingModelService,
   environmentCredentialResolver,
+  exportLengthWarningPrefix,
   type IndependentReviewRecord,
   importKnowledgeFileWithoutDuplicates,
   isLoopbackEndpoint,
@@ -184,7 +185,7 @@ import type {
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "../model.js";
-import { isUnresolvedFinding } from "../model.js";
+import { exportFormatExtensions, isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import type { ProviderRoutesView } from "../provider-routes.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
@@ -365,6 +366,11 @@ export interface NativeHostDialogs {
   readonly chooseKnowledgeSourceDirectory?: () => Promise<string | undefined>;
   readonly chooseKnowledgeSourceFile?: () => Promise<string | undefined>;
   readonly chooseMarkdownExportPath?: (defaultPath: string) => Promise<string | undefined>;
+  /** Where to save an export in the chosen format (Markdown, DOCX or PDF); undefined cancels. */
+  readonly chooseExportPath?: (
+    defaultPath: string,
+    format: ExportFormat,
+  ) => Promise<string | undefined>;
   /** Where to save Markdown the renderer prepared, such as a run comparison; undefined cancels. */
   readonly chooseMarkdownSavePath?: (suggestedName: string) => Promise<string | undefined>;
 }
@@ -772,6 +778,30 @@ async function countEvidenceFiles(path: string): Promise<number> {
 
 function io(): ApplicationIo {
   return defaultIo;
+}
+
+/**
+ * Wraps the io an export writes to and keeps the estimated-length warning it reports, so the
+ * review screen can show it beside the export path. Other lines pass through unchanged.
+ */
+function exportNoteCollector(inner: ApplicationIo): {
+  readonly io: ApplicationIo;
+  readonly note: () => string | null;
+} {
+  let note: string | null = null;
+  return {
+    io: {
+      ...inner,
+      write: (line: string) => {
+        if (line.startsWith(exportLengthWarningPrefix)) {
+          note = line.slice(exportLengthWarningPrefix.length);
+        } else {
+          inner.write(line);
+        }
+      },
+    },
+    note: () => note,
+  };
 }
 
 function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
@@ -1230,8 +1260,8 @@ function emptyReviewState(
   };
 }
 
-function defaultExportPath(root: string, runId: string): string {
-  return join(root, "exports", `${runId}.md`);
+function defaultExportPath(root: string, runId: string, format: ExportFormat): string {
+  return join(root, "exports", `${runId}.${exportFormatExtensions[format]}`);
 }
 
 function safeWritingPolicyMetadata(value: unknown): WritingPolicyVersionMetadata | undefined {
@@ -4072,6 +4102,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       "review.dispatch",
     );
     let exportPath: string | null = null;
+    let exportNote: string | null = null;
     let dispatchedSnapshot: RunSnapshot | undefined;
     const action: ReviewAction = input.action;
     const criticRecovery =
@@ -4342,21 +4373,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         break;
       case "export":
         {
-          const defaultPath = defaultExportPath(workspace.root, input.runId);
+          const format = action.format ?? "markdown";
+          const defaultPath = defaultExportPath(workspace.root, input.runId, format);
+          const chooser =
+            options.dialogs.chooseExportPath !== undefined
+              ? options.dialogs.chooseExportPath
+              : format === "markdown"
+                ? options.dialogs.chooseMarkdownExportPath
+                : undefined;
           const selectedPath =
-            options.dialogs.chooseMarkdownExportPath === undefined
-              ? defaultPath
-              : await options.dialogs.chooseMarkdownExportPath(defaultPath);
+            chooser === undefined ? defaultPath : await chooser(defaultPath, format);
           if (selectedPath === undefined) break;
+          const exportIo = exportNoteCollector(io());
           exportPath = await service.export(
-            {
-              root: workspace.root,
-              runId: input.runId,
-              format: "markdown",
-              outputPath: selectedPath,
-            },
-            io(),
+            { root: workspace.root, runId: input.runId, format, outputPath: selectedPath },
+            exportIo.io,
           );
+          exportNote = exportIo.note();
         }
         break;
     }
@@ -4394,11 +4427,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
       overrides,
       exportPath ??
-        (await service.latestExportPath({
-          root: workspace.root,
-          runId: snapshot.runId,
-          format: "markdown",
-        })),
+        (await service.latestExportPath({ root: workspace.root, runId: snapshot.runId })),
       setup,
       preflight,
       backgroundStatus(workspace, snapshot.runId),
@@ -4409,10 +4438,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await applicationRunsFor(workspace, scope, "review.dispatch"),
       providerAuthModeConfiguration,
     );
-    return withEarlierRun(
+    const dispatched = withEarlierRun(
       withRunInputs(state, await runInputsFor(workspace, snapshot.runId, "review.dispatch")),
       earlierRun,
     );
+    return exportNote === null ? dispatched : { ...dispatched, exportNote };
   }
 
   async function invoke(value: unknown): Promise<BridgeResult<unknown>> {
@@ -6152,11 +6182,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             snapshot,
             await independentReviewFor(workspace, snapshot.runId, "review.load"),
             preferences,
-            await service.latestExportPath({
-              root: workspace.root,
-              runId: snapshot.runId,
-              format: "markdown",
-            }),
+            await service.latestExportPath({ root: workspace.root, runId: snapshot.runId }),
             setup,
             preflight,
             backgroundStatus(workspace, snapshot.runId),

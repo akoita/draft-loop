@@ -1,26 +1,42 @@
 import type { BrowserWindow, SaveDialogOptions, SaveDialogReturnValue } from "electron";
 
+import type { ExportFormat } from "../model.js";
+
 export interface ExportDialog {
   showSaveDialog(parent: BrowserWindow, options: SaveDialogOptions): Promise<SaveDialogReturnValue>;
 }
 
-export async function chooseMarkdownExportPath(
+const exportDialogDetails: Readonly<
+  Record<
+    ExportFormat,
+    { readonly filter: string; readonly extension: string; readonly title: string }
+  >
+> = {
+  markdown: { filter: "Markdown", extension: "md", title: "Export approved Markdown" },
+  docx: { filter: "Word document", extension: "docx", title: "Export approved DOCX" },
+  pdf: { filter: "PDF document", extension: "pdf", title: "Export approved PDF" },
+};
+
+/** Asks where to save the approved export in the chosen format; cancelling returns undefined. */
+export async function chooseExportPath(
   parent: BrowserWindow | undefined,
   defaultPath: string,
   exportDialog: ExportDialog,
+  format: ExportFormat = "markdown",
 ): Promise<string | undefined> {
   if (parent === undefined || parent.isDestroyed()) {
-    throw new Error("Markdown export requires a live parent window.");
+    throw new Error("Export requires a live parent window.");
   }
 
   if (parent.isMinimized()) parent.restore();
   parent.show();
   parent.focus();
 
+  const details = exportDialogDetails[format];
   const result = await exportDialog.showSaveDialog(parent, {
     defaultPath,
-    filters: [{ name: "Markdown", extensions: ["md"] }],
-    title: "Export approved Markdown",
+    filters: [{ name: details.filter, extensions: [details.extension] }],
+    title: details.title,
   });
   return result.canceled ? undefined : result.filePath;
 }
