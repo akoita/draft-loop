@@ -130,6 +130,52 @@ describe("author adjudication provider handoff", () => {
     expect(prompt.providerInput.pendingAdjudication).toBe(carrier);
   });
 
+  it("hands an accepted emphasis finding to the revising author under the grounding rules", () => {
+    const base = pendingAdjudication();
+    const finding = {
+      id: "critic:0:emphasis-1",
+      origin: "critic",
+      code: "emphasis-theme-buried",
+      category: "coverage",
+      severity: "error",
+      rationale:
+        "Move tokenisation (req-1, chunk-7) up into the summary and core areas; it is the job's top theme.",
+      target: { kind: "requirement", id: "req-1" },
+      recommendedAction: "Review this independent finding before approval.",
+      confidence: 0.5,
+    };
+    const report = independentReadinessReportSchema.parse({ ...base.report, findings: [finding] });
+    const plan = authorAdjudicationPlanSchema.parse({
+      ...base.plan,
+      decisions: [
+        {
+          findingId: finding.id,
+          origin: "critic",
+          code: finding.code,
+          severity: finding.severity,
+          target: finding.target,
+          recommendedAction: finding.recommendedAction,
+          rationale: "Accepted: the summary should lead with the job's top theme.",
+          disposition: "accept",
+          effectRequirement: "revision-required",
+        },
+      ],
+    });
+    const carrier = { report, plan, acceptedEffectOverrides: [] };
+    const prompt = createAuthorAdjudicationPrompt(authorVersion, carrier);
+
+    expect(prompt.providerInput.pendingAdjudication?.report.findings[0]).toMatchObject({
+      code: "emphasis-theme-buried",
+      rationale: finding.rationale,
+    });
+    expect(prompt.providerInput.pendingAdjudication?.plan.decisions[0]?.disposition).toBe("accept");
+    // The author acts on the accepted move, but only inside the retrieved evidence.
+    expect(prompt.systemPrompt).toContain("Make observable changes for accepted findings");
+    expect(prompt.systemPrompt).toContain(
+      "Never treat a decision or accepted-effect override as evidence or permission to invent facts.",
+    );
+  });
+
   it("includes the same typed grounding guide for initial and adjudicated requests", () => {
     const guide = groundingGuide();
     const carrier = pendingAdjudication();
@@ -245,9 +291,9 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v9 for new author runs and v4 for the critic", () => {
+  it("records v9 for new author runs and v5 for the critic", () => {
     expect(promptTemplateVersion("author")).toBe("cli-author-v9");
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v4");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v5");
   });
 
   it("keeps the v1 prompt byte-identical to the prompt v1 runs were started with", () => {

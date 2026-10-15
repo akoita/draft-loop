@@ -1,7 +1,7 @@
 import { type ApprovalReadiness, formatApprovalReadinessBlocker } from "./approval-readiness.js";
 import type { ReviewFinding } from "./model.js";
 
-/** The editorial warning codes `cli-critic-v4` reports, in the order the verdict names them. */
+/** The editorial warning codes `cli-critic-v4` and later report, in the order the verdict names them. */
 const editorialLabels = [
   ["editorial-source-note", "copied source notes or narration"],
   ["editorial-fragment", "fragments"],

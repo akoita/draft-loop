@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { maximumCoverageJudgementRationaleCharacters } from "@draft-loop/validation";
 import { describe, expect, it } from "vitest";
 
-import { promptTemplateVersion } from "./author-adjudication.js";
 import {
   coverageJudgementInstructionsVersion,
   createCriticAdjudicationPrompt,
@@ -83,11 +82,10 @@ describe("critic prompt versions", () => {
     expect(prompt).not.toContain("explicitly stated dated employment gaps");
   });
 
-  it("sets v4 for new runs: v3 plus an editorial review", () => {
+  it("keeps v4 as v3 plus an editorial review", () => {
     const v3 = createCriticAdjudicationPrompt("cli-critic-v3");
     const v4 = createCriticAdjudicationPrompt("cli-critic-v4");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v4");
     expect(
       v4
         .replace(/ Also review the CV as an editor[\s\S]*?evidence does not support\./u, "")
@@ -112,8 +110,8 @@ describe("critic prompt versions", () => {
   });
 
   it("rejects unsupported recorded critic templates", () => {
-    expect(() => createCriticAdjudicationPrompt("cli-critic-v5")).toThrow(
-      'Unsupported critic prompt template version "cli-critic-v5".',
+    expect(() => createCriticAdjudicationPrompt("cli-critic-v6")).toThrow(
+      'Unsupported critic prompt template version "cli-critic-v6".',
     );
   });
 });

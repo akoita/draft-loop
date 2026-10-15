@@ -22,6 +22,7 @@ import {
   maximumCritiqueMessageCharacters,
   withCoverageJudgementInstructions,
 } from "./critic-adjudication.js";
+import { normalizeEmphasisSeverity } from "./critic-emphasis.js";
 
 /** The most candidate blocks shown as hints for one coverage-judgement request. */
 export const maximumCoverageJudgementCandidateBlocks = 3;
@@ -156,7 +157,7 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
       if ((item.message as string).length > maximumCritiqueMessageCharacters) {
         throw new CliUserError("The critic returned an excessively long finding message.");
       }
-      return {
+      return normalizeEmphasisSeverity({
         id: item.id as string,
         code: item.code as string,
         category: item.category as Critique["findings"][number]["category"],
@@ -165,7 +166,7 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
         ...(typeof item.claimId === "string" ? { claimId: item.claimId } : {}),
         ...(typeof item.sectionId === "string" ? { sectionId: item.sectionId } : {}),
         ...(typeof item.requirementId === "string" ? { requirementId: item.requirementId } : {}),
-      };
+      });
     }),
     ...(coverageJudgements === undefined ? {} : { coverageJudgements }),
     ...(instructionsVersion === undefined
