@@ -16,6 +16,26 @@ import {
 } from "./model-profile-presentation.js";
 
 export const customPresetValue = "custom";
+
+interface PresetPricing {
+  readonly inputUsdPerMillion: number;
+  readonly outputUsdPerMillion: number;
+}
+
+function presetRate(pricing: PresetPricing, separator: string): string {
+  return `${formatUsdPerMillion(pricing.inputUsdPerMillion)}${separator}${formatUsdPerMillion(pricing.outputUsdPerMillion)}`;
+}
+
+/** A preset's public API rates: one short line for the card, the full wording for assistive tech. */
+export function presetPriceText(
+  writer: PresetPricing,
+  reviewer: PresetPricing,
+): { readonly short: string; readonly full: string } {
+  return {
+    short: `${presetRate(writer, "/")} · ${presetRate(reviewer, "/")} per M tokens`,
+    full: `Writer ${presetRate(writer, " / ")} · Reviewer ${presetRate(reviewer, " / ")} per million tokens (input / output)`,
+  };
+}
 export const unsupportedSignInBadge = "Not available with your current sign-in";
 
 interface ModelPresetCardsProps {
@@ -57,8 +77,7 @@ function PresetCard({
   const criticName = modelDisplayName(critic.profile.modelId);
   const unvalidated =
     author.qualityStatus === "unvalidated" || critic.qualityStatus === "unvalidated";
-  const writer = author.apiPricing;
-  const reviewer = critic.apiPricing;
+  const price = presetPriceText(author.apiPricing, critic.apiPricing);
   return (
     <label className="model-preset-card">
       <input
@@ -71,19 +90,18 @@ function PresetCard({
       />
       <span className="model-preset-card-title">{presetDisplayName(preset.label)}</span>
       <span className="model-preset-card-line">
-        {authorName} writes · {criticName} reviews
+        <span aria-hidden="true">
+          {authorName} → {criticName}
+        </span>
+        <span className="sr-only">
+          {authorName} writes · {criticName} reviews
+        </span>
       </span>
       <span className="model-preset-card-meta">
-        {providerDisplayName(author.profile.provider)} +{" "}
-        {providerDisplayName(critic.profile.provider)}
-      </span>
-      <span className="model-preset-card-meta model-preset-card-price">
-        Writer {formatUsdPerMillion(writer.inputUsdPerMillion)} /{" "}
-        {formatUsdPerMillion(writer.outputUsdPerMillion)} · Reviewer{" "}
-        {formatUsdPerMillion(reviewer.inputUsdPerMillion)} /{" "}
-        {formatUsdPerMillion(reviewer.outputUsdPerMillion)} per million tokens (input / output)
-      </span>
-      <span className="model-preset-card-badges">
+        <span>
+          {providerDisplayName(author.profile.provider)} +{" "}
+          {providerDisplayName(critic.profile.provider)}
+        </span>
         {unvalidated ? <span className="model-preset-badge">Unvalidated</span> : null}
         {isDevelopmentPreset(preset) ? (
           <span className="model-preset-badge model-preset-badge-development">Development</span>
@@ -93,6 +111,10 @@ function PresetCard({
             {unsupportedSignInBadge}
           </span>
         ) : null}
+      </span>
+      <span className="model-preset-card-meta model-preset-card-price" title={price.full}>
+        <span aria-hidden="true">{price.short}</span>
+        <span className="sr-only">{price.full}</span>
       </span>
     </label>
   );

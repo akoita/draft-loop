@@ -53,6 +53,7 @@ import type {
   FindingDecision,
   ReviewAction,
 } from "./model.js";
+import { ModelEditorSummary } from "./model-editor-summary.js";
 import {
   parseModelProfileSupportResult,
   type SavedModelProfilesResult,
@@ -2251,8 +2252,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   // The model editor covers the workspace pages rather than replacing them, so they keep their
   // state for when it closes.
   const modelEditorScreen = !editingModels ? null : (
-    <main className="boot-shell">
-      <section className="panel boot-panel">
+    <main className="boot-shell model-editor-shell">
+      <section className="panel boot-panel model-editor-panel">
         <div className="boot-brand">
           <BrandMark />
           <span className="brand-name">DraftLoop</span>
@@ -2267,9 +2268,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
             : "Existing run records stay unchanged. New runs will use the saved model pair."}
         </p>
-        <WorkspaceModelSummary
-          title="Current configured model pair"
+        <ModelEditorSummary
           {...workspacePairSides(state, loadedApplicationPair, selectedModelProfiles?.refs ?? null)}
+          applied={selectedModelProfiles?.refs ?? null}
+          support={
+            readyModelProfileSupport?.status === "ready"
+              ? readyModelProfileSupport.result
+              : undefined
+          }
         />
         <fieldset className="model-editor-mode">
           <legend>How to choose models</legend>

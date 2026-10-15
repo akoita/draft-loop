@@ -4896,6 +4896,31 @@ input[type="text"].workspace-title-input {
   margin-bottom: var(--space-3);
 }
 
+/* The quality and sign-in note: one line, with the full text behind More. */
+.model-profile-picker-notice > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.model-profile-picker-notice > summary::-webkit-details-marker {
+  display: none;
+}
+
+.model-profile-picker-notice-more {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.model-profile-picker-notice > summary:hover .model-profile-picker-notice-more {
+  color: var(--text-1);
+}
+
+.model-profile-picker-notice > p {
+  margin: var(--space-1) 0 0;
+}
+
 .model-preset-cards {
   display: grid;
   gap: var(--space-3);
@@ -4915,30 +4940,30 @@ input[type="text"].workspace-title-input {
   text-transform: uppercase;
 }
 
+/* Compact cards: as many columns as fit, so every preset shows without scrolling. */
 .model-preset-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-2) var(--space-3);
 }
 
+/* Radio, then four short rows: name, writer → reviewer, companies with badges, price. */
 .model-preset-card {
-  position: relative;
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  gap: var(--space-2);
+  gap: 1px var(--space-2);
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
+  padding: 6px var(--space-3);
   background: var(--surface-2);
   cursor: pointer;
   overflow-wrap: anywhere;
 }
 
-/* Custom pair is the advanced path: a slim full-width row under the presets, never a lone card. */
-.model-preset-card-custom {
-  grid-column: 1 / -1;
-  padding-block: var(--space-3);
+.model-preset-card > :not(input) {
+  grid-column: 2;
 }
 
 .model-preset-card:hover {
@@ -4962,50 +4987,51 @@ input[type="text"].workspace-title-input {
 }
 
 .model-preset-card > input[type="radio"] {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
   margin: 0;
   accent-color: var(--teal);
 }
 
 .model-preset-card-title {
-  padding-right: var(--space-6);
   color: var(--text-1);
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   font-weight: 650;
+  line-height: 1.3;
 }
 
 .model-preset-card-line {
   color: var(--text-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  line-height: 1.3;
 }
 
+/* Companies with the badges beside them, then the price on its own line. */
 .model-preset-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
   color: var(--text-3);
-  font-size: var(--text-xs);
-  line-height: 1.5;
+  font-size: var(--text-micro);
+  line-height: 1.3;
 }
 
 .model-preset-card-price {
   font-variant-numeric: tabular-nums;
 }
 
-.model-preset-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
+/* Sentence case keeps two badges beside the companies on one line. */
 .model-preset-badge {
   border-radius: var(--radius-pill);
-  padding: 2px var(--space-2);
+  padding: 0 6px;
   background: var(--surface-3);
   color: var(--text-3);
-  font-size: var(--text-micro);
+  font-size: 0.6875rem;
   font-weight: 650;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .model-preset-badge-development {
@@ -8034,4 +8060,117 @@ body:has(.review-column) .workspace-activity {
 
 .start-confirmation-change-models {
   display: contents;
+}
+
+/* The model editor: a wider sheet that fits the window, with its actions pinned to the bottom
+   edge. The shell is the scroller so the sticky bar has a window-sized edge to stick to. */
+.boot-shell.model-editor-shell {
+  height: 100vh;
+  padding-block: var(--space-5);
+}
+
+.boot-panel.model-editor-panel {
+  max-width: 1200px;
+  padding: var(--space-5) var(--space-6) 0;
+}
+
+.model-editor-panel .boot-brand {
+  margin-bottom: var(--space-3);
+}
+
+.boot-panel.model-editor-panel h1 {
+  margin: 0 0 var(--space-1);
+}
+
+.boot-panel.model-editor-panel > p:not(.eyebrow) {
+  margin: 0;
+}
+
+.model-editor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.model-editor-summary-line {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.model-editor-summary-details[open] {
+  flex-basis: 100%;
+}
+
+.model-editor-summary-body {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.model-editor-summary-sides {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.model-editor-summary-sides > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.model-editor-summary-sides dt {
+  min-width: 5rem;
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.model-editor-summary-sides dd {
+  margin: 0;
+}
+
+.model-editor-panel .model-editor-mode {
+  margin-top: var(--space-3);
+}
+
+/* Inside the editor the picker is the sheet's own content, not a second framed panel. */
+.model-editor-panel .model-profile-picker {
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.model-editor-panel .model-profile-budget {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Sticky rather than fixed: the bar stays in flow, so at the end of the scroll it sits below the
+   last option instead of covering it. The negative offset cancels the shell's bottom padding, so
+   while pinned the bar meets the window's bottom edge. */
+.model-editor-panel .model-profile-picker-actions,
+.model-editor-panel .setup-form > .approval-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-5));
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-6));
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: var(--space-3) var(--space-6);
+  background: var(--surface);
 }
