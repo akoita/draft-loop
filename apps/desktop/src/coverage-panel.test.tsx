@@ -145,7 +145,22 @@ describe("requirement coverage panel", () => {
     expect(html.match(/coverage-block-link/gu)).toHaveLength(1);
   });
 
-  it("omits the summary line when nothing was judged and folds with the panel toggle", () => {
+  it("folds the cards behind a tally and offers them all", () => {
+    const html = render(coverage, true);
+    expect(html).toContain(
+      '<span class="coverage-tally">2 of 5 covered · 3 not covered</span> · <button class="coverage-fold-toggle" type="button" aria-expanded="false" aria-controls="coverage-panel-body">show all</button>',
+    );
+    expect(html).toContain('id="coverage-panel-body" hidden=""');
+    expect(html.match(/class="coverage-row /gu)).toHaveLength(5);
+    expect(html).not.toContain("panel-toggle");
+
+    const expanded = render(coverage, false);
+    expect(expanded).toContain('aria-expanded="true"');
+    expect(expanded).toContain(">show summary only</button>");
+    expect(expanded).toContain('<div id="coverage-panel-body">');
+  });
+
+  it("omits the summary line when nothing was judged and folds with the tally toggle", () => {
     const html = render(
       {
         instructionsVersion: null,
@@ -163,11 +178,15 @@ describe("requirement coverage panel", () => {
 });
 
 describe("coverage in the review workspace", () => {
-  it("shows the panel when the review state carries coverage", () => {
+  it("shows the panel under the Coverage tab when the review state carries coverage", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={{ ...fixture, coverage }} onAction={() => undefined} />,
     );
-    expect(html).toContain('aria-label="requirement coverage"');
+    // Under a tab the panel is named by its tab, not by its own landmark label.
+    expect(html).toContain('aria-labelledby="review-work-tab-coverage"');
+    expect(html).toContain(
+      'aria-label="Coverage, 2 of 5 covered" tabindex="-1">Coverage · 2/5</button>',
+    );
     expect(html).toContain("Good knowledge of cloud services (Azure or AWS)");
   });
 
