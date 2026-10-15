@@ -23,8 +23,6 @@ export interface WorkspaceModelSummaryProps {
   readonly appliedProfiles?: ModelProfileReferences | null;
   /** Said when the next run would attach no model profiles. */
   readonly profileWarning?: string | null;
-  /** One line naming the pair, with the exact ids and profiles behind Details. */
-  readonly compact?: boolean;
 }
 
 function SummaryRow({
@@ -76,37 +74,7 @@ export function WorkspaceModelSummary({
   critic,
   appliedProfiles = null,
   profileWarning = null,
-  compact = false,
 }: WorkspaceModelSummaryProps) {
-  if (compact) {
-    // One line naming the pair; the ids and the applied profiles sit behind Details.
-    return (
-      <section
-        className="workspace-model-summary workspace-model-summary-compact"
-        aria-label={title}
-      >
-        <h3 className="sr-only">{title}</h3>
-        <p className="workspace-model-summary-line">
-          <strong>{modelDisplayName(author.model)}</strong> writes
-          <span aria-hidden="true"> · </span>
-          <strong>{modelDisplayName(critic.model)}</strong> reviews
-        </p>
-        <details className="workspace-model-summary-details">
-          <summary>Details</summary>
-          <dl className="workspace-model-summary-rows">
-            <SummaryRow label="Writer" side={author} />
-            <SummaryRow label="Reviewer" side={critic} />
-          </dl>
-          {appliedProfiles === null ? null : appliedProfilesLine(appliedProfiles)}
-        </details>
-        {profileWarning === null ? null : (
-          <p className="workspace-model-summary-profiles" role="status">
-            {profileWarning}
-          </p>
-        )}
-      </section>
-    );
-  }
   return (
     <section className="workspace-model-summary" aria-label={title}>
       <h2 className="eyebrow">{title}</h2>

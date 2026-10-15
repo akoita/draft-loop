@@ -18,11 +18,11 @@ export interface SavedWindowBounds extends WindowRect {
 export const minimumWindowWidth = 1024;
 export const minimumWindowHeight = 720;
 
-/** The window opens at least this large, or as large as the work area allows. */
-const preferredMinimumWidth = 1280;
-const preferredMinimumHeight = 800;
-/** A first launch fills this share of the display's work area. */
-const defaultWorkAreaShare = 0.9;
+/** A first launch opens at this size, a balanced window that shows Home's components in full. */
+export const defaultWindowWidth = 1440;
+export const defaultWindowHeight = 960;
+/** The default is clamped to this share of the display's work area, so it never fills the screen. */
+const defaultWorkAreaShare = 0.95;
 /** A remembered window is restored only if this much of it is on a connected display. */
 const minimumVisibleWidth = 160;
 const minimumVisibleHeight = 100;
@@ -33,18 +33,10 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(Math.max(value, low), Math.max(low, high));
 }
 
-/** The first-launch window: about 90% of the work area, never below 1280×800, centred. */
+/** The first-launch window: 1440×960, at most 95% of the work area, centred and not maximized. */
 export function defaultWindowBounds(workArea: WindowRect): WindowRect {
-  const width = clamp(
-    Math.round(workArea.width * defaultWorkAreaShare),
-    Math.min(preferredMinimumWidth, workArea.width),
-    workArea.width,
-  );
-  const height = clamp(
-    Math.round(workArea.height * defaultWorkAreaShare),
-    Math.min(preferredMinimumHeight, workArea.height),
-    workArea.height,
-  );
+  const width = Math.min(defaultWindowWidth, Math.round(workArea.width * defaultWorkAreaShare));
+  const height = Math.min(defaultWindowHeight, Math.round(workArea.height * defaultWorkAreaShare));
   return {
     x: workArea.x + Math.round((workArea.width - width) / 2),
     y: workArea.y + Math.round((workArea.height - height) / 2),
