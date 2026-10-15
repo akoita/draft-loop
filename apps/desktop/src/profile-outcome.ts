@@ -6,8 +6,7 @@ import {
 } from "./bridge.js";
 
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
-const genericProfileOperationFailure =
-  "The canonical candidate profile operation could not be completed.";
+const genericProfileOperationFailure = "The profile operation could not be completed.";
 const historicalMalformedStreamFailure =
   "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.";
 const safeMalformedStreamFailure =

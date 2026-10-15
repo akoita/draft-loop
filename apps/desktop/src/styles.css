@@ -4435,6 +4435,83 @@ input[type="text"].workspace-title-input {
   line-height: 1.55;
 }
 
+/* The page leads with the status in words, then the one primary action. */
+.profile-status-summary {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.profile-status-summary .section-heading {
+  margin-bottom: 0;
+}
+
+.profile-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.profile-status-label {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 2px var(--space-3);
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.profile-status-ready .profile-status-label {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.profile-status-needs-review .profile-status-label,
+.profile-status-out-of-date .profile-status-label {
+  border-color: var(--amber-line);
+  background: var(--amber-wash);
+}
+
+.profile-generation-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+
+/* Name, version history, checksums and re-extraction stay one click away. */
+.profile-more {
+  display: grid;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.profile-more > summary {
+  width: fit-content;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.profile-more > summary:hover {
+  color: var(--text-1);
+}
+
+.profile-more-body {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin-top: var(--space-3);
+}
+
 .model-profile-picker {
   display: grid;
   gap: var(--space-4);
@@ -4884,6 +4961,15 @@ input[type="text"].workspace-title-input {
   margin: 0;
   color: var(--text-3);
   font-size: var(--text-sm);
+}
+
+.profile-generation-action .profile-approval-label {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.profile-generation-action .profile-approval-hint {
+  flex-basis: 100%;
 }
 
 .profile-outcome-failure,

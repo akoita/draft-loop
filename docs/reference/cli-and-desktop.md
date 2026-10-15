@@ -320,8 +320,19 @@ and the flow strip:
   action (files, a folder, public URLs) and the first add. Its **Knowledge
   base** section chooses the base and switches the store; it has no add
   buttons.
-- **Career profile page.** The profile workflow: generate or update, review
-  facts, saved profiles, version history and Re-extract all sources.
+- **Career profile page.** Leads with the profile's status in words: Ready,
+  Needs review (with the number of open issues), Out of date with your
+  evidence, or No profile yet. One primary action follows: **Review issues**,
+  **Update profile** or **Generate profile**. The facts by category and the
+  issues come next.
+  - The action that sends data has one approval checkbox beside it, worded as
+    what is sent, for example "Send my career evidence (up to 12 sources) to
+    Anthropic to build the profile." The count and provider are omitted when
+    the host cannot report them.
+  - A **Details** disclosure holds the profile name, the saved and reviewed
+    profile pickers, version history, version metadata and checksum, and
+    **Re-extract all sources**. A first profile is named `career-profile`
+    unless another name is entered there.
 
 The configured model pair is shown under Workspace settings on Home, not on
 these pages.
@@ -901,8 +912,8 @@ that still needs human review, open issue blockers, and a reviewed version. An
 empty failed version shows one callout with up to three deduplicated, sanitized
 issue reasons; the version details only note that the failure is recorded rather
 than repeating the cause. The action is labeled **Retry profile generation**;
-the existing provider-data approval must be granted again before selected
-material is sent, and a hint says so while the approval box is unticked.
+the send approval beside it must be ticked again before career evidence is
+sent, and a hint says so while the approval box is unticked.
 
 While a profile is generating, the desktop shows a spinner, an elapsed timer,
 and, once the plan is known, how many parts are done (for example **1 of 4

@@ -22,6 +22,7 @@ import {
   safeCanonicalCandidateProfileText,
 } from "./profile.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
+import { ProfileFullExtractionOption } from "./profile-status-view.js";
 
 const capturedAt = "2026-08-28T10:00:00.000Z";
 const provenance = {
@@ -154,7 +155,6 @@ describe("desktop canonical candidate profile", () => {
     const html = renderToStaticMarkup(
       <ProfileDetails
         record={record()}
-        history={[record()]}
         draftFacts={facts}
         draftIssues={issues}
         editable
@@ -187,7 +187,6 @@ describe("desktop canonical candidate profile", () => {
     const html = renderToStaticMarkup(
       <ProfileDetails
         record={record()}
-        history={[record()]}
         draftFacts={[
           { ...roleFact, field: "employment_end_date", subjectId: "subject-77" },
           linkFact,
@@ -229,7 +228,6 @@ describe("desktop canonical candidate profile", () => {
     const html = renderToStaticMarkup(
       <ProfileDetails
         record={record()}
-        history={[record()]}
         draftFacts={[{ ...roleFact, id: "fact-long", field: "skillName", value: "x".repeat(100) }]}
         draftIssues={[
           {
@@ -283,7 +281,9 @@ describe("desktop canonical candidate profile", () => {
 
     expect(html).toContain("Retry profile generation");
     expect(html).toContain('disabled=""');
-    expect(html).toContain("I approve sending selected candidate material");
+    expect(html).toContain(
+      "Send my career evidence to the configured provider to build the profile.",
+    );
     expect(html).not.toContain("Existing reviewed profiles");
     expect(html).toContain("may use provider credits");
     expect(html).toContain("Tick the approval box to enable Retry.");
@@ -321,7 +321,6 @@ describe("desktop canonical candidate profile", () => {
       const details = renderToStaticMarkup(
         <ProfileDetails
           record={failureRecord}
-          history={[failureRecord]}
           draftFacts={[]}
           draftIssues={failureRecord.issues}
           editable
@@ -349,14 +348,14 @@ describe("desktop canonical candidate profile", () => {
       expect(details).toContain(
         "This version records a failed generation; its cause is shown above.",
       );
-      expect(details).toContain("Version");
+      // Version facts render under the page's Details disclosure, not with the facts.
+      expect(details).not.toContain("Checksum");
     });
 
     it("keeps the facts and issues sections when no failure is recorded", () => {
       const html = renderToStaticMarkup(
         <ProfileDetails
           record={record()}
-          history={[record()]}
           draftFacts={facts}
           draftIssues={issues}
           editable
@@ -456,7 +455,7 @@ describe("desktop canonical candidate profile", () => {
 
   it("labels the generate button by whether generation or another operation is pending", () => {
     const outcome = projectCanonicalCandidateProfileOutcome(null, "profile-1", null);
-    const render = (props: { busy: boolean; generating?: boolean }) =>
+    const render = (props: { busy: boolean; generating?: boolean; mode?: "generate" | "update" }) =>
       renderToStaticMarkup(
         <ProfileGenerationAction
           outcome={outcome}
@@ -479,27 +478,31 @@ describe("desktop canonical candidate profile", () => {
     expect(otherBusy).toContain('disabled=""');
 
     const idle = render({ busy: false });
-    expect(idle).toContain("Derive profile");
+    expect(idle).toContain("Generate profile");
+    expect(idle).not.toContain("Derive profile");
+    expect(render({ busy: false, mode: "update" })).toContain(">Update profile</button>");
     expect(idle).not.toContain("Working…");
     expect(idle).not.toContain("Generating…");
   });
 
-  it("offers re-extraction only where the caller handles it and summarizes source reuse", () => {
+  it("keeps re-extraction apart from the send approval and summarizes source reuse", () => {
     const outcome = projectCanonicalCandidateProfileOutcome(null, "profile-1", null);
-    const render = (extra: { onFullExtractionChange?: (value: boolean) => void }) =>
-      renderToStaticMarkup(
-        <ProfileGenerationAction
-          outcome={outcome}
-          profileIdValid
-          providerTransmissionApproved
-          busy={false}
-          onApprovalChange={() => undefined}
-          onDerive={() => undefined}
-          {...extra}
-        />,
-      );
-    expect(render({})).not.toContain("Re-extract all sources");
-    expect(render({ onFullExtractionChange: () => undefined })).toContain("Re-extract all sources");
+    const action = renderToStaticMarkup(
+      <ProfileGenerationAction
+        outcome={outcome}
+        profileIdValid
+        providerTransmissionApproved
+        busy={false}
+        onApprovalChange={() => undefined}
+        onDerive={() => undefined}
+      />,
+    );
+    expect(action).not.toContain("Re-extract all sources");
+    expect((action.match(/type="checkbox"/gu) ?? []).length).toBe(1);
+    const option = renderToStaticMarkup(
+      <ProfileFullExtractionOption checked={false} disabled={false} onChange={() => undefined} />,
+    );
+    expect(option).toContain("Re-extract all sources");
     expect(profileSourceReuseSummary(3, 1)).toBe("Reused 3 unchanged sources; extracted 1.");
     expect(profileSourceReuseSummary(1, 0)).toBe("Reused 1 unchanged source; extracted 0.");
   });
@@ -509,7 +512,6 @@ describe("desktop canonical candidate profile", () => {
     const emptyMarkup = renderToStaticMarkup(
       <ProfileDetails
         record={emptyRecord}
-        history={[emptyRecord]}
         draftFacts={[]}
         draftIssues={[]}
         editable
@@ -533,7 +535,6 @@ describe("desktop canonical candidate profile", () => {
     const warningMarkup = renderToStaticMarkup(
       <ProfileDetails
         record={record()}
-        history={[record()]}
         draftFacts={facts}
         draftIssues={[...issues.slice(1), warning]}
         editable
@@ -585,7 +586,6 @@ describe("desktop canonical candidate profile", () => {
       const html = renderToStaticMarkup(
         <ProfileDetails
           record={current}
-          history={[current]}
           draftFacts={draftFacts}
           draftIssues={draftIssues}
           editable={options.editable ?? true}
@@ -713,7 +713,9 @@ describe("desktop canonical candidate profile", () => {
     expect(html).toContain(
       "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval",
     );
-    expect(html).toContain("I approve sending selected candidate material");
+    expect(html).toContain(
+      "Send my career evidence to the configured provider to build the profile.",
+    );
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("candidateKnowledgeSelection");

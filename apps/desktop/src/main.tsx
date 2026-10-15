@@ -2533,6 +2533,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           onSelectionChange={onCandidateProfileSelectionChange}
           onPendingChange={profilePendingChange}
           onGenerationChange={profileGenerationChange}
+          evidence={activePort}
+          providerCompany={state.providerTransmissionPreflight.author.company}
         />
       </fieldset>
     );
