@@ -1,6 +1,10 @@
 import { statSync } from "node:fs";
 
-import { snapshotRowChecksum } from "./audit-chain-verification.js";
+import {
+  type AuditChainVerification,
+  snapshotRowChecksum,
+  verifyAuditChain,
+} from "./audit-chain-verification.js";
 import {
   auditEventChecksum,
   checksum,
@@ -8,12 +12,46 @@ import {
   serialize,
 } from "./audit-event-write.js";
 import type { AuditEventInput, JsonValue } from "./index.js";
+import { relieveMemoryPressure } from "./memory-pressure.js";
 import {
   runSnapshotAuditEventType,
   runSnapshotRef,
   runSnapshotTarget,
+  runSnapshotTargetFromText,
 } from "./run-snapshot-audit.js";
 import { loadSqlite } from "./sqlite-handle.js";
+
+export { relieveMemoryPressure };
+
+/**
+ * `verifyAuditChain` on a history file, read only, collecting garbage between pages: a legacy
+ * history holds events and snapshot rows of many megabytes each.
+ */
+export function verifyHistoryChain(
+  databasePath: string,
+  workspaceId: string,
+): AuditChainVerification {
+  const database = loadSqlite(databasePath, { readOnly: true, fileMustExist: true });
+  try {
+    return verifyAuditChain(
+      {
+        prepare: (sql) => {
+          const statement = database.prepare(sql);
+          return {
+            get: (...parameters) => statement.get(...parameters),
+            all: (...parameters) => {
+              relieveMemoryPressure();
+              return statement.all(...parameters);
+            },
+          };
+        },
+      },
+      workspaceId,
+    );
+  } finally {
+    database.close();
+  }
+}
 
 /**
  * Rewrites a history database file so legacy run history takes less space, without leaving the
@@ -87,6 +125,24 @@ export async function* readSnapshotRows(
   }
 }
 
+/**
+ * Copies a history file through SQLite's online backup, which gives a consistent copy even if the
+ * file is open elsewhere. Unlike `SqliteStorage.createBackup` it does not read the finished copy
+ * back into memory to hash it, which costs the whole file size in memory.
+ */
+export async function backupHistoryDatabase(
+  sourcePath: string,
+  destinationPath: string,
+): Promise<{ readonly sizeBytes: number }> {
+  const database = loadSqlite(sourcePath, { readOnly: true, fileMustExist: true });
+  try {
+    await database.backup(destinationPath);
+  } finally {
+    database.close();
+  }
+  return { sizeBytes: statSync(destinationPath).size };
+}
+
 interface RewrittenSnapshot {
   readonly id: string;
   readonly checksum: string;
@@ -112,10 +168,10 @@ export async function compactHistoryDatabase(
       "SELECT workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json FROM run_snapshots WHERE sequence = ?",
     );
     for await (const row of readSnapshotRows(databasePath, workspaceId)) {
+      relieveMemoryPressure();
       const payload = await options.rewritePayload(row);
       if (payload === row.payload) continue;
       const payloadJson = serialize(payload);
-      if (payloadJson === serialize(row.payload)) continue;
       const stored = fields.get(row.sequence);
       if (stored === undefined) continue;
       const rowChecksum = snapshotRowChecksum({ ...stored, payload_json: payloadJson });
@@ -142,7 +198,7 @@ export async function compactHistoryDatabase(
       }
 
       const page = database.prepare(
-        "SELECT sequence, id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE workspace_id = ? AND sequence > ? ORDER BY sequence LIMIT 10",
+        "SELECT sequence, id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE workspace_id = ? AND sequence > ? ORDER BY sequence LIMIT 2",
       );
       const snapshotById = database.prepare(
         "SELECT sequence, run_id, record_checksum FROM run_snapshots WHERE id = ?",
@@ -156,6 +212,7 @@ export async function compactHistoryDatabase(
       let head: string | null = null;
       let rewrittenEvents = 0;
       for (;;) {
+        relieveMemoryPressure();
         const rows = page.all(workspaceId, lastSequence);
         if (rows.length === 0) break;
         for (const row of rows) {
@@ -166,7 +223,9 @@ export async function compactHistoryDatabase(
           let payloadJson = String(row.payload_json);
           let payloadChecksum = String(row.payload_checksum);
           if (row.event_type === runSnapshotAuditEventType) {
-            const target = runSnapshotTarget(parseJson(payloadJson));
+            // The chain was verified before this copy was made, so the text is scanned, not parsed.
+            const target =
+              runSnapshotTargetFromText(payloadJson) ?? runSnapshotTarget(parseJson(payloadJson));
             if (target === undefined) throw new Error("A run snapshot event names no snapshot.");
             const snapshotId = rewritten.get(target.snapshotId)?.id ?? target.snapshotId;
             const snapshot = snapshotById.get(snapshotId);

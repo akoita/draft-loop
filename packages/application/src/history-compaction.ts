@@ -1,6 +1,6 @@
+import { createHash, type Hash } from "node:crypto";
 import { copyFile, rename, rm, stat, statfs } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import {
   createSnapshotReferenceCache,
   createStorageRunStore,
@@ -9,7 +9,14 @@ import {
   slimSnapshotPayload,
 } from "@draft-loop/orchestrator";
 import { openSqliteStorage, openSqliteStorageReadOnly, SqliteStorage } from "@draft-loop/storage";
-import { compactHistoryDatabase, readSnapshotRows } from "@draft-loop/storage/history-compaction";
+import {
+  backupHistoryDatabase,
+  type CompactionSnapshotRow,
+  compactHistoryDatabase,
+  readSnapshotRows,
+  relieveMemoryPressure,
+  verifyHistoryChain,
+} from "@draft-loop/storage/history-compaction";
 import { CliUserError } from "./cli-user-error.js";
 
 const historyDirectory = ".draft-loop";
@@ -111,7 +118,7 @@ async function inspectOriginal(
         );
       }
     }
-    const chain = await storage.auditEvents.verifyAuditChain(workspaceId);
+    const chain = verifyHistoryChain(path, workspaceId);
     if (!chain.ok) {
       const first = chain.problems[0];
       throw new CliUserError(
@@ -122,6 +129,67 @@ async function inspectOriginal(
   });
 }
 
+/** Feeds a value's canonical JSON (sorted keys) to a hash in pieces, never as one large string. */
+function updateCanonical(hash: Hash, value: unknown): void {
+  let pending = "";
+  const write = (text: string): void => {
+    pending += text;
+    if (pending.length >= 65_536) {
+      hash.update(pending, "utf8");
+      pending = "";
+    }
+  };
+  const visit = (current: unknown): void => {
+    if (Array.isArray(current)) {
+      write("[");
+      current.forEach((item, index) => {
+        if (index > 0) write(",");
+        visit(item ?? null);
+      });
+      write("]");
+    } else if (current === null || typeof current !== "object") {
+      write(JSON.stringify(current) ?? "null");
+    } else {
+      const entries = Object.entries(current as Record<string, unknown>)
+        .filter(([, child]) => child !== undefined && typeof child !== "function")
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+      write("{");
+      entries.forEach(([key, child], index) => {
+        if (index > 0) write(",");
+        write(`${JSON.stringify(key)}:`);
+        visit(child);
+      });
+      write("}");
+    }
+  };
+  visit(value);
+  hash.update(pending, "utf8");
+}
+
+/**
+ * A hash of a value's canonical JSON. Comparing hashes is comparing the values, but each side can
+ * be dropped before the other is built, so two multi-megabyte snapshots are never in memory
+ * together.
+ */
+function canonicalHash(value: unknown): string {
+  const hash = createHash("sha256");
+  updateCanonical(hash, value);
+  return hash.digest("hex");
+}
+
+/** The hash of the next snapshot row's resolved snapshot; the row is dropped before it returns. */
+async function nextResolvedHash(
+  rows: AsyncGenerator<CompactionSnapshotRow>,
+  storage: SqliteStorage,
+): Promise<{ readonly sequence: number; readonly hash: string } | undefined> {
+  const next = await rows.next();
+  if (next.done === true) return undefined;
+  return {
+    sequence: next.value.sequence,
+    hash: canonicalHash(await resolveSnapshotPayload(storage, next.value.payload)),
+  };
+}
+
 /** Every run reloads equal, and every snapshot row resolves to the same snapshot, before and after. */
 async function verifyCompacted(
   originalPath: string,
@@ -130,12 +198,10 @@ async function verifyCompacted(
   runIds: readonly string[],
   previousEventCount: number,
 ): Promise<number> {
-  await openedStorage(compactedPath, async (storage) => {
-    const chain = await storage.auditEvents.verifyAuditChain(workspaceId);
-    if (!chain.ok || chain.eventCount !== previousEventCount + 1) {
-      throw new Error("The compacted audit chain did not verify.");
-    }
-  });
+  const chain = verifyHistoryChain(compactedPath, workspaceId);
+  if (!chain.ok || chain.eventCount !== previousEventCount + 1) {
+    throw new Error("The compacted audit chain did not verify.");
+  }
   if (!SqliteStorage.verifyDatabaseIntegrity(compactedPath)) {
     throw new Error("The compacted history did not pass the integrity check.");
   }
@@ -145,29 +211,25 @@ async function verifyCompacted(
     const originalStore = createStorageRunStore(original);
     const compactedStore = createStorageRunStore(compacted);
     for (const runId of runIds) {
-      if (
-        !isDeepStrictEqual(await originalStore.loadRun(runId), await compactedStore.loadRun(runId))
-      ) {
+      relieveMemoryPressure();
+      const earlier = canonicalHash(await originalStore.loadRun(runId));
+      if (earlier !== canonicalHash(await compactedStore.loadRun(runId))) {
         throw new Error(`Run ${runId} did not reload equal after compaction.`);
       }
     }
     const before = readSnapshotRows(originalPath, workspaceId);
-    for await (const row of readSnapshotRows(compactedPath, workspaceId)) {
-      const earlier = await before.next();
-      if (earlier.done === true || earlier.value.sequence !== row.sequence) {
+    const after = readSnapshotRows(compactedPath, workspaceId);
+    for (;;) {
+      relieveMemoryPressure();
+      const earlier = await nextResolvedHash(before, original);
+      const later = await nextResolvedHash(after, compacted);
+      if (earlier === undefined && later === undefined) break;
+      if (earlier === undefined || later === undefined || earlier.sequence !== later.sequence) {
         throw new Error("The compacted snapshots do not match the original.");
       }
-      if (
-        !isDeepStrictEqual(
-          await resolveSnapshotPayload(original, earlier.value.payload),
-          await resolveSnapshotPayload(compacted, row.payload),
-        )
-      ) {
-        throw new Error(`Run snapshot ${row.sequence} did not resolve equal after compaction.`);
+      if (earlier.hash !== later.hash) {
+        throw new Error(`Run snapshot ${later.sequence} did not resolve equal after compaction.`);
       }
-    }
-    if (!(await before.next()).done) {
-      throw new Error("The compacted snapshots do not match the original.");
     }
   } finally {
     await original.close();
@@ -216,7 +278,7 @@ export async function compactWorkspaceHistory(
     throw new CliUserError("A compaction backup with this timestamp already exists. Try again.");
   }
   try {
-    const backup = await openedStorage(historyPath, (storage) => storage.createBackup(backupPath));
+    const backup = await backupHistoryDatabase(historyPath, backupPath);
     if (backup.sizeBytes !== beforeBytes || !SqliteStorage.verifyDatabaseIntegrity(backupPath)) {
       throw new Error("The backup did not verify.");
     }
