@@ -7432,16 +7432,109 @@ input[type="text"].workspace-title-input {
   margin-top: 0;
 }
 
+/* Home fits a 1280×800 window without scrolling the page: the column is capped at the window's
+   height, every block above the applications keeps its natural height, and the applications
+   panel is what gives way, scrolling its own list. Where even that is not enough (a very short
+   window) the column still scrolls as before. */
+.home-column {
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+}
+
 .home-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+  gap: var(--space-3);
+}
+
+.home-settings {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Settings takes the row below the two cards until the window is wide enough for three. */
+.home-summary > .home-settings {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1280px) {
+  /* Settings is the widest card: the pair's one line and its action row need the room. */
+  .home-summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+
+  .home-summary > .home-settings {
+    grid-column: auto;
+  }
 }
 
 .home-card {
   display: grid;
   align-content: start;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.home-card-tagline {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+/* A "?" that opens its explanation in place, over the content below instead of pushing it. */
+.home-help {
+  position: relative;
+  flex: none;
+}
+
+.home-help > summary {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-3);
+  background: transparent;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  line-height: 1;
+  list-style: none;
+  cursor: pointer;
+}
+
+.home-help > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-help > summary:hover,
+.home-help[open] > summary {
+  border-color: var(--teal-line);
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+.home-help > summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.home-help-body {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 10;
+  width: min(26rem, 80vw);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgba(15, 20, 26, 0.24);
+}
+
+.home-help-body p {
+  margin: 0;
 }
 
 .home-card-head,
@@ -7450,6 +7543,17 @@ input[type="text"].workspace-title-input {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.home-card-head .home-help {
+  margin-right: auto;
+}
+
+.home-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .home-section-actions {
@@ -7641,15 +7745,35 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-sm);
 }
 
-.home-applications,
-.home-settings {
+.home-applications {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+/* The one part of Home that scrolls: it gives way when the window is too short for every
+   application. Its explicit minimum lets it shrink below its content; the panel itself does not
+   clip, so the "?" explanation can open over it. The padding keeps a focused card's outline from
+   being clipped by the list. */
+.home-column > .home-applications {
+  flex: 0 1 auto;
+  min-height: 10.5rem;
+}
+
+.home-applications-body {
   display: grid;
-  gap: var(--space-4);
+  align-content: start;
+  gap: var(--space-3);
+  min-height: 0;
+  margin: -3px;
+  padding: 3px;
+  overflow-y: auto;
 }
 
 .application-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -7664,7 +7788,7 @@ input[type="text"].workspace-title-input {
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
+  padding: var(--space-3);
   background: var(--surface-2);
   transition:
     border-color var(--dur-fast) var(--ease),
@@ -7692,6 +7816,8 @@ input[type="text"].workspace-title-input {
 
 /* The name is the card's one control; its hit area stretches over the whole card. */
 .application-card-open {
+  /* A long title keeps two lines and ends with an ellipsis; its `title` has the whole name. */
+  display: -webkit-box;
   border: 0;
   padding: 0;
   color: var(--text-1);
@@ -7700,7 +7826,11 @@ input[type="text"].workspace-title-input {
   font-weight: 650;
   line-height: 1.35;
   text-align: left;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .application-card-open::after {
@@ -7719,11 +7849,25 @@ input[type="text"].workspace-title-input {
   outline-offset: 2px;
 }
 
+/* The meta line and the quiet card actions share one row; the meta is cut before it wraps. */
+.application-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .application-card-meta {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   color: var(--text-3);
   font-size: var(--text-xs);
   line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-empty-applications {
@@ -7742,6 +7886,31 @@ input[type="text"].workspace-title-input {
 
 .application-card-actions .button {
   min-height: 28px;
+}
+
+/* In the card's foot, Archive, Restore and Delete read as quiet inline actions. */
+.application-card-foot > .application-card-actions {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+}
+
+.application-card-foot > .application-card-actions .button {
+  min-height: 24px;
+  border-color: transparent;
+  padding: 0 var(--space-2);
+  color: var(--text-3);
+  background: transparent;
+}
+
+.application-card-foot > .application-card-actions .button:not(:disabled):hover {
+  border-color: var(--border-strong);
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+
+.application-card-foot > .application-card-actions .button-danger {
+  color: var(--red);
 }
 
 .application-card-confirm {
@@ -7920,6 +8089,71 @@ input[type="text"].application-card-name-input {
   flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+/* Workspace settings is a compact card: the pair on one line with its ids behind Details, the
+   actions in one wrapping row, and the sign-in status beside its button. */
+.home-settings .workspace-model-summary-compact {
+  gap: var(--space-1);
+  margin-top: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+.workspace-model-summary-line {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.workspace-model-summary-line strong {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.workspace-model-summary-details {
+  font-size: var(--text-xs);
+}
+
+.workspace-model-summary-details > summary {
+  width: fit-content;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.workspace-model-summary-details[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.home-settings .provider-authentication {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin-top: 0;
+}
+
+.home-settings .provider-authentication-head {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* The summary names the sign-in state; the section's own label still names it for screen readers. */
+.home-settings .provider-authentication-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.home-settings .button {
+  min-height: 28px;
 }
 
 .home-profile-screen {

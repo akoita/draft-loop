@@ -418,7 +418,7 @@ export function ProviderAuthentication({
   return (
     <section className="provider-authentication" aria-label="Provider authentication">
       <div className="provider-authentication-head">
-        <strong>Provider authentication</strong>
+        <strong className="provider-authentication-title">Provider authentication</strong>
         {summary === null ? null : (
           <span className="provider-authentication-summary">{summary}</span>
         )}

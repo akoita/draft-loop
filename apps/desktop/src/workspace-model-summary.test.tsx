@@ -81,6 +81,28 @@ describe("workspace model summary", () => {
     expect(html).toContain('role="status"');
   });
 
+  it("names the pair on one line and keeps the ids and profiles behind Details when compact", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceModelSummary
+        compact
+        title="Configured model pair"
+        author={author}
+        critic={critic}
+        profileWarning="No model profiles: provider defaults."
+      />,
+    );
+
+    expect(html).toContain('aria-label="Configured model pair"');
+    expect(html).toMatch(/<strong>Claude Sonnet 5\.5<\/strong> writes/u);
+    expect(html).toMatch(/<strong>GPT-6 Sol<\/strong> reviews/u);
+    expect(html).toMatch(
+      /<details[^>]*><summary>Details<\/summary>[\s\S]*anthropic\/claude-sonnet-5-5/u,
+    );
+    expect(html).toContain("openai/gpt-6-sol");
+    // The warning is a status, so it is not hidden behind the disclosure.
+    expect(html.indexOf("No model profiles")).toBeGreaterThan(html.indexOf("</details>"));
+  });
+
   it("stays quiet without a warning", () => {
     const html = renderToStaticMarkup(
       <WorkspaceModelSummary title="Configured model pair" author={author} critic={critic} />,

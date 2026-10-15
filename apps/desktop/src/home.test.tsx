@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
-import { careerEvidenceCardSubtitle, careerProfileCardSubtitle } from "./career-flow.js";
+import {
+  careerEvidenceCardSubtitle,
+  careerEvidenceCardTagline,
+  careerProfileCardSubtitle,
+  careerProfileCardTagline,
+} from "./career-flow.js";
 import { HomeView, type HomeViewProps, WorkspaceLocation } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
 
@@ -93,12 +98,40 @@ describe("Home dashboard", () => {
     expect(html).toContain("Manage evidence");
   });
 
-  it("gives each card a one-line subtitle that matches its page intro", () => {
+  it("shows one short line per card and keeps the page intro behind a ? disclosure", () => {
     const html = render();
+    expect(html).toContain(`<p class="home-card-tagline">${careerEvidenceCardTagline}</p>`);
+    expect(html).toContain(`<p class="home-card-tagline">${careerProfileCardTagline}</p>`);
     expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle}</p>`);
     expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle}</p>`);
+    expect(html).toContain('<summary aria-label="About Career evidence"');
+    expect(html).toContain('<summary aria-label="About Career profile"');
     expect(html).toContain("raw material");
     expect(html).toContain("verified record");
+  });
+
+  it("puts Workspace settings in the top row beside the two cards, not after the applications", () => {
+    const html = render({ settings: <p>Pair and sign-in</p> });
+    expect(html).toMatch(
+      /class="home-summary"[\s\S]*home-settings[\s\S]*Pair and sign-in[\s\S]*home-applications/u,
+    );
+    expect(html).toContain('<h2 id="home-settings-title">Workspace settings</h2>');
+    expect(render()).not.toContain("home-settings");
+  });
+
+  it("keeps the whole application name in the card's title and its meta on one line", () => {
+    const name = "Senior Staff Platform Engineering Manager, Developer Productivity at Acme";
+    const html = render({
+      applications: { status: "ready", applications: [application({ name, runCount: 2 })] },
+    });
+    expect(html).toContain(`title="${name}"`);
+    expect(html).toContain('title="Last activity 7 days ago · 2 runs · Original workspace job"');
+  });
+
+  it("scrolls only the applications list", () => {
+    const html = render();
+    expect(html).toContain('class="main-column home-column"');
+    expect(html).toMatch(/class="home-applications-body"><ul class="application-list"/u);
   });
 
   it("shows the evidence, profile and applications flow with Applications current", () => {

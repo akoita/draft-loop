@@ -28,6 +28,11 @@ export const careerEvidenceCardSubtitle =
 export const careerProfileCardSubtitle =
   "The verified record DraftLoop extracts from your evidence, with an exact quote for each fact. You review it once; every application reuses it.";
 
+/** The one-line versions Home shows by default; the subtitles above sit behind each card's "?". */
+export const careerEvidenceCardTagline = "CVs, career facts, exports and links.";
+
+export const careerProfileCardTagline = "Verified facts, each with an exact quote.";
+
 /**
  * "Career evidence → Career profile → Applications", with the current step marked for assistive
  * technology. A step with a handler in `onOpen` is a button that opens its page directly; the

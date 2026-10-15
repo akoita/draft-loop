@@ -6,6 +6,7 @@ import {
   ipcMain,
   type OpenDialogOptions,
   safeStorage,
+  screen,
   session,
 } from "electron";
 import { supportedFileExtensions } from "../bridge.js";
@@ -26,6 +27,13 @@ import {
 import { createRecentWorkspaceStore } from "./recent-workspaces.js";
 import { applyDesktopEmbeddingModelRoot } from "./semantic-retrieval-host.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
+import {
+  createWindowStateStore,
+  defaultWindowBounds,
+  minimumWindowHeight,
+  minimumWindowWidth,
+  restoreWindowBounds,
+} from "./window-state.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -88,12 +96,24 @@ async function chooseFiles(input: {
   return result.canceled ? [] : result.filePaths;
 }
 
+/**
+ * The first launch opens at about 90% of the primary display's work area, centred. Later launches
+ * restore the last bounds when they are still on a connected display.
+ */
 function createWindow(): BrowserWindow {
+  const windowState = createWindowStateStore(app.getPath("userData"));
+  const restored = restoreWindowBounds(
+    windowState.read(),
+    screen.getAllDisplays().map((display) => display.workArea),
+  );
+  const bounds = restored ?? defaultWindowBounds(screen.getPrimaryDisplay().workArea);
   const window = new BrowserWindow({
-    width: 1440,
-    height: 980,
-    minWidth: 1024,
-    minHeight: 720,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    minWidth: minimumWindowWidth,
+    minHeight: minimumWindowHeight,
     backgroundColor: windowGround,
     webPreferences: {
       preload: join(__dirname, "preload.js"),
@@ -111,6 +131,24 @@ function createWindow(): BrowserWindow {
   }
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
+  if (restored?.maximized === true) window.maximize();
+  const rememberBounds = () => {
+    if (window.isDestroyed() || window.isMinimized() || window.isFullScreen()) return;
+    windowState.write({ ...window.getNormalBounds(), maximized: window.isMaximized() });
+  };
+  let rememberTimer: NodeJS.Timeout | undefined;
+  const rememberSoon = () => {
+    clearTimeout(rememberTimer);
+    rememberTimer = setTimeout(rememberBounds, 400);
+  };
+  window.on("resize", rememberSoon);
+  window.on("move", rememberSoon);
+  window.on("maximize", rememberSoon);
+  window.on("unmaximize", rememberSoon);
+  window.on("close", () => {
+    clearTimeout(rememberTimer);
+    rememberBounds();
+  });
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = undefined;
   });
