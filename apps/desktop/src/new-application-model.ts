@@ -1,38 +1,13 @@
 /**
- * Pure model for the guided New application flow (ADR 0010, #1056).
- *
- * The flow has four steps: the job, its reviewed requirements, the career profile to reuse, and
- * the start of the author-critic review. This module holds the draft, the step gating and the
- * reviewed-profile choices, so the screen stays thin and every state is testable without a DOM.
+ * Pure model for creating an application (ADR 0010) and for the reviewed career profiles an
+ * application can reuse. Home's New application form holds the draft; the application screen's
+ * Profile step lists the reviewed profiles. Every state is testable without a DOM.
  */
-import type { OpportunityLatestResult } from "./bridge.js";
 import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import { parseReviewedCanonicalCandidateProfileCatalogResult } from "./profile-catalog.js";
 
-export type NewApplicationStepId = "job" | "requirements" | "profile" | "start";
-
-export interface NewApplicationStep {
-  readonly id: NewApplicationStepId;
-  readonly label: string;
-}
-
-export const newApplicationSteps: readonly NewApplicationStep[] = Object.freeze([
-  { id: "job", label: "Job" },
-  { id: "requirements", label: "Requirements" },
-  { id: "profile", label: "Career profile" },
-  { id: "start", label: "Start review" },
-]);
-
-export function stepPosition(step: NewApplicationStepId): number {
-  return newApplicationSteps.findIndex((candidate) => candidate.id === step) + 1;
-}
-
-export function stepProgressText(step: NewApplicationStepId): string {
-  return `Step ${stepPosition(step)} of ${newApplicationSteps.length}`;
-}
-
-// -- Step 1: the job -------------------------------------------------------------------------
+// -- The new application's name and job ------------------------------------------------------
 
 export type NewApplicationJobKind = "text" | "url";
 
@@ -85,26 +60,7 @@ export function newApplicationJobInput(
   return draft.jobKind === "text" ? draft.jobText : { url: draft.jobUrl.trim() };
 }
 
-// -- Step 2: requirements --------------------------------------------------------------------
-
-/** The flow moves on from the requirements once the application's brief is reviewed. */
-export function requirementsReviewed(latest: OpportunityLatestResult | undefined): boolean {
-  return latest?.status === "reviewed";
-}
-
-export function requirementsStatusText(latest: OpportunityLatestResult | undefined): string {
-  if (latest === undefined) return "Checking for a saved brief…";
-  if (latest === null) return "No requirements yet. Extract them from the job to review them.";
-  if (latest.status === "draft" && latest.requirementCount === 0) {
-    return `Version ${latest.version} is a draft with no requirements. Extract again, or paste the job text instead.`;
-  }
-  const count = `${latest.requirementCount} requirement${latest.requirementCount === 1 ? "" : "s"}`;
-  return latest.status === "reviewed"
-    ? `Version ${latest.version} is reviewed (${count}). Runs for this application start from it.`
-    : `Version ${latest.version} is a draft (${count}). Review it to continue.`;
-}
-
-// -- Step 3: career profile ------------------------------------------------------------------
+// -- Reviewed career profiles --------------------------------------------------------------
 
 export interface ReviewedProfileChoice {
   readonly profileId: string;
@@ -199,26 +155,4 @@ export async function loadReviewedProfileChoices(
   } catch {
     return { status: "failed" };
   }
-}
-
-// -- Step 4: start ---------------------------------------------------------------------------
-
-export interface NewApplicationStartPlan {
-  readonly requirementsReady: boolean;
-  readonly profile: CandidateProfileSelection | null;
-  readonly transmissionRequired: boolean;
-  readonly transmissionConfirmed: boolean;
-  /** The pair's provider readiness; absent or `null` while it is unknown, which does not block. */
-  readonly providerReadiness?: { readonly ready: boolean; readonly summary: string } | null;
-}
-
-/** Why the review cannot start yet, or null when it can. */
-export function newApplicationStartBlocker(plan: NewApplicationStartPlan): string | null {
-  if (!plan.requirementsReady) return "Review the application's requirements first.";
-  if (plan.profile === null) return "Select a reviewed career profile first.";
-  if (plan.providerReadiness?.ready === false) return `${plan.providerReadiness.summary}.`;
-  if (plan.transmissionRequired && !plan.transmissionConfirmed) {
-    return "Confirm the provider data transmission to start.";
-  }
-  return null;
 }

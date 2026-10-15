@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { ApplicationStepsView } from "./application-steps.js";
+import { ApplicationStepsView, focusCurrentStep } from "./application-steps.js";
 import {
   type ApplicationStepState,
   applicationStepStates,
@@ -170,6 +170,31 @@ describe("application steps view", () => {
     expect(html).toContain('<p class="application-step-status">Current step</p>');
     expect(html).toContain('<p class="application-step-status">Blocked: finish step 2 first.</p>');
   });
+
+  it("makes only the current step's heading focusable by script", () => {
+    expect(html.match(/tabindex="-1"/gu)?.length).toBe(1);
+    expect(html).toMatch(
+      /aria-current="step"><div class="application-step-head"><h3 [^>]*tabindex="-1"/u,
+    );
+  });
+});
+
+describe("opening at the current step", () => {
+  it("scrolls the current step into view and focuses its heading", () => {
+    const heading = { focus: vi.fn() };
+    const step = { scrollIntoView: vi.fn(), querySelector: vi.fn(() => heading) };
+    const querySelector = vi.fn(() => step);
+    expect(focusCurrentStep({ querySelector } as never)).toBe(true);
+    expect(querySelector).toHaveBeenCalledWith('[aria-current="step"]');
+    expect(step.querySelector).toHaveBeenCalledWith("h3");
+    expect(step.scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    expect(heading.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
+  it("does nothing when no step is current or the steps are not mounted", () => {
+    expect(focusCurrentStep({ querySelector: () => null } as never)).toBe(false);
+    expect(focusCurrentStep(null)).toBe(false);
+  });
 });
 
 describe("ReviewWorkspace as three steps", () => {
@@ -239,6 +264,30 @@ describe("ReviewWorkspace as three steps", () => {
     // No setup-card numbering and no workspace-level controls.
     expect(html).not.toContain("setup-number");
     expect(html).not.toContain("Replace policy");
+  });
+
+  it("shows the application's pair choice first in the Review step, held while a start is pending", () => {
+    const choice = vi.fn((disabled: boolean) => <p>PAIR CHOICE {String(disabled)}</p>);
+    const props = {
+      onAction: () => undefined,
+      startCandidateProfile: { version: 2 },
+      startDisabledReason: null,
+      onOpenHome: () => undefined,
+      setupSummary: <div>SETUP SUMMARY</div>,
+      modelPairChoice: choice,
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={collecting()} {...props} />);
+    const review = html.slice(html.indexOf('<li id="application-step-review"'));
+    expect(review).toContain("PAIR CHOICE false");
+    expect(review.indexOf("PAIR CHOICE")).toBeLessThan(review.indexOf("provider-preflight-title"));
+    const pending = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={collecting()}
+        {...props}
+        pendingReviewAction={{ action: "start", elapsedSeconds: 1 }}
+      />,
+    );
+    expect(pending).toContain("PAIR CHOICE true");
   });
 
   it("keeps one primary action in each step", () => {

@@ -339,8 +339,8 @@ and the flow strip:
 The configured model pair is shown under Workspace settings on Home, not on
 these pages.
 
-Choosing a card opens that application. **New application** opens a guided
-flow, described next.
+Choosing a card opens that application. **New application** opens a short
+form, described in [New application](#new-application).
 
 An application screen is the existing review and setup screen scoped to that
 application: runs started there belong to it, and a created application starts
@@ -369,8 +369,9 @@ What needs you stays outside the drawer. While a run executes, the side panel
 shows its progress, timeline and Stop. A paused or interrupted run keeps
 Resume in the side panel, and a shared-lineage warning stays there too.
 The row above the run header starts with Back, which returns to the previous
-page, followed by the flow strip, which opens either career page. Focus moves to the screen's location line when
-a screen opens, so the change is announced.
+page, followed by the flow strip, which opens either career page. Focus moves
+to the screen's location line when a screen opens, so the change is announced.
+Before a run, it moves to the current step instead, as described next.
 
 Before a run, the screen shows three numbered steps, top to bottom. Each step
 says in words whether it is **Done**, the **Current step** or **Blocked**, with
@@ -382,11 +383,16 @@ the reason, and has at most one primary action:
    reviewed brief is selected, or when the requirements are read from the job
    description.
 2. **Profile.** The latest reviewed career profile is selected automatically,
-   as New application does, with a picker when there are several and
+   with a picker when there are several and
    **Update in Career profile**. Workspace-level inputs are one-line links:
    career evidence (**Manage**) and models, writing policy and sign-in
    (**Open Home**).
-3. **Review.** The data-sent summary names the writer and reviewer; the full
+3. **Review.** A created application first offers **Use a different model pair
+   for this application**: keep the workspace's pair (the default) or pick a
+   preset pair for this application alone, for example a stronger pair for an
+   important role. The data-sent summary, provider readiness and start
+   confirmation then follow that pair, and the choice waits while a start is
+   pending. The data-sent summary names the writer and reviewer; the full
    transmission detail is behind **See exactly what is sent**, and the
    acknowledgement stays visible while it is required. The per-job writing
    policy override sits under **Advanced**, then autopilot, **Start
@@ -394,7 +400,9 @@ the reason, and has at most one primary action:
    the first two are done.
 
 The step states come from the same conditions as the start checklist, so the
-two never disagree.
+two never disagree. An application opens at its first unfinished step: the
+screen scrolls to it and moves the focus to its heading, once each time the
+screen opens.
 
 The start checklist, **Before you can start**, sits under the Start button and
 stays visible when everything is done:
@@ -430,8 +438,7 @@ Every page other than Home carries the flow strip and a Back action, so no page
 is reached through Home:
 
 - **Flow strip.** Opens Career evidence, Career profile, or Applications (Home)
-  from any page, including an application's review and the New application
-  flow.
+  from any page, including an application's review.
 - **Back.** Names the page it returns to, such as "← Career evidence" or
   "← Acme — Backend Lead", and walks back the pages you came through. Home
   starts the trail again.
@@ -449,49 +456,32 @@ is reached through Home:
   profile generation the Career evidence page opens as usual, but its add,
   remove and retrieval settings wait, with a line saying why.
 
-The New application flow is kept while Back can still return to it. Going Home
-discards it, and **New application** always starts an empty flow. The last
-application opened is kept until another application is opened.
+The last application opened is kept until another application is opened.
 
 ### New application
 
-The flow has four steps. Back leaves it at any point, and the flow strip opens
-either career page, for example to review the profile at step 3; Back then
-returns to the flow where it was left. The application exists from step 1, so
-it appears on Home as Drafting and can be resumed there.
+**New application** on Home opens a form that asks for two things:
 
-1. **Name and job.** Paste the job text, or give a job page address and approve
-   fetching it. The address is stored with that approval and fetched only when
-   requirements are extracted in step 2.
-2. **Requirements.** **Extract requirements** asks for consent, naming the
-   writing model and what is sent (for a web address, that the page is fetched
-   first). Then **Review requirements** opens the brief review. Continue is
-   available once the application's brief is reviewed. If no requirements were
-   found, the step says so and offers **Extract again** instead of a review;
-   pasting the job text into the application is the alternative.
-3. **Career profile.** The workspace's latest reviewed profile is selected for
-   you, and earlier reviewed versions can be picked instead. Nothing is
-   generated here. With no reviewed profile, the step says so and offers
-   **Manage profile**.
-4. **Start review.** A summary of the application, brief version, profile
-   version and model pair, the pair's provider authentication readiness with
-   **Manage provider authentication**, and the provider-transmission
-   confirmation when it is still required. While a provider the pair needs is
-   not configured, **Start review** stays disabled and says which one. It opens
-   the application's review once the run has begun. After approval and export,
-   Home lists the application as Exported.
+- **Name.** For example a company and role.
+- **Job posting.** Paste the job text, or give a job page address and approve
+  fetching it. The address is stored with that approval and fetched only when
+  requirements are extracted on the application's first step, never before.
 
-   Once a run has stopped, finished or run out of budget, **Start a new review**
-   in **Run details** adds another run to the same application with the models set for new runs.
-   The earlier run, its approval and its export are kept, so there is no need
-   to duplicate the application to try another model pair. When it is the
-   next step, the side panel's "Next: start a new review" line opens the drawer.
+**Create application** creates it and opens its screen at its first unfinished
+step (see the three steps above). A problem with the form, or the host's
+refusal, is shown in the form. The application appears on Home as Drafting
+and can be resumed there.
 
-   **Use a different model pair for this application** keeps the workspace's
-   pair (the default) or picks a preset pair for this application alone, for
-   example a stronger pair for an important role. The summary, the provider
-   readiness and the transmission confirmation then follow that pair, and the
-   application's setup summary names it.
+Extracting and reviewing the requirements, choosing the profile and starting
+the review happen on the application screen. For a job page address, **Extract
+requirements** says that the page is fetched first. After approval and export,
+Home lists the application as Exported.
+
+Once a run has stopped, finished or run out of budget, **Start a new review**
+in **Run details** adds another run to the same application with the models set
+for new runs. The earlier run, its approval and its export are kept, so there is
+no need to duplicate the application to try another model pair. When it is the
+next step, the side panel's "Next: start a new review" line opens the drawer.
 
 A second application reuses the same reviewed profile and has its own brief.
 

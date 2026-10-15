@@ -6,17 +6,13 @@ import {
   loadReviewedProfileChoices,
   newApplicationJobInput,
   newApplicationProblem,
-  newApplicationStartBlocker,
-  requirementsReviewed,
-  requirementsStatusText,
   reviewedProfileKey,
   sortReviewedProfileChoices,
-  stepProgressText,
-} from "./new-application-flow-model.js";
+} from "./new-application-model.js";
 
 const workspaceId = "workspace-1";
 
-describe("step 1: the job", () => {
+describe("the new application's name and job", () => {
   it("asks for a name, then the pasted job text", () => {
     expect(newApplicationProblem(emptyNewApplicationDraft)).toMatch(/Name/u);
     const named = { ...emptyNewApplicationDraft, name: "Acme" };
@@ -50,32 +46,7 @@ describe("step 1: the job", () => {
   });
 });
 
-describe("step 2: requirements", () => {
-  const brief = (status: "draft" | "reviewed") => ({
-    workspaceId,
-    briefId: "brief-1",
-    version: 2,
-    status,
-    requirementCount: 1,
-    criticalCount: 0,
-  });
-
-  it("moves on only once the application's brief is reviewed", () => {
-    expect(requirementsReviewed(undefined)).toBe(false);
-    expect(requirementsReviewed(null)).toBe(false);
-    expect(requirementsReviewed(brief("draft"))).toBe(false);
-    expect(requirementsReviewed(brief("reviewed"))).toBe(true);
-  });
-
-  it("words each state", () => {
-    expect(requirementsStatusText(undefined)).toMatch(/Checking/u);
-    expect(requirementsStatusText(null)).toMatch(/No requirements yet/u);
-    expect(requirementsStatusText(brief("draft"))).toMatch(/draft.*Review it to continue/u);
-    expect(requirementsStatusText(brief("reviewed"))).toMatch(/reviewed.*start from it/u);
-  });
-});
-
-describe("step 3: reviewed profiles", () => {
+describe("reviewed profiles", () => {
   const catalog = (
     profiles: readonly { profileId: string; version: number; reviewedAt: string }[],
   ) => ({
@@ -164,57 +135,5 @@ describe("step 3: reviewed profiles", () => {
         workspaceId,
       ),
     ).resolves.toEqual({ status: "failed" });
-  });
-});
-
-describe("step 4: start", () => {
-  const ready = {
-    requirementsReady: true,
-    profile: { profileId: "candidate", version: 3 },
-    transmissionRequired: false,
-    transmissionConfirmed: false,
-  };
-
-  it("names what is missing, in order", () => {
-    expect(newApplicationStartBlocker({ ...ready, requirementsReady: false })).toMatch(
-      /requirements/u,
-    );
-    expect(newApplicationStartBlocker({ ...ready, profile: null })).toMatch(/career profile/u);
-    expect(newApplicationStartBlocker({ ...ready, transmissionRequired: true })).toMatch(
-      /Confirm the provider data transmission/u,
-    );
-    expect(
-      newApplicationStartBlocker({
-        ...ready,
-        transmissionRequired: true,
-        transmissionConfirmed: true,
-      }),
-    ).toBeNull();
-    expect(newApplicationStartBlocker(ready)).toBeNull();
-  });
-
-  it("holds Start while the pair's provider is not configured, but not while unknown", () => {
-    const missing = { ready: false, summary: "Configure OpenAI API key for live review" };
-    expect(newApplicationStartBlocker({ ...ready, providerReadiness: missing })).toBe(
-      "Configure OpenAI API key for live review.",
-    );
-    expect(
-      newApplicationStartBlocker({ ...ready, profile: null, providerReadiness: missing }),
-    ).toMatch(/career profile/u);
-    expect(
-      newApplicationStartBlocker({
-        ...ready,
-        providerReadiness: {
-          ready: true,
-          summary: "Anthropic API key & OpenAI API key configured",
-        },
-      }),
-    ).toBeNull();
-    expect(newApplicationStartBlocker({ ...ready, providerReadiness: null })).toBeNull();
-  });
-
-  it("counts the four steps", () => {
-    expect(stepProgressText("job")).toBe("Step 1 of 4");
-    expect(stepProgressText("start")).toBe("Step 4 of 4");
   });
 });

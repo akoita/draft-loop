@@ -13,7 +13,11 @@ import type {
   ApplicationModelProfilesView,
   ApplicationSummaryView,
 } from "./application-contract.js";
-import { workspacePairSides, workspaceScopedState } from "./application-model-pair.js";
+import {
+  ApplicationModelPairControl,
+  workspacePairSides,
+  workspaceScopedState,
+} from "./application-model-pair.js";
 import { ApplicationNameNudge, ApplicationTitle } from "./application-name.js";
 import { needsApplicationName } from "./application-name-model.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
@@ -78,15 +82,11 @@ import {
   type DesktopSetupPort,
   type WorkspaceModelSelection,
 } from "./native.js";
-import { NewApplicationFlow, newApplicationStartSummary } from "./new-application-flow.js";
 import {
   backTarget,
-  finishNewApplication,
   goBack,
   initialPageNavigation,
-  keepsNewApplicationFlow,
   navigateTo,
-  openNewApplication,
   type PageNavigation,
   pageKey,
   pageLabel,
@@ -1259,12 +1259,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   );
   const loadedApplicationPair =
     loadedApplicationId === null ? null : (applicationPairs[loadedApplicationId] ?? null);
-  const readyModelProfileSupport =
-    state === null
-      ? null
-      : modelProfileSupportForContext(modelProfileSupport, state.workspaceId, workspaceGeneration);
-  const contextualModelProfileSupport =
-    readyModelProfileSupport?.status === "ready" ? readyModelProfileSupport.result : undefined;
   // A loaded application with its own pair runs with that pair, whatever the workspace applied.
   const runModelProfiles: AppliedModelProfileSelection | null =
     loadedApplicationPair !== null && state !== null
@@ -1285,6 +1279,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           state.providerTransmissionPreflight,
         );
   const profileStartDisabledReason = candidateProfileStartReason ?? modelProfileStartReason;
+  const readyModelProfileSupport =
+    state === null
+      ? null
+      : modelProfileSupportForContext(modelProfileSupport, state.workspaceId, workspaceGeneration);
   const onCandidateProfileSelectionChange = useCallback(
     (selection: CandidateProfileSelection | null) => {
       setCandidateProfileSelection(
@@ -1793,92 +1791,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   };
 
   /**
-   * Scopes the window to the application the New application flow just created, unless that flow
-   * was left for good meanwhile: the person may have opened another application since.
+   * Sets or clears the loaded application's own pair, then reloads the window's state so the
+   * provider readiness, the data-sent preflight and the start confirmation follow the pair.
+   * Rejects with the message to show.
    */
-  const onApplicationCreated = (application: ApplicationSummaryView, flowEpoch: number) => {
-    const current = navigationRef.current;
-    if (current.newApplicationEpoch !== flowEpoch || !keepsNewApplicationFlow(current)) return;
-    if (state === null) return;
-    const workspaceId = state.workspaceId;
-    const generation = workspaceGeneration;
-    rememberApplicationPair(application);
-    activePort.selectApplication?.(application.id);
-    void activePort
-      .load()
-      .then((loaded) => {
-        if (
-          isCurrentWorkspaceContext(workspaceId, generation) &&
-          loaded.workspaceId === workspaceId
-        ) {
-          setState(loaded);
-          setLoadedApplicationId(application.id);
-        }
-      })
-      .catch(() => undefined);
-  };
-
-  /**
-   * Starts the first review of a new application from its reviewed brief and the selected
-   * reviewed profile, then opens the application's review. Rejects with the message to show.
-   */
-  const startNewApplication = async (
-    application: ApplicationSummaryView,
-    acknowledgeFingerprint: string | null,
-  ): Promise<void> => {
-    if (state === null) return;
-    const workspaceId = state.workspaceId;
-    const generation = workspaceGeneration;
-    const profile = selectedCandidateProfile;
-    if (profile === null) throw new Error(candidateProfileStartBlockerMessage);
-    if (knowledgePendingRef.current) throw new Error(candidateKnowledgePendingBlockerMessage);
-    try {
-      let current = state;
-      if (acknowledgeFingerprint !== null) {
-        current = await activePort.dispatch(current, {
-          type: "acknowledge-provider-transmission",
-          fingerprint: acknowledgeFingerprint,
-        });
-      }
-      const next = await activePort.dispatch(
-        current,
-        reviewActionWithModelProfiles(
-          { type: "start", candidateProfile: profile },
-          runModelProfiles?.refs ?? null,
-        ),
-      );
-      if (!isCurrentWorkspaceContext(workspaceId, generation) || next.workspaceId !== workspaceId) {
-        return;
-      }
-      setImportError(null);
-      setState(next);
-      setLoadedApplicationId(application.id);
-      setNavigation((current) =>
-        finishNewApplication(current, {
-          kind: "application",
-          applicationId: application.id,
-          name: application.name,
-        }),
-      );
-    } catch (reason: unknown) {
-      if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
-      throw reason;
-    }
-  };
-
-  /**
-   * Sets or clears the new application's own pair, then reloads the window's state so the
-   * provider readiness and transmission confirmation follow the pair. Rejects with the message.
-   */
-  const setNewApplicationModels = async (
-    application: ApplicationSummaryView,
+  const setLoadedApplicationModels = async (
+    applicationId: string,
     pair: ApplicationModelProfilesView | null,
-  ): Promise<ApplicationSummaryView> => {
+  ): Promise<void> => {
     const setModels = activePort.setApplicationModels;
-    if (state === null || setModels === undefined) return application;
+    if (state === null || setModels === undefined) return;
     const workspaceId = state.workspaceId;
     const generation = workspaceGeneration;
-    const updated = await setModels(workspaceId, application.id, pair);
+    const updated = await setModels(workspaceId, applicationId, pair);
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     rememberApplicationPair(updated);
     try {
       const loaded = await activePort.load();
@@ -1889,9 +1815,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         setState(loaded);
       }
     } catch (reason: unknown) {
-      if (enterWorkspaceRecovery(workspaceId, generation, reason)) return updated;
+      enterWorkspaceRecovery(workspaceId, generation, reason);
     }
-    return updated;
   };
 
   /** The pair the next run uses: the loaded application's own, or the workspace's. */
@@ -2597,6 +2522,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     ...(activePort.reviewOpportunity === undefined
       ? {}
       : { reviewOpportunity: activePort.reviewOpportunity }),
+    // An application created from an approved job page fetches it when requirements are extracted.
+    ...(loadedApplicationId !== null &&
+    applicationSummaries[loadedApplicationId]?.jobSourceKind === "approved-url"
+      ? { jobFromUrl: true }
+      : {}),
     // The reviewed-brief selection lives in the loaded setup state, so reload it.
     onBriefChanged: () => {
       const workspaceId = state.workspaceId;
@@ -2719,7 +2649,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     />
   );
 
-  const createApplication = activePort.createApplication;
   /** Asks for a name while the default application still has the one DraftLoop derived. */
   const applicationNameNudge = (
     application: Extract<WorkspaceView, { kind: "application" }>,
@@ -2771,6 +2700,29 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         ? {}
         : {
             headerNotice: applicationNameNudge(application),
+            ...(activePort.setApplicationModels === undefined ||
+            applicationSummaries[application.applicationId]?.isDefault !== false
+              ? {}
+              : {
+                  modelPairChoice: (disabled: boolean) => (
+                    <ApplicationModelPairControl
+                      key={application.applicationId}
+                      pair={loadedApplicationPair}
+                      workspace={workspacePairSides(
+                        state,
+                        loadedApplicationPair,
+                        selectedModelProfiles?.refs ?? null,
+                      )}
+                      support={
+                        readyModelProfileSupport?.status === "ready"
+                          ? readyModelProfileSupport.result
+                          : undefined
+                      }
+                      disabled={disabled || busy}
+                      onSave={(pair) => setLoadedApplicationModels(application.applicationId, pair)}
+                    />
+                  ),
+                }),
             // Back leads the page row, beside the career flow, as on the career pages; the run
             // header keeps only the application and its run.
             pageNavigation: (
@@ -2838,7 +2790,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     ...(profileCapabilities === null ? {} : { profile: openProfileScreen }),
     applications: goHome,
   };
-  const flowEpoch = navigation.newApplicationEpoch;
   const reviewRunning = state.execution.status === "running";
   const homeActivity: HomeActivity =
     profileGenerationForActiveWorkspace !== null
@@ -2871,9 +2822,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           disabledReason={homeActionsBlockedReason(homeActivity)}
           profileGeneration={profileGenerationForActiveWorkspace}
           runningApplicationId={reviewRunning ? loadedApplicationId : null}
-          {...(activePort.createApplication === undefined
-            ? {}
-            : { onNewApplication: () => setNavigation(openNewApplication) })}
+          onApplicationCreated={openApplication}
           onOpenApplication={openApplication}
           onApplicationRenamed={onApplicationRenamed}
           onManageProfile={openProfileScreen}
@@ -2960,55 +2909,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           back={pageBack}
           onOpenStep={flowStepHandlers}
           workflow={profilePanel}
-        />
-      ),
-    });
-  }
-  // The flow keeps its step and draft while Back can still return to it.
-  if (createApplication !== undefined && keepsNewApplicationFlow(navigation)) {
-    pages.push({
-      key: `new-application:${flowEpoch}`,
-      active: view.kind === "new-application",
-      node: (
-        <NewApplicationFlow
-          workspaceId={state.workspaceId}
-          workspaceTitle={workspaceTitleNode}
-          workspaceNavigation={workspaceNavigationNode}
-          errorMessage={importError}
-          createApplication={(name, job) => createApplication(state.workspaceId, name, job)}
-          onCreated={(application) => onApplicationCreated(application, flowEpoch)}
-          requirements={jobRequirementsBinding}
-          profileCapabilities={activePort}
-          selectedProfile={selectedCandidateProfile}
-          onSelectProfile={onCandidateProfileSelectionChange}
-          onManageProfile={openProfileScreen}
-          modelPair={runPairSummary(state)}
-          {...(activePort.setApplicationModels === undefined
-            ? {}
-            : { setApplicationModels: setNewApplicationModels })}
-          workspacePair={workspacePairSides(
-            state,
-            loadedApplicationPair,
-            selectedModelProfiles?.refs ?? null,
-          )}
-          {...(contextualModelProfileSupport === undefined
-            ? {}
-            : { modelProfileSupport: contextualModelProfileSupport })}
-          providerAuthentication={providerAuthenticationProps}
-          preflight={state.providerTransmissionPreflight}
-          startDisabledReason={
-            knowledgePending ? candidateKnowledgePendingBlockerMessage : modelProfileStartReason
-          }
-          startSummary={(latest) =>
-            newApplicationStartSummary(state, {
-              latest,
-              candidateProfile: selectedCandidateProfile,
-              modelProfiles: runModelProfiles?.refs ?? null,
-            })
-          }
-          onStart={startNewApplication}
-          back={pageBack}
-          onOpenStep={flowStepHandlers}
         />
       ),
     });

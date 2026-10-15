@@ -176,6 +176,11 @@ interface ReviewWorkspaceProps {
    * keeps only what starting a review needs.
    */
   readonly setupSummary?: ReactNode;
+  /**
+   * The application's own model pair choice, shown first in the Review step. It is told to hold
+   * while a start is pending or an earlier run is open.
+   */
+  readonly modelPairChoice?: (disabled: boolean) => ReactNode;
   /** The flow strip linking the workspace's other pages, shown above the header. */
   readonly pageNavigation?: ReactNode;
   /** A notice under the run header, such as the request to name the application. */
@@ -1169,6 +1174,7 @@ export function ReviewWorkspace({
   onOpenHome,
   providerSignInReadiness,
   setupSummary,
+  modelPairChoice,
   pageNavigation,
   headerNotice,
 }: ReviewWorkspaceProps) {
@@ -2745,6 +2751,9 @@ export function ReviewWorkspace({
                       profile: setupSummary,
                       review: (
                         <>
+                          {modelPairChoice?.(
+                            readOnly || pendingStart !== null || pendingReviewAction !== null,
+                          )}
                           {renderProviderTransmissionPreflight(true)}
                           {requirementsSource}
                           <OpportunityOverrideDisclosure

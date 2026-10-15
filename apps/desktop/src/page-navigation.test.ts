@@ -4,18 +4,14 @@ import {
   applicationView,
   evidenceView,
   homeView,
-  newApplicationView,
   profileView,
   type WorkspaceView,
 } from "./home-model.js";
 import {
   backTarget,
-  finishNewApplication,
   goBack,
   initialPageNavigation,
-  keepsNewApplicationFlow,
   navigateTo,
-  openNewApplication,
   type PageNavigation,
   pageHistoryLimit,
   pageKey,
@@ -104,39 +100,6 @@ describe("page navigation", () => {
     expect(visit(acme, homeView, globex).lastApplication).toBe(globex);
   });
 
-  it("keeps the New application flow while Back can return to it", () => {
-    let navigation = openNewApplication(initialPageNavigation());
-    expect(navigation.view).toBe(newApplicationView);
-    expect(keepsNewApplicationFlow(navigation)).toBe(true);
-    navigation = navigateTo(navigation, profileView);
-    expect(keepsNewApplicationFlow(navigation)).toBe(true);
-    expect(pageLabel(backTarget(navigation) ?? homeView)).toBe("New application");
-    navigation = goBack(navigation);
-    expect(navigation.view).toBe(newApplicationView);
-    navigation = navigateTo(navigation, homeView);
-    expect(keepsNewApplicationFlow(navigation)).toBe(false);
-  });
-
-  it("starts every New application from an empty flow", () => {
-    const first = openNewApplication(initialPageNavigation());
-    const second = openNewApplication(navigateTo(first, homeView));
-    expect(second.newApplicationEpoch).toBe(first.newApplicationEpoch + 1);
-    const again = openNewApplication(navigateTo(first, profileView));
-    expect(again.view).toBe(newApplicationView);
-    expect(trail(again)).toEqual(["profile"]);
-    expect(again.newApplicationEpoch).toBe(first.newApplicationEpoch + 1);
-  });
-
-  it("replaces a finished New application flow with the application it started", () => {
-    const flow = navigateTo(openNewApplication(initialPageNavigation()), profileView);
-    const finished = finishNewApplication(goBack(flow), acme);
-    expect(finished.view).toBe(acme);
-    expect(keepsNewApplicationFlow(finished)).toBe(false);
-    expect(backTarget(finished)).toBe(homeView);
-    // A review started while another page was shown leaves no flow on the trail either.
-    expect(keepsNewApplicationFlow(finishNewApplication(flow, acme))).toBe(false);
-  });
-
   it("shows an application's new name on its page, on the trail and as the last application", () => {
     const navigation = visit(acme, profileView, globex);
     const renamed = renameApplicationPage(navigation, "app-1", "Acme — Staff Engineer");
@@ -152,7 +115,6 @@ describe("page navigation", () => {
     expect(pageLabel(homeView)).toBe("Home");
     expect(pageLabel(evidenceView)).toBe("Career evidence");
     expect(pageLabel(profileView)).toBe("Career profile");
-    expect(pageLabel(newApplicationView)).toBe("New application");
     expect(pageLabel(acme)).toBe("Acme — Backend Lead");
   });
 });

@@ -1,11 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   ApplicationModelPairChoice,
+  ApplicationModelPairControl,
   applicationPairForValue,
   applicationPairLabel,
   applicationPairValue,
+  saveApplicationModelPair,
   workspacePairSides,
   workspacePairValue,
   workspaceScopedState,
@@ -98,5 +100,53 @@ describe("ApplicationModelPairChoice", () => {
     expect(html).toMatch(/checked="" value="standard"/u);
     expect(html).toContain("Saving the model pair…");
     expect(html).toContain("The model pair could not be saved.");
+  });
+
+  it("holds every choice while disabled, without the saving line", () => {
+    const html = renderToStaticMarkup(<ApplicationModelPairChoice {...props} disabled />);
+    const radios = html.match(/<input[^>]*type="radio"[^>]*>/gu) ?? [];
+    expect(radios.length).toBeGreaterThan(1);
+    for (const radio of radios) expect(radio).toContain('disabled=""');
+    expect(html).not.toContain("Saving the model pair…");
+  });
+});
+
+describe("saving the application's pair", () => {
+  it("hands setApplicationModels the chosen preset's exact refs, or null for the workspace's", async () => {
+    const save = vi.fn(async () => undefined);
+    const chosen = applicationPairForValue("standard");
+    expect(chosen).toEqual(standard);
+    expect(await saveApplicationModelPair(chosen ?? null, save)).toBeNull();
+    expect(save).toHaveBeenLastCalledWith(standard);
+    expect(await saveApplicationModelPair(null, save)).toBeNull();
+    expect(save).toHaveBeenLastCalledWith(null);
+  });
+
+  it("reports the host's refusal, or a fallback when it gives no reason", async () => {
+    expect(
+      await saveApplicationModelPair(standard, async () => {
+        throw new Error("Both models come from the same company.");
+      }),
+    ).toBe("Both models come from the same company.");
+    expect(
+      await saveApplicationModelPair(standard, async () => {
+        throw "unknown";
+      }),
+    ).toBe("The model pair could not be saved.");
+  });
+
+  it("renders the control with the application's pair and holds it while disabled", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationModelPairControl
+        pair={standard}
+        workspace={workspace}
+        support={undefined}
+        disabled
+        onSave={async () => undefined}
+      />,
+    );
+    expect(html).toContain("This application uses its own model pair");
+    expect(html).toMatch(/checked="" value="standard"/u);
+    expect(html).toMatch(/disabled=""[^>]*value="workspace"|value="workspace"[^>]*disabled=""/u);
   });
 });
