@@ -59,7 +59,9 @@ export function nextStepLine(
         ? "Next: wait for the review"
         : "Next: resume or start a review to get a draft";
     case "exported":
-      return "Next: nothing left · the CV is exported";
+      return state.exportPath === null
+        ? "Next: export again to save a new copy"
+        : "Next: nothing left · the CV is exported";
     case "approved":
       return "Next: export";
     case "waiting":

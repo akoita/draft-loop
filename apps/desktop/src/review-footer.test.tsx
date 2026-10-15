@@ -59,6 +59,20 @@ describe("footerBlocker", () => {
     });
   });
 
+  it("warns when an exported draft's export file can't be found", () => {
+    const state: DesktopReviewState = {
+      ...reviewed,
+      state: "exported",
+      approval: "approved",
+      exportPath: null,
+    };
+    expect(footerBlocker(state, null, null)).toEqual({
+      kind: "exported",
+      text: "Exported · the previous export can't be found",
+      tone: "warning",
+    });
+  });
+
   it("says an approved draft is ready to export, and says when it was approved past the checks", () => {
     const state: DesktopReviewState = { ...reviewed, state: "approved", approval: "approved" };
     expect(footerBlocker(state, null, null)).toMatchObject({
@@ -192,6 +206,7 @@ function footerProps(overrides: Partial<ReviewFooterProps> = {}): ReviewFooterPr
     exportAction: {
       disabled: true,
       pathLabel: "Available after approval",
+      again: false,
       pendingSeconds: null,
       onExport: noop,
     },
@@ -257,6 +272,7 @@ describe("ReviewFooter", () => {
       exportAction: {
         disabled: false,
         pathLabel: "Available now",
+        again: false,
         pendingSeconds: null,
         onExport: noop,
       },
@@ -268,14 +284,16 @@ describe("ReviewFooter", () => {
     const exported = render({
       blocker: { kind: "exported", text: "Exported to /tmp/cv.md", tone: "safe" },
       exportAction: {
-        disabled: true,
+        disabled: false,
         pathLabel: "/tmp/cv.md",
+        again: true,
         pendingSeconds: null,
         onExport: noop,
       },
     });
     expect(exported).toContain(">Exported to /tmp/cv.md</p>");
     expect(exported).toContain('<span class="export-path" aria-live="polite">/tmp/cv.md</span>');
+    expect(exported).toMatch(/title="Export Markdown again \(Alt\+E\)">Export again<kbd>/u);
   });
 
   it("offers the round-limit repair and reports a pending export", () => {
@@ -285,6 +303,7 @@ describe("ReviewFooter", () => {
       exportAction: {
         disabled: true,
         pathLabel: "Available now",
+        again: false,
         pendingSeconds: 1,
         onExport: noop,
       },

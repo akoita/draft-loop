@@ -67,7 +67,7 @@ import {
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
-import { footerBlocker, ReviewFooter } from "./review-footer.js";
+import { footerBlocker, MISSING_EXPORT_LABEL, ReviewFooter } from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
@@ -216,7 +216,12 @@ export function canExportReview(
   state: Pick<DesktopReviewState, "state" | "reviewComplete">,
   pendingReviewAction: PendingReviewAction | null,
 ): boolean {
-  return state.state === "approved" && state.reviewComplete && pendingReviewAction === null;
+  // An exported run can be exported again, for example after its file was moved or deleted.
+  return (
+    (state.state === "approved" || state.state === "exported") &&
+    state.reviewComplete &&
+    pendingReviewAction === null
+  );
 }
 
 const findingQueueFilters: ReadonlyArray<{
@@ -1988,7 +1993,7 @@ export function ReviewWorkspace({
         ? null
         : !state.reviewComplete
           ? "Independent critique has not completed."
-          : state.state !== "approved"
+          : state.state !== "approved" && state.state !== "exported"
             ? "The artifact has not been approved."
             : (pendingActionReason ?? "Export is unavailable right now."),
       run: () => onAction({ type: "export" }),
@@ -3918,7 +3923,7 @@ export function ReviewWorkspace({
             blocker={gateBlocker}
             readOnly={readOnly}
             errorMessage={approvalExportErrorVisible ? (errorMessage ?? null) : null}
-            statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath === null ? "not exported" : "exported"} · Validation: ${validationLabel}`}
+            statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath !== null ? "exported" : state.state === "exported" ? "exported, file not found" : "not exported"} · Validation: ${validationLabel}`}
             detail={
               !hasArtifact ? (
                 <p className="warning-copy">
@@ -4013,15 +4018,18 @@ export function ReviewWorkspace({
             }}
             exportAction={{
               disabled: !canExport,
+              again: state.state === "exported",
               pathLabel:
                 state.exportPath ??
                 (!state.reviewComplete
                   ? "Unavailable until independent critique completes"
-                  : canExport
-                    ? "Available now"
-                    : state.state === "approved"
-                      ? "Unavailable while another action is pending"
-                      : "Available after approval"),
+                  : state.state === "exported"
+                    ? MISSING_EXPORT_LABEL
+                    : canExport
+                      ? "Available now"
+                      : state.state === "approved"
+                        ? "Unavailable while another action is pending"
+                        : "Available after approval"),
               pendingSeconds: exportPending ? pendingReviewAction.elapsedSeconds : null,
               onExport: () => onAction({ type: "export" }),
             }}

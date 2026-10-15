@@ -567,6 +567,10 @@ The footer holds the approval gate and stays in view while you scroll:
 - **Export locally.** **Export Markdown** is available after approval and asks
   for a destination in a Save dialog. A **Details** disclosure lists the
   artifact, export and validation state and the approval conditions.
+- **Export again.** An exported run shows its export path and offers **Export
+  again** through the same Save dialog. Each export adds a record; earlier ones
+  are kept. If the previous file was moved or deleted, or the workspace was
+  opened on another machine, the footer says the previous export can't be found.
 
 After approval and export, Home lists the application as Exported.
 

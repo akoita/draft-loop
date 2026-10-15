@@ -4237,6 +4237,26 @@ describe("native host", () => {
       expect((recovered as { readonly value: DesktopReviewState }).value.exportPath).toBe(
         customExportPath,
       );
+
+      // A moved or deleted export leaves an exported run with no readable path; it can be
+      // exported again to a new location through the same Save As dialog.
+      await rm(customExportPath);
+      const missing = await restarted.invoke({
+        type: "review.load",
+        input: { workspaceId, runId: reviewValue.runId },
+      });
+      expect(missing).toMatchObject({ ok: true, value: { state: "exported", exportPath: null } });
+      const reExportPath = join(parent, "re-exported.md");
+      dialogs.chooseMarkdownExportPath.mockImplementationOnce(async () => reExportPath);
+      const reExported = await restarted.invoke({
+        type: "review.dispatch",
+        input: { workspaceId, runId: reviewValue.runId, action: { type: "export" } },
+      });
+      expect(reExported).toMatchObject({
+        ok: true,
+        value: { state: "exported", exportPath: reExportPath },
+      });
+      expect(await readFile(reExportPath, "utf8")).toContain("candidate-provided materials");
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

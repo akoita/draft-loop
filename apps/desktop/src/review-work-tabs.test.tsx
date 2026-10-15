@@ -92,6 +92,9 @@ describe("nextStepLine", () => {
     expect(
       next({ ...reviewed, state: "exported", approval: "approved", exportPath: "/tmp/cv.md" }),
     ).toEqual({ kind: "exported", line: "Next: nothing left · the CV is exported" });
+    expect(
+      next({ ...reviewed, state: "exported", approval: "approved", exportPath: null }),
+    ).toEqual({ kind: "exported", line: "Next: export again to save a new copy" });
   });
 
   it("names what the reviewer is waiting on", () => {

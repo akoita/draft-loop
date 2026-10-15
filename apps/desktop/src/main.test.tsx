@@ -863,6 +863,49 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("This run, its approval and its export are kept.");
   });
 
+  it("offers to export an exported run again, with or without a readable export path", () => {
+    const fixture = createFixtureReviewState();
+    const exported = {
+      ...fixture,
+      state: "exported" as const,
+      approval: "approved" as const,
+      findings: [],
+    };
+    const exportAgainButton =
+      /aria-keyshortcuts="Alt\+E" title="Export Markdown again \(Alt\+E\)">Export again<kbd>/u;
+
+    const readable = { ...exported, exportPath: "exports/run-demo-1.md" };
+    expect(canExportReview(readable, null)).toBe(true);
+    const readableHtml = renderToStaticMarkup(
+      <ReviewWorkspace state={readable} onAction={() => undefined} />,
+    );
+    expect(readableHtml).toMatch(exportAgainButton);
+    expect(readableHtml).toContain(
+      '<span class="export-path" aria-live="polite">exports/run-demo-1.md</span>',
+    );
+    expect(readableHtml).toContain(">Exported to exports/run-demo-1.md</p>");
+    expect(readableHtml).toContain("Next: nothing left · the CV is exported");
+
+    const missing = { ...exported, exportPath: null };
+    expect(canExportReview(missing, null)).toBe(true);
+    const missingHtml = renderToStaticMarkup(
+      <ReviewWorkspace state={missing} onAction={() => undefined} />,
+    );
+    expect(missingHtml).toMatch(exportAgainButton);
+    expect(missingHtml).toContain(
+      "The previous export can&#x27;t be found. Export again to save a new copy.",
+    );
+    expect(missingHtml).not.toContain("Available after approval");
+    expect(missingHtml).toContain(">Exported · the previous export can&#x27;t be found</p>");
+    expect(missingHtml).not.toContain("ready to export");
+    expect(missingHtml).toContain("Next: export again to save a new copy");
+    expect(missingHtml).not.toContain("Next: export<");
+    expect(reduceReviewState(missing, { type: "export" })).toMatchObject({
+      state: "exported",
+      exportPath: `exports/${fixture.runId}.md`,
+    });
+  });
+
   it("offers a new review after an approved or budget-exhausted run", () => {
     const fixture = createFixtureReviewState();
     for (const runState of ["approved", "budget-exhausted"] as const) {
