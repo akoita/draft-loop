@@ -46,7 +46,7 @@ function nullableJson(value: unknown): JsonValue {
 }
 
 /** Recomputes a snapshot row's own checksum the way `saveRunSnapshot` computed it. */
-function snapshotRowChecksum(row: Record<string, unknown>): string {
+export function snapshotRowChecksum(row: Record<string, unknown>): string {
   return checksum(
     serialize({
       workspaceId: String(row.workspace_id),

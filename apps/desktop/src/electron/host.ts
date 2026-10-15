@@ -4576,6 +4576,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ok: true,
             value: await renameWorkspace(command.input.workspaceId, command.input.name),
           };
+        case "workspace.compact-history": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          if (service.compactHistory === undefined) {
+            throw new Error("This application service cannot compact run history.");
+          }
+          const compacted = await service.compactHistory({ root: workspace.root });
+          return {
+            ok: true,
+            value: {
+              workspaceId: workspace.descriptor.id,
+              beforeBytes: compacted.beforeBytes,
+              afterBytes: compacted.afterBytes,
+              backupFileName: compacted.backupFileName,
+              runsVerified: compacted.runsVerified,
+            },
+          };
+        }
         case "workspace.recent-remove":
           await recentWorkspaces.remove(command.input.id);
           return { ok: true, value: { removed: true } };

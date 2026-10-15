@@ -45,6 +45,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "application.get": "Reading the application",
   "application.create": "Creating the application",
   "application.import": "Importing the workspace as an application",
+  "workspace.compact-history": "Compacting the run history",
   "application.archive": "Archiving the application",
   "application.rename": "Renaming the application",
   "application.delete": "Deleting the application",
@@ -170,6 +171,15 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
       command.type === "application.set-models" ||
       command.type === "application.choose-run") &&
     error instanceof CliUserError
+  ) {
+    return error.message;
+  }
+  // Compacting names why it stopped (a run is working, the chain did not verify, no space) and
+  // never a path, so the settings can show it as written.
+  if (
+    command.type === "workspace.compact-history" &&
+    error instanceof CliUserError &&
+    !pathSeparator.test(error.message)
   ) {
     return error.message;
   }

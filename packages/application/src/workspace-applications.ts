@@ -35,6 +35,7 @@ import {
   currentChosenRun,
 } from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
+import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
@@ -752,6 +753,7 @@ export function withWorkspaceApplications(
         const snapshot = await driver.status({ root: command.root, runId });
         return snapshot !== undefined && snapshot.artifact !== null;
       }),
+    compactHistory: async (command) => compactWorkspaceHistory(command, dependencies),
     createApplication: async (command) => service.create(command),
     listApplications: async (command) => service.list(command),
     getApplication: async (command) => service.get(command),

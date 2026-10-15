@@ -25,6 +25,7 @@ import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persist
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
+import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
@@ -578,6 +579,8 @@ export interface ApplicationDriver {
   readonly chooseApplicationRun?: (
     command: ChooseApplicationRunCommand,
   ) => Promise<ApplicationView>;
+  /** Shrinks the workspace's run history behind a verified backup; see `compactWorkspaceHistory`. */
+  readonly compactHistory?: (command: CompactHistoryCommand) => Promise<CompactHistoryResult>;
 }
 
 export interface ApplicationService extends ApplicationDriver {
@@ -777,6 +780,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
         ...command,
         root: requireRoot(command.root),
       }),
+    compactHistory: async (command) =>
+      requireApplicationApi(driver.compactHistory)({ ...command, root: requireRoot(command.root) }),
   };
   return Object.freeze(service);
 }
@@ -804,6 +809,7 @@ export {
   previewEvidenceMode,
 } from "./evidence-mode-preview.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
+export * from "./history-compaction.js";
 export * from "./knowledge-base.js";
 export * from "./knowledge-source-dedupe.js";
 export * from "./legacy-evidence-migration.js";

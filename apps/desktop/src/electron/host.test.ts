@@ -4002,6 +4002,54 @@ describe("native host", () => {
     }
   });
 
+  it("compacts the open workspace's run history and words a refusal for a person", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-compact-"));
+    const fixture = service(root);
+    const compactHistory = vi.fn(async (command: { root: string }) => {
+      if (compactHistory.mock.calls.length > 1) {
+        throw new CliUserError("A run is still working. Pause or stop it first.");
+      }
+      return {
+        beforeBytes: 300,
+        afterBytes: 100,
+        backupFileName: "history.sqlite.pre-compaction-20261016T083000Z",
+        runsVerified: 2,
+        root: command.root,
+      };
+    });
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, compactHistory },
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseMarkdownExportPath: async (defaultPath: string) => defaultPath,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const compact = () =>
+        host.invoke({
+          type: "workspace.compact-history",
+          input: { workspaceId: "workspace-native" },
+        });
+
+      const done = await compact();
+      expect(done).toMatchObject({
+        ok: true,
+        value: { workspaceId: "workspace-native", beforeBytes: 300, afterBytes: 100 },
+      });
+      expect(compactHistory).toHaveBeenCalledWith({ root });
+      // The response carries sizes and the backup's name, never the workspace path.
+      expect(JSON.stringify(done)).not.toContain(root);
+      await expect(compact()).resolves.toMatchObject({
+        ok: false,
+        error: { message: "A run is still working. Pause or stop it first." },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("approves and exports the chosen earlier run, and still refuses revising it", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-chosen-run-"));
     const fixture = service(root);

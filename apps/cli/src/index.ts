@@ -77,6 +77,7 @@ import {
   workspaceRetrievalModeService,
   workspaceRoot,
 } from "./workflow.js";
+import { registerWorkspaceCommands } from "./workspace-commands.js";
 
 type DirectoryIngestionOptions = {
   readonly maxDepth?: number;
@@ -2820,6 +2821,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     io,
   );
   registerApplicationCommands(command, service, io);
+  registerWorkspaceCommands(command, service, io);
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,

@@ -139,6 +139,12 @@ are stored once under the run store's keys, and `resolveSnapshotPayload` in the
 orchestrator is the single reader that rebuilds a snapshot from a row, verifies
 the checksums, and passes older full rows through unchanged.
 
+`workspace compact` shrinks a workspace written before that shape. The immutable,
+hash-chained history file is never edited in place: a verified backup is kept, a
+copy is rewritten (legacy rows slimmed, snapshot events turned into references, the
+chain recomputed and a `workspace.history-compacted` event naming the old head),
+checked, and swapped in. The old chain survives whole in the backup.
+
 ## Detailed current-system views
 
 This page is the stable external entry point. The detailed views below are the
