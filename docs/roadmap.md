@@ -1,8 +1,8 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-10-09<br>
-**Current stage:** Manual parity: inputs
+**Last reviewed:** 2026-10-15<br>
+**Current stage:** Simple guided workflow
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
