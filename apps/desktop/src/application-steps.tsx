@@ -1,8 +1,10 @@
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 import {
+  type ApplicationJobSource,
   type ApplicationStepId,
   type ApplicationStepState,
+  applicationJobStepNote,
   applicationStepIds,
   applicationStepStatusText,
 } from "./application-steps-model.js";
@@ -125,6 +127,8 @@ export interface ApplicationJobStepProps {
   /** DOM id the start checklist scrolls to. */
   readonly id: string;
   readonly ready: boolean;
+  /** An approved job page is already the source: the inputs then only replace it. */
+  readonly source?: ApplicationJobSource;
   /** The job description inputs, folded once the job description is added. */
   readonly children: readonly [ReactNode, ReactNode];
 }
@@ -133,16 +137,14 @@ export interface ApplicationJobStepProps {
 export function ApplicationJobStep({
   id,
   ready,
+  source = "document",
   children: [inputs, requirements],
 }: ApplicationJobStepProps) {
+  const sourceSet = ready || source === "approved-page";
   return (
     <div id={id} className="application-step-job">
-      <p className="setup-note">
-        {ready
-          ? "Job description added."
-          : "Add the job description from a file or a public URL, then extract and review its requirements."}
-      </p>
-      {ready ? (
+      <p className="setup-note">{applicationJobStepNote(source, ready)}</p>
+      {sourceSet ? (
         <details className="setup-details">
           <summary>Replace the job description</summary>
           {inputs}

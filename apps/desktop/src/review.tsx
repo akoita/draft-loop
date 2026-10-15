@@ -16,7 +16,7 @@ import {
   JobDescriptionInputs,
   OpportunityOverrideDisclosure,
 } from "./application-steps.js";
-import { applicationStepStates } from "./application-steps-model.js";
+import { applicationStepStates, jobStepOffersExtraction } from "./application-steps-model.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
 import {
   approvalReadinessForArtifact,
@@ -2555,6 +2555,7 @@ export function ReviewWorkspace({
         ? null
         : `${state.workspaceId}:${reviewedRequirements.briefId}:${reviewedRequirements.version}`;
     const startFromJobDescription = rawJobKey !== null && rawJobChoice === rawJobKey;
+    const jobSource = requirementsBinding?.jobFromUrl === true ? "approved-page" : "document";
     const startConditions = startChecklist({
       setup: state.setup,
       startFromJobDescription,
@@ -2568,6 +2569,7 @@ export function ReviewWorkspace({
       startDisabledReason,
       canOpenProviderSignIn: onOpenHome !== undefined,
       ...(providerSignInReadiness === undefined ? {} : { providerSignIn: providerSignInReadiness }),
+      jobSource,
     });
     const startPending = pendingReviewAction?.action === "start";
     const startTooltip = startChecklistTooltip(startConditions);
@@ -2580,7 +2582,7 @@ export function ReviewWorkspace({
     const compact = setupSummary !== undefined;
     const jobDescriptionInputs = (
       <JobDescriptionInputs
-        ready={state.setup.jobDescriptionReady}
+        ready={jobStepOffersExtraction(jobSource, state.setup.jobDescriptionReady)}
         url={jobUrl}
         onUrlChange={setJobUrl}
         {...(onSelectFiles === undefined
@@ -2613,7 +2615,7 @@ export function ReviewWorkspace({
           />
         ) : null}
         {offersRequirementsExtraction(latestBrief) &&
-        state.setup.jobDescriptionReady &&
+        jobStepOffersExtraction(jobSource, state.setup.jobDescriptionReady) &&
         !state.setup.reviewedOpportunity &&
         requirementsBinding?.createOpportunity !== undefined ? (
           <div id={jobRequirementsExtractionId}>
@@ -2743,7 +2745,7 @@ export function ReviewWorkspace({
                     steps={applicationStepStates(startConditions)}
                     content={{
                       job: (
-                        <ApplicationJobStep id={startJobCardId} ready={jobReady}>
+                        <ApplicationJobStep id={startJobCardId} ready={jobReady} source={jobSource}>
                           {jobDescriptionInputs}
                           {requirementsControls}
                         </ApplicationJobStep>

@@ -8,6 +8,7 @@ import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import { ReviewWorkspace } from "./review.js";
 import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
 import {
+  approvedPageRequirementsDetail,
   candidateProfilePendingBlockerMessage,
   candidateProfileStartBlockerMessage,
   firstUnmetStartCondition,
@@ -141,6 +142,91 @@ describe("start checklist conditions", () => {
     expect(startButtonLabel(conditions, false)).toBe(
       "Start review · add the job description first",
     );
+  });
+
+  describe("for an approved job page with no brief yet", () => {
+    const approvedPage = (requirementAction: StartChecklistInput["requirementAction"]) =>
+      startChecklist({
+        ...allDone,
+        setup: {
+          ...allDone.setup,
+          ready: false,
+          jobDescriptionReady: false,
+          reviewedOpportunity: null,
+          nextSteps: [urlJobBriefStep, "Add at least one candidate evidence source."],
+        },
+        requirementAction,
+        jobSource: "approved-page",
+      });
+
+    it("asks to extract the page's requirements, not to add a job description", () => {
+      const conditions = approvedPage("extract");
+      expect(condition(conditions, "requirements")).toEqual({
+        id: "requirements",
+        label: "Job requirements reviewed",
+        done: false,
+        detail: approvedPageRequirementsDetail,
+        action: { id: "extract-requirements", label: "Extract requirements" },
+      });
+      expect(startButtonLabel(conditions, false)).toBe(
+        "Start review · review the requirements first",
+      );
+    });
+
+    it("does not repeat the host's missing-job step as an item of its own", () => {
+      const conditions = approvedPage("extract");
+      expect(conditions.filter((item) => item.id.startsWith("setup-"))).toEqual([
+        {
+          id: "setup-0",
+          label: "Add at least one candidate evidence source.",
+          done: false,
+          action: null,
+        },
+      ]);
+      expect(conditions.some((item) => item.action?.id === "add-job-description")).toBe(false);
+      expect(JSON.stringify(conditions)).not.toContain(urlJobBriefStep);
+    });
+
+    it("keeps a waiting draft's review, an empty draft's retry and a host that cannot extract", () => {
+      expect(condition(approvedPage("review-draft"), "requirements").action).toEqual({
+        id: "review-requirements",
+        label: "Review requirements",
+      });
+      expect(condition(approvedPage("extract-again"), "requirements").action).toEqual({
+        id: "extract-requirements",
+        label: "Extract requirements again",
+      });
+      const cannotExtract = approvedPage(null);
+      expect(condition(cannotExtract, "requirements")).toMatchObject({
+        detail: approvedPageRequirementsDetail,
+        action: null,
+      });
+      expect(startButtonLabel(cannotExtract, false)).toBe(
+        "Start review · review the requirements first",
+      );
+    });
+
+    it("leaves a document job asking for the job description", () => {
+      const conditions = startChecklist({
+        ...allDone,
+        setup: {
+          ...allDone.setup,
+          ready: false,
+          jobDescriptionReady: false,
+          reviewedOpportunity: null,
+          nextSteps: ["Add a target job description."],
+        },
+        requirementAction: "extract",
+        jobSource: "document",
+      });
+      expect(condition(conditions, "requirements").action).toEqual({
+        id: "add-job-description",
+        label: "Add job description",
+      });
+      expect(startButtonLabel(conditions, false)).toBe(
+        "Start review · add the job description first",
+      );
+    });
   });
 
   it("states a start from the job description as written as done, not reviewed", () => {

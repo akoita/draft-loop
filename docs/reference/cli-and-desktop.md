@@ -382,6 +382,14 @@ the reason, and has at most one primary action:
    added, replacing it is behind a disclosure. The step is done when a
    reviewed brief is selected, or when the requirements are read from the job
    description.
+
+   An application created from an approved job page opens with that page as
+   its source: the step says the page was approved and that DraftLoop fetches
+   it when you extract requirements, and **Extract requirements** is its
+   primary action. The address is not shown, because it never crosses the
+   bridge. Replacing the source stays behind the disclosure. Until a brief
+   exists, the start checklist offers the same **Extract requirements**, and
+   the disabled Start button asks to review the requirements first.
 2. **Profile.** The latest reviewed career profile is selected automatically,
    with a picker when there are several and
    **Update in Career profile**. Workspace-level inputs are one-line links:

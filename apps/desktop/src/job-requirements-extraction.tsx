@@ -160,16 +160,18 @@ export function JobRequirementsExtractionView({
       return (
         <div className="job-extraction">
           <p className="setup-note">
-            Long or pasted job pages can be split into reviewable requirements with your writing
-            model.
+            {jobFromUrl
+              ? "Your writing model splits the job page into requirements you review."
+              : "Long or pasted job pages can be split into reviewable requirements with your writing model."}
           </p>
           {phase.notice === undefined ? null : (
             <p className="setup-note" role="status">
               {phase.notice}
             </p>
           )}
+          {/* An approved job page is already the source, so extraction is the step's next action. */}
           <button
-            className="button button-outline"
+            className={jobFromUrl ? "button button-primary" : "button button-outline"}
             type="button"
             disabled={disabled}
             onClick={onOpen}
