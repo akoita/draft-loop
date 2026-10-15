@@ -71,6 +71,16 @@ import {
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
+import {
+  coverageTabLabel,
+  defaultReviewWorkTab,
+  findingsTabLabel,
+  nextStepLine,
+  nextStepTarget,
+  ReviewWorkTabs,
+  reviewWorkPanelProps,
+  useReviewWorkTab,
+} from "./review-work-tabs.js";
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { sendVerdict } from "./send-verdict.js";
@@ -464,7 +474,14 @@ function PageToolbar({
  * an "active" mark there would be decoration that lies. `onOpenSources` is null before a run
  * exists, when there is no document, no queue and no traceability to reach.
  */
-function SideRail({ onOpenSources }: { readonly onOpenSources: (() => void) | null }) {
+function SideRail({
+  onOpenSources,
+  onOpenFindings,
+}: {
+  readonly onOpenSources: (() => void) | null;
+  /** Bring the Findings tab forward and move to the queue. */
+  readonly onOpenFindings?: () => void;
+}) {
   return (
     <nav className="side-rail" aria-label="Workspace sections">
       <BrandMark />
@@ -490,7 +507,12 @@ function SideRail({ onOpenSources }: { readonly onOpenSources: (() => void) | nu
               />
             </svg>
           </a>
-          <a className="rail-button" href="#findings-panel" title="Findings — the queue">
+          <button
+            className="rail-button"
+            type="button"
+            title="Findings — the queue"
+            onClick={onOpenFindings}
+          >
             <span className="sr-only">Findings — the queue</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
               <path
@@ -500,7 +522,7 @@ function SideRail({ onOpenSources }: { readonly onOpenSources: (() => void) | nu
                 strokeLinecap="round"
               />
             </svg>
-          </a>
+          </button>
           <button
             className="rail-button"
             type="button"
@@ -1387,12 +1409,7 @@ export function ReviewWorkspace({
   const [compareSplit, setCompareSplit] = useCompareSplit();
   const sidePanel = useSidePanelWidth();
   const draftWidth = useDraftWidth();
-  const {
-    collapsed: collapsedPanels,
-    toggle: togglePanel,
-    expand: expandPanel,
-  } = useCollapsedReviewPanels();
-  const findingsCollapsed = collapsedPanels.has("findings");
+  const { collapsed: collapsedPanels, toggle: togglePanel } = useCollapsedReviewPanels();
   // The footer's Details hold the checklist; a refused approval opens them.
   const [gateDetailsOpen, setGateDetailsOpen] = useState(false);
   const expandGate = useCallback(() => setGateDetailsOpen(true), []);
@@ -1434,6 +1451,14 @@ export function ReviewWorkspace({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
   const queueCounts = findingQueueCounts(state.findings);
+  const { selected: workTab, select: selectWorkTab } = useReviewWorkTab(
+    defaultReviewWorkTab(queueCounts.needsAction),
+  );
+  const hasCoverage = state.coverage !== undefined && state.coverage !== null;
+  // Under the Coverage tab the queue shows no current finding, as a folded queue did before.
+  const findingsCollapsed = hasCoverage && workTab !== "findings";
+  const expandFindings = useCallback(() => selectWorkTab("findings"), [selectWorkTab]);
+  const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
   const findingDecisionsLocked = readOnly || findingDecisionPending;
@@ -1682,12 +1707,12 @@ export function ReviewWorkspace({
         (finding) => finding.id === findingId,
       );
       if (!visible) setFindingFilter("needs-action");
-      expandPanel("findings");
+      expandFindings();
       setExpandedFindingId(findingId);
       setActiveFindingId(findingId);
       queueFocusRequest.current = { findingId, target };
     },
-    [expandPanel, findingFilter, state.findings],
+    [expandFindings, findingFilter, state.findings],
   );
 
   // One decision path for both views: the same action, the same "advance to the next
@@ -1718,6 +1743,19 @@ export function ReviewWorkspace({
     setPaletteOpen(true);
   }, []);
 
+  // The rail's Findings button: under the Coverage tab the queue appears on the next render,
+  // where the palette's focus effect lands; otherwise it is already on screen.
+  const gateBlocker = footerBlocker(state, approvalReadiness, verdict);
+  const openFindings = (): void => {
+    const queue = findingQueueRef.current;
+    if (findingsCollapsed) {
+      paletteFocusRequest.current = queue;
+      expandFindings();
+      return;
+    }
+    queue?.scrollIntoView({ block: "start" });
+    queue?.focus();
+  };
   const openTraceability = (): void => {
     const details = traceabilityRef.current;
     if (details === null) return;
@@ -1800,7 +1838,7 @@ export function ReviewWorkspace({
         const moves = ["j", "J", "k", "K", "ArrowDown", "ArrowUp"];
         if (moves.includes(event.key)) {
           event.preventDefault();
-          expandPanel("findings");
+          expandFindings();
         }
         return;
       }
@@ -1890,7 +1928,7 @@ export function ReviewWorkspace({
     decideFinding,
     decisionContext,
     editingBlockId,
-    expandPanel,
+    expandFindings,
     expandedFindingId,
     findingDecisionsLocked,
     findingFilter,
@@ -2082,7 +2120,7 @@ export function ReviewWorkspace({
       note: "Move to critique triage",
       disabledReason: null,
       run: () => {
-        expandPanel("findings");
+        expandFindings();
         const first = filteredFindings[0];
         const summary =
           first === undefined ? undefined : findingSummaryButtonRefs.current.get(first.id);
@@ -2988,7 +3026,7 @@ export function ReviewWorkspace({
 
   return (
     <div className="app-frame">
-      <SideRail onOpenSources={openTraceability} />
+      <SideRail onOpenSources={openTraceability} onOpenFindings={openFindings} />
       <main
         className="app-shell app-shell-resizable"
         style={
@@ -3663,21 +3701,32 @@ export function ReviewWorkspace({
             )}
           </section>
 
+          <ReviewWorkTabs
+            next={nextStepLine(state, gateBlocker, approvalReadiness)}
+            onNext={
+              { findings: openFindings, "approval-gate": revealApprovalGate, none: null }[
+                nextStepTarget(gateBlocker) ?? "none"
+              ]
+            }
+            selected={workTab}
+            onSelect={selectWorkTab}
+            tabs={[
+              findingsTabLabel(queueCounts.needsAction),
+              ...(state.coverage === undefined || state.coverage === null
+                ? []
+                : [coverageTabLabel(state.coverage)]),
+            ]}
+          />
           <section
             className="panel findings-panel"
             id="findings-panel"
             aria-label="critique findings"
             tabIndex={-1}
+            {...reviewWorkPanelProps("findings", workTab, hasCoverage)}
           >
             <div className="findings-queue-header">
               <div className="section-heading compact">
                 <div>
-                  <PanelToggle
-                    label="Critique triage"
-                    collapsed={findingsCollapsed}
-                    controls="findings-panel-body"
-                    onToggle={() => togglePanel("findings")}
-                  />
                   <h2>Findings</h2>
                   <p className="finding-progress" role="status" aria-live="polite">
                     {queueCounts.resolved} of {state.findings.length} resolved
@@ -3702,7 +3751,7 @@ export function ReviewWorkspace({
                       : `${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
                 </span>
               </div>
-              <fieldset className="finding-filters" hidden={findingsCollapsed}>
+              <fieldset className="finding-filters">
                 <legend className="sr-only">Finding filters</legend>
                 {findingQueueFilters.map((filter) => {
                   const count = findingQueueFilterCount(queueCounts, filter.id);
@@ -3727,7 +3776,7 @@ export function ReviewWorkspace({
                 })}
               </fieldset>
             </div>
-            <div id="findings-panel-body" hidden={findingsCollapsed}>
+            <div id="findings-panel-body">
               {findingDecisionPending ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   Saving{" "}
@@ -4044,16 +4093,17 @@ export function ReviewWorkspace({
             <RequirementCoveragePanel
               coverage={state.coverage}
               sections={state.artifact.sections}
-              collapsed={collapsedPanels.has("coverage")}
-              onToggle={() => togglePanel("coverage")}
+              collapsed={!coverageCardsShown}
+              onToggle={() => setCoverageCardsShown((shown) => !shown)}
               onLocateBlock={locateDraftBlock}
+              tabPanel={reviewWorkPanelProps("coverage", workTab, true)}
             />
           )}
 
           {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
               however long the queue above them grows. */}
           <ReviewFooter
-            blocker={footerBlocker(state, approvalReadiness, verdict)}
+            blocker={gateBlocker}
             readOnly={readOnly}
             errorMessage={approvalExportErrorVisible ? (errorMessage ?? null) : null}
             statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath === null ? "not exported" : "exported"} · Validation: ${validationLabel}`}

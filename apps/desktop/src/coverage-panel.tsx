@@ -4,7 +4,8 @@
  *
  * It renders the same application data the CLI `status` command prints. Status is spelled out in
  * words so it never rests on colour alone, and a cited block that exists in the draft becomes a
- * button that jumps to it.
+ * button that jumps to it. The verdicts never block approval, so the cards fold behind a one-line
+ * tally until the reviewer asks for all of them.
  */
 import type { JSX } from "react";
 
@@ -16,7 +17,7 @@ import {
 } from "./coverage-contract.js";
 import { COVERAGE_INFORMATION_NOTE } from "./finding-decision-help.js";
 import type { ReviewSection } from "./model.js";
-import { PanelToggle } from "./review-panels.js";
+import { coverageCollapsedSummary, type ReviewWorkPanelProps } from "./review-work-tabs.js";
 
 /** "3 judged · 2 satisfied · 1 not satisfied"; null when the critic judged nothing. */
 export function coverageSummaryLine(coverage: ReviewCoverageView): string | null {
@@ -74,30 +75,44 @@ export function RequirementCoveragePanel({
   collapsed,
   onToggle,
   onLocateBlock,
+  tabPanel = null,
 }: {
   readonly coverage: ReviewCoverageView;
   readonly sections: readonly ReviewSection[];
   readonly collapsed: boolean;
   readonly onToggle: () => void;
   readonly onLocateBlock: (blockId: string) => void;
+  /** The tabpanel ARIA when the panel sits under the Coverage tab. */
+  readonly tabPanel?: ReviewWorkPanelProps | null;
 }): JSX.Element {
   const citedBlocks = citedBlocksById(sections);
   const summaryLine = coverageSummaryLine(coverage);
   return (
-    <section className="panel coverage-panel" aria-label="requirement coverage">
+    <section className="panel coverage-panel" aria-label="requirement coverage" {...tabPanel}>
       <div className="section-heading compact">
         <div>
-          <PanelToggle
-            label="Coverage"
-            collapsed={collapsed}
-            controls="coverage-panel-body"
-            onToggle={onToggle}
-          />
           <h2>Requirement coverage</h2>
           <p className="coverage-information-note">{COVERAGE_INFORMATION_NOTE}</p>
           {summaryLine === null ? null : <p className="coverage-summary">{summaryLine}</p>}
         </div>
       </div>
+      <p className="coverage-fold">
+        <span className="coverage-tally">{coverageCollapsedSummary(coverage)}</span>
+        {coverage.assessments.length === 0 ? null : (
+          <>
+            {" · "}
+            <button
+              className="coverage-fold-toggle"
+              type="button"
+              aria-expanded={!collapsed}
+              aria-controls="coverage-panel-body"
+              onClick={onToggle}
+            >
+              {collapsed ? "show all" : "show summary only"}
+            </button>
+          </>
+        )}
+      </p>
       <div id="coverage-panel-body" hidden={collapsed}>
         <ul className="coverage-list" aria-label="Requirement coverage assessments">
           {coverage.assessments.map((assessment) => (
