@@ -1200,6 +1200,21 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
+.author-input-direction {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.author-input-direction q {
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+
 .trust-badge {
   display: flex;
   grid-column: 1 / -1;
@@ -3955,6 +3970,34 @@ input[type="text"].workspace-title-input {
 .approval-actions .button {
   flex: 1 1 auto;
   min-height: 36px;
+}
+
+/* The directions field sits beside Request revision; it takes a row of its own when narrow. */
+.revision-direction {
+  display: grid;
+  flex: 2 1 260px;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.revision-direction-input {
+  width: 100%;
+  min-height: 36px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-inset);
+  color: var(--text-1);
+  font: inherit;
+}
+
+.revision-direction-note {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  line-height: 1.4;
 }
 
 .export-action {

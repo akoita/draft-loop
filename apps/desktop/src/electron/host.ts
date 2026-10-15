@@ -4271,6 +4271,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               ...(action.type === "approve" && action.readinessOverrideRationale !== undefined
                 ? { readinessOverrideRationale: action.readinessOverrideRationale }
                 : {}),
+              ...(action.type === "request-revision" && action.candidateDirection !== undefined
+                ? { candidateDirection: action.candidateDirection }
+                : {}),
             },
             io(),
           );

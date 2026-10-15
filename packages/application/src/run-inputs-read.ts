@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { openSqliteStorage } from "@draft-loop/storage";
 
+import { authorPromptSupportsCandidateDirection } from "./author-adjudication.js";
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
 import { readRunContext } from "./run-context-read.js";
@@ -27,6 +28,16 @@ export interface RunProfileInput {
 export interface RunInputs {
   readonly brief: RunBriefInput | null;
   readonly profile: RunProfileInput | null;
+  /** Whether the run's recorded author prompt can take the candidate's directions (v9 or later). */
+  readonly authorDirections: boolean;
+}
+
+function supportsDirections(version: string): boolean {
+  try {
+    return authorPromptSupportsCandidateDirection(version);
+  } catch {
+    return false;
+  }
 }
 
 const historyPath = (root: string): string => join(root, ".draft-loop", "history.sqlite");
@@ -54,5 +65,6 @@ export async function readRunInputs(command: StatusCommand): Promise<RunInputs |
     brief: brief === undefined ? null : { briefId: brief.briefId, version: brief.version },
     profile:
       profile === undefined ? null : { profileId: profile.profileId, version: profile.version },
+    authorDirections: supportsDirections(context.modelConfiguration.author.promptTemplateVersion),
   };
 }

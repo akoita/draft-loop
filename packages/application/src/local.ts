@@ -55,6 +55,7 @@ import {
   type WorkspaceRecord,
   type WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
+import { assertRevisionDirection, withCandidateDirection } from "./candidate-direction.js";
 import {
   candidateKnowledgeEvidenceChecksum,
   candidateKnowledgeEvidenceSourceId,
@@ -118,7 +119,7 @@ import {
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
 import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
-import { type LifecycleOptions, lifecycleDecisionRecord } from "./lifecycle-decision.js";
+import { type LifecycleOptions, saveLifecycleDecision } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import {
@@ -1620,10 +1621,14 @@ function providerAgents(
       artifact,
       deterministicFindings,
       coverageJudgementRequests,
+      candidateDirection,
       retrievedEvidence = [],
       signal,
     }) => {
-      const judgement = criticCoverageJudgementParts(coverageJudgementRequests, context, artifact);
+      const judgement = withCandidateDirection(
+        criticCoverageJudgementParts(coverageJudgementRequests, context, artifact),
+        candidateDirection,
+      );
       const achievementPlan = createRequirementAchievementPlan(
         context.requirements,
         retrievedEvidence,
@@ -2062,6 +2067,7 @@ export async function lifecycleRun(
   try {
     const context = await contextForRun(storage, runId);
     if (action === "revision") {
+      assertRevisionDirection(context, options.candidateDirection);
       await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
     }
     const runEngine = engine(storage, config, context, false, false, environmentCredentialResolver);
@@ -2073,23 +2079,11 @@ export async function lifecycleRun(
           : action === "approve"
             ? await runEngine.approve(runId, options)
             : action === "revision"
-              ? await runEngine.requestRevision(runId)
+              ? await runEngine.requestRevision(runId, options)
               : action === "recover-review"
                 ? await runEngine.recoverToReview(runId)
                 : await runEngine.recoverRoundBudget(runId);
-    const record = lifecycleDecisionRecord(action, snapshot);
-    await storage.saveDecision({
-      id: `decision-${runId}-${action}-${snapshot.round}-${Date.now()}`,
-      workspaceId: config.id,
-      runId,
-      roundId: `${runId}:round:${action === "revision" ? snapshot.round - 1 : snapshot.round}`,
-      artifactId: snapshot.artifact?.id ?? null,
-      type: action === "approve" ? "approve" : "reject-finding",
-      rationale: record.rationale,
-      actor: "user:cli",
-      createdAt: timestamp(),
-      payload: record.payload,
-    });
+    await saveLifecycleDecision(storage, config.id, action, snapshot);
     outputEvents(await runEngine.events(runId), io);
     outputSnapshot(snapshot, io);
     return snapshot;

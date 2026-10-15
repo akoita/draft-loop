@@ -1,5 +1,5 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
-import type { AuthorAgent } from "@draft-loop/orchestrator";
+import type { AuthorAgent, CandidateDirection } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas";
 
@@ -29,6 +29,8 @@ export interface AuthorInputRecord {
   readonly round: number;
   readonly retrievedEvidence: readonly ScoredEvidenceChunk[];
   readonly uncoveredRequirementIds: readonly string[];
+  /** The candidate's direction for this round, when the step was sent one. */
+  readonly candidateDirection?: CandidateDirection;
 }
 
 export interface ProviderAuthorAgentDependencies {
@@ -73,6 +75,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       findings,
       pendingAdjudication,
       retryFeedback,
+      candidateDirection,
       requirementCoverage,
       retrievedEvidence = [],
       signal,
@@ -91,6 +94,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
           round,
           retrievedEvidence,
           uncoveredRequirementIds,
+          ...(candidateDirection === undefined ? {} : { candidateDirection }),
         });
       } catch {
         // Run history is best-effort here: the draft matters more than the record of its input.
@@ -105,6 +109,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         revision,
         context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
         requirementCoverage,
+        candidateDirection,
       );
       const { outputBudget, groundingGuide, ...turnInput } = authorPrompt.providerInput;
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));

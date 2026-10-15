@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
+import {
+  type CandidateDirection,
+  maximumCandidateDirectionCharacters,
+} from "@draft-loop/orchestrator";
 import type { SqliteStorage } from "@draft-loop/storage";
 import { z } from "zod";
 
@@ -14,7 +18,8 @@ import {
 
 /**
  * What one author step was given, recorded in run history as a `run.author-input` audit event so a
- * review surface can show it without a fresh query. Counts and ids only: no evidence text.
+ * review surface can show it without a fresh query. Counts and ids only: no evidence text. A
+ * candidate direction is the person's own instruction for the round, shown as it was given.
  */
 export interface RunAuthorInput {
   readonly round: number;
@@ -28,7 +33,15 @@ export interface RunAuthorInput {
   readonly knowledgeFactCount?: number;
   /** Requirements, responsibilities included, that matched no sent item. */
   readonly unmatchedRequirementIds: readonly string[];
+  /** The candidate's direction for this round: what they asked of the author, and when. */
+  readonly candidateDirection?: RunAuthorInputDirection;
 }
+
+/** The candidate's direction as recorded with one round's author input. */
+export type RunAuthorInputDirection = {
+  readonly text: string;
+  readonly createdAt: string;
+};
 
 /** The knowledge-base totals of a run's pinned selection. */
 export interface RunAuthorInputTotals {
@@ -45,6 +58,7 @@ export function summarizeAuthorInput(input: {
   readonly retrievedEvidence: readonly Pick<ScoredEvidenceChunk, "id">[];
   readonly uncoveredRequirementIds: readonly string[];
   readonly totals?: RunAuthorInputTotals;
+  readonly candidateDirection?: CandidateDirection;
 }): RunAuthorInput {
   const ids = new Set(input.retrievedEvidence.map(({ id }) => id));
   const sentFactCount = [...ids].filter((id) => id.startsWith(profileFactEvidenceIdPrefix)).length;
@@ -58,6 +72,14 @@ export function summarizeAuthorInput(input: {
       ? {}
       : { knowledgeFactCount: totals.knowledgeFactCount }),
     unmatchedRequirementIds: [...input.uncoveredRequirementIds],
+    ...(input.candidateDirection === undefined
+      ? {}
+      : {
+          candidateDirection: {
+            text: input.candidateDirection.text,
+            createdAt: input.candidateDirection.createdAt,
+          },
+        }),
   };
 }
 
@@ -79,6 +101,9 @@ export async function recordRunAuthorInput(
     payload: {
       ...request.summary,
       unmatchedRequirementIds: [...request.summary.unmatchedRequirementIds],
+      ...(request.summary.candidateDirection === undefined
+        ? {}
+        : { candidateDirection: { ...request.summary.candidateDirection } }),
     },
     createdAt: new Date().toISOString(),
   });
@@ -92,15 +117,22 @@ const runAuthorInputPayloadSchema = z.object({
   knowledgeChunkCount: count.optional(),
   knowledgeFactCount: count.optional(),
   unmatchedRequirementIds: z.array(z.string()),
+  candidateDirection: z
+    .object({
+      text: z.string().min(1).max(maximumCandidateDirectionCharacters),
+      createdAt: z.string(),
+    })
+    .optional(),
 });
 
 /** The parsed payload, or `undefined` when it does not have the recorded shape. */
 export function parseRunAuthorInputPayload(payload: unknown): RunAuthorInput | undefined {
   const parsed = runAuthorInputPayloadSchema.safeParse(payload);
   if (!parsed.success) return undefined;
-  const { knowledgeChunkCount, knowledgeFactCount, ...required } = parsed.data;
+  const { knowledgeChunkCount, knowledgeFactCount, candidateDirection, ...required } = parsed.data;
   return {
     ...required,
+    ...(candidateDirection === undefined ? {} : { candidateDirection }),
     ...(knowledgeChunkCount === undefined ? {} : { knowledgeChunkCount }),
     ...(knowledgeFactCount === undefined ? {} : { knowledgeFactCount }),
   };
@@ -139,12 +171,19 @@ export function runAuthorInputRecorder(
     })();
     return totals;
   };
-  return async ({ runId, round, retrievedEvidence, uncoveredRequirementIds }) => {
+  return async ({
+    runId,
+    round,
+    retrievedEvidence,
+    uncoveredRequirementIds,
+    candidateDirection,
+  }) => {
     const resolved = await resolveTotals();
     const summary = summarizeAuthorInput({
       round,
       retrievedEvidence,
       uncoveredRequirementIds,
+      ...(candidateDirection === undefined ? {} : { candidateDirection }),
       ...(resolved === undefined ? {} : { totals: resolved }),
     });
     await recordRunAuthorInput(storage, { workspaceId, runId, summary });

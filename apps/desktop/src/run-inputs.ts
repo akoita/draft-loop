@@ -25,6 +25,11 @@ export interface RunInputsView {
   readonly brief: RunBriefView | null;
   /** The reviewed career profile version the run used; null when it recorded none. */
   readonly profile: RunProfileView | null;
+  /**
+   * Whether the run's author prompt can take directions with Request revision; absent when the
+   * host did not say, which leaves the field offered (the application still refuses).
+   */
+  readonly authorDirections?: boolean;
 }
 
 function exactKeys<Shape extends object>() {
@@ -35,7 +40,7 @@ function exactKeys<Shape extends object>() {
   ): Keys => keys;
 }
 
-export const runInputsKeys = exactKeys<RunInputsView>()(["brief", "profile"]);
+export const runInputsKeys = exactKeys<RunInputsView>()(["brief", "profile", "authorDirections"]);
 export const runBriefKeys = exactKeys<RunBriefView>()(["briefId", "version"]);
 export const runProfileKeys = exactKeys<RunProfileView>()(["profileId", "version"]);
 
@@ -85,5 +90,12 @@ export function normalizeRunInputs(value: unknown): RunInputsView | undefined {
     if (profileId === undefined || profileVersion === undefined) return undefined;
     profile = { profileId, version: profileVersion };
   }
-  return { brief, profile };
+  if (raw.authorDirections !== undefined && typeof raw.authorDirections !== "boolean") {
+    return undefined;
+  }
+  return {
+    brief,
+    profile,
+    ...(raw.authorDirections === undefined ? {} : { authorDirections: raw.authorDirections }),
+  };
 }

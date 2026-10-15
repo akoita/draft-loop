@@ -90,6 +90,7 @@ import {
   reviewWorkPanelProps,
   useReviewWorkTab,
 } from "./review-work-tabs.js";
+import { sendRevisionRequest } from "./revision-direction.js";
 import {
   type ChooseRunDraft,
   type LoadRunForComparison,
@@ -1013,6 +1014,22 @@ export function ReviewWorkspace({
   });
   const readinessOverrideReason =
     readinessOverrideDraft.key === readinessOverrideKey ? readinessOverrideDraft.reason : "";
+  // The directions belong to the round they were typed for; a new round starts with none.
+  const revisionDirectionKey = `${state.runId}:${state.round}`;
+  const [revisionDirectionDraft, setRevisionDirectionDraft] = useState({
+    key: revisionDirectionKey,
+    text: "",
+  });
+  const revisionDirection =
+    revisionDirectionDraft.key === revisionDirectionKey ? revisionDirectionDraft.text : "";
+  // A run whose recorded author prompt predates directions cannot take them.
+  const directionsUnavailable = state.runInputs?.authorDirections === false;
+  // Every way to request a revision sends the typed directions, then clears them.
+  const requestRevision = useCallback((): void => {
+    sendRevisionRequest(directionsUnavailable ? "" : revisionDirection, onAction, () =>
+      setRevisionDirectionDraft({ key: revisionDirectionKey, text: "" }),
+    );
+  }, [directionsUnavailable, onAction, revisionDirection, revisionDirectionKey]);
   const initialQueueState = useMemo(
     () => initialFindingQueueState(state.findings),
     [state.findings],
@@ -1490,7 +1507,7 @@ export function ReviewWorkspace({
             transmissionReady
           ) {
             event.preventDefault();
-            onAction({ type: "request-revision" });
+            requestRevision();
           }
         } else if (event.key === "e" || event.key === "E") {
           if (canExport) {
@@ -1613,6 +1630,7 @@ export function ReviewWorkspace({
     paletteAvailable,
     paletteOpen,
     pendingStart,
+    requestRevision,
     revealApprovalGate,
     revealFindingInQueue,
     state.approval,
@@ -1705,7 +1723,7 @@ export function ReviewWorkspace({
       label: "Request revision",
       note: "Alt+R",
       disabledReason: revisionReason,
-      run: () => onAction({ type: "request-revision" }),
+      run: requestRevision,
     },
     {
       id: "export",
@@ -3752,7 +3770,11 @@ export function ReviewWorkspace({
                 roundLimitReached ||
                 !transmissionReady ||
                 pendingReviewAction !== null,
-              onRequest: () => onAction({ type: "request-revision" }),
+              onRequest: requestRevision,
+              direction: revisionDirection,
+              directionsUnavailable,
+              onDirectionChange: (text) =>
+                setRevisionDirectionDraft({ key: revisionDirectionKey, text }),
             }}
             exportAction={{
               disabled: !canExport,

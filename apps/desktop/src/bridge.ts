@@ -139,6 +139,7 @@ import {
   parseRecentWorkspacesListInput,
   parseRecentWorkspacesListResult,
 } from "./recent-workspaces.js";
+import { maximumRevisionDirectionLength } from "./revision-direction.js";
 import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
 import { normalizeRunInputs } from "./run-inputs.js";
@@ -4440,10 +4441,20 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "recover-to-review":
     case "recover-round-limit":
     case "stop":
-    case "request-revision":
     case "export":
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
+    case "request-revision": {
+      if (!hasOnlyKeys(action, ["type", "candidateDirection"])) return invalidInput();
+      const candidateDirection =
+        action.candidateDirection === undefined
+          ? undefined
+          : proseValue(action.candidateDirection, maximumRevisionDirectionLength).trim();
+      return {
+        type: action.type,
+        ...(candidateDirection === undefined ? {} : { candidateDirection }),
+      };
+    }
     case "set-autopilot":
       if (!hasOnlyKeys(action, ["type", "enabled"])) return invalidInput();
       return { type: action.type, enabled: booleanValue(action.enabled) };

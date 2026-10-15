@@ -202,7 +202,7 @@ function footerProps(overrides: Partial<ReviewFooterProps> = {}): ReviewFooterPr
     recovery: null,
     approve: { disabled: true, onApprove: noop },
     override: null,
-    revision: { disabled: false, onRequest: noop },
+    revision: { disabled: false, onRequest: noop, direction: "", onDirectionChange: noop },
     exportAction: {
       disabled: true,
       pathLabel: "Available after approval",

@@ -38,6 +38,12 @@ import {
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 
+/** The time a direction was given, in the reader's locale; the recorded text when unreadable. */
+function formatDirectionTime(createdAt: string): string {
+  const time = new Date(createdAt);
+  return Number.isNaN(time.getTime()) ? createdAt : time.toLocaleString();
+}
+
 function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
@@ -355,6 +361,15 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
                 ))}
               </ul>
             </details>
+          )}
+          {authorInput.direction !== undefined && (
+            <p className="author-input-direction">
+              <span className="label">Your directions for this round</span>
+              <q>{authorInput.direction.text}</q>
+              <time dateTime={authorInput.direction.createdAt}>
+                {formatDirectionTime(authorInput.direction.createdAt)}
+              </time>
+            </p>
           )}
         </div>
       )}

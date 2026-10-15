@@ -21,6 +21,10 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
+import {
+  maximumRevisionDirectionLength,
+  revisionDirectionsUnavailableNote,
+} from "./revision-direction.js";
 import type { SendVerdict } from "./send-verdict.js";
 
 export type FooterBlockerKind =
@@ -195,7 +199,15 @@ export interface ReviewFooterProps {
     readonly disabled: boolean;
     readonly onSubmit: (reason: string) => void;
   } | null;
-  readonly revision: { readonly disabled: boolean; readonly onRequest: () => void };
+  readonly revision: {
+    readonly disabled: boolean;
+    readonly onRequest: () => void;
+    /** The candidate's directions for the author, typed beside the button; sent with the request. */
+    readonly direction: string;
+    readonly onDirectionChange: (direction: string) => void;
+    /** The run's author prompt cannot take directions: the field is disabled with a note. */
+    readonly directionsUnavailable?: boolean;
+  };
   readonly exportAction: {
     readonly disabled: boolean;
     readonly pathLabel: string;
@@ -311,6 +323,27 @@ export function ReviewFooter({
               Approve with override…
             </button>
           )}
+          <label className="revision-direction">
+            <span>Directions for the author (optional)</span>
+            <textarea
+              className="revision-direction-input"
+              rows={2}
+              maxLength={maximumRevisionDirectionLength}
+              value={revision.direction}
+              disabled={revision.disabled || revision.directionsUnavailable === true}
+              placeholder="e.g. lead with tokenisation; drop certification dates"
+              onChange={(event) => revision.onDirectionChange(event.target.value)}
+            />
+            <span className="revision-direction-note">
+              {revision.directionsUnavailable === true
+                ? revisionDirectionsUnavailableNote
+                : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
+                    revision.direction.length === 0
+                      ? ""
+                      : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
+                  }`}
+            </span>
+          </label>
           <button
             className="button button-quiet"
             type="button"

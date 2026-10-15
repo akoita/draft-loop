@@ -8,6 +8,7 @@
  * The runtime key list is bound to the interface, so adding a field to one without the other is
  * a compile error rather than a validator that silently rejects real payloads.
  */
+import { maximumRevisionDirectionLength } from "./revision-direction.js";
 
 export interface RunAuthorInputView {
   readonly sentChunkCount: number;
@@ -18,6 +19,14 @@ export interface RunAuthorInputView {
   readonly knowledgeFactCount?: number;
   /** Texts of the requirements that matched no sent item, at most 50. */
   readonly unmatchedRequirements: readonly string[];
+  /** The candidate's own direction for this round's author, as they gave it. */
+  readonly candidateDirection?: RunAuthorInputDirectionView;
+}
+
+/** What the candidate asked of the author for the round, and when. */
+export interface RunAuthorInputDirectionView {
+  readonly text: string;
+  readonly createdAt: string;
 }
 
 function exactKeys<Shape extends object>() {
@@ -34,12 +43,27 @@ export const runAuthorInputKeys = exactKeys<RunAuthorInputView>()([
   "knowledgeChunkCount",
   "knowledgeFactCount",
   "unmatchedRequirements",
+  "candidateDirection",
 ]);
 
 const maximumCount = 1_000_000;
 /** The most unmatched requirements the host sends and the bridge accepts. */
 export const maximumUnmatchedRequirements = 50;
 const maximumRequirementLength = 2_000;
+
+function directionView(value: unknown): RunAuthorInputDirectionView | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (!Object.keys(raw).every((key) => key === "text" || key === "createdAt")) return undefined;
+  const { text, createdAt } = raw;
+  return typeof text === "string" &&
+    text.length > 0 &&
+    text.length <= maximumRevisionDirectionLength &&
+    typeof createdAt === "string" &&
+    createdAt.length <= 64
+    ? { text, createdAt }
+    : undefined;
+}
 
 function count(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= maximumCount
@@ -70,11 +94,14 @@ export function normalizeRunAuthorInput(value: unknown): RunAuthorInputView | un
   const knowledgeFactCount =
     raw.knowledgeFactCount === undefined ? undefined : count(raw.knowledgeFactCount);
   const unmatchedRequirements = requirementTexts(raw.unmatchedRequirements);
+  const candidateDirection =
+    raw.candidateDirection === undefined ? undefined : directionView(raw.candidateDirection);
   if (
     sentChunkCount === undefined ||
     sentFactCount === undefined ||
     (raw.knowledgeChunkCount !== undefined && knowledgeChunkCount === undefined) ||
     (raw.knowledgeFactCount !== undefined && knowledgeFactCount === undefined) ||
+    (raw.candidateDirection !== undefined && candidateDirection === undefined) ||
     unmatchedRequirements === undefined
   ) {
     return undefined;
@@ -85,6 +112,7 @@ export function normalizeRunAuthorInput(value: unknown): RunAuthorInputView | un
     ...(knowledgeChunkCount === undefined ? {} : { knowledgeChunkCount }),
     ...(knowledgeFactCount === undefined ? {} : { knowledgeFactCount }),
     unmatchedRequirements,
+    ...(candidateDirection === undefined ? {} : { candidateDirection }),
   };
 }
 
@@ -99,6 +127,7 @@ export function runAuthorInputView(
     readonly knowledgeChunkCount?: number;
     readonly knowledgeFactCount?: number;
     readonly unmatchedRequirementIds: readonly string[];
+    readonly candidateDirection?: RunAuthorInputDirectionView;
   },
   requirementTexts: ReadonlyMap<string, string>,
 ): RunAuthorInputView | undefined {
@@ -111,6 +140,9 @@ export function runAuthorInputView(
     ...(input.knowledgeFactCount === undefined
       ? {}
       : { knowledgeFactCount: input.knowledgeFactCount }),
+    ...(input.candidateDirection === undefined
+      ? {}
+      : { candidateDirection: input.candidateDirection }),
     // Identical texts read as one requirement, and the renderer keys list items by text.
     unmatchedRequirements: [
       ...new Set(
@@ -130,6 +162,8 @@ export interface RunAuthorInputDisplay {
   /** Summary of the gap list, e.g. "No sent evidence for 2 requirements"; absent without a gap. */
   readonly gapSummary?: string;
   readonly unmatchedRequirements: readonly string[];
+  /** The candidate's direction for the round, when they gave one. */
+  readonly direction?: { readonly text: string; readonly createdAt: string };
 }
 
 function plural(value: number, noun: string): string {
@@ -157,5 +191,6 @@ export function runAuthorInputDisplay(
           gapSummary: `No sent evidence for ${plural(unmatchedRequirements.length, "requirement")}`,
         }),
     unmatchedRequirements,
+    ...(input.candidateDirection === undefined ? {} : { direction: input.candidateDirection }),
   };
 }
