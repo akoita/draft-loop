@@ -533,6 +533,17 @@ pinned under it.
   on the latest run. The latest run opens by default. Choosing an earlier run
   shows its draft, findings and coverage read-only, with Back to latest run one
   click away. The desktop host refuses any change to an earlier run.
+- **Run comparison.** **Compare with…** at the end of the switcher's menu
+  lists the other runs. Choosing one shows the two drafts side by side: the
+  chosen run on the left, the open run on the right, each headed with its run
+  number, recorded models, round and status. The right draft is marked against
+  the left one, with struck text only on the left and underlined text only on
+  the right. **Swap sides** switches them.
+- **Comparison is read-only.** Neither draft can be edited. The side panel and
+  the open run's validation banner step aside so the drafts take the full
+  width, and the footer reads "Comparing runs — read-only" with its approval
+  and export actions hidden. **Close comparison** or Escape returns to the open
+  run as it was.
 - **Run details.** Summarises the run in one line, such as "Opus 5.5 → GPT-6.1
   Sol · full source, 282 chunks · policy active", and opens a drawer from the
   right with the run's provenance: the author and critic with their claimed

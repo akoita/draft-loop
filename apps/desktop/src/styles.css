@@ -1610,6 +1610,83 @@ input[type="text"].workspace-title-input {
   min-width: 0;
 }
 
+/* The review column steps aside while two runs are compared, and comes back unchanged. */
+.review-column[hidden] {
+  display: none;
+}
+
+/* =========================================================================
+   Run comparison: two runs of one application side by side, read-only.
+   The header row above the drafts is where the runs' facts can be compared.
+   ========================================================================= */
+
+.run-comparison {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.run-comparison-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.run-comparison-header > div:first-child {
+  min-width: 0;
+}
+
+.run-comparison-legend {
+  margin-top: var(--space-1);
+}
+
+.run-comparison-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.run-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.run-comparison-heading {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.run-comparison-heading-title,
+.run-comparison-heading > .run-comparison-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.run-comparison-heading > .run-comparison-facts {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.run-comparison-tag {
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  background: var(--teal-wash);
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
 /* =========================================================================
    Draft panes
    ========================================================================= */
@@ -2754,6 +2831,51 @@ input[type="text"].workspace-title-input {
 .run-switcher-models {
   color: var(--text-1);
   font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+/* While two runs are compared the drafts take the whole desk: the side panel steps aside and
+   only its footer stays, spanning the width under the main column. */
+.app-shell-comparing {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.app-shell-comparing > .side-panel-handle {
+  display: none;
+}
+
+.app-shell-comparing > .side-column {
+  height: auto;
+  border-top: 1px solid var(--border);
+  border-left: 0;
+}
+
+.app-shell-comparing .side-scroll,
+.validation-banner[hidden] {
+  display: none;
+}
+
+.run-switcher-separator {
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.run-switcher-menu-title {
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
+.run-switcher-compare {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+/* Comparison drafts wrap long tokens instead of widening their column. */
+.run-comparison .artifact-pane {
   overflow-wrap: anywhere;
 }
 

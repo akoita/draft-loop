@@ -361,6 +361,11 @@ export interface DesktopApplicationCapabilities {
    * workspace or starting a review returns to the latest run too.
    */
   readonly openRun?: (runId: string | null) => Promise<DesktopReviewState>;
+  /**
+   * Reads one of the scoped application's runs for the run comparison. Unlike `openRun` it
+   * leaves the review on the run it shows: later loads and changes still target that run.
+   */
+  readonly loadRunForComparison?: (runId: string) => Promise<DesktopReviewState>;
 }
 
 /**
@@ -500,6 +505,16 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               throw error;
             }
           },
+          loadRunForComparison: async (selected: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "review.load",
+                input:
+                  applicationId === undefined
+                    ? { runId: selected }
+                    : { applicationId, runId: selected },
+              }),
+            ),
           listApplications: async (workspaceId: string) =>
             unwrap(
               await capabilityPort.execute({ type: "application.list", input: { workspaceId } }),
