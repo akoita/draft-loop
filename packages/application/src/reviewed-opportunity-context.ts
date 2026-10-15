@@ -32,7 +32,8 @@ export function reviewedOpportunityContext(
   }
   const sections = [
     `Role: ${brief.role?.value ?? ""}`,
-    `Employer: ${brief.employer?.value ?? ""}`,
+    // A reviewed brief may have no employer; say so rather than leave the author a blank to fill.
+    `Employer: ${brief.employer?.value ?? "not named in the job posting"}`,
     ...(brief.responsibilities.length === 0
       ? []
       : ["Responsibilities:", ...brief.responsibilities.map((item) => `- ${item.text}`)]),

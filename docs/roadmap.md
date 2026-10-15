@@ -1860,8 +1860,9 @@ The fixture walk on 2026-10-15 is recorded in
 exit criterion: in a demo workspace, profile generation has no fixture path, so
 a new application cannot start a review offline. #1251 added that path, and
 the repeat walk the same day reached a started review offline, but the exit is
-still not met: a brief whose job text names no employer cannot be reviewed in
-the app (#1265). The walks' other findings are #1252 to #1254 and #1266. The
+still not met: a brief whose job text names no employer could not be reviewed
+in the app. #1265 lets such a brief be reviewed, and #1278 makes Start wait for
+a reviewed brief; a further walk confirms the exit. The walks' other findings are #1252 to #1254 and #1266. The
 v0.8.0-alpha.4 release is a checkpoint of this stage, not its exit.
 
 It follows #1065 and comes ahead of the remaining Any-format career intake

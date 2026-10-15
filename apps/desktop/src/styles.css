@@ -7067,6 +7067,14 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-xs);
 }
 
+/* Why Mark reviewed is disabled, shown beside the button. */
+.brief-review-reason {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--amber);
+  font-size: var(--text-xs);
+}
+
 /* =========================================================================
    Home: the landing page of an open workspace (ADR 0010)
    ========================================================================= */

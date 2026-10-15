@@ -396,10 +396,15 @@ describe("opportunity brief schemas", () => {
     expect(opportunityBriefSchema.safeParse(contaminatedInstructions).success).toBe(false);
   });
 
+  it("accepts a reviewed brief whose job posting names no employer", () => {
+    const reviewed = brief({ employer: null });
+    expect(reviewed.status).toBe("reviewed");
+    expect(opportunityBriefSchema.safeParse(reviewed).success).toBe(true);
+  });
+
   it("enforces reviewed-state requirements and source-status issue mappings", () => {
     expect(opportunityBriefSchema.safeParse(brief({ reviewedAt: null })).success).toBe(false);
     expect(opportunityBriefSchema.safeParse(brief({ role: null })).success).toBe(false);
-    expect(opportunityBriefSchema.safeParse(brief({ employer: null })).success).toBe(false);
     expect(opportunityBriefSchema.safeParse(brief({ requirements: [] })).success).toBe(false);
     expect(
       opportunityBriefSchema.safeParse({
