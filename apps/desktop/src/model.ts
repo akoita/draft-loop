@@ -167,6 +167,7 @@ export interface ProviderFailureView {
     | "permission"
     | "rate-limit"
     | "quota-exhausted"
+    | "usage-limit"
     | "timeout"
     | "cancelled"
     | "transient"
@@ -267,6 +268,15 @@ export interface ReviewEvent {
   readonly createdAt: string;
 }
 
+/** Why a paused run waits: the provider's subscription usage limit, with when it resets. */
+export interface UsageLimitView {
+  readonly provider: string;
+  readonly model: string;
+  readonly step: "author" | "critic" | "revision";
+  /** ISO time the limit resets, or `null` when the provider did not report a valid one. */
+  readonly resetsAt: string | null;
+}
+
 export interface ReviewExecutionView {
   readonly status: "idle" | "running" | "interrupted";
   readonly step: "author" | "critic" | "revision" | null;
@@ -307,6 +317,8 @@ export interface DesktopReviewState {
   /** How the host reaches Anthropic and OpenAI on a new run; absent when the host did not say. */
   readonly providerRoutes?: ProviderRoutesView;
   readonly providerFailure: ProviderFailureView | null;
+  /** Set while the run is paused on a subscription usage limit; absent otherwise. */
+  readonly usageLimit?: UsageLimitView | null;
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;
   readonly findings: readonly ReviewFinding[];
@@ -531,6 +543,7 @@ export function reduceReviewState(
             ...state,
             state: "reviewing",
             providerFailure: null,
+            usageLimit: null,
             execution: { ...state.execution, status: "running" },
           }
         : state;

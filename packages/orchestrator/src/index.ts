@@ -274,6 +274,11 @@ export interface RunError {
   readonly retryable: boolean;
   /** Absolute, content-free time before which a retry must not be attempted. */
   readonly retryNotBefore?: string;
+  /**
+   * When a subscription usage limit resets, as an ISO timestamp. Present only on a
+   * `usage-limit` error whose provider reported a validated time.
+   */
+  readonly usageLimitResetsAt?: string;
   readonly providerRequestId: string | null;
   readonly failureStage?: RunFailureStage;
   readonly failureReason?: RunFailureStage;
@@ -344,6 +349,7 @@ export type RunEventType =
   | "coverage.judged"
   | "provider.failed"
   | "provider.recovered"
+  | "provider.usage-limit"
   | "budget.exhausted"
   | "user.paused"
   | "user.stopped"
@@ -590,6 +596,7 @@ const providerErrorCodes = new Set([
   "permission",
   "rate-limit",
   "quota-exhausted",
+  "usage-limit",
   "timeout",
   "cancelled",
   "transient",
@@ -620,6 +627,15 @@ function safeProviderRequestId(value: unknown): string | null {
 }
 
 const maxRetryAfterMs = 60_000;
+
+const isoInstantPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/u;
+
+/** A usage-limit reset time, only when it is a strict UTC ISO instant; never free text. */
+function safeUsageLimitResetsAt(value: unknown): string | undefined {
+  if (typeof value !== "string" || !isoInstantPattern.test(value)) return undefined;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined;
+}
 
 function safeRetryAfterMs(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
@@ -726,6 +742,7 @@ function providerFailure(
           readonly code?: unknown;
           readonly retryable?: unknown;
           readonly retryAfterMs?: unknown;
+          readonly usageLimitResetsAt?: unknown;
           readonly requestId?: unknown;
           readonly failureStage?: unknown;
           readonly failureReason?: unknown;
@@ -749,6 +766,8 @@ function providerFailure(
     candidate.retryAfterMs ?? (code === "rate-limit" ? 5_000 : undefined),
     now,
   );
+  const usageLimitResetsAt =
+    code === "usage-limit" ? safeUsageLimitResetsAt(candidate.usageLimitResetsAt) : undefined;
   const rawFailureStage =
     typeof candidate.failureStage === "string"
       ? candidate.failureStage
@@ -779,9 +798,12 @@ function providerFailure(
   );
   return {
     code,
-    message: retryable
-      ? "The provider request failed. You can retry safely."
-      : "The provider request failed. Retry is not available.",
+    message:
+      code === "usage-limit"
+        ? "The subscription usage limit was reached. The run is paused; resume it after the limit resets."
+        : retryable
+          ? "The provider request failed. You can retry safely."
+          : "The provider request failed. Retry is not available.",
     provider: selection.company,
     modelId: selection.modelId,
     step,
@@ -789,6 +811,7 @@ function providerFailure(
     maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
     retryable,
     ...(retryAt === undefined ? {} : { retryNotBefore: retryAt }),
+    ...(usageLimitResetsAt === undefined ? {} : { usageLimitResetsAt }),
     providerRequestId: safeProviderRequestId(candidate.requestId),
     ...(failureStage === undefined ? {} : { failureStage, failureReason: failureStage }),
     diagnostics,
@@ -1455,6 +1478,32 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  /**
+   * Pause, not fail, when a subscription usage limit interrupts a step. No failed execution is
+   * recorded, so completed steps stay and the interrupted step runs again, with the same attempt
+   * number, when the person resumes.
+   */
+  const pauseForUsageLimit = async (
+    snapshot: RunSnapshot,
+    failure: RunError,
+    now: string,
+  ): Promise<RunSnapshot> => {
+    const updated = {
+      ...settledForTransition(snapshot, now),
+      state: "paused" as const,
+      updatedAt: now,
+      lastError: failure,
+    };
+    await saveAndEmit(updated, "provider.usage-limit", {
+      provider: failure.provider,
+      modelId: failure.modelId,
+      step: failure.step,
+      usageLimitResetsAt: failure.usageLimitResetsAt ?? null,
+    });
+    await emit(updated, "state.changed", { to: "paused", reason: "usage-limit" });
+    return updated;
+  };
+
   const executeStep = async (
     initialSnapshot: RunSnapshot,
     context: ContextSnapshot,
@@ -1762,6 +1811,7 @@ export function createOrchestrationEngine(
         attempt,
         failureNow,
       );
+      if (failure.code === "usage-limit") return pauseForUsageLimit(snapshot, failure, failureNow);
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -2055,7 +2105,7 @@ export function createOrchestrationEngine(
       return immutable(snapshot);
     const active =
       snapshot.state === "paused"
-        ? { ...snapshot, state: stepStates[snapshot.currentStep ?? "author"] }
+        ? { ...snapshot, state: stepStates[snapshot.currentStep ?? "author"], lastError: null }
         : snapshot;
     return advance(active, request.context);
   };
@@ -2115,7 +2165,11 @@ export function createOrchestrationEngine(
     const active = legacyCriticRecovery
       ? { ...resumed, state: "provider-error" as const, currentStep: "critic" as const }
       : resumed.state === "paused"
-        ? { ...resumed, state: stepStates[resumed.currentStep ?? "author"] }
+        ? {
+            ...resumed,
+            state: stepStates[resumed.currentStep ?? "author"],
+            lastError: null,
+          }
         : resumed;
     return advance(active, context, resumeOptions.signal);
   };

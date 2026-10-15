@@ -34,6 +34,7 @@ const providerErrorCodes = [
   "permission",
   "rate-limit",
   "quota-exhausted",
+  "usage-limit",
   "timeout",
   "cancelled",
   "transient",

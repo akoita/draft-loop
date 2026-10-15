@@ -261,6 +261,7 @@ import {
 import { createSemanticRetrievalHost } from "./semantic-retrieval-host.js";
 import { createSourceEvidenceKindHost } from "./source-evidence-kind-host.js";
 import { draftBriefStartRefusalFor } from "./start-requirements-guard.js";
+import { usageLimitView } from "./usage-limit-view.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -871,6 +872,8 @@ const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], 
   "rate-limit": "The provider rate limit was reached. Wait briefly before retrying.",
   "quota-exhausted":
     "The OpenAI quota is exhausted. Add credits or use a different OpenAI project before retrying.",
+  "usage-limit":
+    "The subscription usage limit was reached. Resume the review after the limit resets.",
   timeout: "The provider did not respond before the request timed out.",
   cancelled: "The provider request was cancelled.",
   transient: "The provider is temporarily unavailable.",
@@ -1158,6 +1161,7 @@ function reviewState(
     providerTransmissionPreflight: preflight,
     providerRoutes: providerRoutesView(providerAuthModeConfiguration),
     providerFailure: providerFailure(snapshot),
+    usageLimit: usageLimitView(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
     findings: snapshot.findings.map((_finding, index) =>
