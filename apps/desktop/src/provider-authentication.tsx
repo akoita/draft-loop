@@ -17,10 +17,12 @@ import {
   saveOpenAiAuthMode,
   saveProviderCredential,
 } from "./provider-authentication-actions.js";
+import type { ProviderAuthenticationSummary } from "./provider-authentication-summary.js";
 import {
-  type ProviderAuthenticationSummary,
-  providerAuthenticationForPair,
-} from "./provider-authentication-summary.js";
+  type CredentialMap,
+  mapProviders,
+  useProviderSignInReadiness,
+} from "./provider-sign-in-readiness.js";
 import { useModalFocusTrap } from "./review.js";
 
 export { credentialProviderLabels, providerAuthModeLabels };
@@ -204,8 +206,6 @@ export function ProviderAuthenticationMode({
   );
 }
 
-type CredentialMap<T> = Readonly<Record<CredentialProvider, T>>;
-
 const credentialRows: readonly {
   readonly provider: CredentialProvider;
   readonly title: string;
@@ -232,34 +232,6 @@ const credentialRows: readonly {
     note: mistralCredentialNote,
   },
 ];
-
-const credentialProviderIds: readonly CredentialProvider[] = credentialRows.map(
-  (row) => row.provider,
-);
-
-function emptyCredentialStatus(provider: CredentialProvider): CredentialStatus {
-  return { provider, configured: false, source: "none", protection: "none" };
-}
-
-function emptyAuthModeStatus(provider: ProviderAuthModeProvider): ProviderAuthModeStatus {
-  return {
-    provider,
-    activeMode: "api-key",
-    preferredMode: "api-key",
-    restartRequired: false,
-    environmentOverride: false,
-  };
-}
-
-function mapProviders<T>(make: (provider: CredentialProvider) => T): CredentialMap<T> {
-  return {
-    anthropic: make("anthropic"),
-    openai: make("openai"),
-    deepinfra: make("deepinfra"),
-    google: make("google"),
-    mistral: make("mistral"),
-  };
-}
 
 export interface ProviderAuthenticationViewProps {
   readonly statuses: CredentialMap<CredentialStatus>;
@@ -389,50 +361,17 @@ export function ProviderAuthentication({
   onReadiness,
 }: ProviderAuthenticationProps) {
   const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [statuses, setStatuses] = useState<CredentialMap<CredentialStatus>>(() =>
-    mapProviders(emptyCredentialStatus),
-  );
-  const [anthropicAuthMode, setAnthropicAuthMode] = useState(() =>
-    emptyAuthModeStatus("anthropic"),
-  );
-  const [openaiAuthMode, setOpenaiAuthMode] = useState(() => emptyAuthModeStatus("openai"));
   const [inputs, setInputs] = useState<CredentialMap<string>>(() => mapProviders(() => ""));
   const [revealed, setRevealed] = useState<CredentialMap<boolean>>(() => mapProviders(() => false));
   const [feedback, setFeedback] = useState<string | null>(null);
-  // A later refresh replaces an earlier one; a stale answer must not overwrite it.
-  const refreshRun = useRef(0);
-
-  const refresh = useCallback(() => {
-    if (getCredentialStatus === undefined) return;
-    const run = ++refreshRun.current;
-    const isCurrent = () => refreshRun.current === run;
-    void Promise.all(
-      credentialProviderIds.map((provider) =>
-        getCredentialStatus(provider)
-          .then((status) => {
-            if (isCurrent()) setStatuses((current) => ({ ...current, [provider]: status }));
-          })
-          .catch(() => undefined),
-      ),
-    ).then(() => {
-      if (isCurrent()) setLoaded(true);
+  const { readiness, statuses, openaiAuthMode, setOpenaiAuthMode, refresh } =
+    useProviderSignInReadiness({
+      getCredentialStatus,
+      getProviderAuthModeStatus,
+      fixtureMode,
+      authorCompany,
+      criticCompany,
     });
-    if (getProviderAuthModeStatus === undefined) return;
-    void getProviderAuthModeStatus("anthropic")
-      .then((status) => isCurrent() && setAnthropicAuthMode(status))
-      .catch(() => undefined);
-    void getProviderAuthModeStatus("openai")
-      .then((status) => isCurrent() && setOpenaiAuthMode(status))
-      .catch(() => undefined);
-  }, [getCredentialStatus, getProviderAuthModeStatus]);
-
-  useEffect(() => {
-    refresh();
-    return () => {
-      refreshRun.current += 1;
-    };
-  }, [refresh]);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -464,23 +403,9 @@ export function ProviderAuthentication({
     }
   };
 
-  const readiness =
-    loaded || fixtureMode
-      ? providerAuthenticationForPair({
-          fixtureMode,
-          anthropicConfigured: statuses.anthropic.configured,
-          openaiConfigured: statuses.openai.configured,
-          deepinfraConfigured: statuses.deepinfra.configured,
-          googleConfigured: statuses.google.configured,
-          mistralConfigured: statuses.mistral.configured,
-          anthropicMode: anthropicAuthMode.activeMode,
-          openaiMode: openaiAuthMode.activeMode,
-          ...(authorCompany === undefined ? {} : { authorCompany }),
-          ...(criticCompany === undefined ? {} : { criticCompany }),
-        })
-      : null;
-  const summary = readiness?.summary ?? null;
-  const ready = readiness?.ready;
+  const summary = readiness.summary;
+  // Ready only when every read the pair needs reported it so, as before the hook was shared.
+  const ready = summary === null ? undefined : readiness.state === "ready";
 
   const onReadinessRef = useRef(onReadiness);
   onReadinessRef.current = onReadiness;

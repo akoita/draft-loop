@@ -400,9 +400,19 @@ stays visible when everything is done:
 - **Button.** While blocked, the button names the first unmet condition, for
   example "Start review · review the requirements first".
 
-Provider sign-in is verified by the host when the review starts, so the
-checklist marks it **Checked when the review starts** rather than done; a
-refusal then appears at the top of the checklist.
+Provider sign-in uses the same status reads as Home, for the run's author and
+critic routes. It is read when the application screen opens and again on
+returning from Home; it is not polled.
+
+- **Done.** Every route reports ready: an API key stored in the app or set in
+  the environment, or a Claude or Codex CLI that reports a signed-in session.
+  The key is not checked against the provider at this point.
+- **Not done.** A route reports no key or no signed-in session. The row offers
+  **Open provider sign-in**, but it does not disable Start, because the host
+  checks sign-in again when the review starts.
+- **Checked when the review starts.** The read failed, has not answered yet,
+  or the host has no status reads. A refusal from the host then appears at the
+  top of the checklist.
 
 ### Moving between pages
 

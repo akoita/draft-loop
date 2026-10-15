@@ -58,6 +58,7 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { footerBlocker, ReviewFooter } from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
@@ -160,6 +161,8 @@ interface ReviewWorkspaceProps {
   readonly writingPolicyAction?: ReactNode;
   /** Opens Home, where workspace-level setup (provider authentication) lives. */
   readonly onOpenHome?: () => void;
+  /** The run pair's provider sign-in as the host's status reads report it, for the checklist. */
+  readonly providerSignInReadiness?: ProviderSignInReadiness;
   /**
    * Compact cards for the inputs that have their own screens (career evidence, career profile,
    * workspace settings). When set, the setup screen shows them in place of the full panels and
@@ -1157,6 +1160,7 @@ export function ReviewWorkspace({
   profilePanel,
   writingPolicyAction,
   onOpenHome,
+  providerSignInReadiness,
   setupSummary,
   pageNavigation,
   headerNotice,
@@ -2550,6 +2554,7 @@ export function ReviewWorkspace({
       transmission: state.providerTransmissionPreflight,
       startDisabledReason,
       canOpenProviderSignIn: onOpenHome !== undefined,
+      ...(providerSignInReadiness === undefined ? {} : { providerSignIn: providerSignInReadiness }),
     });
     const startPending = pendingReviewAction?.action === "start";
     const startTooltip = startChecklistTooltip(startConditions);

@@ -95,6 +95,10 @@ import {
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import type { ProfileGenerationActivity } from "./profile-generation-progress.js";
 import { ProviderAuthentication } from "./provider-authentication.js";
+import {
+  credentialProvidersForRoute,
+  useProviderSignInReadiness,
+} from "./provider-sign-in-readiness.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import {
@@ -2181,6 +2185,27 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     criticModel,
   ]);
 
+  // The application screen's sign-in row reads the same statuses as Home, for the run's pair.
+  // It reads when the screen opens, when returning from Home and when the workspace, application
+  // or pair changes; it never polls.
+  const signInAuthorCompany = state?.providerTransmissionPreflight.author.company as
+    | ModelCompany
+    | undefined;
+  const signInCriticCompany = state?.providerTransmissionPreflight.critic.company as
+    | ModelCompany
+    | undefined;
+  const { readiness: providerSignInReadiness } = useProviderSignInReadiness({
+    getCredentialStatus: activePort.getCredentialStatus,
+    getProviderAuthModeStatus: activePort.getProviderAuthModeStatus,
+    fixtureMode: state?.setup.fixtureMode ?? false,
+    authorCompany: signInAuthorCompany,
+    criticCompany: signInCriticCompany,
+    providers: credentialProvidersForRoute(signInAuthorCompany, signInCriticCompany),
+    enabled:
+      state !== null && (view.kind === "application" || activePort.listApplications === undefined),
+    refreshKey: `${state?.workspaceId ?? ""}:${view.kind === "application" ? view.applicationId : ""}`,
+  });
+
   if (workspaceRecoveryRequired) {
     return (
       <WorkspaceRecovery
@@ -2778,6 +2803,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(addUrl === undefined ? {} : { onAddUrl: addUrl })}
       jobRequirements={jobRequirementsBinding}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
+      providerSignInReadiness={providerSignInReadiness}
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")
         ? {
             setupSummary: (
