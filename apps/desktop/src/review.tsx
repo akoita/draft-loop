@@ -3403,490 +3403,498 @@ export function ReviewWorkspace({
           onReset={sidePanel.reset}
         />
         <aside className="side-column">
-          {/* Run progress sits here only while the run executes; afterwards its timeline is in
+          {/* The panel scrolls above the footer, never under it: a growing footer shrinks this
+              area instead of covering its tabs. */}
+          <div className="side-scroll">
+            {/* Run progress sits here only while the run executes; afterwards its timeline is in
               Run details, and only a paused or interrupted run keeps its way back in. */}
-          {runInProgress ? (
-            <section className="panel progress-panel" aria-label="run progress">
-              <div className="section-heading compact">
-                <div>
-                  <PanelToggle
-                    label="Run progress"
-                    collapsed={collapsedPanels.has("progress")}
-                    controls="run-progress-events"
-                    onToggle={() => togglePanel("progress")}
-                  />
-                  <h2>{stateLabel(state.state)}</h2>
-                </div>
-                {readOnly ? null : state.state === "paused" ? (
-                  resumeButton
-                ) : state.execution.status === "running" ? (
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    disabled={pendingReviewAction !== null}
-                    onClick={() => onAction({ type: "stop" })}
-                  >
-                    {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
-                  </button>
-                ) : null}
-              </div>
-              {state.execution.step === null ? null : (
-                <p className="pending-action-status" role="status" aria-live="polite">
-                  {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
-                  attempt {state.execution.attempt} · elapsed{" "}
-                  {Math.floor(state.execution.elapsedMs / 1_000)}s
-                  {executionLimitText(state.execution)}
-                </p>
-              )}
-              {readOnly ? null : renderAutopilotToggle()}
-              <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
-                <RunTimeline events={state.events} describeState={stateLabel} />
-              </div>
-            </section>
-          ) : readOnly ||
-            (state.execution.status !== "interrupted" && state.state !== "paused") ? null : (
-            <section className="panel run-recovery-panel" aria-label="run recovery">
-              <div className="section-heading compact">
-                <h2>{stateLabel(state.state)}</h2>
-                {state.execution.status === "interrupted" ? (
-                  <div className="approval-actions">
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      disabled={pendingReviewAction !== null || !transmissionReady}
-                      onClick={() => onAction({ type: "resume" })}
-                    >
-                      Resume interrupted review
-                    </button>
+            {runInProgress ? (
+              <section className="panel progress-panel" aria-label="run progress">
+                <div className="section-heading compact">
+                  <div>
+                    <PanelToggle
+                      label="Run progress"
+                      collapsed={collapsedPanels.has("progress")}
+                      controls="run-progress-events"
+                      onToggle={() => togglePanel("progress")}
+                    />
+                    <h2>{stateLabel(state.state)}</h2>
+                  </div>
+                  {readOnly ? null : state.state === "paused" ? (
+                    resumeButton
+                  ) : state.execution.status === "running" ? (
                     <button
                       className="button button-quiet"
                       type="button"
                       disabled={pendingReviewAction !== null}
                       onClick={() => onAction({ type: "stop" })}
                     >
-                      Stop review
+                      {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                     </button>
-                  </div>
-                ) : (
-                  resumeButton
-                )}
-              </div>
-              {state.execution.status !== "interrupted" ? null : state.execution.failure !==
-                undefined ? (
-                <p className="pending-action-status setup-blocker" role="alert">
-                  The review could not continue: {state.execution.failure} Fix this, then resume the
-                  review, or stop it without losing history.
-                </p>
-              ) : (
-                <p className="pending-action-status" role="status">
-                  This review was interrupted when the previous app session ended. Resume it to
-                  continue from the durable step, or stop it without losing history.
-                </p>
-              )}
-            </section>
-          )}
-          <RunTrustWarning independentReview={state.providerExposure.independentReview} />
-
-          <ReviewWorkTabs
-            next={nextStepLine(state, gateBlocker, approvalReadiness)}
-            onNext={
-              !readOnly && nextStepOpensRunDetails(state, gateBlocker)
-                ? openRunDetails
-                : { findings: openFindings, "approval-gate": revealApprovalGate, none: null }[
-                    nextStepTarget(gateBlocker) ?? "none"
-                  ]
-            }
-            selected={workTab}
-            onSelect={selectWorkTab}
-            tabs={[
-              findingsTabLabel(queueCounts.needsAction),
-              ...(state.coverage === undefined || state.coverage === null
-                ? []
-                : [coverageTabLabel(state.coverage)]),
-            ]}
-          />
-          <section
-            className="panel findings-panel"
-            id="findings-panel"
-            aria-label="critique findings"
-            tabIndex={-1}
-            {...reviewWorkPanelProps("findings", workTab, hasCoverage)}
-          >
-            <div className="findings-queue-header">
-              <div className="section-heading compact">
-                <div>
-                  <h2>Findings</h2>
-                  <p className="finding-progress" role="status" aria-live="polite">
-                    {queueCounts.resolved} of {state.findings.length} resolved
-                    {queueCounts.needsAction === 0
-                      ? " · all findings resolved"
-                      : runInProgress
-                        ? ` · ${queueCounts.needsAction} open`
-                        : ` · ${queueCounts.needsAction} need action`}
-                  </p>
-                  {runInProgress && queueCounts.needsAction > 0 ? (
-                    <p className="setup-note">
-                      The review is still running, so nothing here needs you yet. It pauses when it
-                      needs your decisions.
-                    </p>
                   ) : null}
                 </div>
-                <span className="count-badge">
-                  {!hasArtifact
-                    ? "Not evaluated"
-                    : queueCounts.needsAction === 0
-                      ? "All resolved"
-                      : `${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
-                </span>
-              </div>
-              <fieldset className="finding-filters">
-                <legend className="sr-only">Finding filters</legend>
-                {findingQueueFilters.map((filter) => {
-                  const count = findingQueueFilterCount(queueCounts, filter.id);
-                  const isSelected = findingFilter === filter.id;
-                  return (
-                    <button
-                      className={`finding-filter${isSelected ? " finding-filter-selected" : ""}`}
-                      type="button"
-                      aria-pressed={isSelected}
-                      aria-controls="finding-queue-list"
-                      key={filter.id}
-                      onClick={() => {
-                        setFindingFilter(filter.id);
-                        setExpandedFindingId(null);
-                        setOverrideEditingFindingId(null);
-                      }}
-                    >
-                      <span>{filter.label}</span>
-                      <span className="finding-filter-count">{count}</span>
-                    </button>
-                  );
-                })}
-              </fieldset>
-            </div>
-            <div id="findings-panel-body">
-              {findingDecisionPending ? (
-                <p className="pending-action-status" role="status" aria-live="polite">
-                  Saving{" "}
-                  {pendingBulkFindingCount === null
-                    ? "finding decision"
-                    : `${pendingBulkFindingCount} finding decisions`}
-                  … Elapsed {pendingReviewAction.elapsedSeconds} second
-                  {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
-                  {pendingBulkFindingCount === null ? " the decision is" : " the decisions are"}{" "}
-                  saved.
-                </p>
-              ) : null}
-              {bulkDecisionAvailable ? (
-                <fieldset className="finding-bulk-actions">
-                  <legend>
-                    Apply to all {filteredFindings.filter(isUnresolvedFinding).length} shown
-                  </legend>
-                  {directFindingDecisions.map((decision) => {
-                    const targetIds = bulkDecisionTargetsForDecision(
-                      state.findings,
-                      bulkFindingDecisionTargets(state.findings, findingFilter, decision),
-                      decision,
-                      decisionContext,
-                    );
-                    return (
+                {state.execution.step === null ? null : (
+                  <p className="pending-action-status" role="status" aria-live="polite">
+                    {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
+                    attempt {state.execution.attempt} · elapsed{" "}
+                    {Math.floor(state.execution.elapsedMs / 1_000)}s
+                    {executionLimitText(state.execution)}
+                  </p>
+                )}
+                {readOnly ? null : renderAutopilotToggle()}
+                <div id="run-progress-events" hidden={collapsedPanels.has("progress")}>
+                  <RunTimeline events={state.events} describeState={stateLabel} />
+                </div>
+              </section>
+            ) : readOnly ||
+              (state.execution.status !== "interrupted" && state.state !== "paused") ? null : (
+              <section className="panel run-recovery-panel" aria-label="run recovery">
+                <div className="section-heading compact">
+                  <h2>{stateLabel(state.state)}</h2>
+                  {state.execution.status === "interrupted" ? (
+                    <div className="approval-actions">
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        disabled={pendingReviewAction !== null || !transmissionReady}
+                        onClick={() => onAction({ type: "resume" })}
+                      >
+                        Resume interrupted review
+                      </button>
                       <button
                         className="button button-quiet"
                         type="button"
-                        key={decision}
-                        disabled={pendingReviewAction !== null || targetIds.length === 0}
-                        onClick={() => onBulkFindingDecision(targetIds, decision)}
+                        disabled={pendingReviewAction !== null}
+                        onClick={() => onAction({ type: "stop" })}
                       >
-                        {decisionLabels[decision]} all
+                        Stop review
                       </button>
-                    );
-                  })}
-                  {bulkWordMatchNote === null ? null : (
-                    <p className="finding-bulk-note">
-                      {bulkWordMatchNote} {BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.
-                    </p>
+                    </div>
+                  ) : (
+                    resumeButton
                   )}
-                  {bulkBlockingNote === null ? null : (
-                    <p className="finding-bulk-note">{bulkBlockingNote}</p>
-                  )}
-                </fieldset>
-              ) : null}
-              <section
-                className="findings-queue-scroll"
-                id="finding-queue-list"
-                aria-label="Findings queue"
-                tabIndex={-1}
-                ref={findingQueueRef}
-              >
-                {filteredFindings.length === 0 ? (
-                  <p className="finding-empty-state" role="status">
-                    {findingQueueEmptyMessage(findingFilter, queueCounts)}
+                </div>
+                {state.execution.status !== "interrupted" ? null : state.execution.failure !==
+                  undefined ? (
+                  <p className="pending-action-status setup-blocker" role="alert">
+                    The review could not continue: {state.execution.failure} Fix this, then resume
+                    the review, or stop it without losing history.
                   </p>
-                ) : null}
-                {filteredFindings.map((finding) => {
-                  const claim =
-                    finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
-                  const isExpanded = expandedFindingId === finding.id;
-                  const summaryId = findingDomId("finding-summary", finding.id);
-                  const detailsId = findingDomId("finding-details", finding.id);
-                  const isEditingOverride = isOverrideEditorVisible(
-                    overrideEditingFindingId,
-                    finding.id,
-                  );
-                  const rationale = overrideReasons[finding.id] ?? finding.rationale ?? "";
+                ) : (
+                  <p className="pending-action-status" role="status">
+                    This review was interrupted when the previous app session ended. Resume it to
+                    continue from the durable step, or stop it without losing history.
+                  </p>
+                )}
+              </section>
+            )}
+            <RunTrustWarning independentReview={state.providerExposure.independentReview} />
 
-                  return (
-                    <article
-                      className={`finding-row finding-${finding.severity}${
-                        isUnresolvedFinding(finding) ? "" : " finding-resolved"
-                      }${activeFindingId === finding.id ? " finding-row-active" : ""}`}
-                      key={finding.id}
-                    >
+            <ReviewWorkTabs
+              next={nextStepLine(state, gateBlocker, approvalReadiness)}
+              onNext={
+                !readOnly && nextStepOpensRunDetails(state, gateBlocker)
+                  ? openRunDetails
+                  : { findings: openFindings, "approval-gate": revealApprovalGate, none: null }[
+                      nextStepTarget(gateBlocker) ?? "none"
+                    ]
+              }
+              selected={workTab}
+              onSelect={selectWorkTab}
+              tabs={[
+                findingsTabLabel(queueCounts.needsAction),
+                ...(state.coverage === undefined || state.coverage === null
+                  ? []
+                  : [coverageTabLabel(state.coverage)]),
+              ]}
+            />
+            <section
+              className="panel findings-panel"
+              id="findings-panel"
+              aria-label="critique findings"
+              tabIndex={-1}
+              {...reviewWorkPanelProps("findings", workTab, hasCoverage)}
+            >
+              <div className="findings-queue-header">
+                <div className="section-heading compact">
+                  <div>
+                    <h2>Findings</h2>
+                    <p className="finding-progress" role="status" aria-live="polite">
+                      {queueCounts.resolved} of {state.findings.length} resolved
+                      {queueCounts.needsAction === 0
+                        ? " · all findings resolved"
+                        : runInProgress
+                          ? ` · ${queueCounts.needsAction} open`
+                          : ` · ${queueCounts.needsAction} need action`}
+                    </p>
+                    {runInProgress && queueCounts.needsAction > 0 ? (
+                      <p className="setup-note">
+                        The review is still running, so nothing here needs you yet. It pauses when
+                        it needs your decisions.
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="count-badge">
+                    {!hasArtifact
+                      ? "Not evaluated"
+                      : queueCounts.needsAction === 0
+                        ? "All resolved"
+                        : `${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
+                  </span>
+                </div>
+                <fieldset className="finding-filters">
+                  <legend className="sr-only">Finding filters</legend>
+                  {findingQueueFilters.map((filter) => {
+                    const count = findingQueueFilterCount(queueCounts, filter.id);
+                    const isSelected = findingFilter === filter.id;
+                    return (
                       <button
-                        className="finding-summary"
+                        className={`finding-filter${isSelected ? " finding-filter-selected" : ""}`}
                         type="button"
-                        id={summaryId}
-                        aria-expanded={isExpanded}
-                        aria-controls={detailsId}
-                        ref={(element) => {
-                          if (element === null) findingSummaryButtonRefs.current.delete(finding.id);
-                          else findingSummaryButtonRefs.current.set(finding.id, element);
-                        }}
-                        onMouseEnter={() => {
-                          setActiveFindingId(finding.id);
-                          setLinkedClaimId(finding.claimId ?? null);
-                        }}
-                        onMouseLeave={() => {
-                          setActiveFindingId((current) =>
-                            current === finding.id ? null : current,
-                          );
-                          setLinkedClaimId(null);
-                        }}
-                        onFocus={() => {
-                          setActiveFindingId(finding.id);
-                          setLinkedClaimId(finding.claimId ?? null);
-                        }}
-                        onBlur={() => {
-                          setActiveFindingId((current) =>
-                            current === finding.id ? null : current,
-                          );
-                          setLinkedClaimId(null);
-                        }}
+                        aria-pressed={isSelected}
+                        aria-controls="finding-queue-list"
+                        key={filter.id}
                         onClick={() => {
-                          setExpandedFindingId((current) =>
-                            current === finding.id ? null : finding.id,
-                          );
+                          setFindingFilter(filter.id);
+                          setExpandedFindingId(null);
                           setOverrideEditingFindingId(null);
                         }}
                       >
-                        <span className={`severity severity-${finding.severity}`}>
-                          {finding.severity === "error" ? "blocking" : "warning"}
-                        </span>
-                        <span className="finding-summary-content">
-                          <span className="finding-summary-message">{findingTitle(finding)}</span>
-                        </span>
-                        <span className="finding-summary-footer">
-                          <span className={`finding-summary-status resolution-${finding.decision}`}>
-                            {acceptedWithoutRevision(finding, decisionContext)
-                              ? "Accepted · no revision left"
-                              : finding.severity === "error" && finding.decision === "accepted"
-                                ? "Accepted · revision required"
-                                : decisionLabels[finding.decision]}
-                            <span className="finding-summary-chevron" aria-hidden="true">
-                              {isExpanded ? "⌃" : "⌄"}
+                        <span>{filter.label}</span>
+                        <span className="finding-filter-count">{count}</span>
+                      </button>
+                    );
+                  })}
+                </fieldset>
+              </div>
+              <div id="findings-panel-body">
+                {findingDecisionPending ? (
+                  <p className="pending-action-status" role="status" aria-live="polite">
+                    Saving{" "}
+                    {pendingBulkFindingCount === null
+                      ? "finding decision"
+                      : `${pendingBulkFindingCount} finding decisions`}
+                    … Elapsed {pendingReviewAction.elapsedSeconds} second
+                    {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open
+                    while
+                    {pendingBulkFindingCount === null ? " the decision is" : " the decisions are"}{" "}
+                    saved.
+                  </p>
+                ) : null}
+                {bulkDecisionAvailable ? (
+                  <fieldset className="finding-bulk-actions">
+                    <legend>
+                      Apply to all {filteredFindings.filter(isUnresolvedFinding).length} shown
+                    </legend>
+                    {directFindingDecisions.map((decision) => {
+                      const targetIds = bulkDecisionTargetsForDecision(
+                        state.findings,
+                        bulkFindingDecisionTargets(state.findings, findingFilter, decision),
+                        decision,
+                        decisionContext,
+                      );
+                      return (
+                        <button
+                          className="button button-quiet"
+                          type="button"
+                          key={decision}
+                          disabled={pendingReviewAction !== null || targetIds.length === 0}
+                          onClick={() => onBulkFindingDecision(targetIds, decision)}
+                        >
+                          {decisionLabels[decision]} all
+                        </button>
+                      );
+                    })}
+                    {bulkWordMatchNote === null ? null : (
+                      <p className="finding-bulk-note">
+                        {bulkWordMatchNote} {BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.
+                      </p>
+                    )}
+                    {bulkBlockingNote === null ? null : (
+                      <p className="finding-bulk-note">{bulkBlockingNote}</p>
+                    )}
+                  </fieldset>
+                ) : null}
+                <section
+                  className="findings-queue-scroll"
+                  id="finding-queue-list"
+                  aria-label="Findings queue"
+                  tabIndex={-1}
+                  ref={findingQueueRef}
+                >
+                  {filteredFindings.length === 0 ? (
+                    <p className="finding-empty-state" role="status">
+                      {findingQueueEmptyMessage(findingFilter, queueCounts)}
+                    </p>
+                  ) : null}
+                  {filteredFindings.map((finding) => {
+                    const claim =
+                      finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
+                    const isExpanded = expandedFindingId === finding.id;
+                    const summaryId = findingDomId("finding-summary", finding.id);
+                    const detailsId = findingDomId("finding-details", finding.id);
+                    const isEditingOverride = isOverrideEditorVisible(
+                      overrideEditingFindingId,
+                      finding.id,
+                    );
+                    const rationale = overrideReasons[finding.id] ?? finding.rationale ?? "";
+
+                    return (
+                      <article
+                        className={`finding-row finding-${finding.severity}${
+                          isUnresolvedFinding(finding) ? "" : " finding-resolved"
+                        }${activeFindingId === finding.id ? " finding-row-active" : ""}`}
+                        key={finding.id}
+                      >
+                        <button
+                          className="finding-summary"
+                          type="button"
+                          id={summaryId}
+                          aria-expanded={isExpanded}
+                          aria-controls={detailsId}
+                          ref={(element) => {
+                            if (element === null)
+                              findingSummaryButtonRefs.current.delete(finding.id);
+                            else findingSummaryButtonRefs.current.set(finding.id, element);
+                          }}
+                          onMouseEnter={() => {
+                            setActiveFindingId(finding.id);
+                            setLinkedClaimId(finding.claimId ?? null);
+                          }}
+                          onMouseLeave={() => {
+                            setActiveFindingId((current) =>
+                              current === finding.id ? null : current,
+                            );
+                            setLinkedClaimId(null);
+                          }}
+                          onFocus={() => {
+                            setActiveFindingId(finding.id);
+                            setLinkedClaimId(finding.claimId ?? null);
+                          }}
+                          onBlur={() => {
+                            setActiveFindingId((current) =>
+                              current === finding.id ? null : current,
+                            );
+                            setLinkedClaimId(null);
+                          }}
+                          onClick={() => {
+                            setExpandedFindingId((current) =>
+                              current === finding.id ? null : finding.id,
+                            );
+                            setOverrideEditingFindingId(null);
+                          }}
+                        >
+                          <span className={`severity severity-${finding.severity}`}>
+                            {finding.severity === "error" ? "blocking" : "warning"}
+                          </span>
+                          <span className="finding-summary-content">
+                            <span className="finding-summary-message">{findingTitle(finding)}</span>
+                          </span>
+                          <span className="finding-summary-footer">
+                            <span
+                              className={`finding-summary-status resolution-${finding.decision}`}
+                            >
+                              {acceptedWithoutRevision(finding, decisionContext)
+                                ? "Accepted · no revision left"
+                                : finding.severity === "error" && finding.decision === "accepted"
+                                  ? "Accepted · revision required"
+                                  : decisionLabels[finding.decision]}
+                              <span className="finding-summary-chevron" aria-hidden="true">
+                                {isExpanded ? "⌃" : "⌄"}
+                              </span>
+                            </span>
+                            <span className="finding-summary-meta">
+                              {finding.category} · {finding.code}
                             </span>
                           </span>
-                          <span className="finding-summary-meta">
-                            {finding.category} · {finding.code}
-                          </span>
-                        </span>
-                      </button>
-                      {acceptedWithoutRevision(finding, decisionContext) ? (
-                        <p className="finding-nudge">{ACCEPTED_WITHOUT_REVISION_NUDGE}</p>
-                      ) : null}
-                      {isExpanded ? (
-                        <section
-                          className="finding-details"
-                          id={detailsId}
-                          aria-labelledby={summaryId}
-                        >
-                          {finding.agreement !== "author-and-critic" ? (
-                            <p className="disagreement">
-                              Disagreement · {finding.agreement} finding
-                            </p>
-                          ) : null}
-                          {claim === undefined ? (
-                            <p className="linked-claim">No linked claim for this finding.</p>
-                          ) : (
-                            <p className="linked-claim">Linked claim: {claim.text}</p>
-                          )}
-                          <fieldset className="finding-actions">
-                            <legend className="sr-only">Decision for {finding.code}</legend>
-                            {directFindingDecisions.map((decision) => (
+                        </button>
+                        {acceptedWithoutRevision(finding, decisionContext) ? (
+                          <p className="finding-nudge">{ACCEPTED_WITHOUT_REVISION_NUDGE}</p>
+                        ) : null}
+                        {isExpanded ? (
+                          <section
+                            className="finding-details"
+                            id={detailsId}
+                            aria-labelledby={summaryId}
+                          >
+                            {finding.agreement !== "author-and-critic" ? (
+                              <p className="disagreement">
+                                Disagreement · {finding.agreement} finding
+                              </p>
+                            ) : null}
+                            {claim === undefined ? (
+                              <p className="linked-claim">No linked claim for this finding.</p>
+                            ) : (
+                              <p className="linked-claim">Linked claim: {claim.text}</p>
+                            )}
+                            <fieldset className="finding-actions">
+                              <legend className="sr-only">Decision for {finding.code}</legend>
+                              {directFindingDecisions.map((decision) => (
+                                <button
+                                  className={
+                                    finding.decision === decision
+                                      ? "button button-selected"
+                                      : "button button-quiet"
+                                  }
+                                  type="button"
+                                  key={decision}
+                                  aria-describedby={
+                                    decision === "accepted" &&
+                                    acceptUnavailable(finding, decisionContext)
+                                      ? `${findingAcceptGuardId(detailsId)} ${findingDecisionHintId(detailsId, decision)}`
+                                      : findingDecisionHintId(detailsId, decision)
+                                  }
+                                  disabled={
+                                    findingDecisionsLocked ||
+                                    (decision === "accepted" &&
+                                      acceptUnavailable(finding, decisionContext))
+                                  }
+                                  onClick={() => decideFinding(finding.id, decision)}
+                                >
+                                  {decisionLabels[decision]}
+                                </button>
+                              ))}
                               <button
                                 className={
-                                  finding.decision === decision
+                                  isEditingOverride || finding.decision === "overridden"
                                     ? "button button-selected"
                                     : "button button-quiet"
                                 }
                                 type="button"
-                                key={decision}
-                                aria-describedby={
-                                  decision === "accepted" &&
-                                  acceptUnavailable(finding, decisionContext)
-                                    ? `${findingAcceptGuardId(detailsId)} ${findingDecisionHintId(detailsId, decision)}`
-                                    : findingDecisionHintId(detailsId, decision)
-                                }
-                                disabled={
-                                  findingDecisionsLocked ||
-                                  (decision === "accepted" &&
-                                    acceptUnavailable(finding, decisionContext))
-                                }
-                                onClick={() => decideFinding(finding.id, decision)}
+                                aria-describedby={findingDecisionHintId(detailsId, "overridden")}
+                                disabled={findingDecisionsLocked}
+                                onClick={() => beginOverride(finding)}
                               >
-                                {decisionLabels[decision]}
+                                Override
                               </button>
-                            ))}
-                            <button
-                              className={
-                                isEditingOverride || finding.decision === "overridden"
-                                  ? "button button-selected"
-                                  : "button button-quiet"
-                              }
-                              type="button"
-                              aria-describedby={findingDecisionHintId(detailsId, "overridden")}
-                              disabled={findingDecisionsLocked}
-                              onClick={() => beginOverride(finding)}
-                            >
-                              Override
-                            </button>
-                          </fieldset>
-                          <FindingDecisionHint
-                            finding={finding}
-                            context={decisionContext}
-                            baseId={detailsId}
-                          />
-                          {isEditingOverride ? (
-                            <section
-                              className="override-editor"
-                              aria-label={`Override ${finding.code}`}
-                            >
-                              <label className="rationale-input-label">
-                                <span>Override rationale (required)</span>
-                                <input
-                                  className="rationale-input"
-                                  type="text"
-                                  value={rationale}
-                                  disabled={findingDecisionsLocked}
-                                  ref={(element) => {
-                                    if (element === null)
-                                      overrideInputRefs.current.delete(finding.id);
-                                    else overrideInputRefs.current.set(finding.id, element);
-                                  }}
-                                  onChange={(event) =>
-                                    setOverrideReasons((current) => ({
-                                      ...current,
-                                      [finding.id]: event.target.value,
-                                    }))
-                                  }
-                                  aria-label={`Override rationale for ${finding.code}`}
-                                />
-                              </label>
-                              <div className="override-editor-actions">
-                                <button
-                                  className="button button-quiet"
-                                  type="button"
-                                  disabled={findingDecisionsLocked}
-                                  onClick={() => {
-                                    setOverrideEditingFindingId(null);
-                                    setOverrideReasons((current) => {
-                                      const next = { ...current };
-                                      delete next[finding.id];
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  className="button button-primary"
-                                  type="button"
-                                  disabled={findingDecisionsLocked || rationale.trim() === ""}
-                                  onClick={() => {
-                                    const trimmedRationale = rationale.trim();
-                                    if (trimmedRationale === "") return;
-                                    findingDecisionRequest.current = {
-                                      findingId: finding.id,
-                                      decision: "overridden",
-                                    };
-                                    onAction({
-                                      type: "finding-decision",
-                                      findingId: finding.id,
-                                      decision: "overridden",
-                                      rationale: trimmedRationale,
-                                    });
-                                    setOverrideEditingFindingId(null);
-                                  }}
-                                >
-                                  Save override
-                                </button>
-                              </div>
-                            </section>
-                          ) : null}
-                        </section>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </section>
-              {/* The keys, written down. A shortcut nobody can see is a shortcut nobody uses. */}
-              <footer className="finding-hints">
-                <span className="finding-hint">
-                  <kbd>J</kbd>
-                  <kbd>K</kbd> move
-                </span>
-                <span className="finding-hint">
-                  <kbd>Enter</kbd> open
-                </span>
-                <span className="finding-hint">
-                  <kbd>A</kbd> accept
-                </span>
-                <span className="finding-hint">
-                  <kbd>R</kbd> reject
-                </span>
-                <span className="finding-hint">
-                  <kbd>D</kbd> defer
-                </span>
-                <span className="finding-hint">
-                  <kbd>O</kbd> override
-                </span>
-                <span className="finding-hint">
-                  <kbd>Esc</kbd> close
-                </span>
-                <button
-                  className="finding-hint finding-hint-command"
-                  type="button"
-                  aria-keyshortcuts="Control+K Meta+K"
-                  title="Open the command palette"
-                  onClick={openPalette}
-                >
-                  <kbd>Ctrl/⌘</kbd>
-                  <kbd>K</kbd> commands
-                </button>
-              </footer>
-            </div>
-          </section>
+                            </fieldset>
+                            <FindingDecisionHint
+                              finding={finding}
+                              context={decisionContext}
+                              baseId={detailsId}
+                            />
+                            {isEditingOverride ? (
+                              <section
+                                className="override-editor"
+                                aria-label={`Override ${finding.code}`}
+                              >
+                                <label className="rationale-input-label">
+                                  <span>Override rationale (required)</span>
+                                  <input
+                                    className="rationale-input"
+                                    type="text"
+                                    value={rationale}
+                                    disabled={findingDecisionsLocked}
+                                    ref={(element) => {
+                                      if (element === null)
+                                        overrideInputRefs.current.delete(finding.id);
+                                      else overrideInputRefs.current.set(finding.id, element);
+                                    }}
+                                    onChange={(event) =>
+                                      setOverrideReasons((current) => ({
+                                        ...current,
+                                        [finding.id]: event.target.value,
+                                      }))
+                                    }
+                                    aria-label={`Override rationale for ${finding.code}`}
+                                  />
+                                </label>
+                                <div className="override-editor-actions">
+                                  <button
+                                    className="button button-quiet"
+                                    type="button"
+                                    disabled={findingDecisionsLocked}
+                                    onClick={() => {
+                                      setOverrideEditingFindingId(null);
+                                      setOverrideReasons((current) => {
+                                        const next = { ...current };
+                                        delete next[finding.id];
+                                        return next;
+                                      });
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    className="button button-primary"
+                                    type="button"
+                                    disabled={findingDecisionsLocked || rationale.trim() === ""}
+                                    onClick={() => {
+                                      const trimmedRationale = rationale.trim();
+                                      if (trimmedRationale === "") return;
+                                      findingDecisionRequest.current = {
+                                        findingId: finding.id,
+                                        decision: "overridden",
+                                      };
+                                      onAction({
+                                        type: "finding-decision",
+                                        findingId: finding.id,
+                                        decision: "overridden",
+                                        rationale: trimmedRationale,
+                                      });
+                                      setOverrideEditingFindingId(null);
+                                    }}
+                                  >
+                                    Save override
+                                  </button>
+                                </div>
+                              </section>
+                            ) : null}
+                          </section>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </section>
+                {/* The keys, written down. A shortcut nobody can see is a shortcut nobody uses. */}
+                <footer className="finding-hints">
+                  <span className="finding-hint">
+                    <kbd>J</kbd>
+                    <kbd>K</kbd> move
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>Enter</kbd> open
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>A</kbd> accept
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>R</kbd> reject
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>D</kbd> defer
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>O</kbd> override
+                  </span>
+                  <span className="finding-hint">
+                    <kbd>Esc</kbd> close
+                  </span>
+                  <button
+                    className="finding-hint finding-hint-command"
+                    type="button"
+                    aria-keyshortcuts="Control+K Meta+K"
+                    title="Open the command palette"
+                    onClick={openPalette}
+                  >
+                    <kbd>Ctrl/⌘</kbd>
+                    <kbd>K</kbd> commands
+                  </button>
+                </footer>
+              </div>
+            </section>
 
-          {state.coverage === undefined || state.coverage === null ? null : (
-            <RequirementCoveragePanel
-              coverage={state.coverage}
-              sections={state.artifact.sections}
-              collapsed={!coverageCardsShown}
-              onToggle={() => setCoverageCardsShown((shown) => !shown)}
-              onLocateBlock={locateDraftBlock}
-              tabPanel={reviewWorkPanelProps("coverage", workTab, true)}
-            />
-          )}
+            {state.coverage === undefined || state.coverage === null ? null : (
+              <RequirementCoveragePanel
+                coverage={state.coverage}
+                sections={state.artifact.sections}
+                collapsed={!coverageCardsShown}
+                onToggle={() => setCoverageCardsShown((shown) => !shown)}
+                onLocateBlock={locateDraftBlock}
+                tabPanel={reviewWorkPanelProps("coverage", workTab, true)}
+              />
+            )}
+          </div>
 
           {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
               however long the queue above them grows. */}
