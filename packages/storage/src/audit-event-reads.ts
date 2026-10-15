@@ -1,9 +1,11 @@
+import { type AuditChainVerification, verifyAuditChain } from "./audit-chain-verification.js";
 import type { AuditEvent } from "./index.js";
 
 type JsonValue = AuditEvent["payload"];
 
 interface AuditReadStatement {
   readonly get: (...parameters: readonly unknown[]) => Record<string, unknown> | undefined;
+  readonly all: (...parameters: readonly unknown[]) => readonly Record<string, unknown>[];
 }
 
 interface AuditReadDatabase {
@@ -25,6 +27,8 @@ export interface LatestAuditEventQuery {
 export interface AuditEventReadsPort {
   /** The newest matching event, or `undefined` when there is none. Parses only that payload. */
   readonly findLatestAuditEvent: (query: LatestAuditEventQuery) => Promise<AuditEvent | undefined>;
+  /** Re-checks a workspace's chain and the run snapshots its snapshot events refer to. */
+  readonly verifyAuditChain: (workspaceId: string) => Promise<AuditChainVerification>;
 }
 
 /** The columns of an audit event row, in the order the storage reads them. */
@@ -73,6 +77,10 @@ export function createAuditEventReads(
         .prepare(latestAuditEventSql)
         .get(workspaceId, eventType, entityType, entityId);
       return row === undefined ? undefined : auditFromRow(row);
+    },
+    verifyAuditChain: async (workspaceId) => {
+      ensureOpen();
+      return verifyAuditChain(database, workspaceId);
     },
   };
 }

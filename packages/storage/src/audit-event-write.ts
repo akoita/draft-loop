@@ -75,6 +75,22 @@ export function payloadChecksum(payload: JsonValue): string {
   return checksum(serialize(payload));
 }
 
+/** The fields the chain hashes: the event as stored, with its payload by checksum only. */
+export interface AuditEventChecksumFields {
+  readonly createdAt: string;
+  readonly entityId: string;
+  readonly entityType: string;
+  readonly eventType: string;
+  readonly id: string;
+  readonly payloadChecksum: string;
+  readonly previousEventChecksum: string | null;
+  readonly workspaceId: string;
+}
+
+export function auditEventChecksum(fields: AuditEventChecksumFields): string {
+  return checksum(serialize({ ...fields }));
+}
+
 const auditEventSelect =
   "SELECT sequence, id, workspace_id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE id = ?";
 
@@ -111,18 +127,16 @@ export function insertAuditEventRow(
     .get(input.workspaceId);
   const previousEventChecksum =
     typeof previous?.event_checksum === "string" ? previous.event_checksum : null;
-  const eventChecksum = checksum(
-    serialize({
-      createdAt: input.createdAt,
-      entityId: input.entityId,
-      entityType: input.entityType,
-      eventType: input.eventType,
-      id: input.id,
-      payloadChecksum: payloadChecksumValue,
-      previousEventChecksum,
-      workspaceId: input.workspaceId,
-    }),
-  );
+  const eventChecksum = auditEventChecksum({
+    createdAt: input.createdAt,
+    entityId: input.entityId,
+    entityType: input.entityType,
+    eventType: input.eventType,
+    id: input.id,
+    payloadChecksum: payloadChecksumValue,
+    previousEventChecksum,
+    workspaceId: input.workspaceId,
+  });
   database
     .prepare(
       "INSERT INTO audit_events (id, workspace_id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
