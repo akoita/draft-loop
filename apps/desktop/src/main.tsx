@@ -2883,6 +2883,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           settings={
             <>
               <WorkspaceModelSummary
+                compact
                 title="Configured model pair"
                 {...workspacePairSides(
                   state,
