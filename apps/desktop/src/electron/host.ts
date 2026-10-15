@@ -190,6 +190,7 @@ import type { ProviderRoutesView } from "../provider-routes.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
+import { normalizeRunInputs, type RunInputsView, withRunInputs } from "../run-inputs.js";
 import type {
   ReviewEvidencePreviewInput,
   ReviewEvidencePreviewResult,
@@ -2938,6 +2939,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** The brief and profile version the run recorded at start; null when it cannot be read. */
+  async function runInputsFor(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<RunInputsView | null> {
+    if (service.readRunInputs === undefined) return null;
+    try {
+      const inputs = await service.readRunInputs({ root: workspace.root, runId });
+      return inputs === undefined ? null : (normalizeRunInputs(inputs) ?? null);
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
+  }
+
   /** Reused across review actions, which reload the run list on every finding decision. */
   const applicationRunRows = createApplicationRunRowsReader(service);
 
@@ -4389,7 +4406,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       await applicationRunsFor(workspace, scope, "review.dispatch"),
       providerAuthModeConfiguration,
     );
-    return withEarlierRun(state, earlierRun);
+    return withEarlierRun(
+      withRunInputs(state, await runInputsFor(workspace, snapshot.runId, "review.dispatch")),
+      earlierRun,
+    );
   }
 
   async function invoke(value: unknown): Promise<BridgeResult<unknown>> {
@@ -6127,7 +6147,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             await applicationRunsFor(workspace, scope, "review.load"),
             providerAuthModeConfiguration,
           );
-          return { ok: true, value: withEarlierRun(loaded, earlierRunFor(scope, snapshot.runId)) };
+          return {
+            ok: true,
+            value: withEarlierRun(
+              withRunInputs(loaded, await runInputsFor(workspace, snapshot.runId, "review.load")),
+              earlierRunFor(scope, snapshot.runId),
+            ),
+          };
         }
         case "review.dispatch":
           return { ok: true, value: await dispatchReview(command.input) };

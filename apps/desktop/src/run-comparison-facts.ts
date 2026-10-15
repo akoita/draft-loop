@@ -4,9 +4,10 @@
  * Every value comes from the run's own review state: the models from its run-list row, the
  * rounds, readiness, findings and cost from its record, the coverage tally and coverage
  * instructions from its coverage judgement, and the evidence mode and writing policy it
- * recorded. Nothing is read from the workspace's current configuration, so a run started with
- * other models, another policy or another brief is never credited with today's setup. A value a
- * run did not record reads "not recorded".
+ * recorded, and the requirements brief and career profile version it recorded at start. Nothing
+ * is read from the workspace's current configuration, so a run started with other models,
+ * another policy or another brief is never credited with today's setup. A value a run did not
+ * record reads "not recorded".
  */
 import { meanReadinessScore } from "./application-run-list.js";
 import { type DesktopReviewState, isUnresolvedFinding } from "./model.js";
@@ -72,6 +73,7 @@ type RunState = Pick<
   | "totalCostUsd"
   | "evidenceMode"
   | "writingPolicy"
+  | "runInputs"
 >;
 
 function plural(count: number, noun: string): string {
@@ -139,6 +141,105 @@ function policyOf(state: RunState): { readonly text: string; readonly identity: 
 function coverageInstructionsOf(state: RunState): string {
   const version = state.coverage?.instructionsVersion;
   return version === undefined || version === null || version === "" ? notRecorded : version;
+}
+
+type InputSide =
+  | { readonly kind: "unrecorded" }
+  | { readonly kind: "none" }
+  | { readonly kind: "value"; readonly text: string; readonly identity: string };
+
+const noneText = "none (raw job text)";
+
+/** One side of a brief or profile row; a version names its id only when the ids differ. */
+function versionSide(
+  reference: { readonly id: string; readonly version: number } | null | undefined,
+  otherId: string | undefined,
+  noun: string,
+): InputSide {
+  if (reference === undefined) return { kind: "unrecorded" };
+  if (reference === null) return { kind: "none" };
+  const other = otherId === undefined || otherId === reference.id ? "" : ` (other ${noun})`;
+  return {
+    kind: "value",
+    text: `v${reference.version}${other}`,
+    identity: `${reference.id}@${reference.version}`,
+  };
+}
+
+function briefSide(state: RunState, other: RunState): InputSide {
+  const inputs = state.runInputs;
+  const brief = inputs?.brief;
+  return versionSide(
+    inputs === undefined || inputs === null
+      ? undefined
+      : brief === null || brief === undefined
+        ? null
+        : { id: brief.briefId, version: brief.version },
+    other.runInputs?.brief?.briefId,
+    "brief",
+  );
+}
+
+function profileSide(state: RunState, other: RunState): InputSide {
+  const inputs = state.runInputs;
+  const profile = inputs?.profile;
+  return versionSide(
+    inputs === undefined || inputs === null
+      ? undefined
+      : profile === null || profile === undefined
+        ? null
+        : { id: profile.profileId, version: profile.version },
+    other.runInputs?.profile?.profileId,
+    "profile",
+  );
+}
+
+function sideText(side: InputSide, none: string): string {
+  return side.kind === "unrecorded" ? notRecorded : side.kind === "none" ? none : side.text;
+}
+
+/**
+ * A row for an input a run may have used or not: a brief or a career profile. A run that
+ * recorded its inputs but used none differs from one that used one, and the message names it.
+ */
+function optionalInputRow(
+  key: InputDifferenceRow["key"],
+  label: string,
+  noun: string,
+  absent: { readonly text: string; readonly clause: string; readonly both: string },
+  left: InputSide,
+  right: InputSide,
+  labels: { readonly left: string; readonly right: string },
+): InputDifferenceRow {
+  const leftText = sideText(left, absent.text);
+  const rightText = sideText(right, absent.text);
+  const identity = (side: InputSide): string | null =>
+    side.kind === "unrecorded" ? null : side.kind === "none" ? "none" : side.identity;
+  const present = differenceRow(
+    key,
+    label,
+    noun,
+    { text: leftText, identity: identity(left) },
+    { text: rightText, identity: identity(right) },
+    labels,
+  );
+  if (left.kind === "none" && right.kind === "none") {
+    return { ...present, message: absent.both };
+  }
+  // Only one side used the input: name the run that did not, and what the other used.
+  if (left.kind === "none" && right.kind === "value") {
+    return {
+      ...present,
+      message: `${labels.left} recorded no ${absent.clause}; ${labels.right} used ${right.text}`,
+    };
+  }
+  if (right.kind === "none" && left.kind === "value") {
+    return {
+      ...present,
+      message: `${labels.right} recorded no ${absent.clause}; ${labels.left} used ${left.text}`,
+    };
+  }
+  return present;
 }
 
 function differenceRow(
@@ -245,24 +346,33 @@ export function runComparisonFacts(
     { key: "cost", label: "Cost", left: costOf(left), right: costOf(right) },
   ];
 
-  // The run's review state records no brief or profile identity, so these are never guessed
-  // from the workspace's current selection.
-  const unrecorded = { text: notRecorded, identity: null };
+  // The brief and profile come from each run's own recorded inputs, never from the workspace's
+  // current selection.
   const inputs: InputDifferenceRow[] = [
-    differenceRow(
+    optionalInputRow(
       "requirements-brief",
       "Requirements brief",
       "requirements brief",
-      unrecorded,
-      unrecorded,
+      {
+        text: noneText,
+        clause: "requirements brief (raw job text)",
+        both: "Neither run used a requirements brief (raw job text)",
+      },
+      briefSide(left, right),
+      briefSide(right, left),
       labels,
     ),
-    differenceRow(
+    optionalInputRow(
       "career-profile",
       "Career profile version",
       "career profile",
-      unrecorded,
-      unrecorded,
+      {
+        text: "none",
+        clause: "career profile version",
+        both: "Neither run used a career profile version",
+      },
+      profileSide(left, right),
+      profileSide(right, left),
       labels,
     ),
     differenceRow(

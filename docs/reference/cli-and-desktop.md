@@ -550,11 +550,14 @@ pinned under it.
   recorded".
 - **Input differences.** Below the table, each input says in words whether the
   runs shared it, such as "Different writing policy: v3 (…) vs v5 (…)". The
-  inputs are the evidence mode and size, the writing policy, and the
-  coverage-judgement instructions; coverage and readiness judged under
-  different instructions are marked "not directly comparable". A run's review
-  state records no requirements brief or career profile version, so those two
-  read "not recorded for either run" rather than a guess.
+  inputs are the requirements brief, the career profile version, the evidence
+  mode and size, the writing policy, and the coverage-judgement instructions;
+  coverage and readiness judged under different instructions are marked "not
+  directly comparable". The brief and profile are the versions each run
+  recorded when it started ("Different requirements brief: v3 vs v5"). A run
+  started from raw job text reads "Run 1 recorded no requirements brief (raw job
+  text)". An input a run did not record reads "not recorded for either run" or
+  names the run, rather than a guess from the current selection.
 - **Export comparison.** Saves the table, the input differences and both
   drafts' text as a Markdown file where you pick in a save dialog. It names
   runs by number and models by id, and carries no other identifier, critic

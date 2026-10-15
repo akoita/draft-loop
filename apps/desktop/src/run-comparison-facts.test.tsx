@@ -18,6 +18,7 @@ import {
 } from "./run-comparison-export.js";
 import { notRecorded, runComparisonFacts } from "./run-comparison-facts.js";
 import { runComparisonReducer } from "./run-comparison-model.js";
+import type { RunInputsView } from "./run-inputs.js";
 
 const fixture = createFixtureReviewState();
 
@@ -145,6 +146,10 @@ const newRun: DesktopReviewState = {
   artifact: draft("artifact-new", "A sharper opening line."),
 };
 
+function withInputs(state: DesktopReviewState, runInputs: RunInputsView): DesktopReviewState {
+  return { ...state, runInputs };
+}
+
 const labels = { left: "Run 1", right: "Run 2" };
 const facts = runComparisonFacts(oldRun, newRun, labels);
 
@@ -256,12 +261,125 @@ describe("the input differences between the runs", () => {
     expect(same.facts.find((row) => row.key === "coverage")?.note).toBeUndefined();
   });
 
-  it("does not guess the brief or the career profile, which a run's review state does not record", () => {
+  it("says not recorded for either run when neither recorded its inputs, never guessing", () => {
     expect(input("requirements-brief")).toMatchObject({
       status: "unknown",
       message: "Requirements brief not recorded for either run, so it cannot be compared",
     });
     expect(input("career-profile")).toMatchObject({ status: "unknown" });
+  });
+
+  it("flags a different requirements brief and career profile by version", () => {
+    const left = withInputs(oldRun, {
+      brief: { briefId: "target-role", version: 3 },
+      profile: { profileId: "profile-1", version: 2 },
+    });
+    const right = withInputs(newRun, {
+      brief: { briefId: "target-role", version: 5 },
+      profile: { profileId: "profile-1", version: 4 },
+    });
+    const different = runComparisonFacts(left, right, labels);
+    expect(input("requirements-brief", different)).toMatchObject({
+      status: "different",
+      message: "Different requirements brief: v3 vs v5",
+    });
+    expect(input("career-profile", different)).toMatchObject({
+      status: "different",
+      message: "Different career profile: v2 vs v4",
+    });
+  });
+
+  it("says Same for the same brief and profile, even when the current selection differs", () => {
+    const recorded = {
+      brief: { briefId: "target-role", version: 3 },
+      profile: { profileId: "profile-1", version: 2 },
+    };
+    const same = runComparisonFacts(
+      withInputs(oldRun, recorded),
+      withInputs(
+        {
+          ...newRun,
+          setup: {
+            ...newRun.setup,
+            reviewedOpportunity: { briefId: "brief-current", version: 9 },
+          },
+        },
+        recorded,
+      ),
+      labels,
+    );
+    expect(input("requirements-brief", same)).toMatchObject({
+      status: "same",
+      message: "Same requirements brief",
+    });
+    expect(input("career-profile", same)).toMatchObject({
+      status: "same",
+      message: "Same career profile",
+    });
+  });
+
+  it("tells another brief with the same version apart without naming its id", () => {
+    const result = runComparisonFacts(
+      withInputs(oldRun, { brief: { briefId: "role-a", version: 1 }, profile: null }),
+      withInputs(newRun, { brief: { briefId: "role-b", version: 1 }, profile: null }),
+      labels,
+    );
+    expect(input("requirements-brief", result)).toMatchObject({
+      status: "different",
+      message: "Different requirements brief: v1 (other brief) vs v1 (other brief)",
+    });
+    expect(JSON.stringify(result)).not.toContain("role-a");
+  });
+
+  it("names the run that used raw job text, and what the other run used", () => {
+    const rawText = { brief: null, profile: { profileId: "profile-1", version: 2 } };
+    const briefed = { brief: { briefId: "target-role", version: 5 }, profile: rawText.profile };
+    const leftRaw = runComparisonFacts(
+      withInputs(oldRun, rawText),
+      withInputs(newRun, briefed),
+      labels,
+    );
+    expect(input("requirements-brief", leftRaw)).toMatchObject({
+      status: "different",
+      left: "none (raw job text)",
+      right: "v5",
+      message: "Run 1 recorded no requirements brief (raw job text); Run 2 used v5",
+    });
+    expect(input("career-profile", leftRaw).status).toBe("same");
+    const rightRaw = runComparisonFacts(
+      withInputs(oldRun, briefed),
+      withInputs(newRun, rawText),
+      labels,
+    );
+    expect(input("requirements-brief", rightRaw).message).toBe(
+      "Run 2 recorded no requirements brief (raw job text); Run 1 used v5",
+    );
+  });
+
+  it("says neither run used a brief when both were started from raw job text", () => {
+    const rawText = { brief: null, profile: null };
+    const both = runComparisonFacts(
+      withInputs(oldRun, rawText),
+      withInputs(newRun, rawText),
+      labels,
+    );
+    expect(input("requirements-brief", both)).toMatchObject({
+      status: "same",
+      message: "Neither run used a requirements brief (raw job text)",
+    });
+    expect(input("career-profile", both).status).toBe("same");
+  });
+
+  it("names the run whose brief was not recorded when only the other recorded its inputs", () => {
+    const partial = runComparisonFacts(
+      oldRun,
+      withInputs(newRun, { brief: { briefId: "target-role", version: 5 }, profile: null }),
+      labels,
+    );
+    expect(input("requirements-brief", partial)).toMatchObject({
+      status: "unknown",
+      message: "Requirements brief not recorded for Run 1, so it cannot be compared",
+    });
   });
 
   it("names the run that did not record an input", () => {

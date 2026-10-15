@@ -141,6 +141,7 @@ import {
 } from "./recent-workspaces.js";
 import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
+import { normalizeRunInputs } from "./run-inputs.js";
 import {
   type EmbeddingModelCancelResult,
   type EmbeddingModelInstallInput,
@@ -2031,6 +2032,7 @@ const desktopReviewStateKeys = [
   "evidenceMode",
   "authorInput",
   "applicationRuns",
+  "runInputs",
   "earlierRun",
   "setup",
 ] as const;
@@ -7401,6 +7403,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.applicationRuns === undefined || value.applicationRuns === null
       ? value.applicationRuns
       : (normalizeApplicationRuns(value.applicationRuns) ?? invalidInput());
+  const runInputs =
+    value.runInputs === undefined || value.runInputs === null
+      ? value.runInputs
+      : (normalizeRunInputs(value.runInputs) ?? invalidInput());
   const providerRoutes =
     value.providerRoutes === undefined
       ? undefined
@@ -7491,6 +7497,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(evidenceMode === undefined ? {} : { evidenceMode }),
     ...(authorInput === undefined ? {} : { authorInput }),
     ...(applicationRuns === undefined ? {} : { applicationRuns }),
+    ...(runInputs === undefined ? {} : { runInputs }),
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
   } as unknown as DesktopReviewState;

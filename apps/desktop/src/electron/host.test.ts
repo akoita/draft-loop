@@ -512,6 +512,7 @@ function service(
       readRunAuthorInput: vi.fn<NonNullable<ApplicationService["readRunAuthorInput"]>>(
         async () => undefined,
       ),
+      readRunInputs: vi.fn<NonNullable<ApplicationService["readRunInputs"]>>(async () => undefined),
       previewEvidenceMode: vi.fn<NonNullable<ApplicationService["previewEvidenceMode"]>>(
         async () => undefined,
       ),
@@ -3644,6 +3645,57 @@ describe("native host", () => {
       const afterFailure = await load();
       expect(afterFailure.runId).toBe("run-native");
       expect(afterFailure).not.toHaveProperty("authorInput");
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("carries the brief and profile version the run recorded, null for raw job text", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-run-inputs-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = async () => {
+        const result = await host.invoke({
+          type: "review.load",
+          input: { workspaceId: "workspace-native", runId: "run-native" },
+        });
+        if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+        return result.value as DesktopReviewState;
+      };
+
+      // A run with no recorded context carries no run inputs.
+      expect(await load()).not.toHaveProperty("runInputs");
+
+      fixture.service.readRunInputs.mockResolvedValueOnce({
+        brief: { briefId: "target-role", version: 3 },
+        profile: { profileId: "profile-1", version: 2 },
+      });
+      expect((await load()).runInputs).toEqual({
+        brief: { briefId: "target-role", version: 3 },
+        profile: { profileId: "profile-1", version: 2 },
+      });
+      expect(fixture.service.readRunInputs).toHaveBeenLastCalledWith({
+        root,
+        runId: "run-native",
+      });
+
+      // A run started from raw job text recorded no brief.
+      fixture.service.readRunInputs.mockResolvedValueOnce({ brief: null, profile: null });
+      expect((await load()).runInputs).toEqual({ brief: null, profile: null });
+      expect(errors).toEqual([]);
+
+      fixture.service.readRunInputs.mockRejectedValueOnce(new Error("history is locked"));
+      const afterFailure = await load();
+      expect(afterFailure.runId).toBe("run-native");
+      expect(afterFailure).not.toHaveProperty("runInputs");
       expect(errors).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });
