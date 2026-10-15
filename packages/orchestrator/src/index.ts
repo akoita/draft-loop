@@ -76,6 +76,13 @@ import {
   type RevisionRequirementCoverage,
   revisionRequirementCoverage,
 } from "./revision-coverage.js";
+import {
+  createSnapshotReferenceCache,
+  executionStorageKey,
+  resolveSnapshotPayload,
+  slimSnapshotPayload,
+  slimSnapshotWritesDefault,
+} from "./run-snapshot-slim.js";
 
 export type RunState = WorkflowState | "provider-error";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
@@ -1102,10 +1109,19 @@ export class InMemoryRunStore implements RunStore {
   }
 }
 
-export function createStorageRunStore(storage: AuditStorage): StorageRunStore {
+export interface StorageRunStoreOptions {
+  /** Store run-snapshot rows as references to executions and the draft; defaults to true. */
+  readonly slimSnapshots?: boolean;
+}
+
+export function createStorageRunStore(
+  storage: AuditStorage,
+  options: StorageRunStoreOptions = {},
+): StorageRunStore {
+  const slimSnapshots = options.slimSnapshots ?? slimSnapshotWritesDefault;
+  const referenceCache = createSnapshotReferenceCache();
   const runKey = (runId: string): string => `draft-loop:orchestration:run:${runId}`;
-  const executionKey = (runId: string, id: string): string =>
-    `draft-loop:orchestration:execution:${runId}:${id}`;
+  const executionKey = executionStorageKey;
   const latestKey = (
     runId: string,
     round: number,
@@ -1134,11 +1150,12 @@ export function createStorageRunStore(storage: AuditStorage): StorageRunStore {
       const projected = await storage.getLatestRunSnapshot?.(runId);
       return projected === undefined
         ? undefined
-        : immutable(projected.payload as unknown as RunSnapshot);
+        : immutable(await resolveSnapshotPayload(storage, projected.payload));
     },
     async saveRun(snapshot) {
       await storage.set(runKey(snapshot.runId), JSON.stringify(snapshot));
-      await storage.saveRunSnapshot?.({
+      if (storage.saveRunSnapshot === undefined) return;
+      await storage.saveRunSnapshot({
         workspaceId: snapshot.workspaceId,
         runId: snapshot.runId,
         contextSnapshotId: snapshot.contextSnapshotId,
@@ -1152,7 +1169,9 @@ export function createStorageRunStore(storage: AuditStorage): StorageRunStore {
         startedAt: snapshot.startedAt,
         updatedAt: snapshot.updatedAt,
         lastError: snapshot.lastError === null ? null : asJson(snapshot.lastError),
-        payload: asJson(snapshot),
+        payload: slimSnapshots
+          ? await slimSnapshotPayload(storage, snapshot, referenceCache)
+          : asJson(snapshot),
       });
     },
     async saveExecution(execution) {
@@ -2484,4 +2503,21 @@ export {
   maximumReadinessOverrideRationaleLength,
   readinessOverrideRationale,
 } from "./readiness.js";
+export type {
+  SlimArtifactRef,
+  SlimExecutionHistoryRef,
+  SnapshotReferenceCache,
+} from "./run-snapshot-slim.js";
+export {
+  artifactStorageKey,
+  createSnapshotReferenceCache,
+  executionStorageKey,
+  isSlimSnapshotPayload,
+  RunSnapshotReferenceError,
+  resolveSnapshotPayload,
+  slimSnapshotPayload,
+  slimSnapshotShape,
+  slimSnapshotWritesDefault,
+  snapshotPayloadArtifactId,
+} from "./run-snapshot-slim.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

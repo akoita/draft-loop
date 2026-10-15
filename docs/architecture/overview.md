@@ -132,6 +132,13 @@ artifact, including earlier round records. Resume can complete an
 already-reviewed projection without another provider call or changing earlier
 snapshots.
 
+Run snapshot rows are slim: each references its executions (ids plus a checksum
+over their contents) and its draft (id, version, checksum) instead of embedding
+them, so a row stays small as a run grows. The execution records and the draft
+are stored once under the run store's keys, and `resolveSnapshotPayload` in the
+orchestrator is the single reader that rebuilds a snapshot from a row, verifies
+the checksums, and passes older full rows through unchanged.
+
 ## Detailed current-system views
 
 This page is the stable external entry point. The detailed views below are the

@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import {
+  createSnapshotReferenceCache,
+  isSlimSnapshotPayload,
+  resolveSnapshotPayload,
+} from "@draft-loop/orchestrator";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { afterEach, describe, expect, it } from "vitest";
 import { type ApplicationService, createApplicationService } from "./index.js";
@@ -172,6 +177,21 @@ describe("importing a workspace as an application", () => {
       expect(await storage.getRun(legacy.runId)).toMatchObject({
         workspaceId: (await service.readWorkspace(target)).id,
       });
+
+      // Snapshot rows reference executions and the draft; the import rebuilds them for the
+      // target workspace, so every moved row resolves to a snapshot of this workspace.
+      const targetId = (await service.readWorkspace(target)).id;
+      const rows = await storage.listRunSnapshots(legacy.runId);
+      expect(rows.length).toBeGreaterThan(1);
+      const references = createSnapshotReferenceCache();
+      let longest = 0;
+      for (const row of rows) {
+        expect(isSlimSnapshotPayload(row.payload)).toBe(true);
+        const resolved = await resolveSnapshotPayload(storage, row.payload, references);
+        expect(resolved.workspaceId).toBe(targetId);
+        longest = Math.max(longest, resolved.executionHistory.length);
+      }
+      expect(longest).toBeGreaterThan(0);
     } finally {
       await storage.close();
     }

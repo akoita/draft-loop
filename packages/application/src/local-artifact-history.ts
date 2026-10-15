@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
-import type { RunSnapshot } from "@draft-loop/orchestrator";
+import {
+  createSnapshotReferenceCache,
+  type RunSnapshot,
+  resolveSnapshotPayload,
+} from "@draft-loop/orchestrator";
 import { type DraftArtifact, draftArtifactSchema } from "@draft-loop/schemas";
 import type { JsonValue, SqliteStorage } from "@draft-loop/storage";
 
@@ -43,6 +47,7 @@ export async function prepareArtifactHistory(
     artifacts.set(artifact.id, artifact);
     return artifact;
   };
+  const references = createSnapshotReferenceCache();
   for (const record of await storage.listRunSnapshots(snapshot.runId)) {
     const { id, sequence, checksum: storedChecksum, ...input } = record;
     if (
@@ -54,7 +59,7 @@ export async function prepareArtifactHistory(
       record.contextSnapshotId !== snapshot.contextSnapshotId
     )
       invalid();
-    const historical = record.payload as unknown as RunSnapshot;
+    const historical = await resolveSnapshotPayload(storage, record.payload, references);
     if (
       historical.workspaceId !== workspaceId ||
       historical.runId !== snapshot.runId ||
