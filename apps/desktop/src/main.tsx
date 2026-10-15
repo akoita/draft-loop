@@ -136,6 +136,7 @@ import {
   WorkspaceRecovery,
 } from "./workspace-recovery.js";
 import { WorkspaceStart } from "./workspace-start.js";
+import { isNoWorkspaceRefusal, WorkspaceStartIntro } from "./workspace-start-intro.js";
 import { WorkspaceTitle } from "./workspace-title.js";
 import { WritingPolicyEditAction } from "./writing-policy-editor.js";
 import "./styles.css";
@@ -947,6 +948,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The startup load found no open workspace: show the start page without an error.
+  const [noWorkspaceOpen, setNoWorkspaceOpen] = useState(false);
   const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
   // Opening a workspace lands on Home; an application's review is one screen inside it.
   const [navigation, setNavigation] = useState<PageNavigation>(initialPageNavigation);
@@ -1326,6 +1329,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           setImportError(
             reason instanceof Error ? reason.message : "The review workspace could not load.",
           );
+          return;
+        }
+        if (isNoWorkspaceRefusal(reason)) {
+          setNoWorkspaceOpen(true);
           return;
         }
         setError(reason instanceof Error ? reason.message : "The review workspace could not load.");
@@ -2143,7 +2150,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
-  if ((error !== null || workspaceSetupVisible) && !editingModels) {
+  if (
+    (error !== null || workspaceSetupVisible || (state === null && noWorkspaceOpen)) &&
+    !editingModels
+  ) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
     const createDemoWorkspace = nativeActions.createDemo;
@@ -2159,13 +2169,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             <span className="brand-name">DraftLoop</span>
             <ThemeToggle />
           </div>
-          <p className="eyebrow">{workspaceSetupVisible ? "Workspace navigation" : "First run"}</p>
-          <h1>
-            {workspaceSetupVisible
-              ? "Open or create a review workspace"
-              : "Set up a review workspace"}
-          </h1>
-          {error === null ? null : <p>{error}</p>}
+          <WorkspaceStartIntro navigation={workspaceSetupVisible} error={error} />
           <WorkspaceStart
             busy={busy}
             {...(openWorkspace === undefined &&
