@@ -1,7 +1,8 @@
 /**
  * Review panel disclosure and the run timeline.
  *
- * The right-hand review panel stacks the run progress, the critique queue and the human gate.
+ * The right-hand review panel stacks the run progress, the critique queue and coverage; the
+ * approval gate lives in the sticky footer (#1235).
  * Each of those can grow without bound on a long run, so each one folds to its heading. Which
  * panels are folded is a reading preference, stored app-wide in `localStorage` like the theme
  * and the compare split: it never reaches the main process and changes nothing about the run.
@@ -15,13 +16,12 @@ import { type JSX, useCallback, useState } from "react";
 import type { ReviewEvent } from "./model.js";
 
 /** The review panels a reviewer can fold. The trust strip is a fixed-height summary and stays. */
-export type ReviewPanelId = "progress" | "findings" | "coverage" | "gate";
+export type ReviewPanelId = "progress" | "findings" | "coverage";
 
 export const reviewPanelIds: readonly ReviewPanelId[] = Object.freeze([
   "progress",
   "findings",
   "coverage",
-  "gate",
 ] as const);
 
 /** `localStorage` key holding the folded panels, as a JSON array of panel ids. */
@@ -112,7 +112,7 @@ export function useCollapsedReviewPanels(): CollapsedReviewPanels {
 
 /**
  * The panel's eyebrow, made into its disclosure button. The heading under it stays visible
- * when the panel folds, so a folded panel still says where the run, the queue or the gate is.
+ * when the panel folds, so a folded panel still says where the run, the queue or the coverage is.
  */
 export function PanelToggle({
   label,

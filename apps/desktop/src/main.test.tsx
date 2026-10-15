@@ -423,8 +423,12 @@ describe("desktop trust-centered review", () => {
     );
     expect(html).toContain("Final CV checks passed");
     expect(html).toMatch(/title="Approve artifact \(Alt\+A\)" disabled=""/u);
-    expect(html).toContain('aria-label="Reason for approving past final CV checks"');
-    expect(html).toMatch(/disabled="">Approve with override<\/button>/u);
+    // The footer states the blocker in place and offers the override, folded until asked for.
+    expect(html).toContain("Not ready: relevance 0% (80% needed)");
+    expect(html).toContain(
+      'aria-expanded="false" aria-controls="approval-override-form">Approve with override…</button>',
+    );
+    expect(html).not.toContain('aria-label="Reason for approving past final CV checks"');
   });
 
   it("offers no final-check override while blocking findings remain", () => {
@@ -1948,8 +1952,7 @@ describe("desktop workspace setup", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={capped} onAction={() => undefined} />,
     );
-    expect(html).toContain("Maximum of 2 review rounds reached");
-    expect(html).toContain("This reviewed version remains available for approval");
+    expect(html).toMatch(/class="gate-blocker [^"]+"[^>]*>[^<]* · No revision left<\/p>/u);
     expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
     expect(html).toMatch(/title="Approve artifact \(Alt\+A\)"/u);
   });

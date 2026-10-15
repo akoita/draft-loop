@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   approvalAttemptNeedsGate,
-  approvalGateHeadingId,
+  approvalBlockerId,
   focusApprovalGate,
 } from "./approval-gate-focus.js";
 import type { ApprovalReadiness } from "./approval-readiness.js";
@@ -20,7 +20,7 @@ const blocked: ApprovalReadiness = {
 };
 
 describe("approval gate focus", () => {
-  it("sends an approval attempt to the gate only while final CV checks block it", () => {
+  it("sends an approval attempt to the footer's blocker only while final CV checks block it", () => {
     expect(approvalAttemptNeedsGate(blocked, "pending")).toBe(true);
     expect(approvalAttemptNeedsGate(blocked, "rejected")).toBe(true);
     expect(approvalAttemptNeedsGate({ ...blocked, applicationReady: true }, "pending")).toBe(false);
@@ -28,27 +28,28 @@ describe("approval gate focus", () => {
     expect(approvalAttemptNeedsGate(blocked, "approved")).toBe(false);
   });
 
-  it("scrolls the gate into view and focuses its heading", () => {
+  it("scrolls the blocker line into view and focuses it", () => {
     const scrollIntoView = vi.fn();
     const focus = vi.fn();
     const documentRef = {
-      getElementById: (id: string) =>
-        id === approvalGateHeadingId ? { scrollIntoView, focus } : null,
+      getElementById: (id: string) => (id === approvalBlockerId ? { scrollIntoView, focus } : null),
     } as unknown as Document;
 
     expect(focusApprovalGate(documentRef)).toBe(true);
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
     expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(focusApprovalGate({ getElementById: () => null } as unknown as Document)).toBe(false);
   });
 
-  it("renders the gate heading as a programmatic focus target", () => {
+  it("renders the footer's blocker line as a programmatic focus target", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={createFixtureReviewState()} onAction={() => undefined} />,
     );
 
-    expect(html).toContain(
-      `<h2 id="${approvalGateHeadingId}" tabindex="-1">Human approval gate</h2>`,
+    expect(html).toMatch(
+      new RegExp(`<p id="${approvalBlockerId}" class="gate-blocker [^"]+" tabindex="-1"`, "u"),
     );
+    expect(html).not.toContain("Human approval gate");
+    expect(html).not.toContain("approval-gate-heading");
   });
 });

@@ -3270,20 +3270,8 @@ input[type="text"].workspace-title-input {
    Human gate
    ========================================================================= */
 
-.approval-panel h2 {
-  margin-top: var(--space-1);
-}
-
-/* A refused approval moves focus here from a mouse click, where :focus-visible stays off; show
-   the same ring so the reviewer sees where the explanation is. */
-.approval-panel h2:focus {
-  outline: 2px solid var(--teal);
-  outline-offset: 4px;
-  border-radius: var(--radius-sm);
-}
-
 .approval-status {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
@@ -3341,27 +3329,8 @@ input[type="text"].workspace-title-input {
   line-height: 1.45;
 }
 
-.round-limit-recovery {
-  display: grid;
-  gap: var(--space-3);
-  margin: var(--space-3) 0;
-  border: 1px solid var(--amber-line);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
-  background: var(--amber-wash);
-}
-
-.round-limit-recovery .warning-copy,
-.round-limit-note {
-  margin: 0;
-}
-
-.round-limit-recovery .button {
-  justify-self: start;
-}
-
-.approval-panel .round-limit-note {
-  margin-top: var(--space-3);
+.round-limit-recovery-action {
+  margin-bottom: var(--space-3);
 }
 
 .approval-actions {
@@ -3430,6 +3399,75 @@ input[type="text"].workspace-title-input {
 
 .gate-action-bar .approval-action-error {
   margin-bottom: var(--space-3);
+}
+
+.gate-actions {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+/* The gate's one-line answer to "why can't I approve?", stated where the reviewer clicks. */
+.gate-blocker {
+  margin: 0 0 var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.gate-blocker-warning {
+  color: var(--amber);
+}
+
+.gate-blocker-safe {
+  color: var(--teal-bright);
+}
+
+/* A refused approval moves focus here from a mouse click, where :focus-visible stays off; show
+   the same ring so the reviewer sees where the explanation is. */
+.gate-blocker:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.gate-action-bar .footer-override {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.gate-action-bar .footer-override .override-editor-actions {
+  margin-top: var(--space-2);
+}
+
+.gate-details {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.gate-details summary {
+  width: fit-content;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.gate-details summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+/* Details scroll on their own, so opening them never pushes the buttons off screen. */
+.gate-details-body {
+  max-height: min(30vh, 16rem);
+  overflow-y: auto;
+  padding-top: var(--space-2);
+  overscroll-behavior: contain;
 }
 
 /* =========================================================================

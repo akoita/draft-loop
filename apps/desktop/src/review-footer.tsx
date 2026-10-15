@@ -1,0 +1,386 @@
+/**
+ * The review's sticky footer: the approval gate in one place.
+ *
+ * The footer states what blocks approval in one line above the buttons, so a refused approval
+ * explains itself where the reviewer clicked. An override of the final CV checks opens an inline
+ * reason field, and the checklist and the longer explanation sit under a compact "Details"
+ * disclosure that scrolls on its own and never pushes the buttons off screen.
+ */
+import type { JSX, ReactNode } from "react";
+
+import { approvalBlockerId } from "./approval-gate-focus.js";
+import {
+  type ApprovalReadiness,
+  type ApprovalReadinessBlocker,
+  formatApprovalReadinessBlocker,
+} from "./approval-readiness.js";
+import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
+import {
+  type DesktopReviewState,
+  reviewFindingSummary,
+  roundLimitRecoveryRequired,
+} from "./model.js";
+import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
+import type { SendVerdict } from "./send-verdict.js";
+
+export type FooterBlockerKind =
+  | "ready"
+  | "findings"
+  | "final-checks"
+  | "approved"
+  | "exported"
+  | "no-artifact"
+  | "waiting";
+
+export interface FooterBlocker {
+  readonly kind: FooterBlockerKind;
+  /** One plain line naming what stands between the reviewer and approval. */
+  readonly text: string;
+  readonly tone: "safe" | "warning" | "neutral";
+}
+
+export const NO_REVISION_LEFT = "No revision left";
+
+function percent(value: number): string {
+  return `${(value * 100).toFixed(0)}%`;
+}
+
+/** A final-check blocker short enough for the footer line, e.g. "relevance 22% (80% needed)". */
+export function compactReadinessBlocker(blocker: ApprovalReadinessBlocker): string {
+  if (
+    blocker.code === "unmet-rubric-threshold" &&
+    blocker.dimension !== undefined &&
+    blocker.score !== undefined &&
+    blocker.threshold !== undefined
+  ) {
+    return `${blocker.dimension} ${percent(blocker.score)} (${percent(blocker.threshold)} needed)`;
+  }
+  const label = formatApprovalReadinessBlocker(blocker);
+  return `${label[0]?.toLowerCase() ?? ""}${label.slice(1)}`;
+}
+
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * The footer's one-line blocker for the current draft. It reads the same decisions the gate
+ * enforces: the draft, the run's progress, blocking findings, the final CV checks, and the send
+ * verdict for a draft that can be approved.
+ */
+export function footerBlocker(
+  state: DesktopReviewState,
+  readiness: ApprovalReadiness | null,
+  verdict: SendVerdict | null,
+): FooterBlocker {
+  if (state.artifact.version <= 0) {
+    return {
+      kind: "no-artifact",
+      text: "No draft yet: approval opens once the author produces a valid draft",
+      tone: "neutral",
+    };
+  }
+  if (state.exportPath !== null) {
+    return { kind: "exported", text: `Exported to ${state.exportPath}`, tone: "safe" };
+  }
+  if (state.approval === "approved") {
+    return {
+      kind: "approved",
+      text:
+        readiness?.overridden === true
+          ? "Approved past the final CV checks with a recorded reason · ready to export"
+          : "Approved · ready to export",
+      tone: "safe",
+    };
+  }
+  if (roundLimitRecoveryRequired(state)) {
+    return {
+      kind: "waiting",
+      text: `Round limit recovery required: return to reviewed Round ${state.round - 1}`,
+      tone: "warning",
+    };
+  }
+  if (reviewInProgress(state)) {
+    return { kind: "waiting", text: inProgressStatus(state).label, tone: "neutral" };
+  }
+  if (!state.reviewComplete) {
+    return {
+      kind: "waiting",
+      text: `${uncritiquedStatus(state).label}: approval needs a finished critique`,
+      tone: "warning",
+    };
+  }
+  const revisionLeft = state.round < state.providerTransmissionPreflight.budget.maxRounds;
+  const noRevision = revisionLeft ? "" : ` · ${NO_REVISION_LEFT}`;
+  const { blocking } = reviewFindingSummary(state);
+  if (blocking.length > 0) {
+    const accepted = blocking.filter((finding) => finding.decision === "accepted").length;
+    const text =
+      revisionLeft && accepted === blocking.length
+        ? `${plural(accepted, "accepted blocking finding")} ${accepted === 1 ? "needs" : "need"} a revision`
+        : `${plural(blocking.length, "blocking finding")} ${blocking.length === 1 ? "needs" : "need"} a decision`;
+    return {
+      kind: "findings",
+      text: revisionLeft ? text : `${text} · ${ACCEPT_UNAVAILABLE_NOTE}`,
+      tone: "warning",
+    };
+  }
+  if (readiness?.applicationReady === false) {
+    return {
+      kind: "final-checks",
+      text: `Not ready: ${readiness.blockers.map(compactReadinessBlocker).join("; ")}${noRevision}`,
+      tone: "warning",
+    };
+  }
+  if (state.state === "provider-error") {
+    return { kind: "waiting", text: "Provider recovery remains before approval", tone: "warning" };
+  }
+  if (verdict === null || verdict.ready) {
+    return { kind: "ready", text: `Ready to send${noRevision}`, tone: "safe" };
+  }
+  return {
+    kind: "ready",
+    text: `${verdict.headline}: ${verdict.reasons.join("; ")}${noRevision}`,
+    tone: "warning",
+  };
+}
+
+export interface GateCondition {
+  readonly id: string;
+  readonly label: string;
+  readonly met: boolean;
+}
+
+export const approvalOverrideFormId = "approval-override-form";
+export const approvalDetailsId = "approval-details";
+
+export interface ReviewFooterProps {
+  readonly blocker: FooterBlocker;
+  readonly readOnly: boolean;
+  /** An approval or export error to show above the buttons, or null. */
+  readonly errorMessage: string | null;
+  /** "Artifact … · Export … · Validation …" for the Details disclosure. */
+  readonly statusLine: string;
+  /** The longer explanation of the gate's state, shown under Details. */
+  readonly detail: ReactNode;
+  readonly conditions: readonly GateCondition[];
+  readonly editNote: string | null;
+  readonly detailsOpen: boolean;
+  readonly onDetailsOpenChange: (open: boolean) => void;
+  /** The round-limit repair, when the run opened a round past its limit. */
+  readonly recovery: {
+    readonly round: number;
+    readonly disabled: boolean;
+    readonly onRecover: () => void;
+  } | null;
+  readonly approve: { readonly disabled: boolean; readonly onApprove: () => void };
+  /** Approving past failing final CV checks with a recorded reason, when that is possible. */
+  readonly override: {
+    readonly open: boolean;
+    readonly onOpenChange: (open: boolean) => void;
+    readonly reason: string;
+    readonly onReasonChange: (reason: string) => void;
+    readonly disabled: boolean;
+    readonly onSubmit: (reason: string) => void;
+  } | null;
+  readonly revision: { readonly disabled: boolean; readonly onRequest: () => void };
+  readonly exportAction: {
+    readonly disabled: boolean;
+    readonly pathLabel: string;
+    /** Elapsed seconds while an export is pending, or null. */
+    readonly pendingSeconds: number | null;
+    readonly onExport: () => void;
+  };
+}
+
+/** The sticky footer at the foot of the review's side panel. */
+export function ReviewFooter({
+  blocker,
+  readOnly,
+  errorMessage,
+  statusLine,
+  detail,
+  conditions,
+  editNote,
+  detailsOpen,
+  onDetailsOpenChange,
+  recovery,
+  approve,
+  override,
+  revision,
+  exportAction,
+}: ReviewFooterProps): JSX.Element {
+  const exportPending = exportAction.pendingSeconds !== null;
+  return (
+    <section className="gate-action-bar" aria-label="approval and export">
+      <p
+        id={approvalBlockerId}
+        className={`gate-blocker gate-blocker-${blocker.tone}`}
+        tabIndex={-1}
+        role="status"
+      >
+        {blocker.text}
+      </p>
+      {recovery === null ? null : (
+        <div className="round-limit-recovery-action">
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={readOnly || recovery.disabled}
+            onClick={recovery.onRecover}
+          >
+            Return to reviewed Round {recovery.round}
+          </button>
+        </div>
+      )}
+      <fieldset className="gate-actions" aria-label="approval actions" hidden={readOnly}>
+        {errorMessage === null ? null : (
+          <div className="error-banner approval-action-error" role="alert">
+            <p>{errorMessage}</p>
+          </div>
+        )}
+        <div className="approval-actions">
+          <button
+            className="button button-primary"
+            type="button"
+            aria-keyshortcuts="Alt+A"
+            title="Approve artifact (Alt+A)"
+            disabled={approve.disabled}
+            onClick={approve.onApprove}
+          >
+            Approve artifact
+            <kbd>Alt+A</kbd>
+          </button>
+          {override === null ? null : (
+            <button
+              className="button button-outline"
+              type="button"
+              aria-expanded={override.open}
+              aria-controls={approvalOverrideFormId}
+              disabled={override.disabled}
+              onClick={() => override.onOpenChange(!override.open)}
+            >
+              Approve with override…
+            </button>
+          )}
+          <button
+            className="button button-quiet"
+            type="button"
+            aria-keyshortcuts="Alt+R"
+            title="Request revision (Alt+R)"
+            disabled={revision.disabled}
+            onClick={revision.onRequest}
+          >
+            Request revision
+            <kbd>Alt+R</kbd>
+          </button>
+        </div>
+        {override === null || !override.open ? null : (
+          <section
+            className="override-editor footer-override"
+            id={approvalOverrideFormId}
+            aria-label="Approve past final CV checks"
+          >
+            <label className="rationale-input-label">
+              <span>Reason for approving anyway (required)</span>
+              <input
+                className="rationale-input"
+                type="text"
+                maxLength={500}
+                value={override.reason}
+                disabled={override.disabled}
+                onChange={(event) => override.onReasonChange(event.target.value)}
+                aria-label="Reason for approving past final CV checks"
+              />
+            </label>
+            <div className="override-editor-actions">
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => override.onOpenChange(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={override.disabled || override.reason.trim() === ""}
+                onClick={() => {
+                  const reason = override.reason.trim();
+                  if (reason === "") return;
+                  override.onSubmit(reason);
+                }}
+              >
+                Approve with override
+              </button>
+            </div>
+          </section>
+        )}
+        <div className="export-action">
+          <div>
+            <strong>Export locally</strong>
+            <span className="export-path" aria-live="polite">
+              {exportAction.pathLabel}
+            </span>
+          </div>
+          <button
+            className="button button-outline"
+            type="button"
+            aria-keyshortcuts="Alt+E"
+            title="Export Markdown (Alt+E)"
+            disabled={exportAction.disabled}
+            onClick={exportAction.onExport}
+          >
+            {exportPending ? (
+              "Exporting Markdown…"
+            ) : (
+              <>
+                Export Markdown
+                <kbd>Alt+E</kbd>
+              </>
+            )}
+          </button>
+        </div>
+        {exportAction.pendingSeconds === null ? null : (
+          <p className="pending-action-status" role="status" aria-live="polite">
+            Exporting Markdown… Elapsed {exportAction.pendingSeconds} second
+            {exportAction.pendingSeconds === 1 ? "" : "s"}. Choose a destination in the Save As
+            dialog; the approved artifact will be written after you confirm.
+          </p>
+        )}
+      </fieldset>
+      <details
+        className="gate-details"
+        id={approvalDetailsId}
+        open={detailsOpen}
+        onToggle={(event) => {
+          const open = event.currentTarget.open;
+          if (open !== detailsOpen) onDetailsOpenChange(open);
+        }}
+      >
+        <summary>Details</summary>
+        <div className="gate-details-body">
+          <p className="subtle approval-status">{statusLine}</p>
+          {detail}
+          <ul className="gate-checklist">
+            {conditions.map((condition) => (
+              <li
+                className={`gate-item ${condition.met ? "gate-met" : "gate-blocked"}`}
+                key={condition.id}
+              >
+                <span className="gate-mark" aria-hidden="true">
+                  {condition.met ? "✓" : "!"}
+                </span>
+                <span>
+                  {condition.label}
+                  <span className="sr-only">{condition.met ? " — met" : " — not met"}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {editNote === null ? null : <p className="gate-edit-note">{editNote}</p>}
+        </div>
+      </details>
+    </section>
+  );
+}

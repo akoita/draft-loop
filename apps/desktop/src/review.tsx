@@ -10,11 +10,7 @@ import {
   useState,
 } from "react";
 import { ApplicationRunList } from "./application-run-list-view.js";
-import {
-  approvalAttemptNeedsGate,
-  approvalGateHeadingId,
-  useApprovalGateFocus,
-} from "./approval-gate-focus.js";
+import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
 import {
   approvalReadinessForArtifact,
   approvalReadinessGuidance,
@@ -64,6 +60,7 @@ import {
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
+import { footerBlocker, ReviewFooter } from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
@@ -1396,8 +1393,10 @@ export function ReviewWorkspace({
     expand: expandPanel,
   } = useCollapsedReviewPanels();
   const findingsCollapsed = collapsedPanels.has("findings");
-  const gateCollapsed = collapsedPanels.has("gate");
-  const expandGate = useCallback(() => expandPanel("gate"), [expandPanel]);
+  // The footer's Details hold the checklist; a refused approval opens them.
+  const [gateDetailsOpen, setGateDetailsOpen] = useState(false);
+  const expandGate = useCallback(() => setGateDetailsOpen(true), []);
+  const [readinessOverrideOpen, setReadinessOverrideOpen] = useState(false);
   const { revealGate: revealApprovalGate, attemptApproval } = useApprovalGateFocus({
     state,
     needsGate: approvalAttemptNeedsGate(approvalReadiness, state.approval),
@@ -4051,51 +4050,24 @@ export function ReviewWorkspace({
             />
           )}
 
-          <section className="panel approval-panel" aria-label="approval and export">
-            <PanelToggle
-              label="Human gate"
-              collapsed={gateCollapsed}
-              controls="approval-gate-details"
-              onToggle={() => togglePanel("gate")}
-            />
-            <h2 id={approvalGateHeadingId} tabIndex={-1}>
-              Human approval gate
-            </h2>
-            <p className="subtle approval-status">
-              Artifact: {state.approval === "approved" ? "approved" : "not approved"} · Export:{" "}
-              {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
-              {validationLabel}
-            </p>
-            {verdict === null ? null : (
-              <p
-                className={`send-verdict ${verdict.ready ? "safe-copy" : "warning-copy"}`}
-                role="status"
-              >
-                <strong>{verdict.headline}</strong>
-                {verdict.reasons.length === 0 ? null : `: ${verdict.reasons.join("; ")}.`}
-              </p>
-            )}
-            <div id="approval-gate-details" hidden={gateCollapsed}>
-              {!hasArtifact ? (
+          {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
+              however long the queue above them grows. */}
+          <ReviewFooter
+            blocker={footerBlocker(state, approvalReadiness, verdict)}
+            readOnly={readOnly}
+            errorMessage={approvalExportErrorVisible ? (errorMessage ?? null) : null}
+            statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath === null ? "not exported" : "exported"} · Validation: ${validationLabel}`}
+            detail={
+              !hasArtifact ? (
                 <p className="warning-copy">
                   Approval and export are unavailable until the author produces a valid draft.
                 </p>
               ) : roundLimitRecovery ? (
-                <div className="round-limit-recovery" role="alert">
-                  <p className="warning-copy">
-                    Round {state.round} was opened after the configured maximum of {maximumRounds},
-                    before any new draft or critique was produced. Version {state.artifact.version}
-                    and its completed Round {state.round - 1} critique are still intact.
-                  </p>
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    disabled={readOnly || pendingReviewAction !== null}
-                    onClick={() => onAction({ type: "recover-round-limit" })}
-                  >
-                    Return to reviewed Round {state.round - 1}
-                  </button>
-                </div>
+                <p className="warning-copy">
+                  Round {state.round} was opened after the configured maximum of {maximumRounds},
+                  before any new draft or critique was produced. Version {state.artifact.version}{" "}
+                  and its completed Round {state.round - 1} critique are still intact.
+                </p>
               ) : runInProgress ? (
                 <p className="setup-note">Approval opens when the review pauses for you.</p>
               ) : !state.reviewComplete ? (
@@ -4117,43 +4089,6 @@ export function ReviewWorkspace({
                     {approvalReadiness.blockers.map(formatApprovalReadinessBlocker).join("; ")}.
                   </p>
                   <p>{approvalReadinessGuidance}</p>
-                  {canOverrideReadiness ? (
-                    <section className="override-editor" aria-label="Approve past final CV checks">
-                      <label className="rationale-input-label">
-                        <span>Reason for approving anyway (required)</span>
-                        <input
-                          className="rationale-input"
-                          type="text"
-                          maxLength={500}
-                          value={readinessOverrideReason}
-                          disabled={pendingReviewAction !== null}
-                          onChange={(event) =>
-                            setReadinessOverrideDraft({
-                              key: readinessOverrideKey,
-                              reason: event.target.value,
-                            })
-                          }
-                          aria-label="Reason for approving past final CV checks"
-                        />
-                      </label>
-                      <div className="override-editor-actions">
-                        <button
-                          className="button button-primary"
-                          type="button"
-                          disabled={
-                            pendingReviewAction !== null || readinessOverrideReason.trim() === ""
-                          }
-                          onClick={() => {
-                            const reason = readinessOverrideReason.trim();
-                            if (reason === "") return;
-                            onAction({ type: "approve", readinessOverrideRationale: reason });
-                          }}
-                        >
-                          Approve with override
-                        </button>
-                      </div>
-                    </section>
-                  ) : null}
                 </div>
               ) : warnings.length > 0 ? (
                 <p className="warning-copy">
@@ -4168,117 +4103,67 @@ export function ReviewWorkspace({
                 <p className="safe-copy">
                   No unresolved blocking findings. The final decision remains yours.
                 </p>
-              )}
-              <ul className="gate-checklist">
-                {gateConditions.map((condition) => (
-                  <li
-                    className={`gate-item ${condition.met ? "gate-met" : "gate-blocked"}`}
-                    key={condition.id}
-                  >
-                    <span className="gate-mark" aria-hidden="true">
-                      {condition.met ? "✓" : "!"}
-                    </span>
-                    <span>
-                      {condition.label}
-                      <span className="sr-only">{condition.met ? " — met" : " — not met"}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {editedBlockIds.size > 0 ? (
-                <p className="gate-edit-note">
-                  Approving signs v{state.artifact.version} including {editedBlockIds.size} of your
-                  edit{editedBlockIds.size === 1 ? "" : "s"}.
-                </p>
-              ) : null}
-              {!roundLimitRecovery && state.reviewComplete && roundLimitReached ? (
-                <p className="subtle round-limit-note">
-                  Maximum of {maximumRounds} review rounds reached. This reviewed version remains
-                  available for approval; create a workspace with a higher limit to continue the
-                  loop.
-                </p>
-              ) : null}
-            </div>
-          </section>
-
-          {/* The gate's actions stay on screen however long the queue above them grows: the
-              bar sticks to the bottom of the panel and rests under the gate when it is reached. */}
-          <section className="gate-action-bar" aria-label="approval actions" hidden={readOnly}>
-            {approvalExportErrorVisible ? (
-              <div className="error-banner approval-action-error" role="alert">
-                <p>{errorMessage}</p>
-              </div>
-            ) : null}
-            <div className="approval-actions">
-              <button
-                className="button button-primary"
-                type="button"
-                aria-keyshortcuts="Alt+A"
-                title="Approve artifact (Alt+A)"
-                disabled={!canApprove || pendingReviewAction !== null}
-                onClick={approveArtifact}
-              >
-                Approve artifact
-                <kbd>Alt+A</kbd>
-              </button>
-              <button
-                className="button button-quiet"
-                type="button"
-                aria-keyshortcuts="Alt+R"
-                title="Request revision (Alt+R)"
-                disabled={
-                  state.state !== "awaiting-approval" ||
-                  !state.reviewComplete ||
-                  roundLimitReached ||
-                  !transmissionReady ||
-                  pendingReviewAction !== null
-                }
-                onClick={() => onAction({ type: "request-revision" })}
-              >
-                Request revision
-                <kbd>Alt+R</kbd>
-              </button>
-            </div>
-            <div className="export-action">
-              <div>
-                <strong>Export locally</strong>
-                <span className="export-path" aria-live="polite">
-                  {state.exportPath ??
-                    (!state.reviewComplete
-                      ? "Unavailable until independent critique completes"
-                      : canExport
-                        ? "Available now"
-                        : state.state === "approved"
-                          ? "Unavailable while another action is pending"
-                          : "Available after approval")}
-                </span>
-              </div>
-              <button
-                className="button button-outline"
-                type="button"
-                aria-keyshortcuts="Alt+E"
-                title="Export Markdown (Alt+E)"
-                disabled={!canExport}
-                onClick={() => onAction({ type: "export" })}
-              >
-                {exportPending ? (
-                  "Exporting Markdown…"
-                ) : (
-                  <>
-                    Export Markdown
-                    <kbd>Alt+E</kbd>
-                  </>
-                )}
-              </button>
-            </div>
-            {exportPending ? (
-              <p className="pending-action-status" role="status" aria-live="polite">
-                Exporting Markdown… Elapsed {pendingReviewAction.elapsedSeconds} second
-                {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Choose a destination in the
-                Save As dialog; the approved artifact will be written after you confirm.
-              </p>
-            ) : null}
-          </section>
+              )
+            }
+            conditions={gateConditions}
+            editNote={
+              editedBlockIds.size > 0
+                ? `Approving signs v${state.artifact.version} including ${editedBlockIds.size} of your edit${editedBlockIds.size === 1 ? "" : "s"}.`
+                : null
+            }
+            detailsOpen={gateDetailsOpen}
+            onDetailsOpenChange={setGateDetailsOpen}
+            recovery={
+              roundLimitRecovery
+                ? {
+                    round: state.round - 1,
+                    disabled: pendingReviewAction !== null,
+                    onRecover: () => onAction({ type: "recover-round-limit" }),
+                  }
+                : null
+            }
+            approve={{
+              disabled: !canApprove || pendingReviewAction !== null,
+              onApprove: approveArtifact,
+            }}
+            override={
+              canOverrideReadiness
+                ? {
+                    open: readinessOverrideOpen,
+                    onOpenChange: setReadinessOverrideOpen,
+                    reason: readinessOverrideReason,
+                    onReasonChange: (reason) =>
+                      setReadinessOverrideDraft({ key: readinessOverrideKey, reason }),
+                    disabled: pendingReviewAction !== null,
+                    onSubmit: (reason) =>
+                      onAction({ type: "approve", readinessOverrideRationale: reason }),
+                  }
+                : null
+            }
+            revision={{
+              disabled:
+                state.state !== "awaiting-approval" ||
+                !state.reviewComplete ||
+                roundLimitReached ||
+                !transmissionReady ||
+                pendingReviewAction !== null,
+              onRequest: () => onAction({ type: "request-revision" }),
+            }}
+            exportAction={{
+              disabled: !canExport,
+              pathLabel:
+                state.exportPath ??
+                (!state.reviewComplete
+                  ? "Unavailable until independent critique completes"
+                  : canExport
+                    ? "Available now"
+                    : state.state === "approved"
+                      ? "Unavailable while another action is pending"
+                      : "Available after approval"),
+              pendingSeconds: exportPending ? pendingReviewAction.elapsedSeconds : null,
+              onExport: () => onAction({ type: "export" }),
+            }}
+          />
         </aside>
       </main>
     </div>
