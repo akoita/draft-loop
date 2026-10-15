@@ -29,6 +29,7 @@ import {
   draftArtifactSchema,
   type IndependentReadinessReport,
   independentReadinessReportSchema,
+  type RevisionFindingClassification,
   type WorkspaceInput,
 } from "@draft-loop/schemas";
 import type {
@@ -70,6 +71,7 @@ import {
   inspectDurationAccounting,
   settleDurationAccounting,
 } from "./duration-accounting.js";
+import { attributeRevision, classifyRevisionFindings } from "./finding-attribution.js";
 import {
   type ApprovedArtifactBinding,
   approvedArtifactBinding,
@@ -91,6 +93,12 @@ import {
 
 export type RunState = WorkflowState | "provider-error";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
+export {
+  attributeRevision,
+  classifyRevisionFindings,
+  findingIdentity,
+  normalizeFindingCode,
+} from "./finding-attribution.js";
 export type { RevisionRequirementCoverage } from "./revision-coverage.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -225,6 +233,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly adjudicatedRevisionTrace?: AdjudicatedRevisionTrace;
   /** Judged requirement coverage; present only on a critic execution that was sent requests. */
   readonly coverageJudgement?: ExecutionCoverageJudgement;
+  /** Resolved, persisting and new findings; present only on the critic pass after an attributed revision. */
+  readonly findingClassification?: RevisionFindingClassification;
 }
 
 /** Coverage assessments after the critic's verdicts, stored with that critic execution. */
@@ -1029,6 +1039,8 @@ function deriveAdjudicatedRevisionTrace(
   sourceArtifact: DraftArtifact,
   revisedArtifact: unknown,
   createdAt: string,
+  /** False only when replaying a stored version 1 trace, which carries no attribution. */
+  attribute = true,
 ): AdjudicatedRevisionTrace {
   const parsedRevisedArtifact = draftArtifactSchema.safeParse(revisedArtifact);
   if (!parsedRevisedArtifact.success) {
@@ -1062,6 +1074,15 @@ function deriveAdjudicatedRevisionTrace(
       // A valid stored trace already satisfies this, so replay is unchanged.
       createdAt: notBefore(createdAt, pending.plan.createdAt, parsedRevisedArtifact.data.createdAt),
       acceptedEffectOverrides: pending.acceptedEffectOverrides,
+      ...(attribute
+        ? {
+            attribution: attributeRevision({
+              plan: pending.plan,
+              sourceArtifact,
+              revisedArtifact: parsedRevisedArtifact.data,
+            }),
+          }
+        : {}),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
@@ -1555,6 +1576,7 @@ export function createOrchestrationEngine(
             snapshot.artifact,
             existing.output,
             storedTrace?.success === true ? storedTrace.data.createdAt : clock(),
+            storedTrace?.success !== true || storedTrace.data.schemaVersion === 2,
           );
           if (
             storedTrace?.success === true &&
@@ -1688,6 +1710,22 @@ export function createOrchestrationEngine(
               execution.output as Critique | undefined,
               snapshot.artifact as DraftArtifact,
             );
+      const priorTrace = snapshot.adjudicationRuntime?.trace;
+      const findingClassification =
+        step !== "critic" || priorTrace === null || priorTrace === undefined
+          ? undefined
+          : classifyRevisionFindings({
+              trace: priorTrace,
+              reviewedArtifact: snapshot.artifact as DraftArtifact,
+              deterministicFindings: snapshot.findings,
+              critiqueFindings: Array.isArray((execution.output as Critique).findings)
+                ? (execution.output as Critique).findings
+                : [],
+              judgedRequirementIds:
+                coverageJudgement === undefined
+                  ? []
+                  : judgedCoveredRequirementIds(coverageJudgement.assessments),
+            });
       const record: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -1710,6 +1748,7 @@ export function createOrchestrationEngine(
         retryable: false,
         ...(adjudicatedRevisionTrace === undefined ? {} : { adjudicatedRevisionTrace }),
         ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
+        ...(findingClassification === undefined ? {} : { findingClassification }),
       };
       await options.store.saveExecution(record);
       completedExecutionSaved = true;
