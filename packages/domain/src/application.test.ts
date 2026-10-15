@@ -4,6 +4,7 @@ import {
   deriveApplicationStatus,
   normalizeApplicationName,
 } from "./application.js";
+import { type WorkflowState, workflowStates } from "./index.js";
 
 describe("application name", () => {
   it("trims and accepts 1 to 120 characters", () => {
@@ -20,6 +21,26 @@ describe("application name", () => {
 });
 
 describe("deriveApplicationStatus", () => {
+  it("maps every run state to a status", () => {
+    const expected: Record<WorkflowState, string> = {
+      collecting: "drafting",
+      ingesting: "drafting",
+      drafting: "drafting",
+      reviewing: "in-review",
+      revising: "in-review",
+      "awaiting-approval": "in-review",
+      paused: "in-review",
+      stopped: "in-review",
+      "budget-exhausted": "in-review",
+      approved: "approved",
+      exported: "exported",
+    };
+    for (const state of workflowStates) {
+      expect(deriveApplicationStatus([{ state }], false), state).toBe(expected[state]);
+      expect(deriveApplicationStatus([{ state }], true), state).toBe("exported");
+    }
+  });
+
   it("is drafting without runs or while runs are only drafting", () => {
     expect(deriveApplicationStatus([], false)).toBe("drafting");
     expect(deriveApplicationStatus([{ state: "collecting" }, { state: "drafting" }], false)).toBe(
