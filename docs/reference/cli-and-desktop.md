@@ -261,7 +261,7 @@ The desktop follows one journey, and this section follows it in order:
    profile, then start.
 7. [Review screen](#review-screen): findings, approval and export.
 
-A fixture walk of this journey, with its open dead ends, is recorded in
+Fixture walks of this journey, with their findings, are recorded in
 [First-run journey walk](../evaluation/first-run-journey.md).
 [Moving between pages](#moving-between-pages) and
 [Closing and reopening](#closing-and-reopening) apply throughout.

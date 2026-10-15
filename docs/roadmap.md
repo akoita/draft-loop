@@ -279,7 +279,7 @@ applications.
 | Previous | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Completed: 51/51 issues closed, ending with source kinds (#1127–#1131), fact-first retrieval (#1132–#1135) and the live output-ratio re-measurement (#1053); the "structured in minutes" check still needs a live consented run | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
 | Previous | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Completed in code: 29/29 issues closed, ending with a per-application model pair and provider readiness in New application step 4 (#1065) | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
 | Previous | Tailored, sendable CVs ([milestone](https://github.com/akoita/draft-loop/milestone/30)) | [Completed](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172): 29/29 issues closed; exit met on reference E | Make drafts tailored to the job and sendable without hand edits to structure | A fresh run covers the job's responsibilities, opens with a job-led headline and core areas, and contains no copied source notes |
-| Now | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | In progress since 2026-10-14; review-screen clarity issues added (#1199, #1205) | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
+| Now | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | [Exit met in a fixture walk](evaluation/first-run-journey.md) on 2026-10-15; release pending Anthropic access for the preflight (#1268) | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
 | Next | Manual parity: review and export ([milestone](https://github.com/akoita/draft-loop/milestone/31)) | Not started; run comparison added 2026-10-15 (#1276) | Review, compare, stop and export like the manual Claude/Codex loop | Editorial critic, consensus stop, subscription-limit recovery, DOCX/PDF export, comparing two runs' drafts and keeping the better one (#1273–#1275), four-reference observation |
 | Later | Guided career interview ([milestone](https://github.com/akoita/draft-loop/milestone/27)) | Not started; opened 2026-10-08 | Help candidates tell their career story over several sessions, with local voice input | Gap-driven interview answers become candidate-provided evidence; audio never leaves the machine (#1030) |
 | Later | Harness observability and evaluation ([#1101](https://github.com/akoita/draft-loop/issues/1101)) | Not started; planned 2026-10-09 | Trace every run, measure the critic against labelled failures, explain each revision, and let the author check its own grounding | A failed author attempt is diagnosable from its trace, critic agreement is recorded on a held-out set, and the tighter loop shows fewer rejected attempts without regression (#1102–#1113) |
@@ -1862,8 +1862,13 @@ a new application cannot start a review offline. #1251 added that path, and
 the repeat walk the same day reached a started review offline, but the exit is
 still not met: a brief whose job text names no employer could not be reviewed
 in the app. #1265 lets such a brief be reviewed, and #1278 makes Start wait for
-a reviewed brief; a further walk confirms the exit. The walks' other findings are #1252 to #1254 and #1266. The
-v0.8.0-alpha.4 release is a checkpoint of this stage, not its exit.
+a reviewed brief.
+
+The third walk, on base `07af3d2`, met the exit criterion in fixture mode: a
+new application reached a started review with no dead end, and every disabled
+control on the way said why. It left small usability findings and no blocker.
+The walks' other findings are #1252 to #1254 and #1266. The v0.8.0-alpha.4
+release is a checkpoint of this stage, not its exit.
 
 It follows #1065 and comes ahead of the remaining Any-format career intake
 issues, because people must be able to use what already works.

@@ -7,23 +7,109 @@ material or provider took part.
 
 ## Verdict
 
-**The #1092 exit criterion is still not met in fixture mode.** The
-[repeat walk](#repeat-walk-2026-10-15-base-ad82177) got further than the
-original walk:
+**The #1092 exit criterion is met in fixture mode.** In the
+[third walk](#third-walk-2026-10-15-base-07af3d2), a first-time user went from
+the start page to a started review on a new application with no dead end:
 
-- A new application in a demo workspace now reaches a started review offline,
-  and every Start blocker is explained.
-- Reviewing the extracted requirements is a dead end. The brief cannot be marked
-  reviewed because it has no employer, and the review dialog has no way to add
-  one (R1).
-- Start stays available, because the run falls back to the raw job description.
-  Step 1 says the opposite: "A draft cannot start a run until you review it"
-  (R2).
+- Every step had a visible next action, and the walk needed no workaround.
+- A job posting that names no employer could be reviewed and used (#1265).
+- Start waited for the reviewed brief, named the reason and offered the fix
+  (#1278).
+- Every disabled control met on the way said why, or was self-evident.
 
-The criterion asks for a started review with no dead end and every disabled
-control offering its fix. R1 fails both.
+This is fixture evidence, not validated outcome evidence. The provider-backed
+path and a real person's first run remain unobserved. The walk left four small
+usability findings and no blocker.
+
+## Third walk (2026-10-15, base `07af3d2`)
+
+### Third walk setup
+
+- **Base commit.** `07af3d2`, `main` after #1265, #1266, #1269, #1270 and
+  #1278.
+- **Mode.** A demo workspace from **Try demo workspace**, reporting
+  `local fixture (no network)`. The host log shows no provider call.
+- **Material.** One synthetic career-facts file for a fictional candidate at
+  `example.test` employers. The pasted job description is synthetic and names
+  no employer, to exercise #1265.
+- **Viewport.** 1280 x 800 px, light and dark themes at every step.
+- **How it was driven.** A rebuilt Chrome DevTools Protocol harness against the
+  real Electron main process and preload, with a fresh user-data directory and
+  home folder, as in the
+  [original walk](#original-walk-2026-10-15-base-bde5022). Screenshots are kept
+  outside the repository.
+
+### Third walk steps
+
+| # | Step | Outcome | What the person sees |
+|---|---|---|---|
+| 1 | Start page | Done | "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material." |
+| 2 | Try demo workspace | Done | After a parent folder is chosen, Home shows Career evidence Ready, Career profile Not yet generated, and the pre-seeded Default application In review. |
+| 3 | Add career evidence | Done | Before adding, the page lists "Workspace evidence files: 1 file". **Add files** created and selected the "Career evidence" knowledge base; the file is Ready with its detected kind. |
+| 4 | Generate and review the profile | Done, offline | Ticking the local-fixture consent enabled **Generate profile**, which produced 10 facts and 11 open warnings. "Set all 11: Acknowledged", **Save draft edits** and **Mark latest draft reviewed** gave "Ready. Reviewed version 3 is used for new applications." |
+| 5 | New application | Done | Home's form with a name and the pasted job text. The application opened on its three steps, with step 1 Done ("Job description added") and step 2 Done. |
+| 6 | Extract and review the brief | Done, offline | The extraction confirmation says nothing is sent, and the result is "Requirements brief v1 (draft)". The review dialog shows "Employer: Not named in the job posting", and **Mark reviewed** is enabled. One priority change and **Save changes** made v2; reopening and **Mark reviewed** made "Requirements brief v3 (reviewed)". |
+| 7 | Start while the brief is a draft | Blocked, explained | The button reads **Start review · review the requirements first** and is disabled. The checklist says "The requirements brief is a draft. Review it before starting, or choose to start from the raw job description under Advanced", with a **Review requirements** button. After review, Start is enabled and **Use the raw job description instead** is offered as an explicit choice. |
+| 8 | Profile (step 2) | Done | "Reviewed career profile · Selected · Using career-profile · version 3 · reviewed 2026-10-15". |
+| 9 | Start (step 3) | Done | "Demo remains local · No network transmission". The confirmation lists both models as "Demo, no provider call" and the requirements as "Reviewed brief v3 · 4 requirements". **Start** opened the review screen. |
+| 10 | Review screen and Home | Done | Awaiting approval, Round 1, version 1, two blocking findings, with Approve artifact explained. Run details names the recorded author and critic models. Home shows the new application In review, also after a renderer reload. |
+
+### Third walk findings
+
+None of these is a dead end. Each has a proposed disposition.
+
+| ID | Finding | Disposition |
+|---|---|---|
+| T1 | **Save changes** in the brief review closes the dialog. To finish, the person reopens **Review requirements** and then clicks **Mark reviewed**. | Proposed issue |
+| T2 | The brief review shows internal identifiers: the brief ID `brief-…` under the version chip, and "Source Job posting (workspace-job-description)" on each requirement. | Proposed issue, with T1 |
+| T3 | A reviewed brief is "v3" after one edit, and the first reviewed profile is "version 3", because each save and the review create a version. This extends R5 to briefs. | Noted |
+| T4 | In a demo workspace, Home's Workspace settings show the Economy pair of Anthropic and OpenAI models. Only the Start confirmation says "Demo, no provider call". | Noted |
+
+### Earlier findings in the third walk
+
+- **Resolved.**
+  - R1 (#1265): a brief with no employer can be marked reviewed.
+  - R2 (#1278): a draft brief blocks Start, and the raw job description is an
+    explicit choice.
+  - R3 (#1266): Home's status follows the run.
+  - R6: the brief's **Mark reviewed** is enabled, and **Update profile** says
+    "Tick the approval box to update."
+  - D3 (#1252): the Career evidence page lists the demo's workspace evidence
+    file.
+- **Unchanged.**
+  - R4: the demo profile fixture files every fact under Achievement and raises
+    11 omission warnings.
+  - R5: see T3.
+  - D8: the demo opens with the Default application In review.
+- **Not rechecked.** D5 (override form), #1269 (Change models was not opened)
+  and the export.
+
+### Third walk disabled controls and overflow
+
+- **Explained in place.**
+  - Clear recent workspaces ("No recent workspaces yet").
+  - Generate profile and Update profile (tick the approval box).
+  - Mark latest draft reviewed: unsaved decisions first, then "This version is
+    already reviewed".
+  - Create application (name the application).
+  - Start review (button text, plus checklist with **Review requirements**).
+  - Approve artifact (blocking findings) and Export Markdown ("Available after
+    approval").
+  - Changes only ("This is the first artifact version").
+- **Self-evident.** Review and fetch source URL and the job URL fetch with an
+  empty address box, Save changes in the brief review with no edits, and the
+  current choice in "Set all".
+- **Unexplained.** None found.
+- **Overflow.** No page overflowed horizontally at 1280 px.
 
 ## Repeat walk (2026-10-15, base `ad82177`)
+
+### Repeat verdict
+
+**The #1092 exit criterion was still not met in fixture mode.** A new
+application in a demo workspace reached a started review offline, but
+reviewing the extracted requirements was a dead end (R1). Start stayed
+available on a draft brief while step 1 said a draft cannot start a run (R2).
 
 ### Setup
 
