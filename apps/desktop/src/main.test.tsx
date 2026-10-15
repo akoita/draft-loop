@@ -251,15 +251,19 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Writing policy");
     expect(html).toContain("Choose policy file");
     expect(html).toContain("kept separate from career evidence");
-    expect(html).toContain("Start author–critic review");
-    expect(html).toContain('aria-describedby="start-review-blockers"');
+    // The disabled button names the first unmet condition; the checklist under it says the rest.
+    expect(html).toContain("Start review · add the job description first");
+    expect(html).toContain('aria-describedby="start-checklist"');
     expect(html).toContain(
-      'title="Can&#x27;t start yet: Add a target job description. Add at least one candidate evidence source. Acknowledge provider transmission above."',
+      'title="Can&#x27;t start yet: Add a target job description. Acknowledge provider transmission above. Add at least one candidate evidence source."',
     );
-    expect(html).toContain('id="start-review-blockers" role="status"');
-    expect(html).toContain("To start the review");
-    expect(html).toContain("<li>Add at least one candidate evidence source.</li>");
-    expect(html).toContain("<li>Acknowledge provider transmission above.</li>");
+    expect(html).toContain("Before you can start");
+    expect(html).toContain(
+      '<span class="start-check-label">Add at least one candidate evidence source.</span>',
+    );
+    expect(html).toContain(
+      '<span class="start-check-detail">Acknowledge provider transmission above.</span>',
+    );
     expect(html).toContain("Acknowledgement required");
     expect(html).toContain("selected candidate-source excerpts");
     expect(html).toContain("complete candidate corpus");
@@ -341,7 +345,11 @@ describe("desktop trust-centered review", () => {
     const base = collectingState();
     const html = renderToStaticMarkup(
       <ReviewWorkspace
-        state={{ ...base, setup: { ...base.setup, fixtureMode: false } }}
+        state={{
+          ...base,
+          setup: { ...base.setup, fixtureMode: false },
+          providerTransmissionPreflight: { ...base.providerTransmissionPreflight, required: true },
+        }}
         onAction={() => undefined}
         onOpenHome={() => undefined}
       />,
@@ -357,21 +365,25 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain("<strong>Career evidence</strong>");
     expect(html).not.toContain("<strong>Provider authentication</strong>");
     expect(html).not.toContain('title="Provider authentication"');
-    // The way to it is stated, and navigates Home.
-    expect(html).toContain("Provider sign-in is in Home → Workspace settings.");
-    expect(html).toContain("Open Home");
+    // The way to it is stated beside Start, and navigates Home.
+    expect(html).toContain("Sign-in is on Home, under Workspace settings");
+    expect(html).toContain("Open provider sign-in");
   });
 
   it("does not offer a Home button when the host has no Home", () => {
     const base = collectingState();
     const html = renderToStaticMarkup(
       <ReviewWorkspace
-        state={{ ...base, setup: { ...base.setup, fixtureMode: false } }}
+        state={{
+          ...base,
+          setup: { ...base.setup, fixtureMode: false },
+          providerTransmissionPreflight: { ...base.providerTransmissionPreflight, required: true },
+        }}
         onAction={() => undefined}
       />,
     );
-    expect(html).toContain("Provider sign-in is in Home → Workspace settings.");
-    expect(html).not.toContain("Open Home");
+    expect(html).toContain("Sign-in is on Home, under Workspace settings");
+    expect(html).not.toContain("Open provider sign-in");
   });
 
   it("makes paused progress, provider exposure, and unresolved findings visible", () => {

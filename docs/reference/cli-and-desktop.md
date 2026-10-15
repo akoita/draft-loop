@@ -240,11 +240,13 @@ way, whether the application raised them as user errors or plain errors.
 
 The desktop setup applies the same job-description check before a run when no
 reviewed opportunity brief is selected. A job description with a requirement
-that is too long to match keeps **Start author–critic review** disabled and
-lists that message among its reasons, so the problem appears before you click.
-Next to that reason, **Extract requirements into a brief** opens the extraction
-consent step on the **Target job description** card instead of asking for hand
-edits. The CLI message ends with the `opportunity create` command to run.
+that is too long to match keeps the Start button disabled and shows that
+message under **Job requirements reviewed** in the start checklist, so the
+problem appears before you click. The condition's action fixes it: **Review
+requirements** for a waiting draft, or **Extract requirements into a brief**,
+which opens the extraction consent step on the **Target job description** card
+instead of asking for hand edits. The CLI message ends with the `opportunity
+create` command to run.
 
 ## Desktop workspace navigation
 
@@ -357,7 +359,25 @@ Before a run, the screen keeps only what starting a review needs:
   detail is behind **See exactly what is sent**, and the acknowledgement stays
   visible while it is required.
 - **Start.** The per-job writing policy override sits under **Advanced**, then
-  autopilot, **Start author–critic review** and the list of blockers.
+  autopilot, **Start author–critic review** and the start checklist.
+
+The start checklist, **Before you can start**, sits under the Start button and
+stays visible when everything is done:
+
+- **Conditions.** Job requirements reviewed, a reviewed career profile
+  selected, provider sign-in ready and data sent acknowledged, each marked
+  **Done** or **Not done** in words.
+- **Fixes.** An unmet condition carries its own action: **Review
+  requirements**, **Choose profile**, **Open provider sign-in** (Home) or
+  **Review data sent**. Read-only runs show no actions.
+- **Host reasons.** A refused start and any other setup step the host reports
+  appear in the same list, so no blocker is reachable only elsewhere.
+- **Button.** While blocked, the button names the first unmet condition, for
+  example "Start review · review the requirements first".
+
+Provider sign-in is verified by the host when the review starts, so the
+checklist marks it **Checked when the review starts** rather than done; a
+refusal then appears at the top of the checklist.
 
 ### Moving between pages
 
@@ -729,7 +749,7 @@ For a job page address or saved job page, extraction reads only that page:
 - **No requirements found.** If extraction returns no requirements, the card
   says "No requirements were found in this job text" and offers **Extract
   again** instead of a review. The empty draft keeps offering extraction after
-  a restart, and the start blocker offers **Extract requirements again**.
+  a restart, and the start checklist offers **Extract requirements again**.
 
 The card also shows the workspace's latest brief as "Requirements brief vN
 (draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review

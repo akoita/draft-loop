@@ -3838,35 +3838,6 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-xs);
 }
 
-.setup-next-steps {
-  margin-top: var(--space-4);
-  border: 1px solid var(--amber-line);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  color: var(--amber);
-  background: var(--amber-wash);
-  font-size: var(--text-sm);
-}
-
-.setup-next-steps strong {
-  display: block;
-  margin-bottom: var(--space-2);
-  font-size: var(--text-micro);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
-}
-
-.setup-next-steps ul {
-  margin: 0;
-  padding-left: var(--space-5);
-  color: var(--text-2);
-  line-height: 1.6;
-}
-
-.setup-next-steps li + li {
-  margin-top: var(--space-1);
-}
-
 .onboarding-footer {
   display: flex;
   align-items: center;
@@ -3885,18 +3856,111 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-sm);
 }
 
-/* Sits right under the disabled start button so the reasons read as its own. */
-.start-review-blockers {
+/* Sits right under the start button so its conditions read as the button's own. */
+.start-checklist {
   margin-top: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
 }
 
-.start-blocker-action {
-  margin-top: var(--space-2);
+.start-checklist-blocked {
+  border-color: var(--amber-line);
+  background: var(--amber-wash);
 }
 
-.start-blocker-action .button {
+.start-checklist > strong {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.start-checklist .error-banner {
+  margin-bottom: var(--space-3);
+}
+
+.start-checklist ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.start-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.start-check-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  min-width: 0;
+}
+
+.start-check-label {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.start-check-status {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.start-check-done .start-check-status {
+  color: var(--teal);
+}
+
+.start-check-todo .start-check-status {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.start-check-detail {
+  flex-basis: 100%;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.start-check-done .gate-mark {
+  border-color: var(--teal-line);
+  color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.start-check-todo .gate-mark {
+  border-color: var(--amber-line);
+  color: var(--amber);
+  background: var(--amber-wash);
+}
+
+.start-check-action {
   min-width: 0;
   white-space: normal;
+}
+
+@media (max-width: 760px) {
+  .start-check {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .start-check-action {
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 .start-requirements {
@@ -7260,14 +7324,6 @@ input[type="text"].application-card-name-input {
   color: var(--text-3);
   font-size: var(--text-xs);
   line-height: 1.5;
-}
-
-/* On the application screen: where provider sign-in went, and the way to it. */
-.provider-signin-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .home-settings-actions {

@@ -154,7 +154,7 @@ describe("ReviewWorkspace with setup summary", () => {
     expect(html).toContain("<summary>See exactly what is sent</summary>");
     expect(html).toContain("Acknowledge provider transmission");
     expect(html).toContain("Advanced: writing policy override for this job");
-    expect(html).toContain("Start author–critic review");
+    expect(html).toContain("Start review · review the data sent first");
   });
 
   it("keeps the full setup when no summary is given", () => {

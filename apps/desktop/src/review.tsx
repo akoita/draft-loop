@@ -85,6 +85,15 @@ import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
+import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
+import {
+  type StartActionId,
+  startButtonLabel,
+  startChecklist,
+  startChecklistId,
+  startChecklistTooltip,
+  startJobCardId,
+} from "./start-checklist-model.js";
 import {
   type StartCandidateProfile,
   StartConfirmation,
@@ -101,17 +110,11 @@ import {
   withLatestBriefRefresh,
 } from "./start-requirements.js";
 import {
-  isJobRequirementRefusal,
   jobRequirementsExtractionId,
   offersRequirementsExtraction,
   requirementRefusalAction,
   reviewedRequirementsSelection,
 } from "./start-requirements-model.js";
-import {
-  startReviewBlockedTooltip,
-  startReviewBlockers,
-  startReviewBlockersId,
-} from "./start-review-blockers.js";
 import { ThemeToggle } from "./theme.js";
 
 interface ReviewWorkspaceProps {
@@ -2599,15 +2602,21 @@ export function ReviewWorkspace({
         ? null
         : `${state.workspaceId}:${reviewedRequirements.briefId}:${reviewedRequirements.version}`;
     const startFromJobDescription = rawJobKey !== null && rawJobChoice === rawJobKey;
-    const setupStartBlockers = startReviewBlockers({
-      setupReady: state.setup.ready,
-      nextSteps: state.setup.nextSteps,
-      transmissionReady,
+    const startConditions = startChecklist({
+      setup: state.setup,
+      startFromJobDescription,
+      requirementAction: requirementRefusalAction(
+        latestBrief,
+        reviewedRequirements,
+        requirementsBinding?.createOpportunity !== undefined,
+      ),
+      candidateProfile: startCandidateProfile,
+      transmission: state.providerTransmissionPreflight,
       startDisabledReason,
-      rawJobRequirementProblem: startFromJobDescription
-        ? (state.setup.jobRequirementProblem ?? null)
-        : null,
+      canOpenProviderSignIn: onOpenHome !== undefined,
     });
+    const startPending = pendingReviewAction?.action === "start";
+    const startTooltip = startChecklistTooltip(startConditions);
     const extractRequirements = () => {
       setExtractionSignal((value) => value + 1);
       document
@@ -2674,40 +2683,11 @@ export function ReviewWorkspace({
         )}
       </details>
     );
-    const renderBlockerAction = () => {
-      const action = requirementRefusalAction(
-        latestBrief,
-        reviewedRequirements,
-        requirementsBinding?.createOpportunity !== undefined,
-      );
-      if (action === "use-reviewed") {
-        return (
-          <button
-            className="button button-quiet"
-            type="button"
-            onClick={() => setRawJobChoice(null)}
-          >
-            Use the reviewed requirements instead
-          </button>
-        );
-      }
-      if (action === "review-draft") {
-        return <span className="setup-note">Review the requirements brief above to start.</span>;
-      }
-      if (action === null || requirementsBinding === undefined) return null;
-      // An empty draft has nothing to review, so it offers a fresh extraction instead.
-      return (
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={requirementsBinding.disabled}
-          onClick={extractRequirements}
-        >
-          {action === "extract-again"
-            ? "Extract requirements again"
-            : "Extract requirements into a brief"}
-        </button>
-      );
+    const runStartAction = (id: StartActionId) => {
+      if (id === "extract-requirements") extractRequirements();
+      else if (id === "use-reviewed-requirements") setRawJobChoice(null);
+      else if (id === "open-provider-sign-in") onOpenHome?.();
+      else revealStartTarget(startActionTargets[id] ?? []);
     };
     return (
       <div className="app-frame">
@@ -2750,13 +2730,9 @@ export function ReviewWorkspace({
                   </p>
                 </>
               )}
-              {errorMessage ? (
-                <div className="error-banner" role="alert">
-                  <p>{errorMessage}</p>
-                </div>
-              ) : null}
               <div className={compact ? "application-setup" : "setup-grid"}>
                 <article
+                  id={startJobCardId}
                   className={`setup-card${state.setup.jobDescriptionReady ? " setup-card-ready" : ""}`}
                   {...(compact ? { "aria-labelledby": "application-job-title" } : {})}
                 >
@@ -2934,19 +2910,6 @@ export function ReviewWorkspace({
                   </article>
                 )}
               </div>
-              {compact || state.setup.fixtureMode ? null : (
-                <p className="setup-note provider-signin-note">
-                  Provider sign-in is in Home → Workspace settings.
-                  {onOpenHome === undefined ? null : (
-                    <>
-                      {" "}
-                      <button className="button button-quiet" type="button" onClick={onOpenHome}>
-                        Open Home
-                      </button>
-                    </>
-                  )}
-                </p>
-              )}
               {renderProviderTransmissionPreflight(compact)}
               {compact ? null : profilePanel}
               {reviewedRequirements === null || rawJobKey === null ? null : (
@@ -2970,13 +2933,9 @@ export function ReviewWorkspace({
                 <button
                   className="button button-primary"
                   type="button"
-                  disabled={
-                    setupStartBlockers.length > 0 || pendingReviewAction?.action === "start"
-                  }
-                  title={startReviewBlockedTooltip(setupStartBlockers)}
-                  aria-describedby={
-                    setupStartBlockers.length > 0 ? startReviewBlockersId : undefined
-                  }
+                  disabled={startTooltip !== undefined || startPending}
+                  title={startTooltip}
+                  aria-describedby={startChecklistId}
                   onClick={() =>
                     requestStart(
                       startFromJobDescription
@@ -2985,31 +2944,20 @@ export function ReviewWorkspace({
                     )
                   }
                 >
-                  {pendingReviewAction?.action === "start"
-                    ? "Starting review…"
-                    : "Start author–critic review"}
+                  {startButtonLabel(startConditions, startPending)}
                 </button>
               </div>
-              {setupStartBlockers.length > 0 ? (
-                <div
-                  className="setup-next-steps start-review-blockers"
-                  id={startReviewBlockersId}
-                  role="status"
-                >
-                  <strong>To start the review</strong>
-                  <ul>
-                    {setupStartBlockers.map((blocker) => (
-                      <li key={blocker}>
-                        {blocker}
-                        {isJobRequirementRefusal(blocker, state.setup.jobRequirementProblem) ? (
-                          <div className="start-blocker-action">{renderBlockerAction()}</div>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {pendingReviewAction?.action === "start" ? (
+              <StartChecklistView
+                id={startChecklistId}
+                conditions={startConditions}
+                errorMessage={errorMessage ?? null}
+                readOnly={readOnly}
+                isActionDisabled={(id) =>
+                  id === "extract-requirements" && requirementsBinding?.disabled === true
+                }
+                onAction={runStartAction}
+              />
+              {startPending ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
                   {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
