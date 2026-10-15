@@ -77,6 +77,6 @@ describe("saved DeepInfra stream feedback", () => {
       safeCanonicalCandidateProfileFeedback(
         "DeepInfra returned a malformed GLM stream. Check private/provider compatibility and update DraftLoop to the latest supported version; no facts were saved.",
       ),
-    ).toBe("The canonical candidate profile operation could not be completed.");
+    ).toBe("The profile operation could not be completed.");
   });
 });

@@ -136,13 +136,11 @@ describe("canonical candidate profile outcome", () => {
       "profile-1",
     );
     expect(outcome.failureReasons).toHaveLength(1);
-    expect(outcome.failureReasons[0]).toBe(
-      "The canonical candidate profile operation could not be completed.",
-    );
+    expect(outcome.failureReasons[0]).toBe("The profile operation could not be completed.");
     expect(JSON.stringify(outcome)).not.toContain("private");
     expect(
       safeCanonicalCandidateProfileFeedback(new Error("failed at C:\\candidate\\cv.pdf")),
-    ).toBe("The canonical candidate profile operation could not be completed.");
+    ).toBe("The profile operation could not be completed.");
   });
 
   it("limits deduplicated recorded reasons to three", () => {

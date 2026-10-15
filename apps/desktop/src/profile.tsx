@@ -11,7 +11,9 @@ import type {
   CanonicalCandidateProfileListResult,
   CanonicalCandidateProfileRecordResult,
 } from "./bridge.js";
+import type { CareerEvidenceCapabilities } from "./career-evidence.js";
 import type { CandidateProfileSelection } from "./model.js";
+import { providerDisplayName } from "./model-profile-presentation.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
   defaultProfileToAutoload,
@@ -53,6 +55,22 @@ import {
   profileReviewBlockedReason,
   projectProfileFactCategories,
 } from "./profile-review-navigation.js";
+import {
+  defaultCareerProfileName,
+  profilePrimaryActionLabel,
+  projectProfileStatus,
+} from "./profile-status.js";
+import {
+  ProfileFullExtractionOption,
+  ProfileGenerationAction,
+  ProfileStatusSummary,
+  ProfileVersionDetails,
+  ProfileVersionHistory,
+  useEvidenceSourceCount,
+  useProfileFreshness,
+} from "./profile-status-view.js";
+
+export { ProfileGenerationAction } from "./profile-status-view.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
@@ -87,6 +105,10 @@ export interface ProfileWorkspaceProps {
     workspaceId: string,
     generation: ProfileGenerationActivity | null,
   ) => void;
+  /** Reads the selected career evidence, so the approval can say how many sources it sends. */
+  readonly evidence?: CareerEvidenceCapabilities;
+  /** The company whose model builds the profile (the author), as the approval names it. */
+  readonly providerCompany?: string;
 }
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
@@ -179,10 +201,6 @@ export function candidateProfileSelectionForRecord(
     : null;
 }
 
-function shortChecksum(checksum: string): string {
-  return `${checksum.slice(0, 12)}…`;
-}
-
 /** True when the outcome is shown as a single failure or empty callout instead of status text. */
 export function isProfileOutcomeCallout(outcome: CanonicalCandidateProfileOutcome): boolean {
   return outcome.kind === "extraction-failure" || (outcome.kind === "empty" && outcome.retry);
@@ -197,7 +215,7 @@ function ProfileOutcomeCallout({
   return (
     <section
       className={`profile-outcome ${failed ? "profile-outcome-failure" : "profile-outcome-empty"}`}
-      aria-label="Canonical profile status"
+      aria-label="Profile generation result"
     >
       <strong className="profile-outcome-title">
         {failed
@@ -229,7 +247,7 @@ export function ProfileOutcomeFeedback({
 }) {
   if (isProfileOutcomeCallout(outcome)) return <ProfileOutcomeCallout outcome={outcome} />;
   return (
-    <section className="profile-outcome" aria-label="Canonical profile status">
+    <section className="profile-outcome" aria-label="Profile generation result">
       {showMessage ? <p>{outcome.message}</p> : null}
       {outcome.failureReasons.length === 0 ? null : (
         <ul aria-label="Saved profile issue guidance">
@@ -239,75 +257,6 @@ export function ProfileOutcomeFeedback({
         </ul>
       )}
     </section>
-  );
-}
-
-export function ProfileGenerationAction({
-  outcome,
-  profileIdValid,
-  providerTransmissionApproved,
-  busy,
-  generating = false,
-  fullExtraction = false,
-  onApprovalChange,
-  onFullExtractionChange,
-  onDerive,
-}: {
-  readonly outcome: CanonicalCandidateProfileOutcome;
-  readonly profileIdValid: boolean;
-  readonly providerTransmissionApproved: boolean;
-  readonly busy: boolean;
-  readonly generating?: boolean;
-  readonly fullExtraction?: boolean;
-  readonly onApprovalChange: (approved: boolean) => void;
-  /** Offers the re-extraction choice only when provided. */
-  readonly onFullExtractionChange?: (fullExtraction: boolean) => void;
-  readonly onDerive: () => void;
-}) {
-  return (
-    <>
-      <label className="profile-approval-label">
-        <input
-          type="checkbox"
-          checked={providerTransmissionApproved}
-          disabled={busy}
-          onChange={(event) => onApprovalChange(event.target.checked)}
-        />
-        <span>I approve sending selected candidate material to the configured provider.</span>
-      </label>
-      {onFullExtractionChange === undefined ? null : (
-        <label className="profile-approval-label">
-          <input
-            type="checkbox"
-            checked={fullExtraction}
-            disabled={busy}
-            onChange={(event) => onFullExtractionChange(event.target.checked)}
-          />
-          <span>Re-extract all sources</span>
-        </label>
-      )}
-      <button
-        className="button button-primary"
-        type="button"
-        disabled={busy || !profileIdValid || !providerTransmissionApproved}
-        onClick={onDerive}
-      >
-        {busy
-          ? generating
-            ? "Generating…"
-            : "Working…"
-          : outcome.retry
-            ? "Retry profile generation"
-            : "Derive profile"}
-      </button>
-      {!busy && profileIdValid && !providerTransmissionApproved ? (
-        <p className="profile-approval-hint">
-          {outcome.retry
-            ? "Tick the approval box to enable Retry."
-            : "Tick the approval box to generate."}
-        </p>
-      ) : null}
-    </>
   );
 }
 
@@ -489,7 +438,6 @@ function ProfileIssue({
 
 export function ProfileDetails({
   record,
-  history,
   draftFacts,
   draftIssues,
   editable,
@@ -502,7 +450,6 @@ export function ProfileDetails({
   onReview,
 }: {
   readonly record: CanonicalCandidateProfileRecordResult;
-  readonly history: readonly CanonicalCandidateProfileRecordResult[];
   readonly draftFacts: readonly CanonicalCandidateProfileFactResult[];
   readonly draftIssues: readonly CanonicalCandidateProfileIssueResult[];
   readonly editable: boolean;
@@ -524,7 +471,6 @@ export function ProfileDetails({
     [draftIssues],
   );
   const factsById = useMemo(() => new Map(draftFacts.map((fact) => [fact.id, fact])), [draftFacts]);
-  const historical = history.length > 0 && record.version !== history.at(-1)?.version;
   const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
   const reviewHint = profileReviewBlockedReason({
     record,
@@ -550,43 +496,6 @@ export function ProfileDetails({
 
   return (
     <>
-      <dl className="profile-metadata">
-        <div>
-          <dt>Version</dt>
-          <dd>{record.version}</dd>
-        </div>
-        <div>
-          <dt>Parent</dt>
-          <dd>{record.parentVersion === null ? "—" : record.parentVersion}</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{record.status}</dd>
-        </div>
-        <div>
-          <dt>Created</dt>
-          <dd>{record.createdAt}</dd>
-        </div>
-        <div>
-          <dt>Updated</dt>
-          <dd>{record.updatedAt}</dd>
-        </div>
-        <div>
-          <dt>Reviewed</dt>
-          <dd>{record.reviewedAt ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>Checksum</dt>
-          <dd title={record.checksum}>{shortChecksum(record.checksum)}</dd>
-        </div>
-      </dl>
-
-      {historical ? (
-        <p className="profile-note">Historical versions are immutable.</p>
-      ) : record.status === "reviewed" ? (
-        <p className="profile-note">Reviewed versions are immutable.</p>
-      ) : null}
-
       {failureRecorded ? (
         <p className="profile-failure-note">
           This version records a failed generation; its cause is shown above.
@@ -596,8 +505,10 @@ export function ProfileDetails({
           <section className="profile-subsection" aria-labelledby="profile-facts-title">
             <div className="section-heading compact">
               <div>
-                <p className="eyebrow">Canonical facts</p>
-                <h3 id="profile-facts-title">Facts by category</h3>
+                <p className="eyebrow">Your facts</p>
+                <h3 id="profile-facts-title" tabIndex={-1}>
+                  Facts by category
+                </h3>
               </div>
               <span className="meta-chip">{draftFacts.length}</span>
             </div>
@@ -688,7 +599,9 @@ export function ProfileDetails({
             <div className="section-heading compact">
               <div>
                 <p className="eyebrow">Review blockers</p>
-                <h3 id="profile-issues-title">Issues by severity and status</h3>
+                <h3 id="profile-issues-title" tabIndex={-1}>
+                  Issues by severity and status
+                </h3>
               </div>
               <span className="meta-chip">{draftIssues.length}</span>
             </div>
@@ -834,6 +747,8 @@ export function ProfileWorkspace({
   onSelectionChange,
   onPendingChange,
   onGenerationChange,
+  evidence,
+  providerCompany,
 }: ProfileWorkspaceProps) {
   const [profileId, setProfileId] = useState("");
   const [loadedProfileId, setLoadedProfileId] = useState<string | null>(null);
@@ -926,6 +841,30 @@ export function ProfileWorkspace({
     currentOutcome.kind === "reviewed" &&
     selectedProfile.profileId === record.profileId &&
     selectedProfile.version === record.version;
+  // A first profile needs no name: it gets the default once no saved profile can be loaded.
+  const defaultNameAllowed =
+    capabilities.listCanonicalCandidateProfileSummaries === undefined ||
+    (savedSummariesWorkspaceId === workspaceId && savedSummaries.length === 0);
+  const generationProfileId =
+    normalizedProfileId === "" && defaultNameAllowed
+      ? defaultCareerProfileName
+      : normalizedProfileId;
+  const recordKey = record === null ? "" : `${record.profileId}@${record.version}`;
+  const freshness = useProfileFreshness(
+    capabilities,
+    workspaceId,
+    record !== null && currentOutcome.kind === "reviewed" && record.version === latestVersion
+      ? record.profileId
+      : null,
+    recordKey,
+  );
+  const evidenceSourceCount = useEvidenceSourceCount(evidence, workspaceId, recordKey);
+  const status = projectProfileStatus({
+    outcome: currentOutcome,
+    draftIssues,
+    version: record?.version ?? null,
+    freshness,
+  });
 
   useEffect(() => {
     onPendingChange?.(workspaceId, busy);
@@ -1056,7 +995,7 @@ export function ProfileWorkspace({
 
   const withBusy = async (
     operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
-    pendingMessage = "Working with the canonical candidate profile…",
+    pendingMessage = "Working on your profile…",
   ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
@@ -1256,12 +1195,14 @@ export function ProfileWorkspace({
   };
 
   const derive = (): void => {
-    if (!isCanonicalCandidateProfileId(normalizedProfileId) || !providerTransmissionApproved)
+    const generatingProfileId = generationProfileId;
+    if (!isCanonicalCandidateProfileId(generatingProfileId) || !providerTransmissionApproved)
       return;
+    if (generatingProfileId !== profileId) setProfileId(generatingProfileId);
     setProviderTransmissionApproved(false);
     setFullExtraction(false);
     setSourceReuse(null);
-    generatingProfileIdRef.current = normalizedProfileId;
+    generatingProfileIdRef.current = generatingProfileId;
     setGenerationProgress(undefined);
     setCancelRequested(false);
     const startedAt = Date.now();
@@ -1278,7 +1219,7 @@ export function ProfileWorkspace({
       getProgress === undefined
         ? undefined
         : setInterval(() => {
-            void getProgress(normalizedProfileId)
+            void getProgress(generatingProfileId)
               .then((progress) => {
                 if (!polling || !progress.active) return;
                 if (progress.completedCalls === undefined || progress.plannedCalls === undefined)
@@ -1297,7 +1238,7 @@ export function ProfileWorkspace({
     void withBusy(async () => {
       try {
         const derived = await capabilities.deriveCanonicalCandidateProfile({
-          profileId: normalizedProfileId,
+          profileId: generatingProfileId,
           providerTransmissionApproved: true,
           ...(fullExtraction ? { fullExtraction: true } : {}),
         });
@@ -1309,7 +1250,7 @@ export function ProfileWorkspace({
             extracted: derived.extractedSourceCount,
           });
         }
-        const refreshed = await refresh(normalizedProfileId, derived.version);
+        const refreshed = await refresh(generatingProfileId, derived.version);
         refreshCatalog();
         return refreshed;
       } finally {
@@ -1363,171 +1304,70 @@ export function ProfileWorkspace({
     });
   };
 
+  const loading = busy && generationStartedAt === null && record === null;
+  const primaryLabel = profilePrimaryActionLabel(status);
+  const sendsFromTop = status.primaryAction === "generate" || status.primaryAction === "update";
+  const generationAction = (mode: "generate" | "update") => (
+    <ProfileGenerationAction
+      outcome={currentOutcome}
+      mode={mode}
+      profileIdValid={isCanonicalCandidateProfileId(generationProfileId)}
+      providerTransmissionApproved={providerTransmissionApproved}
+      busy={busy}
+      generating={generationStartedAt !== null}
+      sourceCount={evidenceSourceCount}
+      providerName={
+        providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
+      }
+      onApprovalChange={setProviderTransmissionApproved}
+      onDerive={derive}
+    />
+  );
+  const openReview = (): void => {
+    const target = document.getElementById(
+      status.issueCount > 0 ? "profile-issues-title" : "profile-facts-title",
+    );
+    target?.scrollIntoView({ block: "start" });
+    target?.focus();
+  };
+
   return (
     <section className="panel profile-panel" aria-labelledby="canonical-profile-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Candidate profile workflow</p>
-          <h2 id="canonical-profile-title">Canonical candidate profile</h2>
-        </div>
-        {selectedThisRecord ? <span className="state-pill state-approved">Selected</span> : null}
-      </div>
-      <p className="profile-copy">
-        Derive a bounded, provider-independent profile from the configured candidate knowledge. Only
-        an exact reviewed version can be selected for a new review run.
-      </p>
-      <p className="profile-note">
-        Source compatibility is checked again before starting a review.
-      </p>
-      {capabilities.listReviewedCanonicalCandidateProfiles === undefined ? null : (
-        <div className="profile-catalog-picker">
-          <label htmlFor="reviewed-profile-catalog">Existing reviewed profiles</label>
-          <div className="profile-catalog-controls">
-            <select
-              id="reviewed-profile-catalog"
-              aria-label="Existing reviewed profiles"
-              value={catalogChoice}
-              disabled={busy || catalogLoading}
-              onChange={(event) => {
-                const choice = event.target.value;
-                if (choice === "") {
-                  selectionRequestRef.current += 1;
-                  catalogChoiceRef.current = null;
-                  setCatalogChoice("");
-                  setProviderTransmissionApproved(false);
-                  setLoadedProfileId(null);
-                  setHistory([]);
-                  setRecord(null);
-                  setDraftFacts([]);
-                  setDraftIssues([]);
-                  onSelectionChange(null);
-                  setStatusMessage("");
-                  setErrorMessage(null);
-                  return;
-                }
-                void selectReviewedProfile(choice);
-              }}
-            >
-              <option value="">Choose a reviewed profile…</option>
-              {(catalogWorkspaceId === workspaceId ? catalogProfiles : []).map((profile) => {
-                const choice = reviewedCanonicalCandidateProfileChoice(profile);
-                return (
-                  <option key={choice} value={choice}>
-                    {profile.profileId} · v{profile.version}
-                  </option>
-                );
-              })}
-            </select>
+      <ProfileStatusSummary
+        titleId="canonical-profile-title"
+        status={status}
+        loading={loading}
+        selected={selectedThisRecord}
+      >
+        {loading ? null : sendsFromTop ? (
+          generationAction(status.primaryAction === "update" ? "update" : "generate")
+        ) : status.primaryAction === "review" && primaryLabel !== null ? (
+          <div className="profile-generation-action">
             <button
-              className="button button-outline"
+              className="button button-primary"
               type="button"
-              disabled={busy || catalogLoading}
-              onClick={() => setCatalogEpoch((epoch) => epoch + 1)}
+              disabled={busy}
+              onClick={openReview}
             >
-              Refresh
+              {primaryLabel}
             </button>
           </div>
-          {catalogLoading ? <p role="status">Loading reviewed profiles…</p> : null}
-          {catalogError === null ? null : (
-            <p className="profile-error" role="alert">
-              {catalogError}
-            </p>
-          )}
-          {!catalogLoading &&
-          catalogError === null &&
-          catalogWorkspaceId === workspaceId &&
-          catalogProfiles.length === 0 ? (
-            <p className="profile-empty">No reviewed profiles are available in this workspace.</p>
-          ) : null}
-        </div>
-      )}
-      {savedSummariesWorkspaceId !== workspaceId ? null : (
-        <SavedProfilePicker
-          summaries={savedSummaries}
-          currentName={normalizedProfileId}
-          disabled={busy}
-          onChoose={loadSavedProfile}
-        />
-      )}
-      <div className="profile-controls">
-        <label className="profile-id-label">
-          <span>Profile name</span>
-          <input
-            type="text"
-            value={profileId}
-            maxLength={maximumProfileIdLength}
-            pattern={profileIdPattern.source}
-            autoComplete="off"
-            disabled={busy}
-            aria-label="Profile name"
-            placeholder="e.g. senior-data-engineer-cv"
-            aria-describedby="profile-id-hint"
-            onChange={(event) => {
-              const next = event.target.value;
-              if (
-                next === "" ||
-                (next.length <= maximumProfileIdLength && profileIdPattern.test(next))
-              ) {
-                selectionRequestRef.current += 1;
-                catalogChoiceRef.current = null;
-                setCatalogChoice("");
-                setProviderTransmissionApproved((approved) =>
-                  candidateProfileApprovalAfterIdChange(approved, profileId, next),
-                );
-                setProfileId(next);
-                setStatusMessage("");
-                setErrorMessage(null);
-                if (loadedProfileId !== next) {
-                  setLoadedProfileId(null);
-                  setHistory([]);
-                  setRecord(null);
-                  setDraftFacts([]);
-                  setDraftIssues([]);
-                  onSelectionChange(null);
-                }
-              }
-            }}
-          />
-        </label>
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={busy || !isCanonicalCandidateProfileId(normalizedProfileId)}
-          onClick={loadLatest}
-        >
-          Load latest
-        </button>
-        <p className="field-hint" id="profile-id-hint">
-          Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
-          applies to this name only.
+        ) : null}
+      </ProfileStatusSummary>
+      {/* The status line already says what the outcome means; only causes and guidance remain. */}
+      {outcomeFeedbackShown &&
+      (isProfileOutcomeCallout(currentOutcome) || currentOutcome.failureReasons.length > 0) ? (
+        <ProfileOutcomeFeedback outcome={currentOutcome} showMessage={false} />
+      ) : null}
+      {!busy &&
+      sourceReuse !== null &&
+      record !== null &&
+      record.profileId === sourceReuse.profileId &&
+      record.version === sourceReuse.version ? (
+        <p className="profile-note">
+          {profileSourceReuseSummary(sourceReuse.reused, sourceReuse.extracted)}
         </p>
-        {outcomeFeedbackShown ? (
-          <ProfileOutcomeFeedback
-            outcome={currentOutcome}
-            showMessage={statusMessage !== currentOutcome.message}
-          />
-        ) : null}
-        <ProfileGenerationAction
-          outcome={currentOutcome}
-          profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
-          providerTransmissionApproved={providerTransmissionApproved}
-          busy={busy}
-          generating={generationStartedAt !== null}
-          fullExtraction={fullExtraction}
-          onApprovalChange={setProviderTransmissionApproved}
-          onFullExtractionChange={setFullExtraction}
-          onDerive={derive}
-        />
-        {!busy &&
-        sourceReuse !== null &&
-        record !== null &&
-        record.profileId === sourceReuse.profileId &&
-        record.version === sourceReuse.version ? (
-          <p className="profile-note">
-            {profileSourceReuseSummary(sourceReuse.reused, sourceReuse.extracted)}
-          </p>
-        ) : null}
-      </div>
+      ) : null}
       <div
         className={
           busy && generationStartedAt === null ? "profile-status boot-loading" : "profile-status"
@@ -1553,34 +1393,10 @@ export function ProfileWorkspace({
           <p>{errorMessage}</p>
         </div>
       )}
-      {history.length === 0 ? null : (
-        <label className="profile-history-label">
-          <span>Immutable profile history</span>
-          <select
-            aria-label="Canonical candidate profile version"
-            value={record?.version ?? ""}
-            disabled={busy || loadedProfileId === null}
-            onChange={(event) => loadVersion(Number(event.target.value))}
-          >
-            {history.map((version) => (
-              <option key={version.version} value={version.version}>
-                Version {version.version} · {version.status}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {record === null ? (
-        <p className="profile-empty">
-          {currentOutcome.kind === "no-version"
-            ? currentOutcome.message
-            : "Enter a profile name and choose Load latest to see its history."}
-        </p>
-      ) : (
+      {record === null ? null : (
         <ProfileDetails
           key={`${record.profileId}@${record.version}`}
           record={record}
-          history={history}
           draftFacts={draftFacts}
           draftIssues={draftIssues}
           editable={editable}
@@ -1594,15 +1410,165 @@ export function ProfileWorkspace({
           onRemoveFact={(factId) =>
             setDraftFacts((facts) => facts.filter((fact) => fact.id !== factId))
           }
-          onIssueStatusChange={(issueId, status) =>
+          onIssueStatusChange={(issueId, nextStatus) =>
             setDraftIssues((issues) =>
-              issues.map((issue) => (issue.id === issueId ? { ...issue, status } : issue)),
+              issues.map((issue) =>
+                issue.id === issueId ? { ...issue, status: nextStatus } : issue,
+              ),
             )
           }
           onSave={save}
           onReview={review}
         />
       )}
+      <details className="profile-more">
+        <summary>Details</summary>
+        <div className="profile-more-body">
+          <div className="profile-controls">
+            <label className="profile-id-label">
+              <span>Profile name</span>
+              <input
+                type="text"
+                value={profileId}
+                maxLength={maximumProfileIdLength}
+                pattern={profileIdPattern.source}
+                autoComplete="off"
+                disabled={busy}
+                aria-label="Profile name"
+                placeholder="e.g. senior-data-engineer-cv"
+                aria-describedby="profile-id-hint"
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (
+                    next === "" ||
+                    (next.length <= maximumProfileIdLength && profileIdPattern.test(next))
+                  ) {
+                    selectionRequestRef.current += 1;
+                    catalogChoiceRef.current = null;
+                    setCatalogChoice("");
+                    setProviderTransmissionApproved((approved) =>
+                      candidateProfileApprovalAfterIdChange(approved, profileId, next),
+                    );
+                    setProfileId(next);
+                    setStatusMessage("");
+                    setErrorMessage(null);
+                    if (loadedProfileId !== next) {
+                      setLoadedProfileId(null);
+                      setHistory([]);
+                      setRecord(null);
+                      setDraftFacts([]);
+                      setDraftIssues([]);
+                      onSelectionChange(null);
+                    }
+                  }
+                }}
+              />
+            </label>
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={busy || !isCanonicalCandidateProfileId(normalizedProfileId)}
+              onClick={loadLatest}
+            >
+              Load latest
+            </button>
+            <p className="field-hint" id="profile-id-hint">
+              Choose a name for this profile: letters, digits, dots, dashes, or underscores.
+              Approval applies to this name only.
+            </p>
+          </div>
+          {savedSummariesWorkspaceId !== workspaceId ? null : (
+            <SavedProfilePicker
+              summaries={savedSummaries}
+              currentName={normalizedProfileId}
+              disabled={busy}
+              onChoose={loadSavedProfile}
+            />
+          )}
+          {capabilities.listReviewedCanonicalCandidateProfiles === undefined ? null : (
+            <div className="profile-catalog-picker">
+              <label htmlFor="reviewed-profile-catalog">Existing reviewed profiles</label>
+              <div className="profile-catalog-controls">
+                <select
+                  id="reviewed-profile-catalog"
+                  aria-label="Existing reviewed profiles"
+                  value={catalogChoice}
+                  disabled={busy || catalogLoading}
+                  onChange={(event) => {
+                    const choice = event.target.value;
+                    if (choice === "") {
+                      selectionRequestRef.current += 1;
+                      catalogChoiceRef.current = null;
+                      setCatalogChoice("");
+                      setProviderTransmissionApproved(false);
+                      setLoadedProfileId(null);
+                      setHistory([]);
+                      setRecord(null);
+                      setDraftFacts([]);
+                      setDraftIssues([]);
+                      onSelectionChange(null);
+                      setStatusMessage("");
+                      setErrorMessage(null);
+                      return;
+                    }
+                    void selectReviewedProfile(choice);
+                  }}
+                >
+                  <option value="">Choose a reviewed profile…</option>
+                  {(catalogWorkspaceId === workspaceId ? catalogProfiles : []).map((profile) => {
+                    const choice = reviewedCanonicalCandidateProfileChoice(profile);
+                    return (
+                      <option key={choice} value={choice}>
+                        {profile.profileId} · v{profile.version}
+                      </option>
+                    );
+                  })}
+                </select>
+                <button
+                  className="button button-outline"
+                  type="button"
+                  disabled={busy || catalogLoading}
+                  onClick={() => setCatalogEpoch((epoch) => epoch + 1)}
+                >
+                  Refresh
+                </button>
+              </div>
+              {catalogLoading ? <p role="status">Loading reviewed profiles…</p> : null}
+              {catalogError === null ? null : (
+                <p className="profile-error" role="alert">
+                  {catalogError}
+                </p>
+              )}
+              <p className="profile-note">
+                Source compatibility is checked again before starting a review.
+              </p>
+              {!catalogLoading &&
+              catalogError === null &&
+              catalogWorkspaceId === workspaceId &&
+              catalogProfiles.length === 0 ? (
+                <p className="profile-empty">
+                  No reviewed profiles are available in this workspace.
+                </p>
+              ) : null}
+            </div>
+          )}
+          <ProfileVersionHistory
+            history={history}
+            version={record?.version ?? null}
+            disabled={busy || loadedProfileId === null}
+            onChoose={loadVersion}
+          />
+          {record === null ? null : <ProfileVersionDetails record={record} history={history} />}
+          <ProfileFullExtractionOption
+            checked={fullExtraction}
+            disabled={busy}
+            onChange={setFullExtraction}
+          />
+          {sendsFromTop || loading
+            ? null
+            : generationAction(record === null ? "generate" : "update")}
+        </div>
+      </details>
     </section>
   );
 }
