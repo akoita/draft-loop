@@ -104,6 +104,10 @@ import {
   saveAppliedModelProfiles,
 } from "./saved-model-profiles.js";
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
+import {
+  candidateProfilePendingBlockerMessage,
+  candidateProfileStartBlockerMessage,
+} from "./start-checklist-model.js";
 import { ThemeToggle } from "./theme.js";
 import { ModelsIcon } from "./workspace-action-icons.js";
 import { type WorkspaceActivity, WorkspaceActivityBar } from "./workspace-activity.js";
@@ -236,12 +240,9 @@ function messageOf(reason: unknown, fallback: string): string {
   return reason instanceof Error && reason.message.trim() !== "" ? reason.message : fallback;
 }
 
-export const candidateProfileStartBlockerMessage =
-  "Select an exact reviewed candidate profile before starting a review.";
+export { candidateProfilePendingBlockerMessage, candidateProfileStartBlockerMessage };
 export const candidateKnowledgePendingBlockerMessage =
   "Wait for candidate knowledge selection to finish before starting a review.";
-export const candidateProfilePendingBlockerMessage =
-  "Wait for the candidate profile operation to finish before starting a review.";
 
 export function candidateProfileStartDisabledReason(
   profileCapabilitiesPresent: boolean,

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { OpportunityLatestBrief } from "./bridge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
+import { startChecklist } from "./start-checklist-model.js";
 import { LatestRequirementsBriefView, StartRequirementsSourceView } from "./start-requirements.js";
 import {
   isJobRequirementRefusal,
@@ -15,7 +16,6 @@ import {
   reviewedRequirementsLabel,
   reviewedRequirementsSelection,
 } from "./start-requirements-model.js";
-import { startReviewBlockers } from "./start-review-blockers.js";
 
 const reviewed: OpportunityLatestBrief = {
   workspaceId: "w",
@@ -191,21 +191,30 @@ describe("guided requirement blocker", () => {
   });
 
   it("blocks a start from the raw job description on the refusal, even with a ready setup", () => {
-    const base = {
-      setupReady: true,
-      nextSteps: [],
-      transmissionReady: true,
+    const input = {
+      setup: { ready: true, nextSteps: [], jobDescriptionReady: true, fixtureMode: true },
+      startFromJobDescription: false,
+      requirementAction: null,
+      candidateProfile: undefined,
+      transmission: { required: false, acknowledged: true },
       startDisabledReason: null,
-    };
-    expect(startReviewBlockers(base)).toEqual([]);
-    expect(startReviewBlockers({ ...base, rawJobRequirementProblem: problem })).toEqual([problem]);
-    expect(
-      startReviewBlockers({
-        ...base,
-        nextSteps: [problem],
-        setupReady: false,
-        rawJobRequirementProblem: problem,
-      }),
-    ).toEqual([problem]);
+      canOpenProviderSignIn: false,
+    } as const;
+    const unmet = (conditions: ReturnType<typeof startChecklist>) =>
+      conditions
+        .filter((condition) => !condition.done)
+        .map((condition) => condition.detail ?? condition.label);
+    expect(unmet(startChecklist(input))).toEqual([]);
+    const chosen = startChecklist({
+      ...input,
+      setup: { ...input.setup, jobRequirementProblem: problem },
+      startFromJobDescription: true,
+    });
+    expect(unmet(chosen)).toEqual([problem]);
+    const reported = startChecklist({
+      ...input,
+      setup: { ...input.setup, ready: false, nextSteps: [problem], jobRequirementProblem: problem },
+    });
+    expect(unmet(reported)).toEqual([problem]);
   });
 });
