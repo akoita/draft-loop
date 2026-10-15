@@ -4,7 +4,8 @@ import { join } from "node:path";
 
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { type JsonValue, openSqliteStorage, type SqliteStorage } from "@draft-loop/storage";
-import { afterEach, describe, expect, it } from "vitest";
+import { setSqliteCommitSyncSkippedForTests } from "@draft-loop/storage/sqlite-handle";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   artifactStorageKey,
@@ -117,6 +118,16 @@ function stepSnapshot(step: number): { snapshot: RunSnapshot; executions: Execut
 describe("slim run snapshot rows", () => {
   const directories: string[] = [];
   const stores: SqliteStorage[] = [];
+  let commitSyncSkipped = false;
+
+  // These tests save many snapshots and assert shapes and sizes, not durability, so skip the
+  // per-commit disk sync that otherwise made them time out on a busy machine.
+  beforeAll(() => {
+    commitSyncSkipped = setSqliteCommitSyncSkippedForTests(true);
+  });
+  afterAll(() => {
+    setSqliteCommitSyncSkippedForTests(commitSyncSkipped);
+  });
 
   afterEach(async () => {
     await Promise.all(stores.splice(0).map((storage) => storage.close()));
