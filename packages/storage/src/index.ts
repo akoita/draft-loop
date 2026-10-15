@@ -73,6 +73,7 @@ import {
 } from "./candidate-knowledge-retention-types.js";
 import * as vectorIndex from "./knowledge-vector-index.js";
 import * as originTrace from "./retrieval-origin-trace.js";
+import { runSnapshotRef } from "./run-snapshot-audit.js";
 import * as semanticTrace from "./semantic-retrieval-trace.js";
 import {
   appendSourceEvidenceKindOverride,
@@ -11172,7 +11173,6 @@ export class SqliteStorage
     assertSafeRecordFields(input, ["budget", "lastError", "payload"]);
     const checksumValue = recordChecksum(input);
     const id = `run-snapshot:${input.runId}:${checksumValue}`;
-    const recordWithoutSequence = { ...input, id, checksum: checksumValue };
     this.database.transaction(() => {
       const existing = this.database
         .prepare(
@@ -11186,7 +11186,7 @@ export class SqliteStorage
         }
         return;
       }
-      this.database
+      const inserted = this.database
         .prepare(
           "INSERT INTO run_snapshots (id, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
@@ -11214,7 +11214,7 @@ export class SqliteStorage
         eventType: "run-snapshot.appended",
         entityType: "run-snapshot",
         entityId: input.runId,
-        payload: recordToJson(recordWithoutSequence),
+        payload: runSnapshotRef(id, input.runId, inserted.lastInsertRowid, checksumValue),
         createdAt: input.updatedAt,
       });
     })();

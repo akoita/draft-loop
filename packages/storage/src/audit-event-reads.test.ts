@@ -101,6 +101,7 @@ describe("targeted audit event reads", () => {
               parameters.push([...values]);
               return undefined;
             },
+            all: () => [],
           };
         },
       },
