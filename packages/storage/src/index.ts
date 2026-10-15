@@ -50,6 +50,7 @@ import {
 import * as applicationStore from "./application-store.js";
 import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
+import { auditFromRow, createAuditEventReads } from "./audit-event-reads.js";
 import {
   dropCandidateKnowledgeDeletionImmutableDeleteTriggers,
   recreateCandidateKnowledgeDeletionImmutableDeleteTriggers,
@@ -3979,6 +3980,11 @@ export class SqliteStorage
   /** Append-only fact/chunk origin traces of pinned-profile runs; also on read-only stores. */
   public get candidateKnowledgeRetrievalOriginTrace() {
     return originTrace.createRetrievalOriginTraceStorage(this.database, () => this.ensureOpen());
+  }
+
+  /** Targeted audit-trail reads that parse only the events they return; also read-only. */
+  public get auditEvents() {
+    return createAuditEventReads(this.database, () => this.ensureOpen());
   }
 
   /** Applications and their run and brief bindings; also available on read-only stores. */
@@ -14654,22 +14660,6 @@ function exportFromRow(row: Record<string, unknown>): ExportRecord {
     createdAt: rowString(row, "created_at"),
     payload: parse(rowString(row, "payload_json")),
     checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function auditFromRow(row: Record<string, unknown>): AuditEvent {
-  return {
-    sequence: rowNumber(row, "sequence"),
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    eventType: rowString(row, "event_type"),
-    entityType: rowString(row, "entity_type"),
-    entityId: rowString(row, "entity_id"),
-    payload: parse(rowString(row, "payload_json")),
-    payloadChecksum: rowString(row, "payload_checksum"),
-    previousEventChecksum: rowNullableString(row, "previous_event_checksum"),
-    eventChecksum: rowString(row, "event_checksum"),
-    createdAt: rowString(row, "created_at"),
   };
 }
 

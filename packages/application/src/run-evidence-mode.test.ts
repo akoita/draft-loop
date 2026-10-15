@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type JsonValue, openSqliteStorage } from "@draft-loop/storage";
-import { afterEach, describe, expect, it } from "vitest";
+import { type JsonValue, openSqliteStorage, SqliteStorage } from "@draft-loop/storage";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApplicationService } from "./index.js";
 import { createLocalApplicationDriver, readWorkspace } from "./local.js";
 import { parseRunEvidenceModePayload, readRunEvidenceMode } from "./run-evidence-mode.js";
@@ -129,6 +129,21 @@ describe("run evidence mode reader", () => {
       chunkCount: 20,
       sourceCount: 2,
     });
+  });
+
+  it("reads one event without listing the run snapshots in the audit trail", async () => {
+    const root = await workspace();
+    await record(root, "run-a", fullSource);
+    await record(root, "run-a", { snapshot: "synthetic" }, "run-snapshot.appended");
+    const listing = vi.spyOn(SqliteStorage.prototype, "listAuditEvents");
+    try {
+      await expect(readRunEvidenceMode({ root, runId: "run-a" })).resolves.toMatchObject({
+        chunkCount: 181,
+      });
+      expect(listing).not.toHaveBeenCalled();
+    } finally {
+      listing.mockRestore();
+    }
   });
 
   it("is offered by the local driver through the application service", async () => {
