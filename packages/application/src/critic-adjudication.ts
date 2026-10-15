@@ -3,6 +3,7 @@ import {
   maximumCoverageJudgementRationaleCharacters,
 } from "@draft-loop/validation";
 
+import { emphasisReviewInstructions } from "./critic-emphasis.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
 export const maximumCritiqueFindings = 16;
@@ -26,6 +27,11 @@ const explicitEmploymentGapReviewInstructionsV4 = explicitEmploymentGapReviewIns
   "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
   "This source-to-CV completeness check and the editorial missing-evidence check are the only uses of uncited retrievedEvidence;",
 );
+// v5 adds a job emphasis review, which also reads retrievedEvidence to see what the evidence supports.
+const explicitEmploymentGapReviewInstructionsV5 = explicitEmploymentGapReviewInstructions.replace(
+  "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
+  "This source-to-CV completeness check, the editorial missing-evidence check and the job emphasis review are the only uses of uncited retrievedEvidence;",
+);
 const editorialReviewInstructions =
   " Also review the CV as an editor deciding whether it is ready to send. Report each of these as a quality warning whose message quotes the exact offending text (at most 80 characters) and names its section: a copied source note, meta-commentary about sources, documents, repositories or the job search, or third-person narration about the candidate (code editorial-source-note); a sentence fragment, or evidence quotes stitched together with semicolons instead of written as a sentence (code editorial-fragment); a negative aside that undercuts an accomplishment instead of stating a real limit once in the candidate's voice (code editorial-negative-aside). Then compare the job's requirements with retrievedEvidence: when a retrieved chunk clearly supports a requirement or responsibility the CV does not show, report a quality warning naming the requirement and the retrievedEvidence ID (code editorial-missing-evidence). Do not report wording preferences, and never ask for content the evidence does not support.";
 
@@ -47,6 +53,9 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   }
   if (templateVersion === "cli-critic-v4") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV4}${editorialReviewInstructions}${outputInstructions}\n\n${evidenceReferenceTableInstructions}`;
+  }
+  if (templateVersion === "cli-critic-v5") {
+    return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV5}${editorialReviewInstructions}${emphasisReviewInstructions}${outputInstructions}\n\n${evidenceReferenceTableInstructions}`;
   }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }

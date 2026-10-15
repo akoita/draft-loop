@@ -229,7 +229,7 @@ does not use a fixed technology vocabulary or external verification. Findings
 use the existing structured contract; resumed v1/v2 runs retain their recorded
 prompt bytes.
 
-New runs record critic template `cli-critic-v4`: v3 plus an editorial review
+Critic template `cli-critic-v4` is v3 plus an editorial review
 of whether the CV is ready to send. It reports quality warnings that quote the
 offending text and name its section:
 
@@ -243,6 +243,28 @@ offending text and name its section:
 
 It never asks for content the evidence does not support. Resumed v3 runs keep
 the v3 prompt.
+
+New runs record critic template `cli-critic-v5`: v4 plus a job emphasis review.
+The critic compares the job's central themes, from its requirements and
+responsibilities weighted by priority and repetition, with what the draft leads
+with, expands and compresses. Each finding is a `coverage` finding that names
+one concrete move and the theme or requirement id it serves:
+
+- `emphasis-theme-buried`: expand a supported central theme, or move it up into
+  the summary or core areas;
+- `emphasis-padding`: compress or drop content the job does not ask for;
+- `emphasis-order`: move supported, relevant content earlier;
+- `emphasis-theme-gap`: a central theme the approved evidence does not support,
+  reported as a gap and never as a move.
+
+Findings are warnings by default. Only `emphasis-theme-buried` can be an error,
+and only when the job's top-priority theme is missing from the summary and core
+areas and retrieved evidence supports it, so the author can fix it; the critic
+contract downgrades an error on any other emphasis code to a warning. They reach
+the author like any critic finding, through the adjudicated revision, so an
+accepted move is still bounded by the grounding rules. The theme source is one
+replaceable sentence in `critic-emphasis.ts`, where the application plan will
+feed the critic. Resumed v4 runs keep the v4 prompt.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited
