@@ -539,6 +539,22 @@ pinned under it.
   number, recorded models, round and status. The right draft is marked against
   the left one, with struck text only on the left and underlined text only on
   the right. **Swap sides** switches them.
+- **Comparison facts.** Above the drafts, a table gives each run's author and
+  critic models, rounds, mean readiness score, requirements covered (judged),
+  blocking findings left and cost. Every value is what that run recorded, never
+  the current configuration, and a value a run did not record reads "not
+  recorded".
+- **Input differences.** Below the table, each input says in words whether the
+  runs shared it, such as "Different writing policy: v3 (…) vs v5 (…)". The
+  inputs are the evidence mode and size, the writing policy, and the
+  coverage-judgement instructions; coverage and readiness judged under
+  different instructions are marked "not directly comparable". A run's review
+  state records no requirements brief or career profile version, so those two
+  read "not recorded for either run" rather than a guess.
+- **Export comparison.** Saves the table, the input differences and both
+  drafts' text as a Markdown file where you pick in a save dialog. It names
+  runs by number and models by id, and carries no other identifier, critic
+  rationale or finding text. Cancelling the dialog writes nothing.
 - **Comparison is read-only.** Neither draft can be edited. The side panel and
   the open run's validation banner step aside so the drafts take the full
   width, and the footer reads "Comparing runs — read-only" with its approval

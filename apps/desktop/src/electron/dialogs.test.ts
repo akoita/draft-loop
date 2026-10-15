@@ -1,7 +1,33 @@
 import type { BrowserWindow, SaveDialogOptions } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import { chooseMarkdownExportPath, type ExportDialog } from "./dialogs.js";
+import { chooseMarkdownExportPath, chooseMarkdownSavePath, type ExportDialog } from "./dialogs.js";
+
+describe("Markdown save dialog", () => {
+  it("starts on the suggested name and returns the picked path", async () => {
+    const parent = windowDouble();
+    const saveDialog = dialogDouble({ canceled: false, filePath: "/tmp/picked.md" });
+
+    await expect(
+      chooseMarkdownSavePath(parent, "run-1-vs-run-2-comparison.md", saveDialog),
+    ).resolves.toBe("/tmp/picked.md");
+    expect(saveDialog.showSaveDialog).toHaveBeenCalledWith(parent, {
+      defaultPath: "run-1-vs-run-2-comparison.md",
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+      title: "Save Markdown",
+    });
+  });
+
+  it("returns nothing when cancelled and needs a live window", async () => {
+    const cancelled = dialogDouble({ canceled: true, filePath: "" });
+    await expect(
+      chooseMarkdownSavePath(windowDouble(), "comparison.md", cancelled),
+    ).resolves.toBeUndefined();
+    await expect(chooseMarkdownSavePath(undefined, "comparison.md", cancelled)).rejects.toThrow(
+      "live parent window",
+    );
+  });
+});
 
 interface WindowDouble {
   readonly isDestroyed: ReturnType<typeof vi.fn<() => boolean>>;

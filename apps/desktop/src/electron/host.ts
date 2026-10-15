@@ -362,6 +362,8 @@ export interface NativeHostDialogs {
   readonly chooseKnowledgeSourceDirectory?: () => Promise<string | undefined>;
   readonly chooseKnowledgeSourceFile?: () => Promise<string | undefined>;
   readonly chooseMarkdownExportPath?: (defaultPath: string) => Promise<string | undefined>;
+  /** Where to save Markdown the renderer prepared, such as a run comparison; undefined cancels. */
+  readonly chooseMarkdownSavePath?: (suggestedName: string) => Promise<string | undefined>;
 }
 
 export interface NativeCredentialStore {
@@ -6114,6 +6116,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await selectFiles(command.input) };
         case "source.add-url":
           return { ok: true, value: await addUrl(command.input) };
+        case "file.save-markdown": {
+          const chooseSavePath = options.dialogs.chooseMarkdownSavePath;
+          if (chooseSavePath === undefined) {
+            throw new Error("Saving a Markdown file is not available here.");
+          }
+          // Only the file the person picked is written; a cancelled dialog writes nothing.
+          const target = await chooseSavePath(command.input.suggestedName);
+          if (target === undefined) return { ok: true, value: { saved: false, fileName: null } };
+          await writeFile(target, command.input.content, "utf8");
+          return { ok: true, value: { saved: true, fileName: basename(target) } };
+        }
         case "export.write": {
           const workspace = workspaceFor(command.input.workspaceId);
           const written = await service.export(

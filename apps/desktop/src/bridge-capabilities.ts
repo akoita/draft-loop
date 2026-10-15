@@ -84,6 +84,7 @@ export const bridgeCapabilities = [
   "review.dispatch",
   "review.preview-evidence",
   "file.select",
+  "file.save-markdown",
   "source.add-url",
   "export.write",
   "credential.status",

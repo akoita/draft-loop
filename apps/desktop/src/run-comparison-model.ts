@@ -25,6 +25,8 @@ export interface RunComparisonState {
   /** Which side the chosen run sits on. It starts on the left, with the open run on the right. */
   readonly otherSide: "left" | "right";
   readonly other: ComparedRunDraft;
+  /** The chosen run's review state once read, for the facts it recorded; null until then. */
+  readonly otherState?: DesktopReviewState | null;
 }
 
 export type RunComparisonEvent =
@@ -72,7 +74,11 @@ export function runComparisonReducer(
       ) {
         return current;
       }
-      return { ...current, other: { status: "loaded", artifact: event.state.artifact } };
+      return {
+        ...current,
+        other: { status: "loaded", artifact: event.state.artifact },
+        otherState: event.state,
+      };
     case "failed":
       if (current === null || event.runId !== current.otherRunId) return current;
       return { ...current, other: { status: "failed", message: event.message } };
@@ -142,6 +148,8 @@ export interface ComparisonSide {
   readonly facts: ComparedRunFacts;
   readonly open: boolean;
   readonly draft: ComparedRunDraft;
+  /** The run's review state, with what it recorded; null while the other run is being read. */
+  readonly state: DesktopReviewState | null;
 }
 
 /**
@@ -150,17 +158,19 @@ export interface ComparisonSide {
  */
 export function comparisonSides(
   comparison: RunComparisonState,
-  state: Pick<DesktopReviewState, "artifact" | "applicationRuns">,
+  state: DesktopReviewState,
 ): { readonly left: ComparisonSide; readonly right: ComparisonSide } {
   const open: ComparisonSide = {
     facts: comparedRunFacts(state.applicationRuns, comparison.openRunId),
     open: true,
     draft: { status: "loaded", artifact: state.artifact },
+    state,
   };
   const other: ComparisonSide = {
     facts: comparedRunFacts(state.applicationRuns, comparison.otherRunId),
     open: false,
     draft: comparison.other,
+    state: comparison.other.status === "loaded" ? (comparison.otherState ?? null) : null,
   };
   return comparison.otherSide === "left"
     ? { left: other, right: open }

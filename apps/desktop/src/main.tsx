@@ -2688,6 +2688,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(activePort.loadRunForComparison === undefined
         ? {}
         : { onLoadRunForComparison: activePort.loadRunForComparison })}
+      {...(activePort.saveMarkdownFile === undefined
+        ? {}
+        : { onSaveMarkdownFile: activePort.saveMarkdownFile })}
       onBulkFindingDecision={onBulkFindingDecision}
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}
