@@ -1174,9 +1174,36 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
-/* The author-input fact spans both columns so its requirement gap list stays readable. */
-.author-input-fact {
+/* The author-input and application-plan facts span both columns so their lists stay readable. */
+.author-input-fact,
+.application-plan-fact {
   grid-column: 1 / -1;
+}
+
+.application-plan-fact ol,
+.application-plan-fact ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.application-plan-fact .application-plan-leads {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.application-plan-fact p,
+.application-plan-fact .application-plan-cuts,
+.application-plan-fact .application-plan-gaps,
+.application-plan-fact .application-plan-review {
+  margin: var(--space-2) 0 0;
 }
 
 .author-input-gap {

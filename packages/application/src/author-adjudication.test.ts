@@ -291,8 +291,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v10 for new author runs and v5 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v10");
+  it("records v11 for new author runs and v5 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v11");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v5");
   });
 

@@ -23,13 +23,25 @@ export const emphasisFindingCodes = [
 const emphasisCodePrefix = "emphasis-";
 
 /**
- * Hook for the application plan (#1304). Today the critic derives the job's central themes from
- * the requirements and responsibilities in context, weighted by priority and repetition. When an
- * approved application plan is sent to the critic, replace this sentence so the plan's themes
- * are used instead; the finding codes and severity rules below stay the same.
+ * Where the emphasis review gets the job's central themes. Without an application plan the critic
+ * derives them from the requirements and responsibilities in context, weighted by priority and
+ * repetition. When a run's reviewed application plan (#1304) is sent to the critic, this sentence
+ * is replaced by `emphasisPlanThemeSourceInstructions` so the plan's themes are used instead; the
+ * finding codes and severity rules below stay the same.
  */
 export const emphasisThemeSourceInstructions =
   "Derive the job's central themes from context.requirements and the responsibilities in the job description, weighting them by priority and by how often the job repeats them.";
+
+/** The theme source when the input carries the run's reviewed application plan. */
+export const emphasisPlanThemeSourceInstructions = `Take the job's central themes from input.applicationPlan.themes, the reviewed application plan, in its rank order, instead of deriving them yourself. A theme with gap set to true has no approved evidence: report it as ${emphasisThemeGapCode} and never ask for a move on it. For a supported theme, evidenceChunkIds are the retrievedEvidence IDs the plan says prove it. Compare applicationPlan.leads (the summary angle and core areas) and applicationPlan.cuts with what the draft leads with, expands and compresses. The plan is guidance, not evidence.`;
+
+/**
+ * The critic prompt with the plan as the theme source. A prompt without the emphasis review does
+ * not contain the sentence and is returned as it is.
+ */
+export function withPlanThemeSource(prompt: string): string {
+  return prompt.replace(emphasisThemeSourceInstructions, emphasisPlanThemeSourceInstructions);
+}
 
 export const emphasisReviewInstructions =
   ` Also review the job emphasis: whether the CV makes the strongest case for this job. ${emphasisThemeSourceInstructions} Compare those themes with what the draft leads with in the summary and core areas, what it expands, and what it compresses or pads. Report each emphasis finding as category coverage with a message that names one concrete move and the job theme or requirement it serves, quoting the requirement id when one applies, and the retrievedEvidence ID that supports the move. Use code ${emphasisThemeBuriedCode} to expand a supported central theme or move it up into the summary or core areas; ${emphasisPaddingCode} to compress or drop content the job does not ask for (such as certifications that only pad); ${emphasisOrderCode} to move supported relevant content earlier or lead a role with it. Severity is warning by default. Use error only for ${emphasisThemeBuriedCode} when the job's top-priority theme is missing from the summary and core areas and retrievedEvidence clearly supports it, so the author can fix it. ` +

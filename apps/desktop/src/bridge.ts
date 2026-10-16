@@ -141,6 +141,7 @@ import {
   parseRecentWorkspacesListResult,
 } from "./recent-workspaces.js";
 import { maximumRevisionDirectionLength } from "./revision-direction.js";
+import { normalizeRunApplicationPlan } from "./run-application-plan.js";
 import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
 import { normalizeRunInputs } from "./run-inputs.js";
@@ -2064,6 +2065,7 @@ const desktopReviewStateKeys = [
   "authorInput",
   "applicationRuns",
   "runInputs",
+  "applicationPlan",
   "earlierRun",
   "setup",
 ] as const;
@@ -7508,6 +7510,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.applicationRuns === undefined || value.applicationRuns === null
       ? value.applicationRuns
       : (normalizeApplicationRuns(value.applicationRuns) ?? invalidInput());
+  const applicationPlan =
+    value.applicationPlan === undefined || value.applicationPlan === null
+      ? value.applicationPlan
+      : (normalizeRunApplicationPlan(value.applicationPlan) ?? invalidInput());
   const runInputs =
     value.runInputs === undefined || value.runInputs === null
       ? value.runInputs
@@ -7620,6 +7626,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(authorInput === undefined ? {} : { authorInput }),
     ...(applicationRuns === undefined ? {} : { applicationRuns }),
     ...(runInputs === undefined ? {} : { runInputs }),
+    ...(applicationPlan === undefined ? {} : { applicationPlan }),
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
   } as unknown as DesktopReviewState;

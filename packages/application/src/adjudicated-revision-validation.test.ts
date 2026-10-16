@@ -231,6 +231,7 @@ async function setupTenFindingRun(
   });
 
   const driver = createLocalApplicationDriver({
+    applicationPlan: false,
     providerClientFactories: {
       local: () => ({ fetch: localFetch as unknown as typeof fetch }),
     },

@@ -7,6 +7,7 @@ import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
 import type { FindingRequirement } from "./finding-requirement.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
+import type { RunApplicationPlanView } from "./run-application-plan.js";
 import type { RunAuthorInputView } from "./run-author-input.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import type { RunInputsView } from "./run-inputs.js";
@@ -342,6 +343,8 @@ export interface DesktopReviewState {
   readonly applicationRuns?: readonly ApplicationRunRowView[] | null;
   /** The brief and career profile version this run recorded at start; absent without a context. */
   readonly runInputs?: RunInputsView | null;
+  /** The plan the run made before drafting (themes, what leads, what is cut); absent if it made none. */
+  readonly applicationPlan?: RunApplicationPlanView | null;
   /** Set when this is an earlier run of the application: it is shown read-only. */
   readonly earlierRun?: EarlierRunView | null;
   readonly setup: WorkspaceReadiness;

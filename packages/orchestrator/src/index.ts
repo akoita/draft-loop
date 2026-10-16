@@ -33,6 +33,11 @@ import {
   type RevisionFindingClassification,
   type WorkspaceInput,
 } from "@draft-loop/schemas";
+import {
+  type ApplicationPlan,
+  type ApplicationPlanState,
+  guidingApplicationPlan,
+} from "@draft-loop/schemas/application-plan";
 import type {
   AuditEventInput,
   JsonValue,
@@ -53,6 +58,12 @@ import {
 } from "@draft-loop/validation";
 
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
+import {
+  type ApplicationPlanner,
+  advanceApplicationPlan,
+  needsApplicationPlan,
+  planStepFailureRole,
+} from "./application-plan.js";
 import {
   type AuthorRetryCorrection,
   buildAuthorRetryCorrections,
@@ -102,6 +113,12 @@ import {
 } from "./run-snapshot-slim.js";
 
 export type RunState = WorkflowState | "provider-error";
+export {
+  type ApplicationPlanner,
+  type ApplicationPlanRequest,
+  advanceApplicationPlan,
+  needsApplicationPlan,
+} from "./application-plan.js";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
 export { COVERAGE_BLOCK_DROPPED_CODE, droppedCoverageFindings } from "./dropped-coverage.js";
 export {
@@ -199,6 +216,8 @@ export interface AuthorRequest {
   readonly retryFeedback?: AuthorRetryFeedback;
   /** The candidate's direction for this revision round, when they gave one. */
   readonly candidateDirection?: CandidateDirection;
+  /** The reviewed application plan the draft follows; guidance, never evidence. */
+  readonly applicationPlan?: ApplicationPlan;
   /** On a revision, the critic's judged coverage of the draft being revised; never empty. */
   readonly requirementCoverage?: readonly RevisionRequirementCoverage[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
@@ -216,6 +235,8 @@ export interface CriticRequest {
   readonly coverageJudgementRequests?: readonly CoverageJudgementRequest[];
   /** The candidate's direction for this round, so a requested change is not flagged as a defect. */
   readonly candidateDirection?: CandidateDirection;
+  /** The reviewed application plan, the source of the job's central themes for the emphasis review. */
+  readonly applicationPlan?: ApplicationPlan;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
@@ -375,6 +396,8 @@ export interface RunSnapshot {
   readonly approvedArtifact?: ApprovedArtifactBinding | null;
   /** The candidate's direction for the round in `candidateDirection.round`; absent without one. */
   readonly candidateDirection?: CandidateDirection | null;
+  /** The plan step before the first draft; absent on runs that do not plan. */
+  readonly applicationPlan?: ApplicationPlanState | null;
 }
 
 export type RunEventType =
@@ -496,6 +519,8 @@ export interface OrchestrationEngineOptions {
   readonly autopilot?: boolean;
   /** Asks the critic to judge semantic coverage candidates; absent keeps the critic step as is. */
   readonly coverageJudgement?: CoverageJudgementPlanner;
+  /** Plans the application before the first draft; absent keeps the run as it is without a plan. */
+  readonly planner?: ApplicationPlanner;
 }
 
 export interface StorageRunStore extends RunStore {}
@@ -1578,6 +1603,21 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  const exhaust = async (
+    snapshot: RunSnapshot,
+    reason: string,
+    now: string,
+  ): Promise<RunSnapshot> => {
+    const exhausted = {
+      ...settledForTransition(snapshot, now),
+      state: "budget-exhausted" as const,
+      updatedAt: now,
+      currentStep: null,
+    };
+    await saveAndEmit(exhausted, "budget.exhausted", { reason });
+    return transitionToAwaitingApproval(exhausted, reason, now);
+  };
+
   const executeStep = async (
     initialSnapshot: RunSnapshot,
     context: ContextSnapshot,
@@ -1589,16 +1629,7 @@ export function createOrchestrationEngine(
     const step = snapshot.currentStep;
     const now = clock();
     const reason = budgetReason(snapshot, now);
-    if (reason !== undefined) {
-      const exhausted = {
-        ...settledForTransition(snapshot, now),
-        state: "budget-exhausted" as const,
-        updatedAt: now,
-        currentStep: null,
-      };
-      await saveAndEmit(exhausted, "budget.exhausted", { reason });
-      return transitionToAwaitingApproval(exhausted, reason, now);
-    }
+    if (reason !== undefined) return exhaust(snapshot, reason, now);
 
     // Persist a legacy migration or a paused/error-to-active transition before
     // invoking a provider so a restart cannot lose the active segment.
@@ -1756,6 +1787,33 @@ export function createOrchestrationEngine(
             })
         : undefined;
 
+      const planner = options.planner;
+      if (planner?.applies(context) === true && needsApplicationPlan(snapshot)) {
+        const planned = await advanceApplicationPlan({
+          planner,
+          snapshot,
+          context,
+          ...(retrievedEvidence ? { retrievedEvidence } : {}),
+          ...(signal === undefined ? {} : { signal }),
+          budgetReason: (current) => budgetReason(current, clock()),
+          // Keep the local snapshot current, so a failure later in the step records the plan so far.
+          persist: async (current, planStep) => {
+            snapshot = await saveAndEmit({ ...current, updatedAt: clock() }, "step.completed", {
+              step,
+              planStep,
+            });
+            return snapshot;
+          },
+        });
+        snapshot = planned.snapshot;
+        const planReason = planned.exhausted ?? budgetReason(snapshot, clock());
+        if (planReason !== undefined) return exhaust(snapshot, planReason, clock());
+      }
+      const applicationPlan =
+        snapshot.applicationPlan === undefined || snapshot.applicationPlan === null
+          ? undefined
+          : guidingApplicationPlan(snapshot.applicationPlan);
+
       const coverageRequests =
         step === "critic"
           ? await requestedCoverage(options.coverageJudgement, {
@@ -1778,6 +1836,7 @@ export function createOrchestrationEngine(
               artifact: snapshot.artifact as DraftArtifact,
               deterministicFindings: snapshot.findings,
               ...(candidateDirection === undefined ? {} : { candidateDirection }),
+              ...(applicationPlan === undefined ? {} : { applicationPlan }),
               ...(coverageRequests === undefined
                 ? {}
                 : { coverageJudgementRequests: coverageRequests.requests }),
@@ -1792,6 +1851,7 @@ export function createOrchestrationEngine(
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
               ...(candidateDirection === undefined ? {} : { candidateDirection }),
+              ...(applicationPlan === undefined ? {} : { applicationPlan }),
               ...(pendingAdjudication === undefined ? {} : { pendingAdjudication }),
               ...(retryFeedback === undefined ? {} : { retryFeedback }),
               ...(requirementCoverage === undefined ? {} : { requirementCoverage }),
@@ -1894,21 +1954,25 @@ export function createOrchestrationEngine(
       // execution instead of attempting to overwrite it with a failed row.
       if (completedExecutionSaved) throw error;
       const failureNow = clock();
-      const failure = providerFailure(
-        error instanceof InvalidAdjudicatedRevisionResponseError
-          ? {
-              code: "invalid-response",
-              retryable: false,
-              failureStage: "artifact-schema-validation",
-              diagnostics: error.diagnostics,
-              diagnosticCounts: error.diagnosticCounts,
-            }
-          : executionFailure(error, signal),
-        context,
+      // A failed plan review names the critic's model but stays a failure of this author step.
+      const failure: RunError = {
+        ...providerFailure(
+          error instanceof InvalidAdjudicatedRevisionResponseError
+            ? {
+                code: "invalid-response",
+                retryable: false,
+                failureStage: "artifact-schema-validation",
+                diagnostics: error.diagnostics,
+                diagnosticCounts: error.diagnosticCounts,
+              }
+            : executionFailure(error, signal),
+          context,
+          planStepFailureRole(error) ?? step,
+          attempt,
+          failureNow,
+        ),
         step,
-        attempt,
-        failureNow,
-      );
+      };
       if (failure.code === "usage-limit") return pauseForUsageLimit(snapshot, failure, failureNow);
       const failedExecution: ExecutionRecord = {
         id,

@@ -27,6 +27,7 @@ import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type { RunApplicationPlan } from "./run-application-plan.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
@@ -542,6 +543,10 @@ export interface ApplicationDriver {
   readonly readRunEvidenceMode?: (command: StatusCommand) => Promise<RunEvidenceMode | undefined>;
   /** What the run's latest author step was sent; `undefined` for runs that recorded none. */
   readonly readRunAuthorInput?: (command: StatusCommand) => Promise<RunAuthorInput | undefined>;
+  /** The application plan a run made before drafting; `undefined` for runs that did not plan. */
+  readonly readRunApplicationPlan?: (
+    command: StatusCommand,
+  ) => Promise<RunApplicationPlan | undefined>;
   /** The author and critic models a run was configured with; `undefined` without a context. */
   readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
   /**
@@ -729,6 +734,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunAuthorInput === undefined
         ? undefined
         : driver.readRunAuthorInput({ ...command, root: requireRoot(command.root) }),
+    readRunApplicationPlan: async (command) =>
+      driver.readRunApplicationPlan === undefined
+        ? undefined
+        : driver.readRunApplicationPlan({ ...command, root: requireRoot(command.root) }),
     readRunModels: async (command) =>
       driver.readRunModels === undefined
         ? undefined
@@ -828,6 +837,8 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export type { RunApplicationPlan } from "./run-application-plan.js";
+export { readRunApplicationPlan } from "./run-application-plan-read.js";
 export {
   parseRunAuthorInputPayload,
   type RunAuthorInput,
