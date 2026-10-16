@@ -124,6 +124,26 @@ describe("phase-0 CLI workflow", () => {
     expect((await readFile(docxPath)).subarray(0, 4).toString("hex")).toBe("504b0304");
     const pdfPath = await exportRun(root, undefined, undefined, messages.value, "pdf");
     expect((await readFile(pdfPath, "utf8")).startsWith("%PDF-1.4")).toBe(true);
+    const compactPath = join(root, "exports", "compact.md");
+    await exportRun(root, undefined, compactPath, messages.value, "markdown", {
+      templateId: "compact",
+    });
+    await expect(
+      exportRun(root, undefined, undefined, messages.value, "pdf", { templateId: "modern" }),
+    ).rejects.toThrow("Unknown template: modern. Use classic or compact.");
+    const exportStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    const exportTemplates = (await exportStorage.listExports(started.runId)).map((record) => [
+      record.outputPath,
+      (record.payload as { readonly renderingTemplate?: { readonly id: string } }).renderingTemplate
+        ?.id,
+    ]);
+    await exportStorage.close();
+    expect(exportTemplates).toEqual(
+      expect.arrayContaining([
+        [pdfPath, "classic"],
+        [compactPath, "compact"],
+      ]),
+    );
 
     const status = await statusRun(root, undefined, messages.value);
     expect(status?.state).toBe("exported");

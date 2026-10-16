@@ -25,6 +25,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@draft-loop/rendering": "workspace:*",
     "@electron-forge/cli": "7.11.2",
     "@electron-forge/maker-zip": "7.11.2",
     "@electron-forge/plugin-auto-unpack-natives": "7.11.2",

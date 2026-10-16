@@ -362,6 +362,8 @@ export interface LengthEstimate {
 
 export interface EstimateLengthOptions {
   readonly pageTarget?: LengthPageTarget | undefined;
+  /** Where the page target comes from, as the warning names it; the writing policy by default. */
+  readonly targetSource?: string | undefined;
 }
 
 function wordsIn(text: string): number {
@@ -407,7 +409,7 @@ export function estimateDocumentLength(
       ? `Estimated length: about ${estimatedPages} ${pageWord} (an estimate from ${basis}; the writing policy sets no page target).`
       : `Estimated length: about ${estimatedPages} ${pageWord} against a ${targetPages}-page target (an estimate from ${basis}).`;
   const warning = exceedsTarget
-    ? `Estimated length is about ${estimatedPages} pages, over the ${targetPages}-page target in the writing policy. This is an estimate from ${basis}; open the file to confirm the real page count.`
+    ? `Estimated length is about ${estimatedPages} pages, over the ${targetPages}-page target ${options.targetSource ?? "in the writing policy"}. This is an estimate from ${basis}; open the file to confirm the real page count.`
     : undefined;
   return {
     words,

@@ -80,6 +80,7 @@ import {
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
+import { exportTemplates } from "./export-template.js";
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   DesktopReviewState,
@@ -4465,10 +4466,13 @@ function validateReviewAction(value: unknown): ReviewAction {
       };
     }
     case "export": {
-      if (!hasOnlyKeys(action, ["type", "format"])) return invalidInput();
+      if (!hasOnlyKeys(action, ["type", "format", "template"])) return invalidInput();
       return {
         type: action.type,
         ...(action.format === undefined ? {} : { format: enumValue(action.format, exportFormats) }),
+        ...(action.template === undefined
+          ? {}
+          : { template: enumValue(action.template, exportTemplates) }),
       };
     }
     case "set-autopilot":

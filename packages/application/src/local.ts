@@ -30,13 +30,12 @@ import {
   type CoverageJudgementPlanner,
   createOrchestrationEngine,
   createStorageRunStore,
-  hasCompletedIndependentCritique,
   type OrchestrationEngine,
   type RunBudget,
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
 import type { JsonObject } from "@draft-loop/providers";
-import { extensionForFormat, type OutputFormat, renderArtifact } from "@draft-loop/rendering";
+import type { OutputFormat } from "@draft-loop/rendering";
 import { contextSnapshotSchema } from "@draft-loop/schemas";
 import {
   type CanonicalCandidateProfileVersionRecord,
@@ -70,10 +69,7 @@ import {
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
-import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
-import { assertExportRenderingQa, exportTemplateRecord } from "./export-qa.js";
-import { exactApprovedArtifactFailure } from "./export-readiness.js";
-import { exportRecordId } from "./export-record.js";
+import { type ExportRunOptions, exportApprovedRun } from "./export-run.js";
 import {
   environmentCredentialResolver,
   isProviderAuthMode,
@@ -2169,72 +2165,10 @@ export async function exportRun(
   outputPathInput: string | undefined,
   io: CliIo = defaultIo,
   formatInput: string = "markdown",
+  options: ExportRunOptions = {},
 ): Promise<string> {
-  const root = resolve(rootInput);
-  const config = await readWorkspace(root);
-  const runId = runIdInput ?? config.latestRunId;
-  if (runId === undefined) throw new CliUserError("No run is configured. Start a run first.");
-  const storage = await openStorage(root);
-  try {
-    const runStore = createStorageRunStore(storage);
-    const snapshot = await runStore.loadRun(runId);
-    if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
-    if (snapshot.state !== "approved" && snapshot.state !== "exported") {
-      throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
-    }
-    if (!hasCompletedIndependentCritique(snapshot)) {
-      throw new CliUserError("A completed independent critic review is required before export.");
-    }
-    if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
-    const readinessFailure = exactApprovedArtifactFailure(snapshot);
-    if (readinessFailure !== null) throw new CliUserError(readinessFailure);
-    const format = parseExportFormat(formatInput);
-    if (format === undefined) throw new CliUserError(`Unsupported export format: ${formatInput}.`);
-    const outputPath =
-      outputPathInput === undefined
-        ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
-        : resolve(root, outputPathInput);
-    await mkdir(dirname(outputPath), { recursive: true });
-    const rendered = renderArtifact(snapshot.artifact, format, {
-      requiredSections: config.requiredSections,
-      ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
-      ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
-      allowUnbackedClaims: false,
-      generatedAt: timestamp(),
-    });
-    const qa = assertExportRenderingQa(snapshot.artifact, rendered);
-    await writeFile(outputPath, rendered.content);
-    const outputChecksum = rendered.metadata.checksum;
-    await storage.saveExport({
-      id: exportRecordId(runId, outputChecksum, outputPath, rendered.metadata.generatedAt),
-      workspaceId: config.id,
-      runId,
-      artifactId: snapshot.artifact.id,
-      format,
-      status: "completed",
-      outputPath,
-      outputChecksum,
-      createdAt: rendered.metadata.generatedAt,
-      payload: {
-        format,
-        approved: true,
-        artifactVersion: rendered.metadata.artifactVersion,
-        ...exportTemplateRecord(rendered),
-        mimeType: rendered.mimeType,
-        renderingQa: qa.report,
-      },
-    });
-    const transitionEngine = createOrchestrationEngine({ ...noopAgents(), store: runStore });
-    await transitionEngine.markExported(runId);
-    io.write(
-      `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
-    );
-    const lengthWarning = await exportLengthWarningLine(storage, snapshot, qa.pageOverflow);
-    if (lengthWarning !== undefined) io.write(lengthWarning);
-    return outputPath;
-  } finally {
-    await storage.close();
-  }
+  const deps = { readWorkspace, openStorage };
+  return exportApprovedRun(deps, rootInput, runIdInput, outputPathInput, io, formatInput, options);
 }
 
 export async function latestExportPath(
@@ -2801,7 +2735,9 @@ export function createLocalApplicationDriver(
       }
     },
     export: async (command, io) =>
-      exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown"),
+      exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown", {
+        templateId: command.templateId,
+      }),
     latestExportPath: async (command) =>
       latestExportPath(command.root, command.runId, command.format),
     queryEvidence: async (command, io) =>

@@ -1,9 +1,9 @@
 import {
-  defaultLayoutProfileId,
   estimateDocumentLength,
+  getRenderingTemplate,
   type LengthPageTarget,
   type OutputFormat,
-  renderingLayoutProfiles,
+  profileFromTemplate,
 } from "@draft-loop/rendering";
 import type { DraftArtifact } from "@draft-loop/schemas";
 
@@ -56,24 +56,37 @@ export function pageOverflowWarningLine(overflow: ExportPageOverflow): string {
   return `${exportLengthWarningPrefix}The PDF runs to ${pages(pageCount)}; the ${layoutName} layout targets ${pages(targetPageCount)}.`;
 }
 
+/** The template an export was drawn with, and whether the person chose it. */
+export interface ExportLengthTemplate {
+  readonly templateId: string;
+  /** True when the export named the template, so its page target replaces the policy's. */
+  readonly explicit: boolean;
+}
+
 /**
- * The io line an export writes when the estimated length clearly exceeds the writing policy's page
- * target, or undefined when it fits, there is no target, or there is no artifact. A PDF that
- * rendered past its page target gets the real page-count line instead, never both.
+ * The io line an export writes when the estimated length clearly exceeds the page target, or
+ * undefined when it fits, there is no target, or there is no artifact. The estimate measures the
+ * template's layout; the target is the chosen template's, otherwise the writing policy's. A PDF
+ * that rendered past its page target gets the real page-count line instead, never both.
  */
 export async function exportLengthWarningLine(
   storage: ContextSnapshotReader,
   snapshot: { readonly contextSnapshotId: string; readonly artifact: DraftArtifact | null },
   pageOverflow?: ExportPageOverflow,
+  template: ExportLengthTemplate = { templateId: "classic", explicit: false },
 ): Promise<string | undefined> {
   if (pageOverflow !== undefined) return pageOverflowWarningLine(pageOverflow);
   if (snapshot.artifact === null) return undefined;
-  const pageTarget = await readRunPageTarget(storage, snapshot.contextSnapshotId);
-  const estimate = estimateDocumentLength(
-    snapshot.artifact,
-    renderingLayoutProfiles[defaultLayoutProfileId],
-    { pageTarget },
-  );
+  const rendering = getRenderingTemplate(template.templateId);
+  const pageTarget: LengthPageTarget | undefined = template.explicit
+    ? rendering.page.targetPages === 1
+      ? "one-page"
+      : "two-page"
+    : await readRunPageTarget(storage, snapshot.contextSnapshotId);
+  const estimate = estimateDocumentLength(snapshot.artifact, profileFromTemplate(rendering), {
+    pageTarget,
+    ...(template.explicit ? { targetSource: `of the ${rendering.displayName} template` } : {}),
+  });
   return estimate.warning === undefined
     ? undefined
     : `${exportLengthWarningPrefix}${estimate.warning}`;

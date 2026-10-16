@@ -4420,7 +4420,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           if (selectedPath === undefined) break;
           const exportIo = exportNoteCollector(io());
           exportPath = await service.export(
-            { root: workspace.root, runId: input.runId, format, outputPath: selectedPath },
+            {
+              root: workspace.root,
+              runId: input.runId,
+              format,
+              outputPath: selectedPath,
+              ...(action.template === undefined ? {} : { templateId: action.template }),
+            },
             exportIo.io,
           );
           exportNote = exportIo.note();

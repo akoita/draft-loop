@@ -14,6 +14,13 @@ import {
   type ApprovalReadinessBlocker,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
+import {
+  type ExportTemplate,
+  exportTemplateDescriptions,
+  exportTemplateLabels,
+  exportTemplates,
+} from "./export-template.js";
+import { ExportTemplatePreview } from "./export-template-picker.js";
 import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
 import {
   type DesktopReviewState,
@@ -232,6 +239,9 @@ export interface ReviewFooterProps {
     /** The format the next export is saved in. */
     readonly format: ExportFormat;
     readonly onFormatChange: (format: ExportFormat) => void;
+    /** The rendering template the next export is drawn with. */
+    readonly template: ExportTemplate;
+    readonly onTemplateChange: (template: ExportTemplate) => void;
     /** An estimated-length warning from the export just made, or null. */
     readonly note: string | null;
     readonly onExport: () => void;
@@ -463,6 +473,25 @@ export function ReviewFooter({
             )}
           </button>
         </div>
+        <fieldset className="export-templates" disabled={exportAction.disabled}>
+          <legend>Template</legend>
+          {exportTemplates.map((template) => (
+            <label className="export-template-option" key={template}>
+              <input
+                type="radio"
+                name="export-template"
+                value={template}
+                checked={exportAction.template === template}
+                onChange={() => exportAction.onTemplateChange(template)}
+              />
+              <ExportTemplatePreview template={template} />
+              <span className="export-template-text">
+                <strong>{exportTemplateLabels[template]}</strong>
+                <span>{exportTemplateDescriptions[template]}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
         {exportAction.note === null ? null : (
           <p className="export-note" role="status">
             {exportAction.note}

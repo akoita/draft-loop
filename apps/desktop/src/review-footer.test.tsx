@@ -236,6 +236,8 @@ function footerProps(overrides: Partial<ReviewFooterProps> = {}): ReviewFooterPr
       pendingSeconds: null,
       format: "markdown",
       onFormatChange: noop,
+      template: "classic",
+      onTemplateChange: noop,
       note: null,
       onExport: noop,
     },
@@ -305,6 +307,8 @@ describe("ReviewFooter", () => {
         pendingSeconds: null,
         format: "markdown",
         onFormatChange: noop,
+        template: "classic",
+        onTemplateChange: noop,
         note: null,
         onExport: noop,
       },
@@ -325,6 +329,8 @@ describe("ReviewFooter", () => {
         pendingSeconds: null,
         format: "markdown",
         onFormatChange: noop,
+        template: "classic",
+        onTemplateChange: noop,
         note: null,
         onExport: noop,
       },
@@ -343,11 +349,16 @@ describe("ReviewFooter", () => {
         pendingSeconds: null,
         format: "docx",
         onFormatChange: noop,
+        template: "classic",
+        onTemplateChange: noop,
         note: "Estimated length is about 3 pages, over the 2-page target. This is an estimate.",
         onExport: noop,
       },
     });
     expect(html).toContain('<option value="docx" selected="">DOCX</option>');
+    expect(html).toContain("<legend>Template</legend>");
+    expect(html).toContain('name="export-template" checked="" value="classic"');
+    expect(html).toContain("<strong>Compact</strong>");
     expect(html).toContain('title="Export as DOCX again (Alt+E)"');
     expect(html).toContain('<p class="export-note" role="status">Estimated length is about 3');
   });
@@ -363,6 +374,8 @@ describe("ReviewFooter", () => {
         pendingSeconds: 1,
         format: "markdown",
         onFormatChange: noop,
+        template: "classic",
+        onTemplateChange: noop,
         note: null,
         onExport: noop,
       },

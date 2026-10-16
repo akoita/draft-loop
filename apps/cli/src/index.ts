@@ -1847,11 +1847,13 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--run-id <id>", "run id to export")
     .option("--output <path>", "local output path")
     .option("--format <format>", "output format: docx, pdf, or md (markdown)", "markdown")
+    .option("--template <id>", "rendering template: classic (default) or compact")
     .action(async (workspace: string, options: Record<string, unknown>) => {
       await service.export({
         root: workspaceRoot(workspace),
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
         ...(options.output === undefined ? {} : { outputPath: options.output as string }),
+        ...(options.template === undefined ? {} : { templateId: options.template as string }),
         format: (options.format === "md" ? "markdown" : options.format) as
           | "markdown"
           | "pdf"
