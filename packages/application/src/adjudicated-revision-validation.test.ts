@@ -220,6 +220,11 @@ async function setupTenFindingRun(
       if (round === 1) {
         return localCompletion(validProposal(chunkId), "author-r1");
       }
+      if ((body.messages[0]?.content ?? "").includes("This request is a targeted revision")) {
+        // The revision first asks for a patch; an unusable one falls back to the full proposal
+        // request, which is what these tests exercise.
+        return localCompletion({ edits: [] }, "author-patch");
+      }
       return onRevisionFetch(parsed);
     }
     return localCompletion({ findings: [] }, "critic");

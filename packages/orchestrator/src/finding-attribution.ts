@@ -129,6 +129,80 @@ export function targetOf(
 }
 
 /**
+ * One edit of a targeted revision (#1112) as applied to the artifact, keyed by positional block
+ * key. A replace and a delete name the block they changed in the source artifact; a replace and an
+ * insert name the block they produced in the revised artifact.
+ */
+export interface AppliedRevisionEdit {
+  readonly op: "replace" | "insert" | "delete";
+  readonly sourceBlockKey?: string;
+  readonly revisedBlockKey?: string;
+  /** The accepted findings the author said this edit addresses. */
+  readonly findingIds: readonly string[];
+}
+
+/**
+ * Attribution from the author's own edits: exact, where `attributeRevision` has to infer it from
+ * the diff. An edit whose resulting block no longer exists (grounding left it out) is dropped, and
+ * the findings it named that no other edit covers are reported as unattributed.
+ */
+function attributeFromEdits(
+  input: {
+    readonly plan: AuthorAdjudicationPlan;
+    readonly sourceArtifact: DraftArtifact;
+    readonly revisedArtifact: DraftArtifact;
+  },
+  edits: readonly AppliedRevisionEdit[],
+): AdjudicatedRevisionAttribution {
+  const { plan, sourceArtifact, revisedArtifact } = input;
+  const source = new Map(indexBlocks(sourceArtifact).map((block) => [block.key, block]));
+  const revised = new Map(indexBlocks(revisedArtifact).map((block) => [block.key, block]));
+  const accepted = plan.decisions
+    .filter(({ disposition }) => disposition === "accept")
+    .map(({ findingId }) => findingId);
+
+  const entries = new Map<
+    string,
+    { blockId: string; change: RevisionBlockAttribution["change"]; findingIds: Set<string> }
+  >();
+  for (const edit of edits) {
+    const key = edit.op === "delete" ? edit.sourceBlockKey : edit.revisedBlockKey;
+    const block =
+      key === undefined ? undefined : (edit.op === "delete" ? source : revised).get(key);
+    if (key === undefined || block === undefined) continue;
+    const change = edit.op === "delete" ? "removed" : edit.op === "insert" ? "added" : "changed";
+    const findingIds = edit.findingIds.filter((id) => accepted.includes(id));
+    const entry = entries.get(key);
+    if (entry === undefined) {
+      entries.set(key, { blockId: block.id, change, findingIds: new Set(findingIds) });
+    } else {
+      // A delete and an insert that land on one position read as one changed block.
+      entries.set(key, {
+        blockId: edit.op === "delete" ? entry.blockId : block.id,
+        change: entry.change === change ? change : "changed",
+        findingIds: new Set([...entry.findingIds, ...findingIds]),
+      });
+    }
+  }
+
+  const attributed = new Set([...entries.values()].flatMap(({ findingIds }) => [...findingIds]));
+  return {
+    source: "edits",
+    findings: plan.decisions.map((decision) => ({
+      findingId: decision.findingId,
+      findingIdentity: findingIdentity(decision, sourceArtifact),
+    })),
+    blocks: [...entries].map(([blockKey, { blockId, change, findingIds }]) => ({
+      blockKey,
+      blockId,
+      change,
+      findingIds: [...findingIds],
+    })),
+    unattributedFindingIds: accepted.filter((id) => !attributed.has(id)),
+  };
+}
+
+/**
  * List every changed block with the accepted findings that targeted it, and record every
  * adjudicated finding's identity. Accepted findings no changed block can be tied to are listed as unattributed.
  */
@@ -136,8 +210,11 @@ export function attributeRevision(input: {
   readonly plan: AuthorAdjudicationPlan;
   readonly sourceArtifact: DraftArtifact;
   readonly revisedArtifact: DraftArtifact;
+  /** The edits a targeted revision applied; when present they replace the derived attribution. */
+  readonly edits?: readonly AppliedRevisionEdit[];
 }): AdjudicatedRevisionAttribution {
   const { plan, sourceArtifact, revisedArtifact } = input;
+  if (input.edits !== undefined) return attributeFromEdits(input, input.edits);
   const source = new Map(indexBlocks(sourceArtifact).map((block) => [block.key, block]));
   const revised = indexBlocks(revisedArtifact);
   const revisedKeys = new Set(revised.map(({ key }) => key));

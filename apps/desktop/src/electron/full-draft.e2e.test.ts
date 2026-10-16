@@ -291,7 +291,28 @@ describe("full real-mode native host draft workflow", () => {
             evidenceChunkId: chunkId,
           });
           const version = authorRequests.length;
-          return anthropicResponse(authorProposal(version, chunkId), `anthropic-e2e-${version}`);
+          const proposal = authorProposal(version, chunkId);
+          const schema = (parameters.output_config?.format as { schema?: JsonRecord } | undefined)
+            ?.schema;
+          if ((schema?.properties as JsonRecord | undefined)?.edits !== undefined) {
+            // The revision asks for a targeted patch: replace every block with the revised one.
+            const current = input.currentArtifact as {
+              sections: { blocks: { id: string }[] }[];
+            };
+            const revised = proposal.sections as { blocks: unknown[] }[];
+            const edits = current.sections.flatMap((section, sectionIndex) =>
+              section.blocks.map((block, blockIndex) => ({
+                op: "replace",
+                blockId: block.id,
+                sectionId: null,
+                afterBlockId: null,
+                block: revised[sectionIndex]?.blocks[blockIndex] ?? null,
+                findingIds: [],
+              })),
+            );
+            return anthropicResponse({ edits }, `anthropic-e2e-${version}`);
+          }
+          return anthropicResponse(proposal, `anthropic-e2e-${version}`);
         },
       },
     };

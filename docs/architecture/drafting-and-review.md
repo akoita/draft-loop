@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v9`, which states and sends a
+New runs record author template `cli-author-v10`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v9 retain 32,768.
+v4 to v10 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -624,6 +624,8 @@ is a plain artifact proposal and cannot name finding ids, so attribution is
 derived from the block diff plus each finding's target: a claim finding maps to
 that claim's block, a section finding to every changed block of the section.
 Version 1 traces have no `attribution` and still load and replay unchanged.
+When the revision was a targeted patch (#1112, below) the attribution comes from
+the edits instead and carries `source: "edits"`.
 
 After the critic pass that reviews the revised artifact, the orchestrator stores
 a content-free `findingClassification` on that critic execution. An accepted
@@ -644,6 +646,44 @@ severity are ignored, so near-duplicates in one block collapse into one
 finding. The key is positional and code-based: a critic that rewords a code, or
 a revision that inserts or reorders blocks, makes a real match fail and reads as
 one `resolved` plus one `new`.
+
+### Targeted revisions (#1112)
+
+A revision on author template `cli-author-v10` answers with block-level edits
+instead of a whole new proposal. A full rewrite costs output tokens, can change
+blocks nobody flagged and can drop a line that covered a requirement. First
+drafts, retries after a rejection and runs recorded on v9 or earlier keep the
+full-proposal revision and their exact prompts.
+
+**Patch.** `{edits: [...]}`, each edit a `replace`, `insert` or `delete` of one
+block, with the complete new block (type, text and cited claims) for a replace or
+insert, and the `findingIds` of the accepted findings it addresses. The author
+keys edits to the section and block ids of the `currentArtifact` it receives.
+Those ids are minted per execution, but a patch is applied only to the exact
+artifact it was written against, so they are unambiguous. The application maps
+them to the positional keys (`<sectionKind>#<n>/b<i>`) of #1108 for attribution.
+
+**Applying.** The patch is expanded locally into a complete proposal: blocks no
+edit names are copied from the current artifact with their claims and evidence,
+so they stay identical. The proposal then goes through the same citation
+completion, grounding and validation as any author proposal, so an unsupported
+claim in an edited block is rejected. A delete that removes the block covering a
+requirement still raises the dropped-coverage warning (#1212), because that
+check compares the revised artifact with the previous one.
+
+**Rejection and fallback.** The patch is rejected for malformed JSON, an unknown
+block, section or finding id, two edits to one block, a section left without
+blocks, an unmappable evidence reference, or a result that grounding would
+shorten or leave blocks out of. The agent then requests the full-proposal
+revision in the same attempt and sums the tokens and cost of both calls. The
+mode is stored on the revision execution as `revisionMode`: `patch`, `full`, or
+`patch-fallback`.
+
+**Attribution.** The execution carries the applied edits, and the trace
+attribution uses each edit's `findingIds` directly (`source: "edits"`), listing a
+finding as unattributed only when no edit names it. A full rewrite keeps the
+derived diff attribution. A replayed execution keeps its stored edit-sourced
+attribution, because the edits are not stored.
 
 ### Stop and pause on findings (#1113)
 

@@ -328,6 +328,11 @@ describe("author input in a local run", { timeout: 60_000 }, () => {
         readonly messages: readonly { readonly content: string }[];
       };
       if (body.model === "critic-model") return completion({ findings: [] }, "critic");
+      // A revision first asks for a patch; an unusable one falls back to the full proposal, and
+      // both calls belong to one author step.
+      if ((body.messages[0]?.content ?? "").includes("This request is a targeted revision")) {
+        return completion({ edits: [] }, "author-patch");
+      }
       const input = JSON.parse(body.messages[1]?.content ?? "{}") as {
         readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
       };
