@@ -242,7 +242,7 @@ describe("line wrapping fills the real content width", () => {
       const lines = blockLines({ kind, text: longText }, profile);
       expect(lines.length).toBeGreaterThan(2);
       for (const line of lines.slice(0, -1)) {
-        const width = textWidthPt(line, body, false);
+        const width = textWidthPt(line, body, false, profile.typography.pdfFont);
         expect(width).toBeLessThanOrEqual(available);
         expect(width).toBeGreaterThanOrEqual(available * 0.85);
       }
@@ -255,7 +255,9 @@ describe("line wrapping fills the real content width", () => {
     const raw = new TextDecoder().decode(pdf.content);
     const drawn = [...raw.matchAll(/\(([^)]*)\) Tj/gu)].map((match) => match[1] ?? "");
     const bulletLines = drawn.filter((text) => !/^(Experience)$/u.test(text));
-    const widest = Math.max(...bulletLines.map((text) => textWidthPt(text, 10.5, false)));
+    const widest = Math.max(
+      ...bulletLines.map((text) => textWidthPt(text, 10.5, false, profile.typography.pdfFont)),
+    );
     expect(widest).toBeGreaterThan(contentWidthPt(profile) * 0.85);
   });
 });

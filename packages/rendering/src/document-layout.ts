@@ -1,5 +1,7 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
 
+import { embeddedPdfFonts, embeddedTextUnits, type PdfFontFamily } from "./pdf-fonts.js";
+
 /**
  * One laid-out unit of a controlled DOCX or PDF. Both formats are built from this single model so
  * they show the same headline, contact lines, headings and bullets, and so the length estimate
@@ -22,7 +24,12 @@ export interface LayoutMetricsProfile {
     readonly bottom: number;
     readonly left: number;
   };
-  readonly typography: { readonly bodyFontSizePt: number; readonly headingFontSizePt: number };
+  readonly typography: {
+    readonly bodyFontSizePt: number;
+    readonly headingFontSizePt: number;
+    /** The PDF font the layout measures with; Helvetica when left out. */
+    readonly pdfFont?: PdfFontFamily | undefined;
+  };
   readonly lineMetricsPt: { readonly body: number; readonly heading: number };
   /** Spacing overrides; any field left out keeps the default of the original standard layout. */
   readonly spacingPt?: Partial<LayoutMetrics> | undefined;
@@ -82,8 +89,20 @@ const helveticaWidths = [
 ] as const;
 const boldWidthRatio = 1.06;
 
-/** Advance width of a text run in points; non-ASCII characters use an average-width estimate. */
-export function textWidthPt(text: string, sizePt: number, bold: boolean): number {
+/**
+ * Advance width of a text run in points. Helvetica estimates non-ASCII characters with an
+ * average width; an embedded font measures every WinAnsi character with its real advance width.
+ */
+export function textWidthPt(
+  text: string,
+  sizePt: number,
+  bold: boolean,
+  font: PdfFontFamily = "helvetica",
+): number {
+  const embedded = embeddedPdfFonts(font);
+  if (embedded !== null) {
+    return (embeddedTextUnits(text, bold ? embedded.bold : embedded.regular) / 1000) * sizePt;
+  }
   let units = 0;
   for (const character of text) {
     const code = character.codePointAt(0) ?? 0;
@@ -92,16 +111,13 @@ export function textWidthPt(text: string, sizePt: number, bold: boolean): number
   return (units / 1000) * sizePt * (bold ? boldWidthRatio : 1);
 }
 
-/**
- * The most characters a line may hold before the controlled-document inspector's coarse clipping
- * heuristic (0.45 em per character from the line start to the page edge) would flag it.
- */
-function inspectorCharacterLimit(sizePt: number, availablePt: number): number {
-  return Math.max(1, Math.floor(availablePt / (0.45 * sizePt)));
+/** The PDF font a layout profile measures and draws with. */
+export function profilePdfFont(profile: LayoutMetricsProfile): PdfFontFamily {
+  return profile.typography.pdfFont ?? "helvetica";
 }
 
 /**
- * Greedy word wrap to a real width, using Helvetica glyph widths. A single word wider than the
+ * Greedy word wrap to a real width, using the font's glyph widths. A single word wider than the
  * line stays on its own line rather than being split.
  */
 export function wrapTextToWidth(
@@ -110,6 +126,7 @@ export function wrapTextToWidth(
   sizePt: number,
   bold = false,
   maxCharacters = Number.POSITIVE_INFINITY,
+  font: PdfFontFamily = "helvetica",
 ): readonly string[] {
   const words = text.split(/\s+/u).filter((word) => word !== "");
   const lines: string[] = [];
@@ -118,7 +135,7 @@ export function wrapTextToWidth(
     const candidate = line === "" ? word : `${line} ${word}`;
     if (
       line !== "" &&
-      (textWidthPt(candidate, sizePt, bold) > widthPt || candidate.length > maxCharacters)
+      (textWidthPt(candidate, sizePt, bold, font) > widthPt || candidate.length > maxCharacters)
     ) {
       lines.push(line);
       line = word;
@@ -164,24 +181,23 @@ export function contentWidthPt(profile: LayoutMetricsProfile): number {
 
 /** Width the "• " prefix takes; bullet text on every line is indented by this much. */
 export function bulletPrefixWidthPt(profile: LayoutMetricsProfile): number {
-  return textWidthPt("• ", profile.typography.bodyFontSizePt, false);
+  return textWidthPt("• ", profile.typography.bodyFontSizePt, false, profilePdfFont(profile));
 }
 
 /**
  * Wrapped text lines for one block, filled to the real content width (less the bullet indent for
- * bullets) using Helvetica glyph widths.
+ * bullets) using the profile font's glyph widths.
  */
 export function blockLines(block: LayoutBlock, profile: LayoutMetricsProfile): readonly string[] {
   const body = profile.typography.bodyFontSizePt;
   const indent = block.kind === "bullet" ? bulletPrefixWidthPt(profile) : 0;
-  const startPt = profile.marginsMm.left * pointsPerMillimeter + indent;
-  const pagePt = profile.pageWidthMm * pointsPerMillimeter;
   return wrapTextToWidth(
     block.text,
     contentWidthPt(profile) - indent,
     body,
     false,
-    inspectorCharacterLimit(body, pagePt - startPt),
+    Number.POSITIVE_INFINITY,
+    profilePdfFont(profile),
   );
 }
 

@@ -23,6 +23,7 @@ import {
 import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
+import type { PdfFontFamily } from "./pdf-fonts.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
@@ -43,8 +44,10 @@ export interface RenderingLayoutProfile {
   };
   readonly typography: {
     readonly fontFamily: string;
-    /** The font the DOCX names; PDF always uses the standard Helvetica fonts. */
+    /** The font the DOCX names. */
     readonly docxFontFamily: string;
+    /** The font the PDF draws and the layout measures: embedded Carlito, or standard Helvetica. */
+    readonly pdfFont: PdfFontFamily;
     readonly bodyFontSizePt: number;
     readonly headingFontSizePt: number;
     readonly lineHeight: number;
@@ -78,6 +81,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     typography: {
       fontFamily: "Arial, sans-serif",
       docxFontFamily: "Arial",
+      pdfFont: "helvetica",
       bodyFontSizePt: 9.5,
       headingFontSizePt: 13,
       lineHeight: 1.25,
@@ -101,10 +105,11 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     id: "standard-two-page",
     pageWidthMm: 210,
     pageHeightMm: 297,
-    marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
+    marginsMm: { top: 10, right: 12, bottom: 10, left: 12 },
     typography: {
       fontFamily: "Calibri, Arial, sans-serif",
       docxFontFamily: "Calibri",
+      pdfFont: "carlito",
       bodyFontSizePt: 9,
       headingFontSizePt: 10.5,
       lineHeight: 1.2,
@@ -115,14 +120,14 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       titleLinePt: 20,
       headingBeforePt: 6,
       headingAfterPt: 2,
-      blockAfterPt: 1.5,
+      blockAfterPt: 0.5,
       titleAfterPt: 2,
       contactAfterPt: 0,
       bulletIndentPt: 11,
     },
     previewSpacingPt: { headingBefore: 6, headingAfter: 3, blockAfter: 2, listIndent: 11 },
-    // Real line width binds first; these stay within the inspector's clipping heuristic at 9 pt.
-    wrapping: { bodyMaxCharacters: 138, bulletMaxCharacters: 133 },
+    // Generous caps: the real Carlito line width (about 150 characters at 9 pt) always binds first.
+    wrapping: { bodyMaxCharacters: 200, bulletMaxCharacters: 195 },
     targetMaxPages: 2,
   },
 };

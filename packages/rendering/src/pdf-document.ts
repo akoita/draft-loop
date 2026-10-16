@@ -5,62 +5,27 @@ import {
   type LayoutBlock,
   layoutBlocks,
   layoutMetrics,
+  profilePdfFont,
   textWidthPt,
   wrapTextToWidth,
 } from "./document-layout.js";
 import type { RenderingLayoutProfile } from "./index.js";
+import { embeddedFontFlateBytes, embeddedPdfFonts } from "./pdf-fonts.js";
+import type { EmbeddedFontData } from "./truetype-font.js";
+import { winAnsiCode, windows1252Characters } from "./winansi.js";
 
 /**
- * A dependency-free PDF of the same layout the DOCX uses: Helvetica text (bold for the title and
- * headings), a rule under each heading, hanging bullets and the profile's A4 margins. Text is
- * written in WinAnsi, so Latin accents and common punctuation survive; characters outside it are
- * written as "?" because the standard fonts cannot draw them.
+ * A dependency-free PDF of the same layout the DOCX uses: text in the profile's font (bold for the
+ * title and headings), a rule under each heading, hanging bullets and the profile's A4 margins.
+ * Carlito is embedded in full as a TrueType simple font; Helvetica is the unembedded standard
+ * font. Text is written in WinAnsi, so Latin accents and common punctuation survive; characters
+ * outside it are written as "?" because neither font setup can draw them.
  */
 
 const pointsPerMillimeter = 72 / 25.4;
 
-const windows1252Specials: Readonly<Record<string, number>> = {
-  "€": 0x80,
-  "‚": 0x82,
-  ƒ: 0x83,
-  "„": 0x84,
-  "…": 0x85,
-  "†": 0x86,
-  "‡": 0x87,
-  ˆ: 0x88,
-  "‰": 0x89,
-  Š: 0x8a,
-  "‹": 0x8b,
-  Œ: 0x8c,
-  Ž: 0x8e,
-  "‘": 0x91,
-  "’": 0x92,
-  "“": 0x93,
-  "”": 0x94,
-  "•": 0x95,
-  "–": 0x96,
-  "—": 0x97,
-  "˜": 0x98,
-  "™": 0x99,
-  š: 0x9a,
-  "›": 0x9b,
-  œ: 0x9c,
-  ž: 0x9e,
-  Ÿ: 0x9f,
-};
-
 function octal(code: number): string {
   return `\\${code.toString(8).padStart(3, "0")}`;
-}
-
-/** The WinAnsi code for one character, or null when the standard fonts cannot draw it. */
-function winAnsiCode(character: string): number | null {
-  const special = windows1252Specials[character];
-  if (special !== undefined) return special;
-  const code = character.codePointAt(0) ?? 0x3f;
-  if (code >= 0x20 && code <= 0x7e) return code;
-  if (code >= 0xa0 && code <= 0xff) return code;
-  return null;
 }
 
 function pdfLiteral(value: string): string {
@@ -79,10 +44,6 @@ function pdfLiteral(value: string): string {
   }
   return result;
 }
-
-const windows1252Characters: ReadonlyMap<number, string> = new Map(
-  Object.entries(windows1252Specials).map(([character, code]) => [code, character]),
-);
 
 /** Decode the escapes of one PDF literal string written in WinAnsi back to text. */
 export function decodePdfLiteralEscapes(value: string): string {
@@ -131,7 +92,8 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
   const body = profile.typography.bodyFontSizePt;
   const bodyLine = profile.lineMetricsPt.body;
   const bulletPrefix = "• ";
-  const bulletTextOffset = textWidthPt(bulletPrefix, body, false);
+  const font = profilePdfFont(profile);
+  const bulletTextOffset = textWidthPt(bulletPrefix, body, false, font);
 
   const pages: PlacedLine[][] = [[]];
   let y = top;
@@ -149,10 +111,17 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
   blocks.forEach((block, index) => {
     const next = blocks[index + 1];
     if (block.kind === "title") {
-      const wrapped = wrapTextToWidth(block.text, right - left, metrics.titleSizePt, true);
+      const wrapped = wrapTextToWidth(
+        block.text,
+        right - left,
+        metrics.titleSizePt,
+        true,
+        Number.POSITIVE_INFINITY,
+        font,
+      );
       for (const line of wrapped) {
         if (y - metrics.titleLinePt < bottom && !atPageTop()) startPage();
-        const width = textWidthPt(line, metrics.titleSizePt, true);
+        const width = textWidthPt(line, metrics.titleSizePt, true, font);
         const x = Math.max(left, (left + right - width) / 2);
         place(text("F2", metrics.titleSizePt, x, y - metrics.titleSizePt, line));
         y -= metrics.titleLinePt;
@@ -163,7 +132,7 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
     if (block.kind === "contact") {
       for (const line of blockLines(block, profile)) {
         if (y - bodyLine < bottom && !atPageTop()) startPage();
-        const width = textWidthPt(line, body, false);
+        const width = textWidthPt(line, body, false, font);
         const x = Math.max(left, (left + right - width) / 2);
         place(text("F1", body, x, y - body, line));
         y -= bodyLine;
@@ -214,18 +183,75 @@ export interface PdfRenderInput {
   readonly generatedAt: string | undefined;
 }
 
+type PdfObjectBody = string | Uint8Array;
+
+const textEncoder = new TextEncoder();
+
+function encode(value: PdfObjectBody): Uint8Array {
+  return typeof value === "string" ? textEncoder.encode(value) : value;
+}
+
+/** A stream object whose bytes are binary and must be counted, never measured as characters. */
+function streamObject(dictionary: string, data: Uint8Array): Uint8Array {
+  return concatenate([
+    encode(`<< ${dictionary} /Length ${data.length} >>\nstream\n`),
+    data,
+    encode("\nendstream"),
+  ]);
+}
+
+function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+function embeddedFontObjects(
+  descriptorId: number,
+  fileId: number,
+  data: EmbeddedFontData,
+): { readonly font: string; readonly descriptor: string; readonly file: Uint8Array } {
+  return {
+    font: `<< /Type /Font /Subtype /TrueType /BaseFont /${data.baseFont} /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [${data.widths.join(" ")}] /FontDescriptor ${descriptorId} 0 R >>`,
+    // Flags 32 is "nonsymbolic": the font is addressed through WinAnsi, not its own encoding.
+    descriptor: `<< /Type /FontDescriptor /FontName /${data.baseFont} /Flags 32 /FontBBox [${data.bbox.join(" ")}] /ItalicAngle ${data.italicAngle} /Ascent ${data.ascent} /Descent ${data.descent} /CapHeight ${data.capHeight} /StemV ${data.stemV} /FontFile2 ${fileId} 0 R >>`,
+    file: streamObject(
+      `/Filter /FlateDecode /Length1 ${data.length1}`,
+      embeddedFontFlateBytes(data),
+    ),
+  };
+}
+
 export function buildPdf(input: PdfRenderInput): Uint8Array {
   const { artifact, profile } = input;
   const pageWidth = toPoints(profile.pageWidthMm);
   const pageHeight = toPoints(profile.pageHeightMm);
   const pages = pageCommands(profile, layoutBlocks(artifact));
 
-  const objects: string[] = [];
+  const objects: PdfObjectBody[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[2] = "";
-  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
-  objects[4] =
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  const embedded = embeddedPdfFonts(profilePdfFont(profile));
+  if (embedded === null) {
+    objects[3] =
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+    objects[4] =
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  } else {
+    // F1 is object 3 and F2 is object 4; their descriptors and font files follow as 5 to 8.
+    const regular = embeddedFontObjects(5, 6, embedded.regular);
+    const bold = embeddedFontObjects(7, 8, embedded.bold);
+    objects[3] = regular.font;
+    objects[4] = bold.font;
+    objects[5] = regular.descriptor;
+    objects[6] = regular.file;
+    objects[7] = bold.descriptor;
+    objects[8] = bold.file;
+  }
   const pageIds: number[] = [];
   for (const page of pages) {
     const pageId = objects.length;
@@ -234,6 +260,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
     const stream = page.map((line) => line.commands).join("\n");
     objects[pageId] =
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${fixed(pageWidth)} ${fixed(pageHeight)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`;
+    // Page content is ASCII (non-ASCII text is octal-escaped), so its length is a byte count.
     objects[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
   }
   objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
@@ -245,21 +272,28 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
   objects[infoId] =
     `<< /Title (${pdfLiteral(input.documentTitle)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDate}Z) >>`;
 
-  // Every written character is ASCII except the binary-marker comment, so offsets are byte counts.
-  const encoder = new TextEncoder();
-  let pdf = "%PDF-1.4\n%\xFF\xFF\xFF\xFF\n";
-  let byteLength = encoder.encode(pdf).length;
+  // Built as byte chunks: font files are binary, so xref offsets must count bytes, not characters.
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  const append = (value: PdfObjectBody): void => {
+    const bytes = encode(value);
+    chunks.push(bytes);
+    byteLength += bytes.length;
+  };
+  append("%PDF-1.4\n%\xFF\xFF\xFF\xFF\n");
   const offsets: number[] = [0];
   for (let index = 1; index < objects.length; index += 1) {
     offsets[index] = byteLength;
-    const object = `${index} 0 obj\n${objects[index]}\nendobj\n`;
-    pdf += object;
-    byteLength += encoder.encode(object).length;
+    append(`${index} 0 obj\n`);
+    append(objects[index] ?? "");
+    append("\nendobj\n");
   }
-  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
   for (let index = 1; index < objects.length; index += 1) {
-    pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+    xref += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
   }
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${byteLength}\n%%EOF\n`;
-  return encoder.encode(pdf);
+  xref += `trailer\n<< /Size ${objects.length} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  append(xref);
+  return concatenate(chunks);
 }
