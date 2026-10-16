@@ -822,7 +822,7 @@ are in `packages/rendering/fonts/carlito/NOTICE.md`.
 In an Experience or Projects section, a paragraph directly followed by bullets
 is a role header (`role` layout block, `packages/rendering/src/role-header.ts`).
 It is drawn bold with extra space before it, except directly under a section
-heading (`roleBeforePt`; bullets keep the small `blockAfterPt`). If its last
+heading (`roleBeforePt`; bullets follow each other with no extra gap). If its last
 ` | ` segment is a month-year or year date range, that segment is right-aligned
 on the same baseline: a right tab stop in the DOCX, flex alignment in the HTML
 preview. A left part too long for the line wraps, and a line that cannot share

@@ -135,7 +135,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       titleLinePt: 20,
       headingBeforePt: 6,
       headingAfterPt: 2,
-      blockAfterPt: 0.5,
+      blockAfterPt: 0,
       roleBeforePt: 6,
       titleAfterPt: 2,
       contactAfterPt: 0,
