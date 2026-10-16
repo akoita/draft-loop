@@ -514,6 +514,9 @@ function service(
         async () => undefined,
       ),
       readRunInputs: vi.fn<NonNullable<ApplicationService["readRunInputs"]>>(async () => undefined),
+      readRunApplicationPlan: vi.fn<NonNullable<ApplicationService["readRunApplicationPlan"]>>(
+        async () => undefined,
+      ),
       previewEvidenceMode: vi.fn<NonNullable<ApplicationService["previewEvidenceMode"]>>(
         async () => undefined,
       ),
@@ -3680,6 +3683,96 @@ describe("native host", () => {
       const afterFailure = await load();
       expect(afterFailure.runId).toBe("run-native");
       expect(afterFailure).not.toHaveProperty("authorInput");
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("carries the application plan into the review, with requirement texts and no evidence ids", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-application-plan-"));
+    const fixture = service(root);
+    const errors: unknown[] = [];
+    const readRunRequirements = vi.fn<NonNullable<ApplicationService["readRunRequirements"]>>(
+      async () => [{ id: "req-1", text: "Build tokenisation services" }],
+    );
+    const evidenceId = "a".repeat(64);
+    const recorded = {
+      plan: {
+        themes: [
+          {
+            title: "Tokenisation",
+            rationale: "The job centres on it.",
+            requirementIds: ["req-1"],
+            evidenceChunkIds: [evidenceId],
+            gap: false,
+          },
+          {
+            title: "Kubernetes",
+            rationale: "No approved evidence supports it.",
+            requirementIds: [],
+            evidenceChunkIds: [],
+            gap: true,
+          },
+          {
+            title: "Payments",
+            rationale: "Named in the posting.",
+            requirementIds: [],
+            evidenceChunkIds: [evidenceId],
+            gap: false,
+          },
+        ],
+        leads: {
+          summaryAngle: "Lead with tokenisation.",
+          coreAreas: [
+            { text: "Tokenisation", themeRank: 1 },
+            { text: "Payments", themeRank: 3 },
+            { text: "Platform", themeRank: 1 },
+          ],
+        },
+        cuts: [{ action: "drop" as const, target: "Old roles", reason: "Not asked for." }],
+      },
+      review: { verdict: "accept" as const, points: [] },
+      revised: false,
+    };
+    try {
+      const host = createNativeHost({
+        applicationService: { ...fixture.service, readRunRequirements },
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const load = async () => {
+        const result = await host.invoke({
+          type: "review.load",
+          input: { workspaceId: "workspace-native", runId: "run-native" },
+        });
+        if (!result.ok) throw new Error(`Expected the review to load: ${JSON.stringify(result)}`);
+        return result.value as DesktopReviewState;
+      };
+
+      // A run that made no plan carries none.
+      expect(await load()).not.toHaveProperty("applicationPlan");
+
+      fixture.service.readRunApplicationPlan.mockResolvedValueOnce(recorded);
+      const state = await load();
+      expect(state.applicationPlan?.themes[0]).toMatchObject({
+        title: "Tokenisation",
+        requirements: ["Build tokenisation services"],
+        proofCount: 1,
+        gap: false,
+      });
+      expect(state.applicationPlan?.themes[1]).toMatchObject({ title: "Kubernetes", gap: true });
+      expect(state.applicationPlan?.review).toBe("accepted");
+      expect(JSON.stringify(state.applicationPlan)).not.toContain(evidenceId);
+      expect(fixture.service.readRunApplicationPlan).toHaveBeenLastCalledWith({
+        root,
+        runId: "run-native",
+      });
+      expect(errors).toEqual([]);
+
+      fixture.service.readRunApplicationPlan.mockRejectedValueOnce(new Error("history is locked"));
+      expect(await load()).not.toHaveProperty("applicationPlan");
       expect(errors).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });

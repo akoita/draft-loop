@@ -343,6 +343,7 @@ describe("author input in a local run", { timeout: 60_000 }, () => {
       return completion(authorProposal(cited.id), "author");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: (endpoint) => ({
           ...(endpoint === undefined ? {} : { endpoint }),

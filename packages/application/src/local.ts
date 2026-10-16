@@ -27,9 +27,7 @@ import {
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
-  type AuthorAgent,
   type CoverageJudgementPlanner,
-  type CriticAgent,
   createOrchestrationEngine,
   createStorageRunStore,
   hasCompletedIndependentCritique,
@@ -37,7 +35,7 @@ import {
   type RunBudget,
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
-import type { JsonObject, ModelRequest } from "@draft-loop/providers";
+import type { JsonObject } from "@draft-loop/providers";
 import { extensionForFormat, type OutputFormat, renderArtifact } from "@draft-loop/rendering";
 import { contextSnapshotSchema } from "@draft-loop/schemas";
 import {
@@ -50,7 +48,7 @@ import {
   type WorkspaceRecord,
   type WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
-import { assertRevisionDirection, withCandidateDirection } from "./candidate-direction.js";
+import { assertRevisionDirection } from "./candidate-direction.js";
 import {
   candidateKnowledgeEvidenceChecksum,
   candidateKnowledgeEvidenceSourceId,
@@ -72,12 +70,6 @@ import {
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
-import * as criticPrompt from "./critic-adjudication.js";
-import {
-  criticCoverageJudgementParts,
-  invalidCritiqueError,
-  parseCritique,
-} from "./critic-critique-contract.js";
 import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
@@ -135,12 +127,16 @@ import type { ModelProfileRegistry } from "./model-profiles.js";
 import { noopAgents } from "./noop-agents.js";
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
-import * as providerArtifactInput from "./provider-artifact-input.js";
 import { modelFacingContext } from "./provider-context.js";
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
-import { responseExecution, timestamp } from "./response-execution.js";
+import { createProviderCriticAgent } from "./provider-critic-agent.js";
+import { timestamp } from "./response-execution.js";
 import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
-import { createRecordedAuthorAgent, type RecordAuthorInput } from "./run-author-input.js";
+import {
+  type RunAgents,
+  type RunRecorders,
+  recordedApplicationPlanner,
+} from "./run-application-plan.js";
+import { createRecordedAuthorAgent } from "./run-author-input.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { announceRunEvidenceMode, withRunHistoryReaders } from "./run-evidence-mode.js";
@@ -148,7 +144,6 @@ import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   type BeginStartRunOptions,
   bindRunModelProfiles,
-  criticOutputBudget,
   projectResumeRunOptions,
   projectStartRunOptions,
   type ResumeRunOptions,
@@ -1574,8 +1569,8 @@ function providerAgents(
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
   withheld?: CandidateKnowledgeSensitivityExclusions,
-  recordAuthorInput?: RecordAuthorInput,
-): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
+  recorders?: RunRecorders,
+): RunAgents {
   const authorIdentity = runModelIdentity(
     { company: config.authorCompany, modelId: config.authorModel },
     context.modelConfiguration.author,
@@ -1607,67 +1602,25 @@ function providerAgents(
     dataPolicy,
     createAdapter,
     authorProposalCaptureDirectory,
-    ...(recordAuthorInput === undefined ? {} : { recordAuthorInput }),
+    ...(recorders === undefined ? {} : { recordAuthorInput: recorders.recordAuthorInput }),
   });
-  const critic = {
-    execute: async ({
-      executionId,
-      runId,
-      round,
-      artifact,
-      deterministicFindings,
-      coverageJudgementRequests,
-      candidateDirection,
-      retrievedEvidence = [],
-      signal,
-    }) => {
-      const judgement = withCandidateDirection(
-        criticCoverageJudgementParts(coverageJudgementRequests, context, artifact),
-        candidateDirection,
-      );
-      const achievementPlan = createRequirementAchievementPlan(
-        context.requirements,
-        retrievedEvidence,
-      );
-      if (achievementPlan.status === "no-evidence") {
-        throw new CliUserError("Critique requires retrieved candidate evidence.");
-      }
-      const request: ModelRequest<JsonObject> = {
-        contextSnapshotId: context.id,
-        model: context.modelConfiguration.critic,
-        systemPrompt: judgement.systemPrompt(
-          criticPrompt.create(context.modelConfiguration.critic.promptTemplateVersion),
-        ),
-        input: asJsonObject({
-          context: promptContext,
-          retrievedEvidence,
-          achievementPlan,
-          runId,
-          round,
-          executionId,
-          artifact: providerArtifactInput.modelFacingArtifactWithEvidenceTable(artifact, context),
-          deterministicFindings,
-          ...judgement.input,
-        }),
-        outputSchema: judgement.outputSchema,
-        outputName: "draft_critique",
-        maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
-        dataPolicy: dataPolicy(criticIdentity.company),
-        ...(signal === undefined ? {} : { signal }),
-      };
-      const adapter = await createAdapter(criticIdentity.company, criticIdentity.modelId, "critic");
-      const response = await adapter.execute(request);
-      try {
-        return responseExecution(
-          response,
-          parseCritique(response.output, judgement.instructionsVersion),
-        );
-      } catch {
-        throw invalidCritiqueError(response);
-      }
-    },
-  } satisfies CriticAgent;
-  return { author, critic };
+  const critic = createProviderCriticAgent({
+    context,
+    promptContext,
+    dataPolicy,
+    createAdapter,
+    criticCompany: criticIdentity.company,
+    criticModel: criticIdentity.modelId,
+    userError: (message) => new CliUserError(message),
+  });
+  const planner = recordedApplicationPlanner(recorders, {
+    promptContext,
+    dataPolicy,
+    createAdapter,
+    author: authorIdentity,
+    critic: criticIdentity,
+  });
+  return { author, critic, ...(planner === undefined ? {} : { planner }) };
 }
 function engine(
   storage: SqliteStorage,
@@ -1688,9 +1641,9 @@ function engine(
   localClaudeCategoryCaptureParent?: string,
   withheld?: CandidateKnowledgeSensitivityExclusions,
   coverageJudgement?: CoverageJudgementPlanner,
-  recordAuthorInput?: RecordAuthorInput,
+  recorders?: RunRecorders,
 ): OrchestrationEngine {
-  const agents = needsAgents
+  const agents: RunAgents = needsAgents
     ? config.fixtureMode
       ? fixtureAgents(config, context)
       : providerAgents(
@@ -1705,13 +1658,14 @@ function engine(
           authorProposalCaptureDirectory,
           localClaudeCategoryCaptureParent,
           withheld,
-          recordAuthorInput,
+          recorders,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
   return createOrchestrationEngine({
     author: agents.author,
     critic: agents.critic,
+    ...(agents.planner === undefined ? {} : { planner: agents.planner }),
     autopilot: config.autopilot === true,
     ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
     store,
@@ -2553,6 +2507,8 @@ export interface LocalApplicationDriverOptions {
   readonly userSessionTimeoutMs?: number;
   readonly authorProposalCaptureDirectory?: string;
   readonly localClaudeCategoryCaptureParent?: string;
+  /** Plan before the first draft; on unless `false`. Tests that script provider calls turn it off. */
+  readonly applicationPlan?: boolean;
 }
 
 export function createLocalApplicationDriver(
@@ -2586,6 +2542,7 @@ export function createLocalApplicationDriver(
   };
   const runProviderOptions = {
     ...providerOpportunityOptions,
+    ...(options?.applicationPlan === false ? { applicationPlan: false } : {}),
     ...(options?.modelProfileRegistry === undefined
       ? {}
       : { modelProfileRegistry: options.modelProfileRegistry }),

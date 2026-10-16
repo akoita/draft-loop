@@ -193,6 +193,12 @@ import { exportFormatExtensions, isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
 import type { ProviderRoutesView } from "../provider-routes.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+import {
+  applicationPlanRequirementIds,
+  type RunApplicationPlanView,
+  runApplicationPlanView,
+  withRunApplicationPlan,
+} from "../run-application-plan.js";
 import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
 import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
 import { normalizeRunInputs, type RunInputsView, withRunInputs } from "../run-inputs.js";
@@ -2976,6 +2982,27 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
   }
 
+  /** The plan the run made before drafting; null when it made none or it cannot be read. */
+  async function applicationPlanForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<RunApplicationPlanView | null> {
+    if (service.readRunApplicationPlan === undefined) return null;
+    try {
+      const recorded = await service.readRunApplicationPlan({ root: workspace.root, runId });
+      if (recorded === undefined) return null;
+      const texts =
+        applicationPlanRequirementIds(recorded).length === 0
+          ? new Map<string, string>()
+          : await requirementTextsForRun(workspace, runId, capability);
+      return runApplicationPlanView(recorded, texts) ?? null;
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
+  }
+
   /** The brief and profile version the run recorded at start; null when it cannot be read. */
   async function runInputsFor(
     workspace: ActiveWorkspace,
@@ -4446,7 +4473,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       providerAuthModeConfiguration,
     );
     const dispatched = withEarlierRun(
-      withRunInputs(state, await runInputsFor(workspace, snapshot.runId, "review.dispatch")),
+      withRunApplicationPlan(
+        withRunInputs(state, await runInputsFor(workspace, snapshot.runId, "review.dispatch")),
+        await applicationPlanForRun(workspace, snapshot.runId, "review.dispatch"),
+      ),
       earlierRun,
     );
     return exportNote === null ? dispatched : { ...dispatched, exportNote };
@@ -6203,7 +6233,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return {
             ok: true,
             value: withEarlierRun(
-              withRunInputs(loaded, await runInputsFor(workspace, snapshot.runId, "review.load")),
+              withRunApplicationPlan(
+                withRunInputs(loaded, await runInputsFor(workspace, snapshot.runId, "review.load")),
+                await applicationPlanForRun(workspace, snapshot.runId, "review.load"),
+              ),
               earlierRunFor(scope, snapshot.runId),
             ),
           };

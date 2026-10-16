@@ -470,6 +470,7 @@ describe("local driver author revision", () => {
       };
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerAuthModeConfiguration: { anthropic: "user-session", openai: "user-session" },
       userSessionRunners: { anthropic: author, openai: critic },
     });

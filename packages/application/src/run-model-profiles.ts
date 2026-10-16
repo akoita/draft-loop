@@ -52,6 +52,11 @@ export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly authorProposalCaptureDirectory?: string;
   readonly localClaudeCategoryCaptureParent?: string;
+  /**
+   * Plan the application before the first draft (#1304). On unless `false`; only runs on author
+   * prompt `cli-author-v11` or later plan, and tests that script provider calls turn it off.
+   */
+  readonly applicationPlan?: boolean;
 }
 
 export type BeginStartRunOptions = Omit<

@@ -144,6 +144,7 @@ async function profileWorkspace() {
     return localCompletion(authorProposal(cited.id), "author");
   });
   const driver = createLocalApplicationDriver({
+    applicationPlan: false,
     providerClientFactories: {
       local: (endpoint) => ({
         ...(endpoint === undefined ? {} : { endpoint }),

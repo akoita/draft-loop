@@ -612,6 +612,7 @@ describe("local application driver", () => {
       },
     };
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       resolveCredential: async (provider) => {
         credentialCalls.push(provider);
         return "fake-anthropic-key";
@@ -730,6 +731,7 @@ describe("local application driver", () => {
       );
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: localFetch as unknown as typeof fetch }),
       },
@@ -871,6 +873,7 @@ describe("local application driver", () => {
       );
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: localFetch as unknown as typeof fetch }),
         anthropic: () => anthropicCritiqueClient([]),
@@ -997,6 +1000,7 @@ describe("local application driver", () => {
       },
     };
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       resolveCredential: async () => "fake-anthropic-key",
       providerClientFactories: {
         local: () => ({ fetch: localFetch as unknown as typeof fetch }),
@@ -1689,6 +1693,7 @@ describe("local application driver", () => {
     const io = { write: () => undefined };
     const requestedEndpoints: (string | undefined)[] = [];
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       resolveCredential: async () => "fake-anthropic-key",
       providerClientFactories: {
         anthropic: () => anthropicCritiqueClient([]),
@@ -2127,6 +2132,7 @@ describe("local application driver", () => {
 
       await rm(sourcePath);
       const restarted = createLocalApplicationDriver({
+        applicationPlan: false,
         resolveCredential,
         providerClientFactories,
       });
@@ -2293,6 +2299,7 @@ describe("local application driver", () => {
       localCompletion(opportunityExtractionProposal(), "driver-extraction"),
     );
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: transport as unknown as typeof fetch }),
       },
@@ -2339,6 +2346,7 @@ describe("local application driver", () => {
       expect(transport).toHaveBeenCalledOnce();
 
       const restarted = createLocalApplicationDriver({
+        applicationPlan: false,
         providerClientFactories: {
           local: () => {
             throw new Error("Reads must not invoke the provider.");
@@ -2361,6 +2369,7 @@ describe("local application driver", () => {
       return localCompletion(opportunityExtractionProposal(), "driver-extraction-aborted");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: transport as unknown as typeof fetch }),
       },
@@ -2517,6 +2526,7 @@ describe("local application driver", () => {
       };
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerAuthMode: "user-session",
       resolveCredential,
       providerClientFactories: {
@@ -2581,6 +2591,7 @@ describe("local application driver", () => {
       };
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
       resolveCredential: async () => "fake-anthropic-key",
       providerClientFactories: { anthropic: () => anthropicAuthorClient() },
@@ -2639,6 +2650,7 @@ describe("local application driver", () => {
       };
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
       resolveCredential,
       providerClientFactories: {
@@ -2752,6 +2764,7 @@ describe("local application driver", () => {
         : localCompletion({ findings: [] }, "local-critic-1");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       resolveCredential: async (provider) => {
         credentialCalls.push(provider);
         return "unused";
@@ -2832,6 +2845,7 @@ describe("local application driver", () => {
   it("refuses one local model reviewing itself", async () => {
     const root = await providerWorkspace("draft-loop-shared-lineage-");
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: (async () => localCompletion({}, "x")) as unknown as typeof fetch }),
       },
@@ -2863,6 +2877,7 @@ describe("local application driver", () => {
   it("refuses two vendors the candidate declared as one lineage", async () => {
     const root = await providerWorkspace("draft-loop-declared-lineage-");
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       resolveCredential: async () => "fake-key",
       providerClientFactories: { anthropic: () => anthropicCritiqueClient([]) },
     });
@@ -2908,6 +2923,7 @@ describe("local application driver", () => {
         : localCompletion({ findings: [] }, "local-critic-1");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: (endpoint) => ({
           ...(endpoint === undefined ? {} : { endpoint }),
@@ -3207,6 +3223,7 @@ describe("workspace candidate knowledge selection binding", () => {
       );
 
       const restarted = createLocalApplicationDriver({
+        applicationPlan: false,
         providerClientFactories: { local: providerFactory },
       });
       const failure = restarted.resume(
@@ -3695,6 +3712,7 @@ describe("canonical candidate profile application API", () => {
       );
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: transport as unknown as typeof fetch }),
       },
@@ -3780,6 +3798,7 @@ describe("canonical candidate profile application API", () => {
         throw new Error("Profile reads must not invoke a provider.");
       });
       const restarted = createLocalApplicationDriver({
+        applicationPlan: false,
         providerClientFactories: { local: providerFactory },
       });
       // Source counts describe one derivation and are not persisted with the version.
@@ -3986,6 +4005,7 @@ describe("canonical candidate profile application API", () => {
       return localCompletion({ schemaVersion: 1, facts: [], issues: [] }, "profile-progress");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: transport as unknown as typeof fetch }),
       },
@@ -4080,6 +4100,7 @@ describe("canonical candidate profile application API", () => {
     ]);
     const transport = vi.fn(async () => localCompletion({}, "unexpected-profile-call"));
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: () => ({ fetch: transport as unknown as typeof fetch }),
       },
@@ -4406,6 +4427,7 @@ describe("workspace model reconfiguration", () => {
       return localCompletion({ findings: [] }, "local-critic-1");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: (endpoint) => ({
           ...(endpoint === undefined ? {} : { endpoint }),
@@ -4492,6 +4514,7 @@ describe("workspace model reconfiguration", () => {
         : localCompletion({ findings: [] }, "local-critic-1");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: (endpoint) => ({
           ...(endpoint === undefined ? {} : { endpoint }),
@@ -4565,6 +4588,7 @@ describe("workspace model reconfiguration", () => {
         : localCompletion({ findings: [] }, "local-critic-1");
     });
     const driver = createLocalApplicationDriver({
+      applicationPlan: false,
       providerClientFactories: {
         local: (endpoint) => ({
           ...(endpoint === undefined ? {} : { endpoint }),

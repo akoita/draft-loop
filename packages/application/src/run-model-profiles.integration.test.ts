@@ -60,6 +60,7 @@ it("persists exact profile snapshots before execution and resumes without regist
   const { author, critic, registry } = testProfiles();
   const resolve = vi.fn(registry.resolve);
   const driver = createLocalApplicationDriver({
+    applicationPlan: false,
     modelProfileRegistry: { resolve, list: registry.list },
   });
   try {
@@ -102,7 +103,7 @@ it("persists exact profile snapshots before execution and resumes without regist
     expect(context.modelConfiguration.author).toMatchObject({
       company: "anthropic",
       modelId: author.modelId,
-      promptTemplateVersion: "cli-author-v10",
+      promptTemplateVersion: "cli-author-v11",
       profile: author,
     });
     expect(context.modelConfiguration.critic).toMatchObject({
@@ -131,7 +132,10 @@ it("persists exact profile snapshots before execution and resumes without regist
       }),
       list: vi.fn(() => []),
     };
-    const restarted = createLocalApplicationDriver({ modelProfileRegistry: throwingRegistry });
+    const restarted = createLocalApplicationDriver({
+      applicationPlan: false,
+      modelProfileRegistry: throwingRegistry,
+    });
     const resumed = await restarted.resume({ root, runId: begun.runId }, silent);
 
     expect(throwingRegistry.resolve).not.toHaveBeenCalled();
@@ -148,7 +152,10 @@ it("persists exact profile snapshots before execution and resumes without regist
 it("rejects invalid profile references before persisting run or context records", async () => {
   const root = await mkdtemp(join(tmpdir(), "invalid-run-profiles-"));
   const { author, critic, registry } = testProfiles();
-  const driver = createLocalApplicationDriver({ modelProfileRegistry: registry });
+  const driver = createLocalApplicationDriver({
+    applicationPlan: false,
+    modelProfileRegistry: registry,
+  });
   try {
     await mkdir(join(root, "evidence"));
     await writeFile(join(root, "job.md"), "Platform engineer");
@@ -171,6 +178,7 @@ it("rejects invalid profile references before persisting run or context records"
       ),
     ).rejects.toThrow("selected model profiles are invalid or unsupported");
     const unsupportedRoute = createLocalApplicationDriver({
+      applicationPlan: false,
       modelProfileRegistry: registry,
       providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
     });
@@ -278,7 +286,7 @@ it.each(["start", "begin-resume"] as const)(
       resolveCredential: async () => "fake-openai-key",
       providerClientFactories: factories,
     };
-    const driver = createLocalApplicationDriver(providerOptions);
+    const driver = createLocalApplicationDriver({ ...providerOptions, applicationPlan: false });
     try {
       await mkdir(join(root, "evidence"));
       await writeFile(join(root, "job.md"), "TypeScript tools");
@@ -328,6 +336,7 @@ it.each(["start", "begin-resume"] as const)(
           list: vi.fn(() => []),
         };
         const restarted = createLocalApplicationDriver({
+          applicationPlan: false,
           ...providerOptions,
           modelProfileRegistry: throwingRegistry,
         });

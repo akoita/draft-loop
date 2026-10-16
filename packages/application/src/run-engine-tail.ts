@@ -2,11 +2,8 @@ import type { CoverageJudgementPlanner } from "@draft-loop/orchestrator";
 import type { RetrievalPort, SqliteStorage } from "@draft-loop/storage";
 
 import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
-import {
-  type RecordAuthorInput,
-  type RunAuthorInputTotalsSource,
-  runAuthorInputRecorder,
-} from "./run-author-input.js";
+import { type RunRecorders, runRecorders } from "./run-application-plan.js";
+import { type RunAuthorInputTotalsSource, runAuthorInputRecorder } from "./run-author-input.js";
 import { createRunCoverageJudgementPlanner } from "./run-coverage-judgement.js";
 import type { RunOptions } from "./run-model-profiles.js";
 
@@ -19,7 +16,7 @@ export type RunEngineTail = readonly [
   localClaudeCategoryCaptureParent: string | undefined,
   withheld: CandidateKnowledgeSensitivityExclusions | undefined,
   coverageJudgement: CoverageJudgementPlanner,
-  recordAuthorInput: RecordAuthorInput,
+  recorders: RunRecorders,
 ];
 
 /** Gathers the run-scoped engine arguments that start, begin, and resume pass identically. */
@@ -39,6 +36,11 @@ export function runEngineTail(
     options.localClaudeCategoryCaptureParent,
     withheld,
     createRunCoverageJudgementPlanner({ root }),
-    runAuthorInputRecorder(storage, workspaceId, retrieval),
+    runRecorders(
+      storage,
+      workspaceId,
+      runAuthorInputRecorder(storage, workspaceId, retrieval),
+      options.applicationPlan,
+    ),
   ];
 }

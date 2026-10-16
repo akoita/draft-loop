@@ -1,5 +1,7 @@
 import type { AuthorRequest } from "@draft-loop/orchestrator";
 
+import { applicationPlanAuthorInstructions } from "./application-plan-prompts.js";
+
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import type { AuthorRevision } from "./author-revision-memory.js";
 
@@ -103,6 +105,8 @@ interface AuthorPromptTemplate {
   readonly sendsCandidateDirection: boolean;
   /** Whether the version states, and so may request, a targeted revision patch. */
   readonly revisesByPatch: boolean;
+  /** Whether the version states, and so may be sent, the reviewed application plan. */
+  readonly sendsApplicationPlan: boolean;
 }
 
 function authorPromptTemplate(
@@ -111,6 +115,7 @@ function authorPromptTemplate(
   sendsRequirementCoverage = false,
   sendsCandidateDirection = false,
   revisesByPatch = false,
+  sendsApplicationPlan = false,
 ): AuthorPromptTemplate {
   return Object.freeze({
     guidance,
@@ -118,6 +123,7 @@ function authorPromptTemplate(
     sendsRequirementCoverage,
     sendsCandidateDirection,
     revisesByPatch,
+    sendsApplicationPlan,
   });
 }
 
@@ -161,6 +167,15 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v11 drafts from the reviewed application plan (#1304): what leads, what proves it, what to cut.
+  "cli-author-v11": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -170,7 +185,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v10" : "cli-critic-v5";
+  return role === "author" ? "cli-author-v11" : "cli-critic-v5";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -183,6 +198,11 @@ export function authorPromptSupportsCandidateDirection(
 /** Whether the recorded author version states, and so can answer a revision with, a patch. */
 export function authorPromptSupportsTargetedRevision(authorPromptTemplateVersion: string): boolean {
   return versionTemplate(authorPromptTemplateVersion).revisesByPatch;
+}
+
+/** Whether the recorded author version states, and so drafts from, the reviewed application plan. */
+export function authorPromptSupportsApplicationPlan(authorPromptTemplateVersion: string): boolean {
+  return versionTemplate(authorPromptTemplateVersion).sendsApplicationPlan;
 }
 
 /** The template of a known author version; unknown versions fail closed. */
@@ -210,6 +230,8 @@ export interface AuthorAdjudicationPrompt {
     readonly requirementCoverage?: NonNullable<AuthorRequest["requirementCoverage"]>;
     /** The candidate's instructions for this revision: delimited from evidence and never a fact. */
     readonly candidateDirection?: Readonly<{ readonly instructions: string }>;
+    /** The reviewed application plan: guidance for what leads and what to cut, never evidence. */
+    readonly applicationPlan?: NonNullable<AuthorRequest["applicationPlan"]>;
   }>;
 }
 
@@ -235,6 +257,7 @@ export function createAuthorAdjudicationPrompt(
   candidateDirection: AuthorRequest["candidateDirection"] = undefined,
   /** `patch` asks for block-level edits; only a version that states them may be asked. */
   revisionMode: "patch" | undefined = undefined,
+  applicationPlan: AuthorRequest["applicationPlan"] = undefined,
 ): AuthorAdjudicationPrompt {
   const template = versionTemplate(authorPromptTemplateVersion);
   const guidance = template.guidance;
@@ -247,7 +270,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v7" ||
     authorPromptTemplateVersion === "cli-author-v8" ||
     authorPromptTemplateVersion === "cli-author-v9" ||
-    authorPromptTemplateVersion === "cli-author-v10";
+    authorPromptTemplateVersion === "cli-author-v10" ||
+    authorPromptTemplateVersion === "cli-author-v11";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt
@@ -276,6 +300,7 @@ export function createAuthorAdjudicationPrompt(
     ...(template.sendsCandidateDirection && candidateDirection !== undefined
       ? { candidateDirection: { instructions: candidateDirection.text } }
       : {}),
+    ...(template.sendsApplicationPlan && applicationPlan !== undefined ? { applicationPlan } : {}),
   };
   if (pendingAdjudication === undefined) {
     return {

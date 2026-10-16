@@ -387,6 +387,7 @@ describe("full real-mode native host draft workflow", () => {
     };
     const applicationService = createApplicationService(
       createLocalApplicationDriver({
+        applicationPlan: false,
         resolveCredential: async (provider) => {
           credentialCalls.push(provider);
           return provider === "anthropic" ? "fake-anthropic-key" : "fake-openai-key";

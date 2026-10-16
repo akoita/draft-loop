@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v10`, which states and sends a
+New runs record author template `cli-author-v11`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v10 retain 32,768.
+v4 to v11 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -684,6 +684,46 @@ attribution uses each edit's `findingIds` directly (`source: "edits"`), listing 
 finding as unattributed only when no edit names it. A full rewrite keeps the
 derived diff attribution. A replayed execution keeps its stored edit-sourced
 attribution, because the edits are not stored.
+
+### Application plan before drafting (#1304)
+
+A run on author template `cli-author-v11` decides what the CV should lead with
+before the first draft. The plan step is bounded at three provider calls, in
+this order:
+
+1. The author model plans: the job's 3 to 5 ranked central themes, each linked
+   to requirement ids and to the approved evidence ids that best prove it; what
+   leads (the summary angle and 3 to 5 core-area items); and what to drop or
+   compress. A theme no approved evidence supports is a **gap** with no
+   evidence ids, never something to claim.
+2. The critic model reviews the plan for fit to the job and answers accept, or
+   revise with specific points.
+3. On revise, the author revises the plan once. There is no second review.
+
+The plan holds short user-visible text and ids, no reasoning, and no facts of
+its own. Validation (`validateApplicationPlan` in
+`packages/schemas/src/application-plan.ts`) rejects an evidence id the request's
+approved evidence lacks, an unknown requirement id, and a core area that serves
+a gap; a rejected plan fails the step as an invalid response, which can be
+retried. Evidence is sent under the same short aliases as drafting.
+
+`packages/orchestrator/src/application-plan.ts` runs the step through the
+`ApplicationPlanner` port; `packages/application/src/application-plan-agent.ts`
+implements it with the run's author and critic models. Each call is persisted
+on the run snapshot (`applicationPlan`) when it completes, so a resumed run
+continues mid-plan without repeating a call, and its cost is added to the run
+cost, which the cost budget is checked against before each call and before
+the draft. Runs on earlier templates do not plan and resume unchanged, and
+`applicationPlan: false` in the run options turns the step off for tests.
+
+The reviewed plan goes to the author as guidance on every round: `cli-author-v11`
+states that it is not evidence, that grounding applies to the draft as before, and
+that a candidate direction outranks it. Earlier versions never receive it. The
+`cli-critic-v5` emphasis review takes its central themes from the plan instead of
+deriving them from the job (`emphasisPlanThemeSourceInstructions` replaces
+`emphasisThemeSourceInstructions`), and reports a plan gap as
+`emphasis-theme-gap`. The plan is recorded in run history as a
+`run.application-plan` event and shown in **Run details** as "Application plan".
 
 ### Stop and pause on findings (#1113)
 

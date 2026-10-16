@@ -585,10 +585,18 @@ pinned under it.
   Sol · full source, 282 chunks · policy active", and opens a drawer from the
   right with the run's provenance: the author and critic with their claimed
   lineages, the data and writing policy, the evidence mode and author input,
-  the event timeline once the run is not executing, and **Start a new review**.
+  the application plan, the event timeline once the run is not executing, and **Start a new review**.
   Both name the models the run on screen recorded, not the pair set for new
   runs, and say "models not recorded" when it recorded none. When the pair for
   new runs differs, the drawer adds "New runs use: author → critic".
+- **Application plan.** Before the first draft, a run on the current author
+  prompt plans the CV: the job's central themes in rank order, what the CV
+  leads with, what it drops or compresses, and **Gaps**, the central themes your
+  evidence does not support. The critic reviews the plan, and the author revises
+  it at most once. **Run details** shows the result under "Application plan"
+  with the count of supporting accomplishments per theme, never evidence text.
+  The plan only guides the draft: every claim still needs evidence, and a gap is
+  never claimed. Runs started before the plan existed show no plan.
 - **Side panel.** A one-line "Next:" status names the next step, such as "Next:
   decide 1 blocking finding", and matches the footer's gate. Below it,
   **Findings** and **Coverage** share the panel as tabs; with no requirement

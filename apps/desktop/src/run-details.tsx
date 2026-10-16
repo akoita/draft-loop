@@ -35,6 +35,7 @@ import {
   reviewFinished,
   reviewInProgress,
 } from "./review-run-status.js";
+import { runApplicationPlanDisplay } from "./run-application-plan.js";
 import { runAuthorInputDisplay } from "./run-author-input.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { plainStopReason } from "./stop-reason.js";
@@ -257,6 +258,7 @@ export function RunTrustWarning({
 function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.Element {
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
   const authorInput = runAuthorInputDisplay(state.authorInput);
+  const applicationPlan = runApplicationPlanDisplay(state.applicationPlan);
   // Independence is what the run recorded, never something this renderer infers.
   const independence = independenceSummary(state.providerExposure.independentReview);
   const recorded = recordedRunModels(state);
@@ -371,6 +373,65 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
                 {formatDirectionTime(authorInput.direction.createdAt)}
               </time>
             </p>
+          )}
+        </div>
+      )}
+      {applicationPlan !== undefined && (
+        <div className="trust-fact application-plan-fact">
+          <span className="label">Application plan</span>
+          <span>{applicationPlan.reviewNote}</span>
+          <ol className="application-plan-themes" aria-label="central themes">
+            {applicationPlan.themes.map((theme) => (
+              <li key={theme.title}>
+                <strong>{theme.title}</strong> <span>{theme.rationale}</span>{" "}
+                <span className="numeric">
+                  {theme.proofCount} supporting accomplishment{theme.proofCount === 1 ? "" : "s"}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="application-plan-leads">
+            <span className="label">What leads</span>
+            <span>{applicationPlan.summaryAngle}</span>
+          </p>
+          <ul className="application-plan-core-areas" aria-label="core areas">
+            {applicationPlan.coreAreas.map((area) => (
+              <li key={area}>{area}</li>
+            ))}
+          </ul>
+          {applicationPlan.cuts.length > 0 && (
+            <div className="application-plan-cuts">
+              <span className="label">What is cut</span>
+              <ul>
+                {applicationPlan.cuts.map((cut) => (
+                  <li key={`${cut.action}:${cut.target}`}>
+                    {cut.action === "drop" ? "Drop" : "Compress"} {cut.target}: {cut.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {applicationPlan.gaps.length > 0 && (
+            <div className="application-plan-gaps">
+              <span className="label">Gaps: central themes your evidence does not support</span>
+              <ul>
+                {applicationPlan.gaps.map((gap) => (
+                  <li key={gap.title}>
+                    <strong>{gap.title}</strong> <span>{gap.rationale}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {applicationPlan.reviewPoints.length > 0 && (
+            <details className="application-plan-review">
+              <summary>What the critic asked to change</summary>
+              <ul>
+                {applicationPlan.reviewPoints.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       )}

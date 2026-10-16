@@ -183,6 +183,7 @@ export interface CriticCoverageJudgementParts {
   readonly input: {
     readonly coverageJudgementRequests?: JsonValue;
     readonly candidateDirection?: JsonValue;
+    readonly applicationPlan?: JsonValue;
   };
   readonly outputSchema: JsonObject;
   /** Set only when the instruction block was sent. */
