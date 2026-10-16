@@ -405,7 +405,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
               <ul>
                 {applicationPlan.cuts.map((cut) => (
                   <li key={`${cut.action}:${cut.target}`}>
-                    {cut.action === "drop" ? "Drop" : "Compress"} {cut.target}: {cut.reason}
+                    {cut.action === "drop" ? "Drop" : "Compress"}: {cut.target} — {cut.reason}
                   </li>
                 ))}
               </ul>

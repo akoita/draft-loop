@@ -1190,6 +1190,15 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
+.application-plan-fact .application-plan-leads {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
 .application-plan-fact p,
 .application-plan-fact .application-plan-cuts,
 .application-plan-fact .application-plan-gaps,

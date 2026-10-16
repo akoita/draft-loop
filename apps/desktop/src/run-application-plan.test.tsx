@@ -65,7 +65,7 @@ describe("Application plan in Run details", () => {
     expect(html).toContain("Tokenisation");
     expect(html).toContain("2 supporting accomplishments");
     expect(html).toContain("Lead with tokenisation delivery.");
-    expect(html).toContain("Compress Certification list: The job ignores it.");
+    expect(html).toContain("Compress: Certification list — The job ignores it.");
     expect(html).toContain("Gaps: central themes your evidence does not support");
     expect(html).toContain("Kubernetes");
     expect(html).toContain("The critic asked for changes and the author revised the plan once.");
