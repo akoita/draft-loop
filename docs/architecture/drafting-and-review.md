@@ -816,6 +816,24 @@ the font's own advance widths. `compact-one-page` keeps the unembedded
 Helvetica. The font source, pinned checksums, licence, and regeneration steps
 are in `packages/rendering/fonts/carlito/NOTICE.md`.
 
+#### Role headers
+
+In an Experience or Projects section, a paragraph directly followed by bullets
+is a role header (`role` layout block, `packages/rendering/src/role-header.ts`).
+It is drawn bold with extra space before it, except directly under a section
+heading (`roleBeforePt`; bullets keep the small `blockAfterPt`). If its last
+` | ` segment is a month-year or year date range, that segment is right-aligned
+on the same baseline: a right tab stop in the DOCX, flex alignment in the HTML
+preview. A left part too long for the line wraps, and a line that cannot share
+its row with the dates falls back to plain bold. The block text is never edited.
+
+The PDF draws role headers in font resource `F3`, a second name for the bold
+face of `F2` that reuses the same embedded font file. The inspectors read `F2`
+runs as headings and `F3` runs as body text, so role headers are not counted as
+sections. The layout does not draw the ` | ` before a right-aligned date; the
+PDF and DOCX inspectors restore it when they recover the text (same baseline, or
+a bare tab), so content integrity compares role lines like any paragraph.
+
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,
 and inspectable PDF page counts. The application builds this report after exact

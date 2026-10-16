@@ -9,6 +9,7 @@ import {
 import { textWidthPt } from "./document-layout.js";
 import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
 import { decodePdfLiteralEscapes } from "./pdf-document.js";
+import { docxParagraphText, joinRoleDateRuns, type PdfTextRun } from "./role-header.js";
 
 interface VisibleTextUnit {
   readonly text: string;
@@ -356,7 +357,7 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
     const contentBody = objects.get(contentId);
     const stream = contentBody?.match(/\bstream\s*\r?\n([\s\S]*?)\r?\nendstream\b/u)?.[1];
     if (stream === undefined) fail("controlled PDF page content stream is missing");
-    const units: VisibleTextUnit[] = [];
+    const runs: PdfTextRun[] = [];
     let clipped = false;
     for (const match of stream.matchAll(/\(((?:\\.|[^()])*)\)\s*Tj/gu)) {
       const escaped = match[1] ?? "";
@@ -372,13 +373,20 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
       const y = Number(transforms.at(-1)?.[2]);
       if (![fontSize, x, y].every(Number.isFinite))
         fail("controlled PDF text position is incomplete");
-      // Titles and headings are the only bold (F2) runs; body text is never bold.
-      const isBold = fontNames.at(-1)?.[1] === "2";
+      // Titles and headings are the only F2 runs. Role headers use the same bold face under F3
+      // and count as body text, so they are measured bold but are not section headings.
+      const fontNumber = Number(fontNames.at(-1)?.[1]);
+      const isBold = fontNumber === 2 || fontNumber === 3;
       const width = textWidthPt(text, fontSize, isBold, font);
       clipped ||=
         x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1 - rightInsetPt + 0.5;
-      units.push({ text, kind: isBold ? "heading" : "body" });
+      runs.push({ text, fontNumber, x, y });
     }
+    // A role header's right-aligned date reads back with the " | " that precedes it.
+    const units: VisibleTextUnit[] = joinRoleDateRuns(runs).map((run) => ({
+      text: run.text,
+      kind: run.fontNumber === 2 ? "heading" : "body",
+    }));
     pages.push({ units, clipped });
   }
   return pages;
@@ -394,9 +402,7 @@ function parseDocxPages(content: Uint8Array): readonly InspectedPage[] {
   const pages: { units: VisibleTextUnit[]; clipped: boolean }[] = [{ units: [], clipped: false }];
   for (const paragraph of paragraphs) {
     const xml = paragraph[1] ?? "";
-    const text = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/gu)]
-      .map((match) => decodeXmlText(match[1] ?? ""))
-      .join("");
+    const text = docxParagraphText(xml, decodeXmlText);
     if (text !== "") {
       pages.at(-1)?.units.push({
         text,

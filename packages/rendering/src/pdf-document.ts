@@ -6,6 +6,8 @@ import {
   layoutBlocks,
   layoutMetrics,
   profilePdfFont,
+  roleHasSpaceBefore,
+  roleHeaderLines,
   textWidthPt,
   wrapTextToWidth,
 } from "./document-layout.js";
@@ -105,7 +107,13 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
   const place = (commands: string): void => {
     pages.at(-1)?.push({ commands });
   };
-  const text = (font: "F1" | "F2", size: number, x: number, baseline: number, value: string) =>
+  const text = (
+    font: "F1" | "F2" | "F3",
+    size: number,
+    x: number,
+    baseline: number,
+    value: string,
+  ) =>
     `BT /${font} ${size} Tf 1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm (${pdfLiteral(value)}) Tj ET`;
 
   blocks.forEach((block, index) => {
@@ -157,6 +165,25 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
         `q 0.5 w 0.58 0.64 0.68 RG ${fixed(left)} ${fixed(ruleY)} m ${fixed(right)} ${fixed(ruleY)} l S Q`,
       );
       y -= headingLine + metrics.headingAfterPt;
+      return;
+    }
+    if (block.kind === "role") {
+      const { lines, date } = roleHeaderLines(block, profile);
+      const before =
+        !atPageTop() && roleHasSpaceBefore(blocks[index - 1]) ? metrics.roleBeforePt : 0;
+      // Keep a role header with the first line of its bullets rather than ending a page on it.
+      const needed = before + lines.length * bodyLine + metrics.blockAfterPt + bodyLine;
+      if (y - needed < bottom && !atPageTop()) startPage();
+      else y -= before;
+      lines.forEach((line, lineIndex) => {
+        if (y - bodyLine < bottom && !atPageTop()) startPage();
+        place(text("F3", body, left, y - body, line));
+        if (date !== null && lineIndex === lines.length - 1) {
+          place(text("F1", body, right - textWidthPt(date, body, false, font), y - body, date));
+        }
+        y -= bodyLine;
+      });
+      y -= metrics.blockAfterPt;
       return;
     }
     const lines = blockLines(block, profile);
@@ -242,7 +269,8 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
     objects[4] =
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
   } else {
-    // F1 is object 3 and F2 is object 4; their descriptors and font files follow as 5 to 8.
+    // F1 is object 3 and F2 is object 4; F3, the role-header bold, reuses object 4 so the bold
+    // font file is embedded once. Their descriptors and font files follow as 5 to 8.
     const regular = embeddedFontObjects(5, 6, embedded.regular);
     const bold = embeddedFontObjects(7, 8, embedded.bold);
     objects[3] = regular.font;
@@ -259,7 +287,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
     pageIds.push(pageId);
     const stream = page.map((line) => line.commands).join("\n");
     objects[pageId] =
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${fixed(pageWidth)} ${fixed(pageHeight)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`;
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${fixed(pageWidth)} ${fixed(pageHeight)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 4 0 R >> >> /Contents ${contentId} 0 R >>`;
     // Page content is ASCII (non-ASCII text is octal-escaped), so its length is a byte count.
     objects[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
   }
