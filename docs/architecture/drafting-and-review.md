@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v12`, which states and sends a
+New runs record author template `cli-author-v13`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v12 retain 32,768.
+v4 to v13 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -735,7 +735,28 @@ never overrides grounding, required sections or the writing policy. Resumed v11
 and earlier runs keep their exact prompt. Deterministic validation reports a
 bullet that opens with a lowercase letter (other than a known name such as `iOS`
 or `npm`) or ends on a dangling connector as an `editorial-fragment` warning, so
-the critic and readiness steps see it.
+the critic and readiness steps see it. New runs use v13 (below), which supersedes
+v12's bullet guidance; the fragment check still applies.
+
+### Context paragraphs and labelled lines (#1341)
+
+Author `cli-author-v13` supersedes v12's bullet guidance: it is v11 plus a block
+that replaces it. Bullet markers should sit several lines apart, so short bullets
+are never stacked. The author writes:
+
+- **Per role or project:** a role line paragraph, a 1 to 3 line context paragraph
+  (what it was, scope, team, stack), then 2 to 4 bullets of about 3 to 4 lines
+  (roughly 45 to 70 words). Older roles get 0 to 2 bullets.
+- **Whole CV:** about 12 to 20 bullets, never more than 4 in a row.
+- **Core areas, Skills, Education and Certifications:** `Label: items` paragraphs
+  grouped by theme, never bullets. Label words must appear in cited evidence.
+
+The guidance never overrides grounding, required sections or the writing policy.
+Resumed v12 and earlier runs keep their exact prompt. Deterministic validation
+adds a `dense-bullet-series` quality warning, one per run of consecutive bullets,
+anchored to its first block. It fires for more than 4 bullets in a row, a section
+of 4 or more one-line bullets, and adjacent bullets where either has under about
+30 words.
 
 ### Stop and pause on findings (#1113)
 

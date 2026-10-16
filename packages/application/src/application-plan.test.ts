@@ -10,6 +10,7 @@ import {
   createAuthorAdjudicationPrompt,
 } from "./author-adjudication.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
+import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
 import { criticCoverageJudgementParts } from "./critic-critique-contract.js";
@@ -119,6 +120,29 @@ describe("author prompt cli-author-v12", () => {
     expect(v12.systemPrompt).toContain("never a fragment copied from a source");
     expect(v12.systemPrompt).toContain("does not override the grounding rules");
     expect(v11.systemPrompt).not.toContain("fuller bullets");
+  });
+});
+
+describe("author prompt cli-author-v13", () => {
+  it("is v11 plus the structured-role guidance, replacing v12's bullet guidance", () => {
+    const v11 = createAuthorAdjudicationPrompt("cli-author-v11", undefined);
+    const v12 = createAuthorAdjudicationPrompt("cli-author-v12", undefined);
+    const v13 = createAuthorAdjudicationPrompt("cli-author-v13", undefined);
+    expect(v13.systemPrompt).toBe(`${v11.systemPrompt}${structuredRoleInstructions}`);
+    expect(v13.providerInput).toEqual(v11.providerInput);
+    expect(authorPromptSupportsApplicationPlan("cli-author-v13")).toBe(true);
+    expect(v13.systemPrompt).toContain("Bullet markers should be several lines apart");
+    expect(v13.systemPrompt).toContain("context paragraph block of 1 to 3 lines");
+    expect(v13.systemPrompt).toContain("at most 2 to 4 substantive bullet blocks");
+    expect(v13.systemPrompt).toContain("roughly 45 to 70 words");
+    expect(v13.systemPrompt).toContain("about 12 to 20 bullets in total");
+    expect(v13.systemPrompt).toContain("never more than 4 bullet blocks in a row");
+    expect(v13.systemPrompt).toContain("paragraph blocks of the form `Label: items`");
+    expect(v13.systemPrompt).toContain("never a fragment copied from a source");
+    expect(v13.systemPrompt).toContain("does not override the grounding rules");
+    expect(v13.systemPrompt).not.toContain(fullerBulletInstructions);
+    expect(v12.systemPrompt).toContain(fullerBulletInstructions);
+    expect(v12.systemPrompt).not.toContain("context paragraph block");
   });
 });
 
