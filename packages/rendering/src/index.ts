@@ -20,11 +20,16 @@ import {
   renderingQaViewerObservationSchema,
 } from "@draft-loop/schemas";
 
-import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
+import { isTitleBlockSection } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { sectionBodyHtml } from "./html-blocks.js";
+import {
+  layoutProfileIdForTemplate,
+  type RenderingLayoutProfile,
+  renderingLayoutProfiles,
+  resolveRenderingTemplate,
+} from "./layout-profile.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
-import type { PdfFontFamily } from "./pdf-fonts.js";
 import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
@@ -35,129 +40,17 @@ export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
 
-export interface RenderingLayoutProfile {
-  readonly id: RenderingLayoutProfileId;
-  readonly pageWidthMm: 210;
-  readonly pageHeightMm: 297;
-  readonly marginsMm: {
-    readonly top: number;
-    readonly right: number;
-    readonly bottom: number;
-    readonly left: number;
-  };
-  readonly typography: {
-    readonly fontFamily: string;
-    /** The font the DOCX names. */
-    readonly docxFontFamily: string;
-    /** The font the PDF draws and the layout measures: embedded Carlito, or standard Helvetica. */
-    readonly pdfFont: PdfFontFamily;
-    readonly bodyFontSizePt: number;
-    readonly headingFontSizePt: number;
-    readonly lineHeight: number;
-  };
-  readonly lineMetricsPt: {
-    readonly body: number;
-    readonly heading: number;
-  };
-  /** Title, block and bullet spacing shared by the PDF, the DOCX and the length estimate. */
-  readonly spacingPt: LayoutMetrics;
-  /** Spacing of the HTML preview, which uses CSS rather than the shared block model. */
-  readonly previewSpacingPt: {
-    readonly headingBefore: number;
-    readonly headingAfter: number;
-    readonly blockAfter: number;
-    readonly roleBefore: number;
-    readonly listIndent: number;
-  };
-  readonly wrapping: {
-    readonly bodyMaxCharacters: number;
-    readonly bulletMaxCharacters: number;
-  };
-  readonly targetMaxPages: 1 | 2;
-}
-
-const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>> = {
-  "compact-one-page": {
-    id: "compact-one-page",
-    pageWidthMm: 210,
-    pageHeightMm: 297,
-    marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
-    typography: {
-      fontFamily: "Arial, sans-serif",
-      docxFontFamily: "Arial",
-      pdfFont: "helvetica",
-      bodyFontSizePt: 9.5,
-      headingFontSizePt: 13,
-      lineHeight: 1.25,
-    },
-    lineMetricsPt: { body: 12, heading: 21 },
-    spacingPt: {
-      titleSizePt: 18,
-      titleLinePt: 26,
-      headingBeforePt: 8,
-      headingAfterPt: 4,
-      blockAfterPt: 3,
-      roleBeforePt: 5,
-      titleAfterPt: 2,
-      contactAfterPt: 0,
-      bulletIndentPt: 14,
-    },
-    previewSpacingPt: {
-      headingBefore: 9,
-      headingAfter: 7,
-      blockAfter: 5,
-      roleBefore: 5,
-      listIndent: 17,
-    },
-    wrapping: { bodyMaxCharacters: 96, bulletMaxCharacters: 90 },
-    targetMaxPages: 1,
-  },
-  "standard-two-page": {
-    id: "standard-two-page",
-    pageWidthMm: 210,
-    pageHeightMm: 297,
-    marginsMm: { top: 10, right: 12, bottom: 10, left: 12 },
-    typography: {
-      fontFamily: "Calibri, Arial, sans-serif",
-      docxFontFamily: "Calibri",
-      pdfFont: "carlito",
-      bodyFontSizePt: 9,
-      headingFontSizePt: 10.5,
-      lineHeight: 1.2,
-    },
-    lineMetricsPt: { body: 11, heading: 14 },
-    spacingPt: {
-      titleSizePt: 16,
-      titleLinePt: 20,
-      headingBeforePt: 6,
-      headingAfterPt: 2,
-      blockAfterPt: 0,
-      roleBeforePt: 6,
-      titleAfterPt: 2,
-      contactAfterPt: 0,
-      bulletIndentPt: 11,
-    },
-    previewSpacingPt: {
-      headingBefore: 6,
-      headingAfter: 3,
-      blockAfter: 2,
-      roleBefore: 6,
-      listIndent: 11,
-    },
-    // Generous caps: the real Carlito line width (about 150 characters at 9 pt) always binds first.
-    wrapping: { bodyMaxCharacters: 200, bulletMaxCharacters: 195 },
-    targetMaxPages: 2,
-  },
-};
-
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value;
   for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
   return Object.freeze(value);
 }
 
-/** Immutable profiles used by every controlled output format. */
-export const renderingLayoutProfiles = deepFreeze(layoutProfileTable);
+/** The profile a render draws with: the selected template's, or the layout profile named directly. */
+function resolveRenderingProfile(options: RenderOptions): RenderingLayoutProfile {
+  const template = resolveRenderingTemplate(options);
+  return getRenderingLayoutProfile(layoutProfileIdForTemplate(template));
+}
 
 function getRenderingLayoutProfile(profileId: string | undefined): RenderingLayoutProfile {
   const selected = profileId ?? defaultLayoutProfileId;
@@ -311,6 +204,8 @@ export interface RenderValidationIssue {
 export interface RenderOptions extends RenderConstraints {
   readonly generatedAt?: string;
   readonly layoutProfile?: RenderingLayoutProfileId;
+  /** A built-in rendering template id; classic by default. Must agree with `layoutProfile` if both are set. */
+  readonly templateId?: string;
 }
 
 export interface RenderMetadata {
@@ -320,6 +215,8 @@ export interface RenderMetadata {
   readonly generatedAt: string;
   readonly templateVersion: string;
   readonly layoutProfile: RenderingLayoutProfileId;
+  /** The rendering template this document was drawn with. Not part of the QA schema. */
+  readonly renderingTemplate: { readonly id: string; readonly version: number };
   readonly checksum: string;
   readonly sourceContentChecksum: string;
 }
@@ -390,6 +287,7 @@ function assertCanonicalOptionKeys(options: RenderOptions): void {
     "allowUnbackedClaims",
     "generatedAt",
     "layoutProfile",
+    "templateId",
   ]);
   for (const key of Object.keys(options as object)) {
     if (!allowedKeys.has(key)) {
@@ -456,7 +354,7 @@ function assertExportable(artifact: DraftArtifact, constraints: RenderConstraint
 
 export function renderMarkdown(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
-  getRenderingLayoutProfile(options.layoutProfile);
+  resolveRenderingProfile(options);
   const sections = orderedSections(artifact);
   if (artifact.kind === "cover-letter") {
     return `${sections
@@ -502,7 +400,7 @@ function escapeHtml(value: string): string {
 
 export function renderHtml(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const profile = resolveRenderingProfile(options);
   const sections = orderedSections(artifact)
     .map((section) => {
       const list = sectionBodyHtml(section, profile, escapeHtml);
@@ -542,7 +440,7 @@ function bytesForFormat(
   options: RenderOptions = {},
 ): Uint8Array {
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const profile = resolveRenderingProfile(options);
   const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   if (format === "pdf") {
     return buildPdf({ artifact, profile, documentTitle, generatedAt: options.generatedAt });
@@ -1014,7 +912,10 @@ export function buildRenderingQaReport(input: BuildRenderingQaReportInput): Buil
   if (!(input.rendered.content instanceof Uint8Array)) {
     throw new TypeError("rendered.content must be a Uint8Array");
   }
-  const renderedMetadata = renderingQaRenderedMetadataSchema.parse(input.rendered.metadata);
+  // The QA schema is strict and does not know the template record; the export payload carries it.
+  const { renderingTemplate: _renderingTemplate, ...qaMetadata } = input.rendered
+    .metadata as Partial<RenderMetadata> & Record<string, unknown>;
+  const renderedMetadata = renderingQaRenderedMetadataSchema.parse(qaMetadata);
   const contentChecksum = createHash("sha256").update(input.rendered.content).digest("hex");
   if (contentChecksum !== renderedMetadata.checksum) {
     throw new Error("rendered metadata checksum does not match rendered content");
@@ -1169,7 +1070,8 @@ export function renderArtifact(
     throw new RangeError(`Unsupported output format: ${format}`);
   }
   assertCanonicalOptionKeys(options);
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const template = resolveRenderingTemplate(options);
+  const profile = resolveRenderingProfile(options);
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const effectiveOptions: RenderOptions = { ...options, generatedAt };
   assertExportable(artifact, effectiveOptions);
@@ -1182,6 +1084,7 @@ export function renderArtifact(
     generatedAt,
     templateVersion: renderTemplateVersion,
     layoutProfile: profile.id,
+    renderingTemplate: { id: template.id, version: template.version },
     checksum,
     sourceContentChecksum: computeArtifactContentChecksum(artifact),
   };
@@ -1201,3 +1104,9 @@ export function renderArtifact(
 
 export * from "./controlled-document-inspector.js";
 export * from "./document-layout.js";
+export {
+  profileFromTemplate,
+  type RenderingLayoutProfile,
+  renderingLayoutProfiles,
+} from "./layout-profile.js";
+export * from "./templates.js";

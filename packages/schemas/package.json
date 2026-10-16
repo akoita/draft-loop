@@ -19,6 +19,10 @@
       "types": "./src/application-plan.ts",
       "import": "./src/application-plan.ts"
     },
+    "./rendering-template": {
+      "types": "./src/rendering-template.ts",
+      "import": "./src/rendering-template.ts"
+    },
     "./application": {
       "types": "./src/application.ts",
       "import": "./src/application.ts"

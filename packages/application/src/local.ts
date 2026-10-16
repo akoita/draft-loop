@@ -71,7 +71,7 @@ import { createCanonicalCandidateProfilePersistenceService } from "./candidate-p
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
 import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
-import { assertExportRenderingQa } from "./export-qa.js";
+import { assertExportRenderingQa, exportTemplateRecord } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { exportRecordId } from "./export-record.js";
 import {
@@ -2219,7 +2219,7 @@ export async function exportRun(
         format,
         approved: true,
         artifactVersion: rendered.metadata.artifactVersion,
-        templateVersion: rendered.metadata.templateVersion,
+        ...exportTemplateRecord(rendered),
         mimeType: rendered.mimeType,
         renderingQa: qa.report,
       },

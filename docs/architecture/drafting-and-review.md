@@ -858,6 +858,25 @@ the font's own advance widths. `compact-one-page` keeps the unembedded
 Helvetica. The font source, pinned checksums, licence, and regeneration steps
 are in `packages/rendering/fonts/carlito/NOTICE.md`.
 
+#### Rendering templates (#1328)
+
+A rendering template is validated data (`renderingTemplateSchema`, exposed as
+`@draft-loop/schemas/rendering-template`): page margins and page target, font
+sizes and line height, spacing, and heading rule. Every value is bounded, and the
+enums accept only what the renderer draws today; later templates widen them.
+
+`packages/rendering/src/templates.ts` holds the built-ins. `classic` (the
+default) produces the `standard-two-page` profile and `compact` produces
+`compact-one-page`. `profileFromTemplate` derives the profile every output format
+shares; settings a template does not carry (font names, wrapping caps, preview
+spacing, title and heading leading) are fixed per page target for the `sans`
+family. `renderArtifact` takes an optional `templateId` and still accepts
+`layoutProfile`; naming both requires that they agree.
+
+The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
+and in the export payload as `renderingTemplate`. The rendering-QA report keeps
+only the layout profile.
+
 #### Role headers
 
 In an Experience or Projects section, a paragraph directly followed by bullets
