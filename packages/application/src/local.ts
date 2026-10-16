@@ -2202,7 +2202,7 @@ export async function exportRun(
       allowUnbackedClaims: false,
       generatedAt: timestamp(),
     });
-    const renderingQa = assertExportRenderingQa(snapshot.artifact, rendered);
+    const qa = assertExportRenderingQa(snapshot.artifact, rendered);
     await writeFile(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
@@ -2221,7 +2221,7 @@ export async function exportRun(
         artifactVersion: rendered.metadata.artifactVersion,
         templateVersion: rendered.metadata.templateVersion,
         mimeType: rendered.mimeType,
-        renderingQa,
+        renderingQa: qa.report,
       },
     });
     const transitionEngine = createOrchestrationEngine({ ...noopAgents(), store: runStore });
@@ -2229,7 +2229,7 @@ export async function exportRun(
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
     );
-    const lengthWarning = await exportLengthWarningLine(storage, snapshot);
+    const lengthWarning = await exportLengthWarningLine(storage, snapshot, qa.pageOverflow);
     if (lengthWarning !== undefined) io.write(lengthWarning);
     return outputPath;
   } finally {

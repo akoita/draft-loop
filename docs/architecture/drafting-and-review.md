@@ -795,6 +795,12 @@ approval and before writing any export, and persists it with export history.
 Markdown uses deterministic QA; PDF and DOCX use the named controlled byte
 inspectors, which recover text and report bounded page/layout failures.
 
+Content-integrity, active-content, clipped-text, blank-page, and orphan-section
+failures stop the export before any file is written. A PDF that fails only page
+fit is still written: its stored report keeps `passed: false`, and the export
+writes one `Length warning:` line with the real page count, as DOCX and
+Markdown do from their length estimate.
+
 The PDF inspector checks page targets, blank pages, text coordinates, and
 orphaned section starts where a page boundary makes them determinable. The DOCX
 inspector checks OOXML text order, explicit page breaks, package integrity, and
