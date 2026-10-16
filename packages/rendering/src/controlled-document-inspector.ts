@@ -6,8 +6,11 @@ import {
   renderingQaViewerObservationSchema,
 } from "@draft-loop/schemas";
 
-import type { RenderedDocument } from "./index.js";
+import { textWidthPt } from "./document-layout.js";
+import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
 import { decodePdfLiteralEscapes } from "./pdf-document.js";
+import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 interface VisibleTextUnit {
   readonly text: string;
@@ -291,8 +294,20 @@ function decodePdfLiteral(value: string): string {
   return decodePdfLiteralEscapes(value);
 }
 
-function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
-  const raw = decodeUtf8(content, "controlled PDF");
+/**
+ * How far in from the page's right edge text must stay: the profile's right margin, so a line
+ * wider than the content box is flagged. An unknown profile falls back to the page edge.
+ */
+function rightMarginPt(layoutProfile: string): number {
+  const profiles: Readonly<Record<string, { readonly marginsMm: { readonly right: number } }>> =
+    renderingLayoutProfiles;
+  const profile = profiles[layoutProfile];
+  return profile === undefined ? 0 : (profile.marginsMm.right * 72) / 25.4;
+}
+
+function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly InspectedPage[] {
+  // A PDF mixes ASCII structure with binary streams (embedded fonts), so it is read as Latin-1.
+  const raw = new TextDecoder("latin1").decode(content);
   if (!raw.startsWith("%PDF-")) fail("controlled PDF signature is missing");
   if (!raw.includes("startxref") || !raw.includes("%%EOF")) {
     fail("controlled PDF end-of-file marker is missing");
@@ -305,6 +320,8 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
     objects.set(id, body);
   }
   if (objects.size === 0) fail("controlled PDF contains no objects");
+  // Clipping is measured with the real advance widths of the font the PDF names.
+  const font = /\/BaseFont\s*\/Carlito\b/u.test(raw) ? "carlito" : "helvetica";
   const catalog = [...objects.values()].find((body) => /\/Type\s+\/Catalog(?:\s|\/|>)/u.test(body));
   const pagesId = Number(catalog?.match(/\/Pages\s+(\d+)\s+0\s+R/u)?.[1]);
   const pagesBody = Number.isSafeInteger(pagesId) ? objects.get(pagesId) : undefined;
@@ -341,13 +358,14 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
     const contentBody = objects.get(contentId);
     const stream = contentBody?.match(/\bstream\s*\r?\n([\s\S]*?)\r?\nendstream\b/u)?.[1];
     if (stream === undefined) fail("controlled PDF page content stream is missing");
-    const units: VisibleTextUnit[] = [];
+    const runs: PdfTextRun[] = [];
     let clipped = false;
     for (const match of stream.matchAll(/\(((?:\\.|[^()])*)\)\s*Tj/gu)) {
       const escaped = match[1] ?? "";
       const text = decodePdfLiteral(escaped);
       const prefix = stream.slice(0, match.index ?? 0);
       const fontSizes = [...prefix.matchAll(/\/F\d+\s+([-+]?\d+(?:\.\d+)?)\s+Tf/gu)];
+      const fontNames = [...prefix.matchAll(/\/F(\d+)\s+[-+]?\d+(?:\.\d+)?\s+Tf/gu)];
       const transforms = [
         ...prefix.matchAll(/1\s+0\s+0\s+1\s+([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+Tm/gu),
       ];
@@ -356,10 +374,22 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
       const y = Number(transforms.at(-1)?.[2]);
       if (![fontSize, x, y].every(Number.isFinite))
         fail("controlled PDF text position is incomplete");
-      const width = [...text].length * fontSize * 0.45;
-      clipped ||= x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1;
-      units.push({ text, kind: fontSize >= 12 ? "heading" : "body" });
+      // Titles and headings are the only F2 runs. Role headers use the same bold face under F3
+      // and count as body text, so they are measured bold but are not section headings.
+      const fontNumber = Number(fontNames.at(-1)?.[1]);
+      const isBold = fontNumber === 2 || fontNumber === 3;
+      const width = textWidthPt(text, fontSize, isBold, font);
+      clipped ||=
+        x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1 - rightInsetPt + 0.5;
+      const lineStart = stream.lastIndexOf("\n", match.index ?? 0) + 1;
+      const tag = pdfRunTag(stream.slice(lineStart, match.index ?? 0));
+      runs.push({ text, fontNumber, x, y, tag });
     }
+    // A role date, a bold label and a compact list read back as the artifact's own blocks.
+    const units: VisibleTextUnit[] = recoverPdfRuns(runs).map((run) => ({
+      text: run.text,
+      kind: run.fontNumber === 2 ? "heading" : "body",
+    }));
     pages.push({ units, clipped });
   }
   return pages;
@@ -375,10 +405,8 @@ function parseDocxPages(content: Uint8Array): readonly InspectedPage[] {
   const pages: { units: VisibleTextUnit[]; clipped: boolean }[] = [{ units: [], clipped: false }];
   for (const paragraph of paragraphs) {
     const xml = paragraph[1] ?? "";
-    const text = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/gu)]
-      .map((match) => decodeXmlText(match[1] ?? ""))
-      .join("");
-    if (text !== "") {
+    for (const text of docxParagraphUnits(xml, decodeXmlText)) {
+      if (text === "") continue;
       pages.at(-1)?.units.push({
         text,
         kind: /<w:pStyle\b[^>]*w:val\s*=\s*["'](?:Heading1|Title)["']/u.test(xml)
@@ -407,7 +435,7 @@ export function inspectControlledDocument(
   }
   if (rendered.metadata.format === "pdf") {
     return observationForPages(
-      parsePdfPages(rendered.content),
+      parsePdfPages(rendered.content, rightMarginPt(rendered.metadata.layoutProfile)),
       rendered,
       "DraftLoop controlled PDF byte inspector",
     );

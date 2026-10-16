@@ -22,74 +22,23 @@ import {
 
 import { isTitleBlockSection } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
+import { sectionBodyHtml } from "./html-blocks.js";
+import {
+  layoutProfileIdForTemplate,
+  type RenderingLayoutProfile,
+  renderingLayoutProfiles,
+  resolveRenderingTemplate,
+} from "./layout-profile.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
+import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
-export const renderTemplateVersion = "cv-controlled-v1";
+export const renderTemplateVersion = "cv-controlled-v4";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
-
-export interface RenderingLayoutProfile {
-  readonly id: RenderingLayoutProfileId;
-  readonly pageWidthMm: 210;
-  readonly pageHeightMm: 297;
-  readonly marginsMm: {
-    readonly top: number;
-    readonly right: number;
-    readonly bottom: number;
-    readonly left: number;
-  };
-  readonly typography: {
-    readonly fontFamily: string;
-    readonly bodyFontSizePt: number;
-    readonly headingFontSizePt: number;
-    readonly lineHeight: number;
-  };
-  readonly lineMetricsPt: {
-    readonly body: number;
-    readonly heading: number;
-  };
-  readonly wrapping: {
-    readonly bodyMaxCharacters: number;
-    readonly bulletMaxCharacters: number;
-  };
-  readonly targetMaxPages: 1 | 2;
-}
-
-const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>> = {
-  "compact-one-page": {
-    id: "compact-one-page",
-    pageWidthMm: 210,
-    pageHeightMm: 297,
-    marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
-    typography: {
-      fontFamily: "Arial, sans-serif",
-      bodyFontSizePt: 9.5,
-      headingFontSizePt: 13,
-      lineHeight: 1.25,
-    },
-    lineMetricsPt: { body: 12, heading: 21 },
-    wrapping: { bodyMaxCharacters: 96, bulletMaxCharacters: 90 },
-    targetMaxPages: 1,
-  },
-  "standard-two-page": {
-    id: "standard-two-page",
-    pageWidthMm: 210,
-    pageHeightMm: 297,
-    marginsMm: { top: 18, right: 18, bottom: 18, left: 18 },
-    typography: {
-      fontFamily: "Arial, sans-serif",
-      bodyFontSizePt: 10.5,
-      headingFontSizePt: 14,
-      lineHeight: 1.42,
-    },
-    lineMetricsPt: { body: 16, heading: 25 },
-    wrapping: { bodyMaxCharacters: 88, bulletMaxCharacters: 82 },
-    targetMaxPages: 2,
-  },
-};
 
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value;
@@ -97,8 +46,11 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value);
 }
 
-/** Immutable profiles used by every controlled output format. */
-export const renderingLayoutProfiles = deepFreeze(layoutProfileTable);
+/** The profile a render draws with: the selected template's, or the layout profile named directly. */
+function resolveRenderingProfile(options: RenderOptions): RenderingLayoutProfile {
+  const template = resolveRenderingTemplate(options);
+  return getRenderingLayoutProfile(layoutProfileIdForTemplate(template));
+}
 
 function getRenderingLayoutProfile(profileId: string | undefined): RenderingLayoutProfile {
   const selected = profileId ?? defaultLayoutProfileId;
@@ -252,6 +204,8 @@ export interface RenderValidationIssue {
 export interface RenderOptions extends RenderConstraints {
   readonly generatedAt?: string;
   readonly layoutProfile?: RenderingLayoutProfileId;
+  /** A built-in rendering template id; classic by default. Must agree with `layoutProfile` if both are set. */
+  readonly templateId?: string;
 }
 
 export interface RenderMetadata {
@@ -261,6 +215,8 @@ export interface RenderMetadata {
   readonly generatedAt: string;
   readonly templateVersion: string;
   readonly layoutProfile: RenderingLayoutProfileId;
+  /** The rendering template this document was drawn with. Not part of the QA schema. */
+  readonly renderingTemplate: { readonly id: string; readonly version: number };
   readonly checksum: string;
   readonly sourceContentChecksum: string;
 }
@@ -331,6 +287,7 @@ function assertCanonicalOptionKeys(options: RenderOptions): void {
     "allowUnbackedClaims",
     "generatedAt",
     "layoutProfile",
+    "templateId",
   ]);
   for (const key of Object.keys(options as object)) {
     if (!allowedKeys.has(key)) {
@@ -397,7 +354,7 @@ function assertExportable(artifact: DraftArtifact, constraints: RenderConstraint
 
 export function renderMarkdown(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
-  getRenderingLayoutProfile(options.layoutProfile);
+  resolveRenderingProfile(options);
   const sections = orderedSections(artifact);
   if (artifact.kind === "cover-letter") {
     return `${sections
@@ -443,18 +400,10 @@ function escapeHtml(value: string): string {
 
 export function renderHtml(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const profile = resolveRenderingProfile(options);
   const sections = orderedSections(artifact)
     .map((section) => {
-      const blocks = section.blocks
-        .map((block) => {
-          const tag = block.type === "bullet" ? "li" : "p";
-          return `<${tag}>${escapeHtml(block.text)}</${tag}>`;
-        })
-        .join("");
-      const list = section.blocks.some((block) => block.type === "bullet")
-        ? `<ul>${blocks}</ul>`
-        : blocks;
+      const list = sectionBodyHtml(section, profile, escapeHtml);
       return `<section><h2>${escapeHtml(section.title)}</h2>${list}</section>`;
     })
     .join("");
@@ -470,14 +419,18 @@ function controlledCss(profile: RenderingLayoutProfile): string {
     left: leftMargin,
   } = profile.marginsMm;
   const contentWidth = profile.pageWidthMm - leftMargin - rightMargin;
-  const headingMargin = profile.lineMetricsPt.heading - profile.lineMetricsPt.body;
+  const spacing = profile.previewSpacingPt;
   return `
 @page { size: A4; margin: ${topMargin}mm ${rightMargin}mm ${bottomMargin}mm ${leftMargin}mm; }
 body { color: #1e2932; font-family: ${profile.typography.fontFamily}; font-size: ${profile.typography.bodyFontSizePt}pt; line-height: ${profile.typography.lineHeight}; }
 main { max-width: ${contentWidth}mm; margin: 0 auto; }
-h2 { margin: ${headingMargin}pt 0 7pt; border-bottom: 1px solid #94a3ad; padding-bottom: 3pt; font-size: ${profile.typography.headingFontSizePt}pt; }
-p, li { margin: 0 0 5pt; }
-ul { margin: 0 0 5pt; padding-left: 17pt; }
+h2 { margin: ${spacing.headingBefore}pt 0 ${spacing.headingAfter}pt; border-bottom: 1px solid #94a3ad; padding-bottom: 3pt; font-size: ${profile.typography.headingFontSizePt}pt; }
+p, li { margin: 0 0 ${spacing.blockAfter}pt; }
+p.role { display: flex; justify-content: space-between; gap: 12pt; margin-top: ${spacing.roleBefore}pt; font-weight: bold; }
+p.role .date { flex: none; font-weight: normal; }
+p.role .separator { display: none; }
+section > h2 + p.role, section > h2 + ul > p.role:first-child { margin-top: 0; }
+ul { margin: 0 0 ${spacing.blockAfter}pt; padding-left: ${spacing.listIndent}pt; }
 `;
 }
 
@@ -487,7 +440,7 @@ function bytesForFormat(
   options: RenderOptions = {},
 ): Uint8Array {
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const profile = resolveRenderingProfile(options);
   const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   if (format === "pdf") {
     return buildPdf({ artifact, profile, documentTitle, generatedAt: options.generatedAt });
@@ -534,17 +487,28 @@ function extractMarkdownUnits(raw: string): readonly VisibleTextUnit[] {
 
 function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
   const units: VisibleTextUnit[] = [];
+  const runs: PdfTextRun[] = [];
   const tjPattern = /\(((?:\\.|[^()])*)\)\s*Tj/gu;
   for (const match of raw.matchAll(tjPattern)) {
     const escaped = match[1] ?? "";
     const start = match.index ?? 0;
     const lineStart = raw.lastIndexOf("\n", start) + 1;
     const prefix = raw.slice(lineStart, start);
-    const fontSize = Number(prefix.match(/\/F\d+\s+([0-9.]+)\s+Tf/u)?.[1] ?? 0);
-    units.push({
+    // Titles and headings are the only F2 runs; role headers use the same bold face as F3.
+    const font = Number(prefix.match(/\/F(\d+)\s+[0-9.]+\s+Tf/u)?.[1]);
+    const tag = pdfRunTag(prefix);
+    const position = prefix.match(/1\s+0\s+0\s+1\s+([-0-9.]+)\s+([-0-9.]+)\s+Tm/u);
+    runs.push({
       text: decodePdfText(escaped),
-      kind: fontSize >= 12 ? "heading" : "body",
+      fontNumber: font,
+      x: Number(position?.[1]),
+      y: Number(position?.[2]),
+      tag,
     });
+  }
+  // Dates, labels and compact lists read back as the artifact's own blocks.
+  for (const run of recoverPdfRuns(runs)) {
+    units.push({ text: run.text, kind: run.fontNumber === 2 ? "heading" : "body" });
   }
   return units;
 }
@@ -554,12 +518,8 @@ function extractDocxUnits(raw: string): readonly VisibleTextUnit[] {
   const paragraphPattern = /<w:p(?:\s[^>]*)?>(.*?)<\/w:p>/gs;
   for (const paragraph of raw.matchAll(paragraphPattern)) {
     const xmlParagraph = paragraph[1] ?? "";
-    const texts: string[] = [];
-    for (const match of xmlParagraph.matchAll(/<w:t[^>]*>(.*?)<\/w:t>/gs)) {
-      texts.push(decodeXmlText(match[1] ?? ""));
-    }
-    const text = texts.join("");
-    if (text !== "") {
+    for (const text of docxParagraphUnits(xmlParagraph, decodeXmlText)) {
+      if (text === "") continue;
       units.push({
         text,
         kind: /w:pStyle\s+w:val="(?:Heading1|Title)"/u.test(xmlParagraph) ? "heading" : "body",
@@ -952,7 +912,10 @@ export function buildRenderingQaReport(input: BuildRenderingQaReportInput): Buil
   if (!(input.rendered.content instanceof Uint8Array)) {
     throw new TypeError("rendered.content must be a Uint8Array");
   }
-  const renderedMetadata = renderingQaRenderedMetadataSchema.parse(input.rendered.metadata);
+  // The QA schema is strict and does not know the template record; the export payload carries it.
+  const { renderingTemplate: _renderingTemplate, ...qaMetadata } = input.rendered
+    .metadata as Partial<RenderMetadata> & Record<string, unknown>;
+  const renderedMetadata = renderingQaRenderedMetadataSchema.parse(qaMetadata);
   const contentChecksum = createHash("sha256").update(input.rendered.content).digest("hex");
   if (contentChecksum !== renderedMetadata.checksum) {
     throw new Error("rendered metadata checksum does not match rendered content");
@@ -1107,7 +1070,8 @@ export function renderArtifact(
     throw new RangeError(`Unsupported output format: ${format}`);
   }
   assertCanonicalOptionKeys(options);
-  const profile = getRenderingLayoutProfile(options.layoutProfile);
+  const template = resolveRenderingTemplate(options);
+  const profile = resolveRenderingProfile(options);
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const effectiveOptions: RenderOptions = { ...options, generatedAt };
   assertExportable(artifact, effectiveOptions);
@@ -1120,6 +1084,7 @@ export function renderArtifact(
     generatedAt,
     templateVersion: renderTemplateVersion,
     layoutProfile: profile.id,
+    renderingTemplate: { id: template.id, version: template.version },
     checksum,
     sourceContentChecksum: computeArtifactContentChecksum(artifact),
   };
@@ -1139,3 +1104,9 @@ export function renderArtifact(
 
 export * from "./controlled-document-inspector.js";
 export * from "./document-layout.js";
+export {
+  profileFromTemplate,
+  type RenderingLayoutProfile,
+  renderingLayoutProfiles,
+} from "./layout-profile.js";
+export * from "./templates.js";

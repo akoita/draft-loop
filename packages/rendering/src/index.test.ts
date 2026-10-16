@@ -55,7 +55,7 @@ describe("Markdown rendering", () => {
       artifactId: "artifact-fixture",
       artifactVersion: 1,
       format: "pdf",
-      templateVersion: "cv-controlled-v1",
+      templateVersion: "cv-controlled-v4",
     });
     expect(pdf.metadata.checksum).toBe(samePdf.metadata.checksum);
     expect(pdf.extension).toBe(".pdf");

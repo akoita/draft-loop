@@ -8,6 +8,8 @@ import type {
   WritingPolicyRule,
 } from "@draft-loop/schemas";
 
+import { findBulletFragment } from "./bullet-fragment.js";
+import { findBulletSeries } from "./bullet-series.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
@@ -494,6 +496,21 @@ export function validateDraftArtifact(
       } else {
         seenBlocks.add(normalized);
       }
+      const fragment = block.type === "bullet" ? findBulletFragment(block.text) : undefined;
+      if (fragment !== undefined) {
+        addIssue(issues, {
+          code: "editorial-fragment",
+          category: "quality",
+          severity: "warning",
+          message:
+            fragment.reason === "lowercase-start"
+              ? `bullet starts mid-sentence, like a copied source fragment: "${fragment.quote}"`
+              : `bullet ends on a dangling connector, like a copied source fragment: "${fragment.quote}"`,
+          sectionId: section.id,
+          blockId: block.id,
+          location: writingPolicyLocation(block.text, fragment.start, fragment.end),
+        });
+      }
       const repeated = findRepeatedPhrase(block.text);
       if (repeated !== undefined) {
         addIssue(issues, {
@@ -506,6 +523,19 @@ export function validateDraftArtifact(
           location: writingPolicyLocation(block.text, repeated.start, repeated.end),
         });
       }
+    }
+  }
+
+  for (const section of artifact.sections) {
+    for (const series of findBulletSeries(section.blocks)) {
+      addIssue(issues, {
+        code: "dense-bullet-series",
+        category: "quality",
+        severity: "warning",
+        message: series.message,
+        sectionId: section.id,
+        blockId: series.blockId,
+      });
     }
   }
 

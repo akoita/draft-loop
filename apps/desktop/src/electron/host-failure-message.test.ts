@@ -88,3 +88,28 @@ describe("refused run start or resume", () => {
     );
   });
 });
+
+describe("refused export", () => {
+  const exportWrite = { type: "export.write", input: {} } as never;
+  const dispatch = (type: string) =>
+    ({ type: "review.dispatch", input: { action: { type } } }) as never;
+  const refusal = new CliUserError("The PDF export failed rendering checks; no file was written.");
+
+  it("shows the path-free refusal as written for both export command shapes", () => {
+    expect(hostFailureMessage(exportWrite, refusal)).toBe(refusal.message);
+    expect(hostFailureMessage(dispatch("export"), refusal)).toBe(refusal.message);
+  });
+
+  it("keeps a message that quotes a path, a plain error or another action generic", () => {
+    const quoted = new CliUserError("Could not write /home/me/exports/run.pdf.");
+    expect(hostFailureMessage(exportWrite, quoted)).toBe(
+      "Exporting the draft failed with an unexpected error.",
+    );
+    expect(hostFailureMessage(dispatch("export"), new Error("boom"))).toBe(
+      "Exporting the draft failed with an unexpected error.",
+    );
+    expect(hostFailureMessage(dispatch("pause"), refusal)).toBe(
+      "Pausing the review failed with an unexpected error.",
+    );
+  });
+});

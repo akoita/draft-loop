@@ -71,7 +71,7 @@ import { createCanonicalCandidateProfilePersistenceService } from "./candidate-p
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { CliUserError } from "./cli-user-error.js";
 import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
-import { assertExportRenderingQa } from "./export-qa.js";
+import { assertExportRenderingQa, exportTemplateRecord } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { exportRecordId } from "./export-record.js";
 import {
@@ -2202,7 +2202,7 @@ export async function exportRun(
       allowUnbackedClaims: false,
       generatedAt: timestamp(),
     });
-    const renderingQa = assertExportRenderingQa(snapshot.artifact, rendered);
+    const qa = assertExportRenderingQa(snapshot.artifact, rendered);
     await writeFile(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
@@ -2219,9 +2219,9 @@ export async function exportRun(
         format,
         approved: true,
         artifactVersion: rendered.metadata.artifactVersion,
-        templateVersion: rendered.metadata.templateVersion,
+        ...exportTemplateRecord(rendered),
         mimeType: rendered.mimeType,
-        renderingQa,
+        renderingQa: qa.report,
       },
     });
     const transitionEngine = createOrchestrationEngine({ ...noopAgents(), store: runStore });
@@ -2229,7 +2229,7 @@ export async function exportRun(
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
     );
-    const lengthWarning = await exportLengthWarningLine(storage, snapshot);
+    const lengthWarning = await exportLengthWarningLine(storage, snapshot, qa.pageOverflow);
     if (lengthWarning !== undefined) io.write(lengthWarning);
     return outputPath;
   } finally {

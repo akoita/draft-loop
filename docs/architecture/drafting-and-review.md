@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v11`, which states and sends a
+New runs record author template `cli-author-v13`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v11 retain 32,768.
+v4 to v13 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -725,6 +725,39 @@ deriving them from the job (`emphasisPlanThemeSourceInstructions` replaces
 `emphasis-theme-gap`. The plan is recorded in run history as a
 `run.application-plan` event and shown in **Run details** as "Application plan".
 
+### Fuller bullets and labelled Core areas (#1338)
+
+Author `cli-author-v12` keeps v11 and asks for 3 to 5 substantive bullets per
+role, each combining what was done, how, and the scope or result (about 30 to 60
+words), labelled Core areas lines whose label words appear in cited evidence,
+a few compact certification lines, and complete statements only. The guidance
+never overrides grounding, required sections or the writing policy. Resumed v11
+and earlier runs keep their exact prompt. Deterministic validation reports a
+bullet that opens with a lowercase letter (other than a known name such as `iOS`
+or `npm`) or ends on a dangling connector as an `editorial-fragment` warning, so
+the critic and readiness steps see it. New runs use v13 (below), which supersedes
+v12's bullet guidance; the fragment check still applies.
+
+### Context paragraphs and labelled lines (#1341)
+
+Author `cli-author-v13` supersedes v12's bullet guidance: it is v11 plus a block
+that replaces it. Bullet markers should sit several lines apart, so short bullets
+are never stacked. The author writes:
+
+- **Per role or project:** a role line paragraph, a 1 to 3 line context paragraph
+  (what it was, scope, team, stack), then 2 to 4 bullets of about 3 to 4 lines
+  (roughly 45 to 70 words). Older roles get 0 to 2 bullets.
+- **Whole CV:** about 12 to 20 bullets, never more than 4 in a row.
+- **Core areas, Skills, Education and Certifications:** `Label: items` paragraphs
+  grouped by theme, never bullets. Label words must appear in cited evidence.
+
+The guidance never overrides grounding, required sections or the writing policy.
+Resumed v12 and earlier runs keep their exact prompt. Deterministic validation
+adds a `dense-bullet-series` quality warning, one per run of consecutive bullets,
+anchored to its first block. It fires for more than 4 bullets in a row, a section
+of 4 or more one-line bullets, and adjacent bullets where either has under about
+30 words.
+
 ### Stop and pause on findings (#1113)
 
 The `stable-convergence` score-delta rule is unchanged and still stops a run
@@ -788,6 +821,80 @@ consistently to the minimal HTML, PDF, and DOCX implementations. Content is
 never truncated, reordered, summarized, or rewritten to satisfy a page target;
 an overflowing PDF is a deterministic QA failure signal.
 
+`standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
+leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins and 10 mm top and bottom margins,
+wrapped to the real line width. About 2,000 words of a typical CV fit on two
+pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
+DOCX names Calibri with the same exact leading. Exports record the layout as
+`cv-controlled-v4`, which adds role context lines, bold labels and compact
+lists. Records written as `cv-controlled-v3` (role headers), `cv-controlled-v2`
+(before role headers) or `cv-controlled-v1` (the earlier, looser layout) still
+parse.
+
+The layout reads structure from the blocks without editing their text:
+
+- **Role context.** In Experience and Projects, a paragraph with a ` | `
+  segment is a role header when bullets or a plain paragraph follow it. A plain
+  paragraph directly after it is a context line and stays regular. A paragraph
+  directly followed by bullets remains a role header.
+- **Labels.** A paragraph or bullet that opens with a short `Label:` followed by a space (at most
+  five words and 40 characters, with a letter, and not a URL scheme or a time)
+  draws the label in bold and the rest regular.
+- **Compact lists.** A run of three or more consecutive bullets that each fit on
+  one line is drawn as one wrapped paragraph with the items joined by ` · ` and
+  no bullet glyphs (`minCompactListItems` in `compact-list.ts`). Runs with a
+  two-line bullet stay bullets.
+
+The PDF tags label and compact lines with marked content, and the DOCX uses a
+`CompactList` style, so the inspectors split a compact paragraph back into its
+bullets and rejoin labels. Content-integrity and block-order checks are
+unchanged.
+
+The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
+Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed
+TypeScript module, so the CLI and the bundled desktop app need no file lookup;
+a two-page PDF is about 570 kB. Wrapping and the length estimate measure with
+the font's own advance widths. `compact-one-page` keeps the unembedded
+Helvetica. The font source, pinned checksums, licence, and regeneration steps
+are in `packages/rendering/fonts/carlito/NOTICE.md`.
+
+#### Rendering templates (#1328)
+
+A rendering template is validated data (`renderingTemplateSchema`, exposed as
+`@draft-loop/schemas/rendering-template`): page margins and page target, font
+sizes and line height, spacing, and heading rule. Every value is bounded, and the
+enums accept only what the renderer draws today; later templates widen them.
+
+`packages/rendering/src/templates.ts` holds the built-ins. `classic` (the
+default) produces the `standard-two-page` profile and `compact` produces
+`compact-one-page`. `profileFromTemplate` derives the profile every output format
+shares; settings a template does not carry (font names, wrapping caps, preview
+spacing, title and heading leading) are fixed per page target for the `sans`
+family. `renderArtifact` takes an optional `templateId` and still accepts
+`layoutProfile`; naming both requires that they agree.
+
+The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
+and in the export payload as `renderingTemplate`. The rendering-QA report keeps
+only the layout profile.
+
+#### Role headers
+
+In an Experience or Projects section, a paragraph directly followed by bullets
+is a role header (`role` layout block, `packages/rendering/src/role-header.ts`).
+It is drawn bold with extra space before it, except directly under a section
+heading (`roleBeforePt`; bullets follow each other with no extra gap). If its last
+` | ` segment is a month-year or year date range, that segment is right-aligned
+on the same baseline: a right tab stop in the DOCX, flex alignment in the HTML
+preview. A left part too long for the line wraps, and a line that cannot share
+its row with the dates falls back to plain bold. The block text is never edited.
+
+The PDF draws role headers in font resource `F3`, a second name for the bold
+face of `F2` that reuses the same embedded font file. The inspectors read `F2`
+runs as headings and `F3` runs as body text, so role headers are not counted as
+sections. The layout does not draw the ` | ` before a right-aligned date; the
+PDF and DOCX inspectors restore it when they recover the text (same baseline, or
+a bare tab), so content integrity compares role lines like any paragraph.
+
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,
 and inspectable PDF page counts. The application builds this report after exact
@@ -795,7 +902,13 @@ approval and before writing any export, and persists it with export history.
 Markdown uses deterministic QA; PDF and DOCX use the named controlled byte
 inspectors, which recover text and report bounded page/layout failures.
 
-The PDF inspector checks page targets, blank pages, text coordinates, and
+Content-integrity, active-content, clipped-text, blank-page, and orphan-section
+failures stop the export before any file is written. A PDF that fails only page
+fit is still written: its stored report keeps `passed: false`, and the export
+writes one `Length warning:` line with the real page count, as DOCX and
+Markdown do from their length estimate.
+
+The PDF inspector checks page targets, blank pages, text coordinates (each run measured with the PDF font's real advance widths against the right margin), and
 orphaned section starts where a page boundary makes them determinable. The DOCX
 inspector checks OOXML text order, explicit page breaks, package integrity, and
 relationship targets. OOXML bytes cannot establish true office pagination or

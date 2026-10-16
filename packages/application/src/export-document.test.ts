@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   exportLengthWarningLine,
   exportLengthWarningPrefix,
+  pageOverflowWarningLine,
   parseExportFormat,
 } from "./export-document.js";
 
@@ -23,7 +24,8 @@ function artifactWithBullets(count: number): DraftArtifact {
         order: 0,
         blocks: Array.from({ length: count }, (_, index) => ({
           id: `bullet-${index}`,
-          type: "bullet" as const,
+          // Paragraphs: a run of short bullets is drawn as one compact paragraph.
+          type: "paragraph" as const,
           text: `Delivered outcome ${index} with measurable impact for the team.`,
           claimIds: [],
         })),
@@ -67,7 +69,7 @@ describe("export format names", () => {
 });
 
 describe("export length warning", () => {
-  const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(70) };
+  const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(100) };
 
   it("warns, as an estimate, when the content clearly exceeds the policy's page target", async () => {
     const line = await exportLengthWarningLine(readerWithPolicy("one-page"), long);
@@ -95,5 +97,21 @@ describe("export length warning", () => {
         long,
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("PDF page overflow warning", () => {
+  it("names the real page count and the layout's target, and replaces the estimate", async () => {
+    const standard = { pageCount: 4, targetPageCount: 2, layoutName: "standard" };
+    expect(pageOverflowWarningLine(standard)).toBe(
+      "Length warning: The PDF runs to 4 pages; the standard layout targets 2 pages.",
+    );
+    expect(
+      pageOverflowWarningLine({ pageCount: 2, targetPageCount: 1, layoutName: "compact" }),
+    ).toBe("Length warning: The PDF runs to 2 pages; the compact layout targets 1 page.");
+    const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(70) };
+    expect(await exportLengthWarningLine(readerWithPolicy("one-page"), long, standard)).toBe(
+      pageOverflowWarningLine(standard),
+    );
   });
 });

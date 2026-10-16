@@ -111,8 +111,9 @@ function unzipStored(content: Uint8Array): ReadonlyMap<string, string> {
 
 function wordTextRuns(documentXml: string): string[] {
   return [...documentXml.matchAll(/<w:p>([\s\S]*?)<\/w:p>/gu)].map((paragraph) =>
-    [...(paragraph[1] ?? "").matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/gu)]
-      .map((run) => run[1] ?? "")
+    // A bare <w:tab/> is the right-aligned date of a role header; it stands for the " | " before it.
+    [...(paragraph[1] ?? "").matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\/>/gu)]
+      .map((run) => run[1] ?? " | ")
       .join("")
       .replaceAll("&lt;", "<")
       .replaceAll("&gt;", ">")
@@ -145,7 +146,7 @@ describe("sendable DOCX export", () => {
       "Heading1",
       "Normal",
       "Heading1",
-      "Normal",
+      "Role",
       "ListBullet",
       "ListBullet",
       "Heading1",
@@ -155,7 +156,7 @@ describe("sendable DOCX export", () => {
 
   it("uses a standard font, A4 margins and a real bullet list without tables or text boxes", () => {
     const styles = parts.get("word/styles.xml") ?? "";
-    expect(styles).toContain('w:ascii="Arial"');
+    expect(styles).toContain('w:ascii="Calibri"');
     expect(styles).toContain('w:styleId="Heading1"');
     expect(parts.get("word/numbering.xml")).toContain('w:numFmt w:val="bullet"');
     expect(documentXml).toContain('<w:pgSz w:w="11906" w:h="16838"/>');
@@ -242,7 +243,7 @@ describe("line wrapping fills the real content width", () => {
       const lines = blockLines({ kind, text: longText }, profile);
       expect(lines.length).toBeGreaterThan(2);
       for (const line of lines.slice(0, -1)) {
-        const width = textWidthPt(line, body, false);
+        const width = textWidthPt(line, body, false, profile.typography.pdfFont);
         expect(width).toBeLessThanOrEqual(available);
         expect(width).toBeGreaterThanOrEqual(available * 0.85);
       }
@@ -255,7 +256,9 @@ describe("line wrapping fills the real content width", () => {
     const raw = new TextDecoder().decode(pdf.content);
     const drawn = [...raw.matchAll(/\(([^)]*)\) Tj/gu)].map((match) => match[1] ?? "");
     const bulletLines = drawn.filter((text) => !/^(Experience)$/u.test(text));
-    const widest = Math.max(...bulletLines.map((text) => textWidthPt(text, 10.5, false)));
+    const widest = Math.max(
+      ...bulletLines.map((text) => textWidthPt(text, 10.5, false, profile.typography.pdfFont)),
+    );
     expect(widest).toBeGreaterThan(contentWidthPt(profile) * 0.85);
   });
 });
@@ -285,10 +288,11 @@ describe("length estimate", () => {
         title: "Experience",
         kind: "experience",
         order: 0,
-        blocks: Array.from({ length: 70 }, (_, index) =>
+        blocks: Array.from({ length: 100 }, (_, index) =>
           block(
             `long-${index}`,
-            "bullet",
+            // Paragraphs: a run of short bullets would be drawn as one compact paragraph.
+            "paragraph",
             `Delivered outcome ${index} with measurable impact for the team.`,
           ),
         ),

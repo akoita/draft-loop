@@ -85,9 +85,10 @@ describe("controlled document byte inspector", () => {
           summary,
           {
             ...experience,
-            blocks: Array.from({ length: 45 }, (_, index) => ({
+            blocks: Array.from({ length: 100 }, (_, index) => ({
               id: `experience-${index}`,
-              type: "bullet" as const,
+              // Paragraphs: a run of short bullets would be drawn as one compact paragraph.
+              type: "paragraph" as const,
               text: `Chronology milestone ${index} remains in order.`,
               claimIds: [],
             })),
