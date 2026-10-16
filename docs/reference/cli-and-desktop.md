@@ -266,12 +266,12 @@ Fixture walks of this journey, with their findings, are recorded in
 [Moving between pages](#moving-between-pages) and
 [Closing and reopening](#closing-and-reopening) apply throughout.
 
-The window first opens at about 90% of the primary display's usable area,
-centred and never below 1280×800 where the display allows it. DraftLoop
-remembers its size, position and maximized state in `window-state.json` in the
-app's user-data folder, and restores them on the next launch only if the window
-is still on a connected display. Otherwise it opens at the default size. The
-smallest window you can make is 1024×720.
+The window first opens centred at 1440×960 (smaller only where the display's
+usable area is under that, never above 95% of it) and is not maximized.
+DraftLoop remembers its size, position and maximized state in
+`window-state.json` in the app's user-data folder, and restores them on the next
+launch only if the window is still on a connected display. Otherwise it opens at
+the default size. The smallest window you can make is 1024×720.
 
 ### Start page
 
@@ -315,11 +315,7 @@ told apart; the full path never reaches the interface.
 
 Opening or creating a workspace lands on **Home**, never on the last review.
 Home shows what the workspace holds once for the candidate, then its
-applications. It fits a 1280×800 window without scrolling the page: a wide
-window puts Career evidence, Career profile and Workspace settings in one row
-with Applications below, and a narrow one moves Workspace settings to its own
-row. Each card shows one short line, and its **?** opens the full explanation.
-With many applications only the Applications section scrolls.
+applications:
 
 - **Header.** The workspace name, editable in place, and **Close workspace**.
 - **Flow strip.** "Career evidence → Career profile → Applications" shows how
@@ -338,23 +334,19 @@ With many applications only the Applications section scrolls.
   [Profile freshness](#profile-freshness). While a generation runs, the card
   shows In progress with the elapsed time and parts done, and **View progress**
   opens the live progress and **Cancel generation**.
-- **Applications.** One compact card per application with its name (two lines at
-  most; hover for the whole name), status (Drafting, In review, Approved,
-  Exported), and a one-line summary of last activity and run count, most recent
+- **Applications.** One card per application with its name, status (Drafting,
+  In review, Approved, Exported), last activity and run count, most recent
   first. When you chose an earlier run's draft, the card says which, such as
   "Using Run 2", and opening the card opens that run. The application whose
   review is running shows Review running instead.
   A workspace with nothing but its default application says so and points
   to **New application**. Beside it, **Import from another workspace** asks for
   another workspace's folder and imports it as an application (see
-  [Importing a workspace](#importing-a-workspace)); the **?** by the heading
-  explains it. Each card has a quiet **Archive** action,
+  [Importing a workspace](#importing-a-workspace)). Each card has **Archive**,
   and **Delete** when the application can be deleted (see
   [Archiving and deleting](#archiving-and-deleting)). Archived applications sit
   behind **Show archived**, where **Restore** brings them back.
-- **Workspace settings.** The configured model pair on one line, such as
-  "Mistral Large 4 (preview) writes · GPT-6 Luna reviews", with **Details** for
-  the exact ids and profiles, then **Change models**, the
+- **Workspace settings.** The configured model pair with **Change models**, the
   writing policy editor, and **Manage provider authentication**, which opens
   the provider sign-in dialog described under
   [Provider credentials](#provider-credentials). A line above the button

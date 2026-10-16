@@ -97,7 +97,7 @@ async function chooseFiles(input: {
 }
 
 /**
- * The first launch opens at about 90% of the primary display's work area, centred. Later launches
+ * The first launch opens centred at 1440×960, clamped to 95% of the primary display's work area. Later launches
  * restore the last bounds when they are still on a connected display.
  */
 function createWindow(): BrowserWindow {

@@ -14,34 +14,32 @@ const laptop = { x: 0, y: 0, width: 1536, height: 816 };
 const second = { x: 1536, y: 0, width: 2560, height: 1400 };
 
 describe("default window bounds", () => {
-  it("fills about 90% of the work area, centred", () => {
+  it("opens centred at 1440x960 on a large display", () => {
     expect(defaultWindowBounds({ x: 0, y: 0, width: 2560, height: 1400 })).toEqual({
-      x: 128,
-      y: 70,
-      width: 2304,
-      height: 1260,
+      x: 560,
+      y: 220,
+      width: 1440,
+      height: 960,
     });
   });
 
-  it("is never below 1280x800 when the work area allows it", () => {
+  it("is clamped to 95% of the work area on a smaller display", () => {
     const bounds = defaultWindowBounds(laptop);
-    expect(bounds.width).toBe(1382);
-    expect(bounds.height).toBe(800);
-    expect(bounds.y).toBe(8);
-  });
-
-  it("uses the whole work area when it is smaller than 1280x800", () => {
+    expect(bounds.width).toBe(1440);
+    expect(bounds.height).toBe(775);
+    expect(bounds.x).toBe(48);
+    expect(bounds.y).toBe(21);
     expect(defaultWindowBounds({ x: 10, y: 20, width: 1100, height: 700 })).toEqual({
-      x: 10,
-      y: 20,
-      width: 1100,
-      height: 700,
+      x: 38,
+      y: 38,
+      width: 1045,
+      height: 665,
     });
   });
 
   it("is placed within a work area that does not start at the origin", () => {
     const bounds = defaultWindowBounds({ x: -1920, y: 40, width: 1920, height: 1040 });
-    expect(bounds).toEqual({ x: -1920 + 96, y: 40 + 52, width: 1728, height: 936 });
+    expect(bounds).toEqual({ x: -1920 + 240, y: 40 + 40, width: 1440, height: 960 });
   });
 });
 

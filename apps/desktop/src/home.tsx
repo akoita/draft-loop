@@ -33,9 +33,7 @@ import {
 import {
   CareerFlowStrip,
   careerEvidenceCardSubtitle,
-  careerEvidenceCardTagline,
   careerProfileCardSubtitle,
-  careerProfileCardTagline,
 } from "./career-flow.js";
 import {
   applicationActivityText,
@@ -155,34 +153,11 @@ export function Chip({
   return <span className={`home-chip home-chip-${tone}`}>{children}</span>;
 }
 
-/**
- * A small "?" that opens a short explanation in place. The default view stays one line; the
- * full text is one click away and, being in the markup, stays available to assistive technology.
- */
-export function HomeHelp({
-  label,
-  children,
-}: {
-  /** What the explanation is about, for the button's accessible name. */
-  readonly label: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <details className="home-help">
-      <summary aria-label={label} title={label}>
-        ?
-      </summary>
-      <div className="home-help-body">{children}</div>
-    </details>
-  );
-}
-
 /** A status card: title, one-line purpose, a chip, and the action that opens its screen. */
 export function SummaryCard({
   id,
   title,
   subtitle,
-  tagline,
   presentation,
   headline,
   children,
@@ -190,10 +165,8 @@ export function SummaryCard({
 }: {
   readonly id: string;
   readonly title: string;
-  /** What the card is, consistent with the intro of the page it opens; shown behind the "?". */
+  /** One line saying what the card is, consistent with the intro of the page it opens. */
   readonly subtitle: string;
-  /** The one short line shown by default. */
-  readonly tagline: string;
   readonly presentation: Pick<HomeStatusPresentation, "chip" | "tone">;
   readonly headline?: string;
   readonly children?: ReactNode;
@@ -203,12 +176,9 @@ export function SummaryCard({
     <section className="panel home-card" aria-labelledby={id}>
       <div className="home-card-head">
         <h2 id={id}>{title}</h2>
-        <HomeHelp label={`About ${title}`}>
-          <p className="home-card-subtitle">{subtitle}</p>
-        </HomeHelp>
         <Chip tone={presentation.tone}>{presentation.chip}</Chip>
       </div>
-      <p className="home-card-tagline">{tagline}</p>
+      <p className="home-card-subtitle">{subtitle}</p>
       {headline === undefined ? null : <p className="home-card-headline">{headline}</p>}
       {children}
       <div className="home-card-actions">{action}</div>
@@ -291,13 +261,6 @@ export function ApplicationCard({
   });
   const nudge = onRename !== undefined && !rename.editing && needsApplicationName(application);
   const chosenRunText = applicationChosenRunText(application);
-  // The meta is one line that is cut when the card is narrow; its title has all of it.
-  const metaText = [
-    applicationActivityText(application.updatedAt, now),
-    applicationRunText(application.runCount),
-    ...(chosenRunText === null ? [] : [chosenRunText]),
-    ...(application.isDefault ? ["Original workspace job"] : []),
-  ].join(" · ");
   return (
     <li className={archived ? "application-card application-card-archived" : "application-card"}>
       <div className="application-card-head">
@@ -361,54 +324,25 @@ export function ApplicationCard({
           </Chip>
         )}
       </div>
-      <div className="application-card-foot">
-        <p className="application-card-meta" id={metaId} title={metaText}>
-          <span title={application.updatedAt}>
-            {applicationActivityText(application.updatedAt, now)}
-          </span>
-          <span aria-hidden="true"> · </span>
-          <span>{applicationRunText(application.runCount)}</span>
-          {chosenRunText === null ? null : (
-            <>
-              <span aria-hidden="true"> · </span>
-              <span className="application-card-chosen-run">{chosenRunText}</span>
-            </>
-          )}
-          {application.isDefault ? (
-            <>
-              <span aria-hidden="true"> · </span>
-              <span>Original workspace job</span>
-            </>
-          ) : null}
-        </p>
-        {actions.confirmingDelete === true && onConfirmDelete !== undefined ? null : onArchive ===
-            undefined && onRequestDelete === undefined ? null : (
-          <div className="application-card-actions">
-            {onArchive === undefined ? null : (
-              <button
-                className="button button-quiet"
-                type="button"
-                disabled={busy}
-                aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
-                onClick={onArchive}
-              >
-                {archived ? "Restore" : "Archive"}
-              </button>
-            )}
-            {onRequestDelete === undefined ? null : (
-              <button
-                className="button button-danger"
-                type="button"
-                disabled={busy}
-                aria-label={`Delete ${application.name}`}
-                onClick={onRequestDelete}
-              >
-                Delete
-              </button>
-            )}
-          </div>
+      <p className="application-card-meta" id={metaId}>
+        <span title={application.updatedAt}>
+          {applicationActivityText(application.updatedAt, now)}
+        </span>
+        <span aria-hidden="true"> · </span>
+        <span>{applicationRunText(application.runCount)}</span>
+        {chosenRunText === null ? null : (
+          <>
+            <span aria-hidden="true"> · </span>
+            <span className="application-card-chosen-run">{chosenRunText}</span>
+          </>
         )}
-      </div>
+        {application.isDefault ? (
+          <>
+            <span aria-hidden="true"> · </span>
+            <span>Original workspace job</span>
+          </>
+        ) : null}
+      </p>
       {nudge ? (
         <div className="application-card-nudge">
           <p>
@@ -448,7 +382,32 @@ export function ApplicationCard({
             </button>
           </div>
         </fieldset>
-      ) : null}
+      ) : onArchive === undefined && onRequestDelete === undefined ? null : (
+        <div className="application-card-actions">
+          {onArchive === undefined ? null : (
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={busy}
+              aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
+              onClick={onArchive}
+            >
+              {archived ? "Restore" : "Archive"}
+            </button>
+          )}
+          {onRequestDelete === undefined ? null : (
+            <button
+              className="button button-danger"
+              type="button"
+              disabled={busy}
+              aria-label={`Delete ${application.name}`}
+              onClick={onRequestDelete}
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </li>
   );
 }
@@ -661,7 +620,7 @@ export function HomeView({
   return (
     <div className="app-frame">
       <main className="app-shell app-shell-single">
-        <div className="main-column home-column">
+        <div className="main-column">
           <header className="home-header">
             <div className="home-header-identity">
               <WorkspaceLocation current="Home" />
@@ -690,7 +649,6 @@ export function HomeView({
               id="home-evidence-title"
               title="Career evidence"
               subtitle={careerEvidenceCardSubtitle}
-              tagline={careerEvidenceCardTagline}
               presentation={evidenceView}
               headline={evidenceView.headline}
               action={
@@ -707,7 +665,6 @@ export function HomeView({
               id="home-profile-title"
               title="Career profile"
               subtitle={careerProfileCardSubtitle}
-              tagline={careerProfileCardTagline}
               presentation={profilePresentation}
               action={
                 <button
@@ -729,31 +686,11 @@ export function HomeView({
                 </div>
               )}
             </SummaryCard>
-            {settings === undefined ? null : (
-              <section
-                className="panel home-card home-settings"
-                aria-labelledby="home-settings-title"
-              >
-                <div className="home-card-head">
-                  <h2 id="home-settings-title">Workspace settings</h2>
-                </div>
-                {settings}
-              </section>
-            )}
           </div>
 
           <section className="panel home-applications" aria-labelledby="home-applications-title">
             <div className="home-section-head">
-              <div className="home-section-title">
-                <h2 id="home-applications-title">Applications</h2>
-                {onImportApplication === undefined ? null : (
-                  <HomeHelp label="About importing an application">
-                    <p className="home-card-copy" id="home-import-explanation">
-                      {applicationImportExplanation}
-                    </p>
-                  </HomeHelp>
-                )}
-              </div>
+              <h2 id="home-applications-title">Applications</h2>
               <div className="home-section-actions">
                 {onImportApplication === undefined ? null : (
                   <button
@@ -778,6 +715,11 @@ export function HomeView({
                 )}
               </div>
             </div>
+            {onImportApplication === undefined ? null : (
+              <p className="home-card-copy" id="home-import-explanation">
+                {applicationImportExplanation}
+              </p>
+            )}
             {!disabled || disabledReason === null ? null : (
               <p className="home-card-copy home-actions-blocked" role="status">
                 {disabledReason}
@@ -798,22 +740,28 @@ export function HomeView({
                 </p>
               ),
             )}
-            {/* With many applications only this list scrolls, never the whole page. */}
-            <div className="home-applications-body">
-              <ApplicationsList
-                state={applications}
-                now={now}
-                onOpen={onOpenApplication}
-                onArchive={onArchiveApplication}
-                onRename={onRenameApplication}
-                onDelete={onDeleteApplication}
-                busyApplicationId={busyApplicationId}
-                runningApplicationId={runningApplicationId}
-                disabled={disabled}
-                initialShowArchived={initialShowArchived}
-              />
-            </div>
+            <ApplicationsList
+              state={applications}
+              now={now}
+              onOpen={onOpenApplication}
+              onArchive={onArchiveApplication}
+              onRename={onRenameApplication}
+              onDelete={onDeleteApplication}
+              busyApplicationId={busyApplicationId}
+              runningApplicationId={runningApplicationId}
+              disabled={disabled}
+              initialShowArchived={initialShowArchived}
+            />
           </section>
+
+          {settings === undefined ? null : (
+            <section className="panel home-settings" aria-labelledby="home-settings-title">
+              <div className="home-section-head">
+                <h2 id="home-settings-title">Workspace settings</h2>
+              </div>
+              {settings}
+            </section>
+          )}
         </div>
       </main>
     </div>
