@@ -110,6 +110,13 @@ function resumesRun(command: BridgeCommand): boolean {
   );
 }
 
+function isExport(command: BridgeCommand): boolean {
+  return (
+    command.type === "export.write" ||
+    (command.type === "review.dispatch" && command.input.action.type === "export")
+  );
+}
+
 // Some application messages quote a workspace path; one with a path separator is never shown.
 const pathSeparator = /[\\/]/u;
 
@@ -148,6 +155,10 @@ export function hostFailureMessage(command: BridgeCommand, error: unknown): stri
     error instanceof CliUserError &&
     !pathSeparator.test(error.message)
   ) {
+    return error.message;
+  }
+  // A refused export (a failed rendering check) is worded for a person and names no path.
+  if (isExport(command) && error instanceof CliUserError && !pathSeparator.test(error.message)) {
     return error.message;
   }
   if (command.type === "profile.derive") {

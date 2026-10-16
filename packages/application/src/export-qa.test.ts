@@ -7,7 +7,12 @@ import { renderArtifact } from "@draft-loop/rendering";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
-import { assertExportRenderingQa } from "./export-qa.js";
+import {
+  assertExportRenderingQa,
+  buildExportRenderingQa,
+  ExportRenderingQaError,
+  exportRenderingQaDecision,
+} from "./export-qa.js";
 import { createLocalApplicationDriver } from "./local.js";
 
 const generatedAt = "2026-08-30T10:00:00.000Z";
@@ -51,6 +56,158 @@ describe("application export rendering QA", () => {
     };
     expect(() => assertExportRenderingQa(artifact, tampered)).toThrow(/PDF|QA|marker|end/u);
   });
+
+  describe("page fit versus other rendering failures", () => {
+    function longArtifact(bullets: number) {
+      const artifact = sampleArtifact();
+      const [section] = artifact.sections;
+      return {
+        ...artifact,
+        sections: [
+          {
+            ...(section as NonNullable<typeof section>),
+            blocks: Array.from({ length: bullets }, (_, index) => ({
+              id: `bullet-${index}`,
+              type: "bullet" as const,
+              text: `Delivered outcome ${index} with measurable impact for the whole team.`,
+              claimIds: [],
+            })),
+          },
+        ],
+      };
+    }
+
+    it("returns a long PDF's honest failed report with the real page count", () => {
+      const artifact = longArtifact(120);
+      const rendered = renderArtifact(artifact, "pdf", { generatedAt });
+      const { report, pageOverflow } = assertExportRenderingQa(artifact, rendered);
+      expect(report.passed).toBe(false);
+      expect(report.deterministicPageCount).toBeGreaterThan(2);
+      expect(pageOverflow).toEqual({
+        pageCount: report.deterministicPageCount,
+        targetPageCount: 2,
+        layoutName: "standard",
+      });
+    });
+
+    it("reports no overflow for a PDF that fits", () => {
+      const artifact = sampleArtifact();
+      const rendered = renderArtifact(artifact, "pdf", { generatedAt });
+      const result = assertExportRenderingQa(artifact, rendered);
+      expect(result.report.passed).toBe(true);
+      expect(result.pageOverflow).toBeUndefined();
+    });
+
+    it("still refuses every other failure with a path-free user error", () => {
+      const artifact = longArtifact(120);
+      const report = buildExportRenderingQa(
+        artifact,
+        renderArtifact(artifact, "pdf", { generatedAt }),
+      );
+      const observation = report.viewerObservation;
+      if (observation === null) throw new Error("expected a PDF viewer observation");
+      const failures = {
+        incomplete: { ...report, complete: false },
+        "block order": {
+          ...report,
+          contentIntegrity: { ...report.contentIntegrity, blockOrderMatches: false },
+        },
+        "content count": {
+          ...report,
+          contentIntegrity: { ...report.contentIntegrity, recoveredVisibleContentCount: 1 },
+        },
+        "active content": {
+          ...report,
+          activeContent: { detected: true, signatures: ["pdf-javascript" as const] },
+        },
+        "missing observation": { ...report, viewerObservation: null },
+        "unbound observation": {
+          ...report,
+          viewerObservation: { ...observation, renderedChecksum: "0".repeat(64) },
+        },
+        "clipped text": { ...report, viewerObservation: { ...observation, clippedText: true } },
+        "blank page": { ...report, viewerObservation: { ...observation, blankPageNumbers: [2] } },
+        orphan: {
+          ...report,
+          viewerObservation: { ...observation, orphanSectionIds: ["summary"] },
+        },
+        "order lost": {
+          ...report,
+          viewerObservation: {
+            ...observation,
+            recoveredVisibleContentOrder: "not-preserved" as const,
+          },
+        },
+        "no page overflow": { ...report, deterministicPageCount: 2 },
+      };
+      for (const [name, failing] of Object.entries(failures)) {
+        let thrown: unknown;
+        try {
+          exportRenderingQaDecision(failing as typeof report);
+        } catch (error) {
+          thrown = error;
+        }
+        expect(thrown, name).toBeInstanceOf(ExportRenderingQaError);
+        expect((thrown as Error).message, name).toBe(
+          "The PDF export failed rendering checks; no file was written.",
+        );
+      }
+    });
+  });
+
+  it("exports a PDF that only runs past the page target, with an honest report and one length line", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-export-overflow-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      const requirements = Array.from(
+        { length: 100 },
+        (_, index) =>
+          `- Requirement ${index}: build reliable synthetic systems for the platform team and document every operational decision for later review by colleagues`,
+      );
+      await writeFile(join(root, "job.md"), `${requirements.join("\n")}\n`, "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Synthetic evidence\n", "utf8");
+      const lines: string[] = [];
+      const io = { write: (line: string) => void lines.push(line) };
+      const driver = createLocalApplicationDriver();
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        io,
+      );
+      const started = await driver.start({ root, allowProviderData: false }, io);
+      await driver.lifecycle({ root, runId: started.runId, action: "revision" }, io);
+      await driver.resume({ root, runId: started.runId, allowProviderData: false }, io);
+      await driver.lifecycle(
+        {
+          root,
+          runId: started.runId,
+          action: "approve",
+          readinessOverrideRationale: "Synthetic override: the fixture draft is long on purpose.",
+        },
+        io,
+      );
+
+      const pdfPath = await driver.export({ root, runId: started.runId, format: "pdf" }, io);
+      expect((await stat(pdfPath)).isFile()).toBe(true);
+      const warnings = lines.filter((line) => line.startsWith("Length warning: "));
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toMatch(
+        /^Length warning: The PDF runs to \d+ pages; the standard layout targets 2 pages\.$/u,
+      );
+
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const [record] = await storage.listExports(started.runId);
+        expect(record?.payload).toMatchObject({
+          format: "pdf",
+          renderingQa: { complete: true, passed: false, deterministicPassed: false },
+        });
+      } finally {
+        await storage.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("runs bounded QA for approved PDF/DOCX exports and persists the content-free report", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-export-qa-"));
