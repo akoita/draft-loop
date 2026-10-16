@@ -24,10 +24,17 @@ import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
 import type { PdfFontFamily } from "./pdf-fonts.js";
+import {
+  docxParagraphText,
+  isRoleHeaderBlock,
+  joinRoleDateRuns,
+  type PdfTextRun,
+  splitRoleHeader,
+} from "./role-header.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
-export const renderTemplateVersion = "cv-controlled-v2";
+export const renderTemplateVersion = "cv-controlled-v3";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
@@ -63,6 +70,7 @@ export interface RenderingLayoutProfile {
     readonly headingBefore: number;
     readonly headingAfter: number;
     readonly blockAfter: number;
+    readonly roleBefore: number;
     readonly listIndent: number;
   };
   readonly wrapping: {
@@ -93,11 +101,18 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       headingBeforePt: 8,
       headingAfterPt: 4,
       blockAfterPt: 3,
+      roleBeforePt: 5,
       titleAfterPt: 2,
       contactAfterPt: 0,
       bulletIndentPt: 14,
     },
-    previewSpacingPt: { headingBefore: 9, headingAfter: 7, blockAfter: 5, listIndent: 17 },
+    previewSpacingPt: {
+      headingBefore: 9,
+      headingAfter: 7,
+      blockAfter: 5,
+      roleBefore: 5,
+      listIndent: 17,
+    },
     wrapping: { bodyMaxCharacters: 96, bulletMaxCharacters: 90 },
     targetMaxPages: 1,
   },
@@ -120,12 +135,19 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       titleLinePt: 20,
       headingBeforePt: 6,
       headingAfterPt: 2,
-      blockAfterPt: 0.5,
+      blockAfterPt: 0,
+      roleBeforePt: 6,
       titleAfterPt: 2,
       contactAfterPt: 0,
       bulletIndentPt: 11,
     },
-    previewSpacingPt: { headingBefore: 6, headingAfter: 3, blockAfter: 2, listIndent: 11 },
+    previewSpacingPt: {
+      headingBefore: 6,
+      headingAfter: 3,
+      blockAfter: 2,
+      roleBefore: 6,
+      listIndent: 11,
+    },
     // Generous caps: the real Carlito line width (about 150 characters at 9 pt) always binds first.
     wrapping: { bodyMaxCharacters: 200, bulletMaxCharacters: 195 },
     targetMaxPages: 2,
@@ -482,13 +504,23 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+/** A role header: bold, with a date range right-aligned; the separator is kept for copy and paste. */
+function htmlRoleHeader(text: string): string {
+  const parts = splitRoleHeader(text);
+  if (parts === null) return `<p class="role">${escapeHtml(text)}</p>`;
+  return `<p class="role"><span>${escapeHtml(parts.left)}</span><span class="separator"> | </span><span class="date">${escapeHtml(parts.date)}</span></p>`;
+}
+
 export function renderHtml(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
   const profile = getRenderingLayoutProfile(options.layoutProfile);
   const sections = orderedSections(artifact)
     .map((section) => {
       const blocks = section.blocks
-        .map((block) => {
+        .map((block, index) => {
+          if (isRoleHeaderBlock(section.kind, section.blocks, index)) {
+            return htmlRoleHeader(block.text);
+          }
           const tag = block.type === "bullet" ? "li" : "p";
           return `<${tag}>${escapeHtml(block.text)}</${tag}>`;
         })
@@ -518,6 +550,10 @@ body { color: #1e2932; font-family: ${profile.typography.fontFamily}; font-size:
 main { max-width: ${contentWidth}mm; margin: 0 auto; }
 h2 { margin: ${spacing.headingBefore}pt 0 ${spacing.headingAfter}pt; border-bottom: 1px solid #94a3ad; padding-bottom: 3pt; font-size: ${profile.typography.headingFontSizePt}pt; }
 p, li { margin: 0 0 ${spacing.blockAfter}pt; }
+p.role { display: flex; justify-content: space-between; gap: 12pt; margin-top: ${spacing.roleBefore}pt; font-weight: bold; }
+p.role .date { flex: none; font-weight: normal; }
+p.role .separator { display: none; }
+section > h2 + p.role, section > h2 + ul > p.role:first-child { margin-top: 0; }
 ul { margin: 0 0 ${spacing.blockAfter}pt; padding-left: ${spacing.listIndent}pt; }
 `;
 }
@@ -575,18 +611,27 @@ function extractMarkdownUnits(raw: string): readonly VisibleTextUnit[] {
 
 function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
   const units: VisibleTextUnit[] = [];
+  const runs: PdfTextRun[] = [];
   const tjPattern = /\(((?:\\.|[^()])*)\)\s*Tj/gu;
   for (const match of raw.matchAll(tjPattern)) {
     const escaped = match[1] ?? "";
     const start = match.index ?? 0;
     const lineStart = raw.lastIndexOf("\n", start) + 1;
     const prefix = raw.slice(lineStart, start);
-    // Titles and headings are the only bold (F2) runs; body text is never bold.
-    const isBold = /\/F2\s+[0-9.]+\s+Tf/u.test(prefix);
-    units.push({
+    // Titles and headings are the only F2 runs; role headers use the same bold face as F3.
+    const font = Number(prefix.match(/\/F(\d+)\s+[0-9.]+\s+Tf/u)?.[1]);
+    const position = prefix.match(/1\s+0\s+0\s+1\s+([-0-9.]+)\s+([-0-9.]+)\s+Tm/u);
+    runs.push({
       text: decodePdfText(escaped),
-      kind: isBold ? "heading" : "body",
+      fontNumber: font,
+      x: Number(position?.[1]),
+      y: Number(position?.[2]),
     });
+  }
+  // A right-aligned date reads back with the " | " that precedes it in the artifact text.
+  const joined = joinRoleDateRuns(runs);
+  for (const run of joined) {
+    units.push({ text: run.text, kind: run.fontNumber === 2 ? "heading" : "body" });
   }
   return units;
 }
@@ -596,11 +641,7 @@ function extractDocxUnits(raw: string): readonly VisibleTextUnit[] {
   const paragraphPattern = /<w:p(?:\s[^>]*)?>(.*?)<\/w:p>/gs;
   for (const paragraph of raw.matchAll(paragraphPattern)) {
     const xmlParagraph = paragraph[1] ?? "";
-    const texts: string[] = [];
-    for (const match of xmlParagraph.matchAll(/<w:t[^>]*>(.*?)<\/w:t>/gs)) {
-      texts.push(decodeXmlText(match[1] ?? ""));
-    }
-    const text = texts.join("");
+    const text = docxParagraphText(xmlParagraph, decodeXmlText);
     if (text !== "") {
       units.push({
         text,

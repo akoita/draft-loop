@@ -68,7 +68,7 @@ describe("export format names", () => {
 });
 
 describe("export length warning", () => {
-  const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(70) };
+  const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(100) };
 
   it("warns, as an estimate, when the content clearly exceeds the policy's page target", async () => {
     const line = await exportLengthWarningLine(readerWithPolicy("one-page"), long);

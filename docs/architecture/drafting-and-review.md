@@ -805,8 +805,9 @@ leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins an
 wrapped to the real line width. About 2,000 words of a typical CV fit on two
 pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
 DOCX names Calibri with the same exact leading. Exports record the layout as
-`cv-controlled-v2`; records written as `cv-controlled-v1` (the earlier, looser
-layout) still parse.
+`cv-controlled-v3`, which adds role headers. Records written as
+`cv-controlled-v2` (before role headers) or `cv-controlled-v1` (the earlier,
+looser layout) still parse.
 
 The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
 Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed
@@ -815,6 +816,24 @@ a two-page PDF is about 570 kB. Wrapping and the length estimate measure with
 the font's own advance widths. `compact-one-page` keeps the unembedded
 Helvetica. The font source, pinned checksums, licence, and regeneration steps
 are in `packages/rendering/fonts/carlito/NOTICE.md`.
+
+#### Role headers
+
+In an Experience or Projects section, a paragraph directly followed by bullets
+is a role header (`role` layout block, `packages/rendering/src/role-header.ts`).
+It is drawn bold with extra space before it, except directly under a section
+heading (`roleBeforePt`; bullets follow each other with no extra gap). If its last
+` | ` segment is a month-year or year date range, that segment is right-aligned
+on the same baseline: a right tab stop in the DOCX, flex alignment in the HTML
+preview. A left part too long for the line wraps, and a line that cannot share
+its row with the dates falls back to plain bold. The block text is never edited.
+
+The PDF draws role headers in font resource `F3`, a second name for the bold
+face of `F2` that reuses the same embedded font file. The inspectors read `F2`
+runs as headings and `F3` runs as body text, so role headers are not counted as
+sections. The layout does not draw the ` | ` before a right-aligned date; the
+PDF and DOCX inspectors restore it when they recover the text (same baseline, or
+a bare tab), so content integrity compares role lines like any paragraph.
 
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,

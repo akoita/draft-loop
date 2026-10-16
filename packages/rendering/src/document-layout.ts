@@ -1,13 +1,14 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 import { embeddedPdfFonts, embeddedTextUnits, type PdfFontFamily } from "./pdf-fonts.js";
+import { isRoleHeaderBlock, layoutRoleHeader, type RoleHeaderLines } from "./role-header.js";
 
 /**
  * One laid-out unit of a controlled DOCX or PDF. Both formats are built from this single model so
  * they show the same headline, contact lines, headings and bullets, and so the length estimate
  * measures what the formats draw.
  */
-export type LayoutBlockKind = "title" | "contact" | "heading" | "paragraph" | "bullet";
+export type LayoutBlockKind = "title" | "contact" | "heading" | "paragraph" | "role" | "bullet";
 
 export interface LayoutBlock {
   readonly kind: LayoutBlockKind;
@@ -67,9 +68,15 @@ export function layoutBlocks(artifact: DraftArtifact): readonly LayoutBlock[] {
       continue;
     }
     blocks.push({ kind: "heading", text: section.title });
-    for (const block of section.blocks) {
-      blocks.push({ kind: block.type === "bullet" ? "bullet" : "paragraph", text: block.text });
-    }
+    section.blocks.forEach((block, index) => {
+      const kind =
+        block.type === "bullet"
+          ? "bullet"
+          : isRoleHeaderBlock(section.kind, section.blocks, index)
+            ? "role"
+            : "paragraph";
+      blocks.push({ kind, text: block.text });
+    });
   }
   return blocks;
 }
@@ -154,6 +161,8 @@ export interface LayoutMetrics {
   readonly headingBeforePt: number;
   readonly headingAfterPt: number;
   readonly blockAfterPt: number;
+  /** Extra space before a role header, except the first one under a section heading. */
+  readonly roleBeforePt: number;
   readonly titleAfterPt: number;
   readonly contactAfterPt: number;
   readonly bulletIndentPt: number;
@@ -166,6 +175,7 @@ export function layoutMetrics(profile: LayoutMetricsProfile): LayoutMetrics {
     headingBeforePt: 8,
     headingAfterPt: 4,
     blockAfterPt: 3,
+    roleBeforePt: 6,
     titleAfterPt: 2,
     contactAfterPt: 0,
     bulletIndentPt: 14,
@@ -189,6 +199,7 @@ export function bulletPrefixWidthPt(profile: LayoutMetricsProfile): number {
  * bullets) using the profile font's glyph widths.
  */
 export function blockLines(block: LayoutBlock, profile: LayoutMetricsProfile): readonly string[] {
+  if (block.kind === "role") return roleHeaderLines(block, profile).lines;
   const body = profile.typography.bodyFontSizePt;
   const indent = block.kind === "bullet" ? bulletPrefixWidthPt(profile) : 0;
   return wrapTextToWidth(
@@ -201,8 +212,33 @@ export function blockLines(block: LayoutBlock, profile: LayoutMetricsProfile): r
   );
 }
 
+/** A role block's wrapped bold lines and, when the dates are right-aligned, the date. */
+export function roleHeaderLines(
+  block: LayoutBlock,
+  profile: LayoutMetricsProfile,
+): RoleHeaderLines {
+  const body = profile.typography.bodyFontSizePt;
+  const font = profilePdfFont(profile);
+  return layoutRoleHeader(block.text, {
+    widthPt: contentWidthPt(profile),
+    boldWidth: (text) => textWidthPt(text, body, true, font),
+    regularWidth: (text) => textWidthPt(text, body, false, font),
+    wrapBold: (text, width) =>
+      wrapTextToWidth(text, width, body, true, Number.POSITIVE_INFINITY, font),
+  });
+}
+
+/** Whether a role header gets the extra space before it: not directly under a section heading. */
+export function roleHasSpaceBefore(previous: LayoutBlock | undefined): boolean {
+  return previous !== undefined && previous.kind !== "heading";
+}
+
 /** The height one block takes, including its spacing, in points. */
-export function blockHeightPt(block: LayoutBlock, profile: LayoutMetricsProfile): number {
+export function blockHeightPt(
+  block: LayoutBlock,
+  profile: LayoutMetricsProfile,
+  previous?: LayoutBlock,
+): number {
   const metrics = layoutMetrics(profile);
   const lineCount = blockLines(block, profile).length;
   switch (block.kind) {
@@ -213,6 +249,12 @@ export function blockHeightPt(block: LayoutBlock, profile: LayoutMetricsProfile)
     case "heading":
       return (
         metrics.headingBeforePt + lineCount * profile.lineMetricsPt.heading + metrics.headingAfterPt
+      );
+    case "role":
+      return (
+        (roleHasSpaceBefore(previous) ? metrics.roleBeforePt : 0) +
+        lineCount * profile.lineMetricsPt.body +
+        metrics.blockAfterPt
       );
     default:
       return lineCount * profile.lineMetricsPt.body + metrics.blockAfterPt;
@@ -254,7 +296,10 @@ export function estimateDocumentLength(
   options: EstimateLengthOptions = {},
 ): LengthEstimate {
   const blocks = layoutBlocks(artifact);
-  const usedPt = blocks.reduce((total, block) => total + blockHeightPt(block, profile), 0);
+  const usedPt = blocks.reduce(
+    (total, block, index) => total + blockHeightPt(block, profile, blocks[index - 1]),
+    0,
+  );
   const lines = blocks.reduce((total, block) => total + blockLines(block, profile).length, 0);
   const words = blocks.reduce((total, block) => total + wordsIn(block.text), 0);
   const availablePt =

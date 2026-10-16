@@ -111,8 +111,9 @@ function unzipStored(content: Uint8Array): ReadonlyMap<string, string> {
 
 function wordTextRuns(documentXml: string): string[] {
   return [...documentXml.matchAll(/<w:p>([\s\S]*?)<\/w:p>/gu)].map((paragraph) =>
-    [...(paragraph[1] ?? "").matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/gu)]
-      .map((run) => run[1] ?? "")
+    // A bare <w:tab/> is the right-aligned date of a role header; it stands for the " | " before it.
+    [...(paragraph[1] ?? "").matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\/>/gu)]
+      .map((run) => run[1] ?? " | ")
       .join("")
       .replaceAll("&lt;", "<")
       .replaceAll("&gt;", ">")
@@ -145,7 +146,7 @@ describe("sendable DOCX export", () => {
       "Heading1",
       "Normal",
       "Heading1",
-      "Normal",
+      "Role",
       "ListBullet",
       "ListBullet",
       "Heading1",
@@ -287,7 +288,7 @@ describe("length estimate", () => {
         title: "Experience",
         kind: "experience",
         order: 0,
-        blocks: Array.from({ length: 70 }, (_, index) =>
+        blocks: Array.from({ length: 100 }, (_, index) =>
           block(
             `long-${index}`,
             "bullet",

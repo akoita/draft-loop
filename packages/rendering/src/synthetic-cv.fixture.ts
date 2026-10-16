@@ -39,6 +39,15 @@ export function sectionOf(
   };
 }
 
+const months = ["Jan", "Mar", "May", "Jul", "Sep", "Nov"] as const;
+
+/** A role line in the "Employer | Title | Mon YYYY to Mon YYYY, City" form. */
+export function roleLine(role: number): string {
+  const start = 2024 - 3 * (role + 1);
+  const end = role === 0 ? "present" : `${months[(role + 2) % 6]} ${start + 3}`;
+  return `Example Employer ${role + 1} | Senior Engineer | ${months[role % 6]} ${start} to ${end}, Sample City`;
+}
+
 /** A realistic CV structure; `scale` multiplies the length of every bullet and summary. */
 export function syntheticCv(scale: number, roles = 6): DraftArtifact {
   const bullets = (count: number, seed: number, base: number, spread: number) =>
@@ -49,7 +58,7 @@ export function syntheticCv(scale: number, roles = 6): DraftArtifact {
   const experience = Array.from({ length: roles }, (_, role) => [
     {
       type: "paragraph" as const,
-      text: `Role ${role + 1}, Example Company ${role + 1}, 2015 to 2020`,
+      text: roleLine(role),
     },
     ...bullets(5 + (role % 2), role, 30, 6),
   ]).flat();
