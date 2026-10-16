@@ -1,5 +1,13 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
 
+import { compactSeparator, findCompactRuns } from "./compact-list.js";
+import {
+  type InlineLabel,
+  type LabelledLines,
+  labelledTextLines,
+  layoutLabelled,
+  splitInlineLabel,
+} from "./inline-label.js";
 import { embeddedPdfFonts, embeddedTextUnits, type PdfFontFamily } from "./pdf-fonts.js";
 import { isRoleHeaderBlock, layoutRoleHeader, type RoleHeaderLines } from "./role-header.js";
 
@@ -8,11 +16,20 @@ import { isRoleHeaderBlock, layoutRoleHeader, type RoleHeaderLines } from "./rol
  * they show the same headline, contact lines, headings and bullets, and so the length estimate
  * measures what the formats draw.
  */
-export type LayoutBlockKind = "title" | "contact" | "heading" | "paragraph" | "role" | "bullet";
+export type LayoutBlockKind =
+  | "title"
+  | "contact"
+  | "heading"
+  | "paragraph"
+  | "role"
+  | "bullet"
+  | "compact";
 
 export interface LayoutBlock {
   readonly kind: LayoutBlockKind;
   readonly text: string;
+  /** For a compact list, the original bullet texts; `text` is these joined with " · ". */
+  readonly items?: readonly string[];
 }
 
 /** The page measurements the layout and the length estimate need; a subset of a layout profile. */
@@ -56,9 +73,13 @@ function sectionsInOrder(artifact: DraftArtifact): readonly DraftArtifact["secti
  * The visible blocks of an artifact, in section order. A header section is the candidate's
  * headline and contact lines, so it draws without a section heading: its first block is the
  * title and the rest are contact lines. Nothing else about the artifact (ids, source references,
- * findings, comments) is carried into a block.
+ * findings, comments) is carried into a block. The profile decides which runs of bullets fit on
+ * one line and so become compact lists.
  */
-export function layoutBlocks(artifact: DraftArtifact): readonly LayoutBlock[] {
+export function layoutBlocks(
+  artifact: DraftArtifact,
+  profile: LayoutMetricsProfile,
+): readonly LayoutBlock[] {
   const blocks: LayoutBlock[] = [];
   for (const section of sectionsInOrder(artifact)) {
     if (section.kind === "header") {
@@ -68,15 +89,40 @@ export function layoutBlocks(artifact: DraftArtifact): readonly LayoutBlock[] {
       continue;
     }
     blocks.push({ kind: "heading", text: section.title });
-    section.blocks.forEach((block, index) => {
-      const kind =
-        block.type === "bullet"
-          ? "bullet"
-          : isRoleHeaderBlock(section.kind, section.blocks, index)
-            ? "role"
-            : "paragraph";
-      blocks.push({ kind, text: block.text });
-    });
+    blocks.push(...layoutSectionBlocks(section, profile));
+  }
+  return blocks;
+}
+
+/**
+ * The body blocks of one non-header section: role headers, paragraphs, bullets, and runs of
+ * short one-line bullets gathered into compact lists.
+ */
+export function layoutSectionBlocks(
+  section: DraftArtifact["sections"][number],
+  profile: LayoutMetricsProfile,
+): readonly LayoutBlock[] {
+  const runs = findCompactRuns(section.blocks, (text) => bulletFitsOneLine(text, profile));
+  const blocks: LayoutBlock[] = [];
+  let index = 0;
+  while (index < section.blocks.length) {
+    const run = runs.find((candidate) => candidate.start === index);
+    if (run !== undefined) {
+      const items = section.blocks.slice(run.start, run.end).map((block) => block.text);
+      blocks.push({ kind: "compact", text: items.join(compactSeparator), items });
+      index = run.end;
+      continue;
+    }
+    const block = section.blocks[index];
+    if (block === undefined) break;
+    const kind =
+      block.type === "bullet"
+        ? "bullet"
+        : isRoleHeaderBlock(section.kind, section.blocks, index)
+          ? "role"
+          : "paragraph";
+    blocks.push({ kind, text: block.text });
+    index += 1;
   }
   return blocks;
 }
@@ -194,12 +240,50 @@ export function bulletPrefixWidthPt(profile: LayoutMetricsProfile): number {
   return textWidthPt("• ", profile.typography.bodyFontSizePt, false, profilePdfFont(profile));
 }
 
+function bulletFitsOneLine(text: string, profile: LayoutMetricsProfile): boolean {
+  return (
+    wrapTextToWidth(
+      text,
+      contentWidthPt(profile) - bulletPrefixWidthPt(profile),
+      profile.typography.bodyFontSizePt,
+      false,
+      Number.POSITIVE_INFINITY,
+      profilePdfFont(profile),
+    ).length === 1
+  );
+}
+
+/**
+ * The label layout of a paragraph or bullet that opens with a short "Label:", or null. The label
+ * is measured bold and the text after it fills the rest of the first line.
+ */
+export function labelledLayout(
+  block: LayoutBlock,
+  profile: LayoutMetricsProfile,
+): LabelledLines | null {
+  if (block.kind !== "paragraph" && block.kind !== "bullet") return null;
+  const parts: InlineLabel | null = splitInlineLabel(block.text);
+  if (parts === null) return null;
+  const body = profile.typography.bodyFontSizePt;
+  const font = profilePdfFont(profile);
+  const indent = block.kind === "bullet" ? bulletPrefixWidthPt(profile) : 0;
+  return layoutLabelled(parts, {
+    widthPt: contentWidthPt(profile) - indent,
+    boldWidth: (text) => textWidthPt(text, body, true, font),
+    regularWidth: (text) => textWidthPt(text, body, false, font),
+    wrap: (text, width) =>
+      wrapTextToWidth(text, width, body, false, Number.POSITIVE_INFINITY, font),
+  });
+}
+
 /**
  * Wrapped text lines for one block, filled to the real content width (less the bullet indent for
- * bullets) using the profile font's glyph widths.
+ * bullets) using the profile font's glyph widths. A label line joins its bold label and the text.
  */
 export function blockLines(block: LayoutBlock, profile: LayoutMetricsProfile): readonly string[] {
   if (block.kind === "role") return roleHeaderLines(block, profile).lines;
+  const labelled = labelledLayout(block, profile);
+  if (labelled !== null) return labelledTextLines(labelled);
   const body = profile.typography.bodyFontSizePt;
   const indent = block.kind === "bullet" ? bulletPrefixWidthPt(profile) : 0;
   return wrapTextToWidth(
@@ -295,13 +379,20 @@ export function estimateDocumentLength(
   profile: LayoutMetricsProfile,
   options: EstimateLengthOptions = {},
 ): LengthEstimate {
-  const blocks = layoutBlocks(artifact);
+  const blocks = layoutBlocks(artifact, profile);
   const usedPt = blocks.reduce(
     (total, block, index) => total + blockHeightPt(block, profile, blocks[index - 1]),
     0,
   );
   const lines = blocks.reduce((total, block) => total + blockLines(block, profile).length, 0);
-  const words = blocks.reduce((total, block) => total + wordsIn(block.text), 0);
+  const words = blocks.reduce(
+    (total, block) =>
+      total +
+      (block.items === undefined
+        ? wordsIn(block.text)
+        : block.items.reduce((sum, item) => sum + wordsIn(item), 0)),
+    0,
+  );
   const availablePt =
     profile.pageHeightMm * pointsPerMillimeter -
     (profile.marginsMm.top + profile.marginsMm.bottom) * pointsPerMillimeter;

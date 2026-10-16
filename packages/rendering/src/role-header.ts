@@ -6,6 +6,8 @@
  * inspectors recover the visible text.
  */
 
+import { docxCompactStyle, splitCompactText } from "./compact-list.js";
+
 const roleSeparator = " | ";
 
 const monthWord = String.raw`\p{L}{3,10}\.?`;
@@ -41,17 +43,49 @@ export function splitRoleHeader(text: string): RoleHeaderParts | null {
   return left !== "" && isDateRange(date) ? { left, date } : null;
 }
 
-/** Whether block `index` of a section is a role header: a non-bullet directly before a bullet. */
+const hasPipeSegment = (text: string | undefined): boolean =>
+  text?.includes(roleSeparator) === true;
+
+interface SectionBlock {
+  readonly type: string;
+  readonly text: string;
+}
+
+/** A paragraph with a " | " segment that opens a role: followed by bullets or a context line. */
+function isPipeRoleHeader(blocks: readonly SectionBlock[], index: number): boolean {
+  const block = blocks[index];
+  const next = blocks[index + 1];
+  return (
+    block !== undefined &&
+    block.type !== "bullet" &&
+    hasPipeSegment(block.text) &&
+    next !== undefined &&
+    (next.type === "bullet" || !hasPipeSegment(next.text))
+  );
+}
+
+/**
+ * Whether block `index` of a section is a role header. In experience and projects, a paragraph
+ * with a " | " segment is one when bullets or a plain paragraph follow it; a plain paragraph
+ * directly after such a header is its context line and stays regular; and a paragraph directly
+ * followed by bullets is still a role header when it is not itself a context line.
+ */
 export function isRoleHeaderBlock(
   sectionKind: string,
-  blocks: readonly { readonly type: string }[],
+  blocks: readonly SectionBlock[],
   index: number,
 ): boolean {
-  return (
-    (sectionKind === "experience" || sectionKind === "projects") &&
-    blocks[index]?.type !== "bullet" &&
-    blocks[index + 1]?.type === "bullet"
-  );
+  const block = blocks[index];
+  if (
+    (sectionKind !== "experience" && sectionKind !== "projects") ||
+    block === undefined ||
+    block.type === "bullet"
+  ) {
+    return false;
+  }
+  const isContextLine = !hasPipeSegment(block.text) && isPipeRoleHeader(blocks, index - 1);
+  if (isContextLine) return false;
+  return isPipeRoleHeader(blocks, index) || blocks[index + 1]?.type === "bullet";
 }
 
 /** The lines of a role header and, when the dates are right-aligned, the date on the last line. */
@@ -94,6 +128,8 @@ export interface PdfTextRun {
   readonly fontNumber: number;
   readonly x: number;
   readonly y: number;
+  /** Marked-content tag the layout wrote around the run: an inline label or a compact list line. */
+  readonly tag?: "label" | "compact" | undefined;
 }
 
 /** The F3 resource is the role-header bold: the same face as F2, not a section heading. */
@@ -109,6 +145,7 @@ export function joinRoleDateRuns(runs: readonly PdfTextRun[]): readonly PdfTextR
     const previous = joined.at(-1);
     if (
       previous !== undefined &&
+      previous.tag === undefined &&
       previous.fontNumber === roleFontNumber &&
       run.fontNumber === 1 &&
       run.y === previous.y &&
@@ -136,4 +173,17 @@ export function docxParagraphText(paragraphXml: string, decode: (value: string) 
     text += match[1] === undefined ? roleSeparator : decode(match[1]);
   }
   return text;
+}
+
+/**
+ * The blocks one DOCX paragraph stands for. A compact-list paragraph is the " · "-joined text of
+ * several bullets and splits back into them; any other paragraph is its one text.
+ */
+export function docxParagraphUnits(
+  paragraphXml: string,
+  decode: (value: string) => string,
+): readonly string[] {
+  const text = docxParagraphText(paragraphXml, decode);
+  const compact = new RegExp(`<w:pStyle\\b[^>]*w:val\\s*=\\s*["']${docxCompactStyle}["']`, "u");
+  return compact.test(paragraphXml) ? splitCompactText(text) : [text];
 }

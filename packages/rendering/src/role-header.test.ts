@@ -176,7 +176,7 @@ describe("role header splitting", () => {
 
 describe("role header blocks", () => {
   it("marks a paragraph directly followed by bullets in experience and projects only", () => {
-    const blocks = layoutBlocks(cvWithRole("Example Employer 1 | Lead | 2018 - 2020"));
+    const blocks = layoutBlocks(cvWithRole("Example Employer 1 | Lead | 2018 - 2020"), standard);
     expect(blocks.map((block) => block.kind)).toEqual([
       "heading",
       "paragraph",
@@ -186,18 +186,22 @@ describe("role header blocks", () => {
       "role",
       "bullet",
     ]);
-    const summaryOnly = layoutBlocks({
-      ...cvWithRole("x"),
-      sections: [
-        sectionOf("summary", "summary", 0, [{ type: "paragraph", text: "A | 2019 - 2020" }]),
-      ],
-    });
+    const summaryOnly = layoutBlocks(
+      {
+        ...cvWithRole("x"),
+        sections: [
+          sectionOf("summary", "summary", 0, [{ type: "paragraph", text: "A | 2019 - 2020" }]),
+        ],
+      },
+      standard,
+    );
     expect(summaryOnly.map((block) => block.kind)).toEqual(["heading", "paragraph"]);
   });
 
   it("adds space before a role except directly under a section heading", () => {
     const [, , , first, , second] = layoutBlocks(
       cvWithRole("Example Employer 1 | Lead | 2018 - 2020"),
+      standard,
     );
     const metrics = layoutMetrics(standard);
     expect(first).toBeDefined();
@@ -213,7 +217,7 @@ describe("role header blocks", () => {
 
   it("counts the extra spacing in the length estimate", () => {
     const cv = syntheticCv(1.05, 6);
-    const blocks = layoutBlocks(cv);
+    const blocks = layoutBlocks(cv, standard);
     const total = (list: typeof blocks): number =>
       list.reduce((sum, block, index) => sum + blockHeightPt(block, standard, list[index - 1]), 0);
     const plain = blocks.map((block) =>
@@ -357,8 +361,10 @@ describe("the acceptance CV with role headers", () => {
     const cv = syntheticCv(scale, roles);
     expect(wordCount(cv)).toBeGreaterThan(1650);
     expect(wordCount(cv)).toBeLessThan(1900);
-    expect(layoutBlocks(cv).filter((block) => block.kind === "role")).toHaveLength(roles);
-    expect(layoutBlocks(cv).find((block) => block.kind === "role")?.text).toBe(roleLine(0));
+    expect(layoutBlocks(cv, standard).filter((block) => block.kind === "role")).toHaveLength(roles);
+    expect(layoutBlocks(cv, standard).find((block) => block.kind === "role")?.text).toBe(
+      roleLine(0),
+    );
     const { rendered, report } = qaPasses(cv, "pdf");
     const observation = inspectControlledDocument(rendered);
     expect(observation.pageCount).toBe(2);

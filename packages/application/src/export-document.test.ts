@@ -24,7 +24,8 @@ function artifactWithBullets(count: number): DraftArtifact {
         order: 0,
         blocks: Array.from({ length: count }, (_, index) => ({
           id: `bullet-${index}`,
-          type: "bullet" as const,
+          // Paragraphs: a run of short bullets is drawn as one compact paragraph.
+          type: "paragraph" as const,
           text: `Delivered outcome ${index} with measurable impact for the team.`,
           claimIds: [],
         })),

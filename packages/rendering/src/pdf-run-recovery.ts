@@ -1,0 +1,78 @@
+import { splitCompactText } from "./compact-list.js";
+import { joinRoleDateRuns, type PdfTextRun } from "./role-header.js";
+
+/**
+ * Join a bold inline label back onto the regular run that follows it on the same baseline. The
+ * label run is tagged, so a role header (also bold) is never joined here.
+ */
+function joinLabelRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
+  const joined: PdfTextRun[] = [];
+  for (const run of runs) {
+    const previous = joined.at(-1);
+    if (
+      previous !== undefined &&
+      previous.tag === "label" &&
+      run.tag === undefined &&
+      run.fontNumber === 1 &&
+      run.y === previous.y &&
+      run.x > previous.x
+    ) {
+      joined[joined.length - 1] = {
+        text: `${previous.text} ${run.text}`,
+        fontNumber: run.fontNumber,
+        x: previous.x,
+        y: previous.y,
+      };
+    } else {
+      joined.push(run);
+    }
+  }
+  return joined;
+}
+
+function untagged(run: PdfTextRun): PdfTextRun {
+  return { text: run.text, fontNumber: run.fontNumber, x: run.x, y: run.y };
+}
+
+/**
+ * Split the tagged lines of compact paragraphs back into one run per original bullet. Consecutive
+ * compact lines are one paragraph; its items were joined with " · ", which may wrap anywhere.
+ */
+function splitCompactRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
+  const result: PdfTextRun[] = [];
+  let pending: PdfTextRun[] = [];
+  const flush = (): void => {
+    const first = pending[0];
+    if (first === undefined) return;
+    const text = pending.map((run) => run.text).join(" ");
+    for (const item of splitCompactText(text)) result.push({ ...untagged(first), text: item });
+    pending = [];
+  };
+  for (const run of runs) {
+    if (run.tag === "compact") {
+      pending.push(run);
+    } else {
+      flush();
+      result.push(run.tag === undefined ? run : untagged(run));
+    }
+  }
+  flush();
+  return result;
+}
+
+/** The visible runs of a PDF page as the artifact's blocks: dates, labels and compact lists. */
+export function recoverPdfRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
+  return splitCompactRuns(joinRoleDateRuns(joinLabelRuns(runs)));
+}
+
+/** The marked-content tag at the start of a content-stream line, when it carries one of ours. */
+export function pdfRunTag(lineBeforeText: string): PdfTextRun["tag"] {
+  const name = /^\/DL(Label|Compact) BMC /u.exec(lineBeforeText)?.[1];
+  if (name === "Label") return "label";
+  return name === "Compact" ? "compact" : undefined;
+}
+
+/** The content-stream wrapper that marks a text command with one of our tags. */
+export function tagPdfCommands(tag: "label" | "compact", commands: string): string {
+  return `/DL${tag === "label" ? "Label" : "Compact"} BMC ${commands} EMC`;
+}

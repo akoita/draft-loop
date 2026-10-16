@@ -9,7 +9,8 @@ import {
 import { textWidthPt } from "./document-layout.js";
 import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
 import { decodePdfLiteralEscapes } from "./pdf-document.js";
-import { docxParagraphText, joinRoleDateRuns, type PdfTextRun } from "./role-header.js";
+import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 interface VisibleTextUnit {
   readonly text: string;
@@ -380,10 +381,12 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
       const width = textWidthPt(text, fontSize, isBold, font);
       clipped ||=
         x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1 - rightInsetPt + 0.5;
-      runs.push({ text, fontNumber, x, y });
+      const lineStart = stream.lastIndexOf("\n", match.index ?? 0) + 1;
+      const tag = pdfRunTag(stream.slice(lineStart, match.index ?? 0));
+      runs.push({ text, fontNumber, x, y, tag });
     }
-    // A role header's right-aligned date reads back with the " | " that precedes it.
-    const units: VisibleTextUnit[] = joinRoleDateRuns(runs).map((run) => ({
+    // A role date, a bold label and a compact list read back as the artifact's own blocks.
+    const units: VisibleTextUnit[] = recoverPdfRuns(runs).map((run) => ({
       text: run.text,
       kind: run.fontNumber === 2 ? "heading" : "body",
     }));
@@ -402,8 +405,8 @@ function parseDocxPages(content: Uint8Array): readonly InspectedPage[] {
   const pages: { units: VisibleTextUnit[]; clipped: boolean }[] = [{ units: [], clipped: false }];
   for (const paragraph of paragraphs) {
     const xml = paragraph[1] ?? "";
-    const text = docxParagraphText(xml, decodeXmlText);
-    if (text !== "") {
+    for (const text of docxParagraphUnits(xml, decodeXmlText)) {
+      if (text === "") continue;
       pages.at(-1)?.units.push({
         text,
         kind: /<w:pStyle\b[^>]*w:val\s*=\s*["'](?:Heading1|Title)["']/u.test(xml)
