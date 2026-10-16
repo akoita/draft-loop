@@ -4491,6 +4491,55 @@ describe("native host", () => {
     }
   });
 
+  it("passes the chosen template through the bridge allowlist to the export", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-template-"));
+    const customPath = join(root, "exports", "compact.pdf");
+    const fixture = service(root, { state: "approved", approval: "approved" });
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseExportPath: async () => customPath,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const dispatch = (action: unknown) =>
+        host.invoke({
+          type: "review.dispatch",
+          input: { workspaceId: "workspace-native", runId: "run-native", action },
+        });
+
+      await expect(
+        dispatch({ type: "export", format: "pdf", template: "compact" }),
+      ).resolves.toMatchObject({ ok: true, value: { exportPath: customPath } });
+      expect(fixture.service.export).toHaveBeenLastCalledWith(
+        {
+          root,
+          runId: "run-native",
+          format: "pdf",
+          outputPath: customPath,
+          templateId: "compact",
+        },
+        expect.anything(),
+      );
+      // Without a template the export carries none, so the application's default applies.
+      await dispatch({ type: "export", format: "pdf" });
+      expect(fixture.service.export).toHaveBeenLastCalledWith(
+        { root, runId: "run-native", format: "pdf", outputPath: customPath },
+        expect.anything(),
+      );
+      // The bridge allowlist rejects a template that is not built in.
+      await expect(
+        dispatch({ type: "export", format: "pdf", template: "modern" }),
+      ).resolves.toMatchObject({ ok: false });
+      expect(fixture.service.export).toHaveBeenCalledTimes(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("chooses a Markdown Save As path before exporting an approved run", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-save-as-"));
     const customPath = join(root, "exports", "custom.md");

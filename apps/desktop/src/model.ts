@@ -5,6 +5,7 @@ import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
+import type { ExportTemplate } from "./export-template.js";
 import type { FindingRequirement } from "./finding-requirement.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
 import type { RunApplicationPlanView } from "./run-application-plan.js";
@@ -391,7 +392,12 @@ export type ReviewAction =
       /** Reason for approving past failing final CV checks, recorded with the approval. */
       readonly readinessOverrideRationale?: string;
     }
-  | { readonly type: "export"; readonly format?: ExportFormat };
+  | {
+      readonly type: "export";
+      readonly format?: ExportFormat;
+      /** The rendering template; Classic, the default, is sent without one. */
+      readonly template?: ExportTemplate;
+    };
 
 /** The formats an approved artifact can be exported to; Markdown is the default. */
 export const exportFormats = ["markdown", "docx", "pdf"] as const;

@@ -38,6 +38,12 @@ import {
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { executionLimitText } from "./execution-limits.js";
 import {
+  defaultExportTemplate,
+  type ExportTemplate,
+  exportTemplateApplicationKey,
+} from "./export-template.js";
+import { useExportTemplate } from "./export-template-picker.js";
+import {
   ACCEPT_UNAVAILABLE_NOTE,
   ACCEPTED_WITHOUT_REVISION_NUDGE,
   acceptedWithoutRevision,
@@ -239,9 +245,13 @@ export interface InitialFindingQueueState {
   readonly expandedFindingId: string | null;
 }
 
-/** The export action for a format; Markdown, the default, is sent without a format. */
-function exportReviewAction(format: ExportFormat): ReviewAction {
-  return format === "markdown" ? { type: "export" } : { type: "export", format };
+/** The export action; Markdown and Classic, the defaults, are sent without a field. */
+export function exportReviewAction(format: ExportFormat, template: ExportTemplate): ReviewAction {
+  return {
+    type: "export",
+    ...(format === "markdown" ? {} : { format }),
+    ...(template === defaultExportTemplate ? {} : { template }),
+  };
 }
 
 export function canExportReview(
@@ -1015,6 +1025,9 @@ export function ReviewWorkspace({
                   : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
+  const [exportTemplate, setExportTemplate] = useExportTemplate(
+    exportTemplateApplicationKey(state),
+  );
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
   const readinessOverrideKey = `${state.runId}:${state.artifact.id}:${state.artifact.version}`;
   const [readinessOverrideDraft, setReadinessOverrideDraft] = useState({
@@ -1521,7 +1534,7 @@ export function ReviewWorkspace({
         } else if (event.key === "e" || event.key === "E") {
           if (canExport) {
             event.preventDefault();
-            onAction(exportReviewAction(exportFormat));
+            onAction(exportReviewAction(exportFormat, exportTemplate));
           }
         }
         return;
@@ -1626,6 +1639,7 @@ export function ReviewWorkspace({
     canApprove,
     canExport,
     exportFormat,
+    exportTemplate,
     decideFinding,
     decisionContext,
     editingBlockId,
@@ -1746,7 +1760,7 @@ export function ReviewWorkspace({
           : state.state !== "approved" && state.state !== "exported"
             ? "The artifact has not been approved."
             : (pendingActionReason ?? "Export is unavailable right now."),
-      run: () => onAction(exportReviewAction(exportFormat)),
+      run: () => onAction(exportReviewAction(exportFormat, exportTemplate)),
     },
     {
       id: "resume",
@@ -3809,8 +3823,10 @@ export function ReviewWorkspace({
               pendingSeconds: exportPending ? pendingReviewAction.elapsedSeconds : null,
               format: exportFormat,
               onFormatChange: setExportFormat,
+              template: exportTemplate,
+              onTemplateChange: setExportTemplate,
               note: state.exportNote ?? null,
-              onExport: () => onAction(exportReviewAction(exportFormat)),
+              onExport: () => onAction(exportReviewAction(exportFormat, exportTemplate)),
             }}
           />
         </aside>

@@ -100,6 +100,35 @@ describe("export length warning", () => {
   });
 });
 
+describe("export length warning with a chosen template", () => {
+  const long = { contextSnapshotId: "context-1", artifact: artifactWithBullets(100) };
+  const compact = { templateId: "compact", explicit: true };
+
+  it("uses the chosen template's page target instead of the policy's", async () => {
+    // The policy allows two pages, but Compact targets one.
+    const line = await exportLengthWarningLine(
+      readerWithPolicy("two-page"),
+      long,
+      undefined,
+      compact,
+    );
+    expect(line).toContain("over the 1-page target of the Compact template");
+    // No policy target at all: the template's still applies.
+    expect(
+      await exportLengthWarningLine(readerWithPolicy(undefined), long, undefined, compact),
+    ).toContain("1-page target of the Compact template");
+  });
+
+  it("keeps the policy's target when the template was not chosen", async () => {
+    expect(
+      await exportLengthWarningLine(readerWithPolicy(undefined), long, undefined, {
+        templateId: "classic",
+        explicit: false,
+      }),
+    ).toBeUndefined();
+  });
+});
+
 describe("PDF page overflow warning", () => {
   it("names the real page count and the layout's target, and replaces the estimate", async () => {
     const standard = { pageCount: 4, targetPageCount: 2, layoutName: "standard" };

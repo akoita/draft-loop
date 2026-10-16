@@ -384,6 +384,8 @@ export interface ExportCommand {
   readonly runId?: string;
   readonly outputPath?: string;
   readonly format?: OutputFormat;
+  /** A built-in rendering template id, such as `classic` or `compact`; Classic when omitted. */
+  readonly templateId?: string;
 }
 
 export interface LatestExportPathCommand {

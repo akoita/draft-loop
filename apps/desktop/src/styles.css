@@ -4070,6 +4070,112 @@ input[type="text"].workspace-title-input {
   font: inherit;
 }
 
+/* The template choice: one radio card per built-in template, each with a schematic page. */
+.export-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  border: 0;
+  padding: 0;
+}
+
+.export-templates legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
+.export-template-option {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: flex-start;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-2);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.export-template-option:has(input:checked) {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.export-template-option input {
+  margin: 2px 0 0;
+}
+
+.export-template-text strong,
+.export-template-text span {
+  display: block;
+}
+
+.export-template-text strong {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+}
+
+.export-template-text span {
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.export-template-preview {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  width: 34px;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px;
+  background: var(--paper);
+}
+
+.export-template-preview-name {
+  align-self: center;
+  width: 60%;
+  height: 3px;
+  margin-bottom: 1px;
+  background: var(--paper-ink);
+}
+
+.export-template-preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.export-template-preview-heading {
+  width: 45%;
+  height: 2px;
+  border-bottom: 1px solid var(--paper-rule);
+  background: var(--paper-ink-2);
+}
+
+.export-template-preview-line {
+  height: 1px;
+  background: var(--paper-rule);
+}
+
+.export-template-preview-compact {
+  gap: 4px;
+}
+
+.export-template-preview-compact .export-template-preview-name {
+  height: 4px;
+}
+
+.export-template-preview-compact .export-template-preview-line {
+  height: 2px;
+}
+
 .export-note {
   margin: var(--space-2) 0 0;
   color: var(--text-3);

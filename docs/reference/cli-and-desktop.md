@@ -645,13 +645,18 @@ The footer holds the approval gate and stays in view while you scroll:
   consistent headings and bullets, Arial text and A4 margins. There are no
   tables, text boxes, comments, source annotations or block ids, so an
   applicant tracking system reads the text in order.
-- **Length estimate.** When the run's writing policy sets a page target and the
-  content clearly exceeds it, the footer shows an estimated-length warning. It
-  is an estimate from line and word counts; open the file to confirm the real
-  page count. With no page target, nothing is shown.
-- **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md`
-  writes the same files (`md` is short for `markdown`, the default) and prints
-  the estimated-length warning when it applies.
+- **Template.** Under **Export…**, pick **Classic** (two pages, the default) or
+  **Compact** (one page). Each option shows a small preview. The choice is
+  remembered per application, and the export record names the template used.
+- **Length estimate.** When the content clearly exceeds the page target, the
+  footer shows an estimated-length warning. The target is the chosen template's
+  (one page for Compact); with Classic left as the default it is the writing
+  policy's, and with no policy target nothing is shown. It is an estimate from
+  line and word counts; open the file to confirm the real page count.
+- **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md
+  --template classic|compact` writes the same files (`md` is short for
+  `markdown`, the default; Classic is the default template) and prints the
+  estimated-length warning when it applies.
 - **Export again.** An exported run shows its export path and offers **Export
   again…** through the same Save dialog. Each export adds a record; earlier ones
   are kept. If the previous file was moved or deleted, or the workspace was

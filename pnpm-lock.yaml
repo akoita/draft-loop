@@ -103,6 +103,9 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      '@draft-loop/rendering':
+        specifier: workspace:*
+        version: link:../../packages/rendering
       '@electron-forge/cli':
         specifier: 7.11.2
         version: 7.11.2(esbuild@0.28.2)

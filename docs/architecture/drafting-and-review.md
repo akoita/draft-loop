@@ -877,6 +877,13 @@ The id and version of the template are on `RenderedDocument.metadata.renderingTe
 and in the export payload as `renderingTemplate`. The rendering-QA report keeps
 only the layout profile.
 
+The person picks the template at export (#1330): `ExportCommand.templateId`,
+`export --template <id>` in the CLI, and the `template` field of the desktop
+`export` action, which the bridge allowlist accepts only for built-in ids. The
+desktop remembers the choice per application in `localStorage`, keyed by the
+application's first run (`apps/desktop/src/export-template.ts`). A chosen
+template's page target replaces the writing policy's in the length warning.
+
 #### Role headers
 
 In an Experience or Projects section, a paragraph directly followed by bullets
