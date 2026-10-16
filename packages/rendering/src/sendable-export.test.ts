@@ -288,7 +288,7 @@ describe("length estimate", () => {
         title: "Experience",
         kind: "experience",
         order: 0,
-        blocks: Array.from({ length: 70 }, (_, index) =>
+        blocks: Array.from({ length: 100 }, (_, index) =>
           block(
             `long-${index}`,
             "bullet",
