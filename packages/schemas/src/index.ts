@@ -142,12 +142,15 @@ export {
   opportunityExtractionProposalSchema,
 } from "./opportunity-extraction.js";
 
+import { artifactBlockTypes, authorArtifactBlockProposalSchema } from "./author-proposal-block.js";
 import { candidateKnowledgeSelectionLifecycleRevisionSchema } from "./candidate-knowledge-selection-lifecycle.js";
 import { checkRevisionAttribution, revisionAttributionTraceShape } from "./finding-attribution.js";
 import { modelSelectionSchema } from "./model-selection.js";
 import { nonEmptyString, strictTimestampSchema } from "./schema-primitives.js";
 
 export type { RenderingLayoutProfileId } from "@draft-loop/domain";
+export { artifactBlockTypes } from "./author-proposal-block.js";
+export * from "./author-revision-patch.js";
 export * from "./canonical-candidate-profile.js";
 export * from "./finding-attribution.js";
 export type { ModelSelection } from "./model-selection.js";
@@ -3756,7 +3759,6 @@ export const artifactSectionKinds = [
   "answer",
 ] as const;
 
-export const artifactBlockTypes = ["paragraph", "bullet"] as const;
 export const claimStatuses = ["unverified", "verified", "disputed"] as const;
 export const artifactDecisionTypes = [
   "edit",
@@ -3764,30 +3766,6 @@ export const artifactDecisionTypes = [
   "reject-finding",
   "approve",
 ] as const;
-
-const authorArtifactClaimProposalSchema = z.strictObject({
-  text: nonEmptyString,
-  substantive: z.boolean(),
-  evidenceChunkIds: z.array(nonEmptyString).superRefine((ids, context) => {
-    const seen = new Set<string>();
-    for (const [index, id] of ids.entries()) {
-      if (seen.has(id)) {
-        context.addIssue({
-          code: "custom",
-          path: [index],
-          message: "evidence chunk ids must be unique within a claim",
-        });
-      }
-      seen.add(id);
-    }
-  }),
-});
-
-const authorArtifactBlockProposalSchema = z.strictObject({
-  type: z.enum(artifactBlockTypes),
-  text: nonEmptyString,
-  claims: z.array(authorArtifactClaimProposalSchema),
-});
 
 const authorArtifactSectionProposalSchema = z.strictObject({
   title: nonEmptyString,

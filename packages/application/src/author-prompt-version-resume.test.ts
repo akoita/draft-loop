@@ -54,7 +54,7 @@ it.each([
   { recorded: "cli-author-v6", structuredGuidance: true, budget: 32_768 },
   { recorded: "cli-author-v7", structuredGuidance: true, budget: 32_768 },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v9",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v10",
   async ({ recorded, structuredGuidance, budget }) => {
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
     const output: string[] = [];
@@ -222,11 +222,11 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v9");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v10");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
       expect(systemPrompts).toHaveLength(3);
       expect(systemPrompts[2]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v9", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v10", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[2]).toContain(structuredFieldInstruction);
       expect(systemPrompts[2]).toContain(

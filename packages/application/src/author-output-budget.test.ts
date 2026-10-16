@@ -131,10 +131,25 @@ it("retains the exact per-generation cap and adjudication through a factuality r
   const inputs: Record<string, unknown>[] = [];
   const author: UserSessionProcessRunner = vi.fn(async (_command, args, options) => {
     const input = JSON.parse(options.stdin) as Record<string, unknown>;
-    inputs.push(input);
     const cap = Number(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
-    // New runs record cli-author-v9, whose budget is 32,768 tokens.
+    // New runs record cli-author-v10, whose budget is 32,768 tokens.
     expect(cap).toBe(32768);
+    if ((args[args.indexOf("--system-prompt") + 1] ?? "").includes("targeted revision")) {
+      // The round-2 revision first asks for a patch; an unusable one falls back to the full proposal.
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          session_id: "author-patch",
+          usage: { input_tokens: 100, output_tokens: 10 },
+          structured_output: { edits: [] },
+        }),
+      };
+    }
+    inputs.push(input);
     expect(input.outputBudget).toEqual({ maxOutputTokens: cap });
     const system = args[args.indexOf("--system-prompt") + 1] ?? "";
     expect(system).toContain(`maximum generated output for this request is ${cap} tokens`);

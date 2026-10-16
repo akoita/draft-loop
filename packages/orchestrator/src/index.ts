@@ -16,6 +16,7 @@ import {
   type ReadinessScoreVector,
 } from "@draft-loop/evaluations";
 import {
+  type AdjudicatedRevisionAttribution,
   type AdjudicatedRevisionEffectOverride,
   type AdjudicatedRevisionTrace,
   type ApplicationReadinessStoppingDecision,
@@ -76,7 +77,11 @@ import {
   inspectDurationAccounting,
   settleDurationAccounting,
 } from "./duration-accounting.js";
-import { attributeRevision, classifyRevisionFindings } from "./finding-attribution.js";
+import {
+  type AppliedRevisionEdit,
+  attributeRevision,
+  classifyRevisionFindings,
+} from "./finding-attribution.js";
 import {
   type ApprovedArtifactBinding,
   approvedArtifactBinding,
@@ -98,7 +103,9 @@ import {
 
 export type RunState = WorkflowState | "provider-error";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
+export { COVERAGE_BLOCK_DROPPED_CODE, droppedCoverageFindings } from "./dropped-coverage.js";
 export {
+  type AppliedRevisionEdit,
   attributeRevision,
   classifyRevisionFindings,
   findingIdentity,
@@ -169,6 +176,13 @@ export interface AgentExecution<T> {
    * draft's findings when the step completes.
    */
   readonly outputFindings?: readonly ValidationIssue[];
+  /**
+   * The edits of a targeted revision (#1112), when the author patched the draft instead of
+   * rewriting it. They give the revision trace its attribution directly.
+   */
+  readonly appliedEdits?: readonly AppliedRevisionEdit[];
+  /** How a revision was produced, recorded on the execution; absent for a first draft. */
+  readonly revisionMode?: AuthorRevisionMode;
 }
 
 export interface AuthorRequest {
@@ -240,7 +254,15 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly coverageJudgement?: ExecutionCoverageJudgement;
   /** Resolved, persisting and new findings; present only on the critic pass after an attributed revision. */
   readonly findingClassification?: RevisionFindingClassification;
+  /** How an author revision was produced; absent on a first draft and on runs that predate patches. */
+  readonly revisionMode?: AuthorRevisionMode;
 }
+
+/**
+ * `patch`: targeted edits to the current draft (#1112). `full`: a whole new proposal.
+ * `patch-fallback`: a targeted patch was tried and could not be used, so a full proposal was requested.
+ */
+export type AuthorRevisionMode = "patch" | "full" | "patch-fallback";
 
 /** Coverage assessments after the critic's verdicts, stored with that critic execution. */
 export interface ExecutionCoverageJudgement {
@@ -1072,6 +1094,14 @@ function deriveAdjudicatedRevisionTrace(
   createdAt: string,
   /** False only when replaying a stored version 1 trace, which carries no attribution. */
   attribute = true,
+  /**
+   * `edits` are the targeted revision's applied edits. On replay the edits are gone, so a stored
+   * edit-sourced `attribution` is kept as recorded.
+   */
+  exact: {
+    readonly edits?: readonly AppliedRevisionEdit[] | undefined;
+    readonly attribution?: AdjudicatedRevisionAttribution | undefined;
+  } = {},
 ): AdjudicatedRevisionTrace {
   const parsedRevisedArtifact = draftArtifactSchema.safeParse(revisedArtifact);
   if (!parsedRevisedArtifact.success) {
@@ -1107,11 +1137,15 @@ function deriveAdjudicatedRevisionTrace(
       acceptedEffectOverrides: pending.acceptedEffectOverrides,
       ...(attribute
         ? {
-            attribution: attributeRevision({
-              plan: pending.plan,
-              sourceArtifact,
-              revisedArtifact: parsedRevisedArtifact.data,
-            }),
+            attribution:
+              exact.attribution?.source === "edits"
+                ? exact.attribution
+                : attributeRevision({
+                    plan: pending.plan,
+                    sourceArtifact,
+                    revisedArtifact: parsedRevisedArtifact.data,
+                    ...(exact.edits === undefined ? {} : { edits: exact.edits }),
+                  }),
           }
         : {}),
     });
@@ -1645,6 +1679,9 @@ export function createOrchestrationEngine(
             existing.output,
             storedTrace?.success === true ? storedTrace.data.createdAt : clock(),
             storedTrace?.success !== true || storedTrace.data.schemaVersion === 2,
+            {
+              attribution: storedTrace?.success === true ? storedTrace.data.attribution : undefined,
+            },
           );
           if (
             storedTrace?.success === true &&
@@ -1769,6 +1806,8 @@ export function createOrchestrationEngine(
               snapshot.artifact as DraftArtifact,
               execution.output,
               clock(),
+              true,
+              { edits: execution.appliedEdits },
             );
       const coverageJudgement =
         coverageRequests === undefined
@@ -1817,6 +1856,7 @@ export function createOrchestrationEngine(
         ...(adjudicatedRevisionTrace === undefined ? {} : { adjudicatedRevisionTrace }),
         ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
         ...(findingClassification === undefined ? {} : { findingClassification }),
+        ...(execution.revisionMode === undefined ? {} : { revisionMode: execution.revisionMode }),
       };
       await options.store.saveExecution(record);
       completedExecutionSaved = true;

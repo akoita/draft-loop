@@ -43,6 +43,12 @@ export const revisionFindingIdentitySchema = z.strictObject({
 
 /** Block-level attribution of an adjudicated revision. */
 export const adjudicatedRevisionAttributionSchema = z.strictObject({
+  /**
+   * `edits` when the author's targeted patch named the findings each edit addresses (#1112).
+   * Absent when attribution was derived from the changed blocks of a full rewrite, as on every
+   * trace recorded before targeted revisions.
+   */
+  source: z.literal("edits").optional(),
   /** Every adjudicated finding, accepted or not, so later rounds can match against all of them. */
   findings: z.array(revisionFindingIdentitySchema),
   blocks: z.array(revisionBlockAttributionSchema),

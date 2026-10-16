@@ -1,9 +1,16 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorAgent, CandidateDirection } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
-import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas";
+import {
+  authorArtifactProposalJsonSchemaForEvidence,
+  authorRevisionPatchJsonSchemaForEvidence,
+} from "@draft-loop/schemas";
 
-import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import {
+  type AuthorAdjudicationPrompt,
+  authorPromptSupportsTargetedRevision,
+  createAuthorAdjudicationPrompt,
+} from "./author-adjudication.js";
 import { proposalIssues } from "./author-diagnostic-counts.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
 import { ungroundedAuthorContentFindings } from "./author-grounded-filter.js";
@@ -15,6 +22,7 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
+import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import {
   evidenceReferenceTableInstructions,
   modelFacingArtifactWithEvidenceTable,
@@ -100,59 +108,119 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         // Run history is best-effort here: the draft matters more than the record of its input.
       }
       const revisionKey = authorRevisionKey(runId, round);
-      const revision = retryFeedback === undefined ? undefined : takeAuthorRevision(revisionKey);
-      const authorPrompt = createAuthorAdjudicationPrompt(
-        context.modelConfiguration.author.promptTemplateVersion,
-        pendingAdjudication,
-        retryFeedback,
-        createAuthorGroundingGuide(retrievedEvidence),
-        revision,
-        context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
-        requirementCoverage,
-        candidateDirection,
-      );
-      const { outputBudget, groundingGuide, ...turnInput } = authorPrompt.providerInput;
+      const promptVersion = context.modelConfiguration.author.promptTemplateVersion;
+      const maxOutputTokens = context.modelConfiguration.author.profile?.runtime.maxOutputTokens;
+      const groundingGuide = createAuthorGroundingGuide(retrievedEvidence);
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
-      const request: ModelRequest<JsonObject> = {
-        contextSnapshotId: context.id,
-        model: context.modelConfiguration.author,
-        systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
-        // Members that stay the same for every round of a run come first, so a
-        // provider's prompt-prefix cache can reuse them; per-call members follow.
-        input: evidenceAliases.toModel(
-          JSON.parse(
-            JSON.stringify({
-              context: deps.promptContext,
-              retrievedEvidence,
-              achievementPlan,
-              groundingGuide,
-              outputBudget,
-              runId,
-              round,
-              executionId,
-              currentArtifact:
-                currentArtifact === null
-                  ? null
-                  : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
-              findings,
-              ...turnInput,
-            }),
-          ) as JsonObject,
-        ),
-        outputSchema: authorArtifactProposalJsonSchemaForEvidence(
-          evidenceAliases.aliases,
-        ) as JsonObject,
-        outputName: "author_artifact_proposal",
-        maxOutputTokens: outputBudget.maxOutputTokens,
-        dataPolicy: deps.dataPolicy(deps.authorCompany),
-        ...(signal === undefined ? {} : { signal }),
-      };
       const adapter = await deps.createAdapter(deps.authorCompany, deps.authorModel, "author");
-      const modelResponse = await adapter.execute(request);
-      const response = {
-        ...modelResponse,
-        output: evidenceAliases.fromModel(modelResponse.output),
+      const callAuthor = async (
+        authorPrompt: AuthorAdjudicationPrompt,
+        outputSchema: JsonObject,
+        outputName: string,
+      ): Promise<ModelResponse<JsonObject>> => {
+        const {
+          outputBudget,
+          groundingGuide: promptGuide,
+          ...turnInput
+        } = authorPrompt.providerInput;
+        const request: ModelRequest<JsonObject> = {
+          contextSnapshotId: context.id,
+          model: context.modelConfiguration.author,
+          systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+          // Members that stay the same for every round of a run come first, so a
+          // provider's prompt-prefix cache can reuse them; per-call members follow.
+          input: evidenceAliases.toModel(
+            JSON.parse(
+              JSON.stringify({
+                context: deps.promptContext,
+                retrievedEvidence,
+                achievementPlan,
+                groundingGuide: promptGuide,
+                outputBudget,
+                runId,
+                round,
+                executionId,
+                currentArtifact:
+                  currentArtifact === null
+                    ? null
+                    : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
+                findings,
+                ...turnInput,
+              }),
+            ) as JsonObject,
+          ),
+          outputSchema,
+          outputName,
+          maxOutputTokens: outputBudget.maxOutputTokens,
+          dataPolicy: deps.dataPolicy(deps.authorCompany),
+          ...(signal === undefined ? {} : { signal }),
+        };
+        const modelResponse = await adapter.execute(request);
+        return { ...modelResponse, output: evidenceAliases.fromModel(modelResponse.output) };
       };
+
+      // A revision of an existing draft asks for block-level edits when the recorded prompt version
+      // states them. A patch that cannot be used falls back to the full-proposal revision below,
+      // within this same attempt; a retry after a rejection always revises the full proposal.
+      let patchResponse: ModelResponse<JsonObject> | undefined;
+      if (
+        currentArtifact !== null &&
+        retryFeedback === undefined &&
+        authorPromptSupportsTargetedRevision(promptVersion)
+      ) {
+        patchResponse = await callAuthor(
+          createAuthorAdjudicationPrompt(
+            promptVersion,
+            pendingAdjudication,
+            undefined,
+            groundingGuide,
+            undefined,
+            maxOutputTokens,
+            requirementCoverage,
+            candidateDirection,
+            "patch",
+          ),
+          authorRevisionPatchJsonSchemaForEvidence(evidenceAliases.aliases) as JsonObject,
+          "author_revision_patch",
+        );
+        const patched = buildPatchedRevision(patchResponse, {
+          executionId,
+          context,
+          currentArtifact,
+          retrievedEvidence,
+          acceptedFindingIds:
+            pendingAdjudication?.plan.decisions
+              .filter(({ disposition }) => disposition === "accept")
+              .map(({ findingId }) => findingId) ?? [],
+        });
+        if (patched !== undefined) {
+          forgetAuthorRevision(revisionKey);
+          return {
+            ...responseExecution(patchResponse, patched.artifact),
+            appliedEdits: patched.edits,
+            revisionMode: "patch" as const,
+          };
+        }
+      }
+
+      const revision = retryFeedback === undefined ? undefined : takeAuthorRevision(revisionKey);
+      const response = withAddedUsage(
+        await callAuthor(
+          createAuthorAdjudicationPrompt(
+            promptVersion,
+            pendingAdjudication,
+            retryFeedback,
+            groundingGuide,
+            revision,
+            maxOutputTokens,
+            requirementCoverage,
+            candidateDirection,
+          ),
+          authorArtifactProposalJsonSchemaForEvidence(evidenceAliases.aliases) as JsonObject,
+          "author_artifact_proposal",
+        ),
+        patchResponse,
+      );
       const grounded = await buildAuthorArtifactWithCapture(
         response,
         {
@@ -174,6 +242,12 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       return {
         ...responseExecution(response, grounded.artifact),
         ...(outputFindings.length === 0 ? {} : { outputFindings }),
+        ...(currentArtifact === null
+          ? {}
+          : {
+              revisionMode:
+                patchResponse === undefined ? ("full" as const) : ("patch-fallback" as const),
+            }),
       };
     },
   };

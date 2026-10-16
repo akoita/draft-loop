@@ -362,6 +362,133 @@ describe("attributeRevision", () => {
   });
 });
 
+describe("attributeRevision from a targeted revision's edits", () => {
+  const replaceEdits = [
+    {
+      op: "replace" as const,
+      sourceBlockKey: "summary#0/b0",
+      revisedBlockKey: "summary#0/b0",
+      findingIds: ["f-summary", "f-skills", "f-rejected"],
+    },
+    {
+      op: "replace" as const,
+      sourceBlockKey: "experience#0/b0",
+      revisedBlockKey: "experience#0/b0",
+      findingIds: ["f-experience"],
+    },
+  ];
+
+  it("uses the findings each edit names, even where the diff would not tie them to a block", () => {
+    const attribution = attributeRevision({
+      plan: plan(),
+      sourceArtifact: source,
+      revisedArtifact: revised,
+      edits: replaceEdits,
+    });
+    expect(attribution.source).toBe("edits");
+    // f-skills targets the unchanged skills section; the diff leaves it unattributed.
+    expect(attribution.blocks).toEqual([
+      {
+        blockKey: "summary#0/b0",
+        blockId: "block-summary-v2",
+        change: "changed",
+        // The rejected finding an edit names is not an accepted decision, so it is not attributed.
+        findingIds: ["f-summary", "f-skills"],
+      },
+      {
+        blockKey: "experience#0/b0",
+        blockId: "block-experience-v2",
+        change: "changed",
+        findingIds: ["f-experience"],
+      },
+    ]);
+    expect(attribution.unattributedFindingIds).toEqual([]);
+    expect(attribution.findings).toEqual(
+      attributeRevision({ plan: plan(), sourceArtifact: source, revisedArtifact: revised })
+        .findings,
+    );
+  });
+
+  it("keeps the derived attribution, without a source, when there are no edits", () => {
+    const derived = attributeRevision({
+      plan: plan(),
+      sourceArtifact: source,
+      revisedArtifact: revised,
+    });
+    expect(derived).not.toHaveProperty("source");
+  });
+
+  it("maps an insert to an added block and a delete to a removed block", () => {
+    const grown = {
+      ...revised,
+      sections: revised.sections.map((section) =>
+        section.kind === "skills"
+          ? {
+              ...section,
+              blocks: [
+                ...section.blocks,
+                { id: "block-extra", type: "paragraph" as const, text: "More.", claimIds: [] },
+              ],
+            }
+          : section,
+      ),
+    };
+    const inserted = attributeRevision({
+      plan: plan(),
+      sourceArtifact: source,
+      revisedArtifact: grown,
+      edits: [{ op: "insert", revisedBlockKey: "skills#0/b1", findingIds: ["f-skills"] }],
+    });
+    expect(inserted.blocks).toEqual([
+      {
+        blockKey: "skills#0/b1",
+        blockId: "block-extra",
+        change: "added",
+        findingIds: ["f-skills"],
+      },
+    ]);
+    expect([...inserted.unattributedFindingIds].sort()).toEqual(["f-experience", "f-summary"]);
+
+    const shrunk = { ...revised, sections: revised.sections.slice(0, 2) };
+    const deleted = attributeRevision({
+      plan: plan(),
+      sourceArtifact: source,
+      revisedArtifact: shrunk,
+      edits: [{ op: "delete", sourceBlockKey: "skills#0/b0", findingIds: ["f-skills"] }],
+    });
+    expect(deleted.blocks).toEqual([
+      {
+        blockKey: "skills#0/b0",
+        blockId: "block-skills-v1",
+        change: "removed",
+        findingIds: ["f-skills"],
+      },
+    ]);
+  });
+
+  it("merges a delete and an insert that land on one position, and drops an edit whose block is gone", () => {
+    const attribution = attributeRevision({
+      plan: plan(),
+      sourceArtifact: source,
+      revisedArtifact: revised,
+      edits: [
+        { op: "delete", sourceBlockKey: "summary#0/b0", findingIds: ["f-summary"] },
+        { op: "insert", revisedBlockKey: "summary#0/b0", findingIds: ["f-skills"] },
+        { op: "replace", revisedBlockKey: "skills#0/b9", findingIds: ["f-experience"] },
+      ],
+    });
+    expect(attribution.blocks).toEqual([
+      {
+        blockKey: "summary#0/b0",
+        blockId: "block-summary-v2",
+        change: "changed",
+        findingIds: ["f-summary", "f-skills"],
+      },
+    ]);
+    expect(attribution.unattributedFindingIds).toEqual(["f-experience"]);
+  });
+});
+
 function traceOf(): AdjudicatedRevisionTrace {
   const attribution = attributeRevision({
     plan: plan(),
@@ -622,6 +749,90 @@ describe("engine classification of an adjudicated revision", () => {
       ["resolved", "f-skills"],
       ["resolved", "f-summary"],
     ]);
+  });
+
+  it("records edit-sourced attribution and keeps it when the stored execution is replayed", async () => {
+    class FlakyStore extends InMemoryRunStore {
+      public failNextRevisionSnapshot = true;
+
+      public override async saveRun(snapshot: RunSnapshot): Promise<void> {
+        if (
+          this.failNextRevisionSnapshot &&
+          snapshot.executionHistory.some(({ step }) => step === "revision")
+        ) {
+          this.failNextRevisionSnapshot = false;
+          throw new Error("synthetic snapshot failure");
+        }
+        return super.saveRun(snapshot);
+      }
+    }
+    const store = new FlakyStore();
+    let authorCalls = 0;
+    const engine = createOrchestrationEngine({
+      author: {
+        execute: async (request: AuthorRequest) => {
+          authorCalls += 1;
+          return request.round === 1
+            ? execution(source)
+            : {
+                ...execution(revised),
+                revisionMode: "patch" as const,
+                appliedEdits: [
+                  {
+                    op: "replace" as const,
+                    sourceBlockKey: "summary#0/b0",
+                    revisedBlockKey: "summary#0/b0",
+                    findingIds: ["f-summary", "f-skills"],
+                  },
+                  {
+                    op: "replace" as const,
+                    sourceBlockKey: "experience#0/b0",
+                    revisedBlockKey: "experience#0/b0",
+                    findingIds: ["f-experience"],
+                  },
+                ],
+              };
+        },
+      },
+      critic: { execute: async () => execution({ findings: [] }) },
+      store,
+      now: () => engineNow,
+    });
+    await engine.start({
+      runId: "run-1",
+      workspace: createWorkspace("workspace-1"),
+      context: context(),
+      budget: { maxRounds: 2 },
+    });
+    await engine.requestAdjudicatedRevision("run-1", {
+      report: report(reportFindings),
+      decisions: reportFindings.map(({ id }) => ({
+        findingId: id,
+        disposition: id === "f-rejected" ? ("reject" as const) : ("accept" as const),
+        rationale: `Decision for ${id}.`,
+      })),
+      acceptedEffectOverrides: [],
+    });
+    await expect(engine.resume("run-1", { context: context() })).rejects.toThrow(/synthetic/);
+    expect(authorCalls).toBe(2);
+
+    const resumed = await engine.resume("run-1", { context: context() });
+    expect(authorCalls).toBe(2);
+    expect(resumed.state).toBe("awaiting-approval");
+    const revision = resumed.executionHistory.find(({ step }) => step === "revision");
+    expect(revision?.revisionMode).toBe("patch");
+    expect(revision?.adjudicatedRevisionTrace).toMatchObject({
+      schemaVersion: 2,
+      attribution: {
+        source: "edits",
+        blocks: [
+          { blockKey: "summary#0/b0", findingIds: ["f-summary", "f-skills"] },
+          { blockKey: "experience#0/b0", findingIds: ["f-experience"] },
+        ],
+        unattributedFindingIds: [],
+      },
+    });
+    expect(resumed.adjudicationRuntime?.trace?.attribution?.source).toBe("edits");
   });
 
   it("replays a stored version 1 trace unchanged and adds no classification", async () => {

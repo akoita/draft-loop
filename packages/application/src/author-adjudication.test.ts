@@ -291,8 +291,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v9 for new author runs and v5 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v9");
+  it("records v10 for new author runs and v5 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v10");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v5");
   });
 
@@ -664,8 +664,8 @@ describe("author prompt template versions", () => {
   });
 
   it("fails closed for an unknown author prompt template version", () => {
-    expect(() => createAuthorAdjudicationPrompt("cli-author-v10", undefined)).toThrow(
-      'Unsupported author prompt template version "cli-author-v10"',
+    expect(() => createAuthorAdjudicationPrompt("cli-author-v99", undefined)).toThrow(
+      'Unsupported author prompt template version "cli-author-v99"',
     );
     expect(() => createAuthorAdjudicationPrompt("cli-critic-v1", undefined)).toThrow(
       "Unsupported author prompt template version",
