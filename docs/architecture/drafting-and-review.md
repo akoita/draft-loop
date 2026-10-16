@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v11`, which states and sends a
+New runs record author template `cli-author-v12`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v11 retain 32,768.
+v4 to v12 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -724,6 +724,18 @@ deriving them from the job (`emphasisPlanThemeSourceInstructions` replaces
 `emphasisThemeSourceInstructions`), and reports a plan gap as
 `emphasis-theme-gap`. The plan is recorded in run history as a
 `run.application-plan` event and shown in **Run details** as "Application plan".
+
+### Fuller bullets and labelled Core areas (#1338)
+
+Author `cli-author-v12` keeps v11 and asks for 3 to 5 substantive bullets per
+role, each combining what was done, how, and the scope or result (about 30 to 60
+words), labelled Core areas lines whose label words appear in cited evidence,
+a few compact certification lines, and complete statements only. The guidance
+never overrides grounding, required sections or the writing policy. Resumed v11
+and earlier runs keep their exact prompt. Deterministic validation reports a
+bullet that opens with a lowercase letter (other than a known name such as `iOS`
+or `npm`) or ends on a dangling connector as an `editorial-fragment` warning, so
+the critic and readiness steps see it.
 
 ### Stop and pause on findings (#1113)
 

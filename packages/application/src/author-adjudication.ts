@@ -1,6 +1,7 @@
 import type { AuthorRequest } from "@draft-loop/orchestrator";
 
 import { applicationPlanAuthorInstructions } from "./application-plan-prompts.js";
+import { fullerBulletInstructions } from "./author-bullet-prompts.js";
 
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import type { AuthorRevision } from "./author-revision-memory.js";
@@ -176,6 +177,15 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v12 asks for fewer, fuller bullets and labelled Core areas (#1338).
+  "cli-author-v12": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${fullerBulletInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -185,7 +195,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v11" : "cli-critic-v5";
+  return role === "author" ? "cli-author-v12" : "cli-critic-v5";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -271,7 +281,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v8" ||
     authorPromptTemplateVersion === "cli-author-v9" ||
     authorPromptTemplateVersion === "cli-author-v10" ||
-    authorPromptTemplateVersion === "cli-author-v11";
+    authorPromptTemplateVersion === "cli-author-v11" ||
+    authorPromptTemplateVersion === "cli-author-v12";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt
