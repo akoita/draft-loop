@@ -20,13 +20,13 @@ import {
   renderingQaViewerObservationSchema,
 } from "@draft-loop/schemas";
 
-import { isTitleBlockSection } from "./document-layout.js";
+import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
-export const renderTemplateVersion = "cv-controlled-v1";
+export const renderTemplateVersion = "cv-controlled-v2";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
@@ -43,6 +43,8 @@ export interface RenderingLayoutProfile {
   };
   readonly typography: {
     readonly fontFamily: string;
+    /** The font the DOCX names; PDF always uses the standard Helvetica fonts. */
+    readonly docxFontFamily: string;
     readonly bodyFontSizePt: number;
     readonly headingFontSizePt: number;
     readonly lineHeight: number;
@@ -50,6 +52,15 @@ export interface RenderingLayoutProfile {
   readonly lineMetricsPt: {
     readonly body: number;
     readonly heading: number;
+  };
+  /** Title, block and bullet spacing shared by the PDF, the DOCX and the length estimate. */
+  readonly spacingPt: LayoutMetrics;
+  /** Spacing of the HTML preview, which uses CSS rather than the shared block model. */
+  readonly previewSpacingPt: {
+    readonly headingBefore: number;
+    readonly headingAfter: number;
+    readonly blockAfter: number;
+    readonly listIndent: number;
   };
   readonly wrapping: {
     readonly bodyMaxCharacters: number;
@@ -66,11 +77,23 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
     typography: {
       fontFamily: "Arial, sans-serif",
+      docxFontFamily: "Arial",
       bodyFontSizePt: 9.5,
       headingFontSizePt: 13,
       lineHeight: 1.25,
     },
     lineMetricsPt: { body: 12, heading: 21 },
+    spacingPt: {
+      titleSizePt: 18,
+      titleLinePt: 26,
+      headingBeforePt: 8,
+      headingAfterPt: 4,
+      blockAfterPt: 3,
+      titleAfterPt: 2,
+      contactAfterPt: 0,
+      bulletIndentPt: 14,
+    },
+    previewSpacingPt: { headingBefore: 9, headingAfter: 7, blockAfter: 5, listIndent: 17 },
     wrapping: { bodyMaxCharacters: 96, bulletMaxCharacters: 90 },
     targetMaxPages: 1,
   },
@@ -78,15 +101,28 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     id: "standard-two-page",
     pageWidthMm: 210,
     pageHeightMm: 297,
-    marginsMm: { top: 18, right: 18, bottom: 18, left: 18 },
+    marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
     typography: {
-      fontFamily: "Arial, sans-serif",
-      bodyFontSizePt: 10.5,
-      headingFontSizePt: 14,
-      lineHeight: 1.42,
+      fontFamily: "Calibri, Arial, sans-serif",
+      docxFontFamily: "Calibri",
+      bodyFontSizePt: 9,
+      headingFontSizePt: 10.5,
+      lineHeight: 1.2,
     },
-    lineMetricsPt: { body: 16, heading: 25 },
-    wrapping: { bodyMaxCharacters: 88, bulletMaxCharacters: 82 },
+    lineMetricsPt: { body: 11, heading: 14 },
+    spacingPt: {
+      titleSizePt: 16,
+      titleLinePt: 20,
+      headingBeforePt: 6,
+      headingAfterPt: 2,
+      blockAfterPt: 1.5,
+      titleAfterPt: 2,
+      contactAfterPt: 0,
+      bulletIndentPt: 11,
+    },
+    previewSpacingPt: { headingBefore: 6, headingAfter: 3, blockAfter: 2, listIndent: 11 },
+    // Real line width binds first; these stay within the inspector's clipping heuristic at 9 pt.
+    wrapping: { bodyMaxCharacters: 138, bulletMaxCharacters: 133 },
     targetMaxPages: 2,
   },
 };
@@ -470,14 +506,14 @@ function controlledCss(profile: RenderingLayoutProfile): string {
     left: leftMargin,
   } = profile.marginsMm;
   const contentWidth = profile.pageWidthMm - leftMargin - rightMargin;
-  const headingMargin = profile.lineMetricsPt.heading - profile.lineMetricsPt.body;
+  const spacing = profile.previewSpacingPt;
   return `
 @page { size: A4; margin: ${topMargin}mm ${rightMargin}mm ${bottomMargin}mm ${leftMargin}mm; }
 body { color: #1e2932; font-family: ${profile.typography.fontFamily}; font-size: ${profile.typography.bodyFontSizePt}pt; line-height: ${profile.typography.lineHeight}; }
 main { max-width: ${contentWidth}mm; margin: 0 auto; }
-h2 { margin: ${headingMargin}pt 0 7pt; border-bottom: 1px solid #94a3ad; padding-bottom: 3pt; font-size: ${profile.typography.headingFontSizePt}pt; }
-p, li { margin: 0 0 5pt; }
-ul { margin: 0 0 5pt; padding-left: 17pt; }
+h2 { margin: ${spacing.headingBefore}pt 0 ${spacing.headingAfter}pt; border-bottom: 1px solid #94a3ad; padding-bottom: 3pt; font-size: ${profile.typography.headingFontSizePt}pt; }
+p, li { margin: 0 0 ${spacing.blockAfter}pt; }
+ul { margin: 0 0 ${spacing.blockAfter}pt; padding-left: ${spacing.listIndent}pt; }
 `;
 }
 
@@ -540,10 +576,11 @@ function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
     const start = match.index ?? 0;
     const lineStart = raw.lastIndexOf("\n", start) + 1;
     const prefix = raw.slice(lineStart, start);
-    const fontSize = Number(prefix.match(/\/F\d+\s+([0-9.]+)\s+Tf/u)?.[1] ?? 0);
+    // Titles and headings are the only bold (F2) runs; body text is never bold.
+    const isBold = /\/F2\s+[0-9.]+\s+Tf/u.test(prefix);
     units.push({
       text: decodePdfText(escaped),
-      kind: fontSize >= 12 ? "heading" : "body",
+      kind: isBold ? "heading" : "body",
     });
   }
   return units;

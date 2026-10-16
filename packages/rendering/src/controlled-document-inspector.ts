@@ -348,6 +348,7 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
       const text = decodePdfLiteral(escaped);
       const prefix = stream.slice(0, match.index ?? 0);
       const fontSizes = [...prefix.matchAll(/\/F\d+\s+([-+]?\d+(?:\.\d+)?)\s+Tf/gu)];
+      const fontNames = [...prefix.matchAll(/\/F(\d+)\s+[-+]?\d+(?:\.\d+)?\s+Tf/gu)];
       const transforms = [
         ...prefix.matchAll(/1\s+0\s+0\s+1\s+([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+Tm/gu),
       ];
@@ -358,7 +359,9 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
         fail("controlled PDF text position is incomplete");
       const width = [...text].length * fontSize * 0.45;
       clipped ||= x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1;
-      units.push({ text, kind: fontSize >= 12 ? "heading" : "body" });
+      // Titles and headings are the only bold (F2) runs; body text is never bold.
+      const isBold = fontNames.at(-1)?.[1] === "2";
+      units.push({ text, kind: isBold ? "heading" : "body" });
     }
     pages.push({ units, clipped });
   }

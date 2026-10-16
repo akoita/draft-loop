@@ -788,6 +788,13 @@ consistently to the minimal HTML, PDF, and DOCX implementations. Content is
 never truncated, reordered, summarized, or rewritten to satisfy a page target;
 an overflowing PDF is a deterministic QA failure signal.
 
+`standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
+leading, 10.5 pt bold headings with a rule, a 16 pt title and 12 mm margins,
+wrapped to the real line width. About 1,700 words of a typical CV fit on two
+pages. The PDF uses Helvetica; the DOCX names Calibri with the same exact
+leading. Exports record the layout as `cv-controlled-v2`; records written as
+`cv-controlled-v1` (the earlier, looser layout) still parse.
+
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,
 and inspectable PDF page counts. The application builds this report after exact
