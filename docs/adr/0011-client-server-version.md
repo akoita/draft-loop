@@ -274,12 +274,42 @@ plan decides what is enabled.
   models and professional features, never the grounding, critic or
   validation that make a CV truthful.
 
+### D14. Hosting on Google Cloud
+
+The owner decided (2026-10-16) to host on Google Cloud. The components map
+onto managed services in one EU region (for example `europe-west9`, Paris,
+or `europe-west1`):
+
+| Component | Google Cloud service |
+|---|---|
+| API (D1, D10) | Cloud Run service behind an external HTTPS load balancer, with Cloud Armor |
+| Workers (D4, D11) | Cloud Run worker pools or always-on Cloud Run services pulling from the queue; ingestion in a separate service with no egress |
+| Database (D3) | Cloud SQL for PostgreSQL with `pgvector`, private IP, automated backups and point-in-time recovery; AlloyDB if load requires it |
+| Queue (D4) | Postgres-backed, in the same Cloud SQL instance, so run state and jobs commit together; Cloud Tasks or Pub/Sub only for fan-out that needs it |
+| Objects (D3) | Cloud Storage, with CMEK through Cloud KMS and per-tenant prefixes |
+| Secrets and BYOK keys (D5) | Secret Manager for platform secrets; Cloud KMS envelope encryption for customer keys |
+| Identity (D6) | Identity Platform: OIDC, SAML and multi-tenancy for Business SSO. Confirm EU data handling before committing, or use a third-party vendor |
+| URL fetching (D11) | A fetcher service with egress only through Cloud NAT and Secure Web Proxy rules |
+| Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
+| Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys) |
+
+- **Model providers.** The Anthropic and OpenAI APIs stay the default pair.
+  Claude on **Vertex AI** in an EU region is an option worth evaluating for
+  Anthropic models. It offers EU processing, Google Cloud billing and
+  enterprise terms, at the cost of a new provider adapter and model-id
+  mapping. OpenAI models stay on OpenAI's API.
+- **Isolation.** Production in its own project, with separate service
+  accounts for API, workers, ingestion and fetcher, each with least
+  privilege. Business plans can later move to Assured Workloads controls.
+- **Cost.** Cloud Run scales to zero for the API, and a small Cloud SQL
+  instance is the main fixed cost at the start.
+
 ## Phasing (for planning only)
 
 | Phase | Outcome | Gate |
 |---|---|---|
 | 0. Ports | Storage port extracted; SQLite behind it; the application driver no longer assumes the filesystem. Done in the current repo, with the desktop still green | Both local clients pass on the port |
-| 1. Hosted single-tenant | API, worker, Postgres and the web review screen, for the owner's own use | A parity run on the server matches the local result |
+| 1. Hosted single-tenant | API and worker on Cloud Run, Cloud SQL and Cloud Storage, Terraform, and the web review screen, for the owner's own use | A parity run on the server matches the local result |
 | 2. Multi-tenant beta | Identity, organisations and candidate records, consent, entitlements and billing, deletion and export | A privacy review and a security review |
 | 3. Professional features | Provenance report, reviewer role, Team and Business plans (SSO, retention, audit export, BYOK) | First paying users on each plan |
 
@@ -289,10 +319,10 @@ plan decides what is enabled.
    tiered plans (D13).
 2. **Pricing levels.** Prices and run allowances per plan, and whether
    overage is billed or blocked. The plan structure itself is set in D13.
-3. **Hosting.** A managed platform for speed, such as a PaaS with managed
-   Postgres in an EU region, or a hyperscaler for control.
-4. **Identity vendor.** Any OIDC provider with organisations and EU
-   residency.
+3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14). Still to
+   choose: the exact EU region.
+4. **Identity vendor.** Identity Platform is the default proposal (D14),
+   subject to confirming its EU data handling.
 5. **The desktop app's future.** It could stay frozen and local, or later
    become a thin client of the service.
 
