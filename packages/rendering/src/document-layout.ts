@@ -24,6 +24,8 @@ export interface LayoutMetricsProfile {
   };
   readonly typography: { readonly bodyFontSizePt: number; readonly headingFontSizePt: number };
   readonly lineMetricsPt: { readonly body: number; readonly heading: number };
+  /** Spacing overrides; any field left out keeps the default of the original standard layout. */
+  readonly spacingPt?: Partial<LayoutMetrics> | undefined;
 }
 
 /** Writing-policy page targets; kept structural so the layout stays framework-free. */
@@ -150,6 +152,7 @@ export function layoutMetrics(profile: LayoutMetricsProfile): LayoutMetrics {
     titleAfterPt: 2,
     contactAfterPt: 0,
     bulletIndentPt: 14,
+    ...profile.spacingPt,
   };
 }
 

@@ -78,7 +78,7 @@ describe("application export rendering QA", () => {
     }
 
     it("returns a long PDF's honest failed report with the real page count", () => {
-      const artifact = longArtifact(120);
+      const artifact = longArtifact(260);
       const rendered = renderArtifact(artifact, "pdf", { generatedAt });
       const { report, pageOverflow } = assertExportRenderingQa(artifact, rendered);
       expect(report.passed).toBe(false);
@@ -99,7 +99,7 @@ describe("application export rendering QA", () => {
     });
 
     it("still refuses every other failure with a path-free user error", () => {
-      const artifact = longArtifact(120);
+      const artifact = longArtifact(260);
       const report = buildExportRenderingQa(
         artifact,
         renderArtifact(artifact, "pdf", { generatedAt }),
@@ -162,7 +162,7 @@ describe("application export rendering QA", () => {
       const requirements = Array.from(
         { length: 100 },
         (_, index) =>
-          `- Requirement ${index}: build reliable synthetic systems for the platform team and document every operational decision for later review by colleagues`,
+          `- Requirement ${index}: build reliable synthetic systems for the platform team and document every operational decision for later review by colleagues, ${"and keep every synthetic stakeholder informed through clear written updates, ".repeat(3)}`,
       );
       await writeFile(join(root, "job.md"), `${requirements.join("\n")}\n`, "utf8");
       await writeFile(join(root, "evidence", "resume.md"), "Synthetic evidence\n", "utf8");

@@ -155,7 +155,7 @@ describe("sendable DOCX export", () => {
 
   it("uses a standard font, A4 margins and a real bullet list without tables or text boxes", () => {
     const styles = parts.get("word/styles.xml") ?? "";
-    expect(styles).toContain('w:ascii="Arial"');
+    expect(styles).toContain('w:ascii="Calibri"');
     expect(styles).toContain('w:styleId="Heading1"');
     expect(parts.get("word/numbering.xml")).toContain('w:numFmt w:val="bullet"');
     expect(documentXml).toContain('<w:pgSz w:w="11906" w:h="16838"/>');
