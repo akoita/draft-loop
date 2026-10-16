@@ -68,7 +68,8 @@ describe("application export rendering QA", () => {
             ...(section as NonNullable<typeof section>),
             blocks: Array.from({ length: bullets }, (_, index) => ({
               id: `bullet-${index}`,
-              type: "bullet" as const,
+              // Paragraphs: a run of short bullets is drawn as one compact paragraph.
+              type: "paragraph" as const,
               text: `Delivered outcome ${index} with measurable impact for the whole team.`,
               claimIds: [],
             })),

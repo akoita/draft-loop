@@ -21,7 +21,7 @@ const options = { generatedAt: fixtureGeneratedAt } as const;
 const cv = syntheticCv(1.05);
 
 function blockLinesOf(artifact: typeof cv): readonly string[] {
-  return layoutBlocks(artifact).flatMap((block) =>
+  return layoutBlocks(artifact, renderingLayoutProfiles["standard-two-page"]).flatMap((block) =>
     blockLines(block, renderingLayoutProfiles["standard-two-page"]),
   );
 }

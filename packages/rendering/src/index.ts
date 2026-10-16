@@ -22,19 +22,15 @@ import {
 
 import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
+import { sectionBodyHtml } from "./html-blocks.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
 import type { PdfFontFamily } from "./pdf-fonts.js";
-import {
-  docxParagraphText,
-  isRoleHeaderBlock,
-  joinRoleDateRuns,
-  type PdfTextRun,
-  splitRoleHeader,
-} from "./role-header.js";
+import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
-export const renderTemplateVersion = "cv-controlled-v3";
+export const renderTemplateVersion = "cv-controlled-v4";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
@@ -504,30 +500,12 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-/** A role header: bold, with a date range right-aligned; the separator is kept for copy and paste. */
-function htmlRoleHeader(text: string): string {
-  const parts = splitRoleHeader(text);
-  if (parts === null) return `<p class="role">${escapeHtml(text)}</p>`;
-  return `<p class="role"><span>${escapeHtml(parts.left)}</span><span class="separator"> | </span><span class="date">${escapeHtml(parts.date)}</span></p>`;
-}
-
 export function renderHtml(artifact: DraftArtifact, options: RenderOptions = {}): string {
   assertCanonicalOptionKeys(options);
   const profile = getRenderingLayoutProfile(options.layoutProfile);
   const sections = orderedSections(artifact)
     .map((section) => {
-      const blocks = section.blocks
-        .map((block, index) => {
-          if (isRoleHeaderBlock(section.kind, section.blocks, index)) {
-            return htmlRoleHeader(block.text);
-          }
-          const tag = block.type === "bullet" ? "li" : "p";
-          return `<${tag}>${escapeHtml(block.text)}</${tag}>`;
-        })
-        .join("");
-      const list = section.blocks.some((block) => block.type === "bullet")
-        ? `<ul>${blocks}</ul>`
-        : blocks;
+      const list = sectionBodyHtml(section, profile, escapeHtml);
       return `<section><h2>${escapeHtml(section.title)}</h2>${list}</section>`;
     })
     .join("");
@@ -620,17 +598,18 @@ function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
     const prefix = raw.slice(lineStart, start);
     // Titles and headings are the only F2 runs; role headers use the same bold face as F3.
     const font = Number(prefix.match(/\/F(\d+)\s+[0-9.]+\s+Tf/u)?.[1]);
+    const tag = pdfRunTag(prefix);
     const position = prefix.match(/1\s+0\s+0\s+1\s+([-0-9.]+)\s+([-0-9.]+)\s+Tm/u);
     runs.push({
       text: decodePdfText(escaped),
       fontNumber: font,
       x: Number(position?.[1]),
       y: Number(position?.[2]),
+      tag,
     });
   }
-  // A right-aligned date reads back with the " | " that precedes it in the artifact text.
-  const joined = joinRoleDateRuns(runs);
-  for (const run of joined) {
+  // Dates, labels and compact lists read back as the artifact's own blocks.
+  for (const run of recoverPdfRuns(runs)) {
     units.push({ text: run.text, kind: run.fontNumber === 2 ? "heading" : "body" });
   }
   return units;
@@ -641,8 +620,8 @@ function extractDocxUnits(raw: string): readonly VisibleTextUnit[] {
   const paragraphPattern = /<w:p(?:\s[^>]*)?>(.*?)<\/w:p>/gs;
   for (const paragraph of raw.matchAll(paragraphPattern)) {
     const xmlParagraph = paragraph[1] ?? "";
-    const text = docxParagraphText(xmlParagraph, decodeXmlText);
-    if (text !== "") {
+    for (const text of docxParagraphUnits(xmlParagraph, decodeXmlText)) {
+      if (text === "") continue;
       units.push({
         text,
         kind: /w:pStyle\s+w:val="(?:Heading1|Title)"/u.test(xmlParagraph) ? "heading" : "body",

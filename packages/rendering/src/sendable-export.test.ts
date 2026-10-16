@@ -291,7 +291,8 @@ describe("length estimate", () => {
         blocks: Array.from({ length: 100 }, (_, index) =>
           block(
             `long-${index}`,
-            "bullet",
+            // Paragraphs: a run of short bullets would be drawn as one compact paragraph.
+            "paragraph",
             `Delivered outcome ${index} with measurable impact for the team.`,
           ),
         ),

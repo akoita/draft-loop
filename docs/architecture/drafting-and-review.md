@@ -826,9 +826,29 @@ leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins an
 wrapped to the real line width. About 2,000 words of a typical CV fit on two
 pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
 DOCX names Calibri with the same exact leading. Exports record the layout as
-`cv-controlled-v3`, which adds role headers. Records written as
-`cv-controlled-v2` (before role headers) or `cv-controlled-v1` (the earlier,
-looser layout) still parse.
+`cv-controlled-v4`, which adds role context lines, bold labels and compact
+lists. Records written as `cv-controlled-v3` (role headers), `cv-controlled-v2`
+(before role headers) or `cv-controlled-v1` (the earlier, looser layout) still
+parse.
+
+The layout reads structure from the blocks without editing their text:
+
+- **Role context.** In Experience and Projects, a paragraph with a ` | `
+  segment is a role header when bullets or a plain paragraph follow it. A plain
+  paragraph directly after it is a context line and stays regular. A paragraph
+  directly followed by bullets remains a role header.
+- **Labels.** A paragraph or bullet that opens with a short `Label:` followed by a space (at most
+  five words and 40 characters, with a letter, and not a URL scheme or a time)
+  draws the label in bold and the rest regular.
+- **Compact lists.** A run of three or more consecutive bullets that each fit on
+  one line is drawn as one wrapped paragraph with the items joined by ` · ` and
+  no bullet glyphs (`minCompactListItems` in `compact-list.ts`). Runs with a
+  two-line bullet stay bullets.
+
+The PDF tags label and compact lines with marked content, and the DOCX uses a
+`CompactList` style, so the inspectors split a compact paragraph back into its
+bullets and rejoin labels. Content-integrity and block-order checks are
+unchanged.
 
 The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
 Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed

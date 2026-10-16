@@ -3,6 +3,7 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 import {
   blockLines,
   type LayoutBlock,
+  labelledLayout,
   layoutBlocks,
   layoutMetrics,
   profilePdfFont,
@@ -13,6 +14,7 @@ import {
 } from "./document-layout.js";
 import type { RenderingLayoutProfile } from "./index.js";
 import { embeddedFontFlateBytes, embeddedPdfFonts } from "./pdf-fonts.js";
+import { tagPdfCommands } from "./pdf-run-recovery.js";
 import type { EmbeddedFontData } from "./truetype-font.js";
 import { winAnsiCode, windows1252Characters } from "./winansi.js";
 
@@ -186,6 +188,41 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
       y -= metrics.blockAfterPt;
       return;
     }
+    if (block.kind === "compact") {
+      // One wrapped paragraph; the tag lets the inspectors split it back into its bullets.
+      for (const line of blockLines(block, profile)) {
+        if (y - bodyLine < bottom && !atPageTop()) startPage();
+        place(tagPdfCommands("compact", text("F1", body, left, y - body, line)));
+        y -= bodyLine;
+      }
+      y -= metrics.blockAfterPt;
+      return;
+    }
+    const labelled = labelledLayout(block, profile);
+    if (labelled !== null) {
+      const isBullet = block.kind === "bullet";
+      const textX = isBullet ? left + bulletTextOffset : left;
+      const lineCount = 1 + labelled.laterLines.length;
+      for (let lineIndex = 0; lineIndex < lineCount; lineIndex += 1) {
+        if (y - bodyLine < bottom && !atPageTop()) startPage();
+        if (lineIndex === 0) {
+          if (isBullet) place(text("F1", body, left, y - body, bulletPrefix));
+          place(tagPdfCommands("label", text("F3", body, textX, y - body, labelled.label)));
+          if (labelled.firstRest !== "") {
+            const restX =
+              textX +
+              textWidthPt(labelled.label, body, true, font) +
+              textWidthPt(" ", body, false, font);
+            place(text("F1", body, restX, y - body, labelled.firstRest));
+          }
+        } else {
+          place(text("F1", body, textX, y - body, labelled.laterLines[lineIndex - 1] ?? ""));
+        }
+        y -= bodyLine;
+      }
+      y -= metrics.blockAfterPt;
+      return;
+    }
     const lines = blockLines(block, profile);
     lines.forEach((line, lineIndex) => {
       if (y - bodyLine < bottom && !atPageTop()) startPage();
@@ -257,7 +294,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
   const { artifact, profile } = input;
   const pageWidth = toPoints(profile.pageWidthMm);
   const pageHeight = toPoints(profile.pageHeightMm);
-  const pages = pageCommands(profile, layoutBlocks(artifact));
+  const pages = pageCommands(profile, layoutBlocks(artifact, profile));
 
   const objects: PdfObjectBody[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
