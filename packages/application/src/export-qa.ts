@@ -110,3 +110,14 @@ export function assertExportRenderingQa(
 ): ExportRenderingQaResult {
   return exportRenderingQaDecision(buildExportRenderingQa(artifact, rendered));
 }
+
+/**
+ * The template record of an export: the renderer version and the rendering template (id and version)
+ * the document was drawn with. The QA report stays template-agnostic, so the export payload holds it.
+ */
+export function exportTemplateRecord(rendered: RenderedDocument) {
+  return {
+    templateVersion: rendered.metadata.templateVersion,
+    renderingTemplate: rendered.metadata.renderingTemplate,
+  };
+}

@@ -253,6 +253,7 @@ describe("application export rendering QA", () => {
           expect(record.payload).toMatchObject({
             format: record.format,
             approved: true,
+            renderingTemplate: { id: "classic", version: 1 },
             renderingQa: { complete: true, passed: true },
           });
           expect(JSON.stringify(record.payload)).not.toContain("Synthetic evidence");
