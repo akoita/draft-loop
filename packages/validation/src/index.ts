@@ -9,6 +9,7 @@ import type {
 } from "@draft-loop/schemas";
 
 import { findBulletFragment } from "./bullet-fragment.js";
+import { findBulletSeries } from "./bullet-series.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
@@ -522,6 +523,19 @@ export function validateDraftArtifact(
           location: writingPolicyLocation(block.text, repeated.start, repeated.end),
         });
       }
+    }
+  }
+
+  for (const section of artifact.sections) {
+    for (const series of findBulletSeries(section.blocks)) {
+      addIssue(issues, {
+        code: "dense-bullet-series",
+        category: "quality",
+        severity: "warning",
+        message: series.message,
+        sectionId: section.id,
+        blockId: series.blockId,
+      });
     }
   }
 

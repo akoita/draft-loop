@@ -55,8 +55,9 @@ it.each([
   { recorded: "cli-author-v7", structuredGuidance: true, budget: 32_768 },
   // v10 and later try a block-level patch before falling back to the full revision.
   { recorded: "cli-author-v11", structuredGuidance: true, budget: 32_768, patchFirst: true },
+  { recorded: "cli-author-v12", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v12",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v13",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -228,19 +229,21 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v12");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v13");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v12", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v13", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
-      expect(systemPrompts[resumedCalls]).toContain("Write fewer, fuller bullets.");
       expect(systemPrompts[resumedCalls]).toContain(
-        "open each line with a short label and a colon",
+        "Bullet markers should be several lines apart; never stack short bullets.",
       );
+      expect(systemPrompts[resumedCalls]).toContain("paragraph blocks of the form `Label: items`");
       expect(systemPrompts[resumedCalls]).toContain("never a fragment copied from a source");
-      // A resumed earlier run keeps its exact prompt, without the v12 guidance.
-      expect(systemPrompts[0]).not.toContain("Write fewer, fuller bullets.");
+      // A resumed earlier run keeps its exact prompt, without the v13 guidance.
+      expect(systemPrompts[0]).not.toContain(
+        "Bullet markers should be several lines apart; never stack short bullets.",
+      );
       expect(systemPrompts[resumedCalls]).toContain(structuredFieldInstruction);
       expect(systemPrompts[resumedCalls]).toContain(
         "word order or grouping may vary only when every whole-word component",
