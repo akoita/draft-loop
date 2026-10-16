@@ -139,20 +139,44 @@ resumes rather than restarts.
 - **Rules kept:** an Anthropic author with an OpenAI critic by default, a
   same-company warning, and model identity recorded in run history.
 
-### D6. Identity and tenancy
+### D6. Identity, tenancy and candidate records
+
+The owner decided (2026-10-16) to serve every profile through tiered plans
+(D13). One person or one organisation can therefore act for many candidates.
 
 - **OIDC sign-in** through a managed identity provider with organisation
-  support. Choose a vendor with EU data residency.
-- **Tenant = organisation.** A solo candidate is an organisation of one.
-- **Roles:** candidate (owns evidence and applications), reviewer (can
-  comment on and approve drafts they are invited to), admin. The candidate
-  alone approves and exports their CV unless they delegate.
+  support and EU data residency. Business plans add SSO (SAML or OIDC) and
+  directory sync.
+- **Organisation** is the tenant. An individual plan is an organisation of
+  one.
+- **Candidate record** is what a local workspace is today (ADR 0010): one
+  candidate's evidence, reviewed profile, writing policy and applications.
+  An organisation holds one or many candidate records.
+- **Roles:**
+  - *Owner/admin*: billing, members, policies, retention.
+  - *Member* (coach, recruiter, counsellor): works on the candidate records
+    assigned to them.
+  - *Candidate*: owns or is invited to their own record. Can see their
+    evidence, approve or reject drafts, and export.
+  - *Reviewer*: comments on and approves drafts they are invited to.
+- **Who approves and exports:** the candidate, or a member the candidate
+  has authorised for that record. The authorisation is recorded in the
+  audit trail.
 
 ### D7. Privacy and data protection
 
-- **Consent is explicit and recorded:** storing career material on the
-  service, sending bounded excerpts to model providers, and each optional
-  sharing with a reviewer.
+- **Controller and processor.** For an individual plan, DraftLoop is the
+  controller of the candidate's data. For team and business plans, the
+  organisation is the controller and DraftLoop processes the data on its
+  behalf under a data processing agreement. The organisation must hold a
+  lawful basis to process each candidate's material.
+- **The candidate's consent is captured and recorded:**
+  - When a member uploads material for a candidate, the member attests
+    the lawful basis.
+  - The candidate is invited to confirm, where the plan requires it, and
+    can see what is held about them and request deletion.
+  - Each step is recorded: storing material, sending bounded excerpts to
+    model providers, and every sharing with a reviewer.
 - **Sensitivity tiers are enforced on the server.** Never-share sections are
   stored for the candidate's own reference but are never sent to a provider
   or a reviewer. Sensitive sections need consent per run, as today.
@@ -224,23 +248,47 @@ backup format (ADR 0007), plus applications and their history. The upload
 is explicit, and the local copy is unchanged. This is optional for the
 first release.
 
+### D13. Plans and entitlements
+
+One product, tiered like Claude's plans. Every user profile is served; the
+plan decides what is enabled.
+
+| Plan | For | Shape |
+|---|---|---|
+| Individual | A candidate managing their own job search | One seat, one candidate record, monthly run allowance |
+| Pro | A demanding candidate or an independent coach | Higher run allowance, frontier model pairs, provenance report, run comparison |
+| Team | Coaches and recruiters working for several candidates | Seats, shared policies and templates, many candidate records, reviewer role |
+| Business | Outplacement firms, schools, career services | SSO and directory sync, admin controls, retention policies, audit export, BYOK, DPA |
+
+- **Entitlements are data, not code paths.** A plan maps to a set of
+  entitlements (run allowance, model tiers, seats, candidate records,
+  provenance report, BYOK, SSO, retention controls). Services check
+  entitlements, never plan names, so plans can change without code changes.
+- **Metering:** runs, provider tokens and cost are already recorded per run.
+  They are aggregated per organisation and enforced by the existing run
+  budget machinery.
+- **Billing:** a payment provider with subscriptions, seats and usage-based
+  overage (for example Stripe). Billing state only feeds entitlements; the
+  domain never depends on it.
+- **The quality engine is the same on every plan.** Plans gate volume,
+  models and professional features, never the grounding, critic or
+  validation that make a CV truthful.
+
 ## Phasing (for planning only)
 
 | Phase | Outcome | Gate |
 |---|---|---|
 | 0. Ports | Storage port extracted; SQLite behind it; the application driver no longer assumes the filesystem. Done in the current repo, with the desktop still green | Both local clients pass on the port |
 | 1. Hosted single-tenant | API, worker, Postgres and the web review screen, for the owner's own use | A parity run on the server matches the local result |
-| 2. Multi-tenant beta | Identity, tenancy, consent, metering, deletion and export | A privacy review and a security review |
-| 3. Professional features | Provenance report, reviewer role, team plans, BYOK | First paying users |
+| 2. Multi-tenant beta | Identity, organisations and candidate records, consent, entitlements and billing, deletion and export | A privacy review and a security review |
+| 3. Professional features | Provenance report, reviewer role, Team and Business plans (SSO, retention, audit export, BYOK) | First paying users on each plan |
 
 ## Open decisions for the owner
 
-1. **Who pays first?** Individual candidates, career coaches and recruiters
-   working for candidates, or organisations (outplacement firms, schools).
-   This sets roles (D6), traceability depth (D8) and pricing.
-2. **Pricing model.** A subscription with included runs, usage-based
-   pricing, or BYOK for professionals. This sets whether platform keys (D5)
-   are the default.
+1. ~~**Who pays first?**~~ **Decided 2026-10-16:** all profiles, through
+   tiered plans (D13).
+2. **Pricing levels.** Prices and run allowances per plan, and whether
+   overage is billed or blocked. The plan structure itself is set in D13.
 3. **Hosting.** A managed platform for speed, such as a PaaS with managed
    Postgres in an EU region, or a hyperscaler for control.
 4. **Identity vendor.** Any OIDC provider with organisations and EU
