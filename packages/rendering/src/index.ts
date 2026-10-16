@@ -120,7 +120,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       titleLinePt: 20,
       headingBeforePt: 6,
       headingAfterPt: 2,
-      blockAfterPt: 1.5,
+      blockAfterPt: 0.5,
       titleAfterPt: 2,
       contactAfterPt: 0,
       bulletIndentPt: 11,
