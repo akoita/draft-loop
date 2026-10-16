@@ -9,6 +9,7 @@ import {
   authorPromptSupportsApplicationPlan,
   createAuthorAdjudicationPrompt,
 } from "./author-adjudication.js";
+import { fullerBulletInstructions } from "./author-bullet-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
 import { criticCoverageJudgementParts } from "./critic-critique-contract.js";
@@ -103,6 +104,21 @@ describe("author prompt cli-author-v11", () => {
     const v11 = createAuthorAdjudicationPrompt("cli-author-v11", undefined);
     expect(v11.systemPrompt).toBe(`${v10.systemPrompt}${applicationPlanAuthorInstructions}`);
     expect(v11.providerInput).toEqual(v10.providerInput);
+  });
+});
+
+describe("author prompt cli-author-v12", () => {
+  it("is v11 plus the fuller-bullets guidance, and still plans the application", () => {
+    const v11 = createAuthorAdjudicationPrompt("cli-author-v11", undefined);
+    const v12 = createAuthorAdjudicationPrompt("cli-author-v12", undefined);
+    expect(v12.systemPrompt).toBe(`${v11.systemPrompt}${fullerBulletInstructions}`);
+    expect(v12.providerInput).toEqual(v11.providerInput);
+    expect(authorPromptSupportsApplicationPlan("cli-author-v12")).toBe(true);
+    expect(v12.systemPrompt).toContain("3 to 5 substantive bullets");
+    expect(v12.systemPrompt).toContain("open each line with a short label and a colon");
+    expect(v12.systemPrompt).toContain("never a fragment copied from a source");
+    expect(v12.systemPrompt).toContain("does not override the grounding rules");
+    expect(v11.systemPrompt).not.toContain("fuller bullets");
   });
 });
 

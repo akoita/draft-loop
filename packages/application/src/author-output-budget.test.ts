@@ -132,7 +132,7 @@ it("retains the exact per-generation cap and adjudication through a factuality r
   const author: UserSessionProcessRunner = vi.fn(async (_command, args, options) => {
     const input = JSON.parse(options.stdin) as Record<string, unknown>;
     const cap = Number(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
-    // New runs record cli-author-v11, whose budget is 32,768 tokens.
+    // New runs record cli-author-v12, whose budget is 32,768 tokens.
     expect(cap).toBe(32768);
     if ((args[args.indexOf("--system-prompt") + 1] ?? "").includes("targeted revision")) {
       // The round-2 revision first asks for a patch; an unusable one falls back to the full proposal.

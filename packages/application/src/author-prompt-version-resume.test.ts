@@ -53,9 +53,12 @@ it.each([
   { recorded: "cli-author-v5", structuredGuidance: true, budget: 32_768 },
   { recorded: "cli-author-v6", structuredGuidance: true, budget: 32_768 },
   { recorded: "cli-author-v7", structuredGuidance: true, budget: 32_768 },
+  // v10 and later try a block-level patch before falling back to the full revision.
+  { recorded: "cli-author-v11", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v11",
-  async ({ recorded, structuredGuidance, budget }) => {
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v12",
+  async ({ recorded, structuredGuidance, budget, patchFirst }) => {
+    const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
     const output: string[] = [];
     const io = { write: (line: string) => void output.push(line) };
@@ -195,17 +198,17 @@ it.each([
       expect(resumed.artifact?.version).toBe(2);
       expect(output.join("\n")).not.toContain("provider.failed");
       expect(output.join("\n")).not.toContain("provider-error");
-      expect(systemPrompts).toHaveLength(2);
+      expect(systemPrompts).toHaveLength(resumedCalls);
       // The versioned template and its budget remain pinned; the wire codec adds
       // the same decoding instructions independently of the stored prompt version.
       const pending = {} as Parameters<typeof createAuthorAdjudicationPrompt>[1];
       expect(systemPrompts[0]).toBe(
         `${createAuthorAdjudicationPrompt(recorded, undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
-      expect(systemPrompts[1]).toBe(
+      expect(systemPrompts[resumedCalls - 1]).toBe(
         `${createAuthorAdjudicationPrompt(recorded, pending).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
-      expect(systemPrompts[1]).toContain("This is an adjudicated revision.");
+      expect(systemPrompts[resumedCalls - 1]).toContain("This is an adjudicated revision.");
       expect(criticSystemPrompts[1]).toBe(
         `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v1")}${criticInputSeparator}`,
       );
@@ -215,29 +218,38 @@ it.each([
           `maximum generated output for this request is ${budget} tokens`,
         );
       }
-      expect(budgets).toEqual([
-        { env: String(budget), input: { maxOutputTokens: budget } },
-        { env: String(budget), input: { maxOutputTokens: budget } },
-      ]);
+      expect(budgets).toEqual(
+        Array.from({ length: resumedCalls }, () => ({
+          env: String(budget),
+          input: { maxOutputTokens: budget },
+        })),
+      );
 
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v11");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v12");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
-      expect(systemPrompts).toHaveLength(3);
-      expect(systemPrompts[2]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v11", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+      expect(systemPrompts).toHaveLength(resumedCalls + 1);
+      expect(systemPrompts[resumedCalls]).toBe(
+        `${createAuthorAdjudicationPrompt("cli-author-v12", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
-      expect(systemPrompts[2]).toContain(structuredFieldInstruction);
-      expect(systemPrompts[2]).toContain(
+      expect(systemPrompts[resumedCalls]).toContain("Write fewer, fuller bullets.");
+      expect(systemPrompts[resumedCalls]).toContain(
+        "open each line with a short label and a colon",
+      );
+      expect(systemPrompts[resumedCalls]).toContain("never a fragment copied from a source");
+      // A resumed earlier run keeps its exact prompt, without the v12 guidance.
+      expect(systemPrompts[0]).not.toContain("Write fewer, fuller bullets.");
+      expect(systemPrompts[resumedCalls]).toContain(structuredFieldInstruction);
+      expect(systemPrompts[resumedCalls]).toContain(
         "word order or grouping may vary only when every whole-word component",
       );
-      expect(systemPrompts[2]).toContain("write concise professional CV language");
-      expect(systemPrompts[2]).toContain(
+      expect(systemPrompts[resumedCalls]).toContain("write concise professional CV language");
+      expect(systemPrompts[resumedCalls]).toContain(
         "maximum generated output for this request is 32768 tokens",
       );
-      expect(budgets[2]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
+      expect(budgets[resumedCalls]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
       expect(criticSystemPrompts[2]).toBe(
         `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v5")}${criticInputSeparator}`,
       );
