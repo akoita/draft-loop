@@ -21,8 +21,9 @@ learning paths:
 - adoption and champions;
 - hand-off and team enablement.
 
-Only the public outlines were consulted. Where the course content refines a
-step, update this plan rather than this summary.
+Only the public outlines were consulted. Anthropic's public guidance anchors
+the evaluation, safety and context stages (see [Sources](#sources)). Where
+the course content refines a step, update this plan.
 
 ## Principles
 
@@ -71,8 +72,10 @@ with structural ROI per plan (ADR 0011, D13).
      scoring, and tool use (deferred #1111).
   3. **Model per role and per plan:** frontier versus economy, with the
      quality floor proven by evals, never assumed.
-  4. **Context strategy:** full source versus retrieval, profile facts, and
-     the application plan (#1304), each with its window and cost budget.
+  4. **Context strategy:** treat context as a finite attention budget.
+     Decide full source versus retrieval, profile facts, and the
+     application plan (#1304), each with its window and cost budget, and
+     what is loaded just in time rather than up front.
 - **Deployment path and residency:**
   - the region and data paths (ADR 0011, D14);
   - the parity gaps between the Claude API and Vertex AI (feature and
@@ -88,12 +91,18 @@ with structural ROI per plan (ADR 0011, D13).
 **Goal:** an evaluation suite that decides whether a change ships.
 
 - **Decisions:**
-  - The scored dimensions. They start from the manual-parity rubric:
+  - **Success criteria:** specific, measurable and multidimensional, as
+    Anthropic's guidance recommends. Start from the manual-parity rubric:
     recall, requirement coverage, leaks, format fit and edits before
     sending.
-  - Which can be automated and which need a human scorer.
-  - The held-out cases.
-  - The regression thresholds.
+  - **Grading method per dimension,** in order of preference: code-based
+    where exact (leaks, format fit, citation validity); an LLM grader for
+    judgement (recall, coverage), validated against human scores before it
+    is trusted at scale; humans only where neither works (edits before
+    sending).
+  - **The held-out cases,** expanded with Claude-generated synthetic
+    variants of the baseline cases.
+  - **The regression thresholds.**
 - **Artifacts:**
   - a versioned evaluation set of synthetic cases plus consented private
     references kept outside the repo;
@@ -110,8 +119,8 @@ with structural ROI per plan (ADR 0011, D13).
 
 | Risk | Control (where) | When the control fails |
 |---|---|---|
-| Invented facts or employers | Grounding validation and claim citations (validation package), with the candidate's approval before export | Approval is blocked, and the finding is shown with its evidence |
-| Prompt injection through job posts, URLs or uploaded files | Untrusted-content delimiting in prompts, sandboxed ingestion, schema-only outputs (D11) | The output is rejected by the schema or grounding, and the run pauses for review |
+| Invented facts or employers | Every claim cites a supporting quote, and unsupported claims are retracted, as Anthropic's guidance recommends; grounding validation (validation package) and the candidate's approval before export | Approval is blocked, and the finding is shown with its evidence. These controls reduce hallucination but don't eliminate it, which is why the human approval stays |
+| Indirect prompt injection through job posts, URLs or uploaded files (third-party content, trusted user) | Layered: a cheap screening model classifies untrusted content before it reaches the author or critic, plus untrusted-content delimiting, sandboxed ingestion and schema-only outputs (D11) | The content is quarantined or the output rejected by schema or grounding; the run pauses for review, and outputs are monitored for signs of injection |
 | Leaking never-share or sensitive material | Server-side sensitivity tiers before any provider call (D7) | Transmission is refused, and an audit event is recorded |
 | Cross-tenant access | Tenant scoping in services plus row-level security (D3) | The query returns nothing, and an alert is raised |
 | Runaway cost | Per-run and per-tenant budgets, and entitlements (D13) | The run pauses at its budget, and the tenant is notified |
@@ -181,3 +190,17 @@ targets.
   route change.
 - **Privacy debt:** consent and deletion designed late. They are part of
   the pilot gate, not of production.
+
+## Sources
+
+- Anthropic, [Define your success criteria](https://platform.claude.com/docs/en/test-and-evaluate/define-success)
+  and [Develop tests](https://platform.claude.com/docs/en/test-and-evaluate/develop-tests)
+  (Stage 3).
+- Anthropic, [Mitigate jailbreaks and prompt injections](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks)
+  and [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations)
+  (Stage 4).
+- Anthropic, [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
+  (Stage 2).
+- Public course outlines: Claude Certified Architect (Foundations and
+  Professional) and Claude Forward Deployed Engineer learning paths on
+  Anthropic's partner academy (stage structure).
