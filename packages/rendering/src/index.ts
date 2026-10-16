@@ -23,6 +23,7 @@ import {
 import { isTitleBlockSection, type LayoutMetrics } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
+import type { PdfFontFamily } from "./pdf-fonts.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
@@ -43,8 +44,10 @@ export interface RenderingLayoutProfile {
   };
   readonly typography: {
     readonly fontFamily: string;
-    /** The font the DOCX names; PDF always uses the standard Helvetica fonts. */
+    /** The font the DOCX names. */
     readonly docxFontFamily: string;
+    /** The font the PDF draws and the layout measures: embedded Carlito, or standard Helvetica. */
+    readonly pdfFont: PdfFontFamily;
     readonly bodyFontSizePt: number;
     readonly headingFontSizePt: number;
     readonly lineHeight: number;
@@ -78,6 +81,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     typography: {
       fontFamily: "Arial, sans-serif",
       docxFontFamily: "Arial",
+      pdfFont: "helvetica",
       bodyFontSizePt: 9.5,
       headingFontSizePt: 13,
       lineHeight: 1.25,
@@ -105,6 +109,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     typography: {
       fontFamily: "Calibri, Arial, sans-serif",
       docxFontFamily: "Calibri",
+      pdfFont: "carlito",
       bodyFontSizePt: 9,
       headingFontSizePt: 10.5,
       lineHeight: 1.2,

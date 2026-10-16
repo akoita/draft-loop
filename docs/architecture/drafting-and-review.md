@@ -790,10 +790,19 @@ an overflowing PDF is a deterministic QA failure signal.
 
 `standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
 leading, 10.5 pt bold headings with a rule, a 16 pt title and 12 mm margins,
-wrapped to the real line width. About 1,700 words of a typical CV fit on two
-pages. The PDF uses Helvetica; the DOCX names Calibri with the same exact
-leading. Exports record the layout as `cv-controlled-v2`; records written as
-`cv-controlled-v1` (the earlier, looser layout) still parse.
+wrapped to the real line width. About 1,900 words of a typical CV fit on two
+pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
+DOCX names Calibri with the same exact leading. Exports record the layout as
+`cv-controlled-v2`; records written as `cv-controlled-v1` (the earlier, looser
+layout) still parse.
+
+The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
+Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed
+TypeScript module, so the CLI and the bundled desktop app need no file lookup;
+a two-page PDF is about 570 kB. Wrapping and the length estimate measure with
+the font's own advance widths. `compact-one-page` keeps the unembedded
+Helvetica. The font source, pinned checksums, licence, and regeneration steps
+are in `packages/rendering/fonts/carlito/NOTICE.md`.
 
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,

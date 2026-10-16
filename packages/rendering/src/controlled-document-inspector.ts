@@ -292,7 +292,8 @@ function decodePdfLiteral(value: string): string {
 }
 
 function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
-  const raw = decodeUtf8(content, "controlled PDF");
+  // A PDF mixes ASCII structure with binary streams (embedded fonts), so it is read as Latin-1.
+  const raw = new TextDecoder("latin1").decode(content);
   if (!raw.startsWith("%PDF-")) fail("controlled PDF signature is missing");
   if (!raw.includes("startxref") || !raw.includes("%%EOF")) {
     fail("controlled PDF end-of-file marker is missing");
