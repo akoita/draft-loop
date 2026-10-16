@@ -6,6 +6,8 @@
  * uses the "CompactList" paragraph style.
  */
 
+import { splitInlineLabel } from "./inline-label.js";
+
 /** The fewest consecutive one-line bullets that are drawn as a compact paragraph. */
 export const minCompactListItems = 3;
 
@@ -16,10 +18,13 @@ export const docxCompactStyle = "CompactList";
 
 /**
  * Whether a bullet may join a compact list. The separator must stay unambiguous, so an item that
- * already contains it is left as a bullet.
+ * already contains it is left as a bullet. A labelled item ("Cloud: ...") keeps its own line and
+ * its bold label, as hand-made CVs lay out labelled lines.
  */
 export function isCompactItem(text: string): boolean {
-  return text.trim() !== "" && !text.includes(separatorCharacter);
+  return (
+    text.trim() !== "" && !text.includes(separatorCharacter) && splitInlineLabel(text) === null
+  );
 }
 
 /**

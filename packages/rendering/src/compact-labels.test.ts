@@ -294,6 +294,18 @@ describe("compact lists", () => {
     expect(splitCompactText("One · Two ·\nThree")).toEqual(["One", "Two", "Three"]);
   });
 
+  it("keeps labelled one-line bullets on their own lines", () => {
+    const runs = findCompactRuns(
+      [
+        { type: "bullet", text: "Blockchain: Solidity, Foundry" },
+        { type: "bullet", text: "Cloud: Cloud Run, Cloud SQL" },
+        { type: "bullet", text: "Data: dbt, BigQuery" },
+      ],
+      () => true,
+    );
+    expect(runs).toEqual([]);
+  });
+
   const twenty = cv([], certs(20));
 
   it("draws 20 one-line certifications as one paragraph of a few lines in PDF, DOCX and HTML", () => {
