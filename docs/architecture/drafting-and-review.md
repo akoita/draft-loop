@@ -805,8 +805,9 @@ leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins an
 wrapped to the real line width. About 2,000 words of a typical CV fit on two
 pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
 DOCX names Calibri with the same exact leading. Exports record the layout as
-`cv-controlled-v2`; records written as `cv-controlled-v1` (the earlier, looser
-layout) still parse.
+`cv-controlled-v3`, which adds role headers. Records written as
+`cv-controlled-v2` (before role headers) or `cv-controlled-v1` (the earlier,
+looser layout) still parse.
 
 The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
 Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed

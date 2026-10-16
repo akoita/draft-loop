@@ -34,7 +34,7 @@ import {
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
-export const renderTemplateVersion = "cv-controlled-v2";
+export const renderTemplateVersion = "cv-controlled-v3";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
 export const defaultLayoutProfileId: RenderingLayoutProfileId = "standard-two-page";
