@@ -89,6 +89,21 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
 - **Consequence:** the frozen desktop app keeps building from the same
   packages. Package changes must keep both clients green until the desktop
   is retired.
+- **No fork and no long-lived branch.** Server work merges to `main` through
+  the normal PR flow. Unfinished server code ships to nobody until it is
+  deployed, so it needs no branch of its own.
+
+**Delivery lanes.** CI stays one gate; delivery splits by client.
+
+- **CI:** `ci.yml` keeps typechecking and testing the whole workspace, so a
+  shared-package change that breaks either client fails its PR. Postgres
+  tests run in their own job with a service container.
+- **Desktop releases:** `release.yml` is unchanged and still requires
+  `pnpm release:preflight` first.
+- **Server deploys:** a separate workflow builds the API and worker images
+  and deploys them to Cloud Run through Workload Identity Federation (D14),
+  staging first, then production behind a manual approval. Server releases
+  use their own tags, such as `server-v*`.
 
 ### D3. Persistence: a storage port, then Postgres and object storage
 
@@ -228,6 +243,15 @@ Build on what the local version already records:
   becomes the API's input validation, with the same drift tests.
 - **Versioned from day one** (`/v1`), with idempotency keys on commands that
   start runs or exports.
+- **Framework: Fastify, not NestJS.** `apps/api` is a thin adapter over
+  `ApplicationService`, like `apps/cli`. Routes are typed with
+  `fastify-type-provider-zod`, and `@fastify/swagger` generates OpenAPI.
+  Auth, rate limits and security headers come from Fastify plugins.
+  - *Why:* the packages already provide the modules, ports and validation
+    that NestJS would add. A second module system and decorators would
+    duplicate them in a framework-free codebase.
+  - *Scale:* the API is stateless on Cloud Run, and runs scale through the
+    worker queue (D4), so the HTTP framework is not the limiting factor.
 
 ### D11. Ingestion, retrieval and fetching
 
