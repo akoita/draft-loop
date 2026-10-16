@@ -29,6 +29,7 @@ describe("findBulletFragment", () => {
       "iOS release automation cut review time across three teams.",
       "gRPC services replaced polling between the billing components.",
       "npm packages were published through a signed pipeline.",
+      "dbt Fundamentals, dbt Labs, March 2025",
       "k8s clusters were upgraded without downtime.",
       "Built a billing service with retries and audit logs.",
       "Designed the platform to scale.",

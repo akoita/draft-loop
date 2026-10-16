@@ -3,6 +3,7 @@ const MAX_QUOTE_CHARACTERS = 40;
 
 /** Lowercase-by-convention names that may legitimately open a bullet. */
 const knownLowercaseTokens: ReadonlySet<string> = new Set([
+  "dbt",
   "npm",
   "pnpm",
   "pip",
