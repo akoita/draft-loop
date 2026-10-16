@@ -111,14 +111,6 @@ export function textWidthPt(
   return (units / 1000) * sizePt * (bold ? boldWidthRatio : 1);
 }
 
-/**
- * The most characters a line may hold before the controlled-document inspector's coarse clipping
- * heuristic (0.45 em per character from the line start to the page edge) would flag it.
- */
-function inspectorCharacterLimit(sizePt: number, availablePt: number): number {
-  return Math.max(1, Math.floor(availablePt / (0.45 * sizePt)));
-}
-
 /** The PDF font a layout profile measures and draws with. */
 export function profilePdfFont(profile: LayoutMetricsProfile): PdfFontFamily {
   return profile.typography.pdfFont ?? "helvetica";
@@ -199,14 +191,12 @@ export function bulletPrefixWidthPt(profile: LayoutMetricsProfile): number {
 export function blockLines(block: LayoutBlock, profile: LayoutMetricsProfile): readonly string[] {
   const body = profile.typography.bodyFontSizePt;
   const indent = block.kind === "bullet" ? bulletPrefixWidthPt(profile) : 0;
-  const startPt = profile.marginsMm.left * pointsPerMillimeter + indent;
-  const pagePt = profile.pageWidthMm * pointsPerMillimeter;
   return wrapTextToWidth(
     block.text,
     contentWidthPt(profile) - indent,
     body,
     false,
-    inspectorCharacterLimit(body, pagePt - startPt),
+    Number.POSITIVE_INFINITY,
     profilePdfFont(profile),
   );
 }

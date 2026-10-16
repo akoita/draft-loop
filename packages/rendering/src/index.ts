@@ -105,7 +105,7 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
     id: "standard-two-page",
     pageWidthMm: 210,
     pageHeightMm: 297,
-    marginsMm: { top: 12, right: 12, bottom: 12, left: 12 },
+    marginsMm: { top: 10, right: 12, bottom: 10, left: 12 },
     typography: {
       fontFamily: "Calibri, Arial, sans-serif",
       docxFontFamily: "Calibri",
@@ -126,8 +126,8 @@ const layoutProfileTable: Readonly<Record<RenderingLayoutProfileId, RenderingLay
       bulletIndentPt: 11,
     },
     previewSpacingPt: { headingBefore: 6, headingAfter: 3, blockAfter: 2, listIndent: 11 },
-    // Real line width binds first; these stay within the inspector's clipping heuristic at 9 pt.
-    wrapping: { bodyMaxCharacters: 138, bulletMaxCharacters: 133 },
+    // Generous caps: the real Carlito line width (about 150 characters at 9 pt) always binds first.
+    wrapping: { bodyMaxCharacters: 200, bulletMaxCharacters: 195 },
     targetMaxPages: 2,
   },
 };

@@ -46,9 +46,9 @@ describe("standard two-page layout density", () => {
     expect(estimate.warning).toBeUndefined();
   });
 
-  it("leaves headroom: a CV of about 1,890 words still fits two pages", () => {
-    const cv = syntheticCv(1.15);
-    expect(wordCount(cv)).toBeGreaterThan(1850);
+  it("leaves headroom: a CV of about 1,960 words still fits two pages", () => {
+    const cv = syntheticCv(1.2);
+    expect(wordCount(cv)).toBeGreaterThan(1950);
     const { observation, report } = pdfReport(cv);
     expect(observation.pageCount).toBe(2);
     expect(report.passed).toBe(true);
@@ -61,6 +61,8 @@ describe("standard two-page layout density", () => {
     expect(profile.typography.bodyFontSizePt).toBeGreaterThanOrEqual(9);
     expect(profile.typography.bodyFontSizePt).toBeLessThanOrEqual(9.5);
     expect(profile.lineMetricsPt.body / profile.typography.bodyFontSizePt).toBeCloseTo(1.2, 1);
+    expect(profile.marginsMm.top).toBe(10);
+    expect(profile.marginsMm.bottom).toBe(10);
     expect(profile.marginsMm.left).toBeGreaterThanOrEqual(12);
     expect(profile.marginsMm.left).toBeLessThanOrEqual(14);
   });

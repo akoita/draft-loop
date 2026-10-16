@@ -6,7 +6,8 @@ import {
   renderingQaViewerObservationSchema,
 } from "@draft-loop/schemas";
 
-import type { RenderedDocument } from "./index.js";
+import { textWidthPt } from "./document-layout.js";
+import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
 import { decodePdfLiteralEscapes } from "./pdf-document.js";
 
 interface VisibleTextUnit {
@@ -291,7 +292,18 @@ function decodePdfLiteral(value: string): string {
   return decodePdfLiteralEscapes(value);
 }
 
-function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
+/**
+ * How far in from the page's right edge text must stay: the profile's right margin, so a line
+ * wider than the content box is flagged. An unknown profile falls back to the page edge.
+ */
+function rightMarginPt(layoutProfile: string): number {
+  const profiles: Readonly<Record<string, { readonly marginsMm: { readonly right: number } }>> =
+    renderingLayoutProfiles;
+  const profile = profiles[layoutProfile];
+  return profile === undefined ? 0 : (profile.marginsMm.right * 72) / 25.4;
+}
+
+function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly InspectedPage[] {
   // A PDF mixes ASCII structure with binary streams (embedded fonts), so it is read as Latin-1.
   const raw = new TextDecoder("latin1").decode(content);
   if (!raw.startsWith("%PDF-")) fail("controlled PDF signature is missing");
@@ -306,6 +318,8 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
     objects.set(id, body);
   }
   if (objects.size === 0) fail("controlled PDF contains no objects");
+  // Clipping is measured with the real advance widths of the font the PDF names.
+  const font = /\/BaseFont\s*\/Carlito\b/u.test(raw) ? "carlito" : "helvetica";
   const catalog = [...objects.values()].find((body) => /\/Type\s+\/Catalog(?:\s|\/|>)/u.test(body));
   const pagesId = Number(catalog?.match(/\/Pages\s+(\d+)\s+0\s+R/u)?.[1]);
   const pagesBody = Number.isSafeInteger(pagesId) ? objects.get(pagesId) : undefined;
@@ -358,10 +372,11 @@ function parsePdfPages(content: Uint8Array): readonly InspectedPage[] {
       const y = Number(transforms.at(-1)?.[2]);
       if (![fontSize, x, y].every(Number.isFinite))
         fail("controlled PDF text position is incomplete");
-      const width = [...text].length * fontSize * 0.45;
-      clipped ||= x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1;
       // Titles and headings are the only bold (F2) runs; body text is never bold.
       const isBold = fontNames.at(-1)?.[1] === "2";
+      const width = textWidthPt(text, fontSize, isBold, font);
+      clipped ||=
+        x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1 - rightInsetPt + 0.5;
       units.push({ text, kind: isBold ? "heading" : "body" });
     }
     pages.push({ units, clipped });
@@ -411,7 +426,7 @@ export function inspectControlledDocument(
   }
   if (rendered.metadata.format === "pdf") {
     return observationForPages(
-      parsePdfPages(rendered.content),
+      parsePdfPages(rendered.content, rightMarginPt(rendered.metadata.layoutProfile)),
       rendered,
       "DraftLoop controlled PDF byte inspector",
     );

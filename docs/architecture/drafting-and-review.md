@@ -789,8 +789,8 @@ never truncated, reordered, summarized, or rewritten to satisfy a page target;
 an overflowing PDF is a deterministic QA failure signal.
 
 `standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
-leading, 10.5 pt bold headings with a rule, a 16 pt title and 12 mm margins,
-wrapped to the real line width. About 1,900 words of a typical CV fit on two
+leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins and 10 mm top and bottom margins,
+wrapped to the real line width. About 2,000 words of a typical CV fit on two
 pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
 DOCX names Calibri with the same exact leading. Exports record the layout as
 `cv-controlled-v2`; records written as `cv-controlled-v1` (the earlier, looser
@@ -817,7 +817,7 @@ fit is still written: its stored report keeps `passed: false`, and the export
 writes one `Length warning:` line with the real page count, as DOCX and
 Markdown do from their length estimate.
 
-The PDF inspector checks page targets, blank pages, text coordinates, and
+The PDF inspector checks page targets, blank pages, text coordinates (each run measured with the PDF font's real advance widths against the right margin), and
 orphaned section starts where a page boundary makes them determinable. The DOCX
 inspector checks OOXML text order, explicit page breaks, package integrity, and
 relationship targets. OOXML bytes cannot establish true office pagination or

@@ -4,12 +4,13 @@ import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
 import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
-import { textWidthPt } from "./document-layout.js";
+import { blockLines, layoutBlocks, textWidthPt } from "./document-layout.js";
 import {
   extractTextFromRenderedDocument,
   inspectControlledDocument,
   type RenderedDocument,
   renderArtifact,
+  renderingLayoutProfiles,
 } from "./index.js";
 import { embeddedFontFlateBytes } from "./pdf-fonts.js";
 import { fixtureGeneratedAt, syntheticCv } from "./synthetic-cv.fixture.js";
@@ -18,6 +19,12 @@ import { winAnsiCodePoint } from "./winansi.js";
 
 const options = { generatedAt: fixtureGeneratedAt } as const;
 const cv = syntheticCv(1.05);
+
+function blockLinesOf(artifact: typeof cv): readonly string[] {
+  return layoutBlocks(artifact).flatMap((block) =>
+    blockLines(block, renderingLayoutProfiles["standard-two-page"]),
+  );
+}
 
 function render(layoutProfile: "standard-two-page" | "compact-one-page"): RenderedDocument {
   return renderArtifact(cv, "pdf", { ...options, layoutProfile });
@@ -147,6 +154,34 @@ describe("Carlito in the standard-two-page PDF", () => {
     );
     expect(extractTextFromRenderedDocument(accented)).toContain("José’s café – 40% (€) • “quoted”");
     expect(inspectControlledDocument(accented).recoveredVisibleContentOrder).toBe("preserved");
+  });
+
+  it("flags a line wider than the content box even when it still fits on the page", () => {
+    // 125 letters measure about 539 pt: past the 527 pt content box, short of the page edge.
+    const wide = renderArtifact(
+      {
+        ...cv,
+        sections: cv.sections.map((section) =>
+          section.kind === "summary"
+            ? {
+                ...section,
+                blocks: section.blocks.map((block, index) =>
+                  index === 0 ? { ...block, text: "a".repeat(125) } : block,
+                ),
+              }
+            : section,
+        ),
+      },
+      "pdf",
+      options,
+    );
+    expect(inspectControlledDocument(wide).clippedText).toBe(true);
+    expect(textWidthPt("a".repeat(125), 9, false, "carlito")).toBeGreaterThan(527);
+  });
+
+  it("measures the wrapped lines against the real width, so Carlito lines run past 143 characters", () => {
+    const longest = Math.max(...blockLinesOf(cv).map((line) => line.length));
+    expect(longest).toBeGreaterThan(143);
   });
 
   it("stays well under one megabyte for a full two-page CV", () => {
