@@ -306,6 +306,11 @@ or `europe-west1`):
 
 ## Phasing (for planning only)
 
+The stage-gated delivery method (discovery, design, evaluation gate, safety
+stack, pilot, production, adoption, operation) is in the
+[client-server delivery plan](../architecture/client-server-delivery-plan.md).
+The phases below are the engineering slices inside it.
+
 | Phase | Outcome | Gate |
 |---|---|---|
 | 0. Ports | Storage port extracted; SQLite behind it; the application driver no longer assumes the filesystem. Done in the current repo, with the desktop still green | Both local clients pass on the port |
