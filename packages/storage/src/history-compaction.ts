@@ -11,8 +11,9 @@ import {
   insertAuditEventRow,
   serialize,
 } from "./audit-event-write.js";
-import type { AuditEventInput, JsonValue } from "./index.js";
 import { relieveMemoryPressure } from "./memory-pressure.js";
+import type { AuditEventInput } from "./ports/history.js";
+import type { JsonValue } from "./ports/workspace.js";
 import {
   runSnapshotAuditEventType,
   runSnapshotRef,

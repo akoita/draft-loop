@@ -1,5 +1,5 @@
 import { auditEventChecksum, checksum, serialize } from "./audit-event-write.js";
-import type { AuditEvent } from "./index.js";
+import type { AuditEvent } from "./ports/history.js";
 import {
   runSnapshotAuditEventType,
   runSnapshotTarget,

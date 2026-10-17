@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { auditFromRow } from "./audit-event-reads.js";
-import type { AuditEvent, AuditEventInput } from "./index.js";
+import type { AuditEvent, AuditEventInput } from "./ports/history.js";
 import {
   StorageConflictError,
   StorageSecurityError,

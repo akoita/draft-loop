@@ -11,7 +11,7 @@ import {
   createApplicationImportReads,
 } from "./application-import-reads.js";
 import { insertAuditEventRow } from "./audit-event-write.js";
-import type { AuditEventInput } from "./index.js";
+import type { AuditEventInput } from "./ports/history.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
 /**

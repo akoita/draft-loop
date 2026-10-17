@@ -1,4 +1,4 @@
-import type { AuditEvent } from "./index.js";
+import type { AuditEvent } from "./ports/history.js";
 
 type JsonValue = AuditEvent["payload"];
 
