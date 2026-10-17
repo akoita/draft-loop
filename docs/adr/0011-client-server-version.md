@@ -410,7 +410,9 @@ The existing offline fixture mode keeps local runs free of provider calls.
 - format, lint, typecheck and unit tests across the workspace;
 - a Postgres job with a service container, running the storage
   conformance suite and the API tests;
-- the desktop acceptance workflows stay manual, as today.
+- the packaged-desktop acceptance workflows (installed app and credential
+  lifecycle) keep running on every PR on all three platforms, so a shared
+  change that breaks the desktop fails its PR.
 
 **Releases.** Independent cadences from the same `main`:
 
