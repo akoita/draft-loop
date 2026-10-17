@@ -89,12 +89,13 @@ const renderOptions = { generatedAt: fixtureGeneratedAt, allowUnbackedClaims: tr
 describe("built-in rendering templates", () => {
   it("are valid, versioned and classic is the default", () => {
     expect(defaultRenderingTemplateId).toBe("classic");
-    expect(Object.keys(builtInRenderingTemplates)).toEqual(["classic", "compact"]);
+    expect(Object.keys(builtInRenderingTemplates)).toEqual(["classic", "compact", "modern"]);
     for (const template of Object.values(builtInRenderingTemplates)) {
       expect(renderingTemplateSchema.safeParse(template).success).toBe(true);
     }
     expect(getRenderingTemplate("classic").version).toBe(1);
     expect(getRenderingTemplate("compact").version).toBe(2);
+    expect(getRenderingTemplate("modern").version).toBe(1);
     expect(getRenderingTemplate(undefined).id).toBe("classic");
     expect(Object.isFrozen(getRenderingTemplate("compact"))).toBe(true);
   });
@@ -121,7 +122,7 @@ describe("built-in rendering templates", () => {
   });
 
   it("rejects an unknown template id, including inherited object keys", () => {
-    expect(() => getRenderingTemplate("modern")).toThrow(/Unknown rendering template: modern/u);
+    expect(() => getRenderingTemplate("fancy")).toThrow(/Unknown rendering template: fancy/u);
     expect(() => getRenderingTemplate("constructor")).toThrow(RangeError);
   });
 });
@@ -179,7 +180,7 @@ describe("renderArtifact template selection", () => {
 
   it("throws on an unknown template id", () => {
     expect(() =>
-      renderArtifact(artifact, "markdown", { ...renderOptions, templateId: "modern" }),
-    ).toThrow(/Unknown rendering template: modern/u);
+      renderArtifact(artifact, "markdown", { ...renderOptions, templateId: "fancy" }),
+    ).toThrow(/Unknown rendering template: fancy/u);
   });
 });

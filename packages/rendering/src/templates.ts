@@ -28,6 +28,8 @@ const classicTemplate: RenderingTemplate = {
   },
   name: { align: "center" },
   headings: { case: "as-written", rule: true, ruleColor: "#94a3ad" },
+  body: { align: "left" },
+  roles: { contextStyle: "regular" },
   skills: { style: "as-written" },
   accentColor: null,
 };
@@ -51,8 +53,40 @@ const compactTemplate: RenderingTemplate = {
   },
   name: { align: "center" },
   headings: { case: "as-written", rule: true, ruleColor: "#94a3ad" },
+  body: { align: "left" },
+  roles: { contextStyle: "regular" },
   skills: { style: "as-written" },
   accentColor: null,
+};
+
+/*
+ * Modern (#1329) follows the person's own hand-made reference CV: a left-aligned name, uppercase
+ * headings and role dates in one teal accent, justified body text and an italic context line under
+ * each role. It keeps Classic's two-page density and stays single column for applicant tracking.
+ */
+const modernTemplate: RenderingTemplate = {
+  schemaVersion: 1,
+  id: "modern",
+  version: 1,
+  displayName: "Modern",
+  description:
+    "Two-page CV with a left-aligned name, teal uppercase headings and dates, justified text and an italic line under each role.",
+  page: { size: "A4", marginsMm: { top: 11, right: 13, bottom: 11, left: 13 }, targetPages: 2 },
+  fonts: { family: "sans", bodyPt: 9, headingPt: 10, namePt: 20, lineHeight: 1.2 },
+  spacing: {
+    headingBeforePt: 7,
+    headingAfterPt: 2,
+    blockAfterPt: 1,
+    roleBeforePt: 5,
+    titleAfterPt: 1,
+    contactAfterPt: 0,
+  },
+  name: { align: "left" },
+  headings: { case: "uppercase", rule: true, ruleColor: "#0f6e5c" },
+  body: { align: "justify" },
+  roles: { contextStyle: "italic" },
+  skills: { style: "as-written" },
+  accentColor: "#0f6e5c",
 };
 
 function deepFreeze<T>(value: T): T {
@@ -67,6 +101,7 @@ export const defaultRenderingTemplateId = "classic";
 export const builtInRenderingTemplates: Readonly<Record<string, RenderingTemplate>> = deepFreeze({
   classic: renderingTemplateSchema.parse(classicTemplate),
   compact: renderingTemplateSchema.parse(compactTemplate),
+  modern: renderingTemplateSchema.parse(modernTemplate),
 });
 
 /** The built-in template with this id, or the default when no id is given. Throws on an unknown id. */

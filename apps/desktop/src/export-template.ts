@@ -10,7 +10,7 @@
  * The ids mirror the rendering package's built-ins; a test keeps the two lists equal, so a new
  * built-in (such as Modern, #1329) must be added here to appear in the picker.
  */
-export const exportTemplates = ["classic", "compact"] as const;
+export const exportTemplates = ["classic", "compact", "modern"] as const;
 export type ExportTemplate = (typeof exportTemplates)[number];
 
 export const defaultExportTemplate: ExportTemplate = "classic";
@@ -18,12 +18,14 @@ export const defaultExportTemplate: ExportTemplate = "classic";
 export const exportTemplateLabels: Readonly<Record<ExportTemplate, string>> = {
   classic: "Classic",
   compact: "Compact",
+  modern: "Modern",
 };
 
 /** One line on what the template is for, shown beside the preview. */
 export const exportTemplateDescriptions: Readonly<Record<ExportTemplate, string>> = {
   classic: "Two pages, centred name, ruled headings and room for full role histories.",
   compact: "One page with smaller type and tighter spacing, so the most fits on each page.",
+  modern: "Two pages, left-aligned name, teal headings and dates, justified text.",
 };
 
 /** `localStorage` key prefix; the application key follows it. */

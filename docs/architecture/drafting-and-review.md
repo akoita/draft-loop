@@ -881,8 +881,8 @@ are in `packages/rendering/fonts/carlito/NOTICE.md`.
 `renderPrintHtml` (`packages/rendering/src/print-html.ts`) turns an artifact into one
 self-contained A4 HTML document for the selected template. It embeds Carlito and marks every
 visible block with `data-dl-unit`, whose text content is exactly the block's text. A bullet is a
-real `•` in a hanging indent. There is no letter-spacing or case transform, and keep rules are CSS
-`break-*` properties.
+real `•` in a hanging indent. There is no letter-spacing; Modern's uppercase headings are a CSS case
+transform, so the reported units keep the artifact's text. Keep rules are CSS `break-*` properties.
 
 The desktop host passes a `PdfPrinter` with PDF exports
 (`apps/desktop/src/electron/pdf-printer.ts`). It loads the HTML in a hidden, sandboxed window on an
@@ -897,16 +897,24 @@ the built-in writer.
 
 A rendering template is validated data (`renderingTemplateSchema`, exposed as
 `@draft-loop/schemas/rendering-template`): page margins and page target, font
-sizes and line height, spacing, and heading rule. Every value is bounded, and the
-enums accept only what the renderer draws today; later templates widen them.
+sizes and line height, spacing, heading rule and case, name alignment, body
+alignment, the role context-line style and an optional accent colour. Every value
+is bounded, and the enums accept only what the renderer draws today.
 
 `packages/rendering/src/templates.ts` holds the built-ins. `classic` (the
-default) produces the `standard-two-page` profile and `compact` produces
-`compact-one-page`. `profileFromTemplate` derives the profile every output format
-shares; settings a template does not carry (font names, wrapping caps, preview
-spacing, title and heading leading) are fixed per page target for the `sans`
-family. `renderArtifact` takes an optional `templateId` and still accepts
+default) and `modern` produce the `standard-two-page` profile and `compact`
+produces `compact-one-page`. `profileFromTemplate` derives the profile every
+output format shares; settings a template does not carry (font names, wrapping
+caps, preview spacing, title and heading leading) are fixed per page target for
+the `sans` family. `renderArtifact` takes an optional `templateId` and still accepts
 `layoutProfile`; naming both requires that they agree.
+
+Modern (#1329) follows the owner's hand-made reference CV: a left-aligned name,
+uppercase headings and role dates in a teal accent, justified text, labelled
+paragraphs with a hanging indent, and an italic context line under each role
+(the engine slants regular Carlito; no italic face is embedded). Only the
+printed desktop PDF draws these options so far; DOCX and the CLI's PDF writer
+use Modern's sizes in the Classic layout (#1412).
 
 The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
 and in the export payload as `renderingTemplate`. The rendering-QA report keeps
