@@ -14,6 +14,7 @@ export const privateDirectory = ".draft-loop";
 export const sourcesDirectory = "sources";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
+export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
 
 export function managedPathSegment(id: string): string {
   return createHash("sha256").update(id, "utf8").digest("hex");
