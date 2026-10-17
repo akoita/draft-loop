@@ -46,7 +46,8 @@ const hitColumns = "chunk_id, ordinal, line_start, line_end, text, metadata_json
 const traceSelect =
   "SELECT workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at FROM candidate_knowledge_retrieval_traces WHERE workspace_id = $1";
 
-async function lockIndex(
+/** Serializes writes to one knowledge base's lexical and vector indexes. */
+export async function lockIndex(
   executor: SqlExecutor,
   storeId: string,
   knowledgeBaseId: string,

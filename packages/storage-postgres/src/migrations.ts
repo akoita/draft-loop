@@ -505,6 +505,47 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 7,
+    name: "candidate knowledge vector index on pgvector",
+    sql: `
+      -- One extension per database, in public, so every tenant schema reaches the same type.
+      CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+      -- Derived from the lexical projection: a lexical rebuild, chunk replacement or source
+      -- version deletion cascades the vectors away, as on SQLite.
+      CREATE TABLE candidate_knowledge_vector_indexes (
+        store_id TEXT NOT NULL,
+        knowledge_base_id TEXT NOT NULL,
+        model_id TEXT NOT NULL CHECK (length(trim(model_id)) > 0),
+        model_revision TEXT NOT NULL CHECK (length(trim(model_revision)) > 0),
+        model_sha256 TEXT NOT NULL CHECK (model_sha256 ~ '^[0-9a-f]{64}$'),
+        dimensions INTEGER NOT NULL CHECK (dimensions BETWEEN 1 AND 4096),
+        pooling TEXT NOT NULL CHECK (length(trim(pooling)) > 0),
+        runtime TEXT NOT NULL CHECK (length(trim(runtime)) > 0),
+        lexical_manifest_checksum TEXT NOT NULL CHECK (lexical_manifest_checksum ~ '^[0-9a-f]{64}$'),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (store_id, knowledge_base_id),
+        FOREIGN KEY (store_id, knowledge_base_id)
+          REFERENCES candidate_knowledge_lexical_indexes (store_id, knowledge_base_id)
+          ON DELETE CASCADE
+      );
+
+      CREATE TABLE candidate_knowledge_vector_chunks (
+        store_id TEXT NOT NULL,
+        knowledge_base_id TEXT NOT NULL,
+        chunk_id TEXT NOT NULL,
+        vector public.vector NOT NULL,
+        PRIMARY KEY (store_id, knowledge_base_id, chunk_id),
+        FOREIGN KEY (store_id, knowledge_base_id, chunk_id)
+          REFERENCES candidate_knowledge_lexical_chunks (store_id, knowledge_base_id, chunk_id)
+          ON DELETE CASCADE,
+        FOREIGN KEY (store_id, knowledge_base_id)
+          REFERENCES candidate_knowledge_vector_indexes (store_id, knowledge_base_id)
+          ON DELETE CASCADE
+      );
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */
