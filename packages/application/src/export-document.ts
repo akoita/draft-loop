@@ -49,6 +49,11 @@ export async function readRunPageTarget(
   }
 }
 
+/** The template an export uses when none is named (#1364): Compact for a one-page run, else Classic. */
+export function defaultExportTemplateId(pageTarget: LengthPageTarget | undefined): string {
+  return pageTarget === "one-page" ? "compact" : "classic";
+}
+
 /** The warning for a PDF that rendered past its page target, using the real page count. */
 export function pageOverflowWarningLine(overflow: ExportPageOverflow): string {
   const { pageCount, targetPageCount, layoutName } = overflow;
