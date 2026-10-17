@@ -1,13 +1,10 @@
 import { stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
-
-import { openSqliteStorage } from "@draft-loop/storage";
+import { resolve } from "node:path";
 
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
+import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
 import { parseRunAuthorInputPayload, type RunAuthorInput } from "./run-author-input.js";
-
-const historyPath = (root: string): string => join(root, ".draft-loop", "history.sqlite");
 
 /**
  * What the latest author step of the given run, or of the workspace's latest run, was sent, read
@@ -22,11 +19,11 @@ export async function readRunAuthorInput(
   const runId = command.runId ?? config.latestRunId;
   if (runId === undefined) return undefined;
   try {
-    await stat(historyPath(root));
+    await stat(localHistoryPath(root));
   } catch {
     return undefined;
   }
-  const storage = openSqliteStorage(historyPath(root));
+  const storage = openLocalHistory(localHistoryPath(root));
   try {
     // One targeted read: listing the whole trail would parse every run snapshot it repeats.
     const event = await storage.auditEvents.findLatestAuditEvent({

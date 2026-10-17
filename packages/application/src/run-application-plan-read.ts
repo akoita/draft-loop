@@ -1,17 +1,14 @@
 import { stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
-
-import { openSqliteStorage } from "@draft-loop/storage";
+import { resolve } from "node:path";
 
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
+import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
 import {
   applicationPlanEventType,
   parseRunApplicationPlanPayload,
   type RunApplicationPlan,
 } from "./run-application-plan.js";
-
-const historyPath = (root: string): string => join(root, ".draft-loop", "history.sqlite");
 
 /**
  * The application plan of the given run, or of the workspace's latest run, from its latest
@@ -26,11 +23,11 @@ export async function readRunApplicationPlan(
   const runId = command.runId ?? config.latestRunId;
   if (runId === undefined) return undefined;
   try {
-    await stat(historyPath(root));
+    await stat(localHistoryPath(root));
   } catch {
     return undefined;
   }
-  const storage = openSqliteStorage(historyPath(root));
+  const storage = openLocalHistory(localHistoryPath(root));
   try {
     const event = await storage.auditEvents.findLatestAuditEvent({
       workspaceId: config.id,

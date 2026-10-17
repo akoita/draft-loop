@@ -8,7 +8,6 @@ import {
   resolveSnapshotPayload,
   slimSnapshotPayload,
 } from "@draft-loop/orchestrator";
-import { openSqliteStorage, openSqliteStorageReadOnly, SqliteStorage } from "@draft-loop/storage";
 import {
   backupHistoryDatabase,
   type CompactionSnapshotRow,
@@ -18,6 +17,12 @@ import {
   verifyHistoryChain,
 } from "@draft-loop/storage/history-compaction";
 import { CliUserError } from "./cli-user-error.js";
+import {
+  type LocalMaintenanceStorage,
+  openLocalMaintenanceStorage,
+  openLocalMaintenanceStorageReadOnly,
+  verifyLocalHistoryIntegrity,
+} from "./local-storage-factory.js";
 
 const historyDirectory = ".draft-loop";
 const historyFilename = "history.sqlite";
@@ -92,9 +97,9 @@ async function requireFreeSpace(directory: string, bytes: number): Promise<void>
 
 async function openedStorage<Result>(
   path: string,
-  use: (storage: SqliteStorage) => Promise<Result>,
+  use: (storage: LocalMaintenanceStorage) => Promise<Result>,
 ): Promise<Result> {
-  const storage = openSqliteStorageReadOnly(path);
+  const storage = openLocalMaintenanceStorageReadOnly(path);
   try {
     return await use(storage);
   } finally {
@@ -180,7 +185,7 @@ function canonicalHash(value: unknown): string {
 /** The hash of the next snapshot row's resolved snapshot; the row is dropped before it returns. */
 async function nextResolvedHash(
   rows: AsyncGenerator<CompactionSnapshotRow>,
-  storage: SqliteStorage,
+  storage: LocalMaintenanceStorage,
 ): Promise<{ readonly sequence: number; readonly hash: string } | undefined> {
   const next = await rows.next();
   if (next.done === true) return undefined;
@@ -202,11 +207,11 @@ async function verifyCompacted(
   if (!chain.ok || chain.eventCount !== previousEventCount + 1) {
     throw new Error("The compacted audit chain did not verify.");
   }
-  if (!SqliteStorage.verifyDatabaseIntegrity(compactedPath)) {
+  if (!verifyLocalHistoryIntegrity(compactedPath)) {
     throw new Error("The compacted history did not pass the integrity check.");
   }
-  const original = openSqliteStorageReadOnly(originalPath);
-  const compacted = openSqliteStorageReadOnly(compactedPath);
+  const original = openLocalMaintenanceStorageReadOnly(originalPath);
+  const compacted = openLocalMaintenanceStorageReadOnly(compactedPath);
   try {
     const originalStore = createStorageRunStore(original);
     const compactedStore = createStorageRunStore(compacted);
@@ -279,12 +284,12 @@ export async function compactWorkspaceHistory(
   }
   try {
     const backup = await backupHistoryDatabase(historyPath, backupPath);
-    if (backup.sizeBytes !== beforeBytes || !SqliteStorage.verifyDatabaseIntegrity(backupPath)) {
+    if (backup.sizeBytes !== beforeBytes || !verifyLocalHistoryIntegrity(backupPath)) {
       throw new Error("The backup did not verify.");
     }
     await copyFile(backupPath, workPath);
 
-    const working = openSqliteStorage(workPath);
+    const working = openLocalMaintenanceStorage(workPath);
     const references = createSnapshotReferenceCache();
     let afterEventBytes = 0;
     try {

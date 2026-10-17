@@ -1,12 +1,12 @@
 import { stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
-import { openSqliteStorage } from "@draft-loop/storage";
 import { z } from "zod";
 
 import { previewEvidenceMode } from "./evidence-mode-preview.js";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
+import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
 import { readRunApplicationPlan } from "./run-application-plan-read.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
 import { readRunInputs } from "./run-inputs-read.js";
@@ -29,8 +29,6 @@ export interface RunEvidenceMode {
   readonly sourceCount?: number;
   readonly fallbackReason?: "budget-exceeded" | "no-eligible-chunks";
 }
-
-const historyPath = (root: string): string => join(root, ".draft-loop", "history.sqlite");
 
 const runEvidenceModePayloadSchema = z.object({
   requestedMode: z.enum(evidenceModes),
@@ -66,11 +64,11 @@ export async function readRunEvidenceMode(
   const runId = command.runId ?? config.latestRunId;
   if (runId === undefined) return undefined;
   try {
-    await stat(historyPath(root));
+    await stat(localHistoryPath(root));
   } catch {
     return undefined;
   }
-  const storage = openSqliteStorage(historyPath(root));
+  const storage = openLocalHistory(localHistoryPath(root));
   try {
     // One targeted read: listing the whole trail would parse every run snapshot it repeats.
     const event = await storage.auditEvents.findLatestAuditEvent({
