@@ -43,6 +43,10 @@
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"
     },
+    "./history-records": {
+      "types": "./src/history-record-rows.ts",
+      "import": "./src/history-record-rows.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"

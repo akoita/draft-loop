@@ -128,6 +128,37 @@ import {
   readEvidenceSource,
 } from "./chronology-evidence.js";
 import { evidenceQueryTerms, preferMultiTermEvidenceHits } from "./evidence-retrieval-precision.js";
+import {
+  decisionAuditEvent,
+  decisionFromRow,
+  executionAuditEvent,
+  executionFromRow,
+  exportAuditEvent,
+  exportFromRow,
+  findingAuditEvent,
+  findingFromRow,
+  parse,
+  prepareDecisionRecord,
+  prepareExecutionRecord,
+  prepareExportRecord,
+  prepareFindingRecord,
+  prepareRoundRecord,
+  prepareRunRecord,
+  prepareRunSnapshot,
+  recordToJson,
+  requireNonEmpty,
+  requireNonNegativeInteger,
+  requirePositive,
+  roundAuditEvent,
+  roundFromRow,
+  rowNullableNumber,
+  rowNullableString,
+  rowNumber,
+  rowString,
+  runAuditEvent,
+  runFromRow,
+  runSnapshotFromRow,
+} from "./history-record-rows.js";
 import { validatedWritingPolicy } from "./writing-policy-validation.js";
 
 export type {
@@ -226,15 +257,6 @@ import type {
   RunRecordInput,
   RunSnapshotRecord,
   RunSnapshotRecordInput,
-  StoredApprovalStatus,
-  StoredDecisionType,
-  StoredExecutionStatus,
-  StoredExecutionStep,
-  StoredExportStatus,
-  StoredFindingSeverity,
-  StoredRoundState,
-  StoredRunState,
-  StoredRunStep,
 } from "./ports/history.js";
 import type {
   CandidateKnowledgeLexicalIndexInspection,
@@ -263,7 +285,6 @@ import type {
 } from "./ports/versioned-records.js";
 import type {
   DiagnosticTelemetryReport,
-  JsonValue,
   StoragePort,
   WorkspaceBackupResult,
   WorkspaceRecord,
@@ -2218,10 +2239,6 @@ function now(): string {
   return new Date().toISOString();
 }
 
-function parse(value: string): JsonValue {
-  return JSON.parse(value) as JsonValue;
-}
-
 function validatedOpportunityBrief(value: unknown): OpportunityBrief {
   const parsed = opportunityBriefSchema.safeParse(value);
   if (!parsed.success) {
@@ -2633,13 +2650,6 @@ function canonicalCandidateProfileLeaf(
   return records[records.length - 1];
 }
 
-function requireNonEmpty(value: string, field: string): string {
-  if (value.trim() === "") {
-    throw new StorageValidationError(`${field} must not be empty`);
-  }
-  return value;
-}
-
 function requireAbsolutePath(value: string, field: string): string {
   const normalized = requireNonEmpty(value, field);
   if (!isAbsolute(normalized)) {
@@ -2736,58 +2746,6 @@ function requirePositiveInteger(value: number, field: string): number {
   return value;
 }
 
-function rowString(row: Record<string, unknown>, field: string): string {
-  return String(row[field]);
-}
-
-function rowNumber(row: Record<string, unknown>, field: string): number {
-  return Number(row[field]);
-}
-
-function rowNullableString(row: Record<string, unknown>, field: string): string | null {
-  const value = row[field];
-  return value === null || value === undefined ? null : String(value);
-}
-
-function rowNullableJson(row: Record<string, unknown>, field: string): JsonValue | null {
-  const value = row[field];
-  return value === null || value === undefined ? null : parse(String(value));
-}
-
-function rowNullableNumber(row: Record<string, unknown>, field: string): number | null {
-  const value = row[field];
-  return value === null || value === undefined ? null : Number(value);
-}
-
-function recordChecksum(input: unknown): string {
-  return checksum(serialize(recordToJson(input)));
-}
-
-function assertSafeRecordFields(input: unknown, fields: readonly string[]): void {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) return;
-  const record = input as Record<string, unknown>;
-  for (const field of fields) {
-    const value = record[field];
-    if (value !== null && value !== undefined) {
-      payloadChecksum(recordToJson(value));
-    }
-  }
-}
-
-function requirePositive(value: number, field: string): number {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new StorageValidationError(`${field} must be a positive integer`);
-  }
-  return value;
-}
-
-function requireNonNegativeInteger(value: number, field: string): number {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new StorageValidationError(`${field} must be a non-negative integer`);
-  }
-  return value;
-}
-
 function requireSha256(value: string, field: string): string {
   const normalized = requireNonEmpty(value, field).trim();
   if (!/^[0-9a-f]{64}$/.test(normalized)) {
@@ -2802,25 +2760,6 @@ function requireBoundedDeletionCount(value: number, field: string): number {
     throw new StorageValidationError(`${field} must be at most 1024`);
   }
   return normalized;
-}
-
-function requireNonNegativeNumber(value: number, field: string): number {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new StorageValidationError(`${field} must be a finite non-negative number`);
-  }
-  return value;
-}
-
-function requireStoredRunState(state: StoredRunState, field: string): void {
-  if (state !== "provider-error" && !workflowStates.includes(state)) {
-    throw new StorageValidationError(`Unsupported ${field}: ${state}`);
-  }
-}
-
-function requireStoredStep(step: StoredRunStep, field: string): void {
-  if (step !== null && step !== "author" && step !== "critic" && step !== "revision") {
-    throw new StorageValidationError(`Unsupported ${field}: ${step}`);
-  }
 }
 
 export class SqliteStorage
@@ -10000,18 +9939,8 @@ export class SqliteStorage
 
   public async saveRun(input: RunRecordInput): Promise<RunRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "run id");
-    requireNonEmpty(input.workspaceId, "run workspaceId");
-    requireNonEmpty(input.contextSnapshotId, "run contextSnapshotId");
-    requireStoredRunState(input.state, "run state");
-    requirePositive(input.round, "run round");
-    requireStoredStep(input.currentStep, "run currentStep");
-    requireNonEmpty(input.startedAt, "run startedAt");
-    requireNonEmpty(input.updatedAt, "run updatedAt");
-    requireNonNegativeNumber(input.totalCostUsd, "run totalCostUsd");
-    assertSafeRecordFields(input, ["budget", "lastError", "payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: RunRecord = { ...input, checksum: checksumValue };
+    const record = prepareRunRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM runs WHERE id = ?")
@@ -10043,15 +9972,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `run:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "run.appended",
-        entityType: "run",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.updatedAt,
-      });
+      this.insertAuditEvent(runAuditEvent(record));
     })();
     return record;
   }
@@ -10079,18 +10000,7 @@ export class SqliteStorage
 
   public async saveRunSnapshot(input: RunSnapshotRecordInput): Promise<RunSnapshotRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.workspaceId, "run snapshot workspaceId");
-    requireNonEmpty(input.runId, "run snapshot runId");
-    requireNonEmpty(input.contextSnapshotId, "run snapshot contextSnapshotId");
-    requireStoredRunState(input.state, "run snapshot state");
-    requirePositive(input.round, "run snapshot round");
-    requireStoredStep(input.currentStep, "run snapshot currentStep");
-    requireNonEmpty(input.startedAt, "run snapshot startedAt");
-    requireNonEmpty(input.updatedAt, "run snapshot updatedAt");
-    requireNonNegativeNumber(input.totalCostUsd, "run snapshot totalCostUsd");
-    assertSafeRecordFields(input, ["budget", "lastError", "payload"]);
-    const checksumValue = recordChecksum(input);
-    const id = `run-snapshot:${input.runId}:${checksumValue}`;
+    const { id, checksum: checksumValue } = prepareRunSnapshot(input);
     this.database.transaction(() => {
       const existing = this.database
         .prepare(
@@ -10176,16 +10086,8 @@ export class SqliteStorage
 
   public async saveRound(input: RoundRecordInput): Promise<RoundRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "round id");
-    requireNonEmpty(input.workspaceId, "round workspaceId");
-    requireNonEmpty(input.runId, "round runId");
-    requirePositive(input.number, "round number");
-    requireStoredRunState(input.state, "round state");
-    requireNonEmpty(input.startedAt, "round startedAt");
-    if (input.completedAt !== null) requireNonEmpty(input.completedAt, "round completedAt");
-    assertSafeRecordFields(input, ["evaluation", "payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: RoundRecord = { ...input, checksum: checksumValue };
+    const record = prepareRoundRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM rounds WHERE id = ?")
@@ -10212,15 +10114,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `round:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "round.appended",
-        entityType: "round",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.startedAt,
-      });
+      this.insertAuditEvent(roundAuditEvent(record));
     })();
     return record;
   }
@@ -10248,24 +10142,8 @@ export class SqliteStorage
 
   public async saveExecution(input: ExecutionRecordInput): Promise<ExecutionRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "execution id");
-    requireNonEmpty(input.workspaceId, "execution workspaceId");
-    requireNonEmpty(input.runId, "execution runId");
-    requireNonEmpty(input.roundId, "execution roundId");
-    requireNonEmpty(input.contextSnapshotId, "execution contextSnapshotId");
-    requirePositive(input.attempt, "execution attempt");
-    requireNonEmpty(input.provider, "execution provider");
-    requireNonEmpty(input.modelId, "execution modelId");
-    requireNonNegativeInteger(input.inputTokens, "execution inputTokens");
-    requireNonNegativeInteger(input.outputTokens, "execution outputTokens");
-    requireNonNegativeInteger(input.totalTokens, "execution totalTokens");
-    if (input.estimatedUsd !== null)
-      requireNonNegativeNumber(input.estimatedUsd, "execution estimatedUsd");
-    requireNonEmpty(input.startedAt, "execution startedAt");
-    if (input.completedAt !== null) requireNonEmpty(input.completedAt, "execution completedAt");
-    assertSafeRecordFields(input, ["output", "payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: ExecutionRecord = { ...input, checksum: checksumValue };
+    const record = prepareExecutionRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM executions WHERE id = ?")
@@ -10305,15 +10183,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `execution:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "execution.appended",
-        entityType: "execution",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.completedAt ?? input.startedAt,
-      });
+      this.insertAuditEvent(executionAuditEvent(record));
     })();
     return record;
   }
@@ -10341,17 +10211,8 @@ export class SqliteStorage
 
   public async saveFinding(input: FindingRecordInput): Promise<FindingRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "finding id");
-    requireNonEmpty(input.workspaceId, "finding workspaceId");
-    requireNonEmpty(input.runId, "finding runId");
-    requireNonEmpty(input.roundId, "finding roundId");
-    requireNonEmpty(input.code, "finding code");
-    requireNonEmpty(input.category, "finding category");
-    requireNonEmpty(input.message, "finding message");
-    requireNonEmpty(input.createdAt, "finding createdAt");
-    assertSafeRecordFields(input, ["payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: FindingRecord = { ...input, checksum: checksumValue };
+    const record = prepareFindingRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM findings WHERE id = ?")
@@ -10384,15 +10245,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `finding:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "finding.appended",
-        entityType: "finding",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.createdAt,
-      });
+      this.insertAuditEvent(findingAuditEvent(record));
     })();
     return record;
   }
@@ -10420,15 +10273,8 @@ export class SqliteStorage
 
   public async saveDecision(input: DecisionRecordInput): Promise<DecisionRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "decision id");
-    requireNonEmpty(input.workspaceId, "decision workspaceId");
-    requireNonEmpty(input.runId, "decision runId");
-    requireNonEmpty(input.rationale, "decision rationale");
-    requireNonEmpty(input.actor, "decision actor");
-    requireNonEmpty(input.createdAt, "decision createdAt");
-    assertSafeRecordFields(input, ["payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: DecisionRecord = { ...input, checksum: checksumValue };
+    const record = prepareDecisionRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM decisions WHERE id = ?")
@@ -10456,15 +10302,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `decision:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "decision.appended",
-        entityType: "decision",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.createdAt,
-      });
+      this.insertAuditEvent(decisionAuditEvent(record));
     })();
     return record;
   }
@@ -10492,15 +10330,8 @@ export class SqliteStorage
 
   public async saveExport(input: ExportRecordInput): Promise<ExportRecord> {
     this.ensureOpen();
-    requireNonEmpty(input.id, "export id");
-    requireNonEmpty(input.workspaceId, "export workspaceId");
-    requireNonEmpty(input.runId, "export runId");
-    requireNonEmpty(input.artifactId, "export artifactId");
-    requireNonEmpty(input.format, "export format");
-    requireNonEmpty(input.createdAt, "export createdAt");
-    assertSafeRecordFields(input, ["payload"]);
-    const checksumValue = recordChecksum(input);
-    const record: ExportRecord = { ...input, checksum: checksumValue };
+    const record = prepareExportRecord(input);
+    const checksumValue = record.checksum;
     this.database.transaction(() => {
       const existing = this.database
         .prepare("SELECT record_checksum FROM exports WHERE id = ?")
@@ -10528,15 +10359,7 @@ export class SqliteStorage
           serialize(input.payload),
           checksumValue,
         );
-      this.insertAuditEvent({
-        id: `export:${input.id}:${checksumValue}`,
-        workspaceId: input.workspaceId,
-        eventType: "export.appended",
-        entityType: "export",
-        entityId: input.id,
-        payload: recordToJson(record),
-        createdAt: input.createdAt,
-      });
+      this.insertAuditEvent(exportAuditEvent(record));
     })();
     return record;
   }
@@ -12233,10 +12056,6 @@ export class SqliteStorage
   }
 }
 
-function recordToJson(record: unknown): JsonValue {
-  return JSON.parse(JSON.stringify(record)) as JsonValue;
-}
-
 function normalizeCandidateKnowledgeBaseInput(
   input: CandidateKnowledgeBaseInput,
 ): CandidateKnowledgeBaseRecord {
@@ -13333,144 +13152,6 @@ function evidenceChunkFromRow(row: Record<string, unknown>): EvidenceChunkRecord
     checksum: rowString(row, "checksum"),
     text: rowString(row, "text"),
     createdAt: rowString(row, "created_at"),
-  };
-}
-
-function runFromRow(row: Record<string, unknown>): RunRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    contextSnapshotId: rowString(row, "context_snapshot_id"),
-    state: rowString(row, "state") as StoredRunState,
-    round: rowNumber(row, "round"),
-    currentStep: rowNullableString(row, "current_step") as StoredRunStep,
-    budget: parse(rowString(row, "budget_json")),
-    artifactId: rowNullableString(row, "artifact_id"),
-    approval: rowString(row, "approval") as StoredApprovalStatus,
-    totalCostUsd: rowNumber(row, "total_cost_usd"),
-    startedAt: rowString(row, "started_at"),
-    updatedAt: rowString(row, "updated_at"),
-    lastError: rowNullableJson(row, "last_error_json"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function runSnapshotFromRow(row: Record<string, unknown>): RunSnapshotRecord {
-  return {
-    sequence: rowNumber(row, "sequence"),
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    contextSnapshotId: rowString(row, "context_snapshot_id"),
-    state: rowString(row, "state") as StoredRunState,
-    round: rowNumber(row, "round"),
-    currentStep: rowNullableString(row, "current_step") as StoredRunStep,
-    budget: parse(rowString(row, "budget_json")),
-    artifactId: rowNullableString(row, "artifact_id"),
-    approval: rowString(row, "approval") as StoredApprovalStatus,
-    totalCostUsd: rowNumber(row, "total_cost_usd"),
-    startedAt: rowString(row, "started_at"),
-    updatedAt: rowString(row, "updated_at"),
-    lastError: rowNullableJson(row, "last_error_json"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function roundFromRow(row: Record<string, unknown>): RoundRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    number: rowNumber(row, "number"),
-    state: rowString(row, "state") as StoredRoundState,
-    startedAt: rowString(row, "started_at"),
-    completedAt: rowNullableString(row, "completed_at"),
-    evaluation: rowNullableJson(row, "evaluation_json"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function executionFromRow(row: Record<string, unknown>): ExecutionRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    roundId: rowString(row, "round_id"),
-    contextSnapshotId: rowString(row, "context_snapshot_id"),
-    artifactId: rowNullableString(row, "artifact_id"),
-    attempt: rowNumber(row, "attempt"),
-    step: rowString(row, "step") as StoredExecutionStep,
-    status: rowString(row, "status") as StoredExecutionStatus,
-    provider: rowString(row, "provider"),
-    modelId: rowString(row, "model_id"),
-    providerRequestId: rowNullableString(row, "provider_request_id"),
-    outputChecksum: rowNullableString(row, "output_checksum"),
-    inputTokens: rowNumber(row, "input_tokens"),
-    outputTokens: rowNumber(row, "output_tokens"),
-    totalTokens: rowNumber(row, "total_tokens"),
-    estimatedUsd: rowNullableNumber(row, "estimated_usd"),
-    startedAt: rowString(row, "started_at"),
-    completedAt: rowNullableString(row, "completed_at"),
-    errorCode: rowNullableString(row, "error_code"),
-    output: rowNullableJson(row, "output_json"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function findingFromRow(row: Record<string, unknown>): FindingRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    roundId: rowString(row, "round_id"),
-    executionId: rowNullableString(row, "execution_id"),
-    artifactId: rowNullableString(row, "artifact_id"),
-    code: rowString(row, "code"),
-    category: rowString(row, "category"),
-    severity: rowString(row, "severity") as StoredFindingSeverity,
-    message: rowString(row, "message"),
-    claimId: rowNullableString(row, "claim_id"),
-    sectionId: rowNullableString(row, "section_id"),
-    requirementId: rowNullableString(row, "requirement_id"),
-    createdAt: rowString(row, "created_at"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function decisionFromRow(row: Record<string, unknown>): DecisionRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    roundId: rowNullableString(row, "round_id"),
-    artifactId: rowNullableString(row, "artifact_id"),
-    type: rowString(row, "type") as StoredDecisionType,
-    rationale: rowString(row, "rationale"),
-    actor: rowString(row, "actor"),
-    createdAt: rowString(row, "created_at"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
-  };
-}
-
-function exportFromRow(row: Record<string, unknown>): ExportRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    runId: rowString(row, "run_id"),
-    artifactId: rowString(row, "artifact_id"),
-    format: rowString(row, "format"),
-    status: rowString(row, "status") as StoredExportStatus,
-    outputPath: rowNullableString(row, "output_path"),
-    outputChecksum: rowNullableString(row, "output_checksum"),
-    createdAt: rowString(row, "created_at"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "record_checksum"),
   };
 }
 

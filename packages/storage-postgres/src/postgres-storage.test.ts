@@ -3,6 +3,7 @@ import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
 import type { HistoryRecordsStorage } from "@draft-loop/storage/conformance";
 import { describeHistoryRecordsConformance } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
+import { postgresMigrations } from "./migrations.js";
 import { openPostgresStorage, type PostgresStorage } from "./postgres-storage.js";
 import { createSqlClient } from "./sql-client.js";
 
@@ -39,7 +40,7 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
     const opened = await openIsolated(url);
     // Only the methods of the selected groups are called; the rest of the surface lands later.
     return { storage: opened.storage as unknown as HistoryRecordsStorage, close: opened.close };
-  }, ["workspaces", "contextSnapshots", "artifactVersions"]);
+  }, ["workspaces", "contextSnapshots", "artifactVersions", "runs", "runSnapshots", "runChildren"]);
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);
@@ -95,7 +96,9 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
       );
       await Promise.all(stores.map((store) => store.close()));
       const rows = await admin.query(`SELECT version FROM ${schema}.schema_migrations`);
-      expect(rows.map((row) => Number(row.version))).toEqual([1]);
+      expect(rows.map((row) => Number(row.version)).sort((left, right) => left - right)).toEqual(
+        postgresMigrations.map((migration) => migration.version),
+      );
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.close();

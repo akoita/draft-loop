@@ -70,6 +70,172 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 2,
+    name: "run history: runs, snapshots, rounds, executions, findings, decisions and exports",
+    sql: `
+      CREATE TABLE runs (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        context_snapshot_id TEXT NOT NULL REFERENCES context_snapshots (id),
+        state TEXT NOT NULL,
+        round INTEGER NOT NULL CHECK (round >= 1),
+        current_step TEXT,
+        budget_json TEXT NOT NULL,
+        artifact_id TEXT REFERENCES artifact_versions (id),
+        approval TEXT NOT NULL CHECK (approval IN ('pending', 'approved', 'rejected')),
+        total_cost_usd DOUBLE PRECISION NOT NULL CHECK (total_cost_usd >= 0),
+        started_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_error_json TEXT,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        UNIQUE (id, workspace_id)
+      );
+      CREATE INDEX runs_workspace_updated ON runs (workspace_id, updated_at, id);
+
+      CREATE TABLE run_snapshots (
+        sequence BIGSERIAL PRIMARY KEY,
+        id TEXT NOT NULL UNIQUE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        context_snapshot_id TEXT NOT NULL REFERENCES context_snapshots (id),
+        state TEXT NOT NULL,
+        round INTEGER NOT NULL CHECK (round >= 1),
+        current_step TEXT,
+        budget_json TEXT NOT NULL,
+        artifact_id TEXT,
+        approval TEXT NOT NULL CHECK (approval IN ('pending', 'approved', 'rejected')),
+        total_cost_usd DOUBLE PRECISION NOT NULL CHECK (total_cost_usd >= 0),
+        started_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_error_json TEXT,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        UNIQUE (run_id, record_checksum)
+      );
+      CREATE INDEX run_snapshots_run_sequence ON run_snapshots (run_id, sequence);
+
+      CREATE TABLE rounds (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        number INTEGER NOT NULL CHECK (number >= 1),
+        state TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        evaluation_json TEXT,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        UNIQUE (run_id, number),
+        UNIQUE (id, workspace_id),
+        FOREIGN KEY (run_id, workspace_id) REFERENCES runs (id, workspace_id)
+      );
+      CREATE INDEX rounds_run_number ON rounds (run_id, number, id);
+
+      CREATE TABLE executions (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        round_id TEXT NOT NULL,
+        context_snapshot_id TEXT NOT NULL REFERENCES context_snapshots (id),
+        artifact_id TEXT REFERENCES artifact_versions (id),
+        attempt INTEGER NOT NULL CHECK (attempt >= 1),
+        step TEXT NOT NULL CHECK (step IN ('author', 'critic', 'revision')),
+        status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+        provider TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        provider_request_id TEXT,
+        output_checksum TEXT,
+        input_tokens INTEGER NOT NULL CHECK (input_tokens >= 0),
+        output_tokens INTEGER NOT NULL CHECK (output_tokens >= 0),
+        total_tokens INTEGER NOT NULL CHECK (total_tokens >= 0),
+        estimated_usd DOUBLE PRECISION,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        error_code TEXT,
+        output_json TEXT,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        UNIQUE (run_id, round_id, step, attempt),
+        UNIQUE (id, workspace_id),
+        FOREIGN KEY (run_id, workspace_id) REFERENCES runs (id, workspace_id),
+        FOREIGN KEY (round_id, workspace_id) REFERENCES rounds (id, workspace_id)
+      );
+      CREATE INDEX executions_run_started ON executions (run_id, started_at, id);
+
+      CREATE TABLE findings (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        round_id TEXT NOT NULL,
+        execution_id TEXT,
+        artifact_id TEXT REFERENCES artifact_versions (id),
+        code TEXT NOT NULL,
+        category TEXT NOT NULL,
+        severity TEXT NOT NULL CHECK (severity IN ('error', 'warning')),
+        message TEXT NOT NULL,
+        claim_id TEXT,
+        section_id TEXT,
+        requirement_id TEXT,
+        created_at TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        FOREIGN KEY (run_id, workspace_id) REFERENCES runs (id, workspace_id),
+        FOREIGN KEY (round_id, workspace_id) REFERENCES rounds (id, workspace_id),
+        FOREIGN KEY (execution_id, workspace_id) REFERENCES executions (id, workspace_id)
+      );
+      CREATE INDEX findings_run_created ON findings (run_id, created_at, id);
+
+      CREATE TABLE decisions (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        round_id TEXT,
+        artifact_id TEXT REFERENCES artifact_versions (id),
+        type TEXT NOT NULL CHECK (type IN ('edit', 'accept-finding', 'reject-finding', 'approve')),
+        rationale TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        FOREIGN KEY (run_id, workspace_id) REFERENCES runs (id, workspace_id),
+        FOREIGN KEY (round_id, workspace_id) REFERENCES rounds (id, workspace_id)
+      );
+      CREATE INDEX decisions_run_created ON decisions (run_id, created_at, id);
+
+      CREATE TABLE exports (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        run_id TEXT NOT NULL,
+        artifact_id TEXT NOT NULL REFERENCES artifact_versions (id),
+        format TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('prepared', 'completed', 'failed')),
+        output_path TEXT,
+        output_checksum TEXT,
+        created_at TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        record_checksum TEXT NOT NULL,
+        FOREIGN KEY (run_id, workspace_id) REFERENCES runs (id, workspace_id)
+      );
+      CREATE INDEX exports_run_created ON exports (run_id, created_at, id);
+
+      CREATE TRIGGER runs_immutable BEFORE UPDATE ON runs
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER run_snapshots_immutable BEFORE UPDATE ON run_snapshots
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER rounds_immutable BEFORE UPDATE ON rounds
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER executions_immutable BEFORE UPDATE ON executions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER findings_immutable BEFORE UPDATE ON findings
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER decisions_immutable BEFORE UPDATE ON decisions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER exports_immutable BEFORE UPDATE ON exports
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */
