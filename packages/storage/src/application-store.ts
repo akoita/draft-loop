@@ -325,7 +325,7 @@ function text(row: Record<string, unknown>, column: string): string {
   return value;
 }
 
-function applicationFromRow(row: Record<string, unknown>): ApplicationStoreRecord {
+export function applicationFromRow(row: Record<string, unknown>): ApplicationStoreRecord {
   const jobSource = applicationJobSourceSchema.safeParse(JSON.parse(text(row, "job_source_json")));
   if (!jobSource.success) throw new StorageValidationError("Invalid stored application job source");
   return {
