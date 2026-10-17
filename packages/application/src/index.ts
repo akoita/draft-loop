@@ -6,7 +6,7 @@ import type {
   WritingPolicyLineage,
 } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
-import type { OutputFormat } from "@draft-loop/rendering";
+import type { OutputFormat, PdfPrinter } from "@draft-loop/rendering";
 import type {
   AdjudicatedRevisionEffectOverride,
   AuthorAdjudicationDecisionInput,
@@ -386,6 +386,8 @@ export interface ExportCommand {
   readonly format?: OutputFormat;
   /** A built-in rendering template id, such as `classic` or `compact`; Classic when omitted. */
   readonly templateId?: string;
+  /** Prints a PDF through a browser engine; the desktop host passes one, the CLI does not. */
+  readonly printPdf?: PdfPrinter;
 }
 
 export interface LatestExportPathCommand {

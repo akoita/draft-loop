@@ -2735,9 +2735,7 @@ export function createLocalApplicationDriver(
       }
     },
     export: async (command, io) =>
-      exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown", {
-        templateId: command.templateId,
-      }),
+      exportRun(command.root, command.runId, command.outputPath, io, command.format, command),
     latestExportPath: async (command) =>
       latestExportPath(command.root, command.runId, command.format),
     queryEvidence: async (command, io) =>

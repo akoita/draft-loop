@@ -87,6 +87,7 @@ import {
   probeOpenAICodexUserSession,
   type UserSessionLoginStatus,
 } from "@draft-loop/providers";
+import type { PdfPrinter } from "@draft-loop/rendering";
 import type { ApplicationRunRowView } from "../application-run-list.js";
 import { isApplicationNotReadyFailure, projectApprovalReadiness } from "../approval-readiness.js";
 import {
@@ -440,6 +441,8 @@ export interface NativeHostOptions {
   >;
   /** Acceptance-only switch for exercising the preflight with offline fixtures. */
   readonly requireProviderPreflight?: boolean;
+  /** Prints PDF exports through the browser engine (#1362); without it the built-in writer draws them. */
+  readonly pdfPrinter?: PdfPrinter;
   readonly onError?: (error: unknown, capability: BridgeCapability) => void;
 }
 
@@ -2364,6 +2367,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     openai: false,
   };
   const requireProviderPreflight = options.requireProviderPreflight === true;
+  const pdfPrinting = (format: string): { readonly printPdf?: PdfPrinter } =>
+    format === "pdf" && options.pdfPrinter !== undefined ? { printPdf: options.pdfPrinter } : {};
   const service =
     options.applicationService ??
     withSavedModelProfiles(
@@ -4426,6 +4431,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               format,
               outputPath: selectedPath,
               ...(action.template === undefined ? {} : { templateId: action.template }),
+              ...pdfPrinting(format),
             },
             exportIo.io,
           );
@@ -6273,6 +6279,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               root: workspace.root,
               runId: command.input.runId,
               format: safeFormat(command.input.format),
+              ...pdfPrinting(safeFormat(command.input.format)),
               ...(command.input.relativePath === undefined
                 ? {}
                 : { outputPath: resolve(workspace.root, command.input.relativePath) }),

@@ -19,6 +19,7 @@ import { createHostErrorLogger } from "./diagnostics.js";
 import { chooseExportPath, chooseMarkdownSavePath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
+import { createElectronPdfPrinter } from "./pdf-printer.js";
 import {
   createProviderAuthModePreferenceStore,
   providerAuthModePreferenceFilename,
@@ -349,6 +350,7 @@ app.whenReady().then(async () => {
   const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
   const consoleHostErrors = smokeEnabled || (!app.isPackaged && !liveE2eEnabled);
   const host = createNativeHost({
+    pdfPrinter: createElectronPdfPrinter(),
     providerAuthModeConfiguration,
     providerAuthModeEnvironmentOverrides: environmentOverrides,
     providerAuthModePreference,

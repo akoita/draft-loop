@@ -10,13 +10,25 @@ import {
   builtInRenderingTemplates,
   extensionForFormat,
   getRenderingTemplate,
+  type OutputFormat,
+  type PdfPrinter,
+  type RenderedDocument,
+  type RenderOptions,
   renderArtifact,
+  renderedPrintedPdf,
+  renderPrintHtml,
 } from "@draft-loop/rendering";
+import type { DraftArtifact } from "@draft-loop/schemas";
 import type { SqliteStorage } from "@draft-loop/storage";
 
 import { CliUserError } from "./cli-user-error.js";
 import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
-import { assertExportRenderingQa, exportTemplateRecord } from "./export-qa.js";
+import {
+  assertExportRenderingQa,
+  assertPrintedPdfRenderingQa,
+  type ExportRenderingQaResult,
+  exportTemplateRecord,
+} from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import { exportRecordId } from "./export-record.js";
 import type { ApplicationIo } from "./index.js";
@@ -32,6 +44,11 @@ export interface ExportRunDependencies {
 export interface ExportRunOptions {
   /** A built-in rendering template id (#1330); Classic when omitted. */
   readonly templateId?: string | undefined;
+  /**
+   * Prints a PDF through a browser engine (#1362). The desktop passes one; without it a PDF is
+   * drawn by the built-in writer, as the CLI does.
+   */
+  readonly printPdf?: PdfPrinter | undefined;
 }
 
 /** The user-facing error for a template id that is not a built-in template. */
@@ -43,6 +60,27 @@ function assertKnownTemplate(templateId: string | undefined): void {
     const known = Object.keys(builtInRenderingTemplates).join(" or ");
     throw new CliUserError(`Unknown template: ${templateId}. Use ${known}.`);
   }
+}
+
+/**
+ * Render and check an export. A PDF goes through the printer when there is one; otherwise, and for
+ * every other format, the built-in renderer draws it. Either way QA fails closed before any write.
+ */
+async function renderChecked(
+  artifact: DraftArtifact,
+  format: OutputFormat,
+  renderOptions: RenderOptions,
+  printPdf: PdfPrinter | undefined,
+): Promise<{ readonly rendered: RenderedDocument; readonly qa: ExportRenderingQaResult }> {
+  if (format === "pdf" && printPdf !== undefined) {
+    const printed = await printPdf(
+      renderPrintHtml(artifact, { templateId: renderOptions.templateId }),
+    );
+    const rendered = renderedPrintedPdf(artifact, printed.pdf, renderOptions);
+    return { rendered, qa: assertPrintedPdfRenderingQa(artifact, rendered, printed) };
+  }
+  const rendered = renderArtifact(artifact, format, renderOptions);
+  return { rendered, qa: assertExportRenderingQa(artifact, rendered) };
 }
 
 /**
@@ -85,15 +123,20 @@ export async function exportApprovedRun(
         ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
         : resolve(root, outputPathInput);
     await mkdir(dirname(outputPath), { recursive: true });
-    const rendered = renderArtifact(snapshot.artifact, format, {
+    const renderOptions: RenderOptions = {
       requiredSections: config.requiredSections,
       ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
       ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
       allowUnbackedClaims: false,
       generatedAt: timestamp(),
       ...(options.templateId === undefined ? {} : { templateId: options.templateId }),
-    });
-    const qa = assertExportRenderingQa(snapshot.artifact, rendered);
+    };
+    const { rendered, qa } = await renderChecked(
+      snapshot.artifact,
+      format,
+      renderOptions,
+      options.printPdf,
+    );
     await writeFile(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({

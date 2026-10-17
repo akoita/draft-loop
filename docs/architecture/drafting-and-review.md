@@ -858,6 +858,23 @@ the font's own advance widths. `compact-one-page` keeps the unembedded
 Helvetica. The font source, pinned checksums, licence, and regeneration steps
 are in `packages/rendering/fonts/carlito/NOTICE.md`.
 
+#### Printed PDFs (#1362)
+
+`renderPrintHtml` (`packages/rendering/src/print-html.ts`) turns an artifact into one
+self-contained A4 HTML document for the selected template. It embeds Carlito and marks every
+visible block with `data-dl-unit`, whose text content is exactly the block's text. A bullet is a
+real `•` in a hanging indent. There is no letter-spacing or case transform, and keep rules are CSS
+`break-*` properties.
+
+The desktop host passes a `PdfPrinter` with PDF exports
+(`apps/desktop/src/electron/pdf-printer.ts`). It loads the HTML in a hidden, sandboxed window on an
+in-memory session that refuses every other request, collects the marked units, and prints with
+`printToPDF` (CSS page size, tagged PDF). `exportApprovedRun` then builds the export from those
+bytes with `renderedPrintedPdf`. QA (`buildPrintedPdfRenderingQa`) compares the reported units
+with the artifact in place of reading text back from the bytes, and takes the page count from the
+PDF. An export that fails QA writes nothing. Without a printer, as in the CLI, a PDF is drawn by
+the built-in writer.
+
 #### Rendering templates (#1328)
 
 A rendering template is validated data (`renderingTemplateSchema`, exposed as

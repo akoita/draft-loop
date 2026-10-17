@@ -131,6 +131,46 @@ describe("phase-0 CLI workflow", () => {
     await expect(
       exportRun(root, undefined, undefined, messages.value, "pdf", { templateId: "modern" }),
     ).rejects.toThrow("Unknown template: modern. Use classic or compact.");
+    // A PDF printed through a browser engine (#1362): QA reads the engine's report, not the bytes.
+    const printedPath = join(root, "exports", "printed.pdf");
+    const printedPdf = new TextEncoder().encode(
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
+    );
+    const printedHtml: string[] = [];
+    const printPdf = async (html: string) => {
+      printedHtml.push(html);
+      return {
+        pdf: printedPdf,
+        units: [...html.matchAll(/data-dl-unit="(heading|body)">(.*?)<\/(?:h1|h2|p|li)>/gu)].map(
+          (match) => ({
+            kind: match[1] as "heading" | "body",
+            text: (match[2] ?? "")
+              .replaceAll(/<[^>]+>/gu, "")
+              .replaceAll("&#39;", "'")
+              .replaceAll("&quot;", '"')
+              .replaceAll("&lt;", "<")
+              .replaceAll("&gt;", ">")
+              .replaceAll("&amp;", "&"),
+          }),
+        ),
+        viewerName: "Test printer",
+        viewerVersion: "1",
+      };
+    };
+    await exportRun(root, undefined, printedPath, messages.value, "pdf", { printPdf });
+    expect(printedHtml).toHaveLength(1);
+    expect(await readFile(printedPath)).toEqual(Buffer.from(printedPdf));
+    // A printer that drops a block fails rendering QA and writes nothing.
+    const droppedPath = join(root, "exports", "dropped.pdf");
+    await expect(
+      exportRun(root, undefined, droppedPath, messages.value, "pdf", {
+        printPdf: async (html) => {
+          const printed = await printPdf(html);
+          return { ...printed, units: printed.units.slice(0, -1) };
+        },
+      }),
+    ).rejects.toThrow("The PDF export failed rendering checks; no file was written.");
+    await expect(readFile(droppedPath)).rejects.toThrow();
     const exportStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
     const exportTemplates = (await exportStorage.listExports(started.runId)).map((record) => [
       record.outputPath,

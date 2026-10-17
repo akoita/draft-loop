@@ -642,9 +642,14 @@ The footer holds the approval gate and stays in view while you scroll:
   conditions.
 - **DOCX and PDF layout.** Both formats are laid out from the approved artifact
   alone: headline and contact lines first, then your sections in order, with
-  consistent headings and bullets, Arial text and A4 margins. There are no
-  tables, text boxes, comments, source annotations or block ids, so an
-  applicant tracking system reads the text in order.
+  consistent headings and bullets and A4 margins. There are no tables, text
+  boxes, comments, source annotations or block ids, so an applicant tracking
+  system reads the text in order.
+- **How the desktop draws a PDF.** The desktop prints the CV through its
+  built-in browser engine: embedded Carlito, navy name and headings, real
+  bullets with a hanging indent, and dates right-aligned. Before the file is
+  written, the export checks that every heading and block was drawn, in order.
+  The CLI still draws PDFs with DraftLoop's own writer.
 - **Template.** Under **Export…**, pick **Classic** (two pages, the default) or
   **Compact** (one page). Each option shows a small preview. The choice is
   remembered per application, and the export record names the template used.
