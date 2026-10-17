@@ -10,6 +10,7 @@ import {
   footerBlocker,
   ReviewFooter,
   type ReviewFooterProps,
+  revisionUnavailableReason,
 } from "./review-footer.js";
 import { sendVerdict } from "./send-verdict.js";
 
@@ -449,5 +450,33 @@ describe("the review footer in the workspace", () => {
     expect(scrollArea).toContain('role="tablist"');
     expect(footer).not.toContain('role="tablist"');
     expect(footer.endsWith("</section></aside>")).toBe(true);
+  });
+});
+
+describe("revisionUnavailableReason", () => {
+  it("keeps the directions field while a revision is possible", () => {
+    expect(revisionUnavailableReason(reviewed, 3)).toBeNull();
+  });
+
+  it("explains an approved draft, an ended review and a spent round limit", () => {
+    expect(revisionUnavailableReason({ ...reviewed, approval: "approved" }, 3)).toBe(
+      "The draft is approved, so this run takes no more revisions.",
+    );
+    expect(revisionUnavailableReason({ ...reviewed, state: "stopped" }, 3)).toContain(
+      "Start a new review",
+    );
+    expect(revisionUnavailableReason({ ...reviewed, round: 3 }, 3)).toBe(
+      "No revision left: this run has used all 3 rounds.",
+    );
+  });
+
+  it("folds the greyed-out directions field away for an approved draft", () => {
+    const approved: DesktopReviewState = { ...reviewed, state: "approved", approval: "approved" };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={approved} onAction={() => undefined} />,
+    );
+    expect(html).not.toContain("revision-direction-input");
+    expect(html).toContain("The draft is approved, so this run takes no more revisions.");
+    expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
   });
 });

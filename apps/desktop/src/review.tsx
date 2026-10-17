@@ -36,7 +36,6 @@ import {
   isChosenEarlierRun,
 } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
-import { executionLimitText } from "./execution-limits.js";
 import {
   defaultExportTemplate,
   type ExportTemplate,
@@ -60,6 +59,12 @@ import {
 } from "./finding-decision-hint.js";
 import { findingTitle } from "./finding-title.js";
 import {
+  executionLine,
+  footerRunningRound,
+  type SentRevisionDirection,
+  sentRevisionDirection,
+} from "./footer-running-round.js";
+import {
   briefOperationsOf,
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
@@ -79,7 +84,12 @@ import {
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
-import { footerBlocker, MISSING_EXPORT_LABEL, ReviewFooter } from "./review-footer.js";
+import {
+  footerBlocker,
+  MISSING_EXPORT_LABEL,
+  ReviewFooter,
+  revisionUnavailableReason,
+} from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
@@ -1046,12 +1056,29 @@ export function ReviewWorkspace({
     revisionDirectionDraft.key === revisionDirectionKey ? revisionDirectionDraft.text : "";
   // A run whose recorded author prompt predates directions cannot take them.
   const directionsUnavailable = state.runInputs?.authorDirections === false;
+  // The footer quotes the directions sent while the round they steer runs.
+  const [sentDirection, setSentDirection] = useState<SentRevisionDirection | null>(null);
+  const runPanelRef = useRef<HTMLElement>(null);
+  const revealRunPanelRequested = useRef(false);
   // Every way to request a revision sends the typed directions, then clears them.
   const requestRevision = useCallback((): void => {
-    sendRevisionRequest(directionsUnavailable ? "" : revisionDirection, onAction, () =>
+    const direction = directionsUnavailable ? "" : revisionDirection;
+    setSentDirection(sentRevisionDirection(state, direction));
+    revealRunPanelRequested.current = true;
+    sendRevisionRequest(direction, onAction, () =>
       setRevisionDirectionDraft({ key: revisionDirectionKey, text: "" }),
     );
-  }, [directionsUnavailable, onAction, revisionDirection, revisionDirectionKey]);
+  }, [directionsUnavailable, onAction, revisionDirection, revisionDirectionKey, state]);
+  const showRunPanel = useCallback((): void => {
+    runPanelRef.current?.scrollIntoView({ block: "nearest" });
+  }, []);
+  // The side panel may be scrolled down to the findings; once the requested round runs, bring
+  // Run progress back into view.
+  useEffect(() => {
+    if (!runInProgress || !revealRunPanelRequested.current) return;
+    revealRunPanelRequested.current = false;
+    showRunPanel();
+  }, [runInProgress, showRunPanel]);
   const initialQueueState = useMemo(
     () => initialFindingQueueState(state.findings),
     [state.findings],
@@ -1692,7 +1719,7 @@ export function ReviewWorkspace({
       onClick={() => onAction({ type: "resume" })}
     >
       <PlayIcon />
-      Resume
+      Resume review
     </button>
   );
   const pendingActionReason =
@@ -1716,6 +1743,9 @@ export function ReviewWorkspace({
             : !transmissionReady
               ? "Provider transmission has not been acknowledged."
               : runChangeReason;
+  // A revision that cannot happen in this run at all folds the directions field away, so a
+  // greyed-out field never looks usable; a briefly blocked one keeps the field and its text.
+  const lastingRevisionBlock = revisionUnavailableReason(state, maximumRounds);
   const comparisonReason = hasPreviousArtifact
     ? null
     : "There is no previous version to compare with.";
@@ -3209,7 +3239,7 @@ export function ReviewWorkspace({
             {/* Run progress sits here only while the run executes; afterwards its timeline is in
               Run details, and only a paused or interrupted run keeps its way back in. */}
             {runInProgress ? (
-              <section className="panel progress-panel" aria-label="run progress">
+              <section className="panel progress-panel" aria-label="run progress" ref={runPanelRef}>
                 <div className="section-heading compact">
                   <div>
                     <PanelToggle
@@ -3235,10 +3265,7 @@ export function ReviewWorkspace({
                 </div>
                 {state.execution.step === null ? null : (
                   <p className="pending-action-status" role="status" aria-live="polite">
-                    {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
-                    attempt {state.execution.attempt} · elapsed{" "}
-                    {Math.floor(state.execution.elapsedMs / 1_000)}s
-                    {executionLimitText(state.execution)}
+                    {executionLine(state.execution)}
                   </p>
                 )}
                 {readOnly ? null : renderAutopilotToggle()}
@@ -3248,7 +3275,11 @@ export function ReviewWorkspace({
               </section>
             ) : readOnly ||
               (state.execution.status !== "interrupted" && state.state !== "paused") ? null : (
-              <section className="panel run-recovery-panel" aria-label="run recovery">
+              <section
+                className="panel run-recovery-panel"
+                aria-label="run recovery"
+                ref={runPanelRef}
+              >
                 <div className="section-heading compact">
                   <h2>{stateLabel(state.state)}</h2>
                   {state.execution.status === "interrupted" ? (
@@ -3707,6 +3738,20 @@ export function ReviewWorkspace({
           <ReviewFooter
             blocker={comparing ? comparingRunsBlocker : gateBlocker}
             readOnly={!approvalOpen}
+            runningRound={
+              comparing
+                ? null
+                : footerRunningRound({
+                    state,
+                    sentDirection,
+                    busy: pendingReviewAction !== null,
+                    stopping: pendingReviewAction?.action === "stop",
+                    transmissionReady,
+                    onStop: () => onAction({ type: "stop" }),
+                    onResume: () => onAction({ type: "resume" }),
+                    onShowProgress: showRunPanel,
+                  })
+            }
             errorMessage={approvalExportErrorVisible ? (errorMessage ?? null) : null}
             statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath !== null ? "exported" : state.state === "exported" ? "exported, file not found" : "not exported"} · Validation: ${validationLabel}`}
             detail={
@@ -3803,6 +3848,7 @@ export function ReviewWorkspace({
               onRequest: requestRevision,
               direction: revisionDirection,
               directionsUnavailable,
+              unavailableReason: lastingRevisionBlock,
               onDirectionChange: (text) =>
                 setRevisionDirectionDraft({ key: revisionDirectionKey, text }),
             }}

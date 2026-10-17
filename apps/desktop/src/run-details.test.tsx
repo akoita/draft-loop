@@ -365,7 +365,7 @@ describe("what stays outside the drawer", () => {
     const html = render(fixture);
     const side = sidePanelOf(html);
     expect(side).toContain('aria-label="run recovery"');
-    expect(side).toMatch(/Resume<\/button>/u);
+    expect(side).toMatch(/Resume review<\/button>/u);
     expect(side).not.toContain('aria-label="run progress"');
     expect(drawerOf(html)).not.toContain("Resume");
   });
