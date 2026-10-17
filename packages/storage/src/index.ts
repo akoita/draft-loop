@@ -4,7 +4,6 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   type CandidateKnowledgeBaseState,
   type CandidateKnowledgeLexicalChunk,
-  type CandidateKnowledgeLexicalChunkInput,
   type CandidateKnowledgeLexicalIndexIdentity,
   type CandidateKnowledgeLexicalIndexIdentityInput,
   type CandidateKnowledgeLexicalRetrievalRequestInput,
@@ -15,7 +14,6 @@ import {
   type CandidateKnowledgeRetrievalScope,
   type CandidateKnowledgeRetrievalScopeInput,
   type CandidateKnowledgeRetrievalSourceVersionReference,
-  type CandidateKnowledgeRetrievalSourceVersionReferenceInput,
   type CandidateKnowledgeRetrievalStatus,
   type CandidateKnowledgeRetrievalTrace,
   type CandidateKnowledgeRetrievalTraceInput,
@@ -26,7 +24,6 @@ import {
   type RetrievalPort,
   type ScoredEvidenceChunk,
   type WorkflowState,
-  type WritingPolicy,
   workflowStates,
 } from "@draft-loop/domain";
 import {
@@ -81,7 +78,6 @@ import {
   listCurrentSourceEvidenceKindOverrides,
   type SourceEvidenceKindOverrideInput,
   type SourceEvidenceKindOverrideRecord,
-  type SourceEvidenceKindStoragePort,
   sourceEvidenceKindOverridesMigration,
 } from "./source-evidence-kinds.js";
 import {
@@ -91,7 +87,6 @@ import {
   readCurrentSourceSensitivityRules,
   readSourceSensitivityRulesVersion,
   type SourceSensitivityRuleAppendInput,
-  type SourceSensitivityRuleStoragePort,
   type SourceSensitivityRuleVersionRecord,
   type SourceSensitivityRuleVersionSummary,
   sourceSensitivityRulesMigration,
@@ -146,1211 +141,138 @@ export {
   candidateKnowledgeRetentionRules,
 } from "@draft-loop/domain";
 export type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
-
-export interface StoragePort {
-  readonly get: (key: string) => Promise<string | undefined>;
-  readonly set: (key: string, value: string) => Promise<void>;
-}
-
-export interface WorkspaceBackupResult {
-  readonly backupPath: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly createdAt: string;
-}
-
-export interface WorkspaceRestoreOptions {
-  readonly verifyIntegrity?: boolean;
-}
-
-export interface MigrationReport {
-  readonly appliedCount: number;
-  readonly appliedVersions: readonly number[];
-  readonly latestVersion: number;
-}
-
-export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue =
-  | JsonPrimitive
-  | readonly JsonValue[]
-  | { readonly [key: string]: JsonValue };
-
-/** Complete replacement of one CKB's deterministic lexical projection. */
-export interface CandidateKnowledgeLexicalIndexRebuildInput {
-  readonly scope: CandidateKnowledgeRetrievalScopeInput;
-  readonly index: CandidateKnowledgeLexicalIndexIdentityInput;
-  readonly chunks: readonly CandidateKnowledgeLexicalChunkInput[];
-  readonly createdAt: string;
-}
-
-/** Incremental replacement of chunks in the current exact CKB projection. */
-export interface CandidateKnowledgeLexicalIndexUpsertInput {
-  readonly scope: CandidateKnowledgeRetrievalScopeInput;
-  readonly index: CandidateKnowledgeLexicalIndexIdentityInput;
-  readonly chunks: readonly CandidateKnowledgeLexicalChunkInput[];
-}
-
-export type CandidateKnowledgeLexicalSourceVersionDeletionInput =
-  CandidateKnowledgeRetrievalSourceVersionReferenceInput;
-
-export interface CandidateKnowledgeLexicalIndexRecord {
-  readonly scope: CandidateKnowledgeRetrievalScope;
-  readonly index: CandidateKnowledgeLexicalIndexIdentity;
-  readonly indexedChunkCount: number;
-  readonly createdAt: string;
-  readonly stale: boolean;
-}
-
-export type CandidateKnowledgeLexicalIndexInspectionStatus = Extract<
-  CandidateKnowledgeRetrievalStatus,
-  "matched" | "stale" | "not-indexed"
->;
-
-export interface CandidateKnowledgeLexicalIndexInspection {
-  readonly status: CandidateKnowledgeLexicalIndexInspectionStatus;
-  readonly requestedScope: CandidateKnowledgeRetrievalScope;
-  readonly index: CandidateKnowledgeLexicalIndexIdentity | null;
-  readonly indexedScope: CandidateKnowledgeRetrievalScope | null;
-  readonly indexedChunkCount: number;
-}
-
-export interface CandidateKnowledgeRetrievalTraceListOptions {
-  readonly operationId?: string;
-  readonly limit?: number;
-}
-
-export interface WorkspaceRecord {
-  readonly id: string;
-  readonly state: WorkflowState;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface CandidateKnowledgeBaseInput {
-  readonly id: string;
-  readonly displayName: string;
-  readonly description?: string;
-  readonly isDefault: boolean;
-  readonly createdAt: string;
-}
-
-export interface CandidateKnowledgeBaseRecord {
-  readonly id: string;
-  readonly displayName: string;
-  readonly description: string;
-  readonly state: CandidateKnowledgeBaseState;
-  readonly isDefault: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly archivedAt: string | null;
-}
-
-export type CandidateKnowledgeSourceKind = "file" | "url";
-
-export interface CandidateKnowledgeSourceInput {
-  readonly id: string;
-  readonly knowledgeBaseId: string;
-  readonly kind: CandidateKnowledgeSourceKind;
-  readonly displayName: string;
-  readonly createdAt: string;
-}
-
-export type CandidateKnowledgeSourceRecord = CandidateKnowledgeSourceInput;
-
-/** Sensitive local-only state remembered for a successfully managed file import. */
-export interface CandidateKnowledgeSourceOriginBindingRecord {
-  readonly sourceId: string;
-  readonly originPath: string;
-  readonly boundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryBindingInput {
-  readonly id: string;
-  readonly knowledgeBaseId: string;
-  readonly rootPath: string;
-  readonly boundAt: string;
-  /** Ordered source IDs whose existing file bindings define membership. */
-  readonly sourceIds: readonly string[];
-}
-
-export interface CandidateKnowledgeDirectoryBindingRecord {
-  readonly id: string;
-  readonly knowledgeBaseId: string;
-  readonly rootPath: string;
-  readonly boundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryRootRevisionRecord {
-  readonly directoryId: string;
-  readonly knowledgeBaseId: string;
-  readonly revision: number;
-  readonly rootPath: string;
-  readonly boundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryRootRebindMemberInput {
-  readonly sourceId: string;
-  /** Canonical physical path verified by the storage handle. */
-  readonly originPath: string;
-  readonly mediaType: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly expectedVersionId: string;
-  readonly expectedOriginBoundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryRootRebindInput {
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly candidateRootPath: string;
-  readonly expectedRootPath: string;
-  readonly expectedRevision: number;
-  readonly reboundAt: string;
-  readonly members: readonly CandidateKnowledgeDirectoryRootRebindMemberInput[];
-}
-
-export interface CandidateKnowledgeDirectoryRootRebindResult {
-  readonly binding: CandidateKnowledgeDirectoryBindingRecord;
-  readonly revision: CandidateKnowledgeDirectoryRootRevisionRecord;
-  readonly rebound: boolean;
-}
-
-export interface CandidateKnowledgeDirectoryMemberRecord {
-  readonly directoryId: string;
-  readonly knowledgeBaseId: string;
-  readonly sourceId: string;
-  readonly relativePathHash: string;
-}
-
-export interface CandidateKnowledgeDirectoryMemberRevisionRecord {
-  readonly directoryId: string;
-  readonly knowledgeBaseId: string;
-  readonly sourceId: string;
-  readonly revision: number;
-  readonly relativePathHash: string;
-  readonly boundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryMemberMoveInput {
-  readonly knowledgeBaseId: string;
-  readonly directoryId: string;
-  readonly sourceId: string;
-  readonly targetOriginPath: string;
-  readonly mediaType: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly expectedRootPath: string;
-  readonly expectedRootRevision: number;
-  readonly expectedMemberRevision: number;
-  readonly expectedRelativePathHash: string;
-  readonly expectedVersionId: string;
-  readonly expectedOriginBoundAt: string;
-  readonly movedAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryMemberMoveResult {
-  readonly member: CandidateKnowledgeDirectoryMemberRecord;
-  readonly revision: CandidateKnowledgeDirectoryMemberRevisionRecord;
-  readonly binding: CandidateKnowledgeSourceOriginBindingRecord;
-  readonly moved: boolean;
-}
-
-export type CandidateKnowledgeDirectoryMemberOriginRelation =
-  | "same-member"
-  | "other-member"
-  | "unmatched"
-  | "outside-root"
-  | "unbound";
-
-export interface CandidateKnowledgeDirectoryMemberOriginRelationRecord {
-  readonly directoryId: string;
-  readonly knowledgeBaseId: string;
-  readonly sourceId: string;
-  readonly relation: CandidateKnowledgeDirectoryMemberOriginRelation;
-  /** Present only when the source currently has an origin binding. */
-  readonly originBoundAt?: string;
-}
-
-export type CandidateKnowledgeDirectoryRefreshObservationStatus = Extract<
-  CandidateKnowledgeSourceRefreshObservationStatus,
-  "current" | "changed" | "missing"
->;
-
-export interface CandidateKnowledgeDirectoryRefreshObservationInput {
-  readonly sourceId: string;
-  readonly observedVersionId: string;
-  readonly status: CandidateKnowledgeDirectoryRefreshObservationStatus;
-  readonly expectedOriginBoundAt: string;
-}
-
-export interface CandidateKnowledgeDirectoryRefreshObservationBatchInput {
-  readonly checkedAt: string;
-  readonly entries: readonly CandidateKnowledgeDirectoryRefreshObservationInput[];
-}
-
-export interface CandidateKnowledgeSourceVersionInput {
-  readonly id: string;
-  readonly mediaType: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly createdAt: string;
-}
-
-export interface CandidateKnowledgeSourceVersionRecord
-  extends CandidateKnowledgeSourceVersionInput {
-  readonly sourceId: string;
-  readonly version: number;
-  readonly parentVersionId: string | null;
-}
-
-export const candidateKnowledgeSourceUrlKinds = [
-  "github",
-  "certification",
-  "profile",
-  "portfolio",
-  "job-description",
-  "generic",
-] as const;
-export type CandidateKnowledgeSourceUrlKind = (typeof candidateKnowledgeSourceUrlKinds)[number];
-
-export interface CandidateKnowledgeSourceUrlProvenanceInput {
-  readonly originalUrl: string;
-  readonly finalUrl: string;
-  readonly fetchedAt: string;
-  readonly kind: CandidateKnowledgeSourceUrlKind;
-}
-
-export interface CandidateKnowledgeSourceUrlProvenanceRecord
-  extends CandidateKnowledgeSourceUrlProvenanceInput {
-  readonly sourceId: string;
-  readonly versionId: string;
-}
-
-export interface CandidateKnowledgeSourcePortableUrlProvenance {
-  readonly fetchedAt: string;
-  readonly kind: CandidateKnowledgeSourceUrlKind;
-}
-
-export interface CandidateKnowledgePortableBackupImportInput {
-  readonly manifest: CandidateKnowledgePortableBackupManifest;
-  readonly operationId: string;
-  readonly manifestChecksum: string;
-  readonly restoredAt: string;
-}
-
-export interface CandidateKnowledgePortableBackupProvenance {
-  readonly operationId: string;
-  readonly manifestChecksum: string;
-  readonly sourceStoreId: string;
-  readonly packageSchemaVersion: number;
-  readonly restoredAt: string;
-}
-
-export type CandidateKnowledgeSourceRefreshObservationStatus =
-  | "current"
-  | "changed"
-  | "missing"
-  | "inaccessible"
-  | "unbound";
-
-export interface CandidateKnowledgeSourceRefreshObservationInput {
-  readonly observedVersionId: string;
-  readonly status: CandidateKnowledgeSourceRefreshObservationStatus;
-  readonly checkedAt: string;
-  readonly lastRefreshedVersionId?: string | null;
-  readonly lastRefreshedAt?: string | null;
-}
-
-export interface CandidateKnowledgeSourceRefreshObservationRecord
-  extends CandidateKnowledgeSourceRefreshObservationInput {
-  readonly sourceId: string;
-  readonly lastRefreshedVersionId: string | null;
-  readonly lastRefreshedAt: string | null;
-  /** Derived from the source's current latest version; never persisted. */
-  readonly stale: boolean;
-}
-
-export const candidateKnowledgeSourceLifecycleBlockerReasons = [
-  "knowledge-base-archived",
-  "source-retired",
-  "latest-version-unmanaged",
-  "source-origin-unbound",
-  "directory-origin-conflict",
-  "refresh-stale",
-  "refresh-changed",
-  "refresh-missing",
-  "refresh-inaccessible",
-  "refresh-unbound",
-] as const;
-export type CandidateKnowledgeSourceLifecycleBlockerReason =
-  (typeof candidateKnowledgeSourceLifecycleBlockerReasons)[number];
-export type CandidateKnowledgeSourceLifecycleReadinessStatus = "ready" | "blocked";
-
-export interface CandidateKnowledgeSourceLifecycleObservationRevision {
-  readonly observedVersionId: string;
-  readonly status: CandidateKnowledgeSourceRefreshObservationStatus;
-  readonly checkedAt: string;
-  readonly lastRefreshedVersionId: string | null;
-  readonly lastRefreshedAt: string | null;
-  readonly stale: boolean;
-}
-
-export interface CandidateKnowledgeSourceLifecycleRetirementRevision {
-  readonly retiredAt: string;
-  readonly reason: CandidateKnowledgeSourceRetirementReason;
-}
-
-export interface CandidateKnowledgeSourceLifecycleDirectoryRevision {
-  readonly directoryId: string;
-  readonly rootRevision: number;
-  readonly rootBoundAt: string;
-  readonly memberRevision: number;
-  readonly memberBoundAt: string;
-}
-
-export interface CandidateKnowledgeSourceLifecycleRevision {
-  readonly knowledgeBaseState: CandidateKnowledgeBaseState;
-  readonly knowledgeBaseArchivedAt: string | null;
-  readonly versionId: string;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly managed: boolean;
-  readonly originBoundAt: string | null;
-  readonly observation: CandidateKnowledgeSourceLifecycleObservationRevision | null;
-  readonly retirement: CandidateKnowledgeSourceLifecycleRetirementRevision | null;
-  readonly provenanceFetchedAt: string | null;
-  readonly directory: CandidateKnowledgeSourceLifecycleDirectoryRevision | null;
-}
-
-export interface CandidateKnowledgeSourceLifecycleReadinessRecord {
-  readonly sourceId: string;
-  readonly latestVersionId: string;
-  readonly status: CandidateKnowledgeSourceLifecycleReadinessStatus;
-  readonly reasons: readonly CandidateKnowledgeSourceLifecycleBlockerReason[];
-  readonly lifecycleRevision: CandidateKnowledgeSourceLifecycleRevision;
-}
-
-export interface CandidateKnowledgeBaseLifecycleReadinessRecord {
-  readonly knowledgeBaseId: string;
-  readonly state: CandidateKnowledgeBaseState;
-  readonly archivedAt: string | null;
-  readonly sources: readonly CandidateKnowledgeSourceLifecycleReadinessRecord[];
-}
-
-export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
-export type CandidateKnowledgeSourceRetirementReason =
-  (typeof candidateKnowledgeSourceRetirementReasons)[number];
-
-export interface CandidateKnowledgeSourceRetirementInput {
-  readonly retiredAt: string;
-  readonly reason: CandidateKnowledgeSourceRetirementReason;
-}
-
-export interface CandidateKnowledgeSourceRetirementRecord
-  extends CandidateKnowledgeSourceRetirementInput {
-  readonly sourceId: string;
-}
-
-export interface CandidateKnowledgeDirectoryMemberRetirementInput {
-  readonly retiredAt: string;
-  /** Current directory root revision observed during the scan. */
-  readonly expectedRootPath: string;
-  readonly expectedRootRevision: number;
-  /** Current immutable-member revision/hash observed during the scan. */
-  readonly expectedMemberRevision: number;
-  readonly expectedRelativePathHash: string;
-  /** The latest managed version observed during the directory scan. */
-  readonly expectedVersionId: string;
-  /** The origin-binding revision observed during the directory scan. */
-  readonly expectedOriginBoundAt: string;
-}
-
-export interface CandidateKnowledgeSourceVersionWriteResult {
-  readonly source: CandidateKnowledgeSourceRecord;
-  readonly version: CandidateKnowledgeSourceVersionRecord;
-  readonly created: boolean;
-}
-
-export interface ManagedCandidateKnowledgeSourceVersionRecord
-  extends CandidateKnowledgeSourceVersionRecord {
-  readonly knowledgeBaseId: string;
-  readonly kind: CandidateKnowledgeSourceKind;
-}
-
-export type ManagedCandidateKnowledgeWriteKind = "create" | "append";
-export type ManagedCandidateKnowledgeWriteEventState =
-  | "targeted"
-  | "published"
-  | "committed"
-  | "completed"
-  | "aborted"
-  | "noop";
-
-export const managedCandidateKnowledgeWriteOwnerKind = "draft-loop" as const;
-export const managedCandidateKnowledgeWriteOwnerSchemaVersion = 1 as const;
-
-export type ManagedCandidateKnowledgeWriteJournalPhase =
-  | "prepared"
-  | ManagedCandidateKnowledgeWriteEventState;
-
-export type ManagedCandidateKnowledgeWriteRecoveryOutcome = "aborted" | "completed" | "preserved";
-
-export interface ManagedCandidateKnowledgeWriteOperationInput {
-  readonly operationId: string;
-  readonly knowledgeBaseId: string;
-  readonly sourceId: string;
-  readonly requestedVersionId: string;
-  readonly kind: ManagedCandidateKnowledgeWriteKind;
-  readonly createdAt: string;
-  /** Current candidate-store writer fencing generation; omitted rows are legacy. */
-  readonly ownerGeneration?: number;
-  /** Requested version integrity metadata for owned recovery. */
-  readonly requestedMediaType?: string;
-  readonly requestedChecksum?: string;
-  readonly requestedSizeBytes?: number;
-}
-
-export interface ManagedCandidateKnowledgeWriteStagingIdentity {
-  readonly device: number;
-  readonly inode: number;
-  readonly createdAt: string;
-}
-
-export type ManagedCandidateKnowledgeWriteRecoveryClaimPhase =
-  | "prepared"
-  | "targeted"
-  | "published"
-  | "committed";
-
-export interface ManagedCandidateKnowledgeWriteRecoveryClaim {
-  readonly phase: ManagedCandidateKnowledgeWriteRecoveryClaimPhase;
-  readonly generation: number;
-  readonly claimedAt: string;
-}
-
-export interface ManagedCandidateKnowledgeWriteOperationRecord
-  extends ManagedCandidateKnowledgeWriteOperationInput {
-  readonly ownerKind: string | null;
-  readonly ownerSchemaVersion: number | null;
-  readonly latestPhase: ManagedCandidateKnowledgeWriteJournalPhase;
-  readonly latestEventCreatedAt: string | null;
-  readonly targetVersionId: string | null;
-  readonly stagingIdentity: ManagedCandidateKnowledgeWriteStagingIdentity | null;
-  readonly recoveryClaim: ManagedCandidateKnowledgeWriteRecoveryClaim | null;
-}
-
-export interface ManagedCandidateKnowledgeWriteRecoveryEntry {
-  readonly kind: ManagedCandidateKnowledgeWriteKind;
-  readonly phase: ManagedCandidateKnowledgeWriteJournalPhase;
-  readonly outcome: ManagedCandidateKnowledgeWriteRecoveryOutcome;
-}
-
-export interface ManagedCandidateKnowledgeWriteRecoveryReport {
-  readonly schemaVersion: 1;
-  readonly entries: readonly ManagedCandidateKnowledgeWriteRecoveryEntry[];
-}
-
-export type ManagedCandidateKnowledgeWriteCommitInput =
-  | {
-      readonly kind: "create";
-      readonly operationId: string;
-      readonly source: CandidateKnowledgeSourceInput;
-      readonly version: CandidateKnowledgeSourceVersionInput;
-      /** Canonical physical path returned by the verified managed-file capture. */
-      readonly originPath?: string;
-      /** Runtime-only directory membership context for a new managed file source. */
-      readonly directoryId?: string;
-      readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
-      /** Current candidate-store writer fencing generation; runtime-only. */
-      readonly expectedOwnerGeneration?: number;
-    }
-  | {
-      readonly kind: "append";
-      readonly operationId: string;
-      readonly version: CandidateKnowledgeSourceVersionInput;
-      /** Required for URL appends; forbidden for file appends. */
-      readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
-      /** Runtime lineage guard used by URL refresh; never persisted. */
-      readonly expectedCurrentVersionId?: string;
-      /** Runtime origin-revision guard used by guarded file refresh; never persisted. */
-      readonly expectedOriginBoundAt?: string;
-      /** Runtime canonical origin-path guard used by guarded file refresh; never persisted. */
-      readonly expectedOriginPath?: string;
-      /** Current candidate-store writer fencing generation; runtime-only. */
-      readonly expectedOwnerGeneration?: number;
-    };
-
-export interface CandidateKnowledgeBaseStoragePort
-  extends SourceSensitivityRuleStoragePort,
-    SourceEvidenceKindStoragePort {
-  readonly ensureDefaultCandidateKnowledgeBase: (
-    input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
-  ) => Promise<CandidateKnowledgeBaseRecord>;
-  readonly createCandidateKnowledgeBase: (
-    input: CandidateKnowledgeBaseInput,
-  ) => Promise<CandidateKnowledgeBaseRecord>;
-  readonly getCandidateKnowledgeBase: (
-    id: string,
-  ) => Promise<CandidateKnowledgeBaseRecord | undefined>;
-  readonly listCandidateKnowledgeBases: () => Promise<readonly CandidateKnowledgeBaseRecord[]>;
-  readonly renameCandidateKnowledgeBase: (
-    id: string,
-    displayName: string,
-    updatedAt: string,
-  ) => Promise<CandidateKnowledgeBaseRecord>;
-  readonly archiveCandidateKnowledgeBase: (
-    id: string,
-    archivedAt: string,
-  ) => Promise<CandidateKnowledgeBaseRecord>;
-  readonly createCandidateKnowledgeSource: (
-    source: CandidateKnowledgeSourceInput,
-    initialVersion: CandidateKnowledgeSourceVersionInput,
-  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
-  readonly appendCandidateKnowledgeSourceVersion: (
-    knowledgeBaseId: string,
-    sourceId: string,
-    version: CandidateKnowledgeSourceVersionInput,
-  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
-  readonly getCandidateKnowledgeSource: (
-    knowledgeBaseId: string,
-    sourceId: string,
-  ) => Promise<CandidateKnowledgeSourceRecord | undefined>;
-  readonly listCandidateKnowledgeSources: (
-    knowledgeBaseId: string,
-  ) => Promise<readonly CandidateKnowledgeSourceRecord[]>;
-  readonly listCandidateKnowledgeSourceVersions: (
-    knowledgeBaseId: string,
-    sourceId: string,
-  ) => Promise<readonly CandidateKnowledgeSourceVersionRecord[]>;
-  readonly getCandidateKnowledgeBaseLifecycleReadiness: (
-    knowledgeBaseId: string,
-  ) => Promise<CandidateKnowledgeBaseLifecycleReadinessRecord | undefined>;
-  readonly createCandidateKnowledgeDirectoryBinding: (
-    input: CandidateKnowledgeDirectoryBindingInput,
-  ) => Promise<CandidateKnowledgeDirectoryBindingRecord>;
-  readonly getCandidateKnowledgeDirectoryBinding: (
-    knowledgeBaseId: string,
-    directoryId: string,
-  ) => Promise<CandidateKnowledgeDirectoryBindingRecord | undefined>;
-  readonly getCandidateKnowledgeDirectoryCurrentRootRevision: (
-    knowledgeBaseId: string,
-    directoryId: string,
-  ) => Promise<CandidateKnowledgeDirectoryRootRevisionRecord | undefined>;
-  readonly getCandidateKnowledgeDirectoryMemberCurrentRevision: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    sourceId: string,
-  ) => Promise<CandidateKnowledgeDirectoryMemberRevisionRecord | undefined>;
-  readonly findCandidateKnowledgeDirectoryBinding: (
-    knowledgeBaseId: string,
-    rootPath: string,
-  ) => Promise<CandidateKnowledgeDirectoryBindingRecord | undefined>;
-  readonly listCandidateKnowledgeDirectoryMembers: (
-    knowledgeBaseId: string,
-    directoryId: string,
-  ) => Promise<readonly CandidateKnowledgeDirectoryMemberRecord[]>;
-  readonly findCandidateKnowledgeDirectoryMemberByPath: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    sourcePath: string,
-  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
-  /** Resolve a historical member hash using a candidate root without mutating the binding. */
-  readonly findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    candidateRootPath: string,
-    sourcePath: string,
-  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
-  readonly getCandidateKnowledgeDirectoryMemberOriginRelation: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    sourceId: string,
-  ) => Promise<CandidateKnowledgeDirectoryMemberOriginRelationRecord>;
-  readonly upsertCandidateKnowledgeDirectoryRefreshObservations: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    input: CandidateKnowledgeDirectoryRefreshObservationBatchInput,
-  ) => Promise<readonly CandidateKnowledgeSourceRefreshObservationRecord[]>;
-  readonly getCandidateKnowledgeSourceUrlProvenance: (
-    knowledgeBaseId: string,
-    sourceId: string,
-    versionId: string,
-  ) => Promise<CandidateKnowledgeSourceUrlProvenanceRecord | undefined>;
-  readonly getCandidateKnowledgeSourcePortableUrlProvenance: (
-    knowledgeBaseId: string,
-    sourceId: string,
-    versionId: string,
-  ) => Promise<CandidateKnowledgeSourcePortableUrlProvenance | undefined>;
-  readonly getCandidateKnowledgeSourceRefreshObservation: (
-    knowledgeBaseId: string,
-    sourceId: string,
-  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord | undefined>;
-  readonly upsertCandidateKnowledgeSourceRefreshObservation: (
-    knowledgeBaseId: string,
-    sourceId: string,
-    input: CandidateKnowledgeSourceRefreshObservationInput,
-  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord>;
-  readonly getCandidateKnowledgeSourceRetirement: (
-    knowledgeBaseId: string,
-    sourceId: string,
-  ) => Promise<CandidateKnowledgeSourceRetirementRecord | undefined>;
-  readonly retireCandidateKnowledgeSource: (
-    knowledgeBaseId: string,
-    sourceId: string,
-    input: CandidateKnowledgeSourceRetirementInput,
-  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
-  readonly retireCandidateKnowledgeDirectoryMember: (
-    knowledgeBaseId: string,
-    directoryId: string,
-    sourceId: string,
-    input: CandidateKnowledgeDirectoryMemberRetirementInput,
-  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
-  readonly getCandidateKnowledgeRetentionPolicy: (
-    knowledgeBaseId: string,
-  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
-  readonly setCandidateKnowledgeRetentionPolicy: (
-    knowledgeBaseId: string,
-    input: CandidateKnowledgeRetentionPolicyUpdateInput,
-  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
-  readonly applyCandidateKnowledgeRetentionOverride: (
-    knowledgeBaseId: string,
-    input: CandidateKnowledgeRetentionOverrideInput,
-  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
-  readonly releaseCandidateKnowledgeRetentionOverride: (
-    knowledgeBaseId: string,
-    input: CandidateKnowledgeRetentionOverrideInput,
-  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
-}
-
-export interface ContextSnapshotInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly schemaVersion: number;
-  readonly createdAt: string;
-  readonly payload: JsonValue;
-}
-
-export interface ContextSnapshotRecord extends ContextSnapshotInput {
-  readonly checksum: string;
-}
-
-export interface OpportunityBriefVersionRecord {
-  readonly workspaceId: string;
-  readonly brief: OpportunityBrief;
-  readonly checksum: string;
-}
-
-export interface OpportunityBriefStoragePort {
-  readonly saveOpportunityBrief: (
-    workspaceId: string,
-    brief: OpportunityBrief,
-  ) => Promise<OpportunityBriefVersionRecord>;
-  readonly getOpportunityBrief: (
-    workspaceId: string,
-    briefId: string,
-    version: number,
-  ) => Promise<OpportunityBriefVersionRecord | undefined>;
-  readonly getLatestOpportunityBrief: (
-    workspaceId: string,
-    briefId: string,
-  ) => Promise<OpportunityBriefVersionRecord | undefined>;
-  readonly listOpportunityBriefVersions: (
-    workspaceId: string,
-    briefId: string,
-  ) => Promise<readonly OpportunityBriefVersionRecord[]>;
-}
-
-export interface CanonicalCandidateProfileVersionRecord {
-  readonly workspaceId: string;
-  readonly profile: CanonicalCandidateProfile;
-  readonly checksum: string;
-}
-
-export interface CanonicalCandidateProfileStoragePort {
-  readonly saveCanonicalCandidateProfile: (
-    workspaceId: string,
-    profile: CanonicalCandidateProfile,
-  ) => Promise<CanonicalCandidateProfileVersionRecord>;
-  readonly getCanonicalCandidateProfile: (
-    workspaceId: string,
-    profileId: string,
-    version: number,
-  ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
-  readonly getLatestCanonicalCandidateProfile: (
-    workspaceId: string,
-    profileId: string,
-  ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
-  readonly listCanonicalCandidateProfileVersions: (
-    workspaceId: string,
-    profileId?: string,
-  ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
-}
-
-export interface CandidateKnowledgeLexicalStoragePort {
-  readonly rebuildCandidateKnowledgeLexicalIndex: (
-    input: CandidateKnowledgeLexicalIndexRebuildInput,
-  ) => Promise<CandidateKnowledgeLexicalIndexRecord>;
-  readonly upsertCandidateKnowledgeLexicalChunks: (
-    input: CandidateKnowledgeLexicalIndexUpsertInput,
-  ) => Promise<CandidateKnowledgeLexicalIndexRecord>;
-  readonly deleteCandidateKnowledgeLexicalSourceVersion: (
-    input: CandidateKnowledgeLexicalSourceVersionDeletionInput,
-  ) => Promise<void>;
-  readonly inspectCandidateKnowledgeLexicalIndex: (
-    scope: CandidateKnowledgeRetrievalScopeInput,
-    index?: CandidateKnowledgeLexicalIndexIdentityInput,
-  ) => Promise<CandidateKnowledgeLexicalIndexInspection>;
-  readonly queryCandidateKnowledge: (
-    request: CandidateKnowledgeLexicalRetrievalRequestInput,
-  ) => Promise<CandidateKnowledgeLexicalRetrievalResult>;
-  readonly appendCandidateKnowledgeRetrievalTrace: (
-    input: CandidateKnowledgeRetrievalTraceInput,
-  ) => Promise<CandidateKnowledgeRetrievalTrace>;
-  readonly getCandidateKnowledgeRetrievalTrace: (
-    workspaceId: string,
-    traceId: string,
-  ) => Promise<CandidateKnowledgeRetrievalTrace | undefined>;
-  readonly listCandidateKnowledgeRetrievalTraces: (
-    workspaceId: string,
-    options?: CandidateKnowledgeRetrievalTraceListOptions,
-  ) => Promise<readonly CandidateKnowledgeRetrievalTrace[]>;
-}
-
-export interface WritingPolicyVersionSaveOptions {
-  /** Creation time for deterministic tests and imported local history. */
-  readonly createdAt?: string;
-  /** Previous policy content checksum; omitted to continue the current chain. */
-  readonly priorChecksum?: string | null;
-}
-
-export interface WritingPolicyVersionInput {
-  readonly workspaceId: string;
-  readonly policy: WritingPolicyInput;
-  readonly createdAt?: string;
-  readonly priorChecksum?: string | null;
-}
-
-/** Immutable policy history row. Policy content remains local to this store. */
-export interface WritingPolicyVersionRecord {
-  readonly workspaceId: string;
-  readonly policy: WritingPolicy;
-  /** Full SHA-256 identity of the policy content. */
-  readonly checksum: string;
-  readonly version: string;
-  readonly schemaVersion: number;
-  readonly createdAt: string;
-  readonly priorChecksum: string | null;
-  readonly payloadChecksum: string;
-}
-
-export interface WritingPolicyStoragePort {
-  readonly saveWritingPolicyVersion: {
-    (
-      workspaceId: string,
-      policy: WritingPolicyInput,
-      options?: WritingPolicyVersionSaveOptions,
-    ): Promise<WritingPolicyVersionRecord>;
-    (input: WritingPolicyVersionInput): Promise<WritingPolicyVersionRecord>;
-  };
-  readonly getWritingPolicyVersion: (
-    workspaceId: string,
-    checksum: string,
-  ) => Promise<WritingPolicyVersionRecord | undefined>;
-  readonly getLatestWritingPolicyVersion: (
-    workspaceId: string,
-  ) => Promise<WritingPolicyVersionRecord | undefined>;
-  readonly listWritingPolicyVersions: (
-    workspaceId: string,
-  ) => Promise<readonly WritingPolicyVersionRecord[]>;
-}
-
-export interface EvidenceSourceRecord {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly path: string;
-  readonly mediaType: string;
-  readonly checksum: string;
-  readonly createdAt: string;
-}
-
-export interface EvidenceChunkRecord {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly sourceId: string;
-  readonly ordinal: number;
-  readonly lineStart: number;
-  readonly lineEnd: number;
-  readonly checksum: string;
-  readonly text: string;
-  readonly createdAt: string;
-}
-
-export type StoredRunState = WorkflowState | "provider-error";
-export type StoredRunStep = "author" | "critic" | "revision" | null;
-export type StoredApprovalStatus = "pending" | "approved" | "rejected";
-export type StoredRoundState = Extract<
+export * from "./ports/candidate-knowledge.js";
+export * from "./ports/history.js";
+export * from "./ports/retrieval.js";
+export * from "./ports/versioned-records.js";
+export * from "./ports/workspace.js";
+
+import {
+  type CandidateKnowledgeBaseInput,
+  type CandidateKnowledgeBaseLifecycleReadinessRecord,
+  type CandidateKnowledgeBaseRecord,
+  type CandidateKnowledgeBaseStoragePort,
+  type CandidateKnowledgeDeletionAuditRecord,
+  type CandidateKnowledgeDeletionCommitInput,
+  type CandidateKnowledgeDeletionDatabaseSnapshot,
+  type CandidateKnowledgeDeletionOperationInput,
+  type CandidateKnowledgeDeletionOperationRecord,
+  type CandidateKnowledgeDirectoryBindingInput,
+  type CandidateKnowledgeDirectoryBindingRecord,
+  type CandidateKnowledgeDirectoryMemberMoveInput,
+  type CandidateKnowledgeDirectoryMemberMoveResult,
+  type CandidateKnowledgeDirectoryMemberOriginRelation,
+  type CandidateKnowledgeDirectoryMemberOriginRelationRecord,
+  type CandidateKnowledgeDirectoryMemberRecord,
+  type CandidateKnowledgeDirectoryMemberRetirementInput,
+  type CandidateKnowledgeDirectoryMemberRevisionRecord,
+  type CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+  type CandidateKnowledgeDirectoryRootRebindInput,
+  type CandidateKnowledgeDirectoryRootRebindMemberInput,
+  type CandidateKnowledgeDirectoryRootRebindResult,
+  type CandidateKnowledgeDirectoryRootRevisionRecord,
+  type CandidateKnowledgePortableBackupImportInput,
+  type CandidateKnowledgePortableBackupProvenance,
+  type CandidateKnowledgeSourceInput,
+  type CandidateKnowledgeSourceKind,
+  type CandidateKnowledgeSourceLifecycleBlockerReason,
+  type CandidateKnowledgeSourceLifecycleDirectoryRevision,
+  type CandidateKnowledgeSourceLifecycleObservationRevision,
+  type CandidateKnowledgeSourceLifecycleReadinessRecord,
+  type CandidateKnowledgeSourceLifecycleRetirementRevision,
+  type CandidateKnowledgeSourceLifecycleRevision,
+  type CandidateKnowledgeSourceOriginBindingRecord,
+  type CandidateKnowledgeSourcePortableUrlProvenance,
+  type CandidateKnowledgeSourceRecord,
+  type CandidateKnowledgeSourceRefreshObservationInput,
+  type CandidateKnowledgeSourceRefreshObservationRecord,
+  type CandidateKnowledgeSourceRefreshObservationStatus,
+  type CandidateKnowledgeSourceRetirementInput,
+  type CandidateKnowledgeSourceRetirementReason,
+  type CandidateKnowledgeSourceRetirementRecord,
+  type CandidateKnowledgeSourceUrlKind,
+  type CandidateKnowledgeSourceUrlProvenanceInput,
+  type CandidateKnowledgeSourceUrlProvenanceRecord,
+  type CandidateKnowledgeSourceVersionInput,
+  type CandidateKnowledgeSourceVersionRecord,
+  type CandidateKnowledgeSourceVersionWriteResult,
+  candidateKnowledgeSourceUrlKinds,
+  type ManagedCandidateKnowledgeSourceVersionRecord,
+  type ManagedCandidateKnowledgeWriteCommitInput,
+  type ManagedCandidateKnowledgeWriteEventState,
+  type ManagedCandidateKnowledgeWriteJournalPhase,
+  type ManagedCandidateKnowledgeWriteKind,
+  type ManagedCandidateKnowledgeWriteOperationInput,
+  type ManagedCandidateKnowledgeWriteOperationRecord,
+  type ManagedCandidateKnowledgeWriteRecoveryClaimPhase,
+  type ManagedCandidateKnowledgeWriteStagingIdentity,
+  managedCandidateKnowledgeWriteOwnerKind,
+  managedCandidateKnowledgeWriteOwnerSchemaVersion,
+} from "./ports/candidate-knowledge.js";
+import type {
+  AuditEvent,
+  AuditEventInput,
+  DecisionRecord,
+  DecisionRecordInput,
+  ExecutionRecord,
+  ExecutionRecordInput,
+  ExportRecord,
+  ExportRecordInput,
+  FindingRecord,
+  FindingRecordInput,
+  HistoryStoragePort,
+  RetentionPlan,
+  RetentionPurgeOptions,
+  RetentionPurgeResult,
+  RoundRecord,
+  RoundRecordInput,
+  RunRecord,
+  RunRecordInput,
+  RunSnapshotRecord,
+  RunSnapshotRecordInput,
+  StoredApprovalStatus,
+  StoredDecisionType,
+  StoredExecutionStatus,
+  StoredExecutionStep,
+  StoredExportStatus,
+  StoredFindingSeverity,
+  StoredRoundState,
   StoredRunState,
-  | "drafting"
-  | "reviewing"
-  | "revising"
-  | "budget-exhausted"
-  | "provider-error"
-  | "paused"
-  | "stopped"
-  | "awaiting-approval"
->;
-export type StoredExecutionStep = Exclude<StoredRunStep, null>;
-export type StoredExecutionStatus = "completed" | "failed";
-export type StoredFindingSeverity = "error" | "warning";
-export type StoredDecisionType = "edit" | "accept-finding" | "reject-finding" | "approve";
-export type StoredExportStatus = "prepared" | "completed" | "failed";
-
-export interface RunRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly contextSnapshotId: string;
-  readonly state: StoredRunState;
-  readonly round: number;
-  readonly currentStep: StoredRunStep;
-  readonly budget: JsonValue;
-  readonly artifactId: string | null;
-  readonly approval: StoredApprovalStatus;
-  readonly totalCostUsd: number;
-  readonly startedAt: string;
-  readonly updatedAt: string;
-  readonly lastError: JsonValue | null;
-  readonly payload: JsonValue;
-}
-
-export interface RunRecord extends RunRecordInput {
-  readonly checksum: string;
-}
-
-/**
- * Append-only lifecycle projection input. The full orchestration snapshot is
- * retained in `payload`; the duplicated columns keep current-state queries
- * cheap and independent of the orchestrator package.
- */
-export interface RunSnapshotRecordInput {
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly contextSnapshotId: string;
-  readonly state: StoredRunState;
-  readonly round: number;
-  readonly currentStep: StoredRunStep;
-  readonly budget: JsonValue;
-  readonly artifactId: string | null;
-  readonly approval: StoredApprovalStatus;
-  readonly totalCostUsd: number;
-  readonly startedAt: string;
-  readonly updatedAt: string;
-  readonly lastError: JsonValue | null;
-  readonly payload: JsonValue;
-}
-
-export interface RunSnapshotRecord extends RunSnapshotRecordInput {
-  readonly id: string;
-  readonly sequence: number;
-  readonly checksum: string;
-}
-
-export interface RoundRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly number: number;
-  readonly state: StoredRoundState;
-  readonly startedAt: string;
-  readonly completedAt: string | null;
-  readonly evaluation: JsonValue | null;
-  readonly payload: JsonValue;
-}
-
-export interface RoundRecord extends RoundRecordInput {
-  readonly checksum: string;
-}
-
-export interface ExecutionRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly roundId: string;
-  readonly contextSnapshotId: string;
-  readonly artifactId: string | null;
-  readonly attempt: number;
-  readonly step: StoredExecutionStep;
-  readonly status: StoredExecutionStatus;
-  readonly provider: string;
-  readonly modelId: string;
-  readonly providerRequestId: string | null;
-  readonly outputChecksum: string | null;
-  readonly inputTokens: number;
-  readonly outputTokens: number;
-  readonly totalTokens: number;
-  readonly estimatedUsd: number | null;
-  readonly startedAt: string;
-  readonly completedAt: string | null;
-  readonly errorCode: string | null;
-  readonly output: JsonValue | null;
-  readonly payload: JsonValue;
-}
-
-export interface ExecutionRecord extends ExecutionRecordInput {
-  readonly checksum: string;
-}
-
-export interface FindingRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly roundId: string;
-  readonly executionId: string | null;
-  readonly artifactId: string | null;
-  readonly code: string;
-  readonly category: string;
-  readonly severity: StoredFindingSeverity;
-  readonly message: string;
-  readonly claimId: string | null;
-  readonly sectionId: string | null;
-  readonly requirementId: string | null;
-  readonly createdAt: string;
-  readonly payload: JsonValue;
-}
-
-export interface FindingRecord extends FindingRecordInput {
-  readonly checksum: string;
-}
-
-export interface DecisionRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly roundId: string | null;
-  readonly artifactId: string | null;
-  readonly type: StoredDecisionType;
-  readonly rationale: string;
-  readonly actor: string;
-  readonly createdAt: string;
-  readonly payload: JsonValue;
-}
-
-export interface DecisionRecord extends DecisionRecordInput {
-  readonly checksum: string;
-}
-
-export interface ExportRecordInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly runId: string;
-  readonly artifactId: string;
-  readonly format: string;
-  readonly status: StoredExportStatus;
-  readonly outputPath: string | null;
-  readonly outputChecksum: string | null;
-  readonly createdAt: string;
-  readonly payload: JsonValue;
-}
-
-export interface ExportRecord extends ExportRecordInput {
-  readonly checksum: string;
-}
-
-export interface RetentionPlan {
-  readonly before: string;
-  readonly auditEventsEligible: number;
-  readonly immutableBusinessRecords: true;
-}
-
-export interface RetentionPurgeOptions {
-  readonly confirmed: boolean;
-}
-
-export interface RetentionPurgeResult {
-  readonly before: string;
-  readonly deletedAuditEventsCount: number;
-  readonly executedAt: string;
-}
-
-/** Internal journal phase for a confirmed candidate knowledge-base deletion. */
-export type CandidateKnowledgeDeletionOperationPhase =
-  | "prepared"
-  | "staging"
-  | "committed"
-  | "completed"
-  | "aborted";
-
-/**
- * Internal deletion artifact identity. These records are deliberately not
- * exposed by `CandidateKnowledgeStoreHandle`; they let restart recovery prove
- * ownership of a staged managed blob without retaining a filesystem path.
- */
-export interface CandidateKnowledgeDeletionArtifactRecord {
-  readonly operationId: string;
-  readonly sourceId: string;
-  readonly versionId: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly device: number;
-  readonly inode: number;
-}
-
-/** Internal deletion operation journal projection used by the filesystem adapter. */
-export interface CandidateKnowledgeDeletionOperationRecord {
-  readonly operationId: string;
-  readonly knowledgeBaseId: string;
-  readonly confirmationToken: string;
-  readonly graphDigest: string;
-  readonly phase: CandidateKnowledgeDeletionOperationPhase;
-  readonly createdAt: string;
-  readonly committedAt: string | null;
-  readonly completedAt: string | null;
-  readonly stagingDevice: number | null;
-  readonly stagingInode: number | null;
-  readonly managedArtifactCount: number;
-  readonly managedArtifactBytes: number;
-  readonly preservedUnknownCount: number;
-  readonly preservedUnmanagedCount: number;
-  readonly countCapped: boolean;
-  readonly artifacts: readonly CandidateKnowledgeDeletionArtifactRecord[];
-}
-
-/** Internal bounded deletion audit counters retained after graph removal. */
-export interface CandidateKnowledgeDeletionAuditCounts {
-  readonly managedArtifactCount: number;
-  readonly managedArtifactBytes: number;
-  readonly preservedUnknownCount: number;
-  readonly preservedUnmanagedCount: number;
-  readonly countCapped: boolean;
-}
-
-/** Content-free deletion audit projection retained after a successful deletion. */
-export interface CandidateKnowledgeDeletionAuditRecord {
-  readonly auditId: string;
-  readonly operationId: string;
-  readonly knowledgeBaseId: string;
-  readonly confirmationToken: string;
-  readonly status: "completed";
-  readonly createdAt: string;
-  readonly completedAt: string;
-  readonly counts: CandidateKnowledgeDeletionAuditCounts;
-}
-
-/** Internal graph snapshot used to bind a deletion confirmation token. */
-export interface CandidateKnowledgeDeletionDatabaseSnapshot {
-  readonly knowledgeBaseId: string;
-  readonly state: CandidateKnowledgeBaseState;
-  readonly isDefault: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly archivedAt: string | null;
-  readonly policy: CandidateKnowledgeRetentionPolicyRecord;
-  readonly graphDigest: string;
-  readonly sourceCount: number;
-  readonly versionCount: number;
-  readonly managedArtifacts: readonly {
-    readonly sourceId: string;
-    readonly versionId: string;
-    readonly checksum: string;
-    readonly sizeBytes: number;
-  }[];
-  readonly unmanagedSourceCount: number;
-  readonly unmanagedVersionCount: number;
-  readonly pendingOperationCount: number;
-}
-
-/** Internal input for creating an owned deletion operation journal. */
-export interface CandidateKnowledgeDeletionOperationInput {
-  readonly operationId: string;
-  readonly knowledgeBaseId: string;
-  readonly confirmationToken: string;
-  readonly graphDigest: string;
-  readonly createdAt: string;
-  readonly managedArtifactCount: number;
-  readonly managedArtifactBytes: number;
-  readonly preservedUnknownCount: number;
-  readonly preservedUnmanagedCount: number;
-  readonly countCapped: boolean;
-  readonly artifacts: readonly Omit<CandidateKnowledgeDeletionArtifactRecord, "operationId">[];
-}
-
-/** Internal input for the logical deletion commit. */
-export interface CandidateKnowledgeDeletionCommitInput {
-  readonly operationId: string;
-  readonly knowledgeBaseId: string;
-  readonly confirmationToken: string;
-  readonly graphDigest: string;
-  readonly committedAt: string;
-}
-
-export interface DiagnosticTelemetryReport {
-  readonly generatedAt: string;
-  readonly schemaVersion: 1;
-  readonly aggregates: {
-    readonly workspacesCount: number;
-    readonly totalRunsCount: number;
-    readonly totalRoundsCount: number;
-    readonly totalExecutionsCount: number;
-    readonly executionsByStatus: Readonly<Record<string, number>>;
-    readonly executionsByStep: Readonly<Record<string, number>>;
-    readonly findingsCount: number;
-    readonly findingsBySeverity: Readonly<Record<string, number>>;
-    readonly decisionsCount: number;
-    readonly totalCostUsd: number;
-    readonly totalTokens: {
-      readonly inputTokens: number;
-      readonly outputTokens: number;
-      readonly totalTokens: number;
-    };
-    readonly providersDistribution: Readonly<Record<string, number>>;
-  };
-  readonly checksum: string;
-}
-
-/** Typed history boundary shared by CLI and future UI adapters. */
-export interface HistoryStoragePort {
-  readonly saveRun: (input: RunRecordInput) => Promise<RunRecord>;
-  readonly getRun: (id: string) => Promise<RunRecord | undefined>;
-  readonly listRuns: (workspaceId: string) => Promise<readonly RunRecord[]>;
-  readonly saveRunSnapshot: (input: RunSnapshotRecordInput) => Promise<RunSnapshotRecord>;
-  readonly getLatestRunSnapshot: (runId: string) => Promise<RunSnapshotRecord | undefined>;
-  readonly listRunSnapshots: (runId: string) => Promise<readonly RunSnapshotRecord[]>;
-  readonly saveRound: (input: RoundRecordInput) => Promise<RoundRecord>;
-  readonly getRound: (id: string) => Promise<RoundRecord | undefined>;
-  readonly listRounds: (runId: string) => Promise<readonly RoundRecord[]>;
-  readonly saveExecution: (input: ExecutionRecordInput) => Promise<ExecutionRecord>;
-  readonly getExecution: (id: string) => Promise<ExecutionRecord | undefined>;
-  readonly listExecutions: (runId: string) => Promise<readonly ExecutionRecord[]>;
-  readonly saveFinding: (input: FindingRecordInput) => Promise<FindingRecord>;
-  readonly getFinding: (id: string) => Promise<FindingRecord | undefined>;
-  readonly listFindings: (runId: string) => Promise<readonly FindingRecord[]>;
-  readonly saveDecision: (input: DecisionRecordInput) => Promise<DecisionRecord>;
-  readonly getDecision: (id: string) => Promise<DecisionRecord | undefined>;
-  readonly listDecisions: (runId: string) => Promise<readonly DecisionRecord[]>;
-  readonly saveExport: (input: ExportRecordInput) => Promise<ExportRecord>;
-  readonly getExport: (id: string) => Promise<ExportRecord | undefined>;
-  readonly listExports: (runId: string) => Promise<readonly ExportRecord[]>;
-}
-
-export interface AuditEventInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly eventType: string;
-  readonly entityType: string;
-  readonly entityId: string;
-  readonly payload: JsonValue;
-  readonly createdAt: string;
-}
-
-export interface AuditEvent extends AuditEventInput {
-  readonly sequence: number;
-  readonly payloadChecksum: string;
-  readonly previousEventChecksum: string | null;
-  readonly eventChecksum: string;
-}
-
-export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
-export type EvidenceSearchHit = ScoredEvidenceChunk;
-export type EvidenceSearchOptions = RetrievalOptions;
+  StoredRunStep,
+} from "./ports/history.js";
+import type {
+  CandidateKnowledgeLexicalIndexInspection,
+  CandidateKnowledgeLexicalIndexRebuildInput,
+  CandidateKnowledgeLexicalIndexRecord,
+  CandidateKnowledgeLexicalIndexUpsertInput,
+  CandidateKnowledgeLexicalSourceVersionDeletionInput,
+  CandidateKnowledgeLexicalStoragePort,
+  CandidateKnowledgeRetrievalTraceListOptions,
+  EvidenceChunkRecord,
+  EvidenceSearchHit,
+  EvidenceSearchOptions,
+  EvidenceSourceRecord,
+} from "./ports/retrieval.js";
+import type {
+  CanonicalCandidateProfileStoragePort,
+  CanonicalCandidateProfileVersionRecord,
+  ContextSnapshotInput,
+  ContextSnapshotRecord,
+  OpportunityBriefStoragePort,
+  OpportunityBriefVersionRecord,
+  WritingPolicyStoragePort,
+  WritingPolicyVersionInput,
+  WritingPolicyVersionRecord,
+  WritingPolicyVersionSaveOptions,
+} from "./ports/versioned-records.js";
+import type {
+  DiagnosticTelemetryReport,
+  JsonValue,
+  StoragePort,
+  WorkspaceBackupResult,
+  WorkspaceRecord,
+  WorkspaceRestoreOptions,
+} from "./ports/workspace.js";
 
 export const storageSchemaVersion = 36 as const;
 

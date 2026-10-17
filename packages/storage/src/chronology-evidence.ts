@@ -1,5 +1,5 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
-import type { EvidenceSourceRecord } from "./index.js";
+import type { EvidenceSourceRecord } from "./ports/retrieval.js";
 
 export type ApprovedEvidenceSources = readonly Pick<EvidenceSourceRecord, "id" | "checksum">[];
 
