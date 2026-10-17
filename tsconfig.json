@@ -32,6 +32,7 @@
     { "path": "./packages/artifacts" },
     { "path": "./packages/rendering" },
     { "path": "./packages/storage" },
+    { "path": "./packages/storage-postgres" },
     { "path": "./packages/security" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
