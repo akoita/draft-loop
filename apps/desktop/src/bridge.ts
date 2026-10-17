@@ -4487,11 +4487,26 @@ function validateReviewAction(value: unknown): ReviewAction {
       };
     }
     case "start": {
-      if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles", "requirementsSource"]))
+      if (
+        !hasOnlyKeys(action, [
+          "type",
+          "candidateProfile",
+          "modelProfiles",
+          "requirementsSource",
+          "pageTarget",
+        ])
+      )
         return invalidInput();
       if (
         action.requirementsSource !== undefined &&
         action.requirementsSource !== "job-description"
+      ) {
+        return invalidInput();
+      }
+      if (
+        action.pageTarget !== undefined &&
+        action.pageTarget !== "one-page" &&
+        action.pageTarget !== "two-page"
       ) {
         return invalidInput();
       }
@@ -4510,6 +4525,7 @@ function validateReviewAction(value: unknown): ReviewAction {
         ...(action.requirementsSource === undefined
           ? {}
           : { requirementsSource: action.requirementsSource }),
+        ...(action.pageTarget === undefined ? {} : { pageTarget: action.pageTarget }),
       };
     }
     default:

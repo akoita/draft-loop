@@ -271,6 +271,7 @@ import {
 } from "./run-model-profile-selection.js";
 import { createSemanticRetrievalHost } from "./semantic-retrieval-host.js";
 import { createSourceEvidenceKindHost } from "./source-evidence-kind-host.js";
+import { applyStartPageTarget } from "./start-page-target.js";
 import { draftBriefStartRefusalFor } from "./start-requirements-guard.js";
 import { usageLimitView } from "./usage-limit-view.js";
 
@@ -4222,6 +4223,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             "operation-failed",
             "The selected policy override belongs to the reviewed requirements. Start from the reviewed requirements or remove the override.",
           );
+        }
+        if (action.pageTarget !== undefined) {
+          // The length is saved as the policy's page target; an override would hide it (#1366).
+          if (pendingWritingPolicyOverride !== undefined) {
+            return fail(
+              "operation-failed",
+              "The selected policy override sets this run's writing policy. Remove the override to choose the length here.",
+            );
+          }
+          const saved = await applyStartPageTarget(
+            service,
+            workspace.root,
+            action.pageTarget,
+            io(),
+          );
+          if (saved !== undefined) active = { descriptor: saved, root: workspace.root };
         }
         dispatchedSnapshot = await service.begin(
           {
