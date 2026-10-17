@@ -15,12 +15,11 @@ import {
   applicationModelProfilesSchema,
   applicationSchema,
 } from "@draft-loop/schemas/application";
-import {
-  type ClosableStoragePort,
-  type OpportunityBriefStoragePort,
-  openSqliteStorage,
-  type WorkspaceApplicationsStoragePort,
-  type WorkspaceStoragePort,
+import type {
+  ClosableStoragePort,
+  OpportunityBriefStoragePort,
+  WorkspaceApplicationsStoragePort,
+  WorkspaceStoragePort,
 } from "@draft-loop/storage";
 import type {
   ApplicationBriefSummary,
@@ -43,6 +42,7 @@ import {
 import { CliUserError } from "./cli-user-error.js";
 import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
+import { localStorageFactory } from "./local-storage-factory.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
   type ImportApplicationCommand,
@@ -197,8 +197,7 @@ type ApplicationHistory = WorkspaceStoragePort &
   ClosableStoragePort;
 
 async function openHistory(root: string): Promise<ApplicationHistory> {
-  await mkdir(join(root, historyDirectory), { recursive: true });
-  return openSqliteStorage(historyPath(root));
+  return localStorageFactory.open(root);
 }
 
 function latestTimestamp(values: readonly string[]): string {

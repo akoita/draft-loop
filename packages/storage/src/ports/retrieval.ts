@@ -10,6 +10,7 @@ import type {
   CandidateKnowledgeRetrievalStatus,
   CandidateKnowledgeRetrievalTrace,
   CandidateKnowledgeRetrievalTraceInput,
+  EvidenceRetrievalInspection,
   RetrievalOptions,
   RetrievalPort,
   ScoredEvidenceChunk,
@@ -114,6 +115,17 @@ export interface EvidenceChunkRecord {
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
+
+/** Legacy local evidence: sources and their chunks, and an inspectable search over them. */
+export interface EvidenceStoragePort {
+  readonly saveEvidenceSource: (record: EvidenceSourceRecord) => Promise<void>;
+  readonly getEvidenceSource: (id: string) => Promise<EvidenceSourceRecord | undefined>;
+  readonly saveEvidenceChunk: (record: EvidenceChunkRecord) => Promise<void>;
+  readonly inspectEvidenceRetrieval: (
+    query: string,
+    optionsOrLimit?: EvidenceSearchOptions | number,
+  ) => Promise<EvidenceRetrievalInspection>;
+}
 
 /** Approved local evidence read back in source order, for legacy local-source contexts. */
 export interface EvidenceChronologyStoragePort {
