@@ -3,6 +3,7 @@ import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
 import {
   describeApplicationsConformance,
   describeCandidateKnowledgeRetrievalConformance,
+  describeCandidateKnowledgeVectorConformance,
   describeHistoryRecordsConformance,
 } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
@@ -42,6 +43,7 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   describeHistoryRecordsConformance("Postgres", () => openIsolated(url));
   describeApplicationsConformance("Postgres", () => openIsolated(url));
   describeCandidateKnowledgeRetrievalConformance("Postgres", () => openIsolated(url));
+  describeCandidateKnowledgeVectorConformance("Postgres", () => openIsolated(url));
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);

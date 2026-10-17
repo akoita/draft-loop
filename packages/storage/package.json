@@ -63,6 +63,10 @@
       "types": "./src/candidate-knowledge-lexical-ranking.ts",
       "import": "./src/candidate-knowledge-lexical-ranking.ts"
     },
+    "./knowledge-vector-rules": {
+      "types": "./src/knowledge-vector-rules.ts",
+      "import": "./src/knowledge-vector-rules.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"

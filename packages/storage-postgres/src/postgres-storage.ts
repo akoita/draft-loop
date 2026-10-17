@@ -6,6 +6,7 @@ import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres } from "./migrations.js";
 import { createRunHistory } from "./run-history.js";
 import { createSqlClient, type SqlClientOptions } from "./sql-client.js";
+import { createVectorIndex } from "./vector-index.js";
 import { createVersionedRecords } from "./versioned-records.js";
 import { createWorkspaceRecords } from "./workspace-records.js";
 
@@ -29,6 +30,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createVersionedRecords(client),
     ...createKnowledgeBaseRecords(client),
     ...createLexicalIndex(client),
+    candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
