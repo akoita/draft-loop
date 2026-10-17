@@ -674,8 +674,8 @@ away.
   bullets with a hanging indent, and dates right-aligned. Before the file is
   written, the export checks that every heading and block was drawn, in order.
   The CLI still draws PDFs with DraftLoop's own writer.
-- **Template.** Under **Export…**, pick **Classic** (two pages, the default),
-  **Compact** (one page) or **Modern** (two pages).
+- **Template.** Under **Export…**, pick **Modern** (two pages, the default),
+  **Classic** (two pages) or **Compact** (one page).
   - Compact uses smaller type, tighter spacing and narrower margins than
     Classic, so any draft comes out shorter in it.
   - Modern has a left-aligned name, teal uppercase headings and dates,
@@ -687,14 +687,14 @@ away.
   the export record names the template used.
 - **Length estimate.** When the content clearly exceeds the page target, the
   footer shows an estimated-length warning. The target is the chosen template's
-  (one page for Compact); with Classic left as the default it is the writing
+  (one page for Compact); with Modern left as the default it is the writing
   policy's, and with no policy target nothing is shown. It is an estimate from
   line and word counts; open the file to confirm the real page count.
 - **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md
   --template classic|compact|modern` writes the same files (`md` is short for
   `markdown`, the default) and prints the estimated-length warning when it
   applies. Without `--template`, a run whose writing policy targets one page
-  uses Compact and any other run uses Classic.
+  uses Compact and any other run uses Modern.
 - **Export again.** An exported run shows its export path and offers **Export
   again…** through the same Save dialog. Each export adds a record; earlier ones
   are kept. If the previous file was moved or deleted, or the workspace was

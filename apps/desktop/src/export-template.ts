@@ -13,7 +13,8 @@
 export const exportTemplates = ["classic", "compact", "modern"] as const;
 export type ExportTemplate = (typeof exportTemplates)[number];
 
-export const defaultExportTemplate: ExportTemplate = "classic";
+/** Modern unless the person picks another; it matches the application's default for a run with no one-page target. */
+export const defaultExportTemplate: ExportTemplate = "modern";
 
 export const exportTemplateLabels: Readonly<Record<ExportTemplate, string>> = {
   classic: "Classic",

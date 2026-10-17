@@ -180,7 +180,7 @@ describe("phase-0 CLI workflow", () => {
     await exportStorage.close();
     expect(exportTemplates).toEqual(
       expect.arrayContaining([
-        [pdfPath, "classic"],
+        [pdfPath, "modern"],
         [compactPath, "compact"],
       ]),
     );

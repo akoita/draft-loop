@@ -773,7 +773,7 @@ shorter text, not the same text printed smaller:
   Skills, Education and Certifications.
 
 Resumed v13 and earlier runs keep their exact prompt. When an export names no
-template, a one-page run is drawn with Compact and any other with Classic, so the
+template, a one-page run is drawn with Compact and any other with Modern, so the
 layout matches the length the author wrote to.
 
 ### Stop and pause on findings (#1113)
@@ -902,7 +902,8 @@ alignment, the role context-line style and an optional accent colour. Every valu
 is bounded, and the enums accept only what the renderer draws today.
 
 `packages/rendering/src/templates.ts` holds the built-ins. `classic` (the
-default) and `modern` produce the `standard-two-page` profile and `compact`
+renderer's fallback when no template is named) and `modern` (the export default)
+produce the `standard-two-page` profile and `compact`
 produces `compact-one-page`. `profileFromTemplate` derives the profile every
 output format shares; settings a template does not carry (font names, wrapping
 caps, preview spacing, title and heading leading) are fixed per page target for
