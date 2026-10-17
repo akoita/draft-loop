@@ -1,4 +1,6 @@
 import type { WorkflowState } from "@draft-loop/domain";
+import type { ArtifactVersionInput, ArtifactVersionRecord } from "../artifact-history.js";
+import type { AuditEventReadsPort } from "../audit-event-reads.js";
 import type { JsonValue } from "./workspace.js";
 
 export type StoredRunState = WorkflowState | "provider-error";
@@ -227,4 +229,17 @@ export interface AuditEvent extends AuditEventInput {
   readonly payloadChecksum: string;
   readonly previousEventChecksum: string | null;
   readonly eventChecksum: string;
+}
+
+/** Immutable artifact versions that runs, executions and exports point at. */
+export interface ArtifactHistoryStoragePort {
+  readonly saveArtifactVersion: (input: ArtifactVersionInput) => Promise<ArtifactVersionRecord>;
+  readonly getArtifactVersion: (id: string) => Promise<ArtifactVersionRecord | undefined>;
+}
+
+/** The per-workspace, hash-chained audit trail. */
+export interface AuditTrailStoragePort {
+  readonly appendAuditEvent: (input: AuditEventInput) => Promise<AuditEvent>;
+  readonly listAuditEvents: (workspaceId: string) => Promise<readonly AuditEvent[]>;
+  readonly auditEvents: AuditEventReadsPort;
 }
