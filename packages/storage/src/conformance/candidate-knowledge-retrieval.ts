@@ -11,8 +11,8 @@ import type { WorkspaceRecord, WorkspaceStoragePort } from "../ports/workspace.j
 import { StorageConflictError, StorageValidationError } from "../storage-errors.js";
 import type { StorageContract } from "./history-records.js";
 
-/** The port surface retrieval reads: knowledge bases, source versions, the lexical index and traces. */
-export type CandidateKnowledgeRetrievalStorage = WorkspaceStoragePort &
+/** The port surface of knowledge bases, their sources and the sources' versions. */
+export type CandidateKnowledgeBaseStorage = WorkspaceStoragePort &
   Pick<
     CandidateKnowledgeBaseStoragePort,
     | "ensureDefaultCandidateKnowledgeBase"
@@ -24,16 +24,22 @@ export type CandidateKnowledgeRetrievalStorage = WorkspaceStoragePort &
     | "getCandidateKnowledgeSource"
     | "listCandidateKnowledgeSources"
     | "listCandidateKnowledgeSourceVersions"
-  > &
+  >;
+
+/** The port surface retrieval reads: knowledge bases, source versions, the lexical index and traces. */
+export type CandidateKnowledgeRetrievalStorage = CandidateKnowledgeBaseStorage &
   CandidateKnowledgeLexicalStoragePort;
 
-export interface OpenedCandidateKnowledgeRetrievalStorage {
-  readonly storage: CandidateKnowledgeRetrievalStorage;
+export interface OpenedCandidateKnowledgeRetrievalStorage<
+  Storage = CandidateKnowledgeRetrievalStorage,
+> {
+  readonly storage: Storage;
   readonly close: () => Promise<void>;
 }
 
-export type CandidateKnowledgeRetrievalStorageFactory =
-  () => Promise<OpenedCandidateKnowledgeRetrievalStorage>;
+export type CandidateKnowledgeRetrievalStorageFactory<
+  Storage = CandidateKnowledgeRetrievalStorage,
+> = () => Promise<OpenedCandidateKnowledgeRetrievalStorage<Storage>>;
 
 const workspace: WorkspaceRecord = {
   id: "conformance-workspace",
@@ -92,7 +98,7 @@ const lexicalChunk = (
 });
 
 /** Two knowledge bases: `ckb-a` with two sources and `ckb-b` with one. */
-async function seedKnowledge(storage: CandidateKnowledgeRetrievalStorage) {
+async function seedKnowledge(storage: CandidateKnowledgeBaseStorage) {
   await storage.saveWorkspace(workspace);
   await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase("ckb-a", true));
   const a1 = await storage.createCandidateKnowledgeSource(
@@ -143,7 +149,7 @@ async function seedIndexedKnowledge(storage: CandidateKnowledgeRetrievalStorage)
   return seeded;
 }
 
-const knowledgeBaseContracts: readonly StorageContract<CandidateKnowledgeRetrievalStorage>[] = [
+const knowledgeBaseContracts: readonly StorageContract<CandidateKnowledgeBaseStorage>[] = [
   {
     name: "knowledge bases: read back what was created, with one default",
     check: async (storage) => {
@@ -431,13 +437,13 @@ const traceContracts: readonly StorageContract<CandidateKnowledgeRetrievalStorag
 export const candidateKnowledgeRetrievalContracts: readonly StorageContract<CandidateKnowledgeRetrievalStorage>[] =
   [...knowledgeBaseContracts, ...lexicalContracts, ...traceContracts];
 
-/** Runs every retrieval contract against fresh stores from `open`, one test per contract. */
-export function describeCandidateKnowledgeRetrievalConformance(
-  implementation: string,
-  open: CandidateKnowledgeRetrievalStorageFactory,
+function describeContracts<Storage>(
+  title: string,
+  contracts: readonly StorageContract<Storage>[],
+  open: CandidateKnowledgeRetrievalStorageFactory<Storage>,
 ): void {
-  describe(`${implementation} storage conformance: candidate-knowledge retrieval`, () => {
-    for (const contract of candidateKnowledgeRetrievalContracts) {
+  describe(title, () => {
+    for (const contract of contracts) {
       it(contract.name, async () => {
         const opened = await open();
         try {
@@ -448,4 +454,31 @@ export function describeCandidateKnowledgeRetrievalConformance(
       });
     }
   });
+}
+
+/** Runs every retrieval contract against fresh stores from `open`, one test per contract. */
+export function describeCandidateKnowledgeRetrievalConformance(
+  implementation: string,
+  open: CandidateKnowledgeRetrievalStorageFactory,
+): void {
+  describeContracts(
+    `${implementation} storage conformance: candidate-knowledge retrieval`,
+    candidateKnowledgeRetrievalContracts,
+    open,
+  );
+}
+
+/**
+ * Runs only the knowledge-base contracts, for an implementation that stores knowledge bases and
+ * source versions before it has a lexical index. A complete one runs the retrieval suite instead.
+ */
+export function describeCandidateKnowledgeBaseConformance(
+  implementation: string,
+  open: CandidateKnowledgeRetrievalStorageFactory<CandidateKnowledgeBaseStorage>,
+): void {
+  describeContracts(
+    `${implementation} storage conformance: candidate knowledge bases`,
+    knowledgeBaseContracts,
+    open,
+  );
 }

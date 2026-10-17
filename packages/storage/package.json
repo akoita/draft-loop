@@ -51,6 +51,10 @@
       "types": "./src/versioned-record-rules.ts",
       "import": "./src/versioned-record-rules.ts"
     },
+    "./candidate-knowledge": {
+      "types": "./src/candidate-knowledge-rules.ts",
+      "import": "./src/candidate-knowledge-rules.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"

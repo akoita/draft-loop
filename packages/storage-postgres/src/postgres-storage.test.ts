@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
 import {
   describeApplicationsConformance,
+  describeCandidateKnowledgeBaseConformance,
   describeHistoryRecordsConformance,
 } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
@@ -40,6 +41,7 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   // Every history and versioned-record group, as SQLite runs them.
   describeHistoryRecordsConformance("Postgres", () => openIsolated(url));
   describeApplicationsConformance("Postgres", () => openIsolated(url));
+  describeCandidateKnowledgeBaseConformance("Postgres", () => openIsolated(url));
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);
@@ -79,6 +81,52 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
           }),
         );
         previous = event.eventChecksum;
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("numbers concurrent appends to one knowledge source one after another", async () => {
+    const { storage, close } = await openIsolated(url);
+    try {
+      const at = "2026-10-17T10:00:00.000Z";
+      await storage.ensureDefaultCandidateKnowledgeBase({
+        id: "ckb-1",
+        displayName: "Knowledge",
+        createdAt: at,
+      });
+      await storage.createCandidateKnowledgeSource(
+        {
+          id: "source-1",
+          knowledgeBaseId: "ckb-1",
+          kind: "file",
+          displayName: "cv.md",
+          createdAt: at,
+        },
+        {
+          id: "version-0",
+          mediaType: "text/markdown",
+          checksum: "0".repeat(64),
+          sizeBytes: 1,
+          createdAt: at,
+        },
+      );
+      await Promise.all(
+        Array.from({ length: 5 }, (_, index) =>
+          storage.appendCandidateKnowledgeSourceVersion("ckb-1", "source-1", {
+            id: `version-${index + 1}`,
+            mediaType: "text/markdown",
+            checksum: String(index + 1).repeat(64),
+            sizeBytes: 1,
+            createdAt: at,
+          }),
+        ),
+      );
+      const versions = await storage.listCandidateKnowledgeSourceVersions("ckb-1", "source-1");
+      expect(versions.map((version) => version.version)).toEqual([1, 2, 3, 4, 5, 6]);
+      for (const [index, version] of versions.entries()) {
+        expect(version.parentVersionId).toBe(index === 0 ? null : versions[index - 1]?.id);
       }
     } finally {
       await close();
