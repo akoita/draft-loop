@@ -147,9 +147,9 @@ describe("PDF page overflow warning", () => {
 });
 
 describe("default export template", () => {
-  it("draws a one-page run with Compact and any other run with Classic", () => {
+  it("draws a one-page run with Compact and any other run with Modern", () => {
     expect(defaultExportTemplateId("one-page")).toBe("compact");
-    expect(defaultExportTemplateId("two-page")).toBe("classic");
-    expect(defaultExportTemplateId(undefined)).toBe("classic");
+    expect(defaultExportTemplateId("two-page")).toBe("modern");
+    expect(defaultExportTemplateId(undefined)).toBe("modern");
   });
 });

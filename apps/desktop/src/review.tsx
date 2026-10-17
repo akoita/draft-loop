@@ -245,7 +245,7 @@ export interface InitialFindingQueueState {
   readonly expandedFindingId: string | null;
 }
 
-/** The export action; Markdown and Classic, the defaults, are sent without a field. */
+/** The export action; Markdown and Modern, the defaults, are sent without a field. */
 export function exportReviewAction(format: ExportFormat, template: ExportTemplate): ReviewAction {
   return {
     type: "export",
