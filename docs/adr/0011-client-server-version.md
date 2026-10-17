@@ -98,6 +98,19 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
 - **No fork and no long-lived branch.** Server work merges to `main` through
   the normal PR flow. Unfinished server code ships to nobody until it is
   deployed, so it needs no branch of its own.
+- **When to revisit (decided 2026-10-17).** The two versions differ only in
+  the adapters behind the ports. Revisit the single repository only if
+  either of these keeps happening:
+  - shared packages need changes specific to one version;
+  - shared changes break one of the clients.
+
+  The response is then to publish the shared core as versioned packages,
+  never a fork or a long-lived branch.
+- **Infrastructure lives in a private repository.** Terraform, the deploy
+  workflow, project identifiers and service accounts sit in a separate
+  private infrastructure repository, so this public repository holds none
+  of them. This repository keeps the Dockerfiles and the local Compose stack
+  (D15).
 
 **Delivery lanes.** CI stays one gate; delivery splits by client.
 
@@ -106,10 +119,10 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
   tests run in their own job with a service container.
 - **Desktop releases:** `release.yml` is unchanged and still requires
   `pnpm release:preflight` first.
-- **Server deploys:** a separate workflow builds the API and worker images
-  and deploys them to Cloud Run through Workload Identity Federation (D14),
-  staging first, then production behind a manual approval. Server releases
-  use their own tags, such as `server-v*`.
+- **Server deploys:** a workflow in the private infrastructure repository
+  checks out a `server-v*` tag of this repository, builds the API and worker
+  images, and deploys them to Cloud Run through Workload Identity Federation
+  (D14). Staging comes first, then production behind a manual approval.
 
 ### D3. Persistence: a storage port, then Postgres and object storage
 
@@ -262,9 +275,11 @@ Build on what the local version already records:
   package where they are not Electron-specific: Home, application steps,
   review, run comparison and Run details. The web app uses them over the
   HTTP API.
-- **The desktop app** stays the frozen local-first product. Making it a
-  thin client of the service is a later, separate decision.
+- **The desktop app** stays the local-first product and keeps evolving in
+  parallel (D15). Making it a thin client of the service is a later,
+  separate decision.
 - **The CLI** becomes an API client, for scripting and support.
+- **Agents** reach DraftLoop through an MCP server (D17).
 
 ### D10. API contract
 
@@ -293,6 +308,20 @@ Build on what the local version already records:
 - **Embeddings:** the same pinned model runs on CPU workers. Vectors go in
   Postgres with pgvector, keeping retrieval in the same database and tenant
   boundary. Lexical retrieval stays the default where it is today.
+- **Retrieval stays in Postgres (amended 2026-10-17).** Hosted retrieval runs
+  in Cloud SQL:
+  - lexical search uses Postgres full-text search;
+  - semantic search uses `pgvector` with the same pinned embedding model.
+
+  There is no managed RAG product and no separate vector database. That
+  keeps one tenant boundary, one backup and one consistency model, and the
+  retrieval code stays the shared code the desktop runs.
+  - *Risk:* Postgres text ranking is not BM25, so ranking may differ from
+    SQLite FTS5. The storage conformance suite compares the two on shared
+    fixtures. If they differ, the fallback is BM25 computed in the
+    application over the chunks Postgres selects.
+  - *Revisit* AlloyDB or a reranker only when evaluation shows a retrieval
+    quality or latency gap.
 - **Approved URL fetching** goes through an egress-controlled fetcher. The
   existing rule holds: a URL is fetched only after the candidate approves
   it.
@@ -353,9 +382,9 @@ plan decides what is enabled.
 
 ### D14. Hosting on Google Cloud
 
-The owner decided (2026-10-16) to host on Google Cloud. The components map
-onto managed services in one EU region (for example `europe-west9`, Paris,
-or `europe-west1`):
+The owner decided (2026-10-16) to host on Google Cloud, and chose the region
+`europe-west1` (Belgium) on 2026-10-17. The components map onto managed
+services in that region:
 
 | Component | Google Cloud service |
 |---|---|
@@ -365,21 +394,43 @@ or `europe-west1`):
 | Queue (D4) | Postgres-backed, in the same Cloud SQL instance, so run state and jobs commit together; Cloud Tasks or Pub/Sub only for fan-out that needs it |
 | Objects (D3) | Cloud Storage, with CMEK through Cloud KMS and per-tenant prefixes |
 | Secrets and BYOK keys (D5) | Secret Manager for platform secrets; Cloud KMS envelope encryption for customer keys |
-| Identity (D6) | Identity Platform: OIDC, SAML and multi-tenancy for Business SSO. Confirm EU data handling before committing, or use a third-party vendor |
+| Identity (D6) | Keycloak managed by Clever Cloud in France, outside Google Cloud: OIDC sign-in, organisations as tenants, SAML for Business SSO. Identity Platform is excluded because its Firebase Authentication base runs only in US data centres |
 | URL fetching (D11) | A fetcher service with egress only through Cloud NAT and Secure Web Proxy rules |
 | Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
-| Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys) |
+| Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys), all in a private infrastructure repository (D2) |
 
 - **Model providers.** Anthropic and OpenAI stay the default pair, through
-  the entry points in D5. Claude on Vertex AI needs one more adapter
-  beside the existing `@anthropic-ai/sdk` one, since both share the
-  messages interface, plus a model-id mapping.
+  the entry points in D5.
+  - Claude is called through Vertex AI's EU multi-region endpoint, which
+    keeps processing in the EU at about a 10% premium over list price.
+  - Claude on Vertex AI needs one more adapter beside the existing
+    `@anthropic-ai/sdk` one, since both share the messages interface, plus
+    a model-id mapping.
+- **Cost per run.** A standard run measured from local history costs about
+  $6 with the Vertex EU premium; the figures are on #1357.
+  - It is an upper bound, since cached tokens were not recorded.
+  - The model gateway (D5) replaces it with measured hosted cost before
+    price levels are set.
 - **Isolation.** Production in its own project, with separate service
   accounts for API, workers, ingestion and fetcher, each with least
   privilege and an egress allowlist (D11). Business plans can later move
   to Assured Workloads controls.
 - **Cost.** Cloud Run scales to zero for the API, and a small Cloud SQL
   instance is the main fixed cost at the start.
+- **European exit: Scaleway.** Scaleway is the planned move if Google Cloud
+  stops fitting. It has serverless containers and jobs, serverless Postgres
+  with `pgvector` in Paris, and S3-compatible storage. OVH needs more
+  operations work, because it has no scale-to-zero container service.
+  - **Switch when** Claude can be called with EU processing outside Google
+    Cloud, a customer requires French or EU-sovereign hosting, or Google
+    Cloud clearly costs more than Scaleway for the same load.
+  - **Why not now.** Scaleway does not host Claude, and the direct Anthropic
+    API has no EU processing option. On Vertex AI, CV content stays in the
+    EU. Re-check before the infrastructure sprint.
+  - **Keeping the exit cheap.** Containers, plain Postgres, an S3-speaking
+    storage port, standard OIDC sign-in and Terraform keep a move a
+    migration, not a rewrite. Neither provider sells sign-in for app users,
+    so identity (D6) stays a separate service either way.
 
 ### D15. Local-first and client-server evolve in parallel
 
@@ -411,8 +462,10 @@ The existing offline fixture mode keeps local runs free of provider calls.
 - a Postgres job with a service container, running the storage
   conformance suite and the API tests;
 - the packaged-desktop acceptance workflows (installed app and credential
-  lifecycle) keep running on every PR on all three platforms, so a shared
-  change that breaks the desktop fails its PR.
+  lifecycle) run on all three platforms for every PR that can change the
+  packaged app, so a shared change that breaks the desktop fails its PR.
+  PRs that change only documentation or tests skip them, and every release
+  build runs them again.
 
 **Releases.** Independent cadences from the same `main`:
 
@@ -442,6 +495,33 @@ The existing offline fixture mode keeps local runs free of provider calls.
   of hosted automation, so live evaluation never runs in GitHub Actions. It
   runs as a manually triggered Cloud Run job in a separate evaluation
   project, on synthetic data only. `AGENTS.md` records this exception.
+
+### D17. Agent channel: an MCP server
+
+Users increasingly work inside agents such as Claude, Codex or ChatGPT.
+DraftLoop is offered there as an MCP server: one more client, like the CLI,
+not a second product.
+
+- **Two transports, one tool set:**
+  - *Local:* `apps/mcp`, a stdio server over the same application services
+    as `apps/cli`. Candidate data stays on the user's machine. It does not
+    depend on the hosted phases.
+  - *Hosted:* the same tools over the HTTP API (D10), with OAuth sign-in
+    through the identity provider and plan credits (D13). After phase 1.
+- **Tools:** list applications, start a tailored CV run from a job post,
+  follow its progress, read the draft with its findings and evidence, and
+  request an export. Inputs and outputs reuse the API's Zod contracts.
+- **The engine stays in DraftLoop.** The host agent never writes or edits
+  CV claims; it asks DraftLoop to run the author–critic workflow, so
+  grounding and the critic still apply.
+- **Approval stays in DraftLoop.** An export or share needs the user's
+  approval in DraftLoop, never through the agent.
+- **Minimal disclosure.** Whatever a tool returns reaches the host agent's
+  model provider. Tools return only what was asked, never return
+  never-share material, and the hosted version records consent for it.
+- **Untrusted input.** Job posts and text arriving from an agent are
+  handled like uploads (D11).
+- *Cost:* a public tool surface to secure and keep stable. Tracked in #1403.
 
 ## Phasing (for planning only)
 
@@ -473,11 +553,15 @@ Notes on phase 4:
 1. ~~**Who pays first?**~~ **Decided 2026-10-16:** all profiles, through
    tiered plans (D13).
 2. **Pricing levels.** Prices and credits per plan, set from the measured
-   cost per run. The pricing model itself is proposed in D13.
-3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14). Still to
-   choose: the exact EU region.
-4. **Identity vendor.** Identity Platform is the default proposal (D14),
-   subject to confirming its EU data handling.
+   cost per run (D14). The pricing model itself is proposed in D13.
+3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14), in
+   `europe-west1` (decided 2026-10-17).
+4. ~~**Identity vendor.**~~ **Decided 2026-10-17:** Keycloak managed by
+   Clever Cloud (D14). It is the most widely adopted open-source identity
+   server, run by a French operator, with organisations built in. Users and
+   their password hashes can be exported, so any other Keycloak host is an
+   exit. The cost is about €0.05 per active user beyond the first 100.
+   Confirm the data processing agreement and SAML support before phase 2.
 5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
    local-first product that can keep evolving in parallel (D15). Making it
    a thin client of the service remains a later option.

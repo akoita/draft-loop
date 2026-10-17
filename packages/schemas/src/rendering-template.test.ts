@@ -20,6 +20,8 @@ const valid = {
   },
   name: { align: "center" },
   headings: { case: "as-written", rule: true, ruleColor: "#94a3ad" },
+  body: { align: "left" },
+  roles: { contextStyle: "regular" },
   skills: { style: "as-written" },
   accentColor: null,
 };
@@ -52,19 +54,33 @@ describe("renderingTemplateSchema", () => {
     [["id"], "Not A Slug"],
     [["headings", "ruleColor"], "red"],
     [["schemaVersion"], 2],
+    [["accentColor"], "teal"],
   ])("rejects out-of-bounds %j = %j", (path, value) => {
     expect(renderingTemplateSchema.safeParse(withChange(path, value)).success).toBe(false);
   });
 
   it.each([
-    [["accentColor"], "#1f6feb"],
-    [["name", "align"], "left"],
+    [["name", "align"], "right"],
     [["headings", "case"], "upper"],
+    [["body", "align"], "center"],
+    [["roles", "contextStyle"], "bold"],
     [["fonts", "family"], "serif"],
     [["skills", "style"], "grouped"],
     [["page", "size"], "Letter"],
   ])("rejects a value the renderer does not draw yet: %j = %j", (path, value) => {
     expect(renderingTemplateSchema.safeParse(withChange(path, value)).success).toBe(false);
+  });
+
+  it("accepts the Modern options: left name, uppercase headings, accent, justified text", () => {
+    const modern = {
+      ...valid,
+      name: { align: "left" },
+      headings: { ...valid.headings, case: "uppercase" },
+      body: { align: "justify" },
+      roles: { contextStyle: "italic" },
+      accentColor: "#0f6e5c",
+    };
+    expect(renderingTemplateSchema.safeParse(modern).success).toBe(true);
   });
 
   it("rejects unknown keys", () => {

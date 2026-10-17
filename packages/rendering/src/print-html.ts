@@ -6,7 +6,7 @@ import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
 import { isTitleBlockSection } from "./document-layout.js";
 import { splitInlineLabel } from "./inline-label.js";
 import { embeddedFontFlateBytes } from "./pdf-fonts.js";
-import { isRoleHeaderBlock, splitRoleHeader } from "./role-header.js";
+import { isRoleContextLine, isRoleHeaderBlock, splitRoleHeader } from "./role-header.js";
 import { getRenderingTemplate } from "./templates.js";
 import type { EmbeddedFontData } from "./truetype-font.js";
 
@@ -19,7 +19,9 @@ import type { EmbeddedFontData } from "./truetype-font.js";
  * the artifact block's text, so the engine that printed it can report back what it drew and
  * rendering QA can compare that with the artifact. A bullet is a real "•" in a fixed-width box with a
  * hanging indent, so it extracts as text like a hand-made CV; QA ignores a leading bullet glyph.
- * There is no letter-spacing or case transform, which can break CV parsers.
+ * There is no letter-spacing, which can split words for CV parsers. Modern's uppercase headings are
+ * a CSS case transform: the reported unit keeps the artifact's own text, and the printed PDF holds
+ * ordinary uppercase words.
  */
 
 /** The attribute naming a visible text unit and whether it is a heading or body text. */
@@ -92,6 +94,13 @@ function roleHeader(text: string): string {
   return unit("p", "body", "role", inner);
 }
 
+/** "context" for the line under a role header, "labelled" for a "Label: text" paragraph. */
+function paragraphClass(section: DraftArtifact["sections"][number], index: number): string {
+  if (isRoleContextLine(section.kind, section.blocks, index)) return "context";
+  const text = section.blocks[index]?.text ?? "";
+  return splitInlineLabel(text) === null ? "" : "labelled";
+}
+
 function sectionHtml(section: DraftArtifact["sections"][number]): string {
   if (isTitleBlockSection(section)) {
     return `<header>${section.blocks
@@ -117,7 +126,7 @@ function sectionHtml(section: DraftArtifact["sections"][number]): string {
     parts.push(
       isRoleHeaderBlock(section.kind, section.blocks, index)
         ? roleHeader(block.text)
-        : unit("p", "body", "", labelled(block.text)),
+        : unit("p", "body", paragraphClass(section, index), labelled(block.text)),
     );
   });
   closeList();
@@ -125,7 +134,10 @@ function sectionHtml(section: DraftArtifact["sections"][number]): string {
 }
 
 function printCss(template: RenderingTemplate): string {
-  const { page, fonts, spacing, headings, name } = template;
+  const { page, fonts, spacing, headings, name, body, roles } = template;
+  const accent = template.accentColor ?? inkColor;
+  const nameColor = template.accentColor === null ? inkColor : "#1b2329";
+  const headingCase = headings.case === "uppercase" ? "text-transform:uppercase;" : "";
   const margins = page.marginsMm;
   const bulletIndent = fonts.bodyPt + 1;
   const rule = headings.rule ? `border-bottom:0.75pt solid ${headings.ruleColor};` : "";
@@ -136,10 +148,10 @@ function printCss(template: RenderingTemplate): string {
     "*{box-sizing:border-box;}",
     "html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}",
     `body{margin:0;color:#1e2932;font-family:"${fontFamily}",Calibri,sans-serif;font-size:${fonts.bodyPt}pt;line-height:${fonts.lineHeight};font-kerning:normal;text-rendering:optimizeLegibility;}`,
-    `h1.name{margin:0 0 ${spacing.titleAfterPt}pt;font-size:${fonts.namePt}pt;line-height:1.15;font-weight:700;text-align:${name.align};color:${inkColor};}`,
+    `h1.name{margin:0 0 ${spacing.titleAfterPt}pt;font-size:${fonts.namePt}pt;line-height:1.15;font-weight:700;text-align:${name.align};color:${nameColor};}`,
     `p.contact{margin:0 0 ${spacing.contactAfterPt}pt;text-align:${name.align};color:#3b4852;}`,
     "header{margin-bottom:2pt;}",
-    `h2{margin:${spacing.headingBeforePt}pt 0 ${spacing.headingAfterPt + 1}pt;padding-bottom:1.5pt;${rule}font-size:${fonts.headingPt}pt;line-height:1.2;font-weight:700;color:${inkColor};break-after:avoid;}`,
+    `h2{margin:${spacing.headingBeforePt}pt 0 ${spacing.headingAfterPt + 1}pt;padding-bottom:1.5pt;${rule}font-size:${fonts.headingPt}pt;line-height:1.2;font-weight:700;color:${accent};${headingCase}break-after:avoid;}`,
     `p{margin:0 0 ${spacing.blockAfterPt}pt;orphans:2;widows:2;}`,
     `p.role{display:flex;justify-content:space-between;align-items:baseline;gap:12pt;margin:${spacing.roleBeforePt}pt 0 1pt;font-weight:700;break-after:avoid;}`,
     "h2+p.role{margin-top:0;}",
@@ -150,6 +162,20 @@ function printCss(template: RenderingTemplate): string {
     `li .bullet{display:inline-block;width:${bulletIndent}pt;text-indent:0;white-space:pre;}`,
     "li:last-child{margin-bottom:0;}",
     "strong{font-weight:700;}",
+    ...(template.accentColor === null
+      ? []
+      : [`p.role .date{font-weight:700;color:${template.accentColor};}`]),
+    // A justified template also hangs a labelled paragraph's lines under its label.
+    ...(body.align === "justify"
+      ? [
+          "p:not(.role):not(.contact),li{text-align:justify;}",
+          `p.labelled{margin-bottom:${spacing.blockAfterPt + 1}pt;padding-left:${bulletIndent}pt;text-indent:-${bulletIndent}pt;}`,
+        ]
+      : []),
+    // Carlito Italic is not embedded; the engine slants the regular face, as it does for any font.
+    ...(roles.contextStyle === "italic"
+      ? ["p.context{margin-bottom:1pt;font-style:italic;color:#4a5560;break-after:avoid;}"]
+      : []),
   ].join("\n");
 }
 
