@@ -1,5 +1,5 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
-import { appendAuditEventRow, listAuditEventRows } from "./audit-trail.js";
+import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { migratePostgres } from "./migrations.js";
 import { createRunHistory } from "./run-history.js";
 import { createSqlClient, type SqlClientOptions } from "./sql-client.js";
@@ -26,6 +26,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>
       listAuditEventRows(client, workspaceId),
+    auditEvents: createAuditEventReads(client),
     close: () => client.close(),
   };
 }

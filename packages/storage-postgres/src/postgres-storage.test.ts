@@ -40,7 +40,15 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
     const opened = await openIsolated(url);
     // Only the methods of the selected groups are called; the rest of the surface lands later.
     return { storage: opened.storage as unknown as HistoryRecordsStorage, close: opened.close };
-  }, ["workspaces", "contextSnapshots", "artifactVersions", "runs", "runSnapshots", "runChildren"]);
+  }, [
+    "workspaces",
+    "contextSnapshots",
+    "artifactVersions",
+    "runs",
+    "runSnapshots",
+    "runChildren",
+    "audit",
+  ]);
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);
@@ -83,6 +91,79 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
       }
     } finally {
       await close();
+    }
+  });
+
+  it("reports tampered audit payloads and run snapshots", async () => {
+    const schema = `tamper_${randomUUID().replaceAll("-", "")}`;
+    const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
+    await admin.query(`CREATE SCHEMA ${schema}`);
+    const storage = await openPostgresStorage({ connectionString: url, schema });
+    try {
+      const at = "2026-10-17T10:00:00.000Z";
+      await storage.saveWorkspace({
+        id: "workspace-1",
+        state: "drafting",
+        createdAt: at,
+        updatedAt: at,
+      });
+      await storage.saveContextSnapshot({
+        id: "context-1",
+        workspaceId: "workspace-1",
+        schemaVersion: 1,
+        createdAt: at,
+        payload: { job: "fixture" },
+      });
+      const snapshot = await storage.saveRunSnapshot({
+        workspaceId: "workspace-1",
+        runId: "run-1",
+        contextSnapshotId: "context-1",
+        state: "drafting",
+        round: 1,
+        currentStep: "author",
+        budget: { maxRounds: 2 },
+        artifactId: null,
+        approval: "pending",
+        totalCostUsd: 0,
+        startedAt: at,
+        updatedAt: at,
+        lastError: null,
+        payload: { step: 1 },
+      });
+      await expect(storage.auditEvents.verifyAuditChain("workspace-1")).resolves.toMatchObject({
+        ok: true,
+        eventCount: 3,
+      });
+
+      // Bypass the immutability triggers, as a direct database edit would.
+      await admin.transaction(async (executor) => {
+        await executor.query("SET LOCAL session_replication_role = replica");
+        await executor.query(
+          `UPDATE ${schema}.run_snapshots SET payload_json = '{"step":2}' WHERE id = $1`,
+          [snapshot.id],
+        );
+        await executor.query(
+          `UPDATE ${schema}.audit_events SET payload_json = '{"job":"changed"}' WHERE entity_type = 'context-snapshot'`,
+        );
+      });
+      const result = await storage.auditEvents.verifyAuditChain("workspace-1");
+      expect(result.ok).toBe(false);
+      expect(result.problems.map((problem) => problem.code).sort()).toEqual([
+        "payload-checksum",
+        "snapshot-checksum",
+      ]);
+      await expect(
+        storage.auditEvents.findLatestAuditEvent({
+          workspaceId: "workspace-1",
+          eventType: "run-snapshot.appended",
+          entityType: "run-snapshot",
+          entityId: "run-1",
+        }),
+      ).resolves.toMatchObject({ id: `${snapshot.id}:audit` });
+    } finally {
+      await storage.close();
+      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
+      await admin.close();
     }
   });
 
