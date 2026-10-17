@@ -659,8 +659,10 @@ The footer holds the approval gate and stays in view while you scroll:
   written, the export checks that every heading and block was drawn, in order.
   The CLI still draws PDFs with DraftLoop's own writer.
 - **Template.** Under **Export…**, pick **Classic** (two pages, the default) or
-  **Compact** (one page). Each option shows a small preview. The choice is
-  remembered per application, and the export record names the template used.
+  **Compact** (one page). Compact uses smaller type, tighter spacing and
+  narrower margins than Classic, so any draft comes out shorter in it. Each
+  option shows a small preview. The choice is remembered per application, and
+  the export record names the template used.
 - **Length estimate.** When the content clearly exceeds the page target, the
   footer shows an estimated-length warning. The target is the chosen template's
   (one page for Compact); with Classic left as the default it is the writing

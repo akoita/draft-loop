@@ -112,7 +112,7 @@ describe("print HTML", () => {
     expect(classic).toContain("@page{size:A4;margin:10mm 12mm 10mm 12mm;}");
     expect(classic).toContain("font-size:9pt");
     const compact = renderPrintHtml(artifact, { templateId: "compact" });
-    expect(compact).toContain("@page{size:A4;margin:12mm 12mm 12mm 12mm;}");
+    expect(compact).toContain("@page{size:A4;margin:9mm 10mm 9mm 10mm;}");
     expect(() => renderPrintHtml(artifact, { templateId: "modern" })).toThrow(RangeError);
   });
 });

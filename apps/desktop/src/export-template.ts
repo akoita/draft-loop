@@ -23,7 +23,7 @@ export const exportTemplateLabels: Readonly<Record<ExportTemplate, string>> = {
 /** One line on what the template is for, shown beside the preview. */
 export const exportTemplateDescriptions: Readonly<Record<ExportTemplate, string>> = {
   classic: "Two pages, centred name, ruled headings and room for full role histories.",
-  compact: "One page with larger type and looser spacing, for short, focused applications.",
+  compact: "One page with smaller type and tighter spacing, so the most fits on each page.",
 };
 
 /** `localStorage` key prefix; the application key follows it. */
