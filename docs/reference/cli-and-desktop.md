@@ -660,8 +660,9 @@ The footer holds the approval gate and stays in view while you scroll:
   line and word counts; open the file to confirm the real page count.
 - **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md
   --template classic|compact` writes the same files (`md` is short for
-  `markdown`, the default; Classic is the default template) and prints the
-  estimated-length warning when it applies.
+  `markdown`, the default) and prints the estimated-length warning when it
+  applies. Without `--template`, a run whose writing policy targets one page
+  uses Compact and any other run uses Classic.
 - **Export again.** An exported run shows its export path and offers **Export
   again…** through the same Save dialog. Each export adds a record; earlier ones
   are kept. If the previous file was moved or deleted, or the workspace was
