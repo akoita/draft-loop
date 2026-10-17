@@ -4,16 +4,13 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   type CandidateKnowledgeBaseState,
   type CandidateKnowledgeLexicalChunk,
-  type CandidateKnowledgeLexicalIndexIdentity,
   type CandidateKnowledgeLexicalIndexIdentityInput,
   type CandidateKnowledgeLexicalRetrievalRequestInput,
   type CandidateKnowledgeLexicalRetrievalResult,
   type CandidateKnowledgeRetentionClass,
   type CandidateKnowledgeRetentionOverrideKind,
   type CandidateKnowledgeRetentionRule,
-  type CandidateKnowledgeRetrievalScope,
   type CandidateKnowledgeRetrievalScopeInput,
-  type CandidateKnowledgeRetrievalSourceVersionReference,
   type CandidateKnowledgeRetrievalStatus,
   type CandidateKnowledgeRetrievalTrace,
   type CandidateKnowledgeRetrievalTraceInput,
@@ -29,16 +26,9 @@ import {
 import {
   type CandidateKnowledgePortableBackupManifest,
   type CanonicalCandidateProfile,
-  candidateKnowledgeLexicalChunkSchema,
-  candidateKnowledgeLexicalIndexIdentitySchema,
-  candidateKnowledgeLexicalRetrievalRequestSchema,
-  candidateKnowledgeLexicalRetrievalResultSchema,
   candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
-  candidateKnowledgeRetrievalScopeSchema,
-  candidateKnowledgeRetrievalSourceVersionReferenceSchema,
-  candidateKnowledgeRetrievalTraceSchema,
   type OpportunityBrief,
   type WritingPolicyInput,
 } from "@draft-loop/schemas";
@@ -120,6 +110,24 @@ export {
 } from "./storage-errors.js";
 
 import {
+  candidateKnowledgeLexicalScopeJson,
+  candidateKnowledgeRetrievalTraceFromRow,
+  expectedLexicalIndex,
+  lexicalIndexInspection,
+  lexicalIndexRecordFromRow,
+  lexicalRetrievalResult,
+  lexicalScopeEquals,
+  lexicalSourceVersionDeletion,
+  prepareLexicalIndexRebuild,
+  prepareLexicalIndexUpsert,
+  prepareRetrievalTrace,
+  requireSingleCandidateKnowledgeLexicalScope,
+  retrievalTraceKey,
+  retrievalTraceListQuery,
+  validatedCandidateKnowledgeRetrievalRequest,
+  validatedCandidateKnowledgeRetrievalScope,
+} from "./candidate-knowledge-lexical-rules.js";
+import {
   candidateKnowledgeBaseFromRow,
   candidateKnowledgeSourceFromRow,
   candidateKnowledgeSourceVersionFromRow,
@@ -136,6 +144,9 @@ import {
   readApprovedChronology,
   readEvidenceSource,
 } from "./chronology-evidence.js";
+
+export { computeCandidateKnowledgeLexicalManifestChecksum } from "./candidate-knowledge-lexical-rules.js";
+
 import { evidenceQueryTerms, preferMultiTermEvidenceHits } from "./evidence-retrieval-precision.js";
 import {
   decisionAuditEvent,
@@ -2267,187 +2278,6 @@ const migrations: readonly Migration[] = [
   sourceEvidenceKindOverridesMigration,
   originTrace.retrievalOriginTraceMigration,
 ];
-const candidateKnowledgeLexicalIndexRebuildKeys = new Set([
-  "scope",
-  "index",
-  "chunks",
-  "createdAt",
-]);
-const candidateKnowledgeLexicalIndexUpsertKeys = new Set(["scope", "index", "chunks"]);
-const candidateKnowledgeLexicalSourceVersionDeletionKeys = new Set([
-  "storeId",
-  "knowledgeBaseId",
-  "sourceId",
-  "versionId",
-]);
-const maximumCandidateKnowledgeLexicalIndexChunkCount = 100_000;
-const maximumCandidateKnowledgeRetrievalTraceListCount = 1_024;
-const candidateKnowledgeLexicalIndexManifestSchemaVersion = 1;
-
-function requireStrictStorageObject(
-  value: unknown,
-  keys: ReadonlySet<string>,
-  field: string,
-): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new StorageValidationError(`${field} must be an object`);
-  }
-  const record = value as Record<string, unknown>;
-  for (const key of Object.keys(record)) {
-    if (!keys.has(key)) throw new StorageValidationError(`${field} contains unsupported fields`);
-  }
-  return record;
-}
-
-function validatedCandidateKnowledgeRetrievalScope(
-  value: unknown,
-): CandidateKnowledgeRetrievalScope {
-  const parsed = candidateKnowledgeRetrievalScopeSchema.safeParse(value);
-  if (!parsed.success)
-    throw new StorageValidationError("Candidate knowledge retrieval scope is invalid");
-  return parsed.data;
-}
-
-function validatedCandidateKnowledgeLexicalIndexIdentity(
-  value: unknown,
-): CandidateKnowledgeLexicalIndexIdentity {
-  const parsed = candidateKnowledgeLexicalIndexIdentitySchema.safeParse(value);
-  if (!parsed.success) {
-    throw new StorageValidationError("Candidate knowledge lexical index identity is invalid");
-  }
-  return parsed.data;
-}
-
-function validatedCandidateKnowledgeLexicalChunk(value: unknown): CandidateKnowledgeLexicalChunk {
-  const parsed = candidateKnowledgeLexicalChunkSchema.safeParse(value);
-  if (!parsed.success)
-    throw new StorageValidationError("Candidate knowledge lexical chunk is invalid");
-  return parsed.data;
-}
-
-function validatedCandidateKnowledgeRetrievalRequest(
-  value: unknown,
-): CandidateKnowledgeLexicalRetrievalRequestInput & {
-  readonly scope: CandidateKnowledgeRetrievalScope;
-} {
-  const parsed = candidateKnowledgeLexicalRetrievalRequestSchema.safeParse(value);
-  if (!parsed.success) {
-    throw new StorageValidationError("Candidate knowledge retrieval request is invalid");
-  }
-  return parsed.data;
-}
-
-function validatedCandidateKnowledgeRetrievalResult(
-  value: unknown,
-): CandidateKnowledgeLexicalRetrievalResult {
-  const parsed = candidateKnowledgeLexicalRetrievalResultSchema.safeParse(value);
-  if (!parsed.success) {
-    throw new StorageValidationError("Candidate knowledge retrieval result is invalid");
-  }
-  return parsed.data;
-}
-
-function validatedCandidateKnowledgeRetrievalTrace(
-  value: unknown,
-): CandidateKnowledgeRetrievalTrace {
-  const parsed = candidateKnowledgeRetrievalTraceSchema.safeParse(value);
-  if (!parsed.success)
-    throw new StorageValidationError("Candidate knowledge retrieval trace is invalid");
-  return parsed.data;
-}
-
-function candidateKnowledgeLexicalReferenceKey(
-  reference: CandidateKnowledgeRetrievalSourceVersionReference,
-): string {
-  return JSON.stringify([
-    reference.storeId,
-    reference.knowledgeBaseId,
-    reference.sourceId,
-    reference.versionId,
-  ]);
-}
-
-function candidateKnowledgeLexicalScopeJson(scope: CandidateKnowledgeRetrievalScope): string {
-  return serialize({
-    sources: scope.sources.map((source) => ({
-      storeId: source.storeId,
-      knowledgeBaseId: source.knowledgeBaseId,
-      sourceId: source.sourceId,
-      versionId: source.versionId,
-    })),
-  });
-}
-
-/** Deterministic identity of the exact source-version manifest, without paths or checksums. */
-export function computeCandidateKnowledgeLexicalManifestChecksum(
-  scope: CandidateKnowledgeRetrievalScopeInput,
-): string {
-  const normalizedScope = validatedCandidateKnowledgeRetrievalScope(scope);
-  return checksum(
-    serialize({
-      schemaVersion: candidateKnowledgeLexicalIndexManifestSchemaVersion,
-      scope: recordToJson(normalizedScope),
-    }),
-  );
-}
-
-function requireCandidateKnowledgeLexicalManifestBinding(
-  scope: CandidateKnowledgeRetrievalScope,
-  index: CandidateKnowledgeLexicalIndexIdentity,
-): void {
-  if (index.manifestChecksum !== computeCandidateKnowledgeLexicalManifestChecksum(scope)) {
-    throw new StorageValidationError("Candidate knowledge lexical index manifest is invalid");
-  }
-}
-
-function requireSingleCandidateKnowledgeLexicalScope(scope: CandidateKnowledgeRetrievalScope): {
-  readonly storeId: string;
-  readonly knowledgeBaseId: string;
-} {
-  const first = scope.sources[0];
-  if (first === undefined) throw new StorageValidationError("Candidate knowledge scope is empty");
-  if (
-    scope.sources.some(
-      (source) =>
-        source.storeId !== first.storeId || source.knowledgeBaseId !== first.knowledgeBaseId,
-    )
-  ) {
-    throw new StorageValidationError(
-      "Candidate knowledge lexical index operations require one store and knowledge base",
-    );
-  }
-  return { storeId: first.storeId, knowledgeBaseId: first.knowledgeBaseId };
-}
-
-function requireSafeLexicalIdentifier(value: string, field: string, maximum = 120): string {
-  const normalized = requireNonEmpty(value, field).trim();
-  if (
-    normalized.length > maximum ||
-    !/^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/u.test(normalized)
-  ) {
-    throw new StorageValidationError(`${field} must be a safe opaque identifier`);
-  }
-  return normalized;
-}
-
-function lexicalScopeEquals(
-  left: CandidateKnowledgeRetrievalScope,
-  right: CandidateKnowledgeRetrievalScope,
-): boolean {
-  return candidateKnowledgeLexicalScopeJson(left) === candidateKnowledgeLexicalScopeJson(right);
-}
-
-function lexicalIndexEquals(
-  left: CandidateKnowledgeLexicalIndexIdentity,
-  right: CandidateKnowledgeLexicalIndexIdentity,
-): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.indexerId === right.indexerId &&
-    left.manifestChecksum === right.manifestChecksum
-  );
-}
-
 const lexicalIndexRowSql =
   "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?";
 
@@ -2455,13 +2285,6 @@ function candidateKnowledgeLexicalIndexRecordFromRow(
   database: SqliteHandle,
   row: Record<string, unknown>,
 ): CandidateKnowledgeLexicalIndexRecord {
-  const scope = validatedCandidateKnowledgeRetrievalScope(parse(rowString(row, "scope_json")));
-  const index = validatedCandidateKnowledgeLexicalIndexIdentity({
-    schemaVersion: rowNumber(row, "schema_version"),
-    indexerId: rowString(row, "indexer_id"),
-    manifestChecksum: rowString(row, "manifest_checksum"),
-  });
-  requireCandidateKnowledgeLexicalManifestBinding(scope, index);
   const indexedChunkCount = Number(
     database
       .prepare(
@@ -2472,74 +2295,7 @@ function candidateKnowledgeLexicalIndexRecordFromRow(
         rowString(row, "knowledge_base_id"),
       )?.count ?? 0,
   );
-  return {
-    scope,
-    index,
-    indexedChunkCount,
-    createdAt: requireTimestamp(rowString(row, "created_at"), "lexical index createdAt"),
-    stale: rowNumber(row, "stale") === 1,
-  };
-}
-
-function candidateKnowledgeRetrievalTraceFromRow(
-  row: Record<string, unknown>,
-): CandidateKnowledgeRetrievalTrace {
-  const payloadJson = rowString(row, "payload_json");
-  const payload = parse(payloadJson);
-  if (checksum(serialize(payload)) !== rowString(row, "payload_checksum")) {
-    throw new StorageValidationError("Stored candidate knowledge retrieval trace is invalid");
-  }
-  const trace = validatedCandidateKnowledgeRetrievalTrace(payload);
-  if (
-    trace.workspaceId !== rowString(row, "workspace_id") ||
-    trace.id !== rowString(row, "trace_id") ||
-    trace.operationId !== rowString(row, "operation_id") ||
-    trace.queryChecksum !== rowString(row, "query_checksum")
-  ) {
-    throw new StorageValidationError(
-      "Stored candidate knowledge retrieval trace identity is invalid",
-    );
-  }
-  return trace;
-}
-
-function validatedCandidateKnowledgeLexicalChunks(
-  value: unknown,
-  scope: CandidateKnowledgeRetrievalScope,
-): readonly CandidateKnowledgeLexicalChunk[] {
-  if (!Array.isArray(value)) {
-    throw new StorageValidationError("Candidate knowledge lexical chunks must be an array");
-  }
-  if (value.length > maximumCandidateKnowledgeLexicalIndexChunkCount) {
-    throw new StorageValidationError("Candidate knowledge lexical chunks exceed the maximum");
-  }
-  const scopeKeys = new Set(scope.sources.map(candidateKnowledgeLexicalReferenceKey));
-  const chunks = value.map((entry) => validatedCandidateKnowledgeLexicalChunk(entry));
-  const chunkIds = new Set<string>();
-  const ordinals = new Set<string>();
-  for (const chunk of chunks) {
-    if (!scopeKeys.has(candidateKnowledgeLexicalReferenceKey(chunk.metadata.provenance))) {
-      throw new StorageValidationError(
-        "Candidate knowledge lexical chunk is outside the index scope",
-      );
-    }
-    if (chunkIds.has(chunk.chunkId)) {
-      throw new StorageValidationError("Candidate knowledge lexical chunk ids must be unique");
-    }
-    chunkIds.add(chunk.chunkId);
-    const ordinalKey = `${candidateKnowledgeLexicalReferenceKey(chunk.metadata.provenance)}\u0000${chunk.ordinal}`;
-    if (ordinals.has(ordinalKey)) {
-      throw new StorageValidationError("Candidate knowledge lexical chunk ordinals must be unique");
-    }
-    ordinals.add(ordinalKey);
-  }
-  return chunks.sort((left, right) => {
-    const leftReference = candidateKnowledgeLexicalReferenceKey(left.metadata.provenance);
-    const rightReference = candidateKnowledgeLexicalReferenceKey(right.metadata.provenance);
-    if (leftReference !== rightReference) return leftReference < rightReference ? -1 : 1;
-    if (left.ordinal !== right.ordinal) return left.ordinal - right.ordinal;
-    return left.chunkId < right.chunkId ? -1 : left.chunkId > right.chunkId ? 1 : 0;
-  });
+  return lexicalIndexRecordFromRow(row, indexedChunkCount);
 }
 
 function writingPolicyVersionLeafSelect(): string {
@@ -10251,25 +10007,8 @@ export class SqliteStorage
     input: CandidateKnowledgeLexicalIndexRebuildInput,
   ): Promise<CandidateKnowledgeLexicalIndexRecord> {
     this.ensureOpen();
-    const record = requireStrictStorageObject(
-      input,
-      candidateKnowledgeLexicalIndexRebuildKeys,
-      "candidate knowledge lexical index rebuild",
-    );
-    const scope = validatedCandidateKnowledgeRetrievalScope(record.scope);
-    const identity = validatedCandidateKnowledgeLexicalIndexIdentity(record.index);
-    const { storeId, knowledgeBaseId } = requireSingleCandidateKnowledgeLexicalScope(scope);
-    requireCandidateKnowledgeLexicalManifestBinding(scope, identity);
-    const createdAt = requireTimestamp(
-      String(record.createdAt),
-      "candidate knowledge lexical index createdAt",
-    );
-    const chunks = validatedCandidateKnowledgeLexicalChunks(record.chunks, scope);
-    if (chunks.length === 0) {
-      throw new StorageValidationError(
-        "Candidate knowledge lexical index must contain at least one chunk",
-      );
-    }
+    const { scope, identity, storeId, knowledgeBaseId, chunks, createdAt } =
+      prepareLexicalIndexRebuild(input);
     let result: CandidateKnowledgeLexicalIndexRecord | undefined;
     this.database.transaction(() => {
       this.database
@@ -10314,16 +10053,7 @@ export class SqliteStorage
     input: CandidateKnowledgeLexicalIndexUpsertInput,
   ): Promise<CandidateKnowledgeLexicalIndexRecord> {
     this.ensureOpen();
-    const record = requireStrictStorageObject(
-      input,
-      candidateKnowledgeLexicalIndexUpsertKeys,
-      "candidate knowledge lexical index upsert",
-    );
-    const scope = validatedCandidateKnowledgeRetrievalScope(record.scope);
-    const identity = validatedCandidateKnowledgeLexicalIndexIdentity(record.index);
-    const { storeId, knowledgeBaseId } = requireSingleCandidateKnowledgeLexicalScope(scope);
-    requireCandidateKnowledgeLexicalManifestBinding(scope, identity);
-    const chunks = validatedCandidateKnowledgeLexicalChunks(record.chunks, scope);
+    const { scope, identity, storeId, knowledgeBaseId, chunks } = prepareLexicalIndexUpsert(input);
     let result: CandidateKnowledgeLexicalIndexRecord | undefined;
     this.database.transaction(() => {
       const existingRow = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
@@ -10395,16 +10125,7 @@ export class SqliteStorage
     input: CandidateKnowledgeLexicalSourceVersionDeletionInput,
   ): Promise<void> {
     this.ensureOpen();
-    const record = requireStrictStorageObject(
-      input,
-      candidateKnowledgeLexicalSourceVersionDeletionKeys,
-      "candidate knowledge lexical source-version deletion",
-    );
-    const parsed = candidateKnowledgeRetrievalSourceVersionReferenceSchema.safeParse(record);
-    if (!parsed.success) {
-      throw new StorageValidationError("Candidate knowledge lexical source-version is invalid");
-    }
-    const reference = parsed.data as CandidateKnowledgeRetrievalSourceVersionReference;
+    const reference = lexicalSourceVersionDeletion(input);
     this.database.transaction(() => {
       // A source-version deletion invalidates the complete manifest. Clear
       // the whole replaceable projection atomically so no chunks survive
@@ -10437,41 +10158,14 @@ export class SqliteStorage
     const requestedScope = validatedCandidateKnowledgeRetrievalScope(scopeInput);
     const { storeId, knowledgeBaseId } =
       requireSingleCandidateKnowledgeLexicalScope(requestedScope);
-    const expectedIndex =
-      indexInput === undefined
-        ? undefined
-        : validatedCandidateKnowledgeLexicalIndexIdentity(indexInput);
     const row = this.database.prepare(lexicalIndexRowSql).get(storeId, knowledgeBaseId);
-    if (row === undefined) {
-      return {
-        status: "not-indexed",
-        requestedScope,
-        index: null,
-        indexedScope: null,
-        indexedChunkCount: 0,
-      };
-    }
-    const record = candidateKnowledgeLexicalIndexRecordFromRow(this.database, row);
-    const stale =
-      record.stale ||
-      !lexicalScopeEquals(record.scope, requestedScope) ||
-      (expectedIndex !== undefined && !lexicalIndexEquals(record.index, expectedIndex));
-    if (record.indexedChunkCount === 0) {
-      return {
-        status: "not-indexed",
-        requestedScope,
-        index: null,
-        indexedScope: null,
-        indexedChunkCount: 0,
-      };
-    }
-    return {
-      status: stale ? "stale" : "matched",
+    return lexicalIndexInspection(
       requestedScope,
-      index: record.index,
-      indexedScope: record.scope,
-      indexedChunkCount: record.indexedChunkCount,
-    };
+      row === undefined
+        ? undefined
+        : candidateKnowledgeLexicalIndexRecordFromRow(this.database, row),
+      expectedLexicalIndex(indexInput),
+    );
   }
 
   public async queryCandidateKnowledge(
@@ -10480,30 +10174,12 @@ export class SqliteStorage
     this.ensureOpen();
     const request = validatedCandidateKnowledgeRetrievalRequest(requestInput);
     const inspection = await this.inspectCandidateKnowledgeLexicalIndex(request.scope);
-    const base = {
-      purpose: request.purpose,
-      scope: request.scope,
-      index: inspection.index,
-      indexedChunkCount: inspection.indexedChunkCount,
-    };
     if (inspection.status !== "matched") {
-      return validatedCandidateKnowledgeRetrievalResult({
-        ...base,
-        status: inspection.status,
-        selectedChunkCount: 0,
-        selectedSourceCount: 0,
-        hits: [],
-      });
+      return lexicalRetrievalResult(request, inspection, inspection.status, []);
     }
     const queryTerms = evidenceQueryTerms(request.query);
     if (queryTerms.length === 0) {
-      return validatedCandidateKnowledgeRetrievalResult({
-        ...base,
-        status: "no-query",
-        selectedChunkCount: 0,
-        selectedSourceCount: 0,
-        hits: [],
-      });
+      return lexicalRetrievalResult(request, inspection, "no-query", []);
     }
     const { storeId, knowledgeBaseId } = requireSingleCandidateKnowledgeLexicalScope(request.scope);
     const ftsQuery = queryTerms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR ");
@@ -10521,41 +10197,14 @@ export class SqliteStorage
         )
         .all(storeId, knowledgeBaseId, request.limit);
     }
-    const hits = rows.map((row) => ({
-      chunkId: rowString(row, "chunk_id"),
-      ordinal: rowNumber(row, "ordinal"),
-      lineStart: rowNumber(row, "line_start"),
-      lineEnd: rowNumber(row, "line_end"),
-      text: rowString(row, "text"),
-      metadata: parse(rowString(row, "metadata_json")),
-      bm25Rank: Number(row.bm25_rank),
-    }));
-    const selectedSourceCount = new Set(
-      hits.map((hit) => {
-        const metadata = hit.metadata as { readonly provenance?: unknown };
-        return JSON.stringify(metadata.provenance);
-      }),
-    ).size;
-    return validatedCandidateKnowledgeRetrievalResult({
-      ...base,
-      status,
-      selectedChunkCount: hits.length,
-      selectedSourceCount,
-      hits,
-    });
+    return lexicalRetrievalResult(request, inspection, status, rows);
   }
 
   public async appendCandidateKnowledgeRetrievalTrace(
     input: CandidateKnowledgeRetrievalTraceInput,
   ): Promise<CandidateKnowledgeRetrievalTrace> {
     this.ensureOpen();
-    const trace = validatedCandidateKnowledgeRetrievalTrace(input);
-    if (trace.index !== null) {
-      requireCandidateKnowledgeLexicalManifestBinding(trace.scope, trace.index);
-    }
-    const payload = recordToJson(trace);
-    const payloadJson = serialize(payload);
-    const payloadChecksum = checksum(payloadJson);
+    const { trace, payloadJson, payloadChecksum } = prepareRetrievalTrace(input);
     let result: CandidateKnowledgeRetrievalTrace | undefined;
     this.database.transaction(() => {
       const existing = this.database.prepare(traceByIdSql).get(trace.workspaceId, trace.id);
@@ -10591,11 +10240,10 @@ export class SqliteStorage
     traceId: string,
   ): Promise<CandidateKnowledgeRetrievalTrace | undefined> {
     this.ensureOpen();
-    const normalizedWorkspaceId = requireSafeLexicalIdentifier(
+    const { workspaceId: normalizedWorkspaceId, traceId: normalizedTraceId } = retrievalTraceKey(
       workspaceId,
-      "retrieval trace workspaceId",
+      traceId,
     );
-    const normalizedTraceId = requireSafeLexicalIdentifier(traceId, "retrieval trace id");
     const row = this.database.prepare(traceByIdSql).get(normalizedWorkspaceId, normalizedTraceId);
     return row === undefined ? undefined : candidateKnowledgeRetrievalTraceFromRow(row);
   }
@@ -10605,27 +10253,11 @@ export class SqliteStorage
     options: CandidateKnowledgeRetrievalTraceListOptions = {},
   ): Promise<readonly CandidateKnowledgeRetrievalTrace[]> {
     this.ensureOpen();
-    const normalizedWorkspaceId = requireSafeLexicalIdentifier(
-      workspaceId,
-      "retrieval trace workspaceId",
-    );
-    const record = requireStrictStorageObject(
-      options,
-      new Set(["operationId", "limit"]),
-      "retrieval trace list options",
-    );
-    const operationId =
-      record.operationId === undefined
-        ? undefined
-        : requireSafeLexicalIdentifier(String(record.operationId), "retrieval trace operationId");
-    const limit = record.limit === undefined ? 100 : Number(record.limit);
-    if (
-      !Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      limit > maximumCandidateKnowledgeRetrievalTraceListCount
-    ) {
-      throw new StorageValidationError("retrieval trace limit is invalid");
-    }
+    const {
+      workspaceId: normalizedWorkspaceId,
+      operationId,
+      limit,
+    } = retrievalTraceListQuery(workspaceId, options);
     const operationFilter = operationId === undefined ? "" : " AND operation_id = ?";
     const parameters = [normalizedWorkspaceId, ...(operationId === undefined ? [] : [operationId])];
     const rows = this.database

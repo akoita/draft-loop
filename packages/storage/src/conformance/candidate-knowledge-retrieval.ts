@@ -467,18 +467,3 @@ export function describeCandidateKnowledgeRetrievalConformance(
     open,
   );
 }
-
-/**
- * Runs only the knowledge-base contracts, for an implementation that stores knowledge bases and
- * source versions before it has a lexical index. A complete one runs the retrieval suite instead.
- */
-export function describeCandidateKnowledgeBaseConformance(
-  implementation: string,
-  open: CandidateKnowledgeRetrievalStorageFactory<CandidateKnowledgeBaseStorage>,
-): void {
-  describeContracts(
-    `${implementation} storage conformance: candidate knowledge bases`,
-    knowledgeBaseContracts,
-    open,
-  );
-}
