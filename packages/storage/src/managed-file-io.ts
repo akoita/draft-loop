@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { chmod, type FileHandle, lstat, open, rm } from "node:fs/promises";
+import { chmod, type FileHandle, lstat, open, rm, rmdir } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 
 import { errorCode, isMissing } from "./filesystem-error-codes.js";
@@ -10,6 +10,7 @@ import { StorageConflictError, StorageValidationError } from "./storage-errors.j
 // Low-level checks for managed candidate-knowledge files, shared by the knowledge store and the
 // filesystem managed-file store.
 
+export const privateDirectory = ".draft-loop";
 export const sourcesDirectory = "sources";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
@@ -273,5 +274,25 @@ export async function requireDirectory(path: string, label: string): Promise<voi
   }
   if (details.isSymbolicLink() || !details.isDirectory()) {
     throw new StorageValidationError(`${label} must be a real directory, not a symbolic link.`);
+  }
+}
+export async function removeEmptyDirectoryIfIdentityMatches(
+  path: string,
+  identity: FileIdentity,
+): Promise<boolean> {
+  try {
+    const details = await lstat(path);
+    if (
+      details.isSymbolicLink() ||
+      !details.isDirectory() ||
+      details.dev !== identity.dev ||
+      details.ino !== identity.ino
+    ) {
+      return false;
+    }
+    await rmdir(path);
+    return true;
+  } catch (error) {
+    return isMissing(error);
   }
 }

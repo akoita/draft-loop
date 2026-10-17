@@ -1,3 +1,5 @@
+import type { CandidateKnowledgeDeletionOperationRecord } from "./candidate-knowledge.js";
+
 /** Identifies one managed candidate-knowledge file: a version of a managed source. */
 export interface ManagedFileKey {
   readonly sourceId: string;
@@ -54,4 +56,17 @@ export interface ManagedFileStorePort {
       readonly createdSource: boolean;
     },
   ): Promise<boolean>;
+  /**
+   * Deletion moves a graph's files aside under its operation, then commits by removing them or
+   * rolls back by restoring them. The returned identity is what the deletion journal records.
+   */
+  createDeletionStaging(operationId: string): Promise<{ readonly identity: ManagedFileIdentity }>;
+  /** Moves each artifact aside, resuming safely if some already moved; never overwrites. */
+  stageDeletion(operation: CandidateKnowledgeDeletionOperationRecord): Promise<void>;
+  /** Fails unless every artifact is staged, unchanged, and gone from its committed location. */
+  verifyDeletionStaged(operation: CandidateKnowledgeDeletionOperationRecord): Promise<void>;
+  /** Removes the staged artifacts and any source location the deletion left empty. */
+  commitDeletion(operation: CandidateKnowledgeDeletionOperationRecord): Promise<void>;
+  /** Moves staged artifacts home; false when any could not be proved restored. */
+  restoreDeletion(operation: CandidateKnowledgeDeletionOperationRecord): Promise<boolean>;
 }

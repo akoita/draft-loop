@@ -69,8 +69,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - Managed candidate-knowledge files go through a managed-file port, keyed by
   source and version and checked against the recorded checksum and size.
   Intake stages and verifies the bytes, then publishes them without ever
-  replacing an existing file, or rolls them back. Deletion and recovery move
-  behind the port in the follow-ups to #1356.
+  replacing an existing file, or rolls them back. Deletion stages a knowledge
+  base's files away from their keys, then commits by removing them or restores
+  them. Store-open recovery moves behind the port in the last follow-up to
+  #1356.
 - A conformance suite, exported as `@draft-loop/storage/conformance`, checks
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.

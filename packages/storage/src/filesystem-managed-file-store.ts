@@ -2,6 +2,7 @@ import { link, mkdir, rmdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { errorCode, isMissing } from "./filesystem-error-codes.js";
+import { createFilesystemDeletionStaging } from "./filesystem-managed-file-deletion.js";
 import {
   chmodWhereSupported,
   managedPathSegment,
@@ -34,6 +35,7 @@ export function createFilesystemManagedFileStore(root: string): ManagedFileStore
         write.published,
         write.createdSource,
       ),
+    ...createFilesystemDeletionStaging(root),
   } satisfies ManagedFileStorePort);
 }
 

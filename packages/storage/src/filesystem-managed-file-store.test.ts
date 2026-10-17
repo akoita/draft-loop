@@ -1,11 +1,22 @@
 import { createHash } from "node:crypto";
-import { link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createFilesystemManagedFileStore } from "./filesystem-managed-file-store.js";
 import { managedVersionPath } from "./managed-file-io.js";
+import type { CandidateKnowledgeDeletionOperationRecord } from "./ports/candidate-knowledge.js";
 import type { StagedManagedFile } from "./ports/managed-files.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
@@ -135,6 +146,76 @@ describe("filesystem managed-file store", () => {
       await expect(
         stat(join(managedVersionPath(root, fresh.sourceId, fresh.versionId), "..")),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("deletion", () => {
+    const operationId = "operation-1";
+    const operation = async (staging?: {
+      readonly dev: number;
+      readonly ino: number;
+    }): Promise<CandidateKnowledgeDeletionOperationRecord> => {
+      const details = await stat(path);
+      return {
+        operationId,
+        knowledgeBaseId: "knowledge-base-1",
+        confirmationToken: "token",
+        graphDigest: "digest",
+        phase: "staging",
+        createdAt: "2026-10-17T00:00:00.000Z",
+        committedAt: null,
+        completedAt: null,
+        stagingDevice: staging?.dev ?? null,
+        stagingInode: staging?.ino ?? null,
+        managedArtifactCount: 1,
+        managedArtifactBytes: integrity.sizeBytes,
+        preservedUnknownCount: 0,
+        preservedUnmanagedCount: 0,
+        countCapped: false,
+        artifacts: [{ operationId, ...key, ...integrity, device: details.dev, inode: details.ino }],
+      };
+    };
+
+    it("stages managed files away from their key and restores them on rollback", async () => {
+      await writeFile(path, content);
+      const files = createFilesystemManagedFileStore(root);
+      const recorded = await operation();
+      const { identity } = await files.createDeletionStaging(operationId);
+      const staged = { ...recorded, stagingDevice: identity.dev, stagingInode: identity.ino };
+      await files.stageDeletion(staged);
+      await files.verifyDeletionStaged(staged);
+      await expect(files.verify(key, integrity)).rejects.toThrow(/is missing/);
+      await expect(files.restoreDeletion(staged)).resolves.toBe(true);
+      await expect(files.read(key, integrity)).resolves.toBeInstanceOf(Uint8Array);
+      await expect(files.restoreDeletion(staged)).resolves.toBe(true);
+    });
+
+    it("commits a staged deletion, removing the files and their empty source location", async () => {
+      await writeFile(path, content);
+      const files = createFilesystemManagedFileStore(root);
+      const recorded = await operation();
+      const { identity } = await files.createDeletionStaging(operationId);
+      const staged = { ...recorded, stagingDevice: identity.dev, stagingInode: identity.ino };
+      await files.stageDeletion(staged);
+      await files.commitDeletion({ ...staged, phase: "committed" });
+      await expect(files.verify(key, integrity)).rejects.toThrow(/is missing/);
+      await expect(stat(join(path, ".."))).rejects.toThrow();
+      await expect(readdir(join(root, ".draft-loop", ".deletion-staging"))).resolves.toEqual([]);
+      await expect(files.createDeletionStaging(operationId)).resolves.toBeDefined();
+    });
+
+    it("refuses staging that is already owned or holds an entry it did not stage", async () => {
+      await writeFile(path, content);
+      const files = createFilesystemManagedFileStore(root);
+      const recorded = await operation();
+      const { identity } = await files.createDeletionStaging(operationId);
+      await expect(files.createDeletionStaging(operationId)).rejects.toThrow(StorageConflictError);
+      const staged = { ...recorded, stagingDevice: identity.dev, stagingInode: identity.ino };
+      await files.stageDeletion(staged);
+      const stray = join(root, ".draft-loop", ".deletion-staging", operationId, "stray");
+      await writeFile(stray, "not managed");
+      await expect(files.commitDeletion(staged)).rejects.toThrow(/unowned entry/);
+      await expect(readFile(stray, "utf8")).resolves.toBe("not managed");
     });
   });
 });
