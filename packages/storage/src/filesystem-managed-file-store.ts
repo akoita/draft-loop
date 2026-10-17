@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 
 import { errorCode, isMissing } from "./filesystem-error-codes.js";
 import { createFilesystemDeletionStaging } from "./filesystem-managed-file-deletion.js";
+import { createFilesystemManagedFileInventory } from "./filesystem-managed-file-inventory.js";
+import { createFilesystemManagedFileRecovery } from "./filesystem-managed-file-recovery.js";
 import {
   chmodWhereSupported,
   managedPathSegment,
@@ -36,6 +38,8 @@ export function createFilesystemManagedFileStore(root: string): ManagedFileStore
         write.createdSource,
       ),
     ...createFilesystemDeletionStaging(root),
+    ...createFilesystemManagedFileInventory(root),
+    ...createFilesystemManagedFileRecovery(root),
   } satisfies ManagedFileStorePort);
 }
 

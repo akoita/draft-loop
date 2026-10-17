@@ -15,7 +15,7 @@ import {
   rmdir,
   writeFile,
 } from "node:fs/promises";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type {
   CandidateKnowledgeLexicalIndexIdentityInput,
   CandidateKnowledgeLexicalRetrievalRequestInput,
@@ -122,6 +122,7 @@ import {
   managedPathSegment,
   managedVersionPath,
   maximumManagedCandidateKnowledgeFileBytes,
+  maximumManagedCandidateKnowledgeInventoryEntries,
   maximumManagedCandidateKnowledgeUrlResponseBytes,
   privateDirectory,
   removeEmptyDirectoryIfIdentityMatches,
@@ -138,7 +139,12 @@ import {
   portableBackupTimestamp,
   validatePortableBackupManifestTimestamps,
 } from "./portable-backup-timestamps.js";
-import type { ManagedFileKey, ManagedFileStorePort } from "./ports/managed-files.js";
+import type {
+  InterruptedWriteArtifact,
+  ManagedFileDeletionObservation,
+  ManagedFileKey,
+  ManagedFileStorePort,
+} from "./ports/managed-files.js";
 import { coordinateSourceEvidenceKindsPort } from "./source-evidence-kinds.js";
 import { coordinateSourceSensitivityRulesPort } from "./source-sensitivity-rules.js";
 import {
@@ -151,6 +157,7 @@ import {
 export type * from "./knowledge-store-types.js";
 export {
   maximumManagedCandidateKnowledgeFileBytes,
+  maximumManagedCandidateKnowledgeInventoryEntries,
   maximumManagedCandidateKnowledgeUrlResponseBytes,
 };
 
@@ -161,8 +168,6 @@ const maximumManifestBytes = 64 * 1024;
 const maximumPortableBackupManifestBytes = 16 * 1024 * 1024;
 const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
 const descriptorKeyPrefix = "candidateKnowledgeStore";
-
-export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
 
 /**
  * A path-free, integrity-verified snapshot of one managed CKB source version.
@@ -874,18 +879,13 @@ async function requireAbsent(path: string): Promise<void> {
 
 async function validateManagedCandidateKnowledgeFiles(
   storage: SqliteStorage,
-  root: string,
+  managedFiles: ManagedFileStorePort,
 ): Promise<void> {
   await verifyManagedCandidateKnowledgeFileVersions(
     storage.listManagedCandidateKnowledgeSourceVersions(),
-    root,
+    managedFiles,
   );
 }
-
-type ManagedWriteRecoveryArtifact =
-  | { readonly status: "missing" }
-  | { readonly status: "preserved" }
-  | { readonly status: "verified"; readonly identity: FileIdentity };
 
 function isManagedWriteJournalPhase(
   value: string,
@@ -901,81 +901,29 @@ function isManagedWriteJournalPhase(
   );
 }
 
-async function inspectManagedWriteRecoveryArtifact(
-  path: string,
-  integrity: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
-): Promise<ManagedWriteRecoveryArtifact> {
-  let details: Awaited<ReturnType<typeof lstat>>;
-  try {
-    details = await lstat(path);
-  } catch (error) {
-    return isMissing(error) ? { status: "missing" } : { status: "preserved" };
-  }
-  if (details.isSymbolicLink() || !details.isFile()) {
-    return { status: "preserved" };
-  }
-  try {
-    await verifyManagedFile(path, integrity);
-    const after = await lstat(path);
-    if (
-      after.isSymbolicLink() ||
-      !after.isFile() ||
-      after.dev !== details.dev ||
-      after.ino !== details.ino
-    ) {
-      return { status: "preserved" };
-    }
-    return { status: "verified", identity: { dev: after.dev, ino: after.ino } };
-  } catch {
-    return { status: "preserved" };
-  }
-}
-
-function requireManagedWriteRecoveryIdentity(
-  artifact: ManagedWriteRecoveryArtifact,
-  expected: ManagedCandidateKnowledgeWriteOperationRecord["stagingIdentity"],
-): ManagedWriteRecoveryArtifact {
-  if (
-    expected !== null &&
-    artifact.status === "verified" &&
-    (artifact.identity.dev !== expected.device || artifact.identity.ino !== expected.inode)
-  ) {
-    return { status: "preserved" };
-  }
-  return artifact;
-}
-
-async function removeManagedWriteRecoveryArtifact(
+async function removeInterruptedWriteArtifact(
   lease: StorageWriterLease,
-  path: string,
-  artifact: ManagedWriteRecoveryArtifact,
+  managedFiles: ManagedFileStorePort,
+  artifact: InterruptedWriteArtifact,
 ): Promise<boolean> {
   if (artifact.status === "missing") return true;
   if (artifact.status !== "verified") return false;
   lease.renew();
-  const removed = await removeRegularFileIfIdentityMatches(path, artifact.identity);
+  const removed = await managedFiles.removeInterruptedWriteArtifact(artifact);
   lease.assertCurrent();
   return removed;
 }
 
-async function removeEmptyManagedWriteSourceDirectory(
-  root: string,
+async function removeEmptyInterruptedWriteSource(
   lease: StorageWriterLease,
+  managedFiles: ManagedFileStorePort,
   operation: ManagedCandidateKnowledgeWriteOperationRecord,
 ): Promise<boolean> {
   if (operation.kind !== "create") return true;
-  const path = join(root, sourcesDirectory, managedPathSegment(operation.sourceId));
   lease.renew();
-  try {
-    await rmdir(path);
-    lease.assertCurrent();
-    return true;
-  } catch (error) {
-    lease.assertCurrent();
-    if (isMissing(error)) return true;
-    if (errorCode(error) === "ENOTEMPTY") return false;
-    return false;
-  }
+  const removed = await managedFiles.removeSourceIfEmpty(operation.sourceId);
+  lease.assertCurrent();
+  return removed;
 }
 
 function recoveryReport(
@@ -1007,6 +955,7 @@ function managedWriteRecoveryTimestamp(
 async function recoverIncompleteManagedCandidateKnowledgeWrites(
   storage: SqliteStorage,
   root: string,
+  managedFiles: ManagedFileStorePort,
 ): Promise<ManagedCandidateKnowledgeWriteRecoveryReport> {
   const lease = currentCandidateKnowledgeWriterLease(root);
   const generation = lease.generation;
@@ -1045,12 +994,6 @@ async function recoverIncompleteManagedCandidateKnowledgeWrites(
     }
 
     const targetVersionId = operation.targetVersionId ?? operation.requestedVersionId;
-    const stagingPath = join(
-      root,
-      sourcesDirectory,
-      `.intake-${managedPathSegment(operation.operationId)}`,
-    );
-    const targetPath = managedVersionPath(root, operation.sourceId, targetVersionId);
     const claimRecovery = async (): Promise<void> => {
       if (
         phase !== "prepared" &&
@@ -1074,14 +1017,17 @@ async function recoverIncompleteManagedCandidateKnowledgeWrites(
       checksum: operation.requestedChecksum,
       sizeBytes: operation.requestedSizeBytes,
     };
-    const stagingObserved = await inspectManagedWriteRecoveryArtifact(stagingPath, integrity);
-    const targetObserved = await inspectManagedWriteRecoveryArtifact(targetPath, integrity);
+    const { staging, target } = await managedFiles.inspectInterruptedWrite({
+      operationId: operation.operationId,
+      target: { sourceId: operation.sourceId, versionId: targetVersionId },
+      integrity,
+      stagedIdentity:
+        operation.stagingIdentity === null
+          ? null
+          : { dev: operation.stagingIdentity.device, ino: operation.stagingIdentity.inode },
+    });
     if (operation.stagingIdentity === null) {
-      if (
-        phase !== "prepared" ||
-        stagingObserved.status !== "missing" ||
-        targetObserved.status !== "missing"
-      ) {
+      if (phase !== "prepared" || staging.status !== "missing" || target.status !== "missing") {
         entries.push({ kind: operation.kind, phase, outcome: "preserved" });
         continue;
       }
@@ -1098,8 +1044,6 @@ async function recoverIncompleteManagedCandidateKnowledgeWrites(
       entries.push({ kind: operation.kind, phase, outcome: "aborted" });
       continue;
     }
-    const staging = requireManagedWriteRecoveryIdentity(stagingObserved, operation.stagingIdentity);
-    const target = requireManagedWriteRecoveryIdentity(targetObserved, operation.stagingIdentity);
 
     if (phase === "committed") {
       if (staging.status === "preserved") {
@@ -1111,7 +1055,7 @@ async function recoverIncompleteManagedCandidateKnowledgeWrites(
         continue;
       }
       if (staging.status === "verified") {
-        const removed = await removeManagedWriteRecoveryArtifact(lease, stagingPath, staging);
+        const removed = await removeInterruptedWriteArtifact(lease, managedFiles, staging);
         if (!removed) {
           entries.push({ kind: operation.kind, phase, outcome: "preserved" });
           continue;
@@ -1137,16 +1081,16 @@ async function recoverIncompleteManagedCandidateKnowledgeWrites(
     }
     if (
       target.status === "verified" &&
-      !(await removeManagedWriteRecoveryArtifact(lease, targetPath, target))
+      !(await removeInterruptedWriteArtifact(lease, managedFiles, target))
     ) {
       entries.push({ kind: operation.kind, phase, outcome: "preserved" });
       continue;
     }
-    if (!(await removeManagedWriteRecoveryArtifact(lease, stagingPath, staging))) {
+    if (!(await removeInterruptedWriteArtifact(lease, managedFiles, staging))) {
       entries.push({ kind: operation.kind, phase, outcome: "preserved" });
       continue;
     }
-    if (!(await removeEmptyManagedWriteSourceDirectory(root, lease, operation))) {
+    if (!(await removeEmptyInterruptedWriteSource(lease, managedFiles, operation))) {
       entries.push({ kind: operation.kind, phase, outcome: "preserved" });
       continue;
     }
@@ -1171,7 +1115,7 @@ type ManagedCandidateKnowledgeSourceVersion = ReturnType<
 
 async function verifyManagedCandidateKnowledgeFileVersions(
   versions: readonly ManagedCandidateKnowledgeSourceVersion[],
-  root: string,
+  managedFiles: ManagedFileStorePort,
 ): Promise<void> {
   for (const version of versions) {
     if (version.kind !== "file" && version.kind !== "url") {
@@ -1179,139 +1123,33 @@ async function verifyManagedCandidateKnowledgeFileVersions(
         "Candidate knowledge store contains a managed version for an unsupported source.",
       );
     }
-    const sourceDirectory = join(root, sourcesDirectory, managedPathSegment(version.sourceId));
-    await requireDirectory(sourceDirectory, "Managed candidate knowledge source directory");
-    await verifyManagedFile(managedVersionPath(root, version.sourceId, version.id), version);
   }
-}
-
-interface MutableManagedCandidateKnowledgeFileInventory {
-  scannedEntryCount: number;
-  scanLimitReached: boolean;
-  readonly unknownEntries: {
-    intakeShapedFilesAtSourcesRoot: number;
-    opaqueEntriesAtSourcesRoot: number;
-    entriesInsideManagedSourceDirectories: number;
-    symbolicLinks: number;
-    otherEntries: number;
-  };
-}
-
-const intakeShapedFilename =
-  /^\.intake-(?:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{64})$/;
-
-function entryType(entry: Dirent): "directory" | "file" | "symbolic-link" | "other" {
-  if (entry.isDirectory()) return "directory";
-  if (entry.isFile()) return "file";
-  if (entry.isSymbolicLink()) return "symbolic-link";
-  return "other";
-}
-
-async function scanManagedCandidateKnowledgeDirectory(
-  path: string,
-  inventory: MutableManagedCandidateKnowledgeFileInventory,
-  inspect: (entry: Dirent, entryPath: string) => void,
-): Promise<void> {
-  if (inventory.scanLimitReached) return;
-  const directory = await opendir(path);
-  let closeError: unknown;
-  try {
-    while (true) {
-      const entry = await directory.read();
-      if (entry === null) break;
-      if (inventory.scannedEntryCount === maximumManagedCandidateKnowledgeInventoryEntries) {
-        inventory.scanLimitReached = true;
-        break;
-      }
-      inventory.scannedEntryCount += 1;
-      inspect(entry, join(path, entry.name));
-    }
-  } finally {
-    try {
-      await directory.close();
-    } catch (error) {
-      if (errorCode(error) !== "ERR_DIR_CLOSED") closeError = error;
-    }
-  }
-  if (closeError !== undefined) throw closeError;
+  await managedFiles.verifyAll(
+    versions.map((version) => ({
+      sourceId: version.sourceId,
+      versionId: version.id,
+      checksum: version.checksum,
+      sizeBytes: version.sizeBytes,
+    })),
+  );
 }
 
 async function inspectManagedCandidateKnowledgeFiles(
   storage: SqliteStorage,
-  root: string,
+  managedFiles: ManagedFileStorePort,
 ): Promise<ManagedCandidateKnowledgeFileInventory> {
   const managedVersions = storage.listManagedCandidateKnowledgeSourceVersions();
-  await verifyManagedCandidateKnowledgeFileVersions(managedVersions, root);
-
-  const expectedFilesBySourceDirectory = new Map<string, Set<string>>();
-  for (const version of managedVersions) {
-    const sourceDirectory = managedPathSegment(version.sourceId);
-    const expectedFiles = expectedFilesBySourceDirectory.get(sourceDirectory) ?? new Set<string>();
-    expectedFiles.add(managedPathSegment(version.id));
-    expectedFilesBySourceDirectory.set(sourceDirectory, expectedFiles);
-  }
-
-  const inventory: MutableManagedCandidateKnowledgeFileInventory = {
-    scannedEntryCount: 0,
-    scanLimitReached: false,
-    unknownEntries: {
-      intakeShapedFilesAtSourcesRoot: 0,
-      opaqueEntriesAtSourcesRoot: 0,
-      entriesInsideManagedSourceDirectories: 0,
-      symbolicLinks: 0,
-      otherEntries: 0,
-    },
-  };
-  const observedManagedSourceDirectories: string[] = [];
-  const sourcesRoot = join(root, sourcesDirectory);
-  await scanManagedCandidateKnowledgeDirectory(sourcesRoot, inventory, (entry) => {
-    if (entry.isSymbolicLink()) {
-      inventory.unknownEntries.symbolicLinks += 1;
-    } else if (entry.isFile()) {
-      if (intakeShapedFilename.test(entry.name)) {
-        inventory.unknownEntries.intakeShapedFilesAtSourcesRoot += 1;
-      } else {
-        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
-      }
-    } else if (entry.isDirectory()) {
-      if (expectedFilesBySourceDirectory.has(entry.name)) {
-        observedManagedSourceDirectories.push(entry.name);
-      } else {
-        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
-      }
-    } else {
-      inventory.unknownEntries.otherEntries += 1;
-    }
-  });
-
-  for (const sourceDirectory of observedManagedSourceDirectories) {
-    if (inventory.scanLimitReached) break;
-    const sourcePath = join(sourcesRoot, sourceDirectory);
-    await requireDirectory(sourcePath, "Managed candidate knowledge source directory");
-    const expectedFiles = expectedFilesBySourceDirectory.get(sourceDirectory) as Set<string>;
-    await scanManagedCandidateKnowledgeDirectory(sourcePath, inventory, (entry) => {
-      if (entry.isSymbolicLink()) {
-        inventory.unknownEntries.symbolicLinks += 1;
-      } else if (entry.isFile()) {
-        if (!expectedFiles.has(entry.name)) {
-          inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
-        }
-      } else if (entry.isDirectory()) {
-        inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
-      } else {
-        inventory.unknownEntries.otherEntries += 1;
-      }
-    });
-  }
-
-  const unknownEntries = Object.freeze({ ...inventory.unknownEntries });
+  await verifyManagedCandidateKnowledgeFileVersions(managedVersions, managedFiles);
+  const scan = await managedFiles.inventory(
+    managedVersions.map((version) => ({ sourceId: version.sourceId, versionId: version.id })),
+  );
   return Object.freeze({
     schemaVersion: 1,
     verifiedManagedFileCount: managedVersions.length,
-    scannedEntryCount: inventory.scannedEntryCount,
-    unknownEntries,
-    complete: !inventory.scanLimitReached,
-    scanLimitReached: inventory.scanLimitReached,
+    scannedEntryCount: scan.scannedEntryCount,
+    unknownEntries: scan.unknownEntries,
+    complete: !scan.scanLimitReached,
+    scanLimitReached: scan.scanLimitReached,
   });
 }
 
@@ -1782,7 +1620,10 @@ async function buildPortableBackupManifest(
   readonly manifest: CandidateKnowledgePortableBackupManifest;
   readonly sourceFiles: readonly { readonly objectName: string; readonly sourcePath: string }[];
 }> {
-  const inventory = await inspectManagedCandidateKnowledgeFiles(storage, root);
+  const inventory = await inspectManagedCandidateKnowledgeFiles(
+    storage,
+    createFilesystemManagedFileStore(root),
+  );
   const unknownCount = Object.values(inventory.unknownEntries).reduce(
     (total, count) => total + count,
     0,
@@ -2159,7 +2000,10 @@ export async function exportCandidateKnowledgePortableBackup(
         storage = readOnlyStorage;
         try {
           await validateOpenedStore(readOnlyStorage, descriptor);
-          await validateManagedCandidateKnowledgeFiles(readOnlyStorage, root);
+          await validateManagedCandidateKnowledgeFiles(
+            readOnlyStorage,
+            createFilesystemManagedFileStore(root),
+          );
           return await exportPortableBackupPackage(
             readOnlyStorage,
             descriptor,
@@ -2404,7 +2248,10 @@ async function buildPortableBackupRestoreStaging(
     const readOnlyStorage = openSqliteStorageReadOnly(databasePath);
     try {
       await validateOpenedStore(readOnlyStorage, manifest.descriptor);
-      await validateManagedCandidateKnowledgeFiles(readOnlyStorage, staging);
+      await validateManagedCandidateKnowledgeFiles(
+        readOnlyStorage,
+        createFilesystemManagedFileStore(staging),
+      );
     } finally {
       await closePreservingFailure(readOnlyStorage);
     }
@@ -2573,7 +2420,10 @@ async function restorePortableBackupPackage(
           );
           try {
             await validateOpenedStore(stagedStorage, manifest.descriptor);
-            await validateManagedCandidateKnowledgeFiles(stagedStorage, staging);
+            await validateManagedCandidateKnowledgeFiles(
+              stagedStorage,
+              createFilesystemManagedFileStore(staging),
+            );
           } finally {
             await closePreservingFailure(stagedStorage);
           }
@@ -2768,7 +2618,10 @@ async function restorePortableBackupPackage(
       const targetStorage = openSqliteStorageReadOnly(join(targetPrivatePath, databaseFilename));
       try {
         await validateOpenedStore(targetStorage, manifest.descriptor);
-        await validateManagedCandidateKnowledgeFiles(targetStorage, destination);
+        await validateManagedCandidateKnowledgeFiles(
+          targetStorage,
+          createFilesystemManagedFileStore(destination),
+        );
       } finally {
         await closePreservingFailure(targetStorage);
       }
@@ -2919,7 +2772,7 @@ function boundedRetentionPlanCount(value: number): {
 
 async function planCandidateKnowledgeRetention(
   storage: SqliteStorage,
-  root: string,
+  managedFiles: ManagedFileStorePort,
   knowledgeBaseIdInput: string,
   asOfInput: string,
 ): Promise<CandidateKnowledgeRetentionPlan> {
@@ -2951,7 +2804,7 @@ async function planCandidateKnowledgeRetention(
       }
     }
   }
-  const inventory = await inspectManagedCandidateKnowledgeFiles(storage, root);
+  const inventory = await inspectManagedCandidateKnowledgeFiles(storage, managedFiles);
   const unknownTotal = Object.values(inventory.unknownEntries).reduce(
     (total, count) => total + count,
     0,
@@ -3036,16 +2889,7 @@ async function planCandidateKnowledgeRetention(
 
 const candidateKnowledgeDeletionPlanSchemaVersion = 1 as const;
 
-type CandidateKnowledgeDeletionArtifactStatus = "verified" | "missing" | "integrity-mismatch";
-
-interface CandidateKnowledgeDeletionArtifactObservation {
-  readonly sourceId: string;
-  readonly versionId: string;
-  readonly checksum: string;
-  readonly sizeBytes: number;
-  readonly status: CandidateKnowledgeDeletionArtifactStatus;
-  readonly identity: FileIdentity | null;
-}
+type CandidateKnowledgeDeletionArtifactObservation = ManagedFileDeletionObservation;
 
 interface CandidateKnowledgeDeletionPhysicalInventory {
   readonly artifacts: readonly CandidateKnowledgeDeletionArtifactObservation[];
@@ -3058,135 +2902,23 @@ function deletionDigest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
-async function observeCandidateKnowledgeDeletionArtifacts(
-  root: string,
-  snapshot: CandidateKnowledgeDeletionDatabaseSnapshot,
-): Promise<readonly CandidateKnowledgeDeletionArtifactObservation[]> {
-  const observations: CandidateKnowledgeDeletionArtifactObservation[] = [];
-  for (const artifact of snapshot.managedArtifacts) {
-    const path = managedVersionPath(root, artifact.sourceId, artifact.versionId);
-    try {
-      const details = await lstat(path);
-      if (details.isSymbolicLink() || !details.isFile()) {
-        observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
-        continue;
-      }
-      try {
-        await verifyManagedFile(path, artifact);
-        const after = await lstat(path);
-        if (
-          after.isSymbolicLink() ||
-          !after.isFile() ||
-          after.dev !== details.dev ||
-          after.ino !== details.ino
-        ) {
-          observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
-          continue;
-        }
-        observations.push({
-          ...artifact,
-          status: "verified",
-          identity: { dev: after.dev, ino: after.ino },
-        });
-      } catch {
-        observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
-      }
-    } catch (error) {
-      if (isMissing(error)) {
-        observations.push({ ...artifact, status: "missing", identity: null });
-        continue;
-      }
-      observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
-    }
-  }
-  return observations;
-}
-
 async function inspectCandidateKnowledgeDeletionInventory(
   storage: SqliteStorage,
-  root: string,
+  managedFiles: ManagedFileStorePort,
   snapshot: CandidateKnowledgeDeletionDatabaseSnapshot,
 ): Promise<CandidateKnowledgeDeletionPhysicalInventory> {
   const allManaged = storage.listManagedCandidateKnowledgeSourceVersions();
   const targetSources = await storage.listCandidateKnowledgeSources(snapshot.knowledgeBaseId);
-  const expectedSourceDirectories = new Set(
-    allManaged.map((version) => managedPathSegment(version.sourceId)),
-  );
-  const targetSourceDirectories = new Map<string, Set<string>>();
-  for (const source of targetSources) {
-    targetSourceDirectories.set(managedPathSegment(source.id), new Set<string>());
-  }
-  for (const artifact of snapshot.managedArtifacts) {
-    const sourceDirectory = managedPathSegment(artifact.sourceId);
-    const expectedFiles = targetSourceDirectories.get(sourceDirectory) ?? new Set<string>();
-    expectedFiles.add(managedPathSegment(artifact.versionId));
-    targetSourceDirectories.set(sourceDirectory, expectedFiles);
-  }
-  const inventory: MutableManagedCandidateKnowledgeFileInventory = {
-    scannedEntryCount: 0,
-    scanLimitReached: false,
-    unknownEntries: {
-      intakeShapedFilesAtSourcesRoot: 0,
-      opaqueEntriesAtSourcesRoot: 0,
-      entriesInsideManagedSourceDirectories: 0,
-      symbolicLinks: 0,
-      otherEntries: 0,
-    },
-  };
-  const inventoryFingerprints: string[] = [];
-  const targetDirectories: string[] = [];
-  const sourcesRoot = join(root, sourcesDirectory);
-  await scanManagedCandidateKnowledgeDirectory(sourcesRoot, inventory, (entry, entryPath) => {
-    inventoryFingerprints.push(`${relative(sourcesRoot, entryPath)}:${entryType(entry)}`);
-    if (entry.isSymbolicLink()) {
-      inventory.unknownEntries.symbolicLinks += 1;
-    } else if (entry.isFile()) {
-      if (intakeShapedFilename.test(entry.name)) {
-        inventory.unknownEntries.intakeShapedFilesAtSourcesRoot += 1;
-      } else {
-        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
-      }
-    } else if (entry.isDirectory()) {
-      if (!expectedSourceDirectories.has(entry.name)) {
-        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
-      } else if (targetSourceDirectories.has(entry.name)) {
-        targetDirectories.push(entry.name);
-      }
-    } else {
-      inventory.unknownEntries.otherEntries += 1;
-    }
+  const observed = await managedFiles.inspectDeletion({
+    managedSourceIds: allManaged.map((version) => version.sourceId),
+    targetSourceIds: targetSources.map((source) => source.id),
+    artifacts: snapshot.managedArtifacts,
   });
-  for (const sourceDirectory of targetDirectories) {
-    if (inventory.scanLimitReached) break;
-    const sourcePath = join(sourcesRoot, sourceDirectory);
-    try {
-      await scanManagedCandidateKnowledgeDirectory(sourcePath, inventory, (entry, entryPath) => {
-        inventoryFingerprints.push(`${relative(sourcesRoot, entryPath)}:${entryType(entry)}`);
-        if (entry.isSymbolicLink()) {
-          inventory.unknownEntries.symbolicLinks += 1;
-        } else if (entry.isFile()) {
-          const expectedFiles = targetSourceDirectories.get(sourceDirectory);
-          if (expectedFiles === undefined || !expectedFiles.has(entry.name)) {
-            inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
-          }
-        } else if (entry.isDirectory()) {
-          inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
-        } else {
-          inventory.unknownEntries.otherEntries += 1;
-        }
-      });
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-    }
-  }
-  const unknownEntries = Object.freeze({ ...inventory.unknownEntries });
   return Object.freeze({
-    artifacts: Object.freeze([
-      ...(await observeCandidateKnowledgeDeletionArtifacts(root, snapshot)),
-    ]),
-    unknownEntries,
-    scanLimitReached: inventory.scanLimitReached,
-    inventoryDigest: deletionDigest(inventoryFingerprints.sort()),
+    artifacts: observed.artifacts,
+    unknownEntries: observed.unknownEntries,
+    scanLimitReached: observed.scanLimitReached,
+    inventoryDigest: deletionDigest(observed.entryFingerprints),
   });
 }
 
@@ -3224,7 +2956,7 @@ function deletionBlocker(
 async function planCandidateKnowledgeBaseDeletion(
   storage: SqliteStorage,
   descriptor: CandidateKnowledgeStoreDescriptor,
-  root: string,
+  managedFiles: ManagedFileStorePort,
   knowledgeBaseIdInput: string,
 ): Promise<{
   readonly plan: CandidateKnowledgeDeletionPlan;
@@ -3242,7 +2974,11 @@ async function planCandidateKnowledgeBaseDeletion(
   if (snapshot.isDefault) {
     throw new StorageConflictError("the default candidate knowledge base cannot be deleted");
   }
-  const inventory = await inspectCandidateKnowledgeDeletionInventory(storage, root, snapshot);
+  const inventory = await inspectCandidateKnowledgeDeletionInventory(
+    storage,
+    managedFiles,
+    snapshot,
+  );
   const boundedSourceCount = boundedDeletionCount(snapshot.sourceCount);
   const boundedVersionCount = boundedDeletionCount(snapshot.versionCount);
   const boundedManagedRecordCount = boundedDeletionCount(
@@ -4304,7 +4040,7 @@ async function deleteCandidateKnowledgeBase(
   const planned = await planCandidateKnowledgeBaseDeletion(
     storage,
     descriptor,
-    root,
+    managedFiles,
     knowledgeBaseId,
   );
   if (planned.plan.confirmationToken !== confirmationToken) {
@@ -4787,14 +4523,20 @@ function createHandle(
       ),
     planCandidateKnowledgeRetention: (knowledgeBaseId, asOf) =>
       coordinateWrite("ckb-retention-plan", () =>
-        planCandidateKnowledgeRetention(storage, root, knowledgeBaseId, asOf),
+        planCandidateKnowledgeRetention(storage, managedFiles, knowledgeBaseId, asOf),
       ),
     planCandidateKnowledgeBaseDeletion: (knowledgeBaseId) =>
       coordinateWrite(
         "ckb-deletion-plan",
         async () =>
-          (await planCandidateKnowledgeBaseDeletion(storage, descriptor, root, knowledgeBaseId))
-            .plan,
+          (
+            await planCandidateKnowledgeBaseDeletion(
+              storage,
+              descriptor,
+              managedFiles,
+              knowledgeBaseId,
+            )
+          ).plan,
       ),
     deleteCandidateKnowledgeBase: (knowledgeBaseId, confirmationToken, options) =>
       coordinateWrite("ckb-deletion", () =>
@@ -4910,7 +4652,7 @@ function createHandle(
       });
     },
     inspectManagedCandidateKnowledgeFiles: () =>
-      inspectManagedCandidateKnowledgeFiles(storage, root),
+      inspectManagedCandidateKnowledgeFiles(storage, managedFiles),
     exportPortableBackup: (destination, options) =>
       coordinateWrite("ckb-portable-backup-export", () =>
         exportPortableBackupPackage(storage, descriptor, root, destination, options),
@@ -4945,14 +4687,15 @@ export async function openCandidateKnowledgeStore(
       async () => {
         storage = openSqliteStorage(databasePath);
         await validateOpenedStore(storage, descriptor);
-        const report = await recoverIncompleteManagedCandidateKnowledgeWrites(storage, root);
-        await recoverIncompleteCandidateKnowledgeDeletions(
+        const managedFiles = createFilesystemManagedFileStore(root);
+        const report = await recoverIncompleteManagedCandidateKnowledgeWrites(
           storage,
           root,
-          createFilesystemManagedFileStore(root),
+          managedFiles,
         );
+        await recoverIncompleteCandidateKnowledgeDeletions(storage, root, managedFiles);
         await validateOpenedStore(storage, descriptor);
-        await validateManagedCandidateKnowledgeFiles(storage, root);
+        await validateManagedCandidateKnowledgeFiles(storage, managedFiles);
         return report;
       },
       { waitTimeoutMs: openLeaseWaitTimeoutMs },

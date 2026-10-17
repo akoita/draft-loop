@@ -71,8 +71,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   Intake stages and verifies the bytes, then publishes them without ever
   replacing an existing file, or rolls them back. Deletion stages a knowledge
   base's files away from their keys, then commits by removing them or restores
-  them. Store-open recovery moves behind the port in the last follow-up to
-  #1356.
+  them. Store-open recovery and the unknown-entry inventory use the same port.
+  Portable backup and the local file-path lookup stay filesystem-only, since
+  they exist only in the local version.
 - A conformance suite, exported as `@draft-loop/storage/conformance`, checks
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.

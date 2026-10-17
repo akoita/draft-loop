@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createFilesystemManagedFileStore } from "./filesystem-managed-file-store.js";
-import { managedVersionPath } from "./managed-file-io.js";
+import { managedPathSegment, managedVersionPath } from "./managed-file-io.js";
 import type { CandidateKnowledgeDeletionOperationRecord } from "./ports/candidate-knowledge.js";
 import type { StagedManagedFile } from "./ports/managed-files.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
@@ -216,6 +216,63 @@ describe("filesystem managed-file store", () => {
       await writeFile(stray, "not managed");
       await expect(files.commitDeletion(staged)).rejects.toThrow(/unowned entry/);
       await expect(readFile(stray, "utf8")).resolves.toBe("not managed");
+    });
+  });
+
+  describe("recovery and inventory", () => {
+    it("finds an interrupted write's files and removes only the ones it owns", async () => {
+      const files = createFilesystemManagedFileStore(root);
+      const staging = join(root, "sources", `.intake-${managedPathSegment("operation-1")}`);
+      await writeFile(staging, content);
+      await writeFile(path, content);
+      const details = await stat(staging);
+      const observed = await files.inspectInterruptedWrite({
+        operationId: "operation-1",
+        target: key,
+        integrity,
+        stagedIdentity: { dev: details.dev, ino: details.ino },
+      });
+      // The target is a different inode than the journal recorded, so it is preserved.
+      expect(observed.target).toEqual({ status: "preserved" });
+      expect(observed.staging.status).toBe("verified");
+      await expect(files.removeInterruptedWriteArtifact(observed.target)).resolves.toBe(false);
+      await expect(files.removeInterruptedWriteArtifact(observed.staging)).resolves.toBe(true);
+      await expect(stat(staging)).rejects.toThrow();
+      await expect(readFile(path, "utf8")).resolves.toBe(content);
+      await expect(files.removeSourceIfEmpty(key.sourceId)).resolves.toBe(false);
+      await rm(path);
+      await expect(files.removeSourceIfEmpty(key.sourceId)).resolves.toBe(true);
+      await expect(files.removeSourceIfEmpty(key.sourceId)).resolves.toBe(true);
+    });
+
+    it("verifies every recorded version and counts entries no record accounts for", async () => {
+      await writeFile(path, content);
+      await writeFile(join(root, "sources", "stray"), "x");
+      await writeFile(join(path, "..", "stray"), "x");
+      const files = createFilesystemManagedFileStore(root);
+      await expect(files.verifyAll([{ ...key, ...integrity }])).resolves.toBeUndefined();
+      await expect(
+        files.verifyAll([{ ...key, versionId: "version-2", ...integrity }]),
+      ).rejects.toThrow(/is missing/);
+      await expect(files.inventory([key])).resolves.toEqual({
+        scannedEntryCount: 4,
+        scanLimitReached: false,
+        unknownEntries: {
+          intakeShapedFilesAtSourcesRoot: 0,
+          opaqueEntriesAtSourcesRoot: 1,
+          entriesInsideManagedSourceDirectories: 1,
+          symbolicLinks: 0,
+          otherEntries: 0,
+        },
+      });
+      const deletion = await files.inspectDeletion({
+        managedSourceIds: [key.sourceId],
+        targetSourceIds: [key.sourceId],
+        artifacts: [{ ...key, ...integrity }],
+      });
+      expect(deletion.artifacts.map((artifact) => artifact.status)).toEqual(["verified"]);
+      expect(deletion.entryFingerprints).toHaveLength(4);
+      expect(deletion.unknownEntries.entriesInsideManagedSourceDirectories).toBe(1);
     });
   });
 });
