@@ -79,7 +79,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.
 - `packages/storage-postgres` is the hosted implementation. It joins the suite
-  one contract group at a time. It reuses the audit-trail hashing from
+  one contract group at a time; it passes the history, versioned-record and
+  application groups, and knowledge retrieval comes next. It reuses the
+  audit-trail hashing from
   `@draft-loop/storage/audit-trail`, the run-record rules from
   `@draft-loop/storage/history-records`, and the versioned-record chain rules
   from `@draft-loop/storage/versioned-records`. Both implementations therefore

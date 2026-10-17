@@ -304,6 +304,79 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 4,
+    name: "applications, their bindings, archives, model pairs, names and chosen runs",
+    sql: `
+      CREATE TABLE applications (
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        application_id TEXT NOT NULL CHECK (length(trim(application_id)) > 0 AND application_id <> 'default'),
+        name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120 AND name = trim(name)),
+        job_source_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, application_id)
+      );
+
+      CREATE TABLE application_run_bindings (
+        workspace_id TEXT NOT NULL,
+        run_id TEXT NOT NULL CHECK (length(trim(run_id)) > 0),
+        application_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, run_id),
+        FOREIGN KEY (workspace_id, application_id) REFERENCES applications (workspace_id, application_id)
+      );
+      CREATE INDEX application_run_bindings_application ON application_run_bindings (workspace_id, application_id);
+
+      CREATE TABLE application_brief_bindings (
+        workspace_id TEXT NOT NULL,
+        brief_id TEXT NOT NULL CHECK (length(trim(brief_id)) > 0),
+        application_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, brief_id),
+        FOREIGN KEY (workspace_id, application_id) REFERENCES applications (workspace_id, application_id)
+      );
+      CREATE INDEX application_brief_bindings_application ON application_brief_bindings (workspace_id, application_id);
+
+      CREATE TABLE application_archives (
+        workspace_id TEXT NOT NULL CHECK (length(trim(workspace_id)) > 0),
+        application_id TEXT NOT NULL CHECK (length(trim(application_id)) > 0),
+        archived_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, application_id)
+      );
+
+      CREATE TABLE application_model_profiles (
+        workspace_id TEXT NOT NULL,
+        application_id TEXT NOT NULL,
+        model_profiles_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, application_id),
+        FOREIGN KEY (workspace_id, application_id) REFERENCES applications (workspace_id, application_id)
+      );
+
+      CREATE TABLE default_application_names (
+        workspace_id TEXT PRIMARY KEY CHECK (length(trim(workspace_id)) > 0),
+        name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120 AND name = trim(name)),
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE application_chosen_runs (
+        workspace_id TEXT NOT NULL CHECK (length(trim(workspace_id)) > 0),
+        application_id TEXT NOT NULL CHECK (length(trim(application_id)) > 0),
+        run_id TEXT NOT NULL CHECK (length(trim(run_id)) > 0),
+        reason TEXT CHECK (reason IS NULL OR length(reason) BETWEEN 1 AND 500),
+        chosen_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, application_id)
+      );
+
+      CREATE TRIGGER application_run_bindings_immutable
+        BEFORE UPDATE OR DELETE ON application_run_bindings
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER application_brief_bindings_immutable
+        BEFORE UPDATE OR DELETE ON application_brief_bindings
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

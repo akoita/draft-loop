@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
-import { describeHistoryRecordsConformance } from "@draft-loop/storage/conformance";
+import {
+  describeApplicationsConformance,
+  describeHistoryRecordsConformance,
+} from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
 import { postgresMigrations } from "./migrations.js";
 import { openPostgresStorage, type PostgresStorage } from "./postgres-storage.js";
@@ -36,6 +39,7 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
 
   // Every history and versioned-record group, as SQLite runs them.
   describeHistoryRecordsConformance("Postgres", () => openIsolated(url));
+  describeApplicationsConformance("Postgres", () => openIsolated(url));
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);
