@@ -58,3 +58,9 @@ export interface DiagnosticTelemetryReport {
   };
   readonly checksum: string;
 }
+
+/** Workspace records, the root every other record belongs to. */
+export interface WorkspaceStoragePort {
+  readonly saveWorkspace: (record: WorkspaceRecord) => Promise<void>;
+  readonly getWorkspace: (id: string) => Promise<WorkspaceRecord | undefined>;
+}
