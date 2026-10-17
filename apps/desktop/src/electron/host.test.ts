@@ -4532,7 +4532,7 @@ describe("native host", () => {
       );
       // The bridge allowlist rejects a template that is not built in.
       await expect(
-        dispatch({ type: "export", format: "pdf", template: "modern" }),
+        dispatch({ type: "export", format: "pdf", template: "fancy" }),
       ).resolves.toMatchObject({ ok: false });
       expect(fixture.service.export).toHaveBeenCalledTimes(2);
     } finally {

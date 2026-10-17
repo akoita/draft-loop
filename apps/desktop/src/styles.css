@@ -4165,15 +4165,19 @@ input[type="text"].workspace-title-input {
 }
 
 .export-template-preview-compact {
-  gap: 4px;
+  gap: 1px;
 }
 
-.export-template-preview-compact .export-template-preview-name {
+.export-template-preview-modern .export-template-preview-name {
+  align-self: flex-start;
+  width: 70%;
   height: 4px;
 }
 
-.export-template-preview-compact .export-template-preview-line {
-  height: 2px;
+.export-template-preview-modern .export-template-preview-heading {
+  width: 35%;
+  border-bottom-color: #0f6e5c;
+  background: #0f6e5c;
 }
 
 .export-note {

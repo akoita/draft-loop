@@ -88,6 +88,23 @@ export function isRoleHeaderBlock(
   return isPipeRoleHeader(blocks, index) || blocks[index + 1]?.type === "bullet";
 }
 
+/** Whether block `index` is the context line directly under a role header ("Paris | scope"). */
+export function isRoleContextLine(
+  sectionKind: string,
+  blocks: readonly SectionBlock[],
+  index: number,
+): boolean {
+  const block = blocks[index];
+  return (
+    (sectionKind === "experience" || sectionKind === "projects") &&
+    block !== undefined &&
+    block.type !== "bullet" &&
+    index > 0 &&
+    isRoleHeaderBlock(sectionKind, blocks, index - 1) &&
+    !isRoleHeaderBlock(sectionKind, blocks, index)
+  );
+}
+
 /** The lines of a role header and, when the dates are right-aligned, the date on the last line. */
 export interface RoleHeaderLines {
   readonly lines: readonly string[];

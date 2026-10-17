@@ -658,16 +658,24 @@ The footer holds the approval gate and stays in view while you scroll:
   bullets with a hanging indent, and dates right-aligned. Before the file is
   written, the export checks that every heading and block was drawn, in order.
   The CLI still draws PDFs with DraftLoop's own writer.
-- **Template.** Under **Export…**, pick **Classic** (two pages, the default) or
-  **Compact** (one page). Each option shows a small preview. The choice is
-  remembered per application, and the export record names the template used.
+- **Template.** Under **Export…**, pick **Classic** (two pages, the default),
+  **Compact** (one page) or **Modern** (two pages).
+  - Compact uses smaller type, tighter spacing and narrower margins than
+    Classic, so any draft comes out shorter in it.
+  - Modern has a left-aligned name, teal uppercase headings and dates,
+    justified text and an italic context line under each role. The desktop PDF
+    draws all of it; Word files and CLI PDFs keep the Classic layout at Modern's
+    sizes.
+
+  Each option shows a small preview. The choice is remembered per application, and
+  the export record names the template used.
 - **Length estimate.** When the content clearly exceeds the page target, the
   footer shows an estimated-length warning. The target is the chosen template's
   (one page for Compact); with Classic left as the default it is the writing
   policy's, and with no policy target nothing is shown. It is an estimate from
   line and word counts; open the file to confirm the real page count.
 - **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md
-  --template classic|compact` writes the same files (`md` is short for
+  --template classic|compact|modern` writes the same files (`md` is short for
   `markdown`, the default) and prints the estimated-length warning when it
   applies. Without `--template`, a run whose writing policy targets one page
   uses Compact and any other run uses Classic.
