@@ -9,7 +9,7 @@ export const hotspotLineLimits = Object.freeze({
   "packages/domain/src/index.ts": 4_490,
   "packages/schemas/src/index.ts": 4_376,
   "packages/storage/src/index.ts": 13_483,
-  "packages/storage/src/knowledge-store.ts": 5_348,
+  "packages/storage/src/knowledge-store.ts": 5_051,
 });
 
 function lineCount(content) {

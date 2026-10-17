@@ -11,7 +11,6 @@ import {
   opendir,
   readFile,
   realpath,
-  rename,
   rm,
   rmdir,
   writeFile,
@@ -53,12 +52,10 @@ import {
   type CandidateKnowledgeBaseInput,
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeBaseStoragePort,
-  type CandidateKnowledgeDeletionArtifactRecord,
   type CandidateKnowledgeDeletionAuditRecord,
   type CandidateKnowledgeDeletionCommitInput,
   type CandidateKnowledgeDeletionDatabaseSnapshot,
   type CandidateKnowledgeDeletionOperationInput,
-  type CandidateKnowledgeDeletionOperationRecord,
   type CandidateKnowledgeDirectoryBindingInput,
   type CandidateKnowledgeDirectoryBindingRecord,
   type CandidateKnowledgeDirectoryMemberMoveInput,
@@ -126,6 +123,8 @@ import {
   managedVersionPath,
   maximumManagedCandidateKnowledgeFileBytes,
   maximumManagedCandidateKnowledgeUrlResponseBytes,
+  privateDirectory,
+  removeEmptyDirectoryIfIdentityMatches,
   removeRegularFileIfIdentityMatches,
   requireDirectory,
   requiredManagedText,
@@ -156,7 +155,6 @@ export {
 };
 
 const manifestFilename = "draft-loop-knowledge.json";
-const privateDirectory = ".draft-loop";
 const databaseFilename = "knowledge.sqlite";
 const writerCoordinatorFilename = "writer-coordination.sqlite";
 const maximumManifestBytes = 64 * 1024;
@@ -730,27 +728,6 @@ async function requireDirectoryIdentity(path: string, identity: FileIdentity): P
     details.ino !== identity.ino
   ) {
     throw new StorageConflictError("Portable candidate knowledge restore state changed.");
-  }
-}
-
-async function removeEmptyDirectoryIfIdentityMatches(
-  path: string,
-  identity: FileIdentity,
-): Promise<boolean> {
-  try {
-    const details = await lstat(path);
-    if (
-      details.isSymbolicLink() ||
-      !details.isDirectory() ||
-      details.dev !== identity.dev ||
-      details.ino !== identity.ino
-    ) {
-      return false;
-    }
-    await rmdir(path);
-    return true;
-  } catch (error) {
-    return isMissing(error);
   }
 }
 
@@ -3057,7 +3034,6 @@ async function planCandidateKnowledgeRetention(
   });
 }
 
-const candidateKnowledgeDeletionStagingDirectory = ".deletion-staging";
 const candidateKnowledgeDeletionPlanSchemaVersion = 1 as const;
 
 type CandidateKnowledgeDeletionArtifactStatus = "verified" | "missing" | "integrity-mismatch";
@@ -3451,289 +3427,10 @@ function deletionOperationId(confirmationToken: string): string {
   return deletionDigest(`${confirmationToken}\u0000${randomUUID()}`);
 }
 
-function deletionStagingPath(root: string, operationId: string): string {
-  return join(root, privateDirectory, candidateKnowledgeDeletionStagingDirectory, operationId);
-}
-
-function deletionArtifactStagingPath(
-  stagingPath: string,
-  sourceId: string,
-  versionId: string,
-): string {
-  return join(stagingPath, `${managedPathSegment(sourceId)}-${managedPathSegment(versionId)}`);
-}
-
-function sameFileIdentity(first: FileIdentity, second: FileIdentity): boolean {
-  return first.dev === second.dev && first.ino === second.ino;
-}
-
-async function createCandidateKnowledgeDeletionStaging(
-  root: string,
-  operationId: string,
-): Promise<{ readonly path: string; readonly identity: FileIdentity }> {
-  const parent = join(root, privateDirectory, candidateKnowledgeDeletionStagingDirectory);
-  await mkdir(parent, { mode: 0o700, recursive: true });
-  await requireDirectory(parent, "Candidate knowledge deletion staging parent");
-  await chmodWhereSupported(parent, 0o700);
-  const path = deletionStagingPath(root, operationId);
-  try {
-    await mkdir(path, { mode: 0o700 });
-  } catch (error) {
-    if (errorCode(error) === "EEXIST") {
-      throw new StorageConflictError("Candidate knowledge deletion staging is already owned.");
-    }
-    throw error;
-  }
-  await chmodWhereSupported(path, 0o700);
-  const details = await lstat(path);
-  if (details.isSymbolicLink() || !details.isDirectory()) {
-    throw new StorageConflictError("Candidate knowledge deletion staging is not a real directory.");
-  }
-  return { path, identity: { dev: details.dev, ino: details.ino } };
-}
-
-async function verifyDeletionStagingDirectory(
-  path: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-): Promise<FileIdentity | null> {
-  try {
-    const details = await lstat(path);
-    if (details.isSymbolicLink() || !details.isDirectory()) {
-      throw new StorageConflictError(
-        "Candidate knowledge deletion staging is not a real directory.",
-      );
-    }
-    if (
-      operation.stagingDevice !== null &&
-      operation.stagingInode !== null &&
-      (details.dev !== operation.stagingDevice || details.ino !== operation.stagingInode)
-    ) {
-      throw new StorageConflictError("Candidate knowledge deletion staging ownership changed.");
-    }
-    return { dev: details.dev, ino: details.ino };
-  } catch (error) {
-    if (isMissing(error)) return null;
-    throw error;
-  }
-}
-
-async function verifyDeletionArtifactAt(
-  path: string,
-  artifact: CandidateKnowledgeDeletionArtifactRecord,
-): Promise<{
-  readonly status: "missing" | "verified" | "preserved";
-  readonly identity?: FileIdentity;
-}> {
-  let details: Awaited<ReturnType<typeof lstat>>;
-  try {
-    details = await lstat(path);
-  } catch (error) {
-    if (isMissing(error)) return { status: "missing" };
-    return { status: "preserved" };
-  }
-  if (details.isSymbolicLink() || !details.isFile()) return { status: "preserved" };
-  const identity = { dev: details.dev, ino: details.ino };
-  if (!sameFileIdentity(identity, { dev: artifact.device, ino: artifact.inode })) {
-    return { status: "preserved" };
-  }
-  try {
-    await verifyManagedFile(path, artifact);
-  } catch {
-    return { status: "preserved" };
-  }
-  return { status: "verified", identity };
-}
-
-async function moveCandidateKnowledgeDeletionArtifactsToStaging(
-  root: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-  stagingPath: string,
-): Promise<void> {
-  for (const artifact of operation.artifacts) {
-    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
-    const stagedPath = deletionArtifactStagingPath(
-      stagingPath,
-      artifact.sourceId,
-      artifact.versionId,
-    );
-    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
-    const original = await verifyDeletionArtifactAt(originalPath, artifact);
-    if (staged.status === "verified") {
-      if (original.status !== "missing") {
-        throw new StorageConflictError(
-          "Candidate knowledge deletion artifact exists in two locations.",
-        );
-      }
-      continue;
-    }
-    if (staged.status === "preserved") {
-      throw new StorageConflictError(
-        "Candidate knowledge deletion staging contains an unowned entry.",
-      );
-    }
-    if (original.status !== "verified") {
-      throw new StorageConflictError(
-        "Candidate knowledge deletion managed artifact changed before staging.",
-      );
-    }
-    try {
-      await rename(originalPath, stagedPath);
-    } catch (error) {
-      if (errorCode(error) === "EEXIST") {
-        throw new StorageConflictError(
-          "Candidate knowledge deletion artifact target already exists.",
-        );
-      }
-      throw error;
-    }
-    const moved = await verifyDeletionArtifactAt(stagedPath, artifact);
-    if (moved.status !== "verified") {
-      throw new StorageConflictError(
-        "Candidate knowledge deletion artifact changed while staging.",
-      );
-    }
-  }
-}
-
-async function verifyCandidateKnowledgeDeletionStagingArtifacts(
-  root: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-  stagingPath: string,
-): Promise<void> {
-  const stagingIdentity = await verifyDeletionStagingDirectory(stagingPath, operation);
-  if (stagingIdentity === null) {
-    throw new StorageConflictError("Candidate knowledge deletion staging disappeared.");
-  }
-  for (const artifact of operation.artifacts) {
-    const stagedPath = deletionArtifactStagingPath(
-      stagingPath,
-      artifact.sourceId,
-      artifact.versionId,
-    );
-    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
-    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
-    const original = await verifyDeletionArtifactAt(originalPath, artifact);
-    if (staged.status !== "verified" || original.status !== "missing") {
-      throw new StorageConflictError("Candidate knowledge deletion staging inventory changed.");
-    }
-  }
-}
-
-async function cleanupCandidateKnowledgeDeletionStaging(
-  root: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-): Promise<void> {
-  const stagingPath = deletionStagingPath(root, operation.operationId);
-  const identity = await verifyDeletionStagingDirectory(stagingPath, operation);
-  if (identity !== null) {
-    const entries = await readDirectoryEntriesSafely(stagingPath);
-    const expected = new Map(
-      operation.artifacts.map((artifact) => [
-        `${managedPathSegment(artifact.sourceId)}-${managedPathSegment(artifact.versionId)}`,
-        artifact,
-      ]),
-    );
-    for (const entry of entries) {
-      const artifact = expected.get(entry.name);
-      if (artifact === undefined || !entry.isFile()) {
-        throw new StorageConflictError(
-          "Candidate knowledge deletion staging contains an unowned entry.",
-        );
-      }
-      const path = join(stagingPath, entry.name);
-      const observed = await verifyDeletionArtifactAt(path, artifact);
-      if (observed.status !== "verified" || observed.identity === undefined) {
-        throw new StorageConflictError(
-          "Candidate knowledge deletion staging artifact is not owned.",
-        );
-      }
-      await removeRegularFileIfIdentityMatches(path, observed.identity);
-    }
-    await removeEmptyDirectoryIfIdentityMatches(stagingPath, identity);
-  }
-  await removeCandidateKnowledgeDeletionSourceDirectories(root, operation);
-}
-
-async function removeCandidateKnowledgeDeletionSourceDirectories(
-  root: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-): Promise<void> {
-  const sourceIds = [...new Set(operation.artifacts.map((artifact) => artifact.sourceId))];
-  for (const sourceId of sourceIds) {
-    const path = join(root, sourcesDirectory, managedPathSegment(sourceId));
-    let details: Awaited<ReturnType<typeof lstat>>;
-    try {
-      details = await lstat(path);
-    } catch (error) {
-      if (isMissing(error)) continue;
-      throw error;
-    }
-    if (details.isSymbolicLink() || !details.isDirectory()) continue;
-    const entries = await readDirectoryEntriesSafely(path);
-    if (entries.length > 0) continue;
-    // The helper re-checks lstat identity immediately before rmdir. A race
-    // that adds an unknown entry therefore leaves the directory untouched.
-    await removeEmptyDirectoryIfIdentityMatches(path, { dev: details.dev, ino: details.ino });
-  }
-}
-
-async function restoreCandidateKnowledgeDeletionArtifacts(
-  root: string,
-  operation: CandidateKnowledgeDeletionOperationRecord,
-): Promise<boolean> {
-  const stagingPath = deletionStagingPath(root, operation.operationId);
-  const identity = await verifyDeletionStagingDirectory(stagingPath, operation);
-  if (identity === null) return true;
-  let restored = true;
-  for (const artifact of operation.artifacts) {
-    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
-    const stagedPath = deletionArtifactStagingPath(
-      stagingPath,
-      artifact.sourceId,
-      artifact.versionId,
-    );
-    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
-    const original = await verifyDeletionArtifactAt(originalPath, artifact);
-    if (staged.status === "missing") {
-      if (original.status === "verified") continue;
-      restored = false;
-      continue;
-    }
-    if (staged.status !== "verified" || original.status !== "missing") {
-      restored = false;
-      continue;
-    }
-    try {
-      await rename(stagedPath, originalPath);
-    } catch {
-      restored = false;
-    }
-  }
-  if (!restored) return false;
-  await removeEmptyDirectoryIfIdentityMatches(stagingPath, identity);
-  return true;
-}
-
-async function readDirectoryEntriesSafely(path: string): Promise<readonly Dirent[]> {
-  const directory = await opendir(path);
-  const entries: Dirent[] = [];
-  try {
-    while (true) {
-      const entry = await directory.read();
-      if (entry === null) break;
-      entries.push(entry);
-    }
-  } finally {
-    await directory.close().catch((error: unknown) => {
-      if (errorCode(error) !== "ERR_DIR_CLOSED") throw error;
-    });
-  }
-  return entries;
-}
-
 async function recoverIncompleteCandidateKnowledgeDeletions(
   storage: SqliteStorage,
   root: string,
+  managedFiles: ManagedFileStorePort,
 ): Promise<void> {
   const lease = currentCandidateKnowledgeWriterLease(root);
   const operations = await storage.listCandidateKnowledgeDeletionOperations();
@@ -3742,7 +3439,7 @@ async function recoverIncompleteCandidateKnowledgeDeletions(
     lease.renew();
     if (operation.phase === "completed") continue;
     if (operation.phase === "committed") {
-      await cleanupCandidateKnowledgeDeletionStaging(root, operation);
+      await managedFiles.commitDeletion(operation);
       lease.assertCurrent();
       await storage.completeCandidateKnowledgeDeletion(
         operation.operationId,
@@ -3753,7 +3450,7 @@ async function recoverIncompleteCandidateKnowledgeDeletions(
       continue;
     }
     if (operation.phase === "aborted") {
-      const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+      const restored = await managedFiles.restoreDeletion(operation);
       if (!restored) {
         throw new StorageConflictError(
           "Candidate knowledge deletion recovery could not restore its original graph.",
@@ -3761,7 +3458,7 @@ async function recoverIncompleteCandidateKnowledgeDeletions(
       }
       continue;
     }
-    const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+    const restored = await managedFiles.restoreDeletion(operation);
     if (!restored) {
       throw new StorageConflictError(
         "Candidate knowledge deletion recovery could not restore its original graph.",
@@ -4582,6 +4279,7 @@ async function deleteCandidateKnowledgeBase(
   storage: SqliteStorage,
   descriptor: CandidateKnowledgeStoreDescriptor,
   root: string,
+  managedFiles: ManagedFileStorePort,
   knowledgeBaseIdInput: string,
   confirmationTokenInput: string,
   options: CandidateKnowledgeDeletionOptions = {},
@@ -4594,7 +4292,7 @@ async function deleteCandidateKnowledgeBase(
   // A retry may run in the same process after an injected interruption. Run
   // the same journal recovery used during store-open so the retry observes a
   // stable graph and can safely reuse an aborted operation.
-  await recoverIncompleteCandidateKnowledgeDeletions(storage, root);
+  await recoverIncompleteCandidateKnowledgeDeletions(storage, root, managedFiles);
   const existingAudit = await storage.getCandidateKnowledgeDeletionAuditByToken(confirmationToken);
   if (existingAudit !== undefined) {
     if (existingAudit.knowledgeBaseId !== knowledgeBaseId) {
@@ -4665,7 +4363,7 @@ async function deleteCandidateKnowledgeBase(
   let stagingCreated = false;
   try {
     await options.beforeStaging?.();
-    const staging = await createCandidateKnowledgeDeletionStaging(root, operationId);
+    const staging = await managedFiles.createDeletionStaging(operationId);
     stagingCreated = true;
     await storage.stageCandidateKnowledgeDeletion(
       operationId,
@@ -4678,10 +4376,10 @@ async function deleteCandidateKnowledgeBase(
     if (stagedOperation === undefined) {
       throw new StorageConflictError("Candidate knowledge deletion operation disappeared.");
     }
-    await moveCandidateKnowledgeDeletionArtifactsToStaging(root, stagedOperation, staging.path);
+    await managedFiles.stageDeletion(stagedOperation);
     await interruptCandidateKnowledgeDeletionAt(options, "staging");
     await options.beforeCommit?.();
-    await verifyCandidateKnowledgeDeletionStagingArtifacts(root, stagedOperation, staging.path);
+    await managedFiles.verifyDeletionStaged(stagedOperation);
     await interruptCandidateKnowledgeDeletionAt(options, "before-commit");
     const commitInput: CandidateKnowledgeDeletionCommitInput = {
       operationId,
@@ -4703,7 +4401,7 @@ async function deleteCandidateKnowledgeBase(
     if (committedOperation === undefined) {
       throw new StorageConflictError("Candidate knowledge deletion operation disappeared.");
     }
-    await cleanupCandidateKnowledgeDeletionStaging(root, committedOperation);
+    await managedFiles.commitDeletion(committedOperation);
     await options.afterStagingCleanup?.();
     await interruptCandidateKnowledgeDeletionAt(options, "after-staging-cleanup");
     const audit = await storage.completeCandidateKnowledgeDeletion(
@@ -4723,7 +4421,7 @@ async function deleteCandidateKnowledgeBase(
       operation.phase !== "committed" &&
       operation.phase !== "completed"
     ) {
-      const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+      const restored = await managedFiles.restoreDeletion(operation);
       if (restored) {
         await storage.abortCandidateKnowledgeDeletion(operationId);
       } else {
@@ -4740,7 +4438,7 @@ async function deleteCandidateKnowledgeBase(
           (candidate) => candidate.operationId === operationId,
         );
         if (afterAbort !== undefined && afterAbort.phase === "aborted") {
-          await restoreCandidateKnowledgeDeletionArtifacts(root, afterAbort);
+          await managedFiles.restoreDeletion(afterAbort);
         }
       } catch {
         // Preserve the original failure and let deterministic open recovery retry.
@@ -5104,6 +4802,7 @@ function createHandle(
           storage,
           descriptor,
           root,
+          managedFiles,
           knowledgeBaseId,
           confirmationToken,
           options,
@@ -5247,7 +4946,11 @@ export async function openCandidateKnowledgeStore(
         storage = openSqliteStorage(databasePath);
         await validateOpenedStore(storage, descriptor);
         const report = await recoverIncompleteManagedCandidateKnowledgeWrites(storage, root);
-        await recoverIncompleteCandidateKnowledgeDeletions(storage, root);
+        await recoverIncompleteCandidateKnowledgeDeletions(
+          storage,
+          root,
+          createFilesystemManagedFileStore(root),
+        );
         await validateOpenedStore(storage, descriptor);
         await validateManagedCandidateKnowledgeFiles(storage, root);
         return report;
