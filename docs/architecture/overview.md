@@ -80,9 +80,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `pnpm test`.
 - `packages/storage-postgres` is the hosted implementation. It joins the suite
   one contract group at a time. It reuses the audit-trail hashing from
-  `@draft-loop/storage/audit-trail` and the run-record validation, checksums
-  and audit events from `@draft-loop/storage/history-records`, so both
-  implementations accept, hash and audit records the same way.
+  `@draft-loop/storage/audit-trail`, the run-record rules from
+  `@draft-loop/storage/history-records`, and the versioned-record chain rules
+  from `@draft-loop/storage/versioned-records`. Both implementations therefore
+  accept, hash, chain and audit records the same way, and differ only in their
+  queries.
   `pnpm test:postgres` runs it against the server named by
   `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs it
   against Postgres 16 with `pgvector`.

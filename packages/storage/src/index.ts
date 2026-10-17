@@ -39,9 +39,7 @@ import {
   candidateKnowledgeRetrievalScopeSchema,
   candidateKnowledgeRetrievalSourceVersionReferenceSchema,
   candidateKnowledgeRetrievalTraceSchema,
-  canonicalCandidateProfileSchema,
   type OpportunityBrief,
-  opportunityBriefSchema,
   type WritingPolicyInput,
 } from "@draft-loop/schemas";
 import * as applicationStore from "./application-store.js";
@@ -159,7 +157,30 @@ import {
   runFromRow,
   runSnapshotFromRow,
 } from "./history-record-rows.js";
-import { validatedWritingPolicy } from "./writing-policy-validation.js";
+import {
+  canonicalCandidateProfileAuditEvent,
+  canonicalCandidateProfileLeaf,
+  canonicalCandidateProfileVersionFromRow,
+  canonicalCandidateProfileVersionSelect,
+  checkCanonicalCandidateProfileAppend,
+  checkCanonicalCandidateProfileHistory,
+  checkExistingWritingPolicyVersion,
+  checkOpportunityBriefAppend,
+  checkWritingPolicyParentTime,
+  now,
+  opportunityBriefAuditEvent,
+  opportunityBriefFromRow,
+  prepareWritingPolicyVersion,
+  requireSha256,
+  requireTimestamp,
+  resolveWritingPolicyPrior,
+  validatedCanonicalCandidateProfile,
+  validatedOpportunityBrief,
+  writingPolicyAuditEvent,
+  writingPolicyVersionFromRow,
+  writingPolicyVersionRecord,
+  writingPolicyVersionSelect,
+} from "./versioned-record-rules.js";
 
 export type {
   CandidateKnowledgeRetentionClass,
@@ -2235,33 +2256,6 @@ const migrations: readonly Migration[] = [
   sourceEvidenceKindOverridesMigration,
   originTrace.retrievalOriginTraceMigration,
 ];
-function now(): string {
-  return new Date().toISOString();
-}
-
-function validatedOpportunityBrief(value: unknown): OpportunityBrief {
-  const parsed = opportunityBriefSchema.safeParse(value);
-  if (!parsed.success) {
-    throw new StorageValidationError("Opportunity brief data is invalid.");
-  }
-  return parsed.data;
-}
-
-function validatedCanonicalCandidateProfile(value: unknown): CanonicalCandidateProfile {
-  try {
-    const parsed = canonicalCandidateProfileSchema.safeParse(value);
-    if (!parsed.success) {
-      throw new StorageValidationError("Canonical candidate profile data is invalid.");
-    }
-    return parsed.data;
-  } catch (error) {
-    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
-      throw error;
-    }
-    throw new StorageValidationError("Canonical candidate profile data is invalid.");
-  }
-}
-
 const candidateKnowledgeLexicalIndexRebuildKeys = new Set([
   "scope",
   "index",
@@ -2537,10 +2531,6 @@ function validatedCandidateKnowledgeLexicalChunks(
   });
 }
 
-function writingPolicyVersionSelect(): string {
-  return "SELECT workspace_id, policy_checksum, version, schema_version, created_at, prior_checksum, payload_json, payload_checksum FROM writing_policy_versions";
-}
-
 function writingPolicyVersionLeafSelect(): string {
   return `SELECT candidate.workspace_id,
                  candidate.policy_checksum,
@@ -2578,10 +2568,6 @@ function currentWritingPolicyLeaf(
   return undefined;
 }
 
-function canonicalCandidateProfileVersionSelect(): string {
-  return "SELECT workspace_id, profile_id, version, schema_version, parent_version, status, created_at, updated_at, reviewed_at, payload_json, payload_checksum FROM canonical_candidate_profile_versions";
-}
-
 function canonicalCandidateProfileHistory(
   database: SqliteHandle,
   workspaceId: string,
@@ -2593,61 +2579,7 @@ function canonicalCandidateProfileHistory(
     )
     .all(workspaceId, profileId)
     .map((row) => canonicalCandidateProfileVersionFromRow(row));
-  if (records.length === 0) return [];
-
-  const children = new Set<number>();
-  records.forEach((record, index) => {
-    if (record.workspaceId !== workspaceId || record.profile.id !== profileId) {
-      throw new StorageValidationError(
-        "The stored canonical candidate profile identity is inconsistent.",
-      );
-    }
-    if (record.profile.version !== index + 1) {
-      throw new StorageConflictError(
-        "The canonical candidate profile history is not a contiguous append-only chain.",
-      );
-    }
-    const expectedParent = index === 0 ? null : index;
-    if (record.profile.parentVersion !== expectedParent) {
-      throw new StorageConflictError(
-        "The canonical candidate profile history has an invalid parent version.",
-      );
-    }
-    if (index > 0) {
-      const parent = records[index - 1];
-      if (parent === undefined) {
-        throw new StorageConflictError(
-          "The canonical candidate profile history has an invalid parent version.",
-        );
-      }
-      if (Date.parse(record.profile.createdAt) < Date.parse(parent.profile.createdAt)) {
-        throw new StorageConflictError(
-          "The canonical candidate profile timestamp precedes its parent version.",
-        );
-      }
-      if (Date.parse(record.profile.updatedAt) < Date.parse(parent.profile.updatedAt)) {
-        throw new StorageConflictError(
-          "The canonical candidate profile timestamp precedes its parent version.",
-        );
-      }
-      children.add(parent.profile.version);
-    }
-  });
-
-  const leaves = records.filter((record) => !children.has(record.profile.version));
-  if (leaves.length !== 1) {
-    throw new StorageConflictError(
-      "The canonical candidate profile history has multiple current leaves.",
-    );
-  }
-  return records;
-}
-
-function canonicalCandidateProfileLeaf(
-  records: readonly CanonicalCandidateProfileVersionRecord[],
-): CanonicalCandidateProfileVersionRecord | undefined {
-  if (records.length === 0) return undefined;
-  return records[records.length - 1];
+  return checkCanonicalCandidateProfileHistory(records, workspaceId, profileId);
 }
 
 function requireAbsolutePath(value: string, field: string): string {
@@ -2711,17 +2643,6 @@ function directoryMemberOriginRelation(
   return memberRelativePathHashes.has(originRelativePathHash) ? "other-member" : "unmatched";
 }
 
-function requireTimestamp(value: string, field: string): string {
-  const normalized = requireNonEmpty(value, field);
-  if (
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(normalized) ||
-    Number.isNaN(Date.parse(normalized))
-  ) {
-    throw new StorageValidationError(`${field} must be a valid ISO timestamp`);
-  }
-  return normalized;
-}
-
 function requireRetentionTimestampNotFuture(value: string, field: string): string {
   const normalized = requireTimestamp(value, field);
   if (Date.parse(normalized) > Date.now()) {
@@ -2744,14 +2665,6 @@ function requirePositiveInteger(value: number, field: string): number {
     throw new StorageValidationError(`${field} must be a non-negative integer`);
   }
   return value;
-}
-
-function requireSha256(value: string, field: string): string {
-  const normalized = requireNonEmpty(value, field).trim();
-  if (!/^[0-9a-f]{64}$/.test(normalized)) {
-    throw new StorageValidationError(`${field} must be a lowercase SHA-256 value`);
-  }
-  return normalized;
 }
 
 function requireBoundedDeletionCount(value: number, field: string): number {
@@ -9226,27 +9139,18 @@ export class SqliteStorage
         return;
       }
 
-      if (normalizedBrief.version > 1) {
-        const parentRow = this.database
-          .prepare(
-            "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? AND version = ?",
-          )
-          .get(normalizedWorkspaceId, normalizedBrief.id, normalizedBrief.version - 1);
-        if (parentRow === undefined) {
-          throw new StorageConflictError("The opportunity brief parent version is missing.");
-        }
-        const parent = opportunityBriefFromRow(parentRow).brief;
-        if (Date.parse(normalizedBrief.createdAt) < Date.parse(parent.createdAt)) {
-          throw new StorageConflictError(
-            "The opportunity brief timestamp precedes its parent version.",
-          );
-        }
-        if (parent.status === "reviewed" && normalizedBrief.status === "reviewed") {
-          throw new StorageConflictError(
-            "A reviewed opportunity brief cannot transition directly to reviewed.",
-          );
-        }
-      }
+      const parentRow =
+        normalizedBrief.version > 1
+          ? this.database
+              .prepare(
+                "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? AND version = ?",
+              )
+              .get(normalizedWorkspaceId, normalizedBrief.id, normalizedBrief.version - 1)
+          : undefined;
+      checkOpportunityBriefAppend(
+        normalizedBrief,
+        parentRow === undefined ? undefined : opportunityBriefFromRow(parentRow).brief,
+      );
 
       this.database
         .prepare(
@@ -9264,29 +9168,12 @@ export class SqliteStorage
           serialize(payload),
           checksumValue,
         );
-      const opaqueEntityId = checksum(`${normalizedWorkspaceId}\u0000${normalizedBrief.id}`).slice(
-        0,
-        32,
-      );
-      this.insertAuditEvent({
-        id: `opportunity-brief-version:${opaqueEntityId}:${normalizedBrief.version}:${checksumValue}`,
-        workspaceId: normalizedWorkspaceId,
-        eventType: "opportunity-brief-version.appended",
-        entityType: "opportunity-brief",
-        entityId: opaqueEntityId,
-        payload: {
-          checksum: checksumValue,
-          schemaVersion: normalizedBrief.schemaVersion,
-          status: normalizedBrief.status,
-          version: normalizedBrief.version,
-        },
-        createdAt: normalizedBrief.createdAt,
-      });
       result = {
         workspaceId: normalizedWorkspaceId,
         brief: normalizedBrief,
         checksum: checksumValue,
       };
+      this.insertAuditEvent(opportunityBriefAuditEvent(result));
     })();
     return result as OpportunityBriefVersionRecord;
   }
@@ -9395,41 +9282,10 @@ export class SqliteStorage
         normalizedWorkspaceId,
         normalizedProfile.id,
       );
-      const latest = canonicalCandidateProfileLeaf(history);
-      if (normalizedProfile.version === 1) {
-        if (latest !== undefined) {
-          throw new StorageConflictError(
-            "The canonical candidate profile version must append after the current leaf.",
-          );
-        }
-        if (normalizedProfile.parentVersion !== null) {
-          throw new StorageValidationError(
-            "The canonical candidate profile root version cannot have a parent.",
-          );
-        }
-      } else {
-        if (latest === undefined) {
-          throw new StorageConflictError(
-            "The canonical candidate profile parent version is missing.",
-          );
-        }
-        if (
-          normalizedProfile.version !== latest.profile.version + 1 ||
-          normalizedProfile.parentVersion !== latest.profile.version
-        ) {
-          throw new StorageConflictError(
-            "The canonical candidate profile version must append after the current leaf.",
-          );
-        }
-        if (
-          Date.parse(normalizedProfile.createdAt) < Date.parse(latest.profile.createdAt) ||
-          Date.parse(normalizedProfile.updatedAt) < Date.parse(latest.profile.updatedAt)
-        ) {
-          throw new StorageConflictError(
-            "The canonical candidate profile timestamp precedes its parent version.",
-          );
-        }
-      }
+      checkCanonicalCandidateProfileAppend(
+        normalizedProfile,
+        canonicalCandidateProfileLeaf(history),
+      );
 
       this.database
         .prepare(
@@ -9449,29 +9305,12 @@ export class SqliteStorage
           checksumValue,
         );
 
-      const opaqueEntityId = checksum(
-        `${normalizedWorkspaceId}\u0000${normalizedProfile.id}`,
-      ).slice(0, 32);
-      this.insertAuditEvent({
-        id: `canonical-candidate-profile-version:${opaqueEntityId}:${normalizedProfile.version}:${checksumValue}`,
-        workspaceId: normalizedWorkspaceId,
-        eventType: "canonical-candidate-profile-version.appended",
-        entityType: "canonical-candidate-profile",
-        entityId: opaqueEntityId,
-        payload: {
-          checksum: checksumValue,
-          schemaVersion: normalizedProfile.schemaVersion,
-          status: normalizedProfile.status,
-          version: normalizedProfile.version,
-          parentVersion: normalizedProfile.parentVersion,
-        },
-        createdAt: normalizedProfile.createdAt,
-      });
       result = {
         workspaceId: normalizedWorkspaceId,
         profile: normalizedProfile,
         checksum: checksumValue,
       };
+      this.insertAuditEvent(canonicalCandidateProfileAuditEvent(result));
     })();
     return result as CanonicalCandidateProfileVersionRecord;
   }
@@ -9541,33 +9380,23 @@ export class SqliteStorage
     options: WritingPolicyVersionSaveOptions = {},
   ): Promise<WritingPolicyVersionRecord> {
     this.ensureOpen();
-    const inputOptions =
+    const prepared = prepareWritingPolicyVersion(
       typeof workspaceOrInput === "string"
-        ? options
+        ? {
+            workspaceId: workspaceOrInput,
+            policy: policyInput,
+            createdAt: options.createdAt,
+            priorChecksum: options.priorChecksum,
+          }
         : {
+            workspaceId: workspaceOrInput.workspaceId,
+            policy: workspaceOrInput.policy,
             createdAt: workspaceOrInput.createdAt,
             priorChecksum: workspaceOrInput.priorChecksum,
-          };
-    const workspaceId = requireNonEmpty(
-      typeof workspaceOrInput === "string" ? workspaceOrInput : workspaceOrInput.workspaceId,
-      "writing policy workspaceId",
-    ).trim();
-    const policy = typeof workspaceOrInput === "string" ? policyInput : workspaceOrInput.policy;
-    if (policy === undefined) {
-      throw new StorageValidationError("A writing policy is required.");
-    }
-    const normalizedPolicy = validatedWritingPolicy(policy);
-    const createdAt = requireTimestamp(inputOptions.createdAt ?? now(), "writing policy createdAt");
-    const requestedPrior =
-      inputOptions.priorChecksum === undefined
-        ? undefined
-        : inputOptions.priorChecksum === null
-          ? null
-          : requireSha256(inputOptions.priorChecksum, "writing policy priorChecksum");
-    const payload = recordToJson(normalizedPolicy);
-    const payloadJson = serialize(payload);
-    const payloadChecksumValue = payloadChecksum(payload);
-    const policyChecksum = normalizedPolicy.checksum;
+          },
+    );
+    const { workspaceId } = prepared;
+    const normalizedPolicy = prepared.policy;
     let result: WritingPolicyVersionRecord | undefined;
 
     this.database.transaction(() => {
@@ -9582,23 +9411,9 @@ export class SqliteStorage
 
       const existing = this.database
         .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND policy_checksum = ?`)
-        .get(workspaceId, policyChecksum);
+        .get(workspaceId, normalizedPolicy.checksum);
       if (existing !== undefined) {
-        const existingRecord = writingPolicyVersionFromRow(existing);
-        const priorMatches =
-          requestedPrior === undefined || existingRecord.priorChecksum === requestedPrior;
-        const timestampMatches =
-          inputOptions.createdAt === undefined || existingRecord.createdAt === createdAt;
-        if (
-          existingRecord.policy.version !== normalizedPolicy.version ||
-          existingRecord.policy.schemaVersion !== normalizedPolicy.schemaVersion ||
-          existingRecord.payloadChecksum !== payloadChecksumValue ||
-          !priorMatches ||
-          !timestampMatches
-        ) {
-          throw new StorageConflictError("The writing policy version is immutable.");
-        }
-        result = existingRecord;
+        result = checkExistingWritingPolicyVersion(writingPolicyVersionFromRow(existing), prepared);
         return;
       }
 
@@ -9609,21 +9424,10 @@ export class SqliteStorage
         throw new StorageConflictError("The writing policy display version is already bound.");
       }
 
-      const inferredPrior = latest === undefined ? null : rowString(latest, "policy_checksum");
-      const priorChecksum = requestedPrior === undefined ? inferredPrior : requestedPrior;
-      if (latest !== undefined && priorChecksum === null) {
-        throw new StorageConflictError("The writing policy parent version is required.");
-      }
-      if (latest !== undefined && priorChecksum !== inferredPrior) {
-        throw new StorageConflictError(
-          "The writing policy parent version must be the current leaf.",
-        );
-      }
-      if (priorChecksum === policyChecksum) {
-        throw new StorageConflictError("A writing policy version cannot link to itself.");
-      }
-
-      let parentCreatedAt: string | undefined;
+      const priorChecksum = resolveWritingPolicyPrior(
+        prepared,
+        latest === undefined ? undefined : rowString(latest, "policy_checksum"),
+      );
       if (priorChecksum !== null) {
         const parent = this.database
           .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND policy_checksum = ?`)
@@ -9631,58 +9435,25 @@ export class SqliteStorage
         if (parent === undefined) {
           throw new StorageConflictError("The writing policy parent version is missing.");
         }
-        parentCreatedAt = requireTimestamp(
-          rowString(parent, "created_at"),
-          "writing policy parent createdAt",
-        );
-        if (Date.parse(createdAt) <= Date.parse(parentCreatedAt)) {
-          throw new StorageConflictError(
-            "The writing policy timestamp must be later than its parent version.",
-          );
-        }
+        checkWritingPolicyParentTime(prepared.createdAt, rowString(parent, "created_at"));
       }
 
+      result = writingPolicyVersionRecord(prepared, priorChecksum);
       this.database
         .prepare(
           "INSERT INTO writing_policy_versions (workspace_id, policy_checksum, version, schema_version, created_at, prior_checksum, payload_json, payload_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           workspaceId,
-          policyChecksum,
-          normalizedPolicy.version,
+          result.checksum,
+          result.version,
           normalizedPolicy.schemaVersion,
-          createdAt,
+          result.createdAt,
           priorChecksum,
-          payloadJson,
-          payloadChecksumValue,
+          prepared.payloadJson,
+          result.payloadChecksum,
         );
-
-      const opaqueEntityId = checksum(`${workspaceId}\u0000${policyChecksum}`).slice(0, 32);
-      this.insertAuditEvent({
-        id: `writing-policy-version:${opaqueEntityId}:${policyChecksum}`,
-        workspaceId,
-        eventType: "writing-policy-version.appended",
-        entityType: "writing-policy",
-        entityId: opaqueEntityId,
-        payload: {
-          checksum: policyChecksum,
-          version: normalizedPolicy.version,
-          schemaVersion: normalizedPolicy.schemaVersion ?? 1,
-          priorChecksum,
-          payloadChecksum: payloadChecksumValue,
-        },
-        createdAt,
-      });
-      result = {
-        workspaceId,
-        policy: normalizedPolicy,
-        checksum: policyChecksum,
-        version: normalizedPolicy.version,
-        schemaVersion: normalizedPolicy.schemaVersion ?? 1,
-        createdAt,
-        priorChecksum,
-        payloadChecksum: payloadChecksumValue,
-      };
+      this.insertAuditEvent(writingPolicyAuditEvent(result));
     })();
     return result as WritingPolicyVersionRecord;
   }
@@ -12998,147 +12769,6 @@ function contextFromRow(row: Record<string, unknown>): ContextSnapshotRecord {
     payload: parse(rowString(row, "payload_json")),
     checksum: rowString(row, "payload_checksum"),
   };
-}
-
-function opportunityBriefFromRow(row: Record<string, unknown>): OpportunityBriefVersionRecord {
-  try {
-    const payload = parse(rowString(row, "payload_json"));
-    const checksumValue = rowString(row, "payload_checksum");
-    if (payloadChecksum(payload) !== checksumValue) {
-      throw new StorageValidationError("The stored opportunity brief checksum is invalid.");
-    }
-    const brief = validatedOpportunityBrief(payload);
-    if (
-      brief.id !== rowString(row, "brief_id") ||
-      brief.version !== rowNumber(row, "version") ||
-      brief.schemaVersion !== rowNumber(row, "schema_version") ||
-      brief.priorVersion !== rowNullableNumber(row, "prior_version") ||
-      brief.status !== rowString(row, "status") ||
-      brief.createdAt !== rowString(row, "created_at") ||
-      brief.reviewedAt !== rowNullableString(row, "reviewed_at")
-    ) {
-      throw new StorageValidationError("The stored opportunity brief metadata is inconsistent.");
-    }
-    return {
-      workspaceId: rowString(row, "workspace_id"),
-      brief,
-      checksum: checksumValue,
-    };
-  } catch (error) {
-    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
-      throw error;
-    }
-    throw new StorageValidationError("The stored opportunity brief could not be read.");
-  }
-}
-
-function canonicalCandidateProfileVersionFromRow(
-  row: Record<string, unknown>,
-): CanonicalCandidateProfileVersionRecord {
-  try {
-    const payloadJson = rowString(row, "payload_json");
-    const payload = parse(payloadJson);
-    if (serialize(payload) !== payloadJson) {
-      throw new StorageValidationError(
-        "The stored canonical candidate profile payload is not canonical.",
-      );
-    }
-    const checksumValue = rowString(row, "payload_checksum");
-    if (!/^[a-f0-9]{64}$/u.test(checksumValue) || payloadChecksum(payload) !== checksumValue) {
-      throw new StorageValidationError(
-        "The stored canonical candidate profile checksum is invalid.",
-      );
-    }
-    const profile = validatedCanonicalCandidateProfile(payload);
-    const workspaceId = requireNonEmpty(
-      rowString(row, "workspace_id"),
-      "canonical candidate profile workspaceId",
-    ).trim();
-    const profileId = requireNonEmpty(
-      rowString(row, "profile_id"),
-      "canonical candidate profileId",
-    ).trim();
-    const version = rowNumber(row, "version");
-    const schemaVersion = rowNumber(row, "schema_version");
-    const parentVersion = rowNullableNumber(row, "parent_version");
-    const status = rowString(row, "status");
-    const createdAt = requireTimestamp(
-      rowString(row, "created_at"),
-      "canonical candidate profile createdAt",
-    );
-    const updatedAt = requireTimestamp(
-      rowString(row, "updated_at"),
-      "canonical candidate profile updatedAt",
-    );
-    const reviewedAt = rowNullableString(row, "reviewed_at");
-    if (
-      profile.id !== profileId ||
-      profile.version !== version ||
-      profile.schemaVersion !== schemaVersion ||
-      profile.parentVersion !== parentVersion ||
-      profile.status !== status ||
-      profile.createdAt !== createdAt ||
-      profile.updatedAt !== updatedAt ||
-      (profile.reviewedAt ?? null) !== reviewedAt
-    ) {
-      throw new StorageValidationError(
-        "The stored canonical candidate profile metadata is inconsistent.",
-      );
-    }
-    return {
-      workspaceId,
-      profile,
-      checksum: checksumValue,
-    };
-  } catch (error) {
-    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
-      throw error;
-    }
-    throw new StorageValidationError("The stored canonical candidate profile could not be read.");
-  }
-}
-
-function writingPolicyVersionFromRow(row: Record<string, unknown>): WritingPolicyVersionRecord {
-  try {
-    const payloadJson = rowString(row, "payload_json");
-    const payload = parse(payloadJson);
-    if (serialize(payload) !== payloadJson) {
-      throw new StorageValidationError("The stored writing policy payload is not canonical.");
-    }
-    const payloadChecksumValue = rowString(row, "payload_checksum");
-    if (payloadChecksum(payload) !== payloadChecksumValue) {
-      throw new StorageValidationError("The stored writing policy payload checksum is invalid.");
-    }
-    const policy = validatedWritingPolicy(payload);
-    const policyChecksum = rowString(row, "policy_checksum");
-    const version = rowString(row, "version");
-    const schemaVersion = rowNumber(row, "schema_version");
-    const createdAt = requireTimestamp(rowString(row, "created_at"), "writing policy createdAt");
-    const priorChecksum = rowNullableString(row, "prior_checksum");
-    if (
-      policy.checksum !== policyChecksum ||
-      policy.version !== version ||
-      policy.schemaVersion !== schemaVersion ||
-      (priorChecksum !== null && !/^[a-f0-9]{64}$/u.test(priorChecksum))
-    ) {
-      throw new StorageValidationError("The stored writing policy metadata is inconsistent.");
-    }
-    return {
-      workspaceId: rowString(row, "workspace_id"),
-      policy,
-      checksum: policyChecksum,
-      version,
-      schemaVersion,
-      createdAt,
-      priorChecksum,
-      payloadChecksum: payloadChecksumValue,
-    };
-  } catch (error) {
-    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
-      throw error;
-    }
-    throw new StorageValidationError("The stored writing policy could not be read.");
-  }
 }
 
 function evidenceChunkFromRow(row: Record<string, unknown>): EvidenceChunkRecord {
