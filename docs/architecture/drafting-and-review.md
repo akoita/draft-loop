@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v13`, which states and sends a
+New runs record author template `cli-author-v14`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v13 retain 32,768.
+v4 to v14 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -735,8 +735,8 @@ never overrides grounding, required sections or the writing policy. Resumed v11
 and earlier runs keep their exact prompt. Deterministic validation reports a
 bullet that opens with a lowercase letter (other than a known name such as `iOS`
 or `npm`) or ends on a dangling connector as an `editorial-fragment` warning, so
-the critic and readiness steps see it. New runs use v13 (below), which supersedes
-v12's bullet guidance; the fragment check still applies.
+the critic and readiness steps see it. New runs use v14 (below), whose v13 base
+supersedes v12's bullet guidance; the fragment check still applies.
 
 ### Context paragraphs and labelled lines (#1341)
 
@@ -757,6 +757,24 @@ adds a `dense-bullet-series` quality warning, one per run of consecutive bullets
 anchored to its first block. It fires for more than 4 bullets in a row, a section
 of 4 or more one-line bullets, and adjacent bullets where either has under about
 30 words.
+
+### Writing to the page target (#1364)
+
+Author `cli-author-v14` is v13 plus length guidance keyed on the writing policy's
+`Page target`. A two-page target, or none, keeps v13's counts. A one-page CV is a
+shorter text, not the same text printed smaller:
+
+- **Summary:** 2 to 3 lines.
+- **Bullets:** only for the 2 or 3 roles or projects most relevant to the job,
+  at most 3 each and about 6 to 9 in total, each about 2 to 3 lines.
+- **Other roles:** the role line and a one-line context paragraph. Every role
+  keeps its title, employer and dates.
+- **Labelled paragraphs:** 2 or 3 in Core areas, one or two lines each for
+  Skills, Education and Certifications.
+
+Resumed v13 and earlier runs keep their exact prompt. When an export names no
+template, a one-page run is drawn with Compact and any other with Classic, so the
+layout matches the length the author wrote to.
 
 ### Stop and pause on findings (#1113)
 
