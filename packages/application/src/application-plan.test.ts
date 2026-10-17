@@ -10,6 +10,7 @@ import {
   createAuthorAdjudicationPrompt,
 } from "./author-adjudication.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
+import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
@@ -143,6 +144,21 @@ describe("author prompt cli-author-v13", () => {
     expect(v13.systemPrompt).not.toContain(fullerBulletInstructions);
     expect(v12.systemPrompt).toContain(fullerBulletInstructions);
     expect(v12.systemPrompt).not.toContain("context paragraph block");
+  });
+});
+
+describe("author prompt cli-author-v14", () => {
+  it("is v13 plus the page-target length guidance", () => {
+    const v13 = createAuthorAdjudicationPrompt("cli-author-v13", undefined);
+    const v14 = createAuthorAdjudicationPrompt("cli-author-v14", undefined);
+    expect(v14.systemPrompt).toBe(`${v13.systemPrompt}${pageTargetLengthInstructions}`);
+    expect(v14.providerInput).toEqual(v13.providerInput);
+    expect(authorPromptSupportsApplicationPlan("cli-author-v14")).toBe(true);
+    expect(v14.systemPrompt).toContain("context.writingPolicy.preferences.pageTarget");
+    expect(v14.systemPrompt).toContain("When it is two-page or absent, use the counts above");
+    expect(v14.systemPrompt).toContain("about 6 to 9 bullets in total");
+    expect(v14.systemPrompt).toContain("Keep every role's title, employer and dates either way");
+    expect(v13.systemPrompt).not.toContain("Write to the page target");
   });
 });
 
