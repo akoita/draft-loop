@@ -417,6 +417,20 @@ services in that region:
   to Assured Workloads controls.
 - **Cost.** Cloud Run scales to zero for the API, and a small Cloud SQL
   instance is the main fixed cost at the start.
+- **European exit: Scaleway.** Scaleway is the planned move if Google Cloud
+  stops fitting. It has serverless containers and jobs, serverless Postgres
+  with `pgvector` in Paris, and S3-compatible storage. OVH needs more
+  operations work, because it has no scale-to-zero container service.
+  - **Switch when** Claude can be called with EU processing outside Google
+    Cloud, a customer requires French or EU-sovereign hosting, or Google
+    Cloud clearly costs more than Scaleway for the same load.
+  - **Why not now.** Scaleway does not host Claude, and the direct Anthropic
+    API has no EU processing option. On Vertex AI, CV content stays in the
+    EU. Re-check before the infrastructure sprint.
+  - **Keeping the exit cheap.** Containers, plain Postgres, an S3-speaking
+    storage port, standard OIDC sign-in and Terraform keep a move a
+    migration, not a rewrite. Neither provider sells sign-in for app users,
+    so identity (D6) stays a separate service either way.
 
 ### D15. Local-first and client-server evolve in parallel
 
