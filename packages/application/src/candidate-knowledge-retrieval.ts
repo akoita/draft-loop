@@ -10,7 +10,10 @@ import type {
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
 import { createCandidateKnowledgeLexicalHit } from "@draft-loop/domain";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type {
+  CandidateKnowledgeLexicalStoragePort,
+  SemanticRetrievalTraceAccessPort,
+} from "@draft-loop/storage";
 import {
   candidateContactEvidenceQuery,
   candidateContactEvidenceQueryLimit,
@@ -222,8 +225,8 @@ function mergeDiagnostics(
  * for each configured required section before provider handoff.
  */
 export function candidateKnowledgeRuntimeRetrieval(
-  storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace"> &
-    Partial<Pick<SqliteStorage, "candidateKnowledgeSemanticRetrievalTrace">>,
+  storage: Pick<CandidateKnowledgeLexicalStoragePort, "appendCandidateKnowledgeRetrievalTrace"> &
+    Partial<SemanticRetrievalTraceAccessPort>,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
   /** Withheld-section filter; defaults to the one built from the knowledge base's current rules. */

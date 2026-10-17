@@ -48,9 +48,9 @@ export interface OpenedHistoryRecordsStorage {
 export type HistoryRecordsStorageFactory = () => Promise<OpenedHistoryRecordsStorage>;
 
 /** One behaviour every implementation must honour, checked against an empty store. */
-export interface StorageContract {
+export interface StorageContract<Storage = HistoryRecordsStorage> {
   readonly name: string;
-  readonly check: (storage: HistoryRecordsStorage) => Promise<void>;
+  readonly check: (storage: Storage) => Promise<void>;
 }
 
 const sha256Pattern = /^[a-f0-9]{64}$/u;

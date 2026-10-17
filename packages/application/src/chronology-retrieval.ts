@@ -1,5 +1,5 @@
 import type { ContextSnapshot, RetrievalPort, ScoredEvidenceChunk } from "@draft-loop/domain";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { EvidenceChronologyStoragePort } from "@draft-loop/storage";
 import {
   matchesRequiredSectionEvidence,
   requiredSectionQuery,
@@ -7,7 +7,7 @@ import {
 
 /** Shared author/critic retrieval for legacy local-source contexts. */
 export function createChronologyRetrieval(
-  storage: Pick<SqliteStorage, "queryEvidence" | "readApprovedChronology">,
+  storage: Pick<RetrievalPort, "queryEvidence"> & EvidenceChronologyStoragePort,
   context: ContextSnapshot,
 ): RetrievalPort {
   const approved = new Set<string>(context.evidenceManifest.map((source) => source.id));

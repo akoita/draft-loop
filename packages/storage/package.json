@@ -32,8 +32,8 @@
       "import": "./src/sqlite-handle.ts"
     },
     "./conformance": {
-      "types": "./src/conformance/history-records.ts",
-      "import": "./src/conformance/history-records.ts"
+      "types": "./src/conformance/index.ts",
+      "import": "./src/conformance/index.ts"
     }
   },
   "files": [
