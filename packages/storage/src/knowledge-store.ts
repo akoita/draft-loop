@@ -42,6 +42,7 @@ import {
   candidateKnowledgeStoreSchema,
 } from "@draft-loop/schemas";
 import { errorCode, isMissing } from "./filesystem-error-codes.js";
+import { createFilesystemManagedFileStore } from "./filesystem-managed-file-store.js";
 import {
   type CandidateKnowledgeBaseInput,
   type CandidateKnowledgeBaseRecord,
@@ -111,6 +112,17 @@ import {
   coordinateCandidateKnowledgeVectorPort,
 } from "./knowledge-vector-index.js";
 import {
+  closeQuietly,
+  managedPathSegment,
+  managedVersionPath,
+  maximumManagedCandidateKnowledgeFileBytes,
+  requireRegularFile,
+  sameFileState,
+  sourceOpenFlags,
+  sourcesDirectory,
+  verifyManagedFile,
+} from "./managed-file-io.js";
+import {
   portableBackupTimestamp,
   validatePortableBackupManifestTimestamps,
 } from "./portable-backup-timestamps.js";
@@ -124,18 +136,17 @@ import {
 } from "./writer-lease.js";
 
 export type * from "./knowledge-store-types.js";
+export { maximumManagedCandidateKnowledgeFileBytes };
 
 const manifestFilename = "draft-loop-knowledge.json";
 const privateDirectory = ".draft-loop";
 const databaseFilename = "knowledge.sqlite";
 const writerCoordinatorFilename = "writer-coordination.sqlite";
-const sourcesDirectory = "sources";
 const maximumManifestBytes = 64 * 1024;
 const maximumPortableBackupManifestBytes = 16 * 1024 * 1024;
 const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
 const descriptorKeyPrefix = "candidateKnowledgeStore";
 
-export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
 
@@ -699,42 +710,6 @@ function isWithin(root: string, candidate: string): boolean {
   return child === "" || (!child.startsWith("..") && !isAbsolute(child));
 }
 
-function managedPathSegment(id: string): string {
-  return createHash("sha256").update(id, "utf8").digest("hex");
-}
-
-function managedVersionPath(root: string, sourceId: string, versionId: string): string {
-  return join(root, sourcesDirectory, managedPathSegment(sourceId), managedPathSegment(versionId));
-}
-
-function sourceOpenFlags(): number {
-  return process.platform === "win32"
-    ? constants.O_RDONLY
-    : constants.O_RDONLY | constants.O_NOFOLLOW;
-}
-
-async function closeQuietly(handle: FileHandle | undefined): Promise<void> {
-  if (handle === undefined) return;
-  try {
-    await handle.close();
-  } catch {
-    // Preserve the failure that caused cleanup.
-  }
-}
-
-function sameFileState(
-  first: Awaited<ReturnType<FileHandle["stat"]>>,
-  second: Awaited<ReturnType<FileHandle["stat"]>>,
-): boolean {
-  return (
-    first.dev === second.dev &&
-    first.ino === second.ino &&
-    first.size === second.size &&
-    first.mtimeMs === second.mtimeMs &&
-    first.ctimeMs === second.ctimeMs
-  );
-}
-
 async function writeComplete(handle: FileHandle, bytes: Buffer): Promise<void> {
   let offset = 0;
   while (offset < bytes.length) {
@@ -1200,28 +1175,6 @@ async function requireDirectory(path: string, label: string): Promise<void> {
   }
 }
 
-async function requireRegularFile(
-  path: string,
-  label: string,
-  maximumBytes: number,
-): Promise<void> {
-  let details: Awaited<ReturnType<typeof lstat>>;
-  try {
-    details = await lstat(path);
-  } catch (error) {
-    if (isMissing(error)) {
-      throw new StorageValidationError(`${label} is missing.`);
-    }
-    throw error;
-  }
-  if (details.isSymbolicLink() || !details.isFile()) {
-    throw new StorageValidationError(`${label} must be a regular file, not a symbolic link.`);
-  }
-  if (details.size > maximumBytes) {
-    throw new StorageValidationError(`${label} exceeds the supported size limit.`);
-  }
-}
-
 async function ensureManagedSourceDirectory(
   root: string,
   sourceId: string,
@@ -1235,133 +1188,6 @@ async function ensureManagedSourceDirectory(
     if (errorCode(error) !== "EEXIST") throw error;
     await requireDirectory(path, "Managed candidate knowledge source directory");
     return { path, created: false };
-  }
-}
-
-async function hashManagedFile(path: string, expectedSize: number): Promise<string> {
-  await requireRegularFile(
-    path,
-    "Managed candidate knowledge source version",
-    maximumManagedCandidateKnowledgeFileBytes,
-  );
-  let handle: FileHandle | undefined;
-  try {
-    handle = await open(path, sourceOpenFlags());
-    const before = await handle.stat();
-    if (!before.isFile() || before.size !== expectedSize) {
-      throw new StorageValidationError(
-        "Managed candidate knowledge source version size does not match its record.",
-      );
-    }
-    const digest = createHash("sha256");
-    const buffer = Buffer.allocUnsafe(64 * 1024);
-    let sizeBytes = 0;
-    while (true) {
-      const result = await handle.read(buffer, 0, buffer.length, null);
-      if (result.bytesRead === 0) break;
-      sizeBytes += result.bytesRead;
-      if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes) {
-        throw new StorageValidationError(
-          "Managed candidate knowledge source version exceeds the size limit.",
-        );
-      }
-      digest.update(buffer.subarray(0, result.bytesRead));
-    }
-    const after = await handle.stat();
-    if (!sameFileState(before, after) || sizeBytes !== expectedSize) {
-      throw new StorageValidationError(
-        "Managed candidate knowledge source version changed while it was being verified.",
-      );
-    }
-    return digest.digest("hex");
-  } finally {
-    await closeQuietly(handle);
-  }
-}
-
-async function readVerifiedManagedFile(
-  path: string,
-  version: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
-): Promise<Uint8Array> {
-  try {
-    if (
-      !/^[0-9a-f]{64}$/.test(version.checksum) ||
-      !Number.isSafeInteger(version.sizeBytes) ||
-      version.sizeBytes < 0 ||
-      version.sizeBytes > maximumManagedCandidateKnowledgeFileBytes
-    ) {
-      throw new StorageValidationError(
-        "Managed candidate knowledge source version integrity metadata is invalid.",
-      );
-    }
-    await requireRegularFile(
-      path,
-      "Managed candidate knowledge source version",
-      maximumManagedCandidateKnowledgeFileBytes,
-    );
-
-    let handle: FileHandle | undefined;
-    try {
-      handle = await open(path, sourceOpenFlags());
-      const before = await handle.stat();
-      if (!before.isFile() || before.size !== version.sizeBytes) {
-        throw new StorageValidationError(
-          "Managed candidate knowledge source version size does not match its record.",
-        );
-      }
-
-      const digest = createHash("sha256");
-      const chunks: Buffer[] = [];
-      const buffer = Buffer.allocUnsafe(64 * 1024);
-      let sizeBytes = 0;
-      while (true) {
-        const result = await handle.read(buffer, 0, buffer.length, null);
-        if (result.bytesRead === 0) break;
-        if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes - result.bytesRead) {
-          throw new StorageValidationError(
-            "Managed candidate knowledge source version exceeds the size limit.",
-          );
-        }
-        sizeBytes += result.bytesRead;
-        const chunk = Buffer.from(buffer.subarray(0, result.bytesRead));
-        chunks.push(chunk);
-        digest.update(chunk);
-      }
-
-      const after = await handle.stat();
-      if (!sameFileState(before, after) || sizeBytes !== version.sizeBytes) {
-        throw new StorageValidationError(
-          "Managed candidate knowledge source version changed while it was being read.",
-        );
-      }
-      if (digest.digest("hex") !== version.checksum) {
-        throw new StorageValidationError(
-          "Managed candidate knowledge source version checksum does not match its record.",
-        );
-      }
-      return new Uint8Array(Buffer.concat(chunks, sizeBytes));
-    } finally {
-      await closeQuietly(handle);
-    }
-  } catch (error) {
-    if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
-      throw error;
-    }
-    throw new StorageValidationError(
-      "Managed candidate knowledge source version could not be read safely.",
-    );
-  }
-}
-
-async function verifyManagedFile(
-  path: string,
-  version: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
-): Promise<void> {
-  const checksum = await hashManagedFile(path, version.sizeBytes);
-  if (checksum !== version.checksum) {
-    throw new StorageValidationError(
-      "Managed candidate knowledge source version checksum does not match its record.",
-    );
   }
 }
 
@@ -5314,6 +5140,7 @@ function createHandle(
     withCandidateKnowledgeStoreWriterLease(root, operation, callback);
   const invalidateLexical = (knowledgeBaseId: string): Promise<void> =>
     invalidateCandidateKnowledgeLexicalProjection(storage, descriptor.id, knowledgeBaseId);
+  const managedFiles = createFilesystemManagedFileStore(root);
   const handle: CandidateKnowledgeStoreHandle = {
     descriptor: Object.freeze({ ...descriptor }),
     root,
@@ -5721,9 +5548,8 @@ function createHandle(
       );
       const version = versions.find((candidate) => candidate.id === versionId.trim());
       if (version === undefined) return undefined;
-      const path = managedVersionPath(root, sourceId.trim(), version.id);
-      await verifyManagedFile(path, version);
-      return path;
+      await managedFiles.verify({ sourceId: sourceId.trim(), versionId: version.id }, version);
+      return managedVersionPath(root, sourceId.trim(), version.id);
     },
     readManagedCandidateKnowledgeSourceVersion: async (knowledgeBaseId, sourceId, versionId) => {
       const normalizedKnowledgeBaseId = requiredManagedText(
@@ -5755,8 +5581,8 @@ function createHandle(
           "Candidate knowledge store contains a managed version for an unsupported source.",
         );
       }
-      const bytes = await readVerifiedManagedFile(
-        managedVersionPath(root, normalizedSourceId, normalizedVersionId),
+      const bytes = await managedFiles.read(
+        { sourceId: normalizedSourceId, versionId: normalizedVersionId },
         version,
       );
       return Object.freeze({
