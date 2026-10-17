@@ -66,6 +66,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - Exported documents go through a blob port, read and checked by content
   checksum. The local filesystem implementation keeps today's export paths;
   object storage implements the same port on the server.
+- Managed candidate-knowledge files are read and verified through a
+  managed-file port, keyed by source and version and checked against the
+  recorded checksum and size. Intake, deletion and recovery move behind it in
+  the follow-ups to #1356.
 - A conformance suite, exported as `@draft-loop/storage/conformance`, checks
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.
