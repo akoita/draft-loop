@@ -1,7 +1,11 @@
 # Installed-app acceptance
 
 The installed-app acceptance workflow runs the packaged Electron application
-twice on Linux x64, macOS arm64, and Windows x64. It uses a safely sanitized
+twice on Linux x64, macOS arm64, and Windows x64. It runs in every release build
+before publishing, on manual dispatch, and on pull requests that can change the
+packaged app. Pull requests that change only documentation or tests skip it;
+`scripts/desktop-ci-scope.mjs` decides, and the always-reporting
+`Installed app acceptance gate` check carries the result. It uses a safely sanitized
 candidate Markdown file and a deterministic local response for an explicitly
 approved job URL. It does not contact a model provider or fetch the public
 internet.
