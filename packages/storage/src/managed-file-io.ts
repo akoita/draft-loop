@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { type FileHandle, lstat, open } from "node:fs/promises";
-import { join } from "node:path";
+import { chmod, type FileHandle, lstat, open, rm } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
 
-import { isMissing } from "./filesystem-error-codes.js";
-import type { ManagedFileIntegrity } from "./ports/managed-files.js";
+import { errorCode, isMissing } from "./filesystem-error-codes.js";
+import type { ManagedFileIdentity, ManagedFileIntegrity } from "./ports/managed-files.js";
 import { StorageConflictError, StorageValidationError } from "./storage-errors.js";
 
 // Low-level checks for managed candidate-knowledge files, shared by the knowledge store and the
@@ -12,6 +12,7 @@ import { StorageConflictError, StorageValidationError } from "./storage-errors.j
 
 export const sourcesDirectory = "sources";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
+export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 
 export function managedPathSegment(id: string): string {
   return createHash("sha256").update(id, "utf8").digest("hex");
@@ -195,5 +196,82 @@ export async function verifyManagedFile(
     throw new StorageValidationError(
       "Managed candidate knowledge source version checksum does not match its record.",
     );
+  }
+}
+export type FileIdentity = ManagedFileIdentity;
+
+export function requiredManagedText(value: string, label: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new StorageValidationError(`${label} is required.`);
+  }
+  return value.trim();
+}
+
+export function isWithin(root: string, candidate: string): boolean {
+  const child = relative(root, candidate);
+  return child === "" || (!child.startsWith("..") && !isAbsolute(child));
+}
+
+export async function writeComplete(handle: FileHandle, bytes: Buffer): Promise<void> {
+  let offset = 0;
+  while (offset < bytes.length) {
+    const result = await handle.write(bytes, offset, bytes.length - offset, null);
+    if (result.bytesWritten <= 0) {
+      throw new StorageValidationError("Managed candidate knowledge source could not be copied.");
+    }
+    offset += result.bytesWritten;
+  }
+}
+
+export async function removeRegularFileIfIdentityMatches(
+  path: string,
+  identity: FileIdentity,
+): Promise<boolean> {
+  try {
+    const details = await lstat(path);
+    if (
+      details.isSymbolicLink() ||
+      !details.isFile() ||
+      details.dev !== identity.dev ||
+      details.ino !== identity.ino
+    ) {
+      return false;
+    }
+    await rm(path);
+    return true;
+  } catch (error) {
+    return isMissing(error);
+  }
+}
+
+export async function chmodWhereSupported(path: string, mode: number): Promise<void> {
+  try {
+    await chmod(path, mode);
+  } catch (error) {
+    const code = errorCode(error);
+    if (
+      code === "ENOSYS" ||
+      code === "ENOTSUP" ||
+      code === "EOPNOTSUPP" ||
+      (process.platform === "win32" && code === "EPERM")
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+export async function requireDirectory(path: string, label: string): Promise<void> {
+  let details: Awaited<ReturnType<typeof lstat>>;
+  try {
+    details = await lstat(path);
+  } catch (error) {
+    if (isMissing(error)) {
+      throw new StorageValidationError(`${label} is missing.`);
+    }
+    throw error;
+  }
+  if (details.isSymbolicLink() || !details.isDirectory()) {
+    throw new StorageValidationError(`${label} must be a real directory, not a symbolic link.`);
   }
 }
