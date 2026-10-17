@@ -376,6 +376,11 @@ export type ReviewAction =
        * Omit to use the reviewed brief when there is one.
        */
       readonly requirementsSource?: "job-description";
+      /**
+       * Write the draft to one page or two (#1366). The host saves it as the writing policy's
+       * page target before the run starts; omit to keep the policy's own target.
+       */
+      readonly pageTarget?: "one-page" | "two-page";
     }
   | { readonly type: "resume" }
   | { readonly type: "recover-to-review" }

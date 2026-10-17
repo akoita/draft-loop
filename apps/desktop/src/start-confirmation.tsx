@@ -268,19 +268,32 @@ export function startConfirmationSummary(
   };
 }
 
+/** The Length choice (#1366): keep the writing policy's target, or write to one page or two. */
+export type StartLengthChoice = "policy" | "one-page" | "two-page";
+
+export const startLengthLabels: Readonly<Record<StartLengthChoice, string>> = {
+  policy: "Writing policy",
+  "one-page": "One page",
+  "two-page": "Two pages",
+};
+
 /**
  * What the dialog's buttons do: Start closes it and sends the trigger's own action, the same
- * object it would have sent before the check existed; Cancel only closes it.
+ * object it would have sent before the check existed, plus a page target when one was chosen;
+ * Cancel only closes it.
  */
 export function startConfirmationHandlers(
   action: StartReviewAction,
   dispatch: (action: StartReviewAction) => void,
   close: () => void,
-): { readonly onStart: () => void; readonly onCancel: () => void } {
+): {
+  readonly onStart: (length?: StartLengthChoice) => void;
+  readonly onCancel: () => void;
+} {
   return {
-    onStart: () => {
+    onStart: (length = "policy") => {
       close();
-      dispatch(action);
+      dispatch(length === "policy" ? action : { ...action, pageTarget: length });
     },
     onCancel: close,
   };
@@ -289,7 +302,7 @@ export function startConfirmationHandlers(
 export interface StartConfirmationProps {
   readonly summary: StartConfirmationSummary;
   readonly dialogRef: RefObject<HTMLDivElement | null>;
-  readonly onStart: () => void;
+  readonly onStart: (length: StartLengthChoice) => void;
   readonly onCancel: () => void;
   /** The screen's existing "Change models" control, when it offers one. */
   readonly changeModelsAction?: ReactNode;
@@ -319,6 +332,7 @@ export function StartConfirmation({
   onCancel,
   changeModelsAction,
 }: StartConfirmationProps) {
+  const [length, setLength] = useState<StartLengthChoice>("policy");
   return (
     <div className="modal-backdrop">
       <div
@@ -363,9 +377,28 @@ export function StartConfirmation({
         <section aria-labelledby="start-confirmation-settings">
           <h3 id="start-confirmation-settings">Run settings</h3>
           <Lines lines={summary.settings} />
+          <fieldset className="start-confirmation-length">
+            <legend>Length</legend>
+            {(Object.keys(startLengthLabels) as StartLengthChoice[]).map((choice) => (
+              <label key={choice}>
+                <input
+                  type="radio"
+                  name="start-confirmation-length"
+                  value={choice}
+                  checked={length === choice}
+                  onChange={() => setLength(choice)}
+                />
+                {startLengthLabels[choice]}
+              </label>
+            ))}
+            <p className="start-confirmation-note">
+              One page or two is saved as your writing policy's page target, and the draft is
+              written to it.
+            </p>
+          </fieldset>
         </section>
         <div className="start-confirmation-actions">
-          <button className="button button-primary" type="button" onClick={onStart}>
+          <button className="button button-primary" type="button" onClick={() => onStart(length)}>
             Start
           </button>
           {changeModelsAction === undefined || changeModelsAction === null ? null : (

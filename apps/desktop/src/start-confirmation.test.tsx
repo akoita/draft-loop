@@ -352,6 +352,31 @@ describe("start confirmation handlers", () => {
     expect(dispatch.mock.calls[0]?.[0]).toBe(action);
   });
 
+  it("Start adds the chosen length as a page target, and leaves it out for the policy's own", () => {
+    const dispatch = vi.fn();
+    const handlers = startConfirmationHandlers(start, dispatch, () => undefined);
+    handlers.onStart("one-page");
+    handlers.onStart("policy");
+    expect(dispatch.mock.calls[0]?.[0]).toEqual({ ...start, pageTarget: "one-page" });
+    expect(dispatch.mock.calls[1]?.[0]).toBe(start);
+  });
+
+  it("offers the length with the writing policy's own target selected", () => {
+    const html = renderToStaticMarkup(
+      <StartConfirmation
+        summary={startConfirmationSummary(liveState(), { action: start })}
+        dialogRef={createRef<HTMLDivElement>()}
+        onStart={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(html).toContain("<legend>Length</legend>");
+    expect(html).toContain('checked="" value="policy"');
+    expect(html).toContain("One page");
+    expect(html).toContain("Two pages");
+    expect(html).toContain("saved as your writing policy&#x27;s page target");
+  });
+
   it("Cancel closes the check and dispatches nothing", () => {
     const dispatch = vi.fn();
     const close = vi.fn();

@@ -722,6 +722,29 @@ describe("desktop capability bridge", () => {
       },
     });
 
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: { type: "start", pageTarget: "one-page" },
+        },
+      }),
+    ).toMatchObject({ input: { action: { type: "start", pageTarget: "one-page" } } });
+    for (const pageTarget of ["three-page", "", 1, null]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-1",
+            runId: "pending",
+            action: { type: "start", pageTarget },
+          },
+        }),
+      ).toThrow();
+    }
+
     for (const candidateProfile of [
       null,
       {},
