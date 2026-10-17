@@ -210,8 +210,9 @@ describe("an earlier run in the review", () => {
     // The latest run's review offers the changes this test expects to see locked.
     expect(latestHtml).toContain('class="block-open" type="button" aria-label="Edit');
     expect(latestHtml.match(decisionButton)).toHaveLength(8);
-    expect(latestHtml).toContain(">Resume</button>");
-    expect(latestHtml).toContain('aria-label="approval actions">');
+    expect(latestHtml).toContain(">Resume review</button>");
+    // The fixture is paused, so the footer offers Resume in place of the approval actions.
+    expect(latestHtml).toContain('aria-label="current round"');
 
     expect(html.match(/<button class="block-open"[^>]*>/gu)).toEqual([
       expect.stringContaining('hidden=""'),
@@ -226,7 +227,8 @@ describe("an earlier run in the review", () => {
     expect(html).toContain("redline · read-only</span>");
     expect(html).toContain("This run is read-only.");
     expect(html).not.toContain(">Start a new review</button>");
-    expect(html).not.toContain(">Resume</button>");
+    expect(html).not.toContain(">Resume review</button>");
+    expect(html).not.toContain('aria-label="current round"');
     expect(html).not.toContain("Stop review</button>");
   });
 

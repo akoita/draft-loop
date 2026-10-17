@@ -50,7 +50,7 @@ describe("paused run on a usage limit", () => {
     expect(html).toContain('aria-label="run recovery"');
     expect(html).toContain("Usage limit reached on Anthropic · try again after");
     expect(html).toContain("Resume retries the critic step where it stopped");
-    expect(html).toMatch(/Resume<\/button>/u);
+    expect(html).toMatch(/Resume review<\/button>/u);
   });
 
   it("says later when the provider reported no time", () => {

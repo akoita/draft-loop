@@ -4236,6 +4236,42 @@ input[type="text"].workspace-title-input {
   color: var(--amber);
 }
 
+/* The running round takes the place of the gate's buttons, where Request revision was clicked. */
+.footer-running-round {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.footer-running-activity {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.footer-running-execution {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.footer-running-direction {
+  margin: 0;
+}
+
+.footer-running-round .approval-actions {
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.footer-running-round .next-step-action {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
 .gate-blocker-safe {
   color: var(--teal-bright);
 }

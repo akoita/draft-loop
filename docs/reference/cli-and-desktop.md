@@ -614,7 +614,8 @@ pinned under it.
   under [Requirement coverage in run output](#requirement-coverage-in-run-output).
 - **Run state.** While a run executes, the side panel shows its progress,
   timeline and Stop. A paused or interrupted run keeps Resume in the side
-  panel, and a shared-lineage warning stays there too.
+  panel, and a shared-lineage warning stays there too. The footer mirrors the
+  step, Stop and Resume (see [Approval and export](#approval-and-export)).
 - **Usage limit.** When a Claude or Codex subscription session reaches its
   usage limit mid-run, the run pauses instead of failing. The side panel says
   "Usage limit reached on Anthropic · try again after <time>", or "later"
@@ -644,6 +645,13 @@ The footer holds the approval gate and stays in view while you scroll:
   add a fact your sources do not hold. Runs started before this field existed
   cannot take directions: the field is disabled with a note, and starting a new
   review enables it.
+- **While a round runs.** The round reports where you requested it. The
+  footer's buttons give way to what the author or critic is doing, its model
+  and elapsed time, your directions for that round, and **Stop review**. A
+  paused or interrupted run shows **Resume review** in the same place. **Show
+  run progress** scrolls the side panel to the timeline, which also comes into
+  view on its own after **Request revision**. The buttons return when the run
+  needs your decision.
 - **Export locally.** After approval, choose a format (Markdown, DOCX or PDF)
   beside **Export…** and pick a destination in the Save dialog. A **Details**
   disclosure lists the artifact, export and validation state and the approval

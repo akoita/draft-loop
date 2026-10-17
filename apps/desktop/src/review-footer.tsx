@@ -2,7 +2,9 @@
  * The review's footer: the approval gate in one place, always at the window's bottom edge.
  *
  * The footer states what blocks approval in one line above the buttons, so a refused approval
- * explains itself where the reviewer clicked. An override of the final CV checks opens an inline
+ * explains itself where the reviewer clicked. While a round runs, or a run waits to be resumed,
+ * the round's progress with Stop or Resume takes the place of the buttons, so the round a
+ * Request revision started reports where it was requested. An override of the final CV checks opens an inline
  * reason field, and the checklist and the longer explanation sit under a compact "Details"
  * disclosure that scrolls on its own and never pushes the buttons off screen.
  */
@@ -22,6 +24,7 @@ import {
 } from "./export-template.js";
 import { ExportTemplatePreview } from "./export-template-picker.js";
 import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
+import { type FooterRunningRound, FooterRunningRoundStrip } from "./footer-running-round.js";
 import {
   type DesktopReviewState,
   type ExportFormat,
@@ -194,6 +197,8 @@ export const approvalDetailsId = "approval-details";
 export interface ReviewFooterProps {
   readonly blocker: FooterBlocker;
   readonly readOnly: boolean;
+  /** The running, paused or interrupted round shown in place of the buttons, or null. */
+  readonly runningRound?: FooterRunningRound | null;
   /** An approval or export error to show above the buttons, or null. */
   readonly errorMessage: string | null;
   /** "Artifact … · Export … · Validation …" for the Details disclosure. */
@@ -284,6 +289,7 @@ function usePublishedHeight(ref: RefObject<HTMLElement | null>): void {
 export function ReviewFooter({
   blocker,
   readOnly,
+  runningRound = null,
   errorMessage,
   statusLine,
   detail,
@@ -300,6 +306,12 @@ export function ReviewFooter({
   const exportPending = exportAction.pendingSeconds !== null;
   const barRef = useRef<HTMLElement>(null);
   usePublishedHeight(barRef);
+  const errorBanner =
+    errorMessage === null ? null : (
+      <div className="error-banner approval-action-error" role="alert">
+        <p>{errorMessage}</p>
+      </div>
+    );
   return (
     <section className="gate-action-bar" aria-label="approval and export" ref={barRef}>
       <p
@@ -322,12 +334,18 @@ export function ReviewFooter({
           </button>
         </div>
       )}
-      <fieldset className="gate-actions" aria-label="approval actions" hidden={readOnly}>
-        {errorMessage === null ? null : (
-          <div className="error-banner approval-action-error" role="alert">
-            <p>{errorMessage}</p>
-          </div>
-        )}
+      {readOnly || runningRound === null ? null : (
+        <>
+          {errorBanner}
+          <FooterRunningRoundStrip round={runningRound} />
+        </>
+      )}
+      <fieldset
+        className="gate-actions"
+        aria-label="approval actions"
+        hidden={readOnly || runningRound !== null}
+      >
+        {runningRound === null ? errorBanner : null}
         <div className="approval-actions">
           <button
             className="button button-primary"

@@ -43,8 +43,8 @@ export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): stri
   return state.state === "exported" ? "Done · approved and exported" : "Done · approved";
 }
 
-/** What the running review is doing, and when it will need the person. */
-export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
+/** What the running review is doing, e.g. "The author is revising version 1 for round 2." */
+export function runActivity(state: RunStatusInput): string {
   const step =
     state.execution.step ??
     (state.state === "drafting"
@@ -55,14 +55,18 @@ export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
           ? "revision"
           : null);
   const version = state.artifact.version;
-  const doing =
-    step === "author"
-      ? "The author is writing the draft."
-      : step === "critic"
-        ? `The critic is checking version ${version}.`
-        : step === "revision"
-          ? `The author is revising version ${version} for round ${state.round}.`
-          : "The review is running.";
+  return step === "author"
+    ? "The author is writing the draft."
+    : step === "critic"
+      ? `The critic is checking version ${version}.`
+      : step === "revision"
+        ? `The author is revising version ${version} for round ${state.round}.`
+        : "The review is running.";
+}
+
+/** What the running review is doing, and when it will need the person. */
+export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
+  const doing = runActivity(state);
   const until =
     state.setup.autopilot === true
       ? "Autopilot keeps going until the draft is ready, a claim needs your call, or the round limit is reached."
