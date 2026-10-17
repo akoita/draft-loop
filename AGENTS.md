@@ -116,13 +116,20 @@ being released and require it to pass. Do not bypass this command or substitute
 an older live-provider result. The command runs deterministic validation first
 and then the synthetic live-provider E2E with the explicit local mixed-auth
 defaults. It must never run in CI/CD, and provider credentials or subscription
-sessions must never be added to hosted automation.
+sessions must never be added to hosted automation. The one exception is the
+client-server live evaluation (ADR 0011, D16): a manually triggered job in a
+separate cloud evaluation project, on synthetic data only, never in GitHub
+Actions.
 
 ## Data, privacy, and model rules
 
-- Keep candidate material and run history local by default. Do not upload or
-  retain source material at a provider without an explicit user-controlled
-  policy.
+- Local-first version: keep candidate material and run history local by
+  default. Do not upload or retain source material at a provider without an
+  explicit user-controlled policy.
+- Client-server version (ADR 0011): store candidate material only with
+  recorded consent, keep it in the EU with per-tenant encryption, enforce
+  sensitivity tiers on the server, and send providers only the bounded,
+  approved material under zero-retention terms.
 - Preserve source references for substantive claims, expose provider and model
   identities, and never invent achievements, dates, employers, or metrics.
 - Provider diversity is a product constraint: Anthropic and OpenAI are the

@@ -1,6 +1,6 @@
 # Client-server delivery plan
 
-- Status: Proposed, alongside [ADR 0011](../adr/0011-client-server-version.md)
+- Status: Accepted (2026-10-17), alongside [ADR 0011](../adr/0011-client-server-version.md)
 - Date: 2026-10-16 (updated 2026-10-17)
 
 This plan runs the client-server version as a stage-gated agentic-system

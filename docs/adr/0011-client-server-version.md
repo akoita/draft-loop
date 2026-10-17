@@ -1,6 +1,6 @@
 # ADR 0011: A client-server version beside the local-first app
 
-- Status: Proposed
+- Status: Accepted (2026-10-17)
 - Date: 2026-10-16 (updated 2026-10-17)
 - Decision owners: DraftLoop maintainers
 
@@ -83,7 +83,7 @@ durable queue. A **web client** is the main interface.
   a known order with structured outputs. That keeps runs reproducible,
   costed and traceable claim by claim. A separate agent is added only to
   isolate a task, an access boundary or a token budget, never for its own
-  sake.
+  sake. This extends the evaluator-optimizer decision in ADR 0003.
 
 ### D2. Repository: same monorepo, new apps
 
@@ -234,9 +234,9 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   candidate record (D13).
 - **No hidden reasoning stored.** Only structured findings, decisions and
   user-visible rationale, as in the local version.
-- **`AGENTS.md` data rules will change** when this ADR is accepted. "Keep
-  material local by default" becomes "store only with recorded consent,
-  send only the bounded approved material".
+- **`AGENTS.md` data rules cover both versions.** The local-first version
+  keeps material local by default. The hosted version stores material only
+  with recorded consent and sends only the bounded, approved material.
 
 ### D8. Traceability as a product feature
 
@@ -439,8 +439,7 @@ The existing offline fixture mode keeps local runs free of provider calls.
 - **Where live evaluation runs.** `AGENTS.md` keeps provider credentials out
   of hosted automation, so live evaluation never runs in GitHub Actions. It
   runs as a manually triggered Cloud Run job in a separate evaluation
-  project, on synthetic data only. `AGENTS.md` is updated to say so when
-  this ADR is accepted.
+  project, on synthetic data only. `AGENTS.md` records this exception.
 
 ## Phasing (for planning only)
 
