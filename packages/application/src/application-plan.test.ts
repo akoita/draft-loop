@@ -188,7 +188,7 @@ describe("critic theme source", () => {
   });
 });
 
-function plannerWith(responses: JsonObject[]) {
+function plannerWith(responses: JsonObject[], authorProfile?: unknown) {
   const requests: ModelRequest<JsonObject>[] = [];
   const context = {
     id: "context-1",
@@ -199,6 +199,7 @@ function plannerWith(responses: JsonObject[]) {
         modelId: "a",
         role: "author",
         promptTemplateVersion: "cli-author-v11",
+        ...(authorProfile === undefined ? {} : { profile: authorProfile }),
       },
       critic: {
         company: "openai",
@@ -270,6 +271,17 @@ describe("provider application planner", () => {
     await expect(second.planner.plan(request(second.context))).rejects.toMatchObject({
       code: "invalid-response",
     });
+  });
+
+  it("caps the plan at its own budget, or at the selected profile's budget", async () => {
+    const legacy = plannerWith([aliased(plan)]);
+    await legacy.planner.plan(request(legacy.context));
+    expect(legacy.requests[0]?.maxOutputTokens).toBe(4_096);
+
+    // Profile-aware adapters reject a request budget that differs from the profile's.
+    const profiled = plannerWith([aliased(plan)], { runtime: { maxOutputTokens: 32_768 } });
+    await profiled.planner.plan(request(profiled.context));
+    expect(profiled.requests[0]?.maxOutputTokens).toBe(32_768);
   });
 
   it("has the critic model review the plan", async () => {

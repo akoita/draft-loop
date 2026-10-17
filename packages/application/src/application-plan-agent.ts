@@ -28,7 +28,10 @@ import { authorPromptSupportsApplicationPlan } from "./author-adjudication.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
 import { responseExecution } from "./response-execution.js";
 
-/** The plan is a short decision; this cap keeps the whole step cheap and bounded. */
+/**
+ * The plan is a short decision; this cap keeps the whole step cheap and bounded. A selected model
+ * profile fixes the request budget instead, since profile-aware adapters reject any other value.
+ */
 const planOutputTokens = 4_096;
 
 export interface ProviderApplicationPlannerDependencies {
@@ -90,9 +93,10 @@ export function createProviderApplicationPlanner(
     const identity = role === "author" ? deps.author : deps.critic;
     const aliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
     const adapter = await deps.createAdapter(identity.company, identity.modelId, role);
+    const model = request.context.modelConfiguration[role];
     const modelRequest: ModelRequest<JsonObject> = {
       contextSnapshotId: request.context.id,
-      model: request.context.modelConfiguration[role],
+      model,
       systemPrompt,
       input: aliases.toModel(
         JSON.parse(
@@ -107,7 +111,7 @@ export function createProviderApplicationPlanner(
       ),
       outputSchema: outputSchema(aliases.aliases),
       outputName,
-      maxOutputTokens: planOutputTokens,
+      maxOutputTokens: model.profile?.runtime.maxOutputTokens ?? planOutputTokens,
       dataPolicy: deps.dataPolicy(identity.company),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
     };
