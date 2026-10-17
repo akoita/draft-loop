@@ -31,6 +31,7 @@ import {
 } from "./layout-profile.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
 import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import type { PrintedTextUnit } from "./print-html.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
@@ -656,8 +657,22 @@ function expectedVisibleTextUnits(
   });
 }
 
+/** The checksum and word count rendering QA compares, for text units a viewer reported. */
+export function visibleContentSummary(units: readonly PrintedTextUnit[]): {
+  readonly checksum: string;
+  readonly count: number;
+} {
+  const sequence = normalizedSequence(units);
+  return { checksum: sha256Text(sequence), count: visibleWordCount(sequence) };
+}
+
 function sha256Text(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/** The page count of a PDF from its page objects; null when none can be found. */
+export function pdfPageCount(content: Uint8Array): number | null {
+  return inspectPdfPageCount(content);
 }
 
 function inspectPdfPageCount(content: Uint8Array): number | null {
@@ -864,7 +879,13 @@ function detectActiveContent(
 }
 
 function assertRenderingQaInputKeys(input: BuildRenderingQaReportInput): void {
-  const allowedKeys = new Set(["artifact", "rendered", "createdAt", "viewerObservation"]);
+  const allowedKeys = new Set([
+    "artifact",
+    "rendered",
+    "createdAt",
+    "viewerObservation",
+    "printedUnits",
+  ]);
   for (const key of Object.keys(input as object)) {
     if (!allowedKeys.has(key)) {
       throw new TypeError(`Unknown rendering QA input field: ${key}`);
@@ -895,6 +916,11 @@ export interface BuildRenderingQaReportInput {
   readonly rendered: RenderedDocument;
   readonly createdAt: string;
   readonly viewerObservation?: RenderingQaViewerObservation;
+  /**
+   * For a PDF a browser engine printed from `renderPrintHtml`: the text units it reported drawing.
+   * They replace reading text back from the PDF bytes, which only works for our own PDF writer.
+   */
+  readonly printedUnits?: readonly PrintedTextUnit[];
 }
 
 export type BuiltRenderingQaReport = RenderingQaReport;
@@ -960,7 +986,10 @@ export function buildRenderingQaReport(input: BuildRenderingQaReportInput): Buil
   }
 
   const expectedUnits = expectedVisibleTextUnits(artifact, renderedMetadata.format);
-  const recoveredUnits = extractVisibleTextUnits(input.rendered);
+  if (input.printedUnits !== undefined && renderedMetadata.format !== "pdf") {
+    throw new Error("printed units are only accepted for a PDF");
+  }
+  const recoveredUnits = input.printedUnits ?? extractVisibleTextUnits(input.rendered);
   const expectedSequence = normalizedSequence(expectedUnits);
   const recoveredSequence = normalizedSequence(recoveredUnits);
   const expectedChecksum = sha256Text(expectedSequence);
@@ -1070,12 +1099,42 @@ export function renderArtifact(
     throw new RangeError(`Unsupported output format: ${format}`);
   }
   assertCanonicalOptionKeys(options);
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const effectiveOptions = { ...options, generatedAt };
+  assertExportable(artifact, effectiveOptions);
+  return renderedDocument(
+    artifact,
+    format,
+    bytesForFormat(artifact, format, effectiveOptions),
+    effectiveOptions,
+  );
+}
+
+/**
+ * A rendered PDF from bytes a browser engine printed from `renderPrintHtml` (#1362). The artifact
+ * passes the same export validation as `renderArtifact`, and the metadata has the same shape.
+ */
+export function renderedPrintedPdf(
+  artifact: DraftArtifact,
+  content: Uint8Array,
+  options: RenderOptions = {},
+): RenderedDocument {
+  assertCanonicalOptionKeys(options);
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const effectiveOptions = { ...options, generatedAt };
+  assertExportable(artifact, effectiveOptions);
+  return renderedDocument(artifact, "pdf", content, effectiveOptions);
+}
+
+function renderedDocument(
+  artifact: DraftArtifact,
+  format: OutputFormat,
+  content: Uint8Array,
+  options: RenderOptions & { readonly generatedAt: string },
+): RenderedDocument {
   const template = resolveRenderingTemplate(options);
   const profile = resolveRenderingProfile(options);
-  const generatedAt = options.generatedAt ?? new Date().toISOString();
-  const effectiveOptions: RenderOptions = { ...options, generatedAt };
-  assertExportable(artifact, effectiveOptions);
-  const content = bytesForFormat(artifact, format, effectiveOptions);
+  const generatedAt = options.generatedAt;
   const checksum = createHash("sha256").update(content).digest("hex");
   const metadata: RenderMetadata = {
     artifactId: artifact.id,
@@ -1109,4 +1168,5 @@ export {
   type RenderingLayoutProfile,
   renderingLayoutProfiles,
 } from "./layout-profile.js";
+export * from "./print-html.js";
 export * from "./templates.js";

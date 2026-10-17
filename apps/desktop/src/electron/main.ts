@@ -19,6 +19,7 @@ import { createHostErrorLogger } from "./diagnostics.js";
 import { chooseExportPath, chooseMarkdownSavePath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
+import { createElectronPdfPrinter } from "./pdf-printer.js";
 import {
   createProviderAuthModePreferenceStore,
   providerAuthModePreferenceFilename,
@@ -43,6 +44,8 @@ const bridgeChannel = "draft-loop:bridge";
 /** Paint the window in the renderer's own ground so launch does not flash. */
 const windowGround = "#0f1319";
 let mainWindow: BrowserWindow | undefined;
+/** Headless test modes never open the main window and exit on their own when done. */
+let interactive = false;
 
 function rendererUrl(): string | undefined {
   return typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === "undefined"
@@ -153,6 +156,7 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) mainWindow = undefined;
   });
   mainWindow = window;
+  interactive = true;
   return window;
 }
 
@@ -349,6 +353,7 @@ app.whenReady().then(async () => {
   const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
   const consoleHostErrors = smokeEnabled || (!app.isPackaged && !liveE2eEnabled);
   const host = createNativeHost({
+    pdfPrinter: createElectronPdfPrinter(),
     providerAuthModeConfiguration,
     providerAuthModeEnvironmentOverrides: environmentOverrides,
     providerAuthModePreference,
@@ -512,6 +517,7 @@ app.whenReady().then(async () => {
   });
 });
 
+// The hidden print window (#1362) closing must not quit a headless run that never had a main window.
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  if (interactive && process.platform !== "darwin") app.quit();
 });

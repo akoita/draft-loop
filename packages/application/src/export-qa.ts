@@ -2,7 +2,10 @@ import {
   buildRenderingQaReport,
   inspectControlledDocument,
   type OutputFormat,
+  type PrintedPdf,
+  pdfPageCount,
   type RenderedDocument,
+  visibleContentSummary,
 } from "@draft-loop/rendering";
 import type { DraftArtifact, RenderingQaReport } from "@draft-loop/schemas";
 
@@ -120,4 +123,48 @@ export function exportTemplateRecord(rendered: RenderedDocument) {
     templateVersion: rendered.metadata.templateVersion,
     renderingTemplate: rendered.metadata.renderingTemplate,
   };
+}
+
+/**
+ * The QA record of a PDF a browser engine printed from print HTML (#1362). The engine's report of
+ * the text it drew stands in for reading text back from the bytes, and is also the independent
+ * viewer observation; the page count comes from the printed PDF itself. The browser flows text
+ * rather than placing it, so it reports no clipped or overflowing lines.
+ */
+export function buildPrintedPdfRenderingQa(
+  artifact: DraftArtifact,
+  rendered: RenderedDocument,
+  printed: PrintedPdf,
+): RenderingQaReport {
+  const pageCount = pdfPageCount(rendered.content);
+  if (pageCount === null) throw new ExportRenderingQaError("pdf");
+  const summary = visibleContentSummary(printed.units);
+  return buildRenderingQaReport({
+    artifact,
+    rendered,
+    createdAt: rendered.metadata.generatedAt,
+    printedUnits: printed.units,
+    viewerObservation: {
+      renderedChecksum: rendered.metadata.checksum,
+      viewerName: printed.viewerName,
+      viewerVersion: printed.viewerVersion,
+      recoveredVisibleContentChecksum: summary.checksum,
+      recoveredVisibleContentCount: summary.count,
+      recoveredVisibleContentOrder: "preserved",
+      pageCount,
+      blankPageNumbers: [],
+      overflowPageNumbers: [],
+      orphanSectionIds: [],
+      clippedText: false,
+    },
+  });
+}
+
+/** `assertExportRenderingQa` for a printed PDF: fails closed on anything but running long. */
+export function assertPrintedPdfRenderingQa(
+  artifact: DraftArtifact,
+  rendered: RenderedDocument,
+  printed: PrintedPdf,
+): ExportRenderingQaResult {
+  return exportRenderingQaDecision(buildPrintedPdfRenderingQa(artifact, rendered, printed));
 }
