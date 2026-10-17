@@ -79,17 +79,23 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.
 - `packages/storage-postgres` is the hosted implementation. It joins the suite
-  one contract group at a time; it passes the history, versioned-record,
-  application and knowledge-base groups, and the lexical index comes next. It
-  reuses the audit-trail hashing from `@draft-loop/storage/audit-trail`, the
-  run-record rules from `@draft-loop/storage/history-records`, the
-  versioned-record chain rules from `@draft-loop/storage/versioned-records`,
-  and the knowledge-source version rules from
-  `@draft-loop/storage/candidate-knowledge`. Both implementations therefore
-  accept, hash, chain and audit records the same way, and differ only in their
-  queries.
-  `pnpm test:postgres` runs it against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs it
+  one contract group at a time and now passes the history, versioned-record,
+  application, knowledge-base and lexical-retrieval groups. It shares these
+  rules with SQLite, so both stores accept, hash, chain and audit records the
+  same way and differ only in their queries:
+  - audit-trail hashing, from `@draft-loop/storage/audit-trail`;
+  - run-record rules, from `@draft-loop/storage/history-records`;
+  - versioned-record chain rules, from `@draft-loop/storage/versioned-records`;
+  - knowledge-source version rules, from `@draft-loop/storage/candidate-knowledge`;
+  - lexical-index and retrieval-trace rules, from
+    `@draft-loop/storage/candidate-knowledge-lexical`.
+- Postgres ranks lexical hits with `@draft-loop/storage/lexical-ranking`, which
+  tokenizes text as FTS5's `unicode61` tokenizer does and computes FTS5's
+  `bm25()` in the application over chunks Postgres selects through a GIN index
+  (ADR 0011, D11). Parity tests check it against FTS5 directly and against the
+  SQLite store, so both stores return the same chunks, order and scores.
+- `pnpm test:postgres` runs the Postgres suites against the server named by
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs them
   against Postgres 16 with `pgvector`.
 
 ## Data and quality contracts

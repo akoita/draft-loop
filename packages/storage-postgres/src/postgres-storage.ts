@@ -2,6 +2,7 @@ import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
+import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres } from "./migrations.js";
 import { createRunHistory } from "./run-history.js";
 import { createSqlClient, type SqlClientOptions } from "./sql-client.js";
@@ -27,6 +28,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createRunHistory(client),
     ...createVersionedRecords(client),
     ...createKnowledgeBaseRecords(client),
+    ...createLexicalIndex(client),
     applications: createApplications(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),

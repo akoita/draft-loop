@@ -437,6 +437,74 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 6,
+    name: "candidate knowledge lexical index, its tokenized chunks and retrieval traces",
+    sql: `
+      CREATE TABLE candidate_knowledge_lexical_indexes (
+        store_id TEXT NOT NULL CHECK (length(trim(store_id)) > 0),
+        knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases (id),
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        indexer_id TEXT NOT NULL CHECK (length(trim(indexer_id)) > 0),
+        manifest_checksum TEXT NOT NULL CHECK (manifest_checksum ~ '^[0-9a-f]{64}$'),
+        scope_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        stale INTEGER NOT NULL DEFAULT 0 CHECK (stale IN (0, 1)),
+        PRIMARY KEY (store_id, knowledge_base_id)
+      );
+
+      -- tokens holds the text as FTS5's unicode61 tokenizer splits it, so BM25 ranks match SQLite.
+      CREATE TABLE candidate_knowledge_lexical_chunks (
+        store_id TEXT NOT NULL,
+        knowledge_base_id TEXT NOT NULL,
+        source_id TEXT NOT NULL CHECK (length(trim(source_id)) > 0),
+        version_id TEXT NOT NULL CHECK (length(trim(version_id)) > 0),
+        chunk_id TEXT NOT NULL CHECK (length(trim(chunk_id)) > 0),
+        ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+        line_start INTEGER NOT NULL CHECK (line_start >= 0),
+        line_end INTEGER NOT NULL CHECK (line_end >= line_start),
+        text TEXT NOT NULL CHECK (length(trim(text)) > 0),
+        metadata_json TEXT NOT NULL,
+        tokens TEXT[] NOT NULL,
+        PRIMARY KEY (store_id, knowledge_base_id, chunk_id),
+        UNIQUE (store_id, knowledge_base_id, source_id, version_id, ordinal),
+        FOREIGN KEY (store_id, knowledge_base_id)
+          REFERENCES candidate_knowledge_lexical_indexes (store_id, knowledge_base_id),
+        FOREIGN KEY (source_id, knowledge_base_id)
+          REFERENCES candidate_knowledge_sources (id, candidate_knowledge_base_id),
+        FOREIGN KEY (version_id, source_id)
+          REFERENCES candidate_knowledge_source_versions (id, source_id)
+      );
+      CREATE INDEX candidate_knowledge_lexical_chunks_tokens
+        ON candidate_knowledge_lexical_chunks USING GIN (tokens);
+
+      CREATE TABLE candidate_knowledge_retrieval_traces (
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        trace_id TEXT NOT NULL CHECK (length(trim(trace_id)) > 0),
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        operation_id TEXT NOT NULL CHECK (length(trim(operation_id)) > 0),
+        purpose TEXT NOT NULL CHECK (
+          purpose IN (
+            'opportunity-requirements',
+            'achievement-recall',
+            'factual-checks',
+            'contradiction-detection',
+            'critic-review'
+          )
+        ),
+        query_checksum TEXT NOT NULL CHECK (query_checksum ~ '^[0-9a-f]{64}$'),
+        payload_json TEXT NOT NULL,
+        payload_checksum TEXT NOT NULL CHECK (payload_checksum ~ '^[0-9a-f]{64}$'),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, trace_id)
+      );
+      CREATE INDEX candidate_knowledge_retrieval_traces_operation
+        ON candidate_knowledge_retrieval_traces (workspace_id, operation_id, created_at, trace_id);
+      CREATE TRIGGER candidate_knowledge_retrieval_traces_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_retrieval_traces
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

@@ -55,6 +55,14 @@
       "types": "./src/candidate-knowledge-rules.ts",
       "import": "./src/candidate-knowledge-rules.ts"
     },
+    "./candidate-knowledge-lexical": {
+      "types": "./src/candidate-knowledge-lexical-rules.ts",
+      "import": "./src/candidate-knowledge-lexical-rules.ts"
+    },
+    "./lexical-ranking": {
+      "types": "./src/candidate-knowledge-lexical-ranking.ts",
+      "import": "./src/candidate-knowledge-lexical-ranking.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"
