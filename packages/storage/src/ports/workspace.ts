@@ -1,4 +1,5 @@
 import type { WorkflowState } from "@draft-loop/domain";
+import type { ApplicationStoragePort } from "../application-store.js";
 
 export interface StoragePort {
   readonly get: (key: string) => Promise<string | undefined>;
@@ -68,4 +69,9 @@ export interface WorkspaceStoragePort {
 /** A store its caller opened and must release once done. */
 export interface ClosableStoragePort {
   readonly close: () => Promise<void>;
+}
+
+/** A workspace's applications and their run and brief bindings. */
+export interface WorkspaceApplicationsStoragePort {
+  readonly applications: ApplicationStoragePort;
 }
