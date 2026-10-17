@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
-import type { HistoryRecordsStorage } from "@draft-loop/storage/conformance";
 import { describeHistoryRecordsConformance } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
 import { postgresMigrations } from "./migrations.js";
@@ -35,20 +34,8 @@ async function openIsolated(url: string): Promise<{
 describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   const url = connectionString ?? "";
 
-  // The groups this implementation supports so far. Each later slice adds its group here.
-  describeHistoryRecordsConformance("Postgres", async () => {
-    const opened = await openIsolated(url);
-    // Only the methods of the selected groups are called; the rest of the surface lands later.
-    return { storage: opened.storage as unknown as HistoryRecordsStorage, close: opened.close };
-  }, [
-    "workspaces",
-    "contextSnapshots",
-    "artifactVersions",
-    "runs",
-    "runSnapshots",
-    "runChildren",
-    "audit",
-  ]);
+  // Every history and versioned-record group, as SQLite runs them.
+  describeHistoryRecordsConformance("Postgres", () => openIsolated(url));
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);

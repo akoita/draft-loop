@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@draft-loop/domain": "workspace:*",
+    "@draft-loop/schemas": "workspace:*",
     "@draft-loop/storage": "workspace:*",
     "pg": "8.23.1"
   },

@@ -322,6 +322,9 @@ importers:
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@draft-loop/storage':
         specifier: workspace:*
         version: link:../storage

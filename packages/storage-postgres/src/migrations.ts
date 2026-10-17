@@ -236,6 +236,74 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 3,
+    name: "versioned records: opportunity briefs, canonical profiles and writing policies",
+    sql: `
+      CREATE TABLE opportunity_brief_versions (
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        brief_id TEXT NOT NULL CHECK (length(trim(brief_id)) > 0),
+        version INTEGER NOT NULL CHECK (version >= 1),
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        prior_version INTEGER,
+        status TEXT NOT NULL CHECK (status IN ('draft', 'reviewed')),
+        created_at TEXT NOT NULL,
+        reviewed_at TEXT,
+        payload_json TEXT NOT NULL,
+        payload_checksum TEXT NOT NULL CHECK (payload_checksum ~ '^[0-9a-f]{64}$'),
+        PRIMARY KEY (workspace_id, brief_id, version),
+        FOREIGN KEY (workspace_id, brief_id, prior_version)
+          REFERENCES opportunity_brief_versions (workspace_id, brief_id, version),
+        CHECK ((version = 1 AND prior_version IS NULL) OR (version > 1 AND prior_version = version - 1)),
+        CHECK ((status = 'draft' AND reviewed_at IS NULL) OR (status = 'reviewed' AND reviewed_at IS NOT NULL))
+      );
+
+      CREATE TABLE canonical_candidate_profile_versions (
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        profile_id TEXT NOT NULL CHECK (length(trim(profile_id)) > 0),
+        version INTEGER NOT NULL CHECK (version >= 1),
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        parent_version INTEGER,
+        status TEXT NOT NULL CHECK (status IN ('draft', 'reviewed')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        reviewed_at TEXT,
+        payload_json TEXT NOT NULL,
+        payload_checksum TEXT NOT NULL CHECK (payload_checksum ~ '^[0-9a-f]{64}$'),
+        PRIMARY KEY (workspace_id, profile_id, version),
+        FOREIGN KEY (workspace_id, profile_id, parent_version)
+          REFERENCES canonical_candidate_profile_versions (workspace_id, profile_id, version),
+        CHECK ((version = 1 AND parent_version IS NULL) OR (version > 1 AND parent_version = version - 1)),
+        CHECK ((status = 'draft' AND reviewed_at IS NULL) OR (status = 'reviewed' AND reviewed_at IS NOT NULL))
+      );
+
+      CREATE TABLE writing_policy_versions (
+        workspace_id TEXT NOT NULL REFERENCES workspaces (id),
+        policy_checksum TEXT NOT NULL CHECK (policy_checksum ~ '^[0-9a-f]{64}$'),
+        version TEXT NOT NULL CHECK (length(trim(version)) > 0),
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        created_at TEXT NOT NULL,
+        prior_checksum TEXT,
+        payload_json TEXT NOT NULL,
+        payload_checksum TEXT NOT NULL CHECK (payload_checksum ~ '^[0-9a-f]{64}$'),
+        PRIMARY KEY (workspace_id, policy_checksum),
+        UNIQUE (workspace_id, version),
+        FOREIGN KEY (workspace_id, prior_checksum)
+          REFERENCES writing_policy_versions (workspace_id, policy_checksum),
+        CHECK (prior_checksum IS NULL OR prior_checksum <> policy_checksum)
+      );
+
+      CREATE TRIGGER opportunity_brief_versions_immutable
+        BEFORE UPDATE OR DELETE ON opportunity_brief_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER canonical_candidate_profile_versions_immutable
+        BEFORE UPDATE OR DELETE ON canonical_candidate_profile_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER writing_policy_versions_immutable
+        BEFORE UPDATE OR DELETE ON writing_policy_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

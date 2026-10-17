@@ -47,6 +47,10 @@
       "types": "./src/history-record-rows.ts",
       "import": "./src/history-record-rows.ts"
     },
+    "./versioned-records": {
+      "types": "./src/versioned-record-rules.ts",
+      "import": "./src/versioned-record-rules.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"
