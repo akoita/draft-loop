@@ -1,10 +1,15 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import {
+  type AuditEventReadsPort,
+  auditChainEventColumns,
+  auditChainPageSize,
+  auditChainSnapshotColumns,
   auditEventChecksum,
   auditEventColumns,
   auditFromRow,
   payloadChecksum,
   serialize,
+  startAuditChainWalk,
 } from "@draft-loop/storage/audit-trail";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
 import type { SqlExecutor } from "./sql-client.js";
@@ -92,4 +97,42 @@ export async function listAuditEventRows(
     [workspaceId],
   );
   return rows.map(auditFromRow);
+}
+
+/**
+ * Targeted audit reads. Verification pages through the chain with the same walk SQLite drives, so
+ * both implementations report the same problems for the same rows.
+ */
+export function createAuditEventReads(executor: SqlExecutor): AuditEventReadsPort {
+  return {
+    findLatestAuditEvent: async ({ workspaceId, eventType, entityType, entityId }) => {
+      const [row] = await executor.query(
+        `SELECT ${auditEventColumns} FROM audit_events WHERE workspace_id = $1 AND event_type = $2 AND entity_type = $3 AND entity_id = $4 ORDER BY sequence DESC LIMIT 1`,
+        [workspaceId, eventType, entityType, entityId],
+      );
+      return row === undefined ? undefined : auditFromRow(row);
+    },
+    verifyAuditChain: async (workspaceId) => {
+      const walk = startAuditChainWalk(workspaceId);
+      let lastSequence = 0;
+      for (;;) {
+        const rows = await executor.query(
+          `SELECT ${auditChainEventColumns} FROM audit_events WHERE workspace_id = $1 AND sequence > $2 ORDER BY sequence LIMIT $3`,
+          [workspaceId, lastSequence, auditChainPageSize],
+        );
+        if (rows.length === 0) break;
+        for (const row of rows) {
+          lastSequence = Number(row.sequence);
+          const target = walk.event(row);
+          if (target === undefined) continue;
+          const [snapshot] = await executor.query(
+            `SELECT ${auditChainSnapshotColumns} FROM run_snapshots WHERE id = $1`,
+            [target.snapshotId],
+          );
+          walk.snapshot(target, snapshot);
+        }
+      }
+      return walk.result();
+    },
+  };
 }

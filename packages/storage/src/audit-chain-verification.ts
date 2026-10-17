@@ -36,7 +36,7 @@ export interface AuditChainVerification {
 }
 
 // Legacy snapshot events held whole snapshots of many megabytes, so a page must stay small.
-const pageSize = 2;
+export const auditChainPageSize = 2;
 
 function parseJson(text: string): JsonValue | undefined {
   try {
@@ -92,37 +92,57 @@ function snapshotRowChecksumFromText(row: Record<string, unknown>): string | und
   );
 }
 
+/** A run snapshot an audit event names, with the checksum the event recorded for it. */
+export interface AuditChainSnapshotTarget {
+  readonly snapshotId: string;
+  readonly checksum: string;
+}
+
 /**
- * Walks a workspace's audit chain in order and reports every break. Each event is checked as it is
- * stored: its payload against its payload checksum, its fields against its event checksum, and its
- * link to the previous event. Snapshot events, in either shape, also name a `run_snapshots` row;
- * that row must exist and match both the checksum the event holds and its own recomputed checksum.
- * The first event's predecessor is not checked, since retention may have removed the head.
+ * One pass over a workspace's audit chain, driven by the storage that reads the rows. It holds the
+ * checks, so every implementation verifies the same way; the driver only pages events in sequence
+ * order and looks up the snapshots they name.
  */
-export function verifyAuditChain(
-  database: AuditChainDatabase,
-  workspaceId: string,
-): AuditChainVerification {
+export interface AuditChainWalk {
+  /** Checks the next event row; returns the run snapshot it names, if it is a snapshot event. */
+  readonly event: (row: Record<string, unknown>) => AuditChainSnapshotTarget | undefined;
+  /** Checks the named snapshot's row, or its absence, against the target `event` returned. */
+  readonly snapshot: (
+    target: AuditChainSnapshotTarget,
+    row: Record<string, unknown> | undefined,
+  ) => void;
+  readonly result: () => AuditChainVerification;
+}
+
+/** The event columns a walk reads, in a page ordered by `sequence`. */
+export const auditChainEventColumns =
+  "sequence, id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at";
+
+/** The snapshot columns a walk reads for a snapshot event's target. */
+export const auditChainSnapshotColumns =
+  "workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum";
+
+/**
+ * Starts a walk. Each event is checked as it is stored: its payload against its payload checksum,
+ * its fields against its event checksum, and its link to the previous event. Snapshot events, in
+ * either shape, also name a `run_snapshots` row; that row must exist and match both the checksum
+ * the event holds and its own recomputed checksum. The first event's predecessor is not checked,
+ * since retention may have removed the head.
+ */
+export function startAuditChainWalk(workspaceId: string): AuditChainWalk {
   const problems: AuditChainProblem[] = [];
-  const page = database.prepare(
-    "SELECT sequence, id, event_type, entity_type, entity_id, payload_json, payload_checksum, previous_event_checksum, event_checksum, created_at FROM audit_events WHERE workspace_id = ? AND sequence > ? ORDER BY sequence LIMIT ?",
-  );
-  const snapshotRow = database.prepare(
-    "SELECT workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum FROM run_snapshots WHERE id = ?",
-  );
-  let lastSequence = 0;
   let previousChecksum: string | undefined;
   let eventCount = 0;
-  for (;;) {
-    const rows = page.all(workspaceId, lastSequence, pageSize);
-    if (rows.length === 0) break;
-    for (const row of rows) {
+  let current: { readonly id: string; readonly sequence: number } | undefined;
+  const report = (code: AuditChainProblem["code"], message: string): void => {
+    if (current !== undefined) {
+      problems.push({ eventId: current.id, sequence: current.sequence, code, message });
+    }
+  };
+  return {
+    event: (row) => {
       const id = String(row.id);
-      const sequence = Number(row.sequence);
-      const report = (code: AuditChainProblem["code"], message: string): void => {
-        problems.push({ eventId: id, sequence, code, message });
-      };
-      lastSequence = sequence;
+      current = { id, sequence: Number(row.sequence) };
       eventCount += 1;
       const payloadText = String(row.payload_json);
       const payloadChecksum = String(row.payload_checksum);
@@ -154,19 +174,20 @@ export function verifyAuditChain(
         report("chain-link", `audit event ${id} does not follow the previous event`);
       }
       previousChecksum = String(row.event_checksum);
-      if (row.event_type !== runSnapshotAuditEventType) continue;
+      if (row.event_type !== runSnapshotAuditEventType) return undefined;
       // A verified payload is read by scanning its text, since a legacy one holds a whole snapshot.
       let target = canonical ? runSnapshotTargetFromText(payloadText) : undefined;
       if (target === undefined) {
         const parsed = parseJson(payloadText);
-        if (parsed === undefined) continue;
+        if (parsed === undefined) return undefined;
         target = runSnapshotTarget(parsed);
       }
       if (target === undefined) {
         report("snapshot-missing", `audit event ${id} does not name a run snapshot`);
-        continue;
       }
-      const snapshot = snapshotRow.get(target.snapshotId);
+      return target;
+    },
+    snapshot: (target, snapshot) => {
       if (snapshot === undefined) {
         report("snapshot-missing", `run snapshot ${target.snapshotId} is missing`);
       } else if (
@@ -179,7 +200,32 @@ export function verifyAuditChain(
           `run snapshot ${target.snapshotId} does not match its checksum`,
         );
       }
+    },
+    result: () => ({ ok: problems.length === 0, eventCount, problems: [...problems] }),
+  };
+}
+
+/** Walks a workspace's audit chain in SQLite and reports every break (see `startAuditChainWalk`). */
+export function verifyAuditChain(
+  database: AuditChainDatabase,
+  workspaceId: string,
+): AuditChainVerification {
+  const walk = startAuditChainWalk(workspaceId);
+  const page = database.prepare(
+    `SELECT ${auditChainEventColumns} FROM audit_events WHERE workspace_id = ? AND sequence > ? ORDER BY sequence LIMIT ?`,
+  );
+  const snapshotRow = database.prepare(
+    `SELECT ${auditChainSnapshotColumns} FROM run_snapshots WHERE id = ?`,
+  );
+  let lastSequence = 0;
+  for (;;) {
+    const rows = page.all(workspaceId, lastSequence, auditChainPageSize);
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      lastSequence = Number(row.sequence);
+      const target = walk.event(row);
+      if (target !== undefined) walk.snapshot(target, snapshotRow.get(target.snapshotId));
     }
   }
-  return { ok: problems.length === 0, eventCount, problems };
+  return walk.result();
 }
