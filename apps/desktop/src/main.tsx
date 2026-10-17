@@ -2807,6 +2807,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(selectFiles === undefined ? {} : { onSelectFiles: selectFiles })}
       {...(addUrl === undefined ? {} : { onAddUrl: addUrl })}
       jobRequirements={jobRequirementsBinding}
+      {...(activePort.getApplicationJob === undefined
+        ? {}
+        : { onReadJob: activePort.getApplicationJob })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
       providerSignInReadiness={providerSignInReadiness}
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")

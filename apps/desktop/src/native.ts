@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
 
 import {
+  type ApplicationJobResult,
   type BridgeCommand,
   type BridgeResult,
   bridgeCapabilities,
@@ -155,6 +156,8 @@ export interface DesktopOpportunityCapabilities {
   readonly listOpportunityVersions?: (briefId: string) => Promise<OpportunityListResult>;
   /** The workspace's most recent opportunity brief (draft or reviewed), or `null` when none. */
   readonly getLatestOpportunity?: () => Promise<OpportunityLatestResult>;
+  /** The job description of the loaded application, read back for the review screen. */
+  readonly getApplicationJob?: () => Promise<ApplicationJobResult>;
   readonly editOpportunity?: (
     input: Omit<OpportunityEditInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
@@ -1241,6 +1244,22 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             return unwrap(
               await capabilityPort.execute({
                 type: "opportunity.latest",
+                input: {
+                  workspaceId: state.workspaceId,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.job")
+      ? {
+          getApplicationJob: async () => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "application.job",
                 input: {
                   workspaceId: state.workspaceId,
                   ...(applicationId === undefined ? {} : { applicationId }),

@@ -607,11 +607,17 @@ pinned under it.
   never claimed. Runs started before the plan existed show no plan.
 - **Side panel.** A one-line "Next:" status names the next step, such as "Next:
   decide 1 blocking finding", and matches the footer's gate. Below it,
-  **Findings** and **Coverage** share the panel as tabs; with no requirement
-  coverage recorded, only Findings shows. Findings filter by Needs action,
-  Blocking, Warnings and Resolved, and each has **Accept**, **Reject**,
-  **Defer** and **Override**, with keyboard shortcuts. Coverage is described
-  under [Requirement coverage in run output](#requirement-coverage-in-run-output).
+  **Findings**, **Coverage** and **Job** share the panel as tabs; with no
+  requirement coverage recorded, there is no Coverage tab. Findings filter by
+  Needs action, Blocking, Warnings and Resolved, and each has **Accept**,
+  **Reject**, **Defer** and **Override**, with keyboard shortcuts. Coverage is
+  described under
+  [Requirement coverage in run output](#requirement-coverage-in-run-output).
+- **Job tab.** Shows the application's job description, read-only, beside the
+  draft, with where it came from: the workspace's job file, the pasted text, or
+  the chosen file as it reads now. A job added from a web page shows the
+  approved address instead, because only the requirements extracted from the
+  page are kept; the Coverage tab lists them.
 - **Run state.** While a run executes, the side panel shows its progress,
   timeline and Stop. A paused or interrupted run keeps Resume in the side
   panel, and a shared-lineage warning stays there too. The footer mirrors the
@@ -2042,7 +2048,7 @@ recorded) and each cited block by its section and opening words. Each row has a
 status badge, the basis, the rationale, and the cited blocks, which jump to the
 block when it is in the draft, under a summary such as
 `3 judged · 2 satisfied · 1 not satisfied`. Without a recorded coverage
-judgement there is no Coverage tab, and the side panel shows Findings alone.
+judgement there is no Coverage tab.
 
 ### Desktop semantic retrieval controls
 

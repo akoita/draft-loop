@@ -1,10 +1,11 @@
 /**
- * The review's work area: a one-line "Next:" status over two tabs, Findings and Coverage.
+ * The review's work area: a one-line "Next:" status over the Findings, Coverage and Job tabs.
  *
  * The "Next:" line reads the footer's blocker kind, so it can never name a different step than
  * the gate below it enforces. Findings and Coverage share the side panel as tabs instead of
  * stacking, and coverage verdicts, which never block approval, fold to one summary line until
- * the reviewer asks for every card.
+ * the reviewer asks for every card. The Job tab shows the job description the draft is written
+ * for, which the setup inputs no longer show once a run exists.
  *
  * The chosen tab is a reading preference held in `sessionStorage` for the app session; it never
  * reaches the main process and changes nothing about the run.
@@ -21,11 +22,12 @@ import {
 import { compactReadinessBlocker, type FooterBlocker } from "./review-footer.js";
 import { reviewInProgress } from "./review-run-status.js";
 
-export type ReviewWorkTabId = "findings" | "coverage";
+export type ReviewWorkTabId = "findings" | "coverage" | "job";
 
 const reviewWorkTabIds: readonly ReviewWorkTabId[] = Object.freeze([
   "findings",
   "coverage",
+  "job",
 ] as const);
 
 function plural(count: number, noun: string): string {
@@ -144,6 +146,20 @@ export function coverageTabLabel(coverage: ReviewCoverageView): ReviewWorkTabLab
   };
 }
 
+export const jobTabLabel: ReviewWorkTabLabel = Object.freeze({
+  id: "job",
+  label: "Job",
+  ariaLabel: "Job description",
+});
+
+/** The selected tab when the review offers it, otherwise Findings, which every review has. */
+export function availableReviewWorkTab(
+  selected: ReviewWorkTabId,
+  tabs: readonly ReviewWorkTabLabel[],
+): ReviewWorkTabId {
+  return tabs.some((tab) => tab.id === selected) ? selected : "findings";
+}
+
 /**
  * Where the "Next:" line can take the reviewer: the findings queue, the footer's approval gate,
  * or nowhere when the step happens elsewhere (waiting, approving, exporting).
@@ -225,7 +241,7 @@ export function reviewWorkTabDomId(tab: ReviewWorkTabId): string {
 
 /** The panels keep their existing ids, so links and focus targets into them still resolve. */
 export function reviewWorkPanelDomId(tab: ReviewWorkTabId): string {
-  return tab === "findings" ? "findings-panel" : "coverage-panel";
+  return `${tab}-panel`;
 }
 
 /** The ARIA a panel carries while it sits under a tab. */
