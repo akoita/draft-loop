@@ -32,7 +32,7 @@ accepted feedback drives bounded revision. The default cross-company pairing is
 Anthropic as author and OpenAI as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
 records DraftLoop's adaptation and controls.
 
-![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before a local export.](docs/assets/how-draftloop-works.svg)
+[![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before a local export.](docs/assets/how-draftloop-works.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/how-draftloop-works.svg)
 
 The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
@@ -156,7 +156,7 @@ see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requi
 | Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
 | Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
 
-![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)
+[![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/architecture-at-a-glance.svg)
 
 The portable Candidate Knowledge Base (CKB) component can store approved local
 source versions. CLI and desktop adapters can create, open, list, and inspect
