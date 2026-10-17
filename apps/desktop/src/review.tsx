@@ -84,7 +84,12 @@ import {
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
-import { footerBlocker, MISSING_EXPORT_LABEL, ReviewFooter } from "./review-footer.js";
+import {
+  footerBlocker,
+  MISSING_EXPORT_LABEL,
+  ReviewFooter,
+  revisionUnavailableReason,
+} from "./review-footer.js";
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
@@ -1738,6 +1743,9 @@ export function ReviewWorkspace({
             : !transmissionReady
               ? "Provider transmission has not been acknowledged."
               : runChangeReason;
+  // A revision that cannot happen in this run at all folds the directions field away, so a
+  // greyed-out field never looks usable; a briefly blocked one keeps the field and its text.
+  const lastingRevisionBlock = revisionUnavailableReason(state, maximumRounds);
   const comparisonReason = hasPreviousArtifact
     ? null
     : "There is no previous version to compare with.";
@@ -3840,6 +3848,7 @@ export function ReviewWorkspace({
               onRequest: requestRevision,
               direction: revisionDirection,
               directionsUnavailable,
+              unavailableReason: lastingRevisionBlock,
               onDirectionChange: (text) =>
                 setRevisionDirectionDraft({ key: revisionDirectionKey, text }),
             }}

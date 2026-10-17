@@ -185,6 +185,27 @@ export function footerBlocker(
   };
 }
 
+/**
+ * Why this run can take no further revision, for the footer to show in place of the directions
+ * field, or null while one is possible or only briefly blocked (a pending action, a critique
+ * still running, an unacknowledged transmission).
+ */
+export function revisionUnavailableReason(
+  state: Pick<DesktopReviewState, "state" | "approval" | "round" | "reviewComplete">,
+  maximumRounds: number,
+): string | null {
+  if (state.approval === "approved" || state.state === "approved" || state.state === "exported") {
+    return "The draft is approved, so this run takes no more revisions.";
+  }
+  if (state.state === "stopped" || state.state === "budget-exhausted") {
+    return "This review has ended. Start a new review from Run details to revise again.";
+  }
+  if (state.reviewComplete && state.round >= maximumRounds) {
+    return `${NO_REVISION_LEFT}: this run has used all ${maximumRounds} rounds.`;
+  }
+  return null;
+}
+
 export interface GateCondition {
   readonly id: string;
   readonly label: string;
@@ -233,6 +254,12 @@ export interface ReviewFooterProps {
     readonly onDirectionChange: (direction: string) => void;
     /** The run's author prompt cannot take directions: the field is disabled with a note. */
     readonly directionsUnavailable?: boolean;
+    /**
+     * Why this run cannot take another revision for now, e.g. because the draft is approved. The
+     * directions field is then left out and the reason shown beside the disabled button; null
+     * while a revision is possible or only briefly blocked.
+     */
+    readonly unavailableReason?: string | null;
   };
   readonly exportAction: {
     readonly disabled: boolean;
@@ -370,38 +397,6 @@ export function ReviewFooter({
               Approve with override…
             </button>
           )}
-          <label className="revision-direction">
-            <span>Directions for the author (optional)</span>
-            <textarea
-              className="revision-direction-input"
-              rows={2}
-              maxLength={maximumRevisionDirectionLength}
-              value={revision.direction}
-              disabled={revision.disabled || revision.directionsUnavailable === true}
-              placeholder="e.g. lead with tokenisation; drop certification dates"
-              onChange={(event) => revision.onDirectionChange(event.target.value)}
-            />
-            <span className="revision-direction-note">
-              {revision.directionsUnavailable === true
-                ? revisionDirectionsUnavailableNote
-                : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
-                    revision.direction.length === 0
-                      ? ""
-                      : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
-                  }`}
-            </span>
-          </label>
-          <button
-            className="button button-quiet"
-            type="button"
-            aria-keyshortcuts="Alt+R"
-            title="Request revision (Alt+R)"
-            disabled={revision.disabled}
-            onClick={revision.onRequest}
-          >
-            Request revision
-            <kbd>Alt+R</kbd>
-          </button>
         </div>
         {override === null || !override.open ? null : (
           <section
@@ -444,6 +439,46 @@ export function ReviewFooter({
             </div>
           </section>
         )}
+        <div className="revision-request">
+          {revision.unavailableReason == null ? (
+            <label className="revision-direction">
+              <span>Directions for the author (optional)</span>
+              <textarea
+                className="revision-direction-input"
+                rows={2}
+                maxLength={maximumRevisionDirectionLength}
+                value={revision.direction}
+                disabled={revision.disabled || revision.directionsUnavailable === true}
+                placeholder="e.g. lead with tokenisation; drop certification dates"
+                onChange={(event) => revision.onDirectionChange(event.target.value)}
+              />
+            </label>
+          ) : null}
+          <div className="revision-request-row">
+            <span className="revision-direction-note">
+              {revision.unavailableReason != null
+                ? revision.unavailableReason
+                : revision.directionsUnavailable === true
+                  ? revisionDirectionsUnavailableNote
+                  : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
+                      revision.direction.length === 0
+                        ? ""
+                        : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
+                    }`}
+            </span>
+            <button
+              className="button button-quiet"
+              type="button"
+              aria-keyshortcuts="Alt+R"
+              title="Request revision (Alt+R)"
+              disabled={revision.disabled}
+              onClick={revision.onRequest}
+            >
+              Request revision
+              <kbd>Alt+R</kbd>
+            </button>
+          </div>
+        </div>
         <div className="export-action">
           <div>
             <strong>Export locally</strong>

@@ -637,14 +637,16 @@ The footer holds the approval gate and stays in view while you scroll:
 - **Approve with override….** Offered when the final CV checks block approval.
   It asks for a required reason and records it with the approval.
 - **Request revision.** Sends the draft back to the author for another round.
-  The optional **Directions for the author** field beside it (up to 1,000
+  The optional **Directions for the author** field above it (up to 1,000
   characters) steers that round, for example "lead with tokenisation" or "drop
   certification dates". The author and the next critic both see the text, which
   is recorded with the round and shown in **Run details**. Directions steer
   selection and framing only: they are not evidence, so the author still cannot
   add a fact your sources do not hold. Runs started before this field existed
   cannot take directions: the field is disabled with a note, and starting a new
-  review enables it.
+  review enables it. When the run can take no more revisions (the draft is
+  approved, the review has ended, or the round limit is spent), the field is
+  left out and the reason sits beside the disabled button.
 - **While a round runs.** The round reports where you requested it. The
   footer's buttons give way to what the author or critic is doing, its model
   and elapsed time, your directions for that round, and **Stop review**. A
