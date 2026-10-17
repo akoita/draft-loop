@@ -2,6 +2,7 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
+  defaultExportTemplateId,
   exportLengthWarningLine,
   exportLengthWarningPrefix,
   pageOverflowWarningLine,
@@ -142,5 +143,13 @@ describe("PDF page overflow warning", () => {
     expect(await exportLengthWarningLine(readerWithPolicy("one-page"), long, standard)).toBe(
       pageOverflowWarningLine(standard),
     );
+  });
+});
+
+describe("default export template", () => {
+  it("draws a one-page run with Compact and any other run with Classic", () => {
+    expect(defaultExportTemplateId("one-page")).toBe("compact");
+    expect(defaultExportTemplateId("two-page")).toBe("classic");
+    expect(defaultExportTemplateId(undefined)).toBe("classic");
   });
 });
