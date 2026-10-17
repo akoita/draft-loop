@@ -377,6 +377,66 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
     `,
   },
+  {
+    version: 5,
+    name: "candidate knowledge bases, sources and immutable source versions",
+    sql: `
+      CREATE TABLE candidate_knowledge_bases (
+        id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('active', 'archived')),
+        is_default INTEGER NOT NULL CHECK (is_default IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        archived_at TEXT,
+        CHECK (
+          (state = 'active' AND archived_at IS NULL) OR
+          (state = 'archived' AND archived_at IS NOT NULL)
+        ),
+        CHECK (is_default = 0 OR state = 'active')
+      );
+      CREATE UNIQUE INDEX candidate_knowledge_bases_one_default
+        ON candidate_knowledge_bases (is_default) WHERE is_default = 1;
+
+      CREATE TABLE candidate_knowledge_sources (
+        id TEXT PRIMARY KEY,
+        candidate_knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases (id),
+        kind TEXT NOT NULL CHECK (kind IN ('file', 'url')),
+        display_name TEXT NOT NULL CHECK (length(trim(display_name)) > 0),
+        created_at TEXT NOT NULL,
+        UNIQUE (id, candidate_knowledge_base_id)
+      );
+      CREATE INDEX candidate_knowledge_sources_base_created
+        ON candidate_knowledge_sources (candidate_knowledge_base_id, created_at, id);
+
+      CREATE TABLE candidate_knowledge_source_versions (
+        id TEXT PRIMARY KEY,
+        source_id TEXT NOT NULL REFERENCES candidate_knowledge_sources (id),
+        version INTEGER NOT NULL CHECK (version >= 1),
+        parent_version_id TEXT,
+        media_type TEXT NOT NULL CHECK (length(trim(media_type)) > 0),
+        checksum TEXT NOT NULL CHECK (checksum ~ '^[0-9a-f]{64}$'),
+        size_bytes BIGINT NOT NULL CHECK (size_bytes >= 0),
+        created_at TEXT NOT NULL,
+        UNIQUE (source_id, version),
+        UNIQUE (id, source_id),
+        FOREIGN KEY (parent_version_id, source_id)
+          REFERENCES candidate_knowledge_source_versions (id, source_id),
+        CHECK (
+          (version = 1 AND parent_version_id IS NULL) OR
+          (version > 1 AND parent_version_id IS NOT NULL)
+        )
+      );
+
+      CREATE TRIGGER candidate_knowledge_sources_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_sources
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER candidate_knowledge_source_versions_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_source_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

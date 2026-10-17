@@ -119,6 +119,17 @@ export {
   StorageValidationError,
 } from "./storage-errors.js";
 
+import {
+  candidateKnowledgeBaseFromRow,
+  candidateKnowledgeSourceFromRow,
+  candidateKnowledgeSourceVersionFromRow,
+  initialCandidateKnowledgeSourceVersion,
+  nextCandidateKnowledgeSourceVersion,
+  normalizeCandidateKnowledgeBaseInput,
+  normalizeCandidateKnowledgeSourceInput,
+  normalizeCandidateKnowledgeSourceVersionInput,
+  requireActiveCandidateKnowledgeBaseRecord,
+} from "./candidate-knowledge-rules.js";
 import { listCanonicalCandidateProfileCatalog } from "./canonical-profile-catalog.js";
 import {
   type ApprovedEvidenceSources,
@@ -3178,18 +3189,10 @@ export class SqliteStorage
   ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
     this.ensureOpen();
     const source = normalizeCandidateKnowledgeSourceInput(sourceInput);
-    const initialVersion = normalizeCandidateKnowledgeSourceVersionInput(initialVersionInput);
-    if (Date.parse(initialVersion.createdAt) < Date.parse(source.createdAt)) {
-      throw new StorageValidationError(
-        "candidate knowledge source version createdAt must not precede its source createdAt",
-      );
-    }
-    const version: CandidateKnowledgeSourceVersionRecord = {
-      ...initialVersion,
-      sourceId: source.id,
-      version: 1,
-      parentVersionId: null,
-    };
+    const version = initialCandidateKnowledgeSourceVersion(
+      source,
+      normalizeCandidateKnowledgeSourceVersionInput(initialVersionInput),
+    );
     this.database.transaction(() => {
       this.requireActiveCandidateKnowledgeBase(source.knowledgeBaseId);
       if (
@@ -3235,32 +3238,14 @@ export class SqliteStorage
           `candidate knowledge source ${normalizedSourceId} has no versions`,
         );
       }
-      const current = candidateKnowledgeSourceVersionFromRow(currentRow);
-      if (Date.parse(normalizedVersion.createdAt) < Date.parse(current.createdAt)) {
-        throw new StorageValidationError(
-          "candidate knowledge source version createdAt must not precede the current version createdAt",
-        );
-      }
-      if (current.checksum === normalizedVersion.checksum) {
-        if (
-          current.mediaType !== normalizedVersion.mediaType ||
-          current.sizeBytes !== normalizedVersion.sizeBytes
-        ) {
-          throw new StorageConflictError(
-            "candidate knowledge source version checksum conflicts with its integrity metadata",
-          );
-        }
-        result = { source, version: current, created: false };
-        return;
-      }
-      const version: CandidateKnowledgeSourceVersionRecord = {
-        ...normalizedVersion,
-        sourceId: normalizedSourceId,
-        version: current.version + 1,
-        parentVersionId: current.id,
+      result = {
+        source,
+        ...nextCandidateKnowledgeSourceVersion(
+          candidateKnowledgeSourceVersionFromRow(currentRow),
+          normalizedVersion,
+        ),
       };
-      this.insertCandidateKnowledgeSourceVersion(version);
-      result = { source, version, created: true };
+      if (result.created) this.insertCandidateKnowledgeSourceVersion(result.version);
     })();
     return result as CandidateKnowledgeSourceVersionWriteResult;
   }
@@ -11796,11 +11781,7 @@ export class SqliteStorage
   }
 
   private requireActiveCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
-    const knowledgeBase = this.requireCandidateKnowledgeBase(id);
-    if (knowledgeBase.state !== "active") {
-      throw new StorageConflictError(`candidate knowledge base ${id} is archived`);
-    }
-    return knowledgeBase;
+    return requireActiveCandidateKnowledgeBaseRecord(this.requireCandidateKnowledgeBase(id));
   }
 
   private requireCandidateKnowledgeSource(
@@ -11825,52 +11806,6 @@ export class SqliteStorage
       throw new StorageValidationError("SQLite storage is closed");
     }
   }
-}
-
-function normalizeCandidateKnowledgeBaseInput(
-  input: CandidateKnowledgeBaseInput,
-): CandidateKnowledgeBaseRecord {
-  const id = requireNonEmpty(input.id, "candidate knowledge base id").trim();
-  const displayName = requireNonEmpty(
-    input.displayName,
-    "candidate knowledge base displayName",
-  ).trim();
-  const createdAt = requireTimestamp(input.createdAt, "candidate knowledge base createdAt");
-  if (input.description !== undefined && typeof input.description !== "string") {
-    throw new StorageValidationError("candidate knowledge base description must be a string");
-  }
-  if (typeof input.isDefault !== "boolean") {
-    throw new StorageValidationError("candidate knowledge base isDefault must be a boolean");
-  }
-  return {
-    id,
-    displayName,
-    description: (input.description ?? "").trim(),
-    state: "active",
-    isDefault: input.isDefault,
-    createdAt,
-    updatedAt: createdAt,
-    archivedAt: null,
-  };
-}
-
-function normalizeCandidateKnowledgeSourceInput(
-  input: CandidateKnowledgeSourceInput,
-): CandidateKnowledgeSourceRecord {
-  const id = requireNonEmpty(input.id, "candidate knowledge source id").trim();
-  const knowledgeBaseId = requireNonEmpty(
-    input.knowledgeBaseId,
-    "candidate knowledge source knowledgeBaseId",
-  ).trim();
-  if (input.kind !== "file" && input.kind !== "url") {
-    throw new StorageValidationError(`Unsupported candidate knowledge source kind: ${input.kind}`);
-  }
-  const displayName = requireNonEmpty(
-    input.displayName,
-    "candidate knowledge source displayName",
-  ).trim();
-  const createdAt = requireTimestamp(input.createdAt, "candidate knowledge source createdAt");
-  return { id, knowledgeBaseId, kind: input.kind, displayName, createdAt };
 }
 
 function normalizeCandidateKnowledgeDirectoryBindingInput(
@@ -12078,30 +12013,6 @@ function normalizeCandidateKnowledgeDirectoryMemberMoveInput(
     expectedOriginBoundAt,
     movedAt,
   };
-}
-
-function normalizeCandidateKnowledgeSourceVersionInput(
-  input: CandidateKnowledgeSourceVersionInput,
-): CandidateKnowledgeSourceVersionInput {
-  const id = requireNonEmpty(input.id, "candidate knowledge source version id").trim();
-  const mediaType = requireNonEmpty(
-    input.mediaType,
-    "candidate knowledge source version mediaType",
-  ).trim();
-  if (!/^[0-9a-f]{64}$/.test(input.checksum)) {
-    throw new StorageValidationError(
-      "candidate knowledge source version checksum must be a lowercase SHA-256 checksum",
-    );
-  }
-  const sizeBytes = requireNonNegativeInteger(
-    input.sizeBytes,
-    "candidate knowledge source version sizeBytes",
-  );
-  const createdAt = requireTimestamp(
-    input.createdAt,
-    "candidate knowledge source version createdAt",
-  );
-  return { id, mediaType, checksum: input.checksum, sizeBytes, createdAt };
 }
 
 function requireCandidateKnowledgeSourceRefreshObservationStatus(
@@ -12402,31 +12313,6 @@ function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   };
 }
 
-function candidateKnowledgeBaseFromRow(row: Record<string, unknown>): CandidateKnowledgeBaseRecord {
-  return {
-    id: rowString(row, "id"),
-    displayName: rowString(row, "display_name"),
-    description: rowString(row, "description"),
-    state: rowString(row, "state") as CandidateKnowledgeBaseState,
-    isDefault: rowNumber(row, "is_default") === 1,
-    createdAt: rowString(row, "created_at"),
-    updatedAt: rowString(row, "updated_at"),
-    archivedAt: rowNullableString(row, "archived_at"),
-  };
-}
-
-function candidateKnowledgeSourceFromRow(
-  row: Record<string, unknown>,
-): CandidateKnowledgeSourceRecord {
-  return {
-    id: rowString(row, "id"),
-    knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
-    kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
-    displayName: rowString(row, "display_name"),
-    createdAt: rowString(row, "created_at"),
-  };
-}
-
 function candidateKnowledgeSourceOriginBindingFromRow(
   row: Record<string, unknown>,
 ): CandidateKnowledgeSourceOriginBindingRecord {
@@ -12607,21 +12493,6 @@ function managedCandidateKnowledgeWriteOperationFromRow(
             generation: recoveryClaimGeneration,
             claimedAt: recoveryClaimedAt,
           },
-  };
-}
-
-function candidateKnowledgeSourceVersionFromRow(
-  row: Record<string, unknown>,
-): CandidateKnowledgeSourceVersionRecord {
-  return {
-    id: rowString(row, "id"),
-    sourceId: rowString(row, "source_id"),
-    version: rowNumber(row, "version"),
-    parentVersionId: rowNullableString(row, "parent_version_id"),
-    mediaType: rowString(row, "media_type"),
-    checksum: rowString(row, "checksum"),
-    sizeBytes: rowNumber(row, "size_bytes"),
-    createdAt: rowString(row, "created_at"),
   };
 }
 
