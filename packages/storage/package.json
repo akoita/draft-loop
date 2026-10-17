@@ -31,6 +31,10 @@
       "types": "./src/sqlite-handle.ts",
       "import": "./src/sqlite-handle.ts"
     },
+    "./blobs": {
+      "types": "./src/filesystem-blob-storage.ts",
+      "import": "./src/filesystem-blob-storage.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"

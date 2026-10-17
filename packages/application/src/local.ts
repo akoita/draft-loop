@@ -2142,7 +2142,7 @@ export async function exportRun(
   formatInput: string = "markdown",
   options: ExportRunOptions = {},
 ): Promise<string> {
-  const deps = { readWorkspace, openStorage };
+  const deps = { readWorkspace, openStorage, exportBlobs: localStorageFactory.exportBlobs };
   return exportApprovedRun(deps, rootInput, runIdInput, outputPathInput, io, formatInput, options);
 }
 

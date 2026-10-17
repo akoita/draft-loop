@@ -1,3 +1,4 @@
+export * from "./blobs.js";
 export * from "./candidate-knowledge.js";
 export * from "./history.js";
 export * from "./retrieval.js";

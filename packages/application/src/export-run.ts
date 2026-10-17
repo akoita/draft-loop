@@ -1,5 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import {
   createOrchestrationEngine,
@@ -19,7 +18,7 @@ import {
   renderPrintHtml,
 } from "@draft-loop/rendering";
 import type { DraftArtifact } from "@draft-loop/schemas";
-import type { ClosableStoragePort, RunHistoryStorage } from "@draft-loop/storage";
+import type { BlobStoragePort, ClosableStoragePort, RunHistoryStorage } from "@draft-loop/storage";
 
 import { CliUserError } from "./cli-user-error.js";
 import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
@@ -39,6 +38,8 @@ import { timestamp } from "./response-execution.js";
 export interface ExportRunDependencies {
   readonly readWorkspace: (root: string) => Promise<WorkspaceConfig>;
   readonly openStorage: (root: string) => Promise<RunHistoryStorage & ClosableStoragePort>;
+  /** Where the rendered document is written, at the export path. */
+  readonly exportBlobs: BlobStoragePort;
 }
 
 export interface ExportRunOptions {
@@ -122,7 +123,6 @@ export async function exportApprovedRun(
       outputPathInput === undefined
         ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
         : resolve(root, outputPathInput);
-    await mkdir(dirname(outputPath), { recursive: true });
     const renderOptions: RenderOptions = {
       requiredSections: config.requiredSections,
       ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
@@ -137,7 +137,7 @@ export async function exportApprovedRun(
       renderOptions,
       options.printPdf,
     );
-    await writeFile(outputPath, rendered.content);
+    await dependencies.exportBlobs.put(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
       id: exportRecordId(runId, outputChecksum, outputPath, rendered.metadata.generatedAt),

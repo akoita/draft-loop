@@ -2,11 +2,13 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
+  type BlobStoragePort,
   openSqliteStorage,
   openSqliteStorageReadOnly,
   SqliteStorage,
   type WorkspaceHistoryStorage,
 } from "@draft-loop/storage";
+import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 
 /**
  * The local driver's storage factory: the one application module that opens SQLite. Everything
@@ -16,6 +18,8 @@ import {
 export interface StorageFactory {
   /** Opens a workspace's history for reading and writing, creating it when missing. */
   readonly open: (root: string) => Promise<WorkspaceHistoryStorage>;
+  /** Where exported documents are written; locally, files at their export paths. */
+  readonly exportBlobs: BlobStoragePort;
 }
 
 const historyDirectory = ".draft-loop";
@@ -42,6 +46,7 @@ export const localStorageFactory: StorageFactory = {
     await mkdir(dirname(path), { recursive: true });
     return openLocalHistory(path);
   },
+  exportBlobs: createFilesystemBlobStorage(),
 };
 
 /**

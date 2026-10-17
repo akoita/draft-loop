@@ -63,6 +63,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `packages/application/src/local-storage-factory.ts`, is the one application
   module that opens SQLite. It alone reaches SQLite maintenance such as backup,
   integrity checks and history compaction.
+- Exported documents go through a blob port, read and checked by content
+  checksum. The local filesystem implementation keeps today's export paths;
+  object storage implements the same port on the server.
 - A conformance suite, exported as `@draft-loop/storage/conformance`, checks
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.
