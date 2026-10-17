@@ -98,6 +98,19 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
 - **No fork and no long-lived branch.** Server work merges to `main` through
   the normal PR flow. Unfinished server code ships to nobody until it is
   deployed, so it needs no branch of its own.
+- **When to revisit (decided 2026-10-17).** The two versions differ only in
+  the adapters behind the ports. Revisit the single repository only if
+  either of these keeps happening:
+  - shared packages need changes specific to one version;
+  - shared changes break one of the clients.
+
+  The response is then to publish the shared core as versioned packages,
+  never a fork or a long-lived branch.
+- **Infrastructure lives in a private repository.** Terraform, the deploy
+  workflow, project identifiers and service accounts sit in a separate
+  private infrastructure repository, so this public repository holds none
+  of them. This repository keeps the Dockerfiles and the local Compose stack
+  (D15).
 
 **Delivery lanes.** CI stays one gate; delivery splits by client.
 
@@ -106,10 +119,10 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
   tests run in their own job with a service container.
 - **Desktop releases:** `release.yml` is unchanged and still requires
   `pnpm release:preflight` first.
-- **Server deploys:** a separate workflow builds the API and worker images
-  and deploys them to Cloud Run through Workload Identity Federation (D14),
-  staging first, then production behind a manual approval. Server releases
-  use their own tags, such as `server-v*`.
+- **Server deploys:** a workflow in the private infrastructure repository
+  checks out a `server-v*` tag of this repository, builds the API and worker
+  images, and deploys them to Cloud Run through Workload Identity Federation
+  (D14). Staging comes first, then production behind a manual approval.
 
 ### D3. Persistence: a storage port, then Postgres and object storage
 
@@ -293,6 +306,20 @@ Build on what the local version already records:
 - **Embeddings:** the same pinned model runs on CPU workers. Vectors go in
   Postgres with pgvector, keeping retrieval in the same database and tenant
   boundary. Lexical retrieval stays the default where it is today.
+- **Retrieval stays in Postgres (amended 2026-10-17).** Hosted retrieval runs
+  in Cloud SQL:
+  - lexical search uses Postgres full-text search;
+  - semantic search uses `pgvector` with the same pinned embedding model.
+
+  There is no managed RAG product and no separate vector database. That
+  keeps one tenant boundary, one backup and one consistency model, and the
+  retrieval code stays the shared code the desktop runs.
+  - *Risk:* Postgres text ranking is not BM25, so ranking may differ from
+    SQLite FTS5. The storage conformance suite compares the two on shared
+    fixtures. If they differ, the fallback is BM25 computed in the
+    application over the chunks Postgres selects.
+  - *Revisit* AlloyDB or a reranker only when evaluation shows a retrieval
+    quality or latency gap.
 - **Approved URL fetching** goes through an egress-controlled fetcher. The
   existing rule holds: a URL is fetched only after the candidate approves
   it.
@@ -353,9 +380,9 @@ plan decides what is enabled.
 
 ### D14. Hosting on Google Cloud
 
-The owner decided (2026-10-16) to host on Google Cloud. The components map
-onto managed services in one EU region (for example `europe-west9`, Paris,
-or `europe-west1`):
+The owner decided (2026-10-16) to host on Google Cloud, and chose the region
+`europe-west1` (Belgium) on 2026-10-17. The components map onto managed
+services in that region:
 
 | Component | Google Cloud service |
 |---|---|
@@ -368,12 +395,20 @@ or `europe-west1`):
 | Identity (D6) | Identity Platform: OIDC, SAML and multi-tenancy for Business SSO. Confirm EU data handling before committing, or use a third-party vendor |
 | URL fetching (D11) | A fetcher service with egress only through Cloud NAT and Secure Web Proxy rules |
 | Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
-| Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys) |
+| Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys), all in a private infrastructure repository (D2) |
 
 - **Model providers.** Anthropic and OpenAI stay the default pair, through
-  the entry points in D5. Claude on Vertex AI needs one more adapter
-  beside the existing `@anthropic-ai/sdk` one, since both share the
-  messages interface, plus a model-id mapping.
+  the entry points in D5.
+  - Claude is called through Vertex AI's EU multi-region endpoint, which
+    keeps processing in the EU at about a 10% premium over list price.
+  - Claude on Vertex AI needs one more adapter beside the existing
+    `@anthropic-ai/sdk` one, since both share the messages interface, plus
+    a model-id mapping.
+- **Cost per run.** A standard run measured from local history costs about
+  $6 with the Vertex EU premium; the figures are on #1357.
+  - It is an upper bound, since cached tokens were not recorded.
+  - The model gateway (D5) replaces it with measured hosted cost before
+    price levels are set.
 - **Isolation.** Production in its own project, with separate service
   accounts for API, workers, ingestion and fetcher, each with least
   privilege and an egress allowlist (D11). Business plans can later move
@@ -411,8 +446,10 @@ The existing offline fixture mode keeps local runs free of provider calls.
 - a Postgres job with a service container, running the storage
   conformance suite and the API tests;
 - the packaged-desktop acceptance workflows (installed app and credential
-  lifecycle) keep running on every PR on all three platforms, so a shared
-  change that breaks the desktop fails its PR.
+  lifecycle) run on all three platforms for every PR that can change the
+  packaged app, so a shared change that breaks the desktop fails its PR.
+  PRs that change only documentation or tests skip them, and every release
+  build runs them again.
 
 **Releases.** Independent cadences from the same `main`:
 
@@ -473,9 +510,9 @@ Notes on phase 4:
 1. ~~**Who pays first?**~~ **Decided 2026-10-16:** all profiles, through
    tiered plans (D13).
 2. **Pricing levels.** Prices and credits per plan, set from the measured
-   cost per run. The pricing model itself is proposed in D13.
-3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14). Still to
-   choose: the exact EU region.
+   cost per run (D14). The pricing model itself is proposed in D13.
+3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14), in
+   `europe-west1` (decided 2026-10-17).
 4. **Identity vendor.** Identity Platform is the default proposal (D14),
    subject to confirming its EU data handling.
 5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
