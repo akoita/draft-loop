@@ -100,6 +100,15 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   knowledge base's vectors exactly, in the application, with the shared rules.
   It has no approximate (HNSW) index: a single person's knowledge base is small,
   and exact ranking keeps hits and scores identical to the local index.
+- Postgres isolates tenants in shared tables (ADR 0011, D3):
+  - every table carries `tenant_id`, and every key and foreign key includes
+    it, so tenants can reuse ids;
+  - a store opens for one tenant, and each transaction sets
+    `draft_loop.tenant_id`, which fills `tenant_id` on insert;
+  - forced row-level security compares that setting on every read and write,
+    and the store refuses to open as a superuser or `BYPASSRLS` role;
+  - migrations run separately as the schema owner (`migratePostgresStorage`),
+    and `grantPostgresStorageAccess` gives the runtime role table access only.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
   `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs them
   against Postgres 16 with `pgvector`.

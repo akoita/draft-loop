@@ -135,7 +135,7 @@ export function createVectorIndex(client: SqlClient): CandidateKnowledgeVectorSt
           await executor.query(
             `INSERT INTO candidate_knowledge_vector_chunks (store_id, knowledge_base_id, chunk_id, vector)
              VALUES ($1, $2, $3, $4::public.vector)
-             ON CONFLICT (store_id, knowledge_base_id, chunk_id) DO UPDATE SET vector = excluded.vector`,
+             ON CONFLICT (tenant_id, store_id, knowledge_base_id, chunk_id) DO UPDATE SET vector = excluded.vector`,
             [storeId, knowledgeBaseId, chunkId, vectorLiteral(vector)],
           );
         }
@@ -171,28 +171,36 @@ export function createVectorIndex(client: SqlClient): CandidateKnowledgeVectorSt
     queryCandidateKnowledgeVectors: async (input) => {
       const { scope, identity, queryVector, limit } = prepareVectorQuery(input);
       const { storeId, knowledgeBaseId } = scope;
-      return client.transaction(async (executor) => {
-        await executor.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
-        const inspection = await inspectScope(executor, scope, storeId, knowledgeBaseId, identity);
-        if (inspection.status !== "matched") {
-          throw new CandidateKnowledgeVectorIndexUnavailableError(inspection.status);
-        }
-        const rows = await executor.query(
-          `SELECT c.source_id, c.version_id, c.chunk_id, c.ordinal, c.line_start, c.line_end, c.text,
+      return client.transaction(
+        async (executor) => {
+          const inspection = await inspectScope(
+            executor,
+            scope,
+            storeId,
+            knowledgeBaseId,
+            identity,
+          );
+          if (inspection.status !== "matched") {
+            throw new CandidateKnowledgeVectorIndexUnavailableError(inspection.status);
+          }
+          const rows = await executor.query(
+            `SELECT c.source_id, c.version_id, c.chunk_id, c.ordinal, c.line_start, c.line_end, c.text,
              c.metadata_json, v.vector::text AS vector
            FROM candidate_knowledge_vector_chunks v
            JOIN candidate_knowledge_lexical_chunks c
              ON c.store_id = v.store_id AND c.knowledge_base_id = v.knowledge_base_id AND c.chunk_id = v.chunk_id
            WHERE v.store_id = $1 AND v.knowledge_base_id = $2`,
-          [storeId, knowledgeBaseId],
-        );
-        return rankVectorHits(
-          rows.map((row) => ({ row, vector: parseVector(row.vector, identity.dimensions) })),
-          scope,
-          queryVector,
-          limit,
-        );
-      });
+            [storeId, knowledgeBaseId],
+          );
+          return rankVectorHits(
+            rows.map((row) => ({ row, vector: parseVector(row.vector, identity.dimensions) })),
+            scope,
+            queryVector,
+            limit,
+          );
+        },
+        { readOnlySnapshot: true },
+      );
     },
   };
 }

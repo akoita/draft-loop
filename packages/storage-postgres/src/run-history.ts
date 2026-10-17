@@ -82,7 +82,7 @@ async function appendRecord(
 ): Promise<void> {
   await client.transaction(async (executor) => {
     const [inserted] = await executor.query(
-      `INSERT INTO ${table} (${columns}) VALUES (${placeholders(values.length)}) ON CONFLICT (id) DO NOTHING RETURNING id`,
+      `INSERT INTO ${table} (${columns}) VALUES (${placeholders(values.length)}) ON CONFLICT (tenant_id, id) DO NOTHING RETURNING id`,
       values,
     );
     if (inserted === undefined) {
@@ -178,7 +178,7 @@ export function createRunHistory(client: SqlClient) {
       const { id, checksum } = prepareRunSnapshot(input);
       await client.transaction(async (executor) => {
         const [inserted] = await executor.query(
-          `INSERT INTO run_snapshots (${runSnapshotColumns.replace("sequence, ", "")}) VALUES (${placeholders(16)}) ON CONFLICT (id) DO NOTHING RETURNING sequence`,
+          `INSERT INTO run_snapshots (${runSnapshotColumns.replace("sequence, ", "")}) VALUES (${placeholders(16)}) ON CONFLICT (tenant_id, id) DO NOTHING RETURNING sequence`,
           [
             id,
             input.workspaceId,

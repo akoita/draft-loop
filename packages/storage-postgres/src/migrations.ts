@@ -546,6 +546,81 @@ export const postgresMigrations: readonly PostgresMigration[] = [
       );
     `,
   },
+  {
+    version: 8,
+    name: "tenant column on every table, tenant-scoped keys and row-level security",
+    sql: `
+      DO $migration$
+      DECLARE
+        target record;
+        constraint_row record;
+        foreign_keys text[] := '{}';
+        definition text;
+      BEGIN
+        -- Foreign keys reference the keys rebuilt below, so they go first and come back last.
+        FOR constraint_row IN
+          SELECT c.conrelid::regclass AS table_name, c.conname, pg_get_constraintdef(c.oid) AS def
+          FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+          WHERE t.relnamespace = current_schema()::regnamespace AND c.contype = 'f'
+        LOOP
+          foreign_keys := foreign_keys || format(
+            'ALTER TABLE %s ADD CONSTRAINT %I %s',
+            constraint_row.table_name,
+            constraint_row.conname,
+            regexp_replace(
+              regexp_replace(constraint_row.def, '^FOREIGN KEY \\(', 'FOREIGN KEY (tenant_id, '),
+              'REFERENCES ([^(]+)\\(',
+              'REFERENCES \\1(tenant_id, '
+            )
+          );
+          EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', constraint_row.table_name, constraint_row.conname);
+        END LOOP;
+
+        FOR target IN
+          SELECT c.oid::regclass AS table_name
+          FROM pg_class c
+          WHERE c.relnamespace = current_schema()::regnamespace
+            AND c.relkind = 'r'
+            AND c.relname <> 'schema_migrations'
+        LOOP
+          -- Rows take their tenant from the transaction's setting; an empty or missing one fails.
+          EXECUTE format(
+            'ALTER TABLE %s ADD COLUMN tenant_id TEXT NOT NULL '
+            'DEFAULT current_setting(''draft_loop.tenant_id'', true) CHECK (tenant_id <> '''')',
+            target.table_name
+          );
+          FOR constraint_row IN
+            SELECT c.conname, pg_get_constraintdef(c.oid) AS def
+            FROM pg_constraint c
+            WHERE c.conrelid = target.table_name AND c.contype IN ('p', 'u')
+          LOOP
+            definition := regexp_replace(constraint_row.def, '^(PRIMARY KEY|UNIQUE) \\(', '\\1 (tenant_id, ');
+            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', target.table_name, constraint_row.conname);
+            EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s', target.table_name, constraint_row.conname, definition);
+          END LOOP;
+          EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', target.table_name);
+          EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', target.table_name);
+          EXECUTE format(
+            'CREATE POLICY tenant_isolation ON %s '
+            'USING (tenant_id = current_setting(''draft_loop.tenant_id'', true)) '
+            'WITH CHECK (tenant_id = current_setting(''draft_loop.tenant_id'', true))',
+            target.table_name
+          );
+        END LOOP;
+
+        FOREACH definition IN ARRAY foreign_keys LOOP
+          EXECUTE definition;
+        END LOOP;
+      END
+      $migration$;
+
+      -- One default knowledge base per tenant, not per database.
+      DROP INDEX candidate_knowledge_bases_one_default;
+      CREATE UNIQUE INDEX candidate_knowledge_bases_one_default
+        ON candidate_knowledge_bases (tenant_id, is_default) WHERE is_default = 1;
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

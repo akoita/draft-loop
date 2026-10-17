@@ -289,26 +289,28 @@ export function createLexicalIndex(client: SqlClient): CandidateKnowledgeLexical
       const { storeId, knowledgeBaseId } = requireSingleCandidateKnowledgeLexicalScope(
         request.scope,
       );
-      return client.transaction(async (executor) => {
-        // One snapshot for the statistics and the chunks they rank.
-        await executor.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
-        const matched = await rankedChunks(
-          executor,
-          storeId,
-          knowledgeBaseId,
-          lexicalQueryPhrases(queryTerms),
-          request.limit,
-        );
-        if (matched.length > 0) {
-          return lexicalRetrievalResult(request, inspection, "matched", matched);
-        }
-        const fallback = await executor.query(
-          `SELECT ${hitColumns}, 0 AS bm25_rank FROM candidate_knowledge_lexical_chunks
+      // One snapshot for the statistics and the chunks they rank.
+      return client.transaction(
+        async (executor) => {
+          const matched = await rankedChunks(
+            executor,
+            storeId,
+            knowledgeBaseId,
+            lexicalQueryPhrases(queryTerms),
+            request.limit,
+          );
+          if (matched.length > 0) {
+            return lexicalRetrievalResult(request, inspection, "matched", matched);
+          }
+          const fallback = await executor.query(
+            `SELECT ${hitColumns}, 0 AS bm25_rank FROM candidate_knowledge_lexical_chunks
            WHERE store_id = $1 AND knowledge_base_id = $2 ORDER BY chunk_id COLLATE "C" LIMIT $3`,
-          [storeId, knowledgeBaseId, request.limit],
-        );
-        return lexicalRetrievalResult(request, inspection, "bounded-fallback", fallback);
-      });
+            [storeId, knowledgeBaseId, request.limit],
+          );
+          return lexicalRetrievalResult(request, inspection, "bounded-fallback", fallback);
+        },
+        { readOnlySnapshot: true },
+      );
     },
     appendCandidateKnowledgeRetrievalTrace: async (input) => {
       const { trace, payloadJson, payloadChecksum } = prepareRetrievalTrace(input);
@@ -317,7 +319,7 @@ export function createLexicalIndex(client: SqlClient): CandidateKnowledgeLexical
           `INSERT INTO candidate_knowledge_retrieval_traces
              (workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           ON CONFLICT (workspace_id, trace_id) DO NOTHING`,
+           ON CONFLICT (tenant_id, workspace_id, trace_id) DO NOTHING`,
           [
             trace.workspaceId,
             trace.id,
