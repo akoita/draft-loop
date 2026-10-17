@@ -82,7 +82,7 @@ export function createWorkspaceRecords(client: SqlClient) {
       await client.transaction(async (executor) => {
         await executor.query(
           `INSERT INTO workspaces (id, state, created_at, updated_at) VALUES ($1, $2, $3, $4)
-           ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at`,
+           ON CONFLICT (tenant_id, id) DO UPDATE SET state = EXCLUDED.state, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at`,
           [record.id, record.state, record.createdAt, record.updatedAt],
         );
         await appendAuditEventRow(executor, {
@@ -115,7 +115,7 @@ export function createWorkspaceRecords(client: SqlClient) {
       await client.transaction(async (executor) => {
         const [inserted] = await executor.query(
           `INSERT INTO context_snapshots (id, workspace_id, schema_version, created_at, payload_json, payload_checksum)
-           VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING RETURNING id`,
+           VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (tenant_id, id) DO NOTHING RETURNING id`,
           [
             input.id,
             input.workspaceId,
@@ -174,7 +174,7 @@ export function createWorkspaceRecords(client: SqlClient) {
       await client.transaction(async (executor) => {
         const [inserted] = await executor.query(
           `INSERT INTO artifact_versions (id, workspace_id, version, parent_version_id, created_at, payload_json, payload_checksum)
-           VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING RETURNING id`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (tenant_id, id) DO NOTHING RETURNING id`,
           [
             input.id,
             input.workspaceId,

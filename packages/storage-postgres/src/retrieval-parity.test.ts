@@ -1,12 +1,10 @@
-import { randomUUID } from "node:crypto";
 import {
   computeCandidateKnowledgeLexicalManifestChecksum,
   openSqliteStorage,
 } from "@draft-loop/storage";
 import type { CandidateKnowledgeVectorsStorage } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
-import { openPostgresStorage } from "./postgres-storage.js";
-import { createSqlClient } from "./sql-client.js";
+import { openIsolated } from "./test-schema.js";
 
 /**
  * Retrieval parity with the local store (ADR 0011, D11): the same knowledge, indexed in SQLite
@@ -166,19 +164,11 @@ async function vectorHits(storage: CandidateKnowledgeVectorsStorage) {
 async function withPostgres<Result>(
   work: (storage: CandidateKnowledgeVectorsStorage) => Promise<Result>,
 ): Promise<Result> {
-  const schema = `parity_${randomUUID().replaceAll("-", "")}`;
-  const admin = createSqlClient({ connectionString: connectionString ?? "", maxConnections: 1 });
-  await admin.query(`CREATE SCHEMA ${schema}`);
-  const postgres = await openPostgresStorage({
-    connectionString: connectionString ?? "",
-    schema,
-  });
+  const { storage, close } = await openIsolated(connectionString ?? "");
   try {
-    return await work(postgres);
+    return await work(storage);
   } finally {
-    await postgres.close();
-    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.close();
+    await close();
   }
 }
 

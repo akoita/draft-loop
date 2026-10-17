@@ -171,7 +171,7 @@ export function createKnowledgeBaseRecords(client: SqlClient): CandidateKnowledg
         );
         const inserted = await executor.query(
           `INSERT INTO candidate_knowledge_sources (${candidateKnowledgeSourceColumns}) VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (id) DO NOTHING RETURNING id`,
+           ON CONFLICT (tenant_id, id) DO NOTHING RETURNING id`,
           [source.id, source.knowledgeBaseId, source.kind, source.displayName, source.createdAt],
         );
         if (inserted.length === 0) {

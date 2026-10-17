@@ -8,33 +8,15 @@ import {
 } from "@draft-loop/storage/conformance";
 import { describe, expect, it } from "vitest";
 import { postgresMigrations } from "./migrations.js";
-import { openPostgresStorage, type PostgresStorage } from "./postgres-storage.js";
+import { migratePostgresStorage, openPostgresStorage } from "./postgres-storage.js";
 import { createSqlClient } from "./sql-client.js";
+import { createTestSchema, openIsolated, runtimeRoleUrl } from "./test-schema.js";
 
 /**
  * Set by the Postgres CI job and by developers with a local server. Without it these suites are
  * skipped, so the workspace gate runs where no database is available.
  */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
-
-/** Opens an empty store in a schema of its own, dropped again on close. */
-async function openIsolated(url: string): Promise<{
-  readonly storage: PostgresStorage;
-  readonly close: () => Promise<void>;
-}> {
-  const schema = `conformance_${randomUUID().replaceAll("-", "")}`;
-  const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
-  await admin.query(`CREATE SCHEMA ${schema}`);
-  const storage = await openPostgresStorage({ connectionString: url, schema });
-  return {
-    storage,
-    close: async () => {
-      await storage.close();
-      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-      await admin.close();
-    },
-  };
-}
 
 describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   const url = connectionString ?? "";
@@ -136,10 +118,8 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   });
 
   it("reports tampered audit payloads and run snapshots", async () => {
-    const schema = `tamper_${randomUUID().replaceAll("-", "")}`;
-    const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
-    await admin.query(`CREATE SCHEMA ${schema}`);
-    const storage = await openPostgresStorage({ connectionString: url, schema });
+    const { schema, admin, open, drop } = await createTestSchema(url, "tamper");
+    const storage = await open("tenant-a");
     try {
       const at = "2026-10-17T10:00:00.000Z";
       await storage.saveWorkspace({
@@ -203,20 +183,18 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
       ).resolves.toMatchObject({ id: `${snapshot.id}:audit` });
     } finally {
       await storage.close();
-      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-      await admin.close();
+      await drop();
     }
   });
 
-  it("applies each migration once when several stores open the same schema", async () => {
+  it("applies each migration once when several migrators run on the same schema", async () => {
     const schema = `migrations_${randomUUID().replaceAll("-", "")}`;
     const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
     await admin.query(`CREATE SCHEMA ${schema}`);
     try {
-      const stores = await Promise.all(
-        Array.from({ length: 3 }, () => openPostgresStorage({ connectionString: url, schema })),
+      await Promise.all(
+        Array.from({ length: 3 }, () => migratePostgresStorage({ connectionString: url, schema })),
       );
-      await Promise.all(stores.map((store) => store.close()));
       const rows = await admin.query(`SELECT version FROM ${schema}.schema_migrations`);
       expect(rows.map((row) => Number(row.version)).sort((left, right) => left - right)).toEqual(
         postgresMigrations.map((migration) => migration.version),
@@ -224,6 +202,93 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.close();
+    }
+  });
+
+  it("keeps each tenant's rows invisible and unwritable to every other tenant", async () => {
+    const { schema, admin, open, drop } = await createTestSchema(url, "tenants");
+    const tenantA = await open("tenant-a");
+    const tenantB = await open("tenant-b");
+    const at = "2026-10-17T10:00:00.000Z";
+    try {
+      await tenantA.saveWorkspace({
+        id: "workspace-1",
+        state: "collecting",
+        createdAt: at,
+        updatedAt: at,
+      });
+      await tenantA.ensureDefaultCandidateKnowledgeBase({
+        id: "ckb-1",
+        displayName: "A",
+        createdAt: at,
+      });
+      await expect(tenantB.getWorkspace("workspace-1")).resolves.toBeUndefined();
+      await expect(tenantB.listCandidateKnowledgeBases()).resolves.toEqual([]);
+      await expect(tenantB.listAuditEvents("workspace-1")).resolves.toEqual([]);
+
+      // The same ids are free in another tenant, including its own default knowledge base.
+      await tenantB.saveWorkspace({
+        id: "workspace-1",
+        state: "drafting",
+        createdAt: at,
+        updatedAt: at,
+      });
+      await tenantB.ensureDefaultCandidateKnowledgeBase({
+        id: "ckb-1",
+        displayName: "B",
+        createdAt: at,
+      });
+      await expect(tenantA.getWorkspace("workspace-1")).resolves.toMatchObject({
+        state: "collecting",
+      });
+      await expect(tenantA.auditEvents.verifyAuditChain("workspace-1")).resolves.toMatchObject({
+        ok: true,
+      });
+
+      // Raw SQL as the runtime role cannot reach across either: reads are filtered and writes refused.
+      const runtime = createSqlClient({
+        connectionString: runtimeRoleUrl(url),
+        schema,
+        tenantId: "tenant-b",
+        maxConnections: 1,
+      });
+      try {
+        await expect(
+          runtime.query("SELECT count(*) AS count FROM workspaces WHERE tenant_id = 'tenant-a'"),
+        ).resolves.toEqual([{ count: "0" }]);
+        await expect(
+          runtime.query(
+            "UPDATE workspaces SET state = 'drafting' WHERE tenant_id = 'tenant-a' RETURNING id",
+          ),
+        ).resolves.toEqual([]);
+        await expect(
+          runtime.query(
+            "INSERT INTO workspaces (tenant_id, id, state, created_at, updated_at) VALUES ('tenant-a', 'workspace-2', 'collecting', $1, $1)",
+            [at],
+          ),
+        ).rejects.toThrow(/row-level security/u);
+      } finally {
+        await runtime.close();
+      }
+      const [counts] = await admin.query(
+        "SELECT count(*) FILTER (WHERE tenant_id = 'tenant-a') AS a, count(*) FILTER (WHERE tenant_id = 'tenant-b') AS b FROM workspaces",
+      );
+      expect(counts).toEqual({ a: "1", b: "1" });
+    } finally {
+      await tenantA.close();
+      await tenantB.close();
+      await drop();
+    }
+  });
+
+  it("refuses to open as a role that bypasses row-level security", async () => {
+    const { schema, drop } = await createTestSchema(url, "bypass");
+    try {
+      await expect(
+        openPostgresStorage({ connectionString: url, schema, tenantId: "tenant-a" }),
+      ).rejects.toThrow(/row-level security/u);
+    } finally {
+      await drop();
     }
   });
 });

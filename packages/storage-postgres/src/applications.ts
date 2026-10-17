@@ -90,7 +90,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
       await requireStoredApplication(executor, input.workspaceId, input.applicationId);
       await executor.query(
         `INSERT INTO ${table} (workspace_id, ${column}, application_id, created_at) VALUES ($1, $2, $3, $4)
-         ON CONFLICT (workspace_id, ${column}) DO NOTHING`,
+         ON CONFLICT (tenant_id, workspace_id, ${column}) DO NOTHING`,
         [input.workspaceId, entityId, input.applicationId, input.createdAt],
       );
       const [bound] = await executor.query(
@@ -127,7 +127,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
       const inserted = await client.query(
         `INSERT INTO applications (workspace_id, application_id, name, job_source_json, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $5)
-         ON CONFLICT (workspace_id, application_id) DO NOTHING RETURNING application_id`,
+         ON CONFLICT (tenant_id, workspace_id, application_id) DO NOTHING RETURNING application_id`,
         [input.workspaceId, id.data, name, JSON.stringify(jobSource), input.createdAt],
       );
       if (inserted.length === 0) {
@@ -232,7 +232,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
       }
       await client.query(
         `INSERT INTO application_archives (workspace_id, application_id, archived_at) VALUES ($1, $2, $3)
-         ON CONFLICT (workspace_id, application_id) DO NOTHING`,
+         ON CONFLICT (tenant_id, workspace_id, application_id) DO NOTHING`,
         [workspaceId, applicationId, archivedAt],
       );
     },
@@ -257,7 +257,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
       if (applicationId === defaultApplicationId) {
         await client.query(
           `INSERT INTO default_application_names (workspace_id, name, updated_at) VALUES ($1, $2, $3)
-           ON CONFLICT (workspace_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at`,
+           ON CONFLICT (tenant_id, workspace_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at`,
           [workspaceId, name, updatedAt],
         );
         return;
@@ -298,7 +298,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
         await executor.query(
           `INSERT INTO application_model_profiles (workspace_id, application_id, model_profiles_json, updated_at)
            VALUES ($1, $2, $3, $4)
-           ON CONFLICT (workspace_id, application_id)
+           ON CONFLICT (tenant_id, workspace_id, application_id)
            DO UPDATE SET model_profiles_json = excluded.model_profiles_json, updated_at = excluded.updated_at`,
           [workspaceId, applicationId, JSON.stringify(parsed.data), updatedAt],
         );
@@ -343,7 +343,7 @@ export function createApplications(client: SqlClient): ApplicationStoragePort {
         await executor.query(
           `INSERT INTO application_chosen_runs (workspace_id, application_id, run_id, reason, chosen_at)
            VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (workspace_id, application_id) DO UPDATE SET
+           ON CONFLICT (tenant_id, workspace_id, application_id) DO UPDATE SET
              run_id = excluded.run_id, reason = excluded.reason, chosen_at = excluded.chosen_at`,
           [workspaceId, applicationId, chosen.runId, chosen.reason, chosen.chosenAt],
         );
