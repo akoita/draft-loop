@@ -337,12 +337,13 @@ describe("ReviewFooter", () => {
       },
     });
     expect(exported).toContain(">Exported to /tmp/cv.md</p>");
-    expect(exported).toContain('<span class="export-path" aria-live="polite">/tmp/cv.md</span>');
+    expect(exported).not.toContain('class="export-path"');
     expect(exported).toMatch(/title="Export as Markdown again \(Alt\+E\)">Export again…<kbd>/u);
   });
 
   it("names the chosen format and shows an estimated-length note after an export", () => {
     const html = render({
+      blocker: { kind: "exported", text: "Exported to /tmp/cv.docx", tone: "safe" },
       exportAction: {
         disabled: false,
         pathLabel: "/tmp/cv.docx",
@@ -364,10 +365,18 @@ describe("ReviewFooter", () => {
     expect(html).toContain('<p class="export-note" role="status">Estimated length is about 3');
   });
 
-  it("offers the round-limit repair and reports a pending export", () => {
+  it("offers the round-limit repair while deciding", () => {
     const html = render({
       blocker: { kind: "waiting", text: "Round limit recovery required", tone: "warning" },
       recovery: { round: 2, disabled: false, onRecover: noop },
+    });
+    expect(html).toContain(">Return to reviewed Round 2</button>");
+    expect(html).toContain('<p class="export-later">');
+  });
+
+  it("reports a pending export once approved", () => {
+    const html = render({
+      blocker: { kind: "approved", text: "Approved · ready to export", tone: "safe" },
       exportAction: {
         disabled: true,
         pathLabel: "Available now",
@@ -381,7 +390,6 @@ describe("ReviewFooter", () => {
         onExport: noop,
       },
     });
-    expect(html).toContain(">Return to reviewed Round 2</button>");
     expect(html).toContain("Exporting Markdown…</button>");
     expect(html).toContain("Exporting Markdown… Elapsed 1 second.");
   });
@@ -470,13 +478,23 @@ describe("revisionUnavailableReason", () => {
     );
   });
 
-  it("folds the greyed-out directions field away for an approved draft", () => {
+  it("folds the greyed-out directions field away once the review has ended", () => {
+    const stopped: DesktopReviewState = { ...reviewed, state: "stopped" };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={stopped} onAction={() => undefined} />,
+    );
+    expect(html).not.toContain("revision-direction-input");
+    expect(html).toContain("This review has ended.");
+    expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
+  });
+
+  it("leaves only export in the footer once the draft is approved", () => {
     const approved: DesktopReviewState = { ...reviewed, state: "approved", approval: "approved" };
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={approved} onAction={() => undefined} />,
     );
-    expect(html).not.toContain("revision-direction-input");
-    expect(html).toContain("The draft is approved, so this run takes no more revisions.");
-    expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
+    expect(html).not.toContain('title="Approve artifact (Alt+A)"');
+    expect(html).not.toContain('title="Request revision (Alt+R)"');
+    expect(html).toMatch(/class="button button-primary"[^>]*aria-keyshortcuts="Alt\+E"/u);
   });
 });

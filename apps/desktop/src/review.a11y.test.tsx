@@ -35,7 +35,14 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
 
     expect(html).toContain('aria-keyshortcuts="Alt+A"');
     expect(html).toContain('aria-keyshortcuts="Alt+R"');
-    expect(html).toContain('aria-keyshortcuts="Alt+E"');
+    // Export takes the footer once the draft is approved.
+    const approved = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{ ...state, state: "approved", approval: "approved" }}
+        onAction={() => undefined}
+      />,
+    );
+    expect(approved).toContain('aria-keyshortcuts="Alt+E"');
   });
 
   it("ensures all editable textareas have accessible aria labels", () => {

@@ -3556,6 +3556,28 @@ input[type="text"].workspace-title-input {
   margin-bottom: var(--space-3);
 }
 
+/* In the two-column desk the findings list scrolls on its own: the panel fills the side panel's
+   remaining height, its heading and filters stay put, and only the list moves. Stacked, the page
+   scrolls as a whole instead. */
+@media (min-width: 1025px) {
+  .side-scroll > .findings-panel:not([hidden]) {
+    display: flex;
+    flex: 1 0 18rem;
+    flex-direction: column;
+    min-height: 18rem;
+    padding-bottom: 0;
+  }
+
+  .side-scroll > .findings-panel:not([hidden]) > #findings-panel-body {
+    flex: 1 1 0;
+    min-height: 0;
+    margin: 0 calc(-1 * var(--space-5));
+    padding: 0 var(--space-5) var(--space-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* In a narrow panel the severity badge moves under the title rather than squeezing the
    progress line into two ragged rows. */
 .findings-queue-header .section-heading {
@@ -4078,6 +4100,12 @@ input[type="text"].workspace-title-input {
   overflow-wrap: anywhere;
 }
 
+.gate-action-bar p.export-path {
+  margin: var(--space-2) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
 .export-format {
   margin-left: auto;
 }
@@ -4228,9 +4256,49 @@ input[type="text"].workspace-title-input {
   margin-top: 0;
 }
 
+/* Once approved, export is the footer's only section: the template first, then the format
+   beside the one primary button. */
 .gate-action-bar .export-action {
+  gap: var(--space-2);
   margin-top: var(--space-3);
+  border-top: 0;
+  padding-top: 0;
+}
+
+.gate-action-bar .export-format {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 0;
+}
+
+.gate-action-bar .export-format select {
+  width: 100%;
+}
+
+.gate-action-bar .export-action .button {
+  flex: none;
+}
+
+.gate-action-bar .export-templates {
+  margin-top: 0;
+}
+
+/* While deciding, export waits in one quiet line under the decision controls. */
+.export-later {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
   padding-top: var(--space-3);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.export-later strong {
+  color: var(--text-2);
+  font-size: var(--text-sm);
 }
 
 .gate-action-bar .approval-action-error {
