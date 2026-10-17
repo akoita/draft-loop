@@ -3,13 +3,13 @@ import { resolve } from "node:path";
 import type { ContextSnapshot } from "@draft-loop/domain";
 import { createStorageRunStore } from "@draft-loop/orchestrator";
 import { contextSnapshotSchema } from "@draft-loop/schemas";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { ClosableStoragePort, RunHistoryStorage } from "@draft-loop/storage";
 
 import type { WorkspaceConfig } from "./local.js";
 
 export interface RunContextReadDependencies {
   readonly readWorkspace: (root: string) => Promise<Pick<WorkspaceConfig, "latestRunId">>;
-  readonly openStorage: (root: string) => Promise<SqliteStorage>;
+  readonly openStorage: (root: string) => Promise<RunHistoryStorage & ClosableStoragePort>;
 }
 
 /**

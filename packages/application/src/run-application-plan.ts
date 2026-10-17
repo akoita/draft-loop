@@ -8,7 +8,7 @@ import {
   applicationPlanStateSchema,
   guidingApplicationPlan,
 } from "@draft-loop/schemas/application-plan";
-import type { JsonValue, SqliteStorage } from "@draft-loop/storage";
+import type { AuditTrailStoragePort, JsonValue } from "@draft-loop/storage";
 
 import {
   createProviderApplicationPlanner,
@@ -45,7 +45,7 @@ export interface RunRecorders {
 
 /** The recorders of a run; planning is on unless the run options turn it off. */
 export function runRecorders(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   workspaceId: string,
   recordAuthorInput: RecordAuthorInput,
   applicationPlan: boolean | undefined,
@@ -76,7 +76,7 @@ export function recordedApplicationPlanner(
 
 /** Append the `run.application-plan` audit event; each completed call of the plan step appends one. */
 export async function recordRunApplicationPlan(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   workspaceId: string,
   runId: string,
   state: ApplicationPlanState,
