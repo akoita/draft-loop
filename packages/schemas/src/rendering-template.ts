@@ -4,9 +4,9 @@ import { z } from "zod";
  * A rendering template (#1328): the visual settings of a CV as bounded data. The renderer derives its
  * layout profile from a template, so a template never carries layout code, only settings.
  *
- * Every value is bounded and every enum accepts only what the renderer draws today. Later templates
- * (#1329) widen the enums, for example an accent colour, uppercase headings and a left-aligned name.
- * The bounds are wide enough to hold the Classic and Compact built-ins with room to spare.
+ * Every value is bounded and every enum accepts only what the renderer draws today. Modern (#1329)
+ * widened them with a left-aligned name, uppercase headings, an accent colour, justified body text
+ * and an italic role context line. The bounds hold every built-in with room to spare.
  */
 
 export const renderingTemplateSchemaVersion = 1;
@@ -21,6 +21,8 @@ const headingPt = z.number().min(9.5).max(14);
 const namePt = z.number().min(14).max(24);
 const lineHeight = z.number().min(1.1).max(1.5);
 const spacingPt = z.number().min(0).max(12);
+const hexColour = (name: string) =>
+  z.string().regex(/^#[0-9a-fA-F]{6}$/u, `${name} must be a #rrggbb hex colour`);
 
 export const renderingTemplateSchema = z
   .strictObject({
@@ -58,14 +60,17 @@ export const renderingTemplateSchema = z
       titleAfterPt: spacingPt,
       contactAfterPt: spacingPt,
     }),
-    name: z.strictObject({ align: z.literal("center") }),
+    name: z.strictObject({ align: z.enum(["center", "left"]) }),
     headings: z.strictObject({
-      case: z.literal("as-written"),
+      case: z.enum(["as-written", "uppercase"]),
       rule: z.boolean(),
-      ruleColor: z.string().regex(/^#[0-9a-fA-F]{6}$/u, "ruleColor must be a #rrggbb hex colour"),
+      ruleColor: hexColour("ruleColor"),
     }),
+    body: z.strictObject({ align: z.enum(["left", "justify"]) }),
+    roles: z.strictObject({ contextStyle: z.enum(["regular", "italic"]) }),
     skills: z.strictObject({ style: z.literal("as-written") }),
-    accentColor: z.null(),
+    /** Colours the section headings and role dates; null keeps the default navy ink. */
+    accentColor: hexColour("accentColor").nullable(),
   })
   .superRefine((template, context) => {
     if (template.fonts.headingPt < template.fonts.bodyPt) {
