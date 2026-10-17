@@ -22,7 +22,12 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 import type { ClosableStoragePort, RunHistoryStorage } from "@draft-loop/storage";
 
 import { CliUserError } from "./cli-user-error.js";
-import { exportLengthWarningLine, parseExportFormat } from "./export-document.js";
+import {
+  defaultExportTemplateId,
+  exportLengthWarningLine,
+  parseExportFormat,
+  readRunPageTarget,
+} from "./export-document.js";
 import {
   assertExportRenderingQa,
   assertPrintedPdfRenderingQa,
@@ -42,7 +47,7 @@ export interface ExportRunDependencies {
 }
 
 export interface ExportRunOptions {
-  /** A built-in rendering template id (#1330); Classic when omitted. */
+  /** A built-in rendering template id (#1330); when omitted, the run's page target picks it (#1364). */
   readonly templateId?: string | undefined;
   /**
    * Prints a PDF through a browser engine (#1362). The desktop passes one; without it a PDF is
@@ -86,7 +91,7 @@ async function renderChecked(
 /**
  * Render an approved run to a local document, record the export, and mark the run exported. The
  * chosen template is recorded on the export, and the length warning measures against its page
- * target; without a template the run's writing-policy target applies.
+ * target; without a template the run's writing-policy target applies and picks the template.
  */
 export async function exportApprovedRun(
   dependencies: ExportRunDependencies,
@@ -129,7 +134,9 @@ export async function exportApprovedRun(
       ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
       allowUnbackedClaims: false,
       generatedAt: timestamp(),
-      ...(options.templateId === undefined ? {} : { templateId: options.templateId }),
+      templateId:
+        options.templateId ??
+        defaultExportTemplateId(await readRunPageTarget(storage, snapshot.contextSnapshotId)),
     };
     const { rendered, qa } = await renderChecked(
       snapshot.artifact,

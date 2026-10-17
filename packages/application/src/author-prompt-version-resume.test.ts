@@ -9,6 +9,7 @@ import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
@@ -56,8 +57,9 @@ it.each([
   // v10 and later try a block-level patch before falling back to the full revision.
   { recorded: "cli-author-v11", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v12", structuredGuidance: true, budget: 32_768, patchFirst: true },
+  { recorded: "cli-author-v13", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v13",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v14",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -229,21 +231,20 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v13");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v14");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v13", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v14", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[resumedCalls]).toContain(
         "Bullet markers should be several lines apart; never stack short bullets.",
       );
       expect(systemPrompts[resumedCalls]).toContain("paragraph blocks of the form `Label: items`");
       expect(systemPrompts[resumedCalls]).toContain("never a fragment copied from a source");
-      // A resumed earlier run keeps its exact prompt, without the v13 guidance.
-      expect(systemPrompts[0]).not.toContain(
-        "Bullet markers should be several lines apart; never stack short bullets.",
-      );
+      expect(systemPrompts[resumedCalls]).toContain(pageTargetLengthInstructions);
+      // A resumed earlier run keeps its exact prompt, without the v14 page-target guidance.
+      expect(systemPrompts[0]).not.toContain("Write to the page target");
       expect(systemPrompts[resumedCalls]).toContain(structuredFieldInstruction);
       expect(systemPrompts[resumedCalls]).toContain(
         "word order or grouping may vary only when every whole-word component",
