@@ -394,7 +394,7 @@ services in that region:
 | Queue (D4) | Postgres-backed, in the same Cloud SQL instance, so run state and jobs commit together; Cloud Tasks or Pub/Sub only for fan-out that needs it |
 | Objects (D3) | Cloud Storage, with CMEK through Cloud KMS and per-tenant prefixes |
 | Secrets and BYOK keys (D5) | Secret Manager for platform secrets; Cloud KMS envelope encryption for customer keys |
-| Identity (D6) | Identity Platform: OIDC, SAML and multi-tenancy for Business SSO. Confirm EU data handling before committing, or use a third-party vendor |
+| Identity (D6) | Keycloak managed by Clever Cloud in France, outside Google Cloud: OIDC sign-in, organisations as tenants, SAML for Business SSO. Identity Platform is excluded because its Firebase Authentication base runs only in US data centres |
 | URL fetching (D11) | A fetcher service with egress only through Cloud NAT and Secure Web Proxy rules |
 | Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
 | Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys), all in a private infrastructure repository (D2) |
@@ -556,8 +556,12 @@ Notes on phase 4:
    cost per run (D14). The pricing model itself is proposed in D13.
 3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14), in
    `europe-west1` (decided 2026-10-17).
-4. **Identity vendor.** Identity Platform is the default proposal (D14),
-   subject to confirming its EU data handling.
+4. ~~**Identity vendor.**~~ **Decided 2026-10-17:** Keycloak managed by
+   Clever Cloud (D14). It is the most widely adopted open-source identity
+   server, run by a French operator, with organisations built in. Users and
+   their password hashes can be exported, so any other Keycloak host is an
+   exit. The cost is about €0.05 per active user beyond the first 100.
+   Confirm the data processing agreement and SAML support before phase 2.
 5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
    local-first product that can keep evolving in parallel (D15). Making it
    a thin client of the service remains a later option.
