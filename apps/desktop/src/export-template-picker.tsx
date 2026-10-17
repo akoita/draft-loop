@@ -55,9 +55,9 @@ export function ExportTemplatePreview({
 }: {
   readonly template: ExportTemplate;
 }): JSX.Element {
-  const lines = (template === "compact" ? ["a", "b", "c"] : ["a", "b", "c", "d", "e"]).map(
-    (line) => <span className="export-template-preview-line" key={line} />,
-  );
+  const lines = (
+    template === "compact" ? ["a", "b", "c", "d", "e", "f"] : ["a", "b", "c", "d", "e"]
+  ).map((line) => <span className="export-template-preview-line" key={line} />);
   return (
     <span
       className={`export-template-preview export-template-preview-${template}`}
