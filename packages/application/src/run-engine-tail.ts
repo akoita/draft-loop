@@ -1,5 +1,5 @@
 import type { CoverageJudgementPlanner } from "@draft-loop/orchestrator";
-import type { RetrievalPort, SqliteStorage } from "@draft-loop/storage";
+import type { AuditTrailStoragePort, RetrievalPort } from "@draft-loop/storage";
 
 import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
 import { type RunRecorders, runRecorders } from "./run-application-plan.js";
@@ -25,7 +25,7 @@ export function runEngineTail(
   retrieval: (RunAuthorInputTotalsSource & { readonly port: RetrievalPort }) | undefined,
   withheld: CandidateKnowledgeSensitivityExclusions | undefined,
   root: string,
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   workspaceId: string,
 ): RunEngineTail {
   return [
