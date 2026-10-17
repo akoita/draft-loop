@@ -674,7 +674,7 @@ away.
   bullets with a hanging indent, and dates right-aligned. Before the file is
   written, the export checks that every heading and block was drawn, in order.
   The CLI still draws PDFs with DraftLoop's own writer.
-- **Template.** Under **Export…**, pick **Modern** (two pages, the default),
+- **Template.** Above **Export…**, pick **Modern** (two pages, the default),
   **Classic** (two pages) or **Compact** (one page).
   - Compact uses smaller type, tighter spacing and narrower margins than
     Classic, so any draft comes out shorter in it.
