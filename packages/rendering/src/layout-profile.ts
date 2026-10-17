@@ -72,17 +72,18 @@ const sansFamilyConstants: Readonly<Record<1 | 2, SansFamilyConstants>> = {
     fontFamily: "Arial, sans-serif",
     docxFontFamily: "Arial",
     pdfFont: "helvetica",
-    titleLinePt: 26,
-    headingLinePt: 21,
-    bulletIndentPt: 14,
+    titleLinePt: 18,
+    headingLinePt: 13,
+    bulletIndentPt: 10,
     previewSpacingPt: {
-      headingBefore: 9,
-      headingAfter: 7,
-      blockAfter: 5,
-      roleBefore: 5,
-      listIndent: 17,
+      headingBefore: 4,
+      headingAfter: 2,
+      blockAfter: 1,
+      roleBefore: 3,
+      listIndent: 10,
     },
-    wrapping: { bodyMaxCharacters: 96, bulletMaxCharacters: 90 },
+    // Helvetica at 8.5 pt across the 190 mm Compact line, with the same safety ratio as before.
+    wrapping: { bodyMaxCharacters: 108, bulletMaxCharacters: 101 },
   },
   2: {
     fontFamily: "Calibri, Arial, sans-serif",
@@ -107,6 +108,8 @@ const sansFamilyConstants: Readonly<Record<1 | 2, SansFamilyConstants>> = {
 const layoutProfileIdByTemplateId: Readonly<Record<string, RenderingLayoutProfileId>> = {
   classic: "standard-two-page",
   compact: "compact-one-page",
+  // Modern differs from Classic in colour and alignment, not in page target or font metrics.
+  modern: "standard-two-page",
 };
 
 /** The layout profile id a template renders with. Throws for a template without a known profile. */
@@ -197,12 +200,15 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value);
 }
 
-const layoutProfileTable = Object.fromEntries(
-  Object.values(builtInRenderingTemplates).map((template) => {
-    const profile = profileFromTemplate(template);
-    return [profile.id, profile];
-  }),
-) as Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>>;
+// Each profile id keeps the profile of the first template that produces it (Classic, Compact), so a
+// template sharing a profile id, such as Modern, does not replace the canonical metrics.
+const layoutProfileTable: Partial<Record<RenderingLayoutProfileId, RenderingLayoutProfile>> = {};
+for (const template of Object.values(builtInRenderingTemplates)) {
+  const profile = profileFromTemplate(template);
+  layoutProfileTable[profile.id] ??= profile;
+}
 
 /** Immutable profiles used by every controlled output format, derived from the built-in templates. */
-export const renderingLayoutProfiles = deepFreeze(layoutProfileTable);
+export const renderingLayoutProfiles = deepFreeze(
+  layoutProfileTable as Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>>,
+);

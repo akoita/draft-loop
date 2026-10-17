@@ -63,7 +63,8 @@ function assertKnownTemplate(templateId: string | undefined): void {
   try {
     getRenderingTemplate(templateId);
   } catch {
-    const known = Object.keys(builtInRenderingTemplates).join(" or ");
+    const ids = Object.keys(builtInRenderingTemplates);
+    const known = `${ids.slice(0, -1).join(", ")} or ${ids.at(-1)}`;
     throw new CliUserError(`Unknown template: ${templateId}. Use ${known}.`);
   }
 }
