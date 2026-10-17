@@ -1,6 +1,10 @@
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { JsonObject } from "@draft-loop/providers";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type {
+  ArtifactHistoryStoragePort,
+  HistoryStoragePort,
+  StoragePort,
+} from "@draft-loop/storage";
 
 import type { WorkspaceConfig } from "./local.js";
 import { prepareArtifactHistory } from "./local-artifact-history.js";
@@ -15,7 +19,7 @@ function asJsonObject(value: unknown): JsonObject {
  * came from the latest saved round.
  */
 export async function decisionRoundId(
-  storage: Pick<SqliteStorage, "getRound" | "listRounds">,
+  storage: Pick<HistoryStoragePort, "getRound" | "listRounds">,
   snapshot: Pick<RunSnapshot, "runId" | "round">,
 ): Promise<string | null> {
   const current = `${snapshot.runId}:round:${snapshot.round}`;
@@ -27,7 +31,7 @@ export async function decisionRoundId(
 }
 
 export async function saveTypedHistory(
-  storage: SqliteStorage,
+  storage: HistoryStoragePort & ArtifactHistoryStoragePort & Pick<StoragePort, "get">,
   config: Pick<WorkspaceConfig, "id">,
   snapshot: RunSnapshot,
 ): Promise<void> {

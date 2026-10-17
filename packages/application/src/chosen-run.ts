@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { SqliteStorage } from "@draft-loop/storage";
 import {
   type ApplicationChosenRunRecord,
+  type ApplicationStoragePort,
   maximumChosenRunReasonLength,
 } from "@draft-loop/storage/application-store";
 import { CliUserError } from "./cli-user-error.js";
@@ -52,7 +52,7 @@ export function normalizeChosenRunReason(reason: string | undefined): string | n
 
 /** The application's runs and the run snapshot reader the choice checks against. */
 export interface ChooseRunContext {
-  readonly storage: Pick<SqliteStorage, "applications">;
+  readonly storage: { readonly applications: ApplicationStoragePort };
   readonly workspaceId: string;
   /** The application's own run ids. */
   readonly runIds: readonly string[];
@@ -109,7 +109,7 @@ export const applicationRunChoiceClearedEventType = "application.run-choice-clea
  * run appends nothing.
  */
 export async function clearChosenRunForNewRun(
-  storage: Pick<SqliteStorage, "applications">,
+  storage: { readonly applications: ApplicationStoragePort },
   workspaceId: string,
   applicationId: string,
   newRunId: string,

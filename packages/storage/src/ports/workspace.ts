@@ -64,3 +64,8 @@ export interface WorkspaceStoragePort {
   readonly saveWorkspace: (record: WorkspaceRecord) => Promise<void>;
   readonly getWorkspace: (id: string) => Promise<WorkspaceRecord | undefined>;
 }
+
+/** A store its caller opened and must release once done. */
+export interface ClosableStoragePort {
+  readonly close: () => Promise<void>;
+}

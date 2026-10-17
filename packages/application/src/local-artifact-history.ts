@@ -7,7 +7,12 @@ import {
   resolveSnapshotPayload,
 } from "@draft-loop/orchestrator";
 import { type DraftArtifact, draftArtifactSchema } from "@draft-loop/schemas";
-import type { JsonValue, SqliteStorage } from "@draft-loop/storage";
+import type {
+  ArtifactHistoryStoragePort,
+  HistoryStoragePort,
+  JsonValue,
+  StoragePort,
+} from "@draft-loop/storage";
 
 function canonical(value: JsonValue): JsonValue {
   if (Array.isArray(value)) return value.map(canonical);
@@ -31,7 +36,9 @@ function invalid(): never {
 
 /** Validate the complete chain before writing, then replay immutable artifacts parent-first. */
 export async function prepareArtifactHistory(
-  storage: SqliteStorage,
+  storage: Pick<HistoryStoragePort, "listRunSnapshots"> &
+    ArtifactHistoryStoragePort &
+    Pick<StoragePort, "get">,
   workspaceId: string,
   snapshot: RunSnapshot,
 ): Promise<readonly RunSnapshot[]> {

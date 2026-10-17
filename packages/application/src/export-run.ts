@@ -19,7 +19,7 @@ import {
   renderPrintHtml,
 } from "@draft-loop/rendering";
 import type { DraftArtifact } from "@draft-loop/schemas";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { ClosableStoragePort, RunHistoryStorage } from "@draft-loop/storage";
 
 import { CliUserError } from "./cli-user-error.js";
 import {
@@ -43,7 +43,7 @@ import { timestamp } from "./response-execution.js";
 
 export interface ExportRunDependencies {
   readonly readWorkspace: (root: string) => Promise<WorkspaceConfig>;
-  readonly openStorage: (root: string) => Promise<SqliteStorage>;
+  readonly openStorage: (root: string) => Promise<RunHistoryStorage & ClosableStoragePort>;
 }
 
 export interface ExportRunOptions {
