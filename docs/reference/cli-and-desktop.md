@@ -629,7 +629,12 @@ What needs you stays outside the drawer.
 
 ### Approval and export
 
-The footer holds the approval gate and stays in view while you scroll:
+The footer holds the approval gate and stays in view while you scroll. It
+shows one stage at a time: while you decide, Approve and Request revision, with
+export reduced to one line; once the draft is approved, only export; while a
+round runs, that round. In the two-column layout the findings list scrolls on
+its own under its heading and filters, so a long list never pushes the footer
+away.
 
 - **Approve artifact.** Disabled while a blocking finding is undecided, with
   the count above it, and while the final CV checks block approval, with their
@@ -644,9 +649,9 @@ The footer holds the approval gate and stays in view while you scroll:
   selection and framing only: they are not evidence, so the author still cannot
   add a fact your sources do not hold. Runs started before this field existed
   cannot take directions: the field is disabled with a note, and starting a new
-  review enables it. When the run can take no more revisions (the draft is
-  approved, the review has ended, or the round limit is spent), the field is
-  left out and the reason sits beside the disabled button.
+  review enables it. When the run can take no more revisions (the review has
+  ended or the round limit is spent), the field is left out and the reason sits
+  beside the disabled button.
 - **While a round runs.** The round reports where you requested it. The
   footer's buttons give way to what the author or critic is doing, its model
   and elapsed time, your directions for that round, and **Stop review**. A
@@ -654,8 +659,9 @@ The footer holds the approval gate and stays in view while you scroll:
   run progress** scrolls the side panel to the timeline, which also comes into
   view on its own after **Request revision**. The buttons return when the run
   needs your decision.
-- **Export locally.** After approval, choose a format (Markdown, DOCX or PDF)
-  beside **Export…** and pick a destination in the Save dialog. A **Details**
+- **Export locally.** After approval, Approve and Request revision leave the
+  footer. Pick a template, then a format (Markdown, DOCX or PDF) beside
+  **Export…**, and choose a destination in the Save dialog. A **Details**
   disclosure lists the artifact, export and validation state and the approval
   conditions.
 - **DOCX and PDF layout.** Both formats are laid out from the approved artifact
@@ -668,7 +674,7 @@ The footer holds the approval gate and stays in view while you scroll:
   bullets with a hanging indent, and dates right-aligned. Before the file is
   written, the export checks that every heading and block was drawn, in order.
   The CLI still draws PDFs with DraftLoop's own writer.
-- **Template.** Under **Export…**, pick **Modern** (two pages, the default),
+- **Template.** Above **Export…**, pick **Modern** (two pages, the default),
   **Classic** (two pages) or **Compact** (one page).
   - Compact uses smaller type, tighter spacing and narrower margins than
     Classic, so any draft comes out shorter in it.

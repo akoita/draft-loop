@@ -331,6 +331,14 @@ export function ReviewFooter({
   exportAction,
 }: ReviewFooterProps): JSX.Element {
   const exportPending = exportAction.pendingSeconds !== null;
+  // One stage at a time: deciding shows Approve and Request revision with export as one line;
+  // once approved, export takes the footer and the decision controls go away.
+  const exportStage = blocker.kind === "approved" || blocker.kind === "exported";
+  // The export line under the button, unless the status line above already says it.
+  const exportPathNote =
+    exportAction.pathLabel === "Available now" || blocker.text.includes(exportAction.pathLabel)
+      ? null
+      : exportAction.pathLabel;
   const barRef = useRef<HTMLElement>(null);
   usePublishedHeight(barRef);
   const errorBanner =
@@ -373,189 +381,201 @@ export function ReviewFooter({
         hidden={readOnly || runningRound !== null}
       >
         {runningRound === null ? errorBanner : null}
-        <div className="approval-actions">
-          <button
-            className="button button-primary"
-            type="button"
-            aria-keyshortcuts="Alt+A"
-            title="Approve artifact (Alt+A)"
-            disabled={approve.disabled}
-            onClick={approve.onApprove}
-          >
-            Approve artifact
-            <kbd>Alt+A</kbd>
-          </button>
-          {override === null ? null : (
-            <button
-              className="button button-outline"
-              type="button"
-              aria-expanded={override.open}
-              aria-controls={approvalOverrideFormId}
-              disabled={override.disabled}
-              onClick={() => override.onOpenChange(!override.open)}
-            >
-              Approve with override…
-            </button>
-          )}
-        </div>
-        {override === null || !override.open ? null : (
-          <section
-            className="override-editor footer-override"
-            id={approvalOverrideFormId}
-            aria-label="Approve past final CV checks"
-          >
-            <label className="rationale-input-label">
-              <span>Reason for approving anyway (required)</span>
-              <input
-                className="rationale-input"
-                type="text"
-                maxLength={500}
-                value={override.reason}
-                disabled={override.disabled}
-                onChange={(event) => override.onReasonChange(event.target.value)}
-                aria-label="Reason for approving past final CV checks"
-              />
-            </label>
-            <div className="override-editor-actions">
-              <button
-                className="button button-quiet"
-                type="button"
-                onClick={() => override.onOpenChange(false)}
-              >
-                Cancel
-              </button>
+        {exportStage ? null : (
+          <>
+            <div className="approval-actions">
               <button
                 className="button button-primary"
                 type="button"
-                disabled={override.disabled || override.reason.trim() === ""}
-                onClick={() => {
-                  const reason = override.reason.trim();
-                  if (reason === "") return;
-                  override.onSubmit(reason);
-                }}
+                aria-keyshortcuts="Alt+A"
+                title="Approve artifact (Alt+A)"
+                disabled={approve.disabled}
+                onClick={approve.onApprove}
               >
-                Approve with override
+                Approve artifact
+                <kbd>Alt+A</kbd>
+              </button>
+              {override === null ? null : (
+                <button
+                  className="button button-outline"
+                  type="button"
+                  aria-expanded={override.open}
+                  aria-controls={approvalOverrideFormId}
+                  disabled={override.disabled}
+                  onClick={() => override.onOpenChange(!override.open)}
+                >
+                  Approve with override…
+                </button>
+              )}
+            </div>
+            {override === null || !override.open ? null : (
+              <section
+                className="override-editor footer-override"
+                id={approvalOverrideFormId}
+                aria-label="Approve past final CV checks"
+              >
+                <label className="rationale-input-label">
+                  <span>Reason for approving anyway (required)</span>
+                  <input
+                    className="rationale-input"
+                    type="text"
+                    maxLength={500}
+                    value={override.reason}
+                    disabled={override.disabled}
+                    onChange={(event) => override.onReasonChange(event.target.value)}
+                    aria-label="Reason for approving past final CV checks"
+                  />
+                </label>
+                <div className="override-editor-actions">
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => override.onOpenChange(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={override.disabled || override.reason.trim() === ""}
+                    onClick={() => {
+                      const reason = override.reason.trim();
+                      if (reason === "") return;
+                      override.onSubmit(reason);
+                    }}
+                  >
+                    Approve with override
+                  </button>
+                </div>
+              </section>
+            )}
+            <div className="revision-request">
+              {revision.unavailableReason == null ? (
+                <label className="revision-direction">
+                  <span>Directions for the author (optional)</span>
+                  <textarea
+                    className="revision-direction-input"
+                    rows={2}
+                    maxLength={maximumRevisionDirectionLength}
+                    value={revision.direction}
+                    disabled={revision.disabled || revision.directionsUnavailable === true}
+                    placeholder="e.g. lead with tokenisation; drop certification dates"
+                    onChange={(event) => revision.onDirectionChange(event.target.value)}
+                  />
+                </label>
+              ) : null}
+              <div className="revision-request-row">
+                <span className="revision-direction-note">
+                  {revision.unavailableReason != null
+                    ? revision.unavailableReason
+                    : revision.directionsUnavailable === true
+                      ? revisionDirectionsUnavailableNote
+                      : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
+                          revision.direction.length === 0
+                            ? ""
+                            : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
+                        }`}
+                </span>
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  aria-keyshortcuts="Alt+R"
+                  title="Request revision (Alt+R)"
+                  disabled={revision.disabled}
+                  onClick={revision.onRequest}
+                >
+                  Request revision
+                  <kbd>Alt+R</kbd>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+        {exportStage ? (
+          <>
+            <fieldset className="export-templates" disabled={exportAction.disabled}>
+              <legend>Template</legend>
+              {exportTemplates.map((template) => (
+                <label className="export-template-option" key={template}>
+                  <input
+                    type="radio"
+                    name="export-template"
+                    value={template}
+                    checked={exportAction.template === template}
+                    onChange={() => exportAction.onTemplateChange(template)}
+                  />
+                  <ExportTemplatePreview template={template} />
+                  <span className="export-template-text">
+                    <strong>{exportTemplateLabels[template]}</strong>
+                    <span>{exportTemplateDescriptions[template]}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <div className="export-action">
+              <label className="export-format">
+                <span className="sr-only">Export format</span>
+                <select
+                  value={exportAction.format}
+                  disabled={exportAction.disabled}
+                  aria-label="Export format"
+                  onChange={(event) => {
+                    const chosen = exportFormats.find((format) => format === event.target.value);
+                    if (chosen !== undefined) exportAction.onFormatChange(chosen);
+                  }}
+                >
+                  {exportFormats.map((format) => (
+                    <option key={format} value={format}>
+                      {exportFormatLabels[format]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="button button-primary"
+                type="button"
+                aria-keyshortcuts="Alt+E"
+                title={
+                  exportAction.again
+                    ? `Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
+                    : `Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
+                }
+                disabled={exportAction.disabled}
+                onClick={exportAction.onExport}
+              >
+                {exportPending ? (
+                  `Exporting ${exportFormatLabels[exportAction.format]}…`
+                ) : (
+                  <>
+                    {exportAction.again ? "Export again…" : "Export…"}
+                    <kbd>Alt+E</kbd>
+                  </>
+                )}
               </button>
             </div>
-          </section>
-        )}
-        <div className="revision-request">
-          {revision.unavailableReason == null ? (
-            <label className="revision-direction">
-              <span>Directions for the author (optional)</span>
-              <textarea
-                className="revision-direction-input"
-                rows={2}
-                maxLength={maximumRevisionDirectionLength}
-                value={revision.direction}
-                disabled={revision.disabled || revision.directionsUnavailable === true}
-                placeholder="e.g. lead with tokenisation; drop certification dates"
-                onChange={(event) => revision.onDirectionChange(event.target.value)}
-              />
-            </label>
-          ) : null}
-          <div className="revision-request-row">
-            <span className="revision-direction-note">
-              {revision.unavailableReason != null
-                ? revision.unavailableReason
-                : revision.directionsUnavailable === true
-                  ? revisionDirectionsUnavailableNote
-                  : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
-                      revision.direction.length === 0
-                        ? ""
-                        : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
-                    }`}
-            </span>
-            <button
-              className="button button-quiet"
-              type="button"
-              aria-keyshortcuts="Alt+R"
-              title="Request revision (Alt+R)"
-              disabled={revision.disabled}
-              onClick={revision.onRequest}
-            >
-              Request revision
-              <kbd>Alt+R</kbd>
-            </button>
-          </div>
-        </div>
-        <div className="export-action">
-          <div>
-            <strong>Export locally</strong>
-            <span className="export-path" aria-live="polite">
-              {exportAction.pathLabel}
-            </span>
-          </div>
-          <label className="export-format">
-            <span className="sr-only">Export format</span>
-            <select
-              value={exportAction.format}
-              disabled={exportAction.disabled}
-              aria-label="Export format"
-              onChange={(event) => {
-                const chosen = exportFormats.find((format) => format === event.target.value);
-                if (chosen !== undefined) exportAction.onFormatChange(chosen);
-              }}
-            >
-              {exportFormats.map((format) => (
-                <option key={format} value={format}>
-                  {exportFormatLabels[format]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="button button-outline"
-            type="button"
-            aria-keyshortcuts="Alt+E"
-            title={
-              exportAction.again
-                ? `Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
-                : `Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
-            }
-            disabled={exportAction.disabled}
-            onClick={exportAction.onExport}
-          >
-            {exportPending ? (
-              `Exporting ${exportFormatLabels[exportAction.format]}…`
-            ) : (
-              <>
-                {exportAction.again ? "Export again…" : "Export…"}
-                <kbd>Alt+E</kbd>
-              </>
+            {exportPathNote === null ? null : (
+              <p className="export-path" aria-live="polite">
+                {exportPathNote}
+              </p>
             )}
-          </button>
-        </div>
-        <fieldset className="export-templates" disabled={exportAction.disabled}>
-          <legend>Template</legend>
-          {exportTemplates.map((template) => (
-            <label className="export-template-option" key={template}>
-              <input
-                type="radio"
-                name="export-template"
-                value={template}
-                checked={exportAction.template === template}
-                onChange={() => exportAction.onTemplateChange(template)}
-              />
-              <ExportTemplatePreview template={template} />
-              <span className="export-template-text">
-                <strong>{exportTemplateLabels[template]}</strong>
-                <span>{exportTemplateDescriptions[template]}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        {exportAction.note === null ? null : (
-          <p className="export-note" role="status">
-            {exportAction.note}
-          </p>
-        )}
-        {exportAction.pendingSeconds === null ? null : (
-          <p className="pending-action-status" role="status" aria-live="polite">
-            Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
-            {exportAction.pendingSeconds} second
-            {exportAction.pendingSeconds === 1 ? "" : "s"}. Choose a destination in the Save As
-            dialog; the approved artifact will be written after you confirm.
+            {exportAction.note === null ? null : (
+              <p className="export-note" role="status">
+                {exportAction.note}
+              </p>
+            )}
+            {exportAction.pendingSeconds === null ? null : (
+              <p className="pending-action-status" role="status" aria-live="polite">
+                Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
+                {exportAction.pendingSeconds} second
+                {exportAction.pendingSeconds === 1 ? "" : "s"}. Choose a destination in the Save As
+                dialog; the approved artifact will be written after you confirm.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="export-later">
+            <strong>Export locally</strong>
+            <span>{exportAction.pathLabel}</span>
           </p>
         )}
       </fieldset>

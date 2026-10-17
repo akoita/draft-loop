@@ -397,7 +397,9 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Disagreement · critic-only finding");
     expect(html).toContain("Resolve or override 1 blocking finding before approval.");
     expect(html).toContain('disabled=""');
-    expect(html).toContain("Export as Markdown");
+    // Export waits in one line until the draft is approved.
+    expect(html).toContain('<p class="export-later"><strong>Export locally</strong>');
+    expect(html).not.toContain("Export as Markdown");
     expect(html).toContain("source linked");
     expect(html).toContain("not linked to candidate materials");
     expect(html).not.toContain(">verified<");
@@ -880,9 +882,8 @@ describe("desktop trust-centered review", () => {
       <ReviewWorkspace state={readable} onAction={() => undefined} />,
     );
     expect(readableHtml).toMatch(exportAgainButton);
-    expect(readableHtml).toContain(
-      '<span class="export-path" aria-live="polite">exports/run-demo-1.md</span>',
-    );
+    // The status line names the file, so the export section doesn't repeat it.
+    expect(readableHtml).not.toContain('class="export-path"');
     expect(readableHtml).toContain(">Exported to exports/run-demo-1.md</p>");
     expect(readableHtml).toContain("Next: nothing left · the CV is exported");
 
