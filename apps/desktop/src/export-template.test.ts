@@ -45,7 +45,7 @@ describe("export templates", () => {
     expect(readStoredExportTemplate(storage, "app-a")).toBe("compact");
     expect(readStoredExportTemplate(storage, "app-b")).toBe("classic");
     expect(readStoredExportTemplate(undefined, "app-a")).toBe("classic");
-    expect(parseExportTemplate("modern")).toBe("classic");
+    expect(parseExportTemplate("fancy")).toBe("classic");
     const blocked = {
       getItem: () => {
         throw new Error("blocked");
