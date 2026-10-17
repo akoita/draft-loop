@@ -1,4 +1,5 @@
 import type { WorkflowState } from "@draft-loop/domain";
+import type { ApplicationStoragePort } from "../application-store.js";
 
 export interface StoragePort {
   readonly get: (key: string) => Promise<string | undefined>;
@@ -57,4 +58,20 @@ export interface DiagnosticTelemetryReport {
     readonly providersDistribution: Readonly<Record<string, number>>;
   };
   readonly checksum: string;
+}
+
+/** Workspace records, the root every other record belongs to. */
+export interface WorkspaceStoragePort {
+  readonly saveWorkspace: (record: WorkspaceRecord) => Promise<void>;
+  readonly getWorkspace: (id: string) => Promise<WorkspaceRecord | undefined>;
+}
+
+/** A store its caller opened and must release once done. */
+export interface ClosableStoragePort {
+  readonly close: () => Promise<void>;
+}
+
+/** A workspace's applications and their run and brief bindings. */
+export interface WorkspaceApplicationsStoragePort {
+  readonly applications: ApplicationStoragePort;
 }

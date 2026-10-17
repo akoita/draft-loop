@@ -10,17 +10,21 @@ import {
   slimSnapshotPayload,
   snapshotPayloadArtifactId,
 } from "@draft-loop/orchestrator";
-import {
-  type ArtifactVersionRecord,
-  openSqliteStorage,
-  openSqliteStorageReadOnly,
-  type SqliteStorage,
+import type {
+  ArtifactVersionRecord,
+  OpportunityBriefStoragePort,
+  RunHistoryStorage,
+  WorkspaceApplicationsStoragePort,
 } from "@draft-loop/storage";
 import { jobHeading } from "./application-name.js";
 import { CliUserError } from "./cli-user-error.js";
+import {
+  localHistoryPath,
+  localStorageFactory,
+  openLocalHistoryReadOnly,
+} from "./local-storage-factory.js";
 
 const historyDirectory = ".draft-loop";
-const historyFilename = "history.sqlite";
 const maximumPastedJobCharacters = 200_000;
 const importedEventType = "application.imported";
 
@@ -122,9 +126,14 @@ function importedName(command: ImportApplicationCommand, jobText: string): strin
   }
 }
 
+/** The history an import copies from one workspace into another. */
+type ImportHistory = RunHistoryStorage &
+  OpportunityBriefStoragePort &
+  WorkspaceApplicationsStoragePort;
+
 interface CopyContext {
-  readonly source: SqliteStorage;
-  readonly target: SqliteStorage;
+  readonly source: ImportHistory;
+  readonly target: ImportHistory;
   readonly sourceRoot: string;
   readonly targetRoot: string;
   readonly sourceId: string;
@@ -376,11 +385,10 @@ export async function importApplicationFromWorkspace(
   const name = importedName({ ...command, sourceRoot }, jobText);
   const applicationId = importedApplicationId(sourceWorkspace.id);
 
-  await mkdir(join(root, historyDirectory), { recursive: true });
-  const target = openSqliteStorage(join(root, historyDirectory, historyFilename));
-  const sourceHistory = join(sourceRoot, historyDirectory, historyFilename);
+  const target = await localStorageFactory.open(root);
+  const sourceHistory = localHistoryPath(sourceRoot);
   const source = (await fileExists(sourceHistory))
-    ? openSqliteStorageReadOnly(sourceHistory)
+    ? openLocalHistoryReadOnly(sourceHistory)
     : undefined;
   try {
     const earlier = (await target.listAuditEvents(targetWorkspace.id)).find(

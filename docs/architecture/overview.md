@@ -55,6 +55,29 @@ and storage boundaries retain path-free run references, evidence links, typed
 findings, artifact history, and user decisions without storing hidden
 chain-of-thought or raw provider payloads.
 
+Storage sits behind ports, as ADR 0011 (D3, D15) requires:
+
+- The port interfaces and record types live in `packages/storage/src/ports/`.
+  Application modules name these ports, never the SQLite class.
+- The local driver's storage factory,
+  `packages/application/src/local-storage-factory.ts`, is the one application
+  module that opens SQLite. It alone reaches SQLite maintenance such as backup,
+  integrity checks and history compaction.
+- Exported documents go through a blob port, read and checked by content
+  checksum. The local filesystem implementation keeps today's export paths;
+  object storage implements the same port on the server.
+- Managed candidate-knowledge files go through a managed-file port, keyed by
+  source and version and checked against the recorded checksum and size.
+  Intake stages and verifies the bytes, then publishes them without ever
+  replacing an existing file, or rolls them back. Deletion stages a knowledge
+  base's files away from their keys, then commits by removing them or restores
+  them. Store-open recovery and the unknown-entry inventory use the same port.
+  Portable backup and the local file-path lookup stay filesystem-only, since
+  they exist only in the local version.
+- A conformance suite, exported as `@draft-loop/storage/conformance`, checks
+  the contracts any implementation must honour. It runs against SQLite in
+  `pnpm test`.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge

@@ -5,7 +5,7 @@ import {
   type CandidateDirection,
   maximumCandidateDirectionCharacters,
 } from "@draft-loop/orchestrator";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { AuditTrailStoragePort } from "@draft-loop/storage";
 import { z } from "zod";
 
 import { CliUserError } from "./cli-user-error.js";
@@ -85,7 +85,7 @@ export function summarizeAuthorInput(input: {
 
 /** Append the `run.author-input` audit event; a retry of the same round appends another. */
 export async function recordRunAuthorInput(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   request: {
     readonly workspaceId: string;
     readonly runId: string;
@@ -150,7 +150,7 @@ export interface RunAuthorInputTotalsSource {
  * is still written without them.
  */
 export function runAuthorInputRecorder(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   workspaceId: string,
   source: RunAuthorInputTotalsSource | undefined,
 ): RecordAuthorInput {

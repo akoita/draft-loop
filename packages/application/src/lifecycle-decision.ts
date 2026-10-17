@@ -1,6 +1,6 @@
 import { activeCandidateDirection, type RunSnapshot } from "@draft-loop/orchestrator";
 
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { HistoryStoragePort } from "@draft-loop/storage";
 
 import type { LifecycleAction } from "./index.js";
 import { timestamp } from "./response-execution.js";
@@ -15,7 +15,7 @@ export interface LifecycleOptions {
 
 /** Record one explicit lifecycle command as a decision in run history. */
 export async function saveLifecycleDecision(
-  storage: Pick<SqliteStorage, "saveDecision">,
+  storage: Pick<HistoryStoragePort, "saveDecision">,
   workspaceId: string,
   action: LifecycleAction,
   snapshot: RunSnapshot,

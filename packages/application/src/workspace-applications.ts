@@ -15,7 +15,12 @@ import {
   applicationModelProfilesSchema,
   applicationSchema,
 } from "@draft-loop/schemas/application";
-import { openSqliteStorage, type SqliteStorage } from "@draft-loop/storage";
+import type {
+  ClosableStoragePort,
+  OpportunityBriefStoragePort,
+  WorkspaceApplicationsStoragePort,
+  WorkspaceStoragePort,
+} from "@draft-loop/storage";
 import type {
   ApplicationBriefSummary,
   ApplicationExportSummary,
@@ -37,6 +42,7 @@ import {
 import { CliUserError } from "./cli-user-error.js";
 import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
+import { localStorageFactory } from "./local-storage-factory.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
   type ImportApplicationCommand,
@@ -184,9 +190,14 @@ async function historyExists(root: string): Promise<boolean> {
   }
 }
 
-async function openHistory(root: string): Promise<SqliteStorage> {
-  await mkdir(join(root, historyDirectory), { recursive: true });
-  return openSqliteStorage(historyPath(root));
+/** The parts of a workspace's history that its applications read and write. */
+type ApplicationHistory = WorkspaceStoragePort &
+  Pick<OpportunityBriefStoragePort, "getLatestOpportunityBrief"> &
+  WorkspaceApplicationsStoragePort &
+  ClosableStoragePort;
+
+async function openHistory(root: string): Promise<ApplicationHistory> {
+  return localStorageFactory.open(root);
 }
 
 function latestTimestamp(values: readonly string[]): string {
@@ -254,7 +265,7 @@ async function describeApplication(
 
 /** The newest brief's role and employer as a name, unless it is the name already shown. */
 async function suggestFromBriefs(
-  storage: SqliteStorage,
+  storage: ApplicationHistory,
   workspaceId: string,
   currentName: string,
 ): Promise<string | null> {
@@ -273,7 +284,7 @@ async function suggestFromBriefs(
 async function describeDefaultApplication(
   root: string,
   workspace: WorkspaceIdentity,
-  storage: SqliteStorage | undefined,
+  storage: ApplicationHistory | undefined,
 ): Promise<ApplicationView> {
   const jobPath = isAbsolute(workspace.jobDescriptionPath)
     ? workspace.jobDescriptionPath
@@ -320,7 +331,7 @@ async function describeDefaultApplication(
 }
 
 async function describeStoredApplication(
-  storage: SqliteStorage,
+  storage: ApplicationHistory,
   workspaceId: string,
   applicationId: string,
 ): Promise<ApplicationView | undefined> {

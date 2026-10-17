@@ -10,10 +10,12 @@ import type {
   CandidateKnowledgeRetrievalStatus,
   CandidateKnowledgeRetrievalTrace,
   CandidateKnowledgeRetrievalTraceInput,
+  EvidenceRetrievalInspection,
   RetrievalOptions,
   RetrievalPort,
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
+import type { SemanticRetrievalTraceStoragePort } from "../semantic-retrieval-trace.js";
 
 /** Complete replacement of one CKB's deterministic lexical projection. */
 export interface CandidateKnowledgeLexicalIndexRebuildInput {
@@ -113,3 +115,27 @@ export interface EvidenceChunkRecord {
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
+
+/** Legacy local evidence: sources and their chunks, and an inspectable search over them. */
+export interface EvidenceStoragePort {
+  readonly saveEvidenceSource: (record: EvidenceSourceRecord) => Promise<void>;
+  readonly getEvidenceSource: (id: string) => Promise<EvidenceSourceRecord | undefined>;
+  readonly saveEvidenceChunk: (record: EvidenceChunkRecord) => Promise<void>;
+  readonly inspectEvidenceRetrieval: (
+    query: string,
+    optionsOrLimit?: EvidenceSearchOptions | number,
+  ) => Promise<EvidenceRetrievalInspection>;
+}
+
+/** Approved local evidence read back in source order, for legacy local-source contexts. */
+export interface EvidenceChronologyStoragePort {
+  readonly readApprovedChronology: (
+    workspaceId: string,
+    sources: readonly Pick<EvidenceSourceRecord, "id" | "checksum">[],
+  ) => Promise<readonly ScoredEvidenceChunk[]>;
+}
+
+/** The semantic and hybrid retrieval traces that annotate lexical traces. */
+export interface SemanticRetrievalTraceAccessPort {
+  readonly candidateKnowledgeSemanticRetrievalTrace: SemanticRetrievalTraceStoragePort;
+}

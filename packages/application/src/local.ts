@@ -37,15 +37,13 @@ import {
 import type { JsonObject } from "@draft-loop/providers";
 import type { OutputFormat } from "@draft-loop/rendering";
 import { contextSnapshotSchema } from "@draft-loop/schemas";
-import {
-  type CanonicalCandidateProfileVersionRecord,
-  type EvidenceChunkRecord,
-  type EvidenceSourceRecord,
-  type OpportunityBriefVersionRecord,
-  openSqliteStorage,
-  type SqliteStorage,
-  type WorkspaceRecord,
-  type WritingPolicyVersionRecord,
+import type {
+  CanonicalCandidateProfileVersionRecord,
+  EvidenceChunkRecord,
+  EvidenceSourceRecord,
+  OpportunityBriefVersionRecord,
+  WorkspaceHistoryStorage,
+  WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
 import { assertRevisionDirection } from "./candidate-direction.js";
 import {
@@ -111,6 +109,7 @@ import {
   opportunityExtractionPortFor,
 } from "./local-extraction-ports.js";
 import { fixtureAgents } from "./local-fixture-agents.js";
+import { contextForRun, ensureWorkspaceRecord } from "./local-history-records.js";
 import {
   createProviderAdapter,
   type ProviderClientFactories,
@@ -118,6 +117,7 @@ import {
   type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
+import { localStorageFactory } from "./local-storage-factory.js";
 import { decisionRoundId, saveTypedHistory } from "./local-typed-history.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { noopAgents } from "./noop-agents.js";
@@ -1057,7 +1057,7 @@ async function writingPolicyFromPath(
 }
 
 async function importWritingPolicyVersion(
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
   workspaceId: string,
   policy: NonNullable<ContextSnapshot["writingPolicy"]>,
 ): Promise<WritingPolicyVersionRecord> {
@@ -1107,7 +1107,7 @@ interface ResolvedWorkspaceWritingPolicy {
 async function resolveWorkspaceWritingPolicy(
   root: string,
   config: WorkspaceConfig,
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
 ): Promise<ResolvedWorkspaceWritingPolicy> {
   if (config.writingPolicyPath === undefined) {
     if (config.writingPolicyChecksum === undefined) return { config };
@@ -1266,7 +1266,7 @@ const executingRunStates: ReadonlySet<string> = new Set(["drafting", "reviewing"
  * provider step is always here.
  */
 async function begunRunIds(
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
   workspaceId: string,
 ): Promise<readonly string[]> {
   const runIds = new Set<string>();
@@ -1493,7 +1493,7 @@ async function prepareInputs(
 }
 
 async function saveInputs(
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
   config: WorkspaceConfig,
   inputs: PreparedInputs,
 ): Promise<void> {
@@ -1619,7 +1619,7 @@ function providerAgents(
   return { author, critic, ...(planner === undefined ? {} : { planner }) };
 }
 function engine(
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
   config: WorkspaceConfig,
   context: ContextSnapshot,
   allowProviderData: boolean,
@@ -1674,23 +1674,7 @@ function engine(
     },
   });
 }
-async function openStorage(root: string): Promise<SqliteStorage> {
-  await mkdir(join(root, configDirectory), { recursive: true });
-  return openSqliteStorage(databasePath(root));
-}
-
-/** Ensure an initialized workspace has the durable parent row used by child records. */
-async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string): Promise<void> {
-  if ((await storage.getWorkspace(workspaceId)) !== undefined) return;
-  const now = timestamp();
-  const record: WorkspaceRecord = {
-    id: workspaceId,
-    state: "collecting",
-    createdAt: now,
-    updatedAt: now,
-  };
-  await storage.saveWorkspace(record);
-}
+const openStorage = localStorageFactory.open;
 
 function policyIdentity(record: WritingPolicyVersionRecord): {
   readonly version: string;
@@ -1700,7 +1684,7 @@ function policyIdentity(record: WritingPolicyVersionRecord): {
 }
 
 async function resolveRunWritingPolicy(
-  storage: SqliteStorage,
+  storage: WorkspaceHistoryStorage,
   workspaceId: string,
   baseRecord: WritingPolicyVersionRecord | undefined,
   overrideChecksum: string | undefined,
@@ -1743,15 +1727,6 @@ async function resolveRunWritingPolicy(
       override: policyIdentity(overrideRecord),
     },
   };
-}
-
-async function contextForRun(storage: SqliteStorage, runId: string): Promise<ContextSnapshot> {
-  const runStore = createStorageRunStore(storage);
-  const snapshot = await runStore.loadRun(runId);
-  if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
-  const contextRecord = await storage.getContextSnapshot(snapshot.contextSnapshotId);
-  if (contextRecord === undefined) throw new CliUserError("The run context snapshot is missing.");
-  return contextSnapshotSchema.parse(contextRecord.payload) as unknown as ContextSnapshot;
 }
 
 async function createRun(
@@ -2167,7 +2142,7 @@ export async function exportRun(
   formatInput: string = "markdown",
   options: ExportRunOptions = {},
 ): Promise<string> {
-  const deps = { readWorkspace, openStorage };
+  const deps = { readWorkspace, openStorage, exportBlobs: localStorageFactory.exportBlobs };
   return exportApprovedRun(deps, rootInput, runIdInput, outputPathInput, io, formatInput, options);
 }
 

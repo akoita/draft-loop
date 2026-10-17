@@ -1,5 +1,8 @@
 import type { WorkflowState } from "@draft-loop/domain";
-import type { JsonValue } from "./workspace.js";
+import type { ArtifactVersionInput, ArtifactVersionRecord } from "../artifact-history.js";
+import type { AuditEventReadsPort } from "../audit-event-reads.js";
+import type { ContextSnapshotStoragePort } from "./versioned-records.js";
+import type { JsonValue, StoragePort, WorkspaceStoragePort } from "./workspace.js";
 
 export type StoredRunState = WorkflowState | "provider-error";
 export type StoredRunStep = "author" | "critic" | "revision" | null;
@@ -228,3 +231,24 @@ export interface AuditEvent extends AuditEventInput {
   readonly previousEventChecksum: string | null;
   readonly eventChecksum: string;
 }
+
+/** Immutable artifact versions that runs, executions and exports point at. */
+export interface ArtifactHistoryStoragePort {
+  readonly saveArtifactVersion: (input: ArtifactVersionInput) => Promise<ArtifactVersionRecord>;
+  readonly getArtifactVersion: (id: string) => Promise<ArtifactVersionRecord | undefined>;
+}
+
+/** The per-workspace, hash-chained audit trail. */
+export interface AuditTrailStoragePort {
+  readonly appendAuditEvent: (input: AuditEventInput) => Promise<AuditEvent>;
+  readonly listAuditEvents: (workspaceId: string) => Promise<readonly AuditEvent[]>;
+  readonly auditEvents: AuditEventReadsPort;
+}
+
+/** Everything a run's history reads and writes: its context, artifacts, records and audit trail. */
+export type RunHistoryStorage = StoragePort &
+  WorkspaceStoragePort &
+  ContextSnapshotStoragePort &
+  ArtifactHistoryStoragePort &
+  HistoryStoragePort &
+  AuditTrailStoragePort;

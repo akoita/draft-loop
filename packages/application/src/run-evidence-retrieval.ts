@@ -1,5 +1,9 @@
 import type { ContextSnapshot } from "@draft-loop/domain";
-import type { CanonicalCandidateProfileStoragePort, SqliteStorage } from "@draft-loop/storage";
+import type {
+  CandidateKnowledgeLexicalStoragePort,
+  CanonicalCandidateProfileStoragePort,
+  SemanticRetrievalTraceAccessPort,
+} from "@draft-loop/storage";
 
 import {
   type CandidateKnowledgeRuntimeConfig,
@@ -26,8 +30,8 @@ import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
  * too, and its facts lead the evidence (see run-profile-fact-retrieval).
  */
 export async function openRunCandidateRetrieval(
-  storage: Pick<SqliteStorage, "appendCandidateKnowledgeRetrievalTrace"> &
-    Partial<Pick<SqliteStorage, "candidateKnowledgeSemanticRetrievalTrace">> &
+  storage: Pick<CandidateKnowledgeLexicalStoragePort, "appendCandidateKnowledgeRetrievalTrace"> &
+    Partial<SemanticRetrievalTraceAccessPort> &
     Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
   root: string,
   config: CandidateKnowledgeRuntimeConfig,

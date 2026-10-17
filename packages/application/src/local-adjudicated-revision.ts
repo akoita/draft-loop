@@ -6,26 +6,27 @@ import type {
   RequestAdjudicatedRevisionInput,
   RunSnapshot,
 } from "@draft-loop/orchestrator";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { ClosableStoragePort } from "@draft-loop/storage";
 
 import type { ApplicationIo, RequestAdjudicatedRevisionCommand } from "./index.js";
 import type { WorkspaceConfig } from "./local.js";
 
-export interface LocalAdjudicatedRevisionDependencies {
+/** The local adapter's operations, over whichever store it opens. */
+export interface LocalAdjudicatedRevisionDependencies<Storage extends ClosableStoragePort> {
   readonly readWorkspace: (root: string) => Promise<WorkspaceConfig>;
-  readonly openStorage: (root: string) => Promise<SqliteStorage>;
-  readonly contextForRun: (storage: SqliteStorage, runId: string) => Promise<ContextSnapshot>;
+  readonly openStorage: (root: string) => Promise<Storage>;
+  readonly contextForRun: (storage: Storage, runId: string) => Promise<ContextSnapshot>;
   readonly assertSelectionStable: (
     root: string,
     historical: ContextSnapshot["candidateKnowledgeSelection"],
   ) => Promise<void>;
   readonly createEngine: (
-    storage: SqliteStorage,
+    storage: Storage,
     config: WorkspaceConfig,
     context: ContextSnapshot,
   ) => OrchestrationEngine;
   readonly saveTypedHistory: (
-    storage: SqliteStorage,
+    storage: Storage,
     config: WorkspaceConfig,
     snapshot: RunSnapshot,
   ) => Promise<void>;
@@ -43,9 +44,9 @@ const defaultIo: ApplicationIo = { write: () => undefined };
  * boundary. The injected engine factory is responsible for selecting noop
  * agents, so this operation cannot create a provider adapter or call a model.
  */
-export async function requestLocalAdjudicatedRevision(
+export async function requestLocalAdjudicatedRevision<Storage extends ClosableStoragePort>(
   command: RequestAdjudicatedRevisionCommand,
-  dependencies: LocalAdjudicatedRevisionDependencies,
+  dependencies: LocalAdjudicatedRevisionDependencies<Storage>,
   io: ApplicationIo = defaultIo,
 ): Promise<RunSnapshot> {
   const root = resolve(command.root);

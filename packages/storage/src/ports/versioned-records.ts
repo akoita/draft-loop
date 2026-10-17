@@ -18,6 +18,12 @@ export interface ContextSnapshotRecord extends ContextSnapshotInput {
   readonly checksum: string;
 }
 
+/** Immutable run context snapshots, addressed by id. */
+export interface ContextSnapshotStoragePort {
+  readonly saveContextSnapshot: (input: ContextSnapshotInput) => Promise<ContextSnapshotRecord>;
+  readonly getContextSnapshot: (id: string) => Promise<ContextSnapshotRecord | undefined>;
+}
+
 export interface OpportunityBriefVersionRecord {
   readonly workspaceId: string;
   readonly brief: OpportunityBrief;

@@ -141,11 +141,7 @@ export {
   candidateKnowledgeRetentionRules,
 } from "@draft-loop/domain";
 export type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
-export * from "./ports/candidate-knowledge.js";
-export * from "./ports/history.js";
-export * from "./ports/retrieval.js";
-export * from "./ports/versioned-records.js";
-export * from "./ports/workspace.js";
+export * from "./ports/index.js";
 
 import {
   type CandidateKnowledgeBaseInput,
