@@ -49,9 +49,9 @@ export async function readRunPageTarget(
   }
 }
 
-/** The template an export uses when none is named (#1364): Compact for a one-page run, else Classic. */
+/** The template an export uses when none is named (#1364): Compact for a one-page run, else Modern. */
 export function defaultExportTemplateId(pageTarget: LengthPageTarget | undefined): string {
-  return pageTarget === "one-page" ? "compact" : "classic";
+  return pageTarget === "one-page" ? "compact" : "modern";
 }
 
 /** The warning for a PDF that rendered past its page target, using the real page count. */
@@ -78,7 +78,7 @@ export async function exportLengthWarningLine(
   storage: ContextSnapshotReader,
   snapshot: { readonly contextSnapshotId: string; readonly artifact: DraftArtifact | null },
   pageOverflow?: ExportPageOverflow,
-  template: ExportLengthTemplate = { templateId: "classic", explicit: false },
+  template: ExportLengthTemplate = { templateId: "modern", explicit: false },
 ): Promise<string | undefined> {
   if (pageOverflow !== undefined) return pageOverflowWarningLine(pageOverflow);
   if (snapshot.artifact === null) return undefined;
