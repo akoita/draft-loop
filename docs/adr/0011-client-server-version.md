@@ -275,9 +275,11 @@ Build on what the local version already records:
   package where they are not Electron-specific: Home, application steps,
   review, run comparison and Run details. The web app uses them over the
   HTTP API.
-- **The desktop app** stays the frozen local-first product. Making it a
-  thin client of the service is a later, separate decision.
+- **The desktop app** stays the local-first product and keeps evolving in
+  parallel (D15). Making it a thin client of the service is a later,
+  separate decision.
 - **The CLI** becomes an API client, for scripting and support.
+- **Agents** reach DraftLoop through an MCP server (D17).
 
 ### D10. API contract
 
@@ -479,6 +481,33 @@ The existing offline fixture mode keeps local runs free of provider calls.
   of hosted automation, so live evaluation never runs in GitHub Actions. It
   runs as a manually triggered Cloud Run job in a separate evaluation
   project, on synthetic data only. `AGENTS.md` records this exception.
+
+### D17. Agent channel: an MCP server
+
+Users increasingly work inside agents such as Claude, Codex or ChatGPT.
+DraftLoop is offered there as an MCP server: one more client, like the CLI,
+not a second product.
+
+- **Two transports, one tool set:**
+  - *Local:* `apps/mcp`, a stdio server over the same application services
+    as `apps/cli`. Candidate data stays on the user's machine. It does not
+    depend on the hosted phases.
+  - *Hosted:* the same tools over the HTTP API (D10), with OAuth sign-in
+    through the identity provider and plan credits (D13). After phase 1.
+- **Tools:** list applications, start a tailored CV run from a job post,
+  follow its progress, read the draft with its findings and evidence, and
+  request an export. Inputs and outputs reuse the API's Zod contracts.
+- **The engine stays in DraftLoop.** The host agent never writes or edits
+  CV claims; it asks DraftLoop to run the author–critic workflow, so
+  grounding and the critic still apply.
+- **Approval stays in DraftLoop.** An export or share needs the user's
+  approval in DraftLoop, never through the agent.
+- **Minimal disclosure.** Whatever a tool returns reaches the host agent's
+  model provider. Tools return only what was asked, never return
+  never-share material, and the hosted version records consent for it.
+- **Untrusted input.** Job posts and text arriving from an agent are
+  handled like uploads (D11).
+- *Cost:* a public tool surface to secure and keep stable. Tracked in #1403.
 
 ## Phasing (for planning only)
 
