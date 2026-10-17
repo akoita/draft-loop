@@ -7,7 +7,10 @@ it does not reuse the API-key set/replace/remove workflow below.
 
 Credential lifecycle acceptance runs the packaged Electron application twice on
 Linux x64, macOS arm64, and Windows x64. It uses Electron `safeStorage` from the
-real main process, not a test double.
+real main process, not a test double. Like
+[installed-app acceptance](installed-app-acceptance.md), it runs in every
+release build and on pull requests that can change the packaged app, with the
+`Credential acceptance gate` check carrying the result.
 
 For both Anthropic and OpenAI, the first launch verifies environment fallback,
 sets an app-managed synthetic canary, confirms app precedence and provider

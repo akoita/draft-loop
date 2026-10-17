@@ -94,11 +94,19 @@ creates a synthetic run and requests a revision; the second launch reopens the
 workspace, resumes the run, approves the revised draft, and verifies the local
 export. This keeps the packaged host, SQLite runtime, and restart boundary in
 the release gate.
+
 This synthetic smoke is implementation and integration evidence. It is not a
 substitute for installed-app acceptance with representative real inputs on each
 supported platform.
 
-To run the same check locally after packaging:
+Every packaging job, on all three platforms, then runs the
+[installed-app](../evaluation/installed-app-acceptance.md) and
+[credential](../evaluation/credential-acceptance.md) acceptance harnesses
+against the packaged executable. A failure on any platform stops the release
+before publishing. The sanitized evidence is uploaded as
+`acceptance-evidence-<platform>`.
+
+To run the smoke locally after packaging:
 
 ```text
 pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-loop-desktop

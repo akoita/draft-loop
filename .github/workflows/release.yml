@@ -136,18 +136,43 @@ jobs:
       - name: Build packaged desktop application
         run: pnpm --filter @draft-loop/desktop make --arch ${{ matrix.arch }}
 
-      - name: Locate packaged Linux executable
-        if: ${{ matrix.name == 'linux-x64' }}
-        id: packaged-linux
+      - name: Locate packaged executable
+        id: executable
         shell: bash
         run: |
-          executable="$(find apps/desktop/out -type f -name '@draft-loop-desktop' -perm -u+x -print -quit)"
-          test -n "$executable"
-          echo "path=$executable" >> "$GITHUB_OUTPUT"
+          case "${{ runner.os }}" in
+            Linux) path="$(find apps/desktop/out -type f -name '@draft-loop-desktop' -perm -u+x -print -quit)" ;;
+            macOS) path="$(find apps/desktop/out -type f -path '*.app/Contents/MacOS/*' -print -quit)" ;;
+            Windows) path="$(find apps/desktop/out -type f -name '@draft-loop-desktop.exe' -print -quit)" ;;
+          esac
+          test -n "$path"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
 
       - name: Run packaged desktop smoke
         if: ${{ matrix.name == 'linux-x64' }}
-        run: xvfb-run --auto-servernum pnpm desktop:smoke -- "${{ steps.packaged-linux.outputs.path }}"
+        run: xvfb-run --auto-servernum pnpm desktop:smoke -- "${{ steps.executable.outputs.path }}"
+
+      - name: Run installed-app and credential acceptance (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          xvfb-run --auto-servernum pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/installed-app-${{ matrix.name }}.json"
+          xvfb-run --auto-servernum pnpm desktop:credential-acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/credential-${{ matrix.name }}.json"
+
+      - name: Run installed-app and credential acceptance (macOS and Windows)
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/installed-app-${{ matrix.name }}.json"
+          pnpm desktop:credential-acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/credential-${{ matrix.name }}.json"
+
+      - name: Upload sanitized acceptance evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: acceptance-evidence-${{ matrix.name }}
+          path: release-evidence
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload platform artifacts
         uses: actions/upload-artifact@v7
