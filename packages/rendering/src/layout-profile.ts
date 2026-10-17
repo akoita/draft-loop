@@ -108,6 +108,8 @@ const sansFamilyConstants: Readonly<Record<1 | 2, SansFamilyConstants>> = {
 const layoutProfileIdByTemplateId: Readonly<Record<string, RenderingLayoutProfileId>> = {
   classic: "standard-two-page",
   compact: "compact-one-page",
+  // Modern differs from Classic in colour and alignment, not in page target or font metrics.
+  modern: "standard-two-page",
 };
 
 /** The layout profile id a template renders with. Throws for a template without a known profile. */
@@ -198,12 +200,15 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value);
 }
 
-const layoutProfileTable = Object.fromEntries(
-  Object.values(builtInRenderingTemplates).map((template) => {
-    const profile = profileFromTemplate(template);
-    return [profile.id, profile];
-  }),
-) as Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>>;
+// Each profile id keeps the profile of the first template that produces it (Classic, Compact), so a
+// template sharing a profile id, such as Modern, does not replace the canonical metrics.
+const layoutProfileTable: Partial<Record<RenderingLayoutProfileId, RenderingLayoutProfile>> = {};
+for (const template of Object.values(builtInRenderingTemplates)) {
+  const profile = profileFromTemplate(template);
+  layoutProfileTable[profile.id] ??= profile;
+}
 
 /** Immutable profiles used by every controlled output format, derived from the built-in templates. */
-export const renderingLayoutProfiles = deepFreeze(layoutProfileTable);
+export const renderingLayoutProfiles = deepFreeze(
+  layoutProfileTable as Readonly<Record<RenderingLayoutProfileId, RenderingLayoutProfile>>,
+);

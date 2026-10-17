@@ -92,6 +92,43 @@ describe("print HTML", () => {
     expect(html).not.toMatch(/letter-spacing|text-transform/u);
   });
 
+  it("draws Modern with a left name, teal uppercase headings and dates, justified text", () => {
+    const html = renderPrintHtml(artifact, { templateId: "modern" });
+    expect(html).toContain("text-align:left;color:#1b2329;");
+    expect(html).toMatch(/h2\{[^}]*color:#0f6e5c;text-transform:uppercase;/u);
+    expect(html).toContain("p.role .date{font-weight:700;color:#0f6e5c;}");
+    expect(html).toContain("p:not(.role):not(.contact),li{text-align:justify;}");
+    expect(html).toContain("p.labelled{margin-bottom:2pt;padding-left:10pt;text-indent:-10pt;}");
+    expect(html).not.toMatch(/letter-spacing/u);
+    // The units keep the artifact's own text; the case transform is presentation only.
+    expect(printedUnits(html)).toEqual(printedUnits(renderPrintHtml(artifact)));
+  });
+
+  it("marks the line under a role header as its context line, italic only in Modern", () => {
+    const withContext: DraftArtifact = {
+      ...artifact,
+      sections: artifact.sections.map((section) =>
+        section.kind === "experience"
+          ? {
+              ...section,
+              blocks: [
+                section.blocks[0]!,
+                block("context", "paragraph", "Engines for the Royal Society, London."),
+                ...section.blocks.slice(1),
+              ],
+            }
+          : section,
+      ),
+    };
+    expect(renderPrintHtml(withContext)).toContain(
+      '<p class="context" data-dl-unit="body">Engines for the Royal Society, London.</p>',
+    );
+    expect(renderPrintHtml(withContext)).not.toContain("font-style:italic");
+    expect(renderPrintHtml(withContext, { templateId: "modern" })).toContain(
+      "p.context{margin-bottom:1pt;font-style:italic;",
+    );
+  });
+
   it("titles the document with the candidate's name for the PDF metadata", () => {
     expect(renderPrintHtml(artifact)).toContain("<title>Ada Lovelace, CV</title>");
   });
@@ -113,6 +150,6 @@ describe("print HTML", () => {
     expect(classic).toContain("font-size:9pt");
     const compact = renderPrintHtml(artifact, { templateId: "compact" });
     expect(compact).toContain("@page{size:A4;margin:9mm 10mm 9mm 10mm;}");
-    expect(() => renderPrintHtml(artifact, { templateId: "modern" })).toThrow(RangeError);
+    expect(() => renderPrintHtml(artifact, { templateId: "fancy" })).toThrow(RangeError);
   });
 });

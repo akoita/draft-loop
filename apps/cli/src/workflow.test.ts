@@ -129,8 +129,8 @@ describe("phase-0 CLI workflow", () => {
       templateId: "compact",
     });
     await expect(
-      exportRun(root, undefined, undefined, messages.value, "pdf", { templateId: "modern" }),
-    ).rejects.toThrow("Unknown template: modern. Use classic or compact.");
+      exportRun(root, undefined, undefined, messages.value, "pdf", { templateId: "fancy" }),
+    ).rejects.toThrow("Unknown template: fancy. Use classic, compact or modern.");
     // A PDF printed through a browser engine (#1362): QA reads the engine's report, not the bytes.
     const printedPath = join(root, "exports", "printed.pdf");
     const printedPdf = new TextEncoder().encode(
