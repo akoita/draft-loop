@@ -44,6 +44,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "profile.freshness": "Checking the career profile against the career evidence",
   "application.list": "Listing the applications",
   "application.get": "Reading the application",
+  "application.job": "Reading the job description",
   "application.create": "Creating the application",
   "application.import": "Importing the workspace as an application",
   "workspace.compact-history": "Compacting the run history",
