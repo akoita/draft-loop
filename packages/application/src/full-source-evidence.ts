@@ -5,7 +5,7 @@ import type {
   ContextSnapshot,
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
-import type { SqliteStorage } from "@draft-loop/storage";
+import type { AuditTrailStoragePort } from "@draft-loop/storage";
 
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
 import { legacyEvidencePreflightLine } from "./legacy-evidence-migration.js";
@@ -110,7 +110,7 @@ export interface EvidenceModeRetrieval {
  * retrieval mode adds its own line and `run.retrieval-mode` event, whether or not it could be used.
  */
 export async function announceRunEvidenceMode(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   retrieval: EvidenceModeRetrieval | undefined,
   workspaceId: string,
   runId: string,
@@ -147,7 +147,7 @@ export async function announceRunEvidenceMode(
 }
 
 async function announceEvidenceMode(
-  storage: Pick<SqliteStorage, "appendAuditEvent">,
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
   decision: EvidenceModeDecision,
   workspaceId: string,
   runId: string,
