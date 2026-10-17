@@ -1,7 +1,7 @@
-# ADR 0011: A client-server version beside the frozen local-first app
+# ADR 0011: A client-server version beside the local-first app
 
 - Status: Proposed
-- Date: 2026-10-16
+- Date: 2026-10-16 (updated 2026-10-17)
 - Decision owners: DraftLoop maintainers
 
 ## Context
@@ -10,8 +10,9 @@ DraftLoop is a local-first desktop app. The candidate's evidence, profile,
 runs and exports live on their machine. Model providers receive only the
 bounded material each run sends, after a visible approval. The last
 local-first stage (#1309) brings CV quality to parity with the manual
-Claude/Codex loop. The local version is then frozen in maintenance mode
-(#1308).
+Claude/Codex loop. After that stage, the local version stays a supported
+product. It is not frozen: it can keep evolving in parallel with the hosted
+version (D15).
 
 The next product is a **client-server version**: hosted, professional, with
 **traceability** as a first-class feature and a viable **business model**.
@@ -77,6 +78,12 @@ durable queue. A **web client** is the main interface.
   Microservices would add network seams where function calls work today.
 - **Consequence:** one deployable API plus one worker image, both built from
   the same packages.
+- **Agent pattern: a fixed author–critic workflow, not autonomous
+  multi-agent teams.** The planner, author, critic and coverage judge run in
+  a known order with structured outputs. That keeps runs reproducible,
+  costed and traceable claim by claim. A separate agent is added only to
+  isolate a task, an access boundary or a token budget, never for its own
+  sake.
 
 ### D2. Repository: same monorepo, new apps
 
@@ -86,9 +93,8 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
 
 - **Why:** parity depends on running the exact same engine and prompts. One
   repository keeps that true by construction.
-- **Consequence:** the frozen desktop app keeps building from the same
-  packages. Package changes must keep both clients green until the desktop
-  is retired.
+- **Consequence:** the desktop app keeps building from the same packages.
+  Package changes must keep both clients green (D15).
 - **No fork and no long-lived branch.** Server work merges to `main` through
   the normal PR flow. Unfinished server code ships to nobody until it is
   deployed, so it needs no branch of its own.
@@ -142,6 +148,19 @@ resumes rather than restarts.
 
 - **API adapters only** on the server. The subscription CLI routes stay
   desktop-only.
+- **Entry points, one primary and one fallback per company:**
+  - *Author (Anthropic):* Claude on Vertex AI in the D14 region first. Calls
+    stay in the EU, use Google Cloud identities instead of a long-lived key,
+    and sit on the same bill. The direct Claude API is the fallback, and the
+    route for models or features that reach it before Vertex. Check that
+    parity when building, and let the evaluation gate confirm it.
+  - *Critic (OpenAI):* OpenAI's API in an EU data-residency project. Azure
+    OpenAI in an EU region is an option for Business customers who require
+    it.
+- **An internal model gateway,** a module of the server rather than a
+  third-party proxy. It holds keys and identities, meters usage per tenant,
+  enforces run budgets and picks the route. A fallback is never silent: it is
+  recorded in run history. No outside proxy sees candidate material.
 - **Platform keys by default:** the service calls Anthropic and OpenAI with
   its own keys, meters usage per tenant, and enforces per-tenant budgets.
   The run budget machinery already exists.
@@ -199,7 +218,20 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   per-tenant data keys.
 - **Data subject rights by design:** export everything, and delete
   everything, including objects and backups within a stated window.
-  Retention is a per-tenant policy.
+- **Retention defaults** (proposed; a GDPR lawyer confirms the periods
+  before launch, especially for special-category data):
+
+  | Situation | What is kept |
+  |---|---|
+  | Active plan or pass | Everything, encrypted with per-tenant keys |
+  | After cancellation or a pass ends | 30 days read-only for export, then deletion; backups age out within 35 days |
+  | Inactive free account | A reminder at 11 months, deletion at 12 |
+  | Audit trail | Content-free metadata, kept as long as the account and deleted with it |
+  | Model providers | Nothing, under zero-retention terms (D5) |
+
+  Pro adds a low-cost encrypted, read-only *vault* that keeps a reviewed
+  profile between job searches. Team and Business set retention per
+  candidate record (D13).
 - **No hidden reasoning stored.** Only structured findings, decisions and
   user-visible rationale, as in the local version.
 - **`AGENTS.md` data rules will change** when this ADR is accepted. "Keep
@@ -264,6 +296,10 @@ Build on what the local version already records:
 - **Approved URL fetching** goes through an egress-controlled fetcher. The
   existing rule holds: a URL is fetched only after the candidate approves
   it.
+- **Egress is enforced per service, not only in code.** Each service has
+  its own identity (D14) and an allowlist of destinations: the run worker
+  reaches only the model endpoints, the fetcher only approved URLs, and
+  ingestion nothing.
 
 ### D12. Bringing local users across
 
@@ -291,9 +327,26 @@ plan decides what is enabled.
 - **Metering:** runs, provider tokens and cost are already recorded per run.
   They are aggregated per organisation and enforced by the existing run
   budget machinery.
-- **Billing:** a payment provider with subscriptions, seats and usage-based
-  overage (for example Stripe). Billing state only feeds entitlements; the
-  domain never depends on it.
+- **Pricing model (proposed):** a subscription that includes monthly
+  credits, plus top-up packs.
+  - One credit is about one reviewed CV. Longer runs and frontier model pairs
+    cost more credits.
+  - A prepaid *job-search pass* of one to three months suits candidates,
+    whose need lasts weeks, better than an open-ended subscription.
+  - Team and Business pool credits across seats. Business can commit
+    annually, or bring its own keys and pay per seat.
+  - The platform pays the model providers (D5). Users never need an API key
+    unless they choose BYOK.
+- **Capping usage:**
+  - A run's credit cost is estimated before it starts. It does not start if
+    the balance is too low, so no run creates debt.
+  - At 80% of the allowance the user is warned, then offered a top-up or a
+    stop. Overage is never silent.
+  - Per-tenant daily and concurrency caps stop abuse, and provider cost
+    alerts protect the platform.
+- **Billing:** a payment provider with subscriptions, seats and top-ups (for
+  example Stripe). Billing state only feeds entitlements; the domain never
+  depends on it.
 - **The quality engine is the same on every plan.** Plans gate volume,
   models and professional features, never the grounding, critic or
   validation that make a CV truthful.
@@ -317,16 +370,77 @@ or `europe-west1`):
 | Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
 | Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys) |
 
-- **Model providers.** The Anthropic and OpenAI APIs stay the default pair.
-  Claude on **Vertex AI** in an EU region is an option worth evaluating for
-  Anthropic models. It offers EU processing, Google Cloud billing and
-  enterprise terms, at the cost of a new provider adapter and model-id
-  mapping. OpenAI models stay on OpenAI's API.
+- **Model providers.** Anthropic and OpenAI stay the default pair, through
+  the entry points in D5. Claude on Vertex AI needs one more adapter
+  beside the existing `@anthropic-ai/sdk` one, since both share the
+  messages interface, plus a model-id mapping.
 - **Isolation.** Production in its own project, with separate service
   accounts for API, workers, ingestion and fetcher, each with least
-  privilege. Business plans can later move to Assured Workloads controls.
+  privilege and an egress allowlist (D11). Business plans can later move
+  to Assured Workloads controls.
 - **Cost.** Cloud Run scales to zero for the API, and a small Cloud SQL
   instance is the main fixed cost at the start.
+
+### D15. Local-first and client-server evolve in parallel
+
+Both versions are products. Either can ship a change without waiting for
+the other, and neither may break the other.
+
+- **Shared core first.** Logic that both need lands in the shared packages
+  behind ports. Each client only adds its adapter: SQLite and the filesystem
+  for the desktop, Postgres and Cloud Storage for the server. A feature that
+  only one version needs stays in that app.
+- **One storage contract, two implementations.** A conformance test suite
+  runs against both the SQLite and the Postgres implementations of the
+  storage port, so they cannot drift.
+- **Capabilities, not forks.** Where behaviour differs, such as provider
+  routes, consent or retention, the application layer reads a capability set.
+  On the desktop it comes from local settings; on the server, from
+  entitlements (D13).
+- **The bridge between versions** is the portable backup format (ADR 0007),
+  used for import (D12). Changing it needs a version bump and a migration.
+
+**Local development.** The desktop runs as today with `pnpm` scripts and no
+cloud account. The server stack runs locally with Docker Compose: Postgres
+with `pgvector`, a local object-storage emulator, the API and one worker.
+The existing offline fixture mode keeps local runs free of provider calls.
+
+**CI.** One required gate on every PR, as D2 describes:
+
+- format, lint, typecheck and unit tests across the workspace;
+- a Postgres job with a service container, running the storage
+  conformance suite and the API tests;
+- the desktop acceptance workflows stay manual, as today.
+
+**Releases.** Independent cadences from the same `main`:
+
+| | Local-first desktop | Client-server |
+|---|---|---|
+| Tags | `v*`, as today | `server-v*` |
+| Workflow | `release.yml`, manual | A deploy workflow: staging, then production after manual approval |
+| Precondition | `pnpm release:preflight` passes locally | The evaluation gate passes on the release commit (D16) |
+| Rollback | Previous installer | Previous Cloud Run revision; database migrations are backward compatible for one release |
+
+### D16. Observability and quality evaluation
+
+- **Observability:** the OpenTelemetry instrumentation feeds Cloud Logging,
+  Monitoring and Trace with content-free attributes only. Dashboards cover
+  run success and duration, cost per run and per tenant, provider errors and
+  limits, and grounding failures. Alerts fire on cost spikes, failed runs
+  and cross-tenant denials. No tracing tool that captures prompts is used
+  unless it is self-hosted in the EU with capture off.
+- **Offline evaluation is the change gate.** The `evaluations` package and
+  the manual-parity rubric run before any prompt, model or orchestration
+  change, against synthetic cases and consented references kept outside the
+  repo.
+- **Online quality signals,** all content-free: approval rate, retracted
+  claims, critic findings per run, edits before sending and re-runs. Real
+  CVs are graded only with explicit consent.
+- **Where live evaluation runs.** `AGENTS.md` keeps provider credentials out
+  of hosted automation, so live evaluation never runs in GitHub Actions. It
+  runs as a manually triggered Cloud Run job in a separate evaluation
+  project, on synthetic data only. `AGENTS.md` is updated to say so when
+  this ADR is accepted.
 
 ## Phasing (for planning only)
 
@@ -341,19 +455,32 @@ The phases below are the engineering slices inside it.
 | 1. Hosted single-tenant | API and worker on Cloud Run, Cloud SQL and Cloud Storage, Terraform, and the web review screen, for the owner's own use | A parity run on the server matches the local result |
 | 2. Multi-tenant beta | Identity, organisations and candidate records, consent, entitlements and billing, deletion and export | A privacy review and a security review |
 | 3. Professional features | Provenance report, reviewer role, Team and Business plans (SSO, retention, audit export, BYOK) | First paying users on each plan |
+| 4. Later services | Job matching against approved job feeds, then a live advisor, both on the same credits (D13) | Each passes its own evaluation and privacy review |
+
+Notes on phase 4:
+
+- **Job matching** uses official job APIs and partner feeds only, never
+  scraping. Embeddings shortlist jobs, and a model scores only the top
+  ones, citing the profile's evidence. DraftLoop suggests jobs and never
+  applies on the user's behalf.
+- **Ranking candidates for recruiters** is high-risk under the EU AI Act,
+  unlike recommending jobs to a candidate. The candidate-side version comes
+  first; the recruiter side waits for legal review.
 
 ## Open decisions for the owner
 
 1. ~~**Who pays first?**~~ **Decided 2026-10-16:** all profiles, through
    tiered plans (D13).
-2. **Pricing levels.** Prices and run allowances per plan, and whether
-   overage is billed or blocked. The plan structure itself is set in D13.
+2. **Pricing levels.** Prices and credits per plan, set from the measured
+   cost per run. The pricing model itself is proposed in D13.
 3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14). Still to
    choose: the exact EU region.
 4. **Identity vendor.** Identity Platform is the default proposal (D14),
    subject to confirming its EU data handling.
-5. **The desktop app's future.** It could stay frozen and local, or later
-   become a thin client of the service.
+5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
+   local-first product that can keep evolving in parallel (D15). Making it
+   a thin client of the service remains a later option.
+6. **Retention periods.** The defaults in D7, confirmed by a GDPR lawyer.
 
 ## Consequences
 
@@ -368,4 +495,6 @@ The phases below are the engineering slices inside it.
 - **Lost with the local trust model:** the strongest privacy argument
   ("your material never leaves your machine"). It is replaced by recorded
   consent, minimal transmission, encryption and the right to delete. The
-  frozen desktop app remains for users who need full local control.
+  desktop app remains for users who need full local control.
+- **Two products to keep green.** Every shared-package change is tested
+  against both clients, which costs CI time and review care (D15).

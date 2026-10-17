@@ -1,16 +1,14 @@
 # Client-server delivery plan
 
 - Status: Proposed, alongside [ADR 0011](../adr/0011-client-server-version.md)
-- Date: 2026-10-16
+- Date: 2026-10-16 (updated 2026-10-17)
 
 This plan runs the client-server version as a stage-gated agentic-system
 engagement, not as a feature backlog. Each stage has decisions to record,
 artifacts to produce, and an evidence gate that must pass before the next
 stage starts.
 
-The structure follows the public outlines of Anthropic's Claude Certified
-Architect (Foundations and Professional) and Forward Deployed Engineer
-learning paths:
+The stages cover:
 
 - solution design from an ambiguous problem;
 - the four platform decisions (entry point, capabilities, model, context);
@@ -21,9 +19,8 @@ learning paths:
 - adoption and champions;
 - hand-off and team enablement.
 
-Only the public outlines were consulted. Anthropic's public guidance anchors
-the evaluation, safety and context stages (see [Sources](#sources)). Where
-the course content refines a step, update this plan.
+Anthropic's public guidance anchors the evaluation, safety and context
+stages (see [Sources](#sources)).
 
 ## Principles
 
@@ -39,6 +36,8 @@ the course content refines a step, update this plan.
    where it sits, and what happens when it fails.
 5. **Parity is the floor.** The hosted version may never produce a weaker
    CV than the local-first version that met the parity exit (#1309).
+6. **Both versions stay shippable.** The local-first version keeps evolving
+   in parallel. Every stage keeps both clients green (ADR 0011, D15).
 
 ## Stage 1: Discovery and qualification
 
@@ -51,9 +50,14 @@ with structural ROI per plan (ADR 0011, D13).
   - What "value" means per plan, for example time to a sendable CV,
     candidate edits before sending, or coach throughput per week.
   - Which plan to pilot first.
-- **Artifacts:** a use-case qualification sheet per plan (problem, user,
-  frequency, current manual cost, expected gain, risks) and stakeholder
-  interviews with three or more coaches or recruiters.
+- **Artifacts:**
+  - a use-case qualification sheet per plan (problem, user, frequency,
+    current manual cost, expected gain, risks), including the assumptions
+    nobody has stated yet;
+  - stakeholder interviews with three or more coaches or recruiters;
+  - an **outcome document** per plan: the measurable fields that define
+    success, agreed before any build, so the pilot measures the right
+    thing.
 - **Gate:** at least one plan has a qualified use case with a measurable
   value hypothesis and a pilot partner.
 
@@ -63,24 +67,32 @@ with structural ROI per plan (ADR 0011, D13).
 
 - **The four platform decisions,** recorded for each agent role (planner,
   author, critic, coverage judge):
-  1. **Entry point:**
-     - Claude API, Claude on Vertex AI (ADR 0011, D14), or both behind a
-       gateway;
-     - OpenAI's API for the critic.
+  1. **Entry point:** proposed in ADR 0011, D5. Claude on Vertex AI first
+     with the direct Claude API as fallback, OpenAI's API in an EU project
+     for the critic, all behind an internal gateway.
   2. **Capability features:** structured outputs (already used), prompt
      caching for the stable run context, batch for non-interactive
      scoring, and tool use (deferred #1111).
   3. **Model per role and per plan:** frontier versus economy, with the
-     quality floor proven by evals, never assumed.
+     quality floor proven by evals, never assumed. A frontier model on every
+     role is not the default.
   4. **Context strategy:** treat context as a finite attention budget.
      Decide full source versus retrieval, profile facts, and the
      application plan (#1304), each with its window and cost budget, and
      what is loaded just in time rather than up front.
+- **Workflow pattern:** the fixed author–critic workflow and the rule for
+  adding an agent (ADR 0011, D1).
+- **Prompts as versioned assets:** each prompt has a version recorded in
+  run history, and a prompt change goes through the stage 3 gate like code.
+- **Sizing:** the measured cost per run, by role and model, from existing
+  run history. It sets the credit price per plan (ADR 0011, D13) and shows
+  whether each plan is viable before it is built.
 - **Deployment path and residency:**
   - the region and data paths (ADR 0011, D14);
   - the parity gaps between the Claude API and Vertex AI (feature and
     model availability);
-  - the gateway pattern for keys, metering and routing (D5).
+  - the gateway for keys, metering and routing, and per-service identity
+    and egress (D5, D11).
 - **Artifacts:** ADR 0011 accepted; one ADR per platform decision that
   departs from the local version; the threat model updated for hosting.
 - **Gate:** ADR 0011 accepted, and the storage port (ADR 0011, phase 0)
@@ -103,6 +115,9 @@ with structural ROI per plan (ADR 0011, D13).
   - **The held-out cases,** expanded with Claude-generated synthetic
     variants of the baseline cases.
   - **The regression thresholds.**
+  - **How variants are compared:** A/B comparisons fix their sample size
+    and success metric in advance, so a winner over a few dozen runs is not
+    mistaken for a real gain.
 - **Artifacts:**
   - a versioned evaluation set of synthetic cases plus consented private
     references kept outside the repo;
@@ -126,7 +141,14 @@ with structural ROI per plan (ADR 0011, D13).
 | Runaway cost | Per-run and per-tenant budgets, and entitlements (D13) | The run pauses at its budget, and the tenant is notified |
 | Provider outage or limits | Retries, usage-limit pause (#1306), optional second route (D14) | The run pauses and is resumable; no silent route switch |
 | Same-company author and critic | The pairing check and its warning (ADR 0005) | The warning is shown, and the override is recorded |
+| Unequal quality across candidates | An evaluation slice with synthetic profile variants that differ only in name, age or gender signals (stage 3) | A gap beyond tolerance blocks the change, as a regression does |
+| A service reaching more than it needs | Per-service identity and egress allowlists (D11, D14) | The call is denied, and an alert is raised |
 
+- **Review routing by stakes:** the candidate approves every export.
+  Team plans can also require a reviewer's approval by policy. Low-stakes
+  steps, such as requirement extraction, need no human review.
+- **Compliance map:** each GDPR and, for later services, EU AI Act
+  obligation is mapped to the control that meets it and to its evidence.
 - **Gate:** a threat model review and a red-team pass on injection through
   job posts and uploads, with no open high-severity finding.
 
@@ -138,7 +160,9 @@ with structural ROI per plan (ADR 0011, D13).
   candidates), its duration, success metrics and exit criteria. Baselines
   are captured **before** the pilot, from the current manual process.
 - **Artifacts:** a pilot plan, consent and data processing agreements, the
-  baseline measurements, and a weekly metrics review.
+  baseline measurements, a weekly metrics review, and a feedback channel
+  with a stated response time. Dashboards complement user feedback; they
+  don't replace it.
 - **Gate:** the metrics beat the baseline (for example, edits before
   sending and time to a sendable CV), with no safety incident.
 
@@ -154,8 +178,9 @@ targets.
   - backup and recovery objectives;
   - the incident process;
   - the release process (the local release guardrail's equivalent).
-- **Artifacts:** runbooks, alerting on the objectives, cost dashboards per
-  tenant and per model, and recovery drills.
+- **Artifacts:** a production-readiness checklist, runbooks, alerting on
+  the objectives, cost dashboards per tenant and per model, and recovery
+  drills.
 - **Gate:** the objectives met for four weeks in the pilot, and a recovery
   drill passed.
 
@@ -201,6 +226,3 @@ targets.
   (Stage 4).
 - Anthropic, [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
   (Stage 2).
-- Public course outlines: Claude Certified Architect (Foundations and
-  Professional) and Claude Forward Deployed Engineer learning paths on
-  Anthropic's partner academy (stage structure).
