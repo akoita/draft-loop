@@ -37,6 +37,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/validation` and `packages/evaluations` | Deterministic checks, rubric findings, and structured critique records                                                                | Proof of truth independent of candidate evidence and human decisions    |
 | `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                                                      | Submission or publishing                                                |
 | `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
+| `packages/storage-postgres`                      | The Postgres implementation of the storage ports for the hosted service, its SQL migrations, and its audit-chain writes               | Desktop or CLI wiring, provider calls, or object storage                |
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
@@ -77,6 +78,12 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - A conformance suite, exported as `@draft-loop/storage/conformance`, checks
   the contracts any implementation must honour. It runs against SQLite in
   `pnpm test`.
+- `packages/storage-postgres` is the hosted implementation. It joins the suite
+  one contract group at a time, and it reuses the audit-trail hashing from
+  `@draft-loop/storage/audit-trail`, so both chains verify the same way.
+  `pnpm test:postgres` runs it against the server named by
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs it
+  against Postgres 16 with `pgvector`.
 
 ## Data and quality contracts
 

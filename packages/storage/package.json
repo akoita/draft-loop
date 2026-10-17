@@ -35,6 +35,14 @@
       "types": "./src/filesystem-blob-storage.ts",
       "import": "./src/filesystem-blob-storage.ts"
     },
+    "./audit-trail": {
+      "types": "./src/audit-trail-exports.ts",
+      "import": "./src/audit-trail-exports.ts"
+    },
+    "./errors": {
+      "types": "./src/storage-errors.ts",
+      "import": "./src/storage-errors.ts"
+    },
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"

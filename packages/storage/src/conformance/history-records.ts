@@ -283,7 +283,8 @@ const writingPolicy = (content: string, version: string): WritingPolicyInput => 
 });
 
 /** Saves one record of every history kind for `run-1` in the conformance workspace. */
-async function seedHistory(storage: HistoryRecordsStorage): Promise<void> {
+/** The workspace, its context snapshot and its artifact version, without any run history. */
+async function seedRecords(storage: HistoryRecordsStorage): Promise<void> {
   await storage.saveWorkspace(workspace);
   await storage.saveContextSnapshot({
     id: "context-1",
@@ -293,6 +294,10 @@ async function seedHistory(storage: HistoryRecordsStorage): Promise<void> {
     payload: { job: "fixture" },
   });
   await storage.saveArtifactVersion(artifactVersion);
+}
+
+async function seedHistory(storage: HistoryRecordsStorage): Promise<void> {
+  await seedRecords(storage);
   await storage.saveRun(run());
   await storage.saveRound(round());
   await storage.saveExecution(execution());
@@ -586,7 +591,7 @@ const artifactContracts: readonly StorageContract[] = [
   {
     name: "artifact versions: are immutable once saved",
     check: async (storage) => {
-      await seedHistory(storage);
+      await seedRecords(storage);
       const saved = await storage.getArtifactVersion("artifact-1");
       expect(saved).toEqual({ ...artifactVersion, checksum: expect.stringMatching(sha256Pattern) });
       await expect(storage.saveArtifactVersion(artifactVersion)).resolves.toEqual(saved);
@@ -603,7 +608,7 @@ const contextSnapshotContracts: readonly StorageContract[] = [
   {
     name: "context snapshots: are immutable once saved",
     check: async (storage) => {
-      await seedHistory(storage);
+      await seedRecords(storage);
       const saved = await storage.getContextSnapshot("context-1");
       expect(saved).toMatchObject({ id: "context-1", payload: { job: "fixture" } });
       expect(saved?.checksum).toMatch(sha256Pattern);
@@ -836,27 +841,44 @@ const workspaceContracts: readonly StorageContract[] = [
   },
 ];
 
-/** Every history and versioned-record contract, in a stable order. */
-export const historyRecordsContracts: readonly StorageContract[] = [
-  ...workspaceContracts,
-  ...contextSnapshotContracts,
-  ...artifactContracts,
-  ...runContracts,
-  ...runSnapshotContracts,
-  ...childContracts,
-  ...auditContracts,
-  ...opportunityBriefContracts,
-  ...canonicalProfileContracts,
-  ...writingPolicyContracts,
-];
+/**
+ * The contracts by group, in a stable order. A new implementation opts in one group at a time;
+ * a complete one runs them all.
+ */
+export const historyRecordsContractGroups = {
+  workspaces: workspaceContracts,
+  contextSnapshots: contextSnapshotContracts,
+  artifactVersions: artifactContracts,
+  runs: runContracts,
+  runSnapshots: runSnapshotContracts,
+  runChildren: childContracts,
+  audit: auditContracts,
+  opportunityBriefs: opportunityBriefContracts,
+  canonicalProfiles: canonicalProfileContracts,
+  writingPolicies: writingPolicyContracts,
+} as const satisfies Readonly<Record<string, readonly StorageContract[]>>;
 
-/** Runs every contract against fresh stores from `open`, one test per contract. */
+export type HistoryRecordsContractGroup = keyof typeof historyRecordsContractGroups;
+
+/** Every history and versioned-record contract, in a stable order. */
+export const historyRecordsContracts: readonly StorageContract[] = Object.values(
+  historyRecordsContractGroups,
+).flat();
+
+/**
+ * Runs the contracts against fresh stores from `open`, one test per contract: every group by
+ * default, or only the named groups.
+ */
 export function describeHistoryRecordsConformance(
   implementation: string,
   open: HistoryRecordsStorageFactory,
+  groups: readonly HistoryRecordsContractGroup[] = Object.keys(
+    historyRecordsContractGroups,
+  ) as HistoryRecordsContractGroup[],
 ): void {
+  const contracts = groups.flatMap((group) => historyRecordsContractGroups[group]);
   describe(`${implementation} storage conformance: history and versioned records`, () => {
-    for (const contract of historyRecordsContracts) {
+    for (const contract of contracts) {
       it(contract.name, async () => {
         const opened = await open();
         try {

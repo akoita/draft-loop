@@ -1,0 +1,104 @@
+import { randomUUID } from "node:crypto";
+import { auditEventChecksum } from "@draft-loop/storage/audit-trail";
+import type { HistoryRecordsStorage } from "@draft-loop/storage/conformance";
+import { describeHistoryRecordsConformance } from "@draft-loop/storage/conformance";
+import { describe, expect, it } from "vitest";
+import { openPostgresStorage, type PostgresStorage } from "./postgres-storage.js";
+import { createSqlClient } from "./sql-client.js";
+
+/**
+ * Set by the Postgres CI job and by developers with a local server. Without it these suites are
+ * skipped, so the workspace gate runs where no database is available.
+ */
+const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
+
+/** Opens an empty store in a schema of its own, dropped again on close. */
+async function openIsolated(url: string): Promise<{
+  readonly storage: PostgresStorage;
+  readonly close: () => Promise<void>;
+}> {
+  const schema = `conformance_${randomUUID().replaceAll("-", "")}`;
+  const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  const storage = await openPostgresStorage({ connectionString: url, schema });
+  return {
+    storage,
+    close: async () => {
+      await storage.close();
+      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
+      await admin.close();
+    },
+  };
+}
+
+describe.runIf(connectionString !== undefined)("Postgres storage", () => {
+  const url = connectionString ?? "";
+
+  // The groups this implementation supports so far. Each later slice adds its group here.
+  describeHistoryRecordsConformance("Postgres", async () => {
+    const opened = await openIsolated(url);
+    // Only the methods of the selected groups are called; the rest of the surface lands later.
+    return { storage: opened.storage as unknown as HistoryRecordsStorage, close: opened.close };
+  }, ["workspaces", "contextSnapshots", "artifactVersions"]);
+
+  it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
+    const { storage, close } = await openIsolated(url);
+    try {
+      await storage.saveWorkspace({
+        id: "workspace-1",
+        state: "collecting",
+        createdAt: "2026-10-17T10:00:00.000Z",
+        updatedAt: "2026-10-17T10:00:00.000Z",
+      });
+      await Promise.all(
+        Array.from({ length: 8 }, (_, index) =>
+          storage.saveContextSnapshot({
+            id: `context-${index}`,
+            workspaceId: "workspace-1",
+            schemaVersion: 1,
+            createdAt: "2026-10-17T10:01:00.000Z",
+            payload: { index },
+          }),
+        ),
+      );
+      const events = await storage.listAuditEvents("workspace-1");
+      expect(events).toHaveLength(9);
+      let previous: string | null = null;
+      for (const event of events) {
+        expect(event.previousEventChecksum).toBe(previous);
+        expect(event.eventChecksum).toBe(
+          auditEventChecksum({
+            createdAt: event.createdAt,
+            entityId: event.entityId,
+            entityType: event.entityType,
+            eventType: event.eventType,
+            id: event.id,
+            payloadChecksum: event.payloadChecksum,
+            previousEventChecksum: event.previousEventChecksum,
+            workspaceId: event.workspaceId,
+          }),
+        );
+        previous = event.eventChecksum;
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("applies each migration once when several stores open the same schema", async () => {
+    const schema = `migrations_${randomUUID().replaceAll("-", "")}`;
+    const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
+    await admin.query(`CREATE SCHEMA ${schema}`);
+    try {
+      const stores = await Promise.all(
+        Array.from({ length: 3 }, () => openPostgresStorage({ connectionString: url, schema })),
+      );
+      await Promise.all(stores.map((store) => store.close()));
+      const rows = await admin.query(`SELECT version FROM ${schema}.schema_migrations`);
+      expect(rows.map((row) => Number(row.version))).toEqual([1]);
+    } finally {
+      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
+      await admin.close();
+    }
+  });
+});

@@ -1,0 +1,31 @@
+import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
+import { appendAuditEventRow, listAuditEventRows } from "./audit-trail.js";
+import { migratePostgres } from "./migrations.js";
+import { createSqlClient, type SqlClientOptions } from "./sql-client.js";
+import { createWorkspaceRecords } from "./workspace-records.js";
+
+export type PostgresStorageOptions = SqlClientOptions;
+
+/**
+ * Opens the Postgres implementation of the storage ports, applying pending migrations first.
+ * Ports land one group at a time; each group passes the shared conformance suite before it ships.
+ */
+export async function openPostgresStorage(options: PostgresStorageOptions) {
+  const client = createSqlClient(options);
+  try {
+    await migratePostgres(client);
+  } catch (error) {
+    await client.close();
+    throw error;
+  }
+  return {
+    ...createWorkspaceRecords(client),
+    appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
+      client.transaction((executor) => appendAuditEventRow(executor, input)),
+    listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>
+      listAuditEventRows(client, workspaceId),
+    close: () => client.close(),
+  };
+}
+
+export type PostgresStorage = Awaited<ReturnType<typeof openPostgresStorage>>;
