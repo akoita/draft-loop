@@ -12,9 +12,11 @@ import {
 } from "@draft-loop/orchestrator";
 import {
   type ArtifactVersionRecord,
+  type OpportunityBriefStoragePort,
   openSqliteStorage,
   openSqliteStorageReadOnly,
-  type SqliteStorage,
+  type RunHistoryStorage,
+  type WorkspaceApplicationsStoragePort,
 } from "@draft-loop/storage";
 import { jobHeading } from "./application-name.js";
 import { CliUserError } from "./cli-user-error.js";
@@ -122,9 +124,14 @@ function importedName(command: ImportApplicationCommand, jobText: string): strin
   }
 }
 
+/** The history an import copies from one workspace into another. */
+type ImportHistory = RunHistoryStorage &
+  OpportunityBriefStoragePort &
+  WorkspaceApplicationsStoragePort;
+
 interface CopyContext {
-  readonly source: SqliteStorage;
-  readonly target: SqliteStorage;
+  readonly source: ImportHistory;
+  readonly target: ImportHistory;
   readonly sourceRoot: string;
   readonly targetRoot: string;
   readonly sourceId: string;
