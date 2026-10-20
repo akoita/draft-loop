@@ -2058,6 +2058,7 @@ const desktopReviewStateKeys = [
   "approvalReadiness",
   "reviewComplete",
   "totalCostUsd",
+  "unpricedCallCount",
   "budgetUsd",
   "providerExposure",
   "providerTransmissionPreflight",

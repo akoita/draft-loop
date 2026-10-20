@@ -252,6 +252,25 @@ describe("application OpenAI API retry budget", () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
+  it("records an estimated cost from the catalog rates for a catalog model", async () => {
+    const lunaModel: ModelSelection = { ...model, modelId: "gpt-6-luna" };
+    const create = vi.fn<OpenAIClient["responses"]["create"]>(async () => ({
+      ...successResponse(),
+      model: lunaModel.modelId,
+    }));
+    const harness = apiHarness(create);
+    const adapter = await createProviderAdapter(
+      {},
+      lunaModel,
+      true,
+      harness.resolveCredential,
+      harness.factories,
+    );
+
+    const response = await adapter.execute({ ...request, model: lunaModel });
+    expect(response.cost.estimatedUsd).toBeCloseTo((3 * 0.1 + 2 * 0.5) / 1_000_000, 12);
+  });
+
   it("does not resolve credentials or construct a client when transmission is denied", async () => {
     const create = vi.fn<OpenAIClient["responses"]["create"]>();
     const harness = apiHarness(create);

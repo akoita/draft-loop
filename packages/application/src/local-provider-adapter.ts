@@ -31,6 +31,7 @@ import OpenAI from "openai";
 import { createAnthropicSdkClient } from "./anthropic-sdk-client.js";
 import { developmentProviderRetry } from "./development-provider-retry.js";
 import type { ProviderCredentialResolver } from "./glm-provider-routing.js";
+import { catalogModelPricing } from "./provider-model-pricing.js";
 
 export type { ProviderCredentialResolver } from "./glm-provider-routing.js";
 
@@ -177,6 +178,8 @@ export async function createProviderAdapter(
       },
     });
   }
+  const pricing = catalogModelPricing(model);
+  const pricingOption = pricing === undefined ? {} : { pricing };
   if (provider === "mistral") {
     const apiKey = await resolveCredential("mistral");
     if (apiKey === undefined || apiKey.trim() === "") {
@@ -191,6 +194,7 @@ export async function createProviderAdapter(
     return createMistralAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
       retry: config.retry ?? developmentProviderRetry,
+      ...pricingOption,
     });
   }
   if (provider === "anthropic") {
@@ -219,6 +223,7 @@ export async function createProviderAdapter(
     return new AnthropicAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
       ...(config.retry === undefined ? {} : { retry: config.retry }),
+      ...pricingOption,
     });
   }
   if (providerAuthModeConfiguration.openai === "user-session") {
@@ -241,5 +246,6 @@ export async function createProviderAdapter(
   return new OpenAIAdapter<JsonObject, JsonObject>(client, {
     configuredModel: model,
     retry: { ...config.retry, maxRetries: config.retry?.maxRetries ?? 0 },
+    ...pricingOption,
   });
 }

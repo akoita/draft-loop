@@ -12,6 +12,7 @@
 import { meanReadinessScore } from "./application-run-list.js";
 import { type DesktopReviewState, isUnresolvedFinding } from "./model.js";
 import { coverageTally } from "./review-work-tabs.js";
+import { costNotRecorded, runCostLabel } from "./run-cost.js";
 import { policyChecksumLabel, recordedRunModels } from "./run-details.js";
 
 export const notRecorded = "not recorded";
@@ -71,6 +72,7 @@ type RunState = Pick<
   | "coverage"
   | "findings"
   | "totalCostUsd"
+  | "unpricedCallCount"
   | "evidenceMode"
   | "writingPolicy"
   | "runInputs"
@@ -106,7 +108,8 @@ function blockingOf(state: RunState): string {
 }
 
 function costOf(state: RunState): string {
-  return Number.isFinite(state.totalCostUsd) ? `$${state.totalCostUsd.toFixed(3)}` : notRecorded;
+  const { text } = runCostLabel(state);
+  return text === costNotRecorded ? notRecorded : text;
 }
 
 /** The evidence mode and size the run recorded; retrieval runs record none. */

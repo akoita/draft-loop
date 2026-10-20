@@ -1163,6 +1163,8 @@ function reviewState(
     ),
     reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,
+    unpricedCallCount: snapshot.executionHistory.filter(({ estimatedUsd }) => estimatedUsd === null)
+      .length,
     budgetUsd: descriptor.maxCostUsd ?? null,
     providerExposure: {
       author: descriptor.author,
