@@ -1,8 +1,8 @@
 {
   "project": "draft-loop",
-  "stage": "simple-guided-workflow",
+  "stage": "local-first-cv-quality-parity",
   "channel": "alpha",
-  "releaseName": "Simple guided workflow checkpoint alpha",
-  "stageIssue": 1092,
+  "releaseName": "Local-first CV quality checkpoint alpha",
+  "stageIssue": 1309,
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
