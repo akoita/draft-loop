@@ -235,7 +235,10 @@ of whether the CV is ready to send. It reports quality warnings that quote the
 offending text and name its section:
 
 - `editorial-source-note`: a copied source note, meta-commentary about sources
-  or the job search, or third-person narration about the candidate;
+  or the job search, or third-person narration about the candidate. Draft
+  validation also raises this code on its own for a block that calls the
+  candidate "he", "she" or "the candidate", or says "labelled as such", so
+  the warning does not depend on the critic noticing;
 - `editorial-fragment`: a fragment or semicolon-stitched evidence quotes;
 - `editorial-negative-aside`: an aside that undercuts an accomplishment
   instead of stating a real limit once;

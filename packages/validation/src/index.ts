@@ -10,6 +10,7 @@ import type {
 
 import { findBulletFragment } from "./bullet-fragment.js";
 import { findBulletSeries } from "./bullet-series.js";
+import { findCandidateNarration } from "./candidate-narration.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
@@ -509,6 +510,18 @@ export function validateDraftArtifact(
           sectionId: section.id,
           blockId: block.id,
           location: writingPolicyLocation(block.text, fragment.start, fragment.end),
+        });
+      }
+      const narration = findCandidateNarration(block.text);
+      if (narration !== undefined) {
+        addIssue(issues, {
+          code: "editorial-source-note",
+          category: "quality",
+          severity: "warning",
+          message: `block narrates the candidate like a copied career note instead of CV prose: "${narration.quote}"`,
+          sectionId: section.id,
+          blockId: block.id,
+          location: writingPolicyLocation(block.text, narration.start, narration.end),
         });
       }
       const repeated = findRepeatedPhrase(block.text);
