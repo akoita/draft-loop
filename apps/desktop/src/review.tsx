@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ApplicationJobResult } from "./application-job-contract.js";
 import {
   ApplicationJobStep,
   ApplicationStepsView,
@@ -64,6 +65,7 @@ import {
   type SentRevisionDirection,
   sentRevisionDirection,
 } from "./footer-running-round.js";
+import { JobDescriptionPanel } from "./job-description-panel.js";
 import {
   briefOperationsOf,
   JobRequirementsExtraction,
@@ -99,9 +101,11 @@ import {
   uncritiquedStatus,
 } from "./review-run-status.js";
 import {
+  availableReviewWorkTab,
   coverageTabLabel,
   defaultReviewWorkTab,
   findingsTabLabel,
+  jobTabLabel,
   nextStepLine,
   nextStepTarget,
   ReviewWorkTabs,
@@ -193,6 +197,8 @@ interface ReviewWorkspaceProps {
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   /** Lets the Target job description card extract requirements into a draft opportunity brief. */
   readonly jobRequirements?: JobRequirementsExtractionBinding;
+  /** Reads the application's job description back for the Job tab; without it there is no tab. */
+  readonly onReadJob?: () => Promise<ApplicationJobResult>;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -911,6 +917,7 @@ export function ReviewWorkspace({
   onSelectFiles,
   onAddUrl,
   jobRequirements,
+  onReadJob,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -1188,12 +1195,20 @@ export function ReviewWorkspace({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
   const queueCounts = findingQueueCounts(state.findings);
-  const { selected: workTab, select: selectWorkTab } = useReviewWorkTab(
+  const { selected: chosenWorkTab, select: selectWorkTab } = useReviewWorkTab(
     defaultReviewWorkTab(queueCounts.needsAction),
   );
-  const hasCoverage = state.coverage !== undefined && state.coverage !== null;
-  // Under the Coverage tab the queue shows no current finding, as a folded queue did before.
-  const findingsCollapsed = hasCoverage && workTab !== "findings";
+  const workTabs = [
+    findingsTabLabel(queueCounts.needsAction),
+    ...(state.coverage === undefined || state.coverage === null
+      ? []
+      : [coverageTabLabel(state.coverage)]),
+    ...(onReadJob === undefined ? [] : [jobTabLabel]),
+  ];
+  const workTab = availableReviewWorkTab(chosenWorkTab, workTabs);
+  const tabbedWork = workTabs.length > 1;
+  // Under another tab the queue shows no current finding, as a folded queue did before.
+  const findingsCollapsed = tabbedWork && workTab !== "findings";
   const expandFindings = useCallback(() => selectWorkTab("findings"), [selectWorkTab]);
   const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
@@ -3338,19 +3353,14 @@ export function ReviewWorkspace({
               }
               selected={workTab}
               onSelect={selectWorkTab}
-              tabs={[
-                findingsTabLabel(queueCounts.needsAction),
-                ...(state.coverage === undefined || state.coverage === null
-                  ? []
-                  : [coverageTabLabel(state.coverage)]),
-              ]}
+              tabs={workTabs}
             />
             <section
               className="panel findings-panel"
               id="findings-panel"
               aria-label="critique findings"
               tabIndex={-1}
-              {...reviewWorkPanelProps("findings", workTab, hasCoverage)}
+              {...reviewWorkPanelProps("findings", workTab, tabbedWork)}
             >
               <div className="findings-queue-header">
                 <div className="section-heading compact">
@@ -3729,6 +3739,13 @@ export function ReviewWorkspace({
                 onToggle={() => setCoverageCardsShown((shown) => !shown)}
                 onLocateBlock={locateDraftBlock}
                 tabPanel={reviewWorkPanelProps("coverage", workTab, true)}
+              />
+            )}
+            {onReadJob === undefined ? null : (
+              <JobDescriptionPanel
+                readJob={onReadJob}
+                reloadKey={`${state.workspaceId}:${state.runId}`}
+                tabPanel={reviewWorkPanelProps("job", workTab, true)}
               />
             )}
           </div>

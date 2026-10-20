@@ -13,6 +13,7 @@ export const bridgeCapabilities = [
   "workspace.compact-history",
   "application.list",
   "application.get",
+  "application.job",
   "application.create",
   "application.import",
   "application.archive",

@@ -221,6 +221,7 @@ import {
   persistedApplicationBriefPreferences,
   withApplicationBriefPreference,
 } from "./application-briefs.js";
+import { readApplicationJob } from "./application-job.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import {
   earlierRunFor,
@@ -4558,6 +4559,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               workspaceId: workspace.descriptor.id,
               application: projectApplication(scope.application),
             },
+          };
+        }
+        case "application.job": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const scope = await requireApplicationScope(workspace.root, command.input.applicationId);
+          return {
+            ok: true,
+            value: await readApplicationJob({
+              workspaceId: workspace.descriptor.id,
+              root: workspace.root,
+              workspaceJobPath: workspace.descriptor.jobDescriptionPath,
+              application: scope?.created === true ? scope.application : undefined,
+            }),
           };
         }
         case "application.create": {
