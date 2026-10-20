@@ -231,8 +231,9 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   per-tenant data keys.
 - **Data subject rights by design:** export everything, and delete
   everything, including objects and backups within a stated window.
-- **Retention defaults** (proposed; a GDPR lawyer confirms the periods
-  before launch, especially for special-category data):
+- **Retention defaults** (working defaults, accepted 2026-10-20; a GDPR
+  lawyer confirms the periods before phase 2 admits other users, especially
+  for special-category data):
 
   | Situation | What is kept |
   |---|---|
@@ -366,6 +367,24 @@ plan decides what is enabled.
     annually, or bring its own keys and pay per seat.
   - The platform pays the model providers (D5). Users never need an API key
     unless they choose BYOK.
+- **Price levels (working defaults, accepted 2026-10-20).** The comparison
+  with other CV services is on #1402.
+
+  | Plan | Price | Included |
+  |---|---|---|
+  | Individual | €19/month | 4 CVs, economy model pair |
+  | Job-search pass | €49 once, 3 months | 12 CVs |
+  | Pro | €49/month | 8 CVs, frontier pair, provenance report |
+  | Team | €149/month per coach seat | 30 CVs, pooled |
+  | Business | Quote | BYOK, SSO, retention controls |
+  | Extra CV | €5 | |
+
+  - **Margin rule:** an included CV costs the platform no more than about
+    half of what the user pays for it.
+  - **Gate:** these prices apply only once phase 1 measures a cached run at
+    US$3 or less, against about US$5.60 uncached today (D14). Otherwise
+    allowances shrink, or the economy pair becomes the default on more
+    plans.
 - **Capping usage:**
   - A run's credit cost is estimated before it starts. It does not start if
     the balance is too low, so no run creates debt.
@@ -552,8 +571,8 @@ Notes on phase 4:
 
 1. ~~**Who pays first?**~~ **Decided 2026-10-16:** all profiles, through
    tiered plans (D13).
-2. **Pricing levels.** Prices and credits per plan, set from the measured
-   cost per run (D14). The pricing model itself is proposed in D13.
+2. ~~**Pricing levels.**~~ **Working defaults accepted 2026-10-20** (D13).
+   They apply once phase 1 measures a cached run at US$3 or less.
 3. ~~**Hosting.**~~ **Decided 2026-10-16:** Google Cloud (D14), in
    `europe-west1` (decided 2026-10-17).
 4. ~~**Identity vendor.**~~ **Decided 2026-10-17:** Keycloak managed by
@@ -565,7 +584,9 @@ Notes on phase 4:
 5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
    local-first product that can keep evolving in parallel (D15). Making it
    a thin client of the service remains a later option.
-6. **Retention periods.** The defaults in D7, confirmed by a GDPR lawyer.
+6. ~~**Retention periods.**~~ **Working defaults accepted 2026-10-20**
+   (D7). A fixed-price GDPR lawyer review confirms them before phase 2
+   admits other users.
 
 ## Consequences
 
