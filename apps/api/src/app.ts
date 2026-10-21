@@ -25,6 +25,8 @@ export interface ApiOptions {
     readonly service: ApplicationService;
     readonly workspaceRoot: (workspaceId: string) => string;
     readonly idempotency?: IdempotencyStore;
+    /** Queues a begun run for the workers, such as the run queue bound to the deployment's tenant. */
+    readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
   };
 }
 
@@ -117,6 +119,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,
       idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
+      enqueueRun: options.application.enqueueRun,
     });
   }
 

@@ -98,12 +98,18 @@ function scriptedService(methods: Partial<ApplicationService>): ApplicationServi
 
 let app: FastifyInstance;
 
-async function build(methods: Partial<ApplicationService>): Promise<void> {
+type EnqueueRun = (workspaceId: string, runId: string) => Promise<void>;
+
+async function build(
+  methods: Partial<ApplicationService>,
+  enqueueRun: EnqueueRun = async () => undefined,
+): Promise<void> {
   app = await buildApi({
     ownerToken,
     application: {
       service: scriptedService(methods),
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
+      enqueueRun,
     },
   });
 }
@@ -324,9 +330,10 @@ describe("runs", () => {
     payload,
   });
 
-  it("begins a run once per idempotency key", async () => {
+  it("begins a run once per idempotency key and queues it on every attempt", async () => {
     const begin = vi.fn(async () => snapshot);
-    await build({ begin });
+    const enqueueRun = vi.fn<EnqueueRun>(async () => undefined);
+    await build({ begin }, enqueueRun);
 
     const first = await app.inject(beginRequest("key-00000001", { applicationId: "default" }));
     const retry = await app.inject(beginRequest("key-00000001", { applicationId: "default" }));
@@ -340,6 +347,29 @@ describe("runs", () => {
       applicationId: "default",
     });
     expect(first.json()).toMatchObject({ runId: "run-1", state: "drafting", hasDraft: false });
+    expect(enqueueRun.mock.calls).toEqual([
+      ["workspace-1", "run-1"],
+      ["workspace-1", "run-1"],
+    ]);
+  });
+
+  it("answers 503 when the queue fails, and a retry queues the saved run", async () => {
+    const begin = vi.fn(async () => snapshot);
+    const enqueueRun = vi
+      .fn<EnqueueRun>()
+      .mockRejectedValueOnce(new Error("connection refused to queue-host"))
+      .mockResolvedValue(undefined);
+    await build({ begin }, enqueueRun);
+
+    const failed = await app.inject(beginRequest("key-00000003"));
+    const retry = await app.inject(beginRequest("key-00000003"));
+
+    expect(failed.statusCode).toBe(503);
+    expect(failed.json().error.code).toBe("queue_unavailable");
+    expect(failed.body).not.toContain("queue-host");
+    expect(retry.statusCode).toBe(201);
+    expect(begin).toHaveBeenCalledTimes(1);
+    expect(enqueueRun).toHaveBeenCalledTimes(2);
   });
 
   it("refuses a reused key with another request, and a missing key", async () => {

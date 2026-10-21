@@ -41,10 +41,11 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
 | `packages/storage-postgres`                      | The Postgres implementation of the storage ports for the hosted service, its SQL migrations, and its audit-chain writes               | Desktop or CLI wiring, provider calls, or object storage                |
 | `packages/storage-gcs`                           | The Cloud Storage implementation of the blob port for the hosted service: tenant-prefixed keys, checksum metadata and verified deletes | Desktop or CLI wiring, encryption keys, or bucket provisioning          |
+| `packages/run-queue`                             | The hosted service's durable run queue on Postgres (pg-boss): ids-only job payloads, one waiting job per run, retry and heartbeat settings, queue migrations and runtime grants | Run execution, candidate material in payloads, or desktop and CLI wiring |
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspaces, job briefs, applications and runs, path-free projections, idempotent run starts, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspaces, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
 
 ## Key flow
 
@@ -132,12 +133,27 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     replaced objects, then download that exact generation and hash it;
   - delete names the generation it verified, so a concurrent write survives.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, and `pnpm test:gcs` runs the Cloud Storage
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's, and `pnpm test:gcs` runs the Cloud Storage
   suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI
   `Server storage` job runs both, against Postgres 16 with `pgvector` and the
   `fake-gcs-server` emulator. Locally, `pnpm server:up` starts both with
   Docker Compose and `pnpm server:test` runs both suites against them; see
   the [local server stack](../operations/local-server-stack.md).
+
+The hosted service starts runs through a queue rather than in the request
+(ADR 0011, D4):
+
+- `POST /v1/workspaces/:id/runs` begins the run, which saves it without a
+  provider call, then queues its ids in `packages/run-queue`. A request that
+  saved the run but could not queue it answers 503, and a retry with the same
+  `Idempotency-Key` queues the saved run.
+- The queue keeps at most one waiting and one active job per run, so repeated
+  requests collapse, and a paused run can queue its resumption while the
+  paused attempt finishes.
+- A job that stops sending heartbeats, as after a crash, is retried with
+  backoff, and the worker resumes the run from its last saved step.
+- Queue migrations run as the schema owner (`migrateRunQueue`), and
+  `grantRunQueueAccess` gives the runtime role table and function access only.
 
 ## Data and quality contracts
 
