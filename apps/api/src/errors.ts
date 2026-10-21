@@ -1,0 +1,63 @@
+import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
+import { z } from "zod";
+
+/**
+ * The one error shape every route answers with. It names what went wrong and never echoes the
+ * request: bodies can hold candidate material, and headers can hold the owner's token.
+ */
+export const apiErrorSchema = z
+  .object({
+    error: z.object({
+      code: z.string(),
+      message: z.string(),
+      issues: z
+        .array(z.object({ path: z.string(), message: z.string() }))
+        .optional()
+        .describe("Which fields failed validation, by path; values are never repeated."),
+    }),
+  })
+  .meta({ id: "ApiError" });
+
+export type ApiError = z.infer<typeof apiErrorSchema>;
+
+export function apiError(code: string, message: string): ApiError {
+  return { error: { code, message } };
+}
+
+export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
+  void reply.code(404).send(apiError("not_found", "No such route."));
+}
+
+export function sendError(error: FastifyError, request: FastifyRequest, reply: FastifyReply): void {
+  if (hasZodFastifySchemaValidationErrors(error)) {
+    void reply.code(400).send({
+      error: {
+        code: "invalid_request",
+        message: "The request does not match the route's schema.",
+        issues: error.validation.map((issue) => ({
+          path: issue.instancePath === "" ? "/" : issue.instancePath,
+          message: issue.message ?? "Invalid value.",
+        })),
+      },
+    } satisfies ApiError);
+    return;
+  }
+  const status = error.statusCode ?? 500;
+  if (status >= 400 && status < 500) {
+    // Fastify's own client errors, such as a body over the size limit or malformed JSON. Their
+    // codes are stable; their messages can quote the input, so a fixed one replaces them.
+    void reply
+      .code(status)
+      .send(apiError(clientErrorCode(error), "The request could not be processed."));
+    return;
+  }
+  request.log.error({ err: { type: error.name, code: error.code } }, "request failed");
+  void reply.code(500).send(apiError("internal", "The server could not complete the request."));
+}
+
+function clientErrorCode(error: FastifyError): string {
+  if (error.code === "FST_ERR_CTP_BODY_TOO_LARGE") return "payload_too_large";
+  if (error.code === "FST_ERR_CTP_INVALID_MEDIA_TYPE") return "unsupported_media_type";
+  return "bad_request";
+}

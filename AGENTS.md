@@ -83,6 +83,9 @@ recorded limit in the same change so the reduction cannot regress.
   manifest behind a provider-independent port. It does not download models or
   persist vectors.
 - `apps/cli` is an adapter over package APIs, not a second domain layer.
+- `apps/api` is the hosted service's HTTP adapter over the same application
+  contracts: Fastify routes typed by Zod schemas, with no domain logic. The
+  desktop and the CLI never depend on it.
 - `apps/desktop` is a UI shell and must call the same application contracts as the CLI.
 
 ## Commands and quality gates
