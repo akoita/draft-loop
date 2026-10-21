@@ -5,5 +5,19 @@
     "outDir": "dist/types",
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../../packages/application"
+    },
+    {
+      "path": "../../packages/orchestrator"
+    },
+    {
+      "path": "../../packages/schemas"
+    },
+    {
+      "path": "../../packages/storage"
+    }
+  ]
 }

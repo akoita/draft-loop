@@ -1,6 +1,9 @@
+import { CliUserError } from "@draft-loop/application";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
+
+import { IdempotencyConflictError } from "./idempotency.js";
 
 /**
  * The one error shape every route answers with. It names what went wrong and never echoes the
@@ -41,6 +44,15 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
         })),
       },
     } satisfies ApiError);
+    return;
+  }
+  if (error instanceof IdempotencyConflictError) {
+    void reply.code(409).send(apiError("idempotency_conflict", error.message));
+    return;
+  }
+  // The application service's user errors are its stable, user-facing refusals.
+  if (error instanceof CliUserError) {
+    void reply.code(422).send(apiError("rejected", error.message));
     return;
   }
   const status = error.statusCode ?? 500;

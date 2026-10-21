@@ -10,13 +10,19 @@
     }
   },
   "files": [
-    "src"
+    "src",
+    "openapi.json"
   ],
   "scripts": {
     "start": "tsx src/server.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "openapi": "tsx src/write-openapi.ts"
   },
   "dependencies": {
+    "@draft-loop/application": "workspace:*",
+    "@draft-loop/orchestrator": "workspace:*",
+    "@draft-loop/schemas": "workspace:*",
+    "@draft-loop/storage": "workspace:*",
     "@fastify/helmet": "13.1.1",
     "@fastify/swagger": "9.9.0",
     "fastify": "5.12.5",

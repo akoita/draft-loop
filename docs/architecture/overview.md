@@ -44,7 +44,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter: Zod-typed `/v1` routes, the generated OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls                        |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspaces, job briefs, applications and runs, path-free projections, idempotent run starts, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
 
 ## Key flow
 
