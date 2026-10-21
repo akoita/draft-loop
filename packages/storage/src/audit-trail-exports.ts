@@ -18,4 +18,9 @@ export {
   auditFromRow,
   type LatestAuditEventQuery,
 } from "./audit-event-reads.js";
-export { auditEventChecksum, payloadChecksum, serialize } from "./audit-event-write.js";
+export {
+  auditEventChecksum,
+  payloadChecksum,
+  sensitiveKeyPattern,
+  serialize,
+} from "./audit-event-write.js";

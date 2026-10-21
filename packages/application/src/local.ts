@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   type ContextSnapshot,
@@ -12,7 +12,7 @@ import {
   type RetrievalPort,
   type ScoredEvidenceChunk,
 } from "@draft-loop/domain";
-import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
+import { ingestSources, type NormalizedSource } from "@draft-loop/ingestion";
 import {
   type CoverageJudgementPlanner,
   createOrchestrationEngine,
@@ -104,7 +104,7 @@ import {
   type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
-import { localStorageFactory } from "./local-storage-factory.js";
+import { storageFactory } from "./local-storage-factory.js";
 import { decisionRoundId, saveTypedHistory } from "./local-typed-history.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { noopAgents } from "./noop-agents.js";
@@ -142,11 +142,11 @@ import { runSensitivityExclusions } from "./run-sensitivity-exclusions.js";
 import { excludedSensitivityTiersForWorkspace } from "./sensitive-knowledge-consent.js";
 import { resolveRunApplication, withWorkspaceApplications } from "./workspace-applications.js";
 import { configureWorkspaceAutopilot } from "./workspace-autopilot.js";
+import { workspaceFiles } from "./workspace-files.js";
 import {
   assertModelCompaniesMatch,
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
-import { ensureDirectory, ensureFile } from "./workspace-paths.js";
 import { workspaceSettings } from "./workspace-settings.js";
 import { managedWritingPolicy, writingPolicyFromPath } from "./writing-policy-file.js";
 
@@ -736,8 +736,8 @@ export async function initWorkspace(
   const root = resolve(options.root);
   const jobDescription = resolve(root, options.jobDescription);
   const sources = resolve(root, options.sources);
-  await ensureFile(jobDescription, "Job description");
-  await ensureDirectory(sources, "Source directory");
+  await workspaceFiles().requireJobDescription(jobDescription);
+  await workspaceFiles().requireSourceDirectory(sources);
   if (
     (await workspaceSettings()
       .read(root, configFilename)
@@ -1096,31 +1096,6 @@ export async function reconfigureWorkspaceModels(
   return next;
 }
 
-async function collectSourceFiles(path: string): Promise<readonly string[]> {
-  const details = await stat(path);
-  if (details.isFile()) {
-    return supportedMediaTypes.some((mediaType) => {
-      if (mediaType === "text/plain")
-        return [".txt", ".text"].includes(extname(path).toLowerCase());
-      if (mediaType === "text/markdown")
-        return [".md", ".markdown"].includes(extname(path).toLowerCase());
-      if (mediaType === "text/html") return [".html", ".htm"].includes(extname(path).toLowerCase());
-      if (mediaType === "application/pdf") return extname(path).toLowerCase() === ".pdf";
-      return extname(path).toLowerCase() === ".docx";
-    })
-      ? [path]
-      : [];
-  }
-  if (!details.isDirectory()) return [];
-  const entries = await readdir(path, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    if (entry.name.startsWith(".")) continue;
-    files.push(...(await collectSourceFiles(join(path, entry.name))));
-  }
-  return files;
-}
-
 interface PreparedInputs {
   readonly context: ContextSnapshot;
   readonly sources: readonly NormalizedSource[];
@@ -1137,19 +1112,13 @@ async function prepareInputs(
     config.candidateKnowledgeSelection,
   );
   const sourceDirectory = pathFromWorkspace(root, config.sourceDirectory);
-  await ensureDirectory(sourceDirectory, "Source directory");
+  await workspaceFiles().requireSourceDirectory(sourceDirectory);
   const reviewedOpportunity =
     opportunityRecord === undefined ? undefined : reviewedOpportunityContext(opportunityRecord);
   const jobDescription =
     reviewedOpportunity?.jobDescription ??
-    (await (async () => {
-      const jobDescriptionPath = pathFromWorkspace(root, config.jobDescriptionPath);
-      await ensureFile(jobDescriptionPath, "Job description");
-      const content = (await readFile(jobDescriptionPath, "utf8")).trim();
-      if (content === "") throw new CliUserError("The job description is empty.");
-      return content;
-    })());
-  const files = await collectSourceFiles(sourceDirectory);
+    (await workspaceFiles().readJobDescription(pathFromWorkspace(root, config.jobDescriptionPath)));
+  const files = await workspaceFiles().listSourceFiles(sourceDirectory);
   if (files.length === 0 && candidateKnowledgeSelection === undefined) {
     throw new CliUserError("No supported local source files were found in the source directory.");
   }
@@ -1407,7 +1376,7 @@ function engine(
     },
   });
 }
-const openStorage = localStorageFactory.open;
+const openStorage = (root: string) => storageFactory().open(root);
 
 function policyIdentity(record: WritingPolicyVersionRecord): {
   readonly version: string;
@@ -1875,7 +1844,7 @@ export async function exportRun(
   formatInput: string = "markdown",
   options: ExportRunOptions = {},
 ): Promise<string> {
-  const deps = { readWorkspace, openStorage, exportBlobs: localStorageFactory.exportBlobs };
+  const deps = { readWorkspace, openStorage, exportBlobs: storageFactory().exportBlobs };
   return exportApprovedRun(deps, rootInput, runIdInput, outputPathInput, io, formatInput, options);
 }
 

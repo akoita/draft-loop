@@ -15,6 +15,12 @@
     },
     {
       "path": "../../packages/run-queue"
+    },
+    {
+      "path": "../../packages/storage"
+    },
+    {
+      "path": "../../packages/storage-postgres"
     }
   ]
 }

@@ -6,6 +6,7 @@ import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
 import { createRunHistory } from "./run-history.js";
+import { createRunState } from "./run-state.js";
 import {
   createSqlClient,
   requireSchemaName,
@@ -99,6 +100,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createVersionedRecords(client),
     ...createKnowledgeBaseRecords(client),
     ...createKnowledgeRunRecords(client),
+    ...createRunState(client),
     ...createLexicalIndex(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),

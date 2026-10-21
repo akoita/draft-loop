@@ -1,3 +1,4 @@
+export { hostedWorkspaceHistory } from "./hosted-workspace-history.js";
 export type {
   CandidateKnowledgeRunRecords,
   ManagedCandidateKnowledgeSourceVersionInput,
