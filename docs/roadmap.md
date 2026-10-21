@@ -1579,8 +1579,8 @@ flagged (#1212), to be checked by the next reference-E observation.
 
 The stage as planned:
 
-Two comparisons with the candidate's manual CVs (TotalEnergies on 2026-10-10,
-Euronext on 2026-10-11) traced the gap to what the author receives and what it
+Two comparisons with the candidate's manual CVs for private reference
+applications (2026-10-10 and 2026-10-11, the second being reference E) traced the gap to what the author receives and what it
 may do, not to the writing model. Full-source evidence is now the default
 (#1168). The remaining causes:
 
@@ -1595,7 +1595,7 @@ may do, not to the writing model. Full-source evidence is now the default
 The ordered issues (milestone "Tailored, sendable CVs"):
 
 1. count the job's responsibilities as requirements (#1171);
-2. observe a full-source frontier run on the Euronext reference (#1172);
+2. observe a full-source frontier run on reference E (#1172);
 3. a versioned author prompt that tailors to the job (#1173);
 4. professional prose and an editorial critique with a ready-to-send verdict
    (#728, #1174);

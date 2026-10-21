@@ -1,6 +1,7 @@
 # Documentation
 
-DraftLoop is a local-first desktop and CLI alpha. This index routes candidates,
+DraftLoop is a local-first desktop and CLI alpha, with a hosted client-server
+version in development beside it. This index routes candidates,
 contributors, maintainers, and operators to the current information they need.
 
 ## Start here
@@ -18,6 +19,7 @@ contributors, maintainers, and operators to the current information they need.
 | Run or review acceptance protocols | [Evaluation protocols and results](evaluation/) |
 | Understand recorded design decisions | [Architecture decision records](adr/) |
 | Release DraftLoop | [Release procedure](operations/releasing.md) |
+| Follow the hosted version's design and phases | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md) |
 | Run the server's storage locally | [Local server stack](operations/local-server-stack.md) |
 
 ## Document types

@@ -1,7 +1,7 @@
 # Threat model
 
 This document is the repository-grounded security baseline for the current
-DraftLoop alpha. The roadmap stage is **Evidence-backed CV drafting**. It is not
+DraftLoop alpha. The [roadmap](../roadmap.md) records the current stage. It is not
 a claim that the product is safe for every deployment; controls, assumptions,
 and residual risks must be revisited as boundaries change.
 
@@ -351,7 +351,7 @@ credential-boundary, or quality invariants regress.
 
 ## Open risks and review triggers
 
-The following remain open during the **Evidence-backed CV drafting** stage:
+The following remain open during the current stage:
 
 - Provider-specific retention and training settings need verification and
   accurate user-facing disclosure.
