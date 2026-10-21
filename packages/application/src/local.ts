@@ -1,29 +1,16 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
-  defaultAntiFormulaicTerms,
   type EvidenceRetrievalInspection,
   type IndependentReviewRecord,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
-  maximumWritingPolicyPreferenceListEntries,
-  maximumWritingPolicyPreferenceNameLength,
-  maximumWritingPolicyRules,
-  maximumWritingPolicySpellingLocaleLength,
-  maximumWritingPolicyTermLength,
-  normalizeWritingPolicySpellingLocale,
   type RetrievalPort,
   type ScoredEvidenceChunk,
-  type WritingPolicyPreferences,
-  type WritingPolicyRule,
-  writingPolicyPageTargets,
-  writingPolicySpellingLocalePattern,
-  writingPolicyTones,
-  writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
@@ -160,12 +147,8 @@ import {
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
 import { ensureDirectory, ensureFile } from "./workspace-paths.js";
-import {
-  compareWritingPolicySemantics,
-  type UnidentifiedWritingPolicyRule,
-  writingPolicyRuleId,
-  writingPolicyTermIdentity,
-} from "./writing-policy-rule-identity.js";
+import { workspaceSettings } from "./workspace-settings.js";
+import { managedWritingPolicy, writingPolicyFromPath } from "./writing-policy-file.js";
 
 export type {
   AnthropicClient,
@@ -188,222 +171,7 @@ const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
 const databaseFilename = "history.sqlite";
 const writingPolicyFilename = "writing-policy.md";
-const maximumWritingPolicyBytes = 64 * 1024;
 const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
-const recognizedWritingPolicyPunctuation = "‐‑‒–—―‘’“”";
-function compileWritingPolicyRules(
-  content: string,
-  antiFormulaicDefaultsEnabled = true,
-): readonly WritingPolicyRule[] {
-  const candidates: UnidentifiedWritingPolicyRule[] = [];
-  const characters = new Set<string>();
-  if (/plain\s+ascii\s+punctuation/iu.test(content)) {
-    for (const character of recognizedWritingPolicyPunctuation) characters.add(character);
-  }
-  if (/no\s+em\s+dashes?/iu.test(content)) characters.add("—");
-  if (/no\s+en\s+dashes?/iu.test(content)) characters.add("–");
-  if (characters.size > 0) {
-    candidates.push({
-      kind: "forbidden-characters",
-      characters: [...recognizedWritingPolicyPunctuation]
-        .filter((character) => characters.has(character))
-        .join(""),
-    });
-  }
-  const defaultTerms = new Map<string, string>();
-  if (antiFormulaicDefaultsEnabled) {
-    for (const term of defaultAntiFormulaicTerms) {
-      defaultTerms.set(writingPolicyTermIdentity(term), term);
-    }
-  }
-  const explicitTerms = new Map<string, string>();
-  for (const line of content.split(/\r?\n/u)) {
-    const match = line.match(
-      /^\s*(?:[-*+]\s+)?Forbidden\s+(?:term|phrase)\s*:\s*(\S(?:.*?\S)?)\s*$/iu,
-    );
-    const term = match?.[1]?.trim();
-    if (term === undefined || term === "") continue;
-    const semanticKey = writingPolicyTermIdentity(term);
-    if ([...term].length > maximumWritingPolicyTermLength) {
-      throw new CliUserError("The writing policy contains a forbidden term that is too long.");
-    }
-    if (!explicitTerms.has(semanticKey)) explicitTerms.set(semanticKey, term);
-  }
-  const terms = new Map(defaultTerms);
-  for (const [semanticKey, term] of explicitTerms) terms.set(semanticKey, term);
-  for (const [, term] of [...terms.entries()].sort(([left], [right]) =>
-    compareWritingPolicySemantics(left, right),
-  )) {
-    candidates.push({
-      kind: "forbidden-term",
-      term,
-      caseSensitive: false,
-      wholeWord: true,
-    });
-  }
-  const ordered = [...candidates].sort((left, right) => {
-    const leftKey =
-      left.kind === "forbidden-term"
-        ? `forbidden-term\u0000${writingPolicyTermIdentity(left.term)}\u0000false\u0000true`
-        : `forbidden-characters\u0000${left.characters}`;
-    const rightKey =
-      right.kind === "forbidden-term"
-        ? `forbidden-term\u0000${writingPolicyTermIdentity(right.term)}\u0000false\u0000true`
-        : `forbidden-characters\u0000${right.characters}`;
-    return compareWritingPolicySemantics(leftKey, rightKey);
-  });
-  if (ordered.length > maximumWritingPolicyRules) {
-    throw new CliUserError(
-      `The writing policy contains too many rules; use at most ${maximumWritingPolicyRules}.`,
-    );
-  }
-  return ordered.map((rule) => ({ id: writingPolicyRuleId(rule), ...rule }));
-}
-type WritingPolicyPreferenceKey = keyof WritingPolicyPreferences;
-type MutableWritingPolicyPreferences = {
-  -readonly [Key in keyof WritingPolicyPreferences]?: WritingPolicyPreferences[Key];
-};
-const writingPolicyPreferenceDirectives = {
-  tone: "Tone",
-  spellingLocale: "Spelling locale",
-  verbosity: "Verbosity",
-  pageTarget: "Page target",
-  sectionOrder: "Section order",
-  emphasisAreas: "Emphasis areas",
-} as const satisfies Record<WritingPolicyPreferenceKey, string>;
-type WritingPolicyDirective = WritingPolicyPreferenceKey | "antiFormulaicDefaults";
-const writingPolicyDirectiveLabels: Record<WritingPolicyDirective, string> = {
-  ...writingPolicyPreferenceDirectives,
-  antiFormulaicDefaults: "Anti-formulaic defaults",
-};
-function writingPolicyDirectiveError(
-  directive: WritingPolicyDirective,
-  kind: "duplicate" | "invalid",
-): CliUserError {
-  const label = writingPolicyDirectiveLabels[directive];
-  return new CliUserError(
-    kind === "duplicate"
-      ? `The writing policy contains duplicate ${label} directives.`
-      : `The writing policy contains an invalid ${label} directive.`,
-  );
-}
-function normalizePolicyPreferenceName(value: string): string {
-  return value.trim().replace(/\s+/gu, " ");
-}
-function compilePolicyPreferenceNames(
-  directive: "sectionOrder" | "emphasisAreas",
-  value: string,
-): readonly string[] {
-  const entries = value.split(",").map(normalizePolicyPreferenceName);
-  if (
-    entries.length === 0 ||
-    entries.length > maximumWritingPolicyPreferenceListEntries ||
-    entries.some(
-      (entry) => entry === "" || [...entry].length > maximumWritingPolicyPreferenceNameLength,
-    )
-  ) {
-    throw writingPolicyDirectiveError(directive, "invalid");
-  }
-  const identities = new Set<string>();
-  for (const entry of entries) {
-    const identity = entry.normalize("NFKC").toLowerCase();
-    if (identities.has(identity)) throw writingPolicyDirectiveError(directive, "invalid");
-    identities.add(identity);
-  }
-  return Object.freeze(entries);
-}
-interface CompiledWritingPolicyDirectives {
-  readonly preferences?: WritingPolicyPreferences;
-  readonly antiFormulaicDefaultsEnabled: boolean;
-}
-function compileWritingPolicyPreferences(content: string): CompiledWritingPolicyDirectives {
-  const preferences: MutableWritingPolicyPreferences = {};
-  const seen = new Set<WritingPolicyDirective>();
-  let antiFormulaicDefaultsEnabled = true;
-  const directivePattern =
-    /^\s*(?:[-*+]\s+)?(Tone|Spelling\s+locale|Verbosity|Page\s+target|Section\s+order|Emphasis\s+areas|Anti-formulaic\s+defaults)\s*:\s*(.*)$/iu;
-  for (const line of content.split(/\r?\n/u)) {
-    const match = line.match(directivePattern);
-    if (match === null) continue;
-    const label = match[1]?.toLowerCase().replace(/\s+/gu, " ");
-    const value = match[2]?.trim() ?? "";
-    const directive: WritingPolicyDirective | undefined =
-      label === "tone"
-        ? "tone"
-        : label === "spelling locale"
-          ? "spellingLocale"
-          : label === "verbosity"
-            ? "verbosity"
-            : label === "page target"
-              ? "pageTarget"
-              : label === "section order"
-                ? "sectionOrder"
-                : label === "emphasis areas"
-                  ? "emphasisAreas"
-                  : label === "anti-formulaic defaults"
-                    ? "antiFormulaicDefaults"
-                    : undefined;
-    if (directive === undefined) continue;
-    if (seen.has(directive)) throw writingPolicyDirectiveError(directive, "duplicate");
-    seen.add(directive);
-    if (value === "") {
-      throw writingPolicyDirectiveError(directive, "invalid");
-    }
-    if (directive === "antiFormulaicDefaults") {
-      const normalized = value.toLowerCase();
-      if (normalized !== "enabled" && normalized !== "disabled") {
-        throw writingPolicyDirectiveError(directive, "invalid");
-      }
-      antiFormulaicDefaultsEnabled = normalized === "enabled";
-      continue;
-    }
-    if (directive === "tone") {
-      const tone = value.toLowerCase() as NonNullable<WritingPolicyPreferences["tone"]>;
-      if (!writingPolicyTones.includes(tone as (typeof writingPolicyTones)[number])) {
-        throw writingPolicyDirectiveError(directive, "invalid");
-      }
-      preferences.tone = tone;
-      continue;
-    }
-    if (directive === "verbosity") {
-      const verbosity = value.toLowerCase() as NonNullable<WritingPolicyPreferences["verbosity"]>;
-      if (
-        !writingPolicyVerbosityLevels.includes(
-          verbosity as (typeof writingPolicyVerbosityLevels)[number],
-        )
-      ) {
-        throw writingPolicyDirectiveError(directive, "invalid");
-      }
-      preferences.verbosity = verbosity;
-      continue;
-    }
-    if (directive === "spellingLocale") {
-      if (
-        [...value].length > maximumWritingPolicySpellingLocaleLength ||
-        !writingPolicySpellingLocalePattern.test(value)
-      ) {
-        throw writingPolicyDirectiveError(directive, "invalid");
-      }
-      preferences.spellingLocale = normalizeWritingPolicySpellingLocale(value);
-      continue;
-    }
-    if (directive === "pageTarget") {
-      const pageTarget = value.toLowerCase() as NonNullable<WritingPolicyPreferences["pageTarget"]>;
-      if (
-        !writingPolicyPageTargets.includes(pageTarget as (typeof writingPolicyPageTargets)[number])
-      ) {
-        throw writingPolicyDirectiveError(directive, "invalid");
-      }
-      preferences.pageTarget = pageTarget;
-      continue;
-    }
-    preferences[directive] = compilePolicyPreferenceNames(directive, value);
-  }
-  return {
-    ...(Object.keys(preferences).length === 0 ? {} : { preferences }),
-    antiFormulaicDefaultsEnabled,
-  };
-}
 
 /**
  * The sections a workspace requires unless the candidate chooses otherwise.
@@ -537,10 +305,6 @@ export class SourceIngestionUserError extends CliUserError {
 }
 
 const defaultIo: CliIo = { write: (line) => console.log(line) };
-
-function workspaceConfigPath(root: string): string {
-  return join(root, configDirectory, configFilename);
-}
 
 function databasePath(root: string): string {
   return join(root, configDirectory, databaseFilename);
@@ -922,10 +686,10 @@ function parseConfig(value: unknown): WorkspaceConfig {
 
 export async function readWorkspace(rootInput: string): Promise<WorkspaceConfig> {
   const root = resolve(rootInput);
-  let content: string;
-  try {
-    content = await readFile(workspaceConfigPath(root), "utf8");
-  } catch {
+  const content = await workspaceSettings()
+    .read(root, configFilename)
+    .catch(() => undefined);
+  if (content === undefined) {
     throw new CliUserError(`No DraftLoop workspace found at ${root}. Run draft-loop init first.`);
   }
   try {
@@ -937,8 +701,7 @@ export async function readWorkspace(rootInput: string): Promise<WorkspaceConfig>
 }
 
 async function saveWorkspaceConfig(root: string, config: WorkspaceConfig): Promise<void> {
-  await mkdir(join(root, configDirectory), { recursive: true });
-  await writeFile(workspaceConfigPath(root), `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  await workspaceSettings().write(root, configFilename, `${JSON.stringify(config, null, 2)}\n`);
 }
 
 export interface InitWorkspaceOptions {
@@ -975,11 +738,12 @@ export async function initWorkspace(
   const sources = resolve(root, options.sources);
   await ensureFile(jobDescription, "Job description");
   await ensureDirectory(sources, "Source directory");
-  try {
-    await stat(workspaceConfigPath(root));
+  if (
+    (await workspaceSettings()
+      .read(root, configFilename)
+      .catch(() => undefined)) !== undefined
+  ) {
     throw new CliUserError(`A DraftLoop workspace already exists at ${root}.`);
-  } catch (error) {
-    if (error instanceof CliUserError) throw error;
   }
   const config: WorkspaceConfig = {
     schemaVersion: 1,
@@ -1027,33 +791,6 @@ export async function initWorkspace(
     `Execution mode: ${config.fixtureMode ? "offline fixture" : "provider (requires --allow-provider-data)"}`,
   );
   return config;
-}
-
-async function writingPolicyFromPath(
-  path: string,
-): Promise<NonNullable<ContextSnapshot["writingPolicy"]>> {
-  await ensureFile(path, "Writing policy");
-  const details = await stat(path);
-  if (details.size > maximumWritingPolicyBytes) {
-    throw new CliUserError(
-      "The writing policy is too large; use a Markdown or text file under 64 KiB.",
-    );
-  }
-  const content = (await readFile(path, "utf8")).trim();
-  if (content === "") throw new CliUserError("The writing policy is empty.");
-  if (content.includes("\0")) throw new CliUserError("The writing policy is not valid text.");
-  const checksum = createHash("sha256").update(content, "utf8").digest("hex");
-  const directives = compileWritingPolicyPreferences(content);
-  const rules = compileWritingPolicyRules(content, directives.antiFormulaicDefaultsEnabled);
-  return Object.freeze({
-    content,
-    checksum,
-    version: `sha256:${checksum.slice(0, 12)}`,
-    rules: Object.freeze(rules.map((rule) => Object.freeze(rule))),
-    ...(directives.preferences === undefined
-      ? {}
-      : { preferences: Object.freeze(directives.preferences) }),
-  });
 }
 
 async function importWritingPolicyVersion(
@@ -1120,9 +857,7 @@ async function resolveWorkspaceWritingPolicy(
     return { config, record };
   }
 
-  const managedPolicy = await writingPolicyFromPath(
-    pathFromWorkspace(root, config.writingPolicyPath),
-  );
+  const managedPolicy = await managedWritingPolicy(root);
   let record =
     config.writingPolicyChecksum === managedPolicy.checksum
       ? await storage.getWritingPolicyVersion(config.id, managedPolicy.checksum)
@@ -1157,12 +892,10 @@ export async function configureWorkspaceWritingPolicy(
       io.write(`Imported writing policy ${record.version} without activation.`);
       return current;
     }
-    const target = join(root, configDirectory, writingPolicyFilename);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, `${policy.content}\n`, "utf8");
+    await workspaceSettings().write(root, writingPolicyFilename, `${policy.content}\n`);
     const config = parseConfig({
       ...current,
-      writingPolicyPath: configuredPath(root, target),
+      writingPolicyPath: configuredPath(root, join(root, configDirectory, writingPolicyFilename)),
       writingPolicyChecksum: record.checksum,
     });
     await saveWorkspaceConfig(root, config);
@@ -1753,7 +1486,7 @@ async function createRun(
     options.opportunityBrief === undefined &&
     options.candidateProfile === undefined &&
     config.writingPolicyPath !== undefined
-      ? await writingPolicyFromPath(pathFromWorkspace(root, config.writingPolicyPath))
+      ? await managedWritingPolicy(root)
       : undefined;
   const legacyInputs =
     options.opportunityBrief === undefined &&

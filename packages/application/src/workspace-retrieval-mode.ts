@@ -1,5 +1,3 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 
 import { CliUserError } from "./cli-user-error.js";
@@ -8,6 +6,7 @@ import {
   type EmbeddingModelTier,
   embeddingModelTiers,
 } from "./embedding-model-install.js";
+import { workspaceSettings } from "./workspace-settings.js";
 
 /**
  * The workspace retrieval mode decides how candidate knowledge is searched. `lexical` (the
@@ -19,9 +18,6 @@ export const retrievalModes = ["lexical", "semantic", "hybrid"] as const;
 export type RetrievalMode = (typeof retrievalModes)[number];
 
 export const defaultRetrievalMode: RetrievalMode = "lexical";
-
-const retrievalModeFilename = "retrieval-mode.json";
-const retrievalModeDirectory = ".draft-loop";
 
 export const retrievalModeInvalidMessage =
   "The workspace retrieval mode file is invalid. Set it again with a retrieval mode of lexical, semantic, or hybrid.";
@@ -43,22 +39,18 @@ export interface WorkspaceRetrievalModeRecord {
   readonly updatedAt?: string;
 }
 
-function retrievalModePath(root: string): string {
-  return join(root, retrievalModeDirectory, retrievalModeFilename);
-}
-
 /** A missing file means the defaults; any unreadable or unrecognized content fails closed. */
 export async function readWorkspaceRetrievalMode(
   root: string,
 ): Promise<WorkspaceRetrievalModeRecord> {
-  let content: string;
+  let content: string | undefined;
   try {
-    content = await readFile(retrievalModePath(root), "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return { mode: defaultRetrievalMode, modelTier: defaultEmbeddingModelTier };
-    }
+    content = await workspaceSettings().read(root, "retrieval-mode.json");
+  } catch {
     throw new CliUserError(retrievalModeInvalidMessage);
+  }
+  if (content === undefined) {
+    return { mode: defaultRetrievalMode, modelTier: defaultEmbeddingModelTier };
   }
   let parsed: unknown;
   try {
@@ -83,15 +75,11 @@ export async function writeWorkspaceRetrievalMode(
   const mode = setting.mode;
   const modelTier = setting.modelTier ?? defaultEmbeddingModelTier;
   const updatedAt = now().toISOString();
-  const path = retrievalModePath(root);
-  await mkdir(join(root, retrievalModeDirectory), { recursive: true });
-  const temporaryPath = `${path}.tmp`;
-  await writeFile(
-    temporaryPath,
+  await workspaceSettings().write(
+    root,
+    "retrieval-mode.json",
     `${JSON.stringify({ schemaVersion: 1, mode, modelTier, updatedAt }, null, 2)}\n`,
-    "utf8",
   );
-  await rename(temporaryPath, path);
   return { mode, modelTier, updatedAt };
 }
 
