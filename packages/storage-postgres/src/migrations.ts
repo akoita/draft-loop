@@ -715,6 +715,27 @@ export const postgresMigrations: readonly PostgresMigration[] = [
       $migration$;
     `,
   },
+  {
+    version: 11,
+    name: "run state entries",
+    sql: `
+      -- The orchestrator's run snapshots, step executions and artifacts, as the local key-value
+      -- table keeps them. Keys carry run ids, so one tenant's workspaces share the table.
+      CREATE TABLE run_state_entries (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        key TEXT NOT NULL CHECK (length(trim(key)) > 0),
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (tenant_id, key)
+      );
+      ALTER TABLE run_state_entries ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE run_state_entries FORCE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON run_state_entries
+        USING (tenant_id = current_setting('draft_loop.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

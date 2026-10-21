@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -48,6 +49,23 @@ export const localStorageFactory: StorageFactory = {
   },
   exportBlobs: createFilesystemBlobStorage(),
 };
+
+const activeFactory = new AsyncLocalStorage<StorageFactory>();
+
+/**
+ * The storage factory of the driver call in progress: the local one, unless a driver that keeps
+ * history elsewhere wraps its calls in `withStorageFactory`, as it does for settings.
+ */
+export function storageFactory(): StorageFactory {
+  return activeFactory.getStore() ?? localStorageFactory;
+}
+
+export function withStorageFactory<Result>(
+  factory: StorageFactory,
+  action: () => Promise<Result>,
+): Promise<Result> {
+  return activeFactory.run(factory, action);
+}
 
 /**
  * SQLite maintenance (backup, integrity, compaction, retention) stays local: the server relies on

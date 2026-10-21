@@ -42,7 +42,7 @@ import {
 import { CliUserError } from "./cli-user-error.js";
 import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
-import { localStorageFactory } from "./local-storage-factory.js";
+import { storageFactory } from "./local-storage-factory.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
   type ImportApplicationCommand,
@@ -197,7 +197,7 @@ type ApplicationHistory = WorkspaceStoragePort &
   ClosableStoragePort;
 
 async function openHistory(root: string): Promise<ApplicationHistory> {
-  return localStorageFactory.open(root);
+  return storageFactory().open(root);
 }
 
 function latestTimestamp(values: readonly string[]): string {

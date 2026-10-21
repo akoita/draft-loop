@@ -827,12 +827,19 @@ export {
 export { exportLengthWarningPrefix } from "./export-document.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./history-compaction.js";
+export {
+  createHostedApplicationDriver,
+  type HostedApplicationDriverOptions,
+  hostedDriverMethods,
+} from "./hosted-driver.js";
 export * from "./knowledge-base.js";
 export * from "./knowledge-source-dedupe.js";
+export type { KnowledgeStoreOpener } from "./knowledge-store-opener.js";
 export * from "./legacy-evidence-migration.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
 export { JobRequirementUserError, localJobRequirements } from "./local-requirements.js";
+export type { StorageFactory } from "./local-storage-factory.js";
 export * from "./opportunity-brief.js";
 export * from "./opportunity-extraction.js";
 export * from "./opportunity-intake.js";

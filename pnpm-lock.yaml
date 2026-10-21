@@ -176,6 +176,12 @@ importers:
       '@draft-loop/run-queue':
         specifier: workspace:*
         version: link:../../packages/run-queue
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@draft-loop/storage-postgres':
+        specifier: workspace:*
+        version: link:../../packages/storage-postgres
     devDependencies:
       '@types/pg':
         specifier: 8.23.1

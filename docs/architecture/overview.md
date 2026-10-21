@@ -77,6 +77,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `<root>/.draft-loop/`, written atomically. A driver that keeps them elsewhere
   wraps each call in `withWorkspaceSettings`, which reaches every module the
   call goes through.
+- A job description and source folder are read through a workspace-files port
+  (`packages/application/src/workspace-files.ts`). A driver without local
+  files wraps each call in `withWorkspaceFiles(noWorkspaceFiles, ...)`, so its
+  runs start only from a reviewed job brief and a knowledge selection.
 - A run opens the candidate knowledge stores its selection names through
   `openKnowledgeStore`. Locally the reference is the store's folder; a driver
   that keeps knowledge elsewhere wraps each call in `withKnowledgeStoreOpener`.
@@ -84,6 +88,14 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   (`@draft-loop/storage/run-knowledge-store`): lifecycle readiness,
   sensitivity rules, pinned source bytes, and the lexical and vector
   projections. `runOnlyCandidateKnowledgeStore` refuses everything else.
+- `createHostedApplicationDriver` (`packages/application/src/hosted-driver.ts`)
+  is the shared driver over injected ports (ADR 0011, D15). It runs the local
+  driver's code inside `withWorkspaceSettings`, `withStorageFactory`,
+  `withKnowledgeStoreOpener` and `withWorkspaceFiles`, so a call never touches
+  the filesystem. Its workspace reference is an opaque absolute POSIX path,
+  such as `/tenants/<tenant>/workspaces/<id>`. It offers workspace setup, job
+  briefs, applications and runs; other methods refuse until an issue needs
+  them. It never imports a Postgres or Cloud Storage package.
 - Exported documents go through a blob port, read and checked by content
   checksum. The local filesystem implementation keeps today's export paths;
   `packages/storage-gcs` implements the same port on Cloud Storage for the
@@ -133,6 +145,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     hashes them.
   - A hosted file source has no local origin to refresh from: its origin is
     the upload, so it is ready once its latest version's bytes are held.
+- `hostedWorkspaceHistory` presents one tenant's Postgres storage as the
+  hosted driver's workspace history. The orchestrator's run state (snapshots,
+  step executions and artifacts) lives in `run_state_entries`, its key-value
+  port. The legacy local evidence folder and semantic retrieval traces refuse,
+  since hosted runs take evidence from candidate knowledge bases.
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
