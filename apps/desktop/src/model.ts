@@ -313,6 +313,8 @@ export interface DesktopReviewState {
   readonly approvalReadiness?: ApprovalReadiness | null;
   readonly reviewComplete: boolean;
   readonly totalCostUsd: number;
+  /** Model calls with no estimated cost, which `totalCostUsd` leaves out; absent when not counted. */
+  readonly unpricedCallCount?: number;
   readonly budgetUsd: number | null;
   readonly providerExposure: ProviderExposureView;
   readonly providerTransmissionPreflight: ProviderTransmissionPreflight;

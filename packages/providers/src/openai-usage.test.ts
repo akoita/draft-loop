@@ -52,6 +52,16 @@ describe("OpenAI cache-aware usage accounting", () => {
     });
   });
 
+  it("reports unknown cost for a prompt larger than the rate card covers", () => {
+    const capped = { ...standardPricing, maxInputTokens: 13 };
+    expect(accountOpenAIUsage({ input_tokens: 13, output_tokens: 5 }, capped).cost).toEqual({
+      estimatedUsd: 0.000076,
+    });
+    expect(accountOpenAIUsage({ input_tokens: 14, output_tokens: 5 }, capped).cost).toEqual({
+      estimatedUsd: null,
+    });
+  });
+
   it("keeps valid totals and omits malformed details without invalidating output", () => {
     expect(
       accountOpenAIUsage(

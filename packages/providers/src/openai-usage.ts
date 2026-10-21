@@ -50,6 +50,7 @@ function usageCost(
     pricing === undefined ||
     !validRate(pricing.inputUsdPerMillionTokens) ||
     !validRate(pricing.outputUsdPerMillionTokens) ||
+    inputTokens > (pricing.maxInputTokens ?? Number.POSITIVE_INFINITY) ||
     (cachedInputTokens > 0 && !validRate(pricing.cachedInputUsdPerMillionTokens)) ||
     (cacheWriteInputTokens > 0 && !validRate(pricing.cacheWriteInputUsdPerMillionTokens))
   ) {

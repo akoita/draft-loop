@@ -121,6 +121,7 @@ import {
   useRunComparison,
 } from "./run-comparison.js";
 import { comparingRunsBlocker, type RunComparisonState } from "./run-comparison-model.js";
+import { runCostLabel } from "./run-cost.js";
 import {
   nextStepOpensRunDetails,
   policyChecksumLabel,
@@ -1271,6 +1272,7 @@ export function ReviewWorkspace({
         ]
       : []),
   ];
+  const costLabel = runCostLabel(state);
   const budgetRatio =
     state.budgetUsd === null || state.budgetUsd <= 0
       ? null
@@ -2811,8 +2813,8 @@ export function ReviewWorkspace({
                 </span>
               </div>
               <div className="spine-cost">
-                <span className="numeric">
-                  ${state.totalCostUsd.toFixed(3)}
+                <span className="numeric" title={costLabel.explanation}>
+                  {costLabel.text}
                   {state.budgetUsd === null ? "" : ` / $${state.budgetUsd.toFixed(2)}`}
                 </span>
                 {budgetRatio === null ? null : (

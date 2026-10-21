@@ -127,6 +127,8 @@ export interface ModelPricing {
   readonly outputUsdPerMillionTokens: number;
   readonly cachedInputUsdPerMillionTokens?: number;
   readonly cacheWriteInputUsdPerMillionTokens?: number;
+  /** The last prompt size these rates cover; a larger prompt has no estimate. */
+  readonly maxInputTokens?: number;
 }
 
 export type ProviderErrorCode =
@@ -507,11 +509,12 @@ function cost(
   outputTokens: number,
 ): ModelCost {
   return {
-    estimatedUsd: pricing
-      ? (inputTokens * pricing.inputUsdPerMillionTokens +
-          outputTokens * pricing.outputUsdPerMillionTokens) /
-        1_000_000
-      : null,
+    estimatedUsd:
+      pricing && inputTokens <= (pricing.maxInputTokens ?? Number.POSITIVE_INFINITY)
+        ? (inputTokens * pricing.inputUsdPerMillionTokens +
+            outputTokens * pricing.outputUsdPerMillionTokens) /
+          1_000_000
+        : null,
   };
 }
 
