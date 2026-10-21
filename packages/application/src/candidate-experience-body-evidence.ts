@@ -10,10 +10,7 @@ import {
   maximumCandidateKnowledgeRetrievalChunkTextLength,
 } from "@draft-loop/domain";
 import { ingestBytes } from "@draft-loop/ingestion";
-import {
-  type CandidateKnowledgeStoreHandle,
-  openCandidateKnowledgeStore,
-} from "@draft-loop/storage/knowledge-store";
+import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 import { selectCandidateIndependentProjectEvidence } from "./candidate-independent-project-evidence.js";
 import { parseLeadingMarkdownHeading } from "./candidate-knowledge-heading.js";
 import {
@@ -26,6 +23,7 @@ import {
   isDatedCandidateRoleHeading,
   selectCandidateRoleContributionBlocks,
 } from "./candidate-role-contribution-blocks.js";
+import { openKnowledgeStore } from "./knowledge-store-opener.js";
 
 const sourceReadFailureMessage = "Pinned candidate knowledge evidence could not be verified.";
 const sourceScanBudgetFailureMessage =
@@ -94,7 +92,7 @@ export function createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
         if (binding.knowledgeBaseId !== reference.knowledgeBaseId) continue;
         let candidate: CandidateKnowledgeStoreHandle | undefined;
         try {
-          candidate = await openCandidateKnowledgeStore(binding.storeRoot);
+          candidate = await openKnowledgeStore(binding.storeRoot);
         } catch {
           continue;
         }

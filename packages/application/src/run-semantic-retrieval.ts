@@ -12,10 +12,7 @@ import type {
   SemanticRetrievalTraceChunk,
   SemanticRetrievalTraceStoragePort,
 } from "@draft-loop/storage";
-import {
-  type CandidateKnowledgeStoreHandle,
-  openCandidateKnowledgeStore,
-} from "@draft-loop/storage/knowledge-store";
+import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 
 import {
   createEmbeddingModelService,
@@ -27,6 +24,7 @@ import type {
   CandidateKnowledgeRetrievalDiagnostic,
   CandidateKnowledgeRetrievalResult,
 } from "./knowledge-base.js";
+import { openKnowledgeStore } from "./knowledge-store-opener.js";
 import {
   embeddingStorageIdentity,
   openLocalTextEmbedder,
@@ -293,7 +291,7 @@ export function createRunSemanticRetrieval(
   request: RunSemanticRetrievalRequest,
 ): RunSemanticRetrieval {
   const { options, workspaceId } = request;
-  const open = options.open ?? openCandidateKnowledgeStore;
+  const open = options.open ?? openKnowledgeStore;
   const now = request.now ?? (() => new Date().toISOString());
   const unavailable = (reason: SemanticUnavailableReason): Prepared => ({
     ok: false,

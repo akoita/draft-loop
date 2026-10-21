@@ -77,6 +77,13 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `<root>/.draft-loop/`, written atomically. A driver that keeps them elsewhere
   wraps each call in `withWorkspaceSettings`, which reaches every module the
   call goes through.
+- A run opens the candidate knowledge stores its selection names through
+  `openKnowledgeStore`. Locally the reference is the store's folder; a driver
+  that keeps knowledge elsewhere wraps each call in `withKnowledgeStoreOpener`.
+  Such a store need only offer a run's operations
+  (`@draft-loop/storage/run-knowledge-store`): lifecycle readiness,
+  sensitivity rules, pinned source bytes, and the lexical and vector
+  projections. `runOnlyCandidateKnowledgeStore` refuses everything else.
 - Exported documents go through a blob port, read and checked by content
   checksum. The local filesystem implementation keeps today's export paths;
   `packages/storage-gcs` implements the same port on Cloud Storage for the
