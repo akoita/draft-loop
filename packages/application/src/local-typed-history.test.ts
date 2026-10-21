@@ -19,6 +19,8 @@ function execution<T>(output: T, provider: string): AgentExecution<T> {
   return {
     output,
     provider,
+    // The author records a route and the critic none, as a run that predates routes would.
+    ...(provider === "anthropic" ? { route: "vertex-ai" } : {}),
     modelId: `${provider}-fixture`,
     providerRequestId: null,
     outputChecksum: "a".repeat(64),
@@ -141,8 +143,15 @@ describe("automatic revision typed history", () => {
         expect(await f.storage.getArtifactVersion(`two-round-artifact-${round}`)).toBeDefined();
         expect(await f.storage.getRound(`two-round-run:round:${round}`)).toBeDefined();
       }
-      for (const entry of f.snapshot.executionHistory)
-        expect(await f.storage.getExecution(entry.id)).toBeDefined();
+      for (const entry of f.snapshot.executionHistory) {
+        const stored = await f.storage.getExecution(entry.id);
+        expect(stored).toBeDefined();
+        expect(stored?.payload).toEqual(
+          entry.step === "critic"
+            ? { source: "phase-zero-cli" }
+            : { source: "phase-zero-cli", route: "vertex-ai" },
+        );
+      }
       expect(await f.storage.listRunSnapshots(f.snapshot.runId)).toEqual(before);
     } finally {
       await f.cleanup();

@@ -2,6 +2,7 @@ import type { ExecutionCoverageJudgement, RunEvent, RunSnapshot } from "@draft-l
 import type { RequirementCoverageBasis } from "@draft-loop/validation";
 
 import type { ApplicationIo } from "./index.js";
+import { runRoutesLine } from "./run-routes.js";
 
 /*
  * Local run output: event lines, the snapshot summary, and the requirement coverage listing.
@@ -46,6 +47,8 @@ export function outputSnapshot(snapshot: RunSnapshot, io: ApplicationIo): void {
   io.write(
     `costUsd=${snapshot.totalCostUsd.toFixed(6)} executions=${snapshot.executionHistory.length}`,
   );
+  const routes = runRoutesLine(snapshot);
+  if (routes !== undefined) io.write(routes);
   if (snapshot.latestEvaluation !== null) {
     io.write(
       `evaluation: ready=${snapshot.latestEvaluation.ready} stop=${snapshot.latestEvaluation.stopReason}`,

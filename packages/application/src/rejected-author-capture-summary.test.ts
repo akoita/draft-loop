@@ -217,6 +217,7 @@ describe("rejected author capture summary", () => {
         contextSnapshotId: "context",
         provider: "anthropic",
         company: "anthropic",
+        route: "anthropic-api",
         modelId: `model-${sentinel}`,
         providerRequestId: null,
         structuredOutputSha256: "c".repeat(64),

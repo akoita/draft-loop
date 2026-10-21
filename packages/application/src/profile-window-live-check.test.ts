@@ -47,6 +47,7 @@ function fakeExecutor(
         contextSnapshotId: request.contextSnapshotId,
         provider: "mistral",
         company: "mistral",
+        route: "mistral-api",
         modelId: "mistral-large-4",
         providerRequestId: null,
         structuredOutputSha256: "0".repeat(64),

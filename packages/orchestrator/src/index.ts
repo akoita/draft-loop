@@ -179,6 +179,8 @@ export interface RequestAdjudicatedRevisionInput {
 export interface AgentExecution<T> {
   readonly output: T;
   readonly provider: string;
+  /** The endpoint that served the call, such as `vertex-ai`; absent when the agent reports none. */
+  readonly route?: string;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum: string;
@@ -258,6 +260,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly status: ExecutionStatus;
   readonly output?: T;
   readonly provider: string;
+  /** The endpoint that served a completed call; absent on failures and on runs that predate it. */
+  readonly route?: string;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum?: string;
@@ -1902,6 +1906,7 @@ export function createOrchestrationEngine(
         status: "completed",
         output: execution.output,
         provider: execution.provider,
+        ...(execution.route === undefined ? {} : { route: execution.route }),
         modelId: execution.modelId,
         providerRequestId: execution.providerRequestId,
         outputChecksum: execution.outputChecksum,

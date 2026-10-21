@@ -99,6 +99,7 @@ export function replayRejectedAuthorCapture(captureInput: unknown): RejectedAuth
       contextSnapshotId: "replay",
       provider: capture.provider,
       company: capture.provider,
+      route: "fixture",
       modelId: capture.modelId,
       providerRequestId: null,
       structuredOutputSha256: "0".repeat(64),

@@ -72,6 +72,7 @@ describe("author request over full-source evidence", () => {
             contextSnapshotId: "context",
             provider: "anthropic",
             company: "anthropic",
+            route: "anthropic-api",
             modelId: "test-model",
             providerRequestId: "request",
             structuredOutputSha256: "c".repeat(64),

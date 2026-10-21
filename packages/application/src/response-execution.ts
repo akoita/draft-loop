@@ -8,6 +8,7 @@ export function responseExecution<T>(
   return {
     output,
     provider: response.provider,
+    route: response.route,
     modelId: response.modelId,
     providerRequestId: response.providerRequestId,
     outputChecksum: response.structuredOutputSha256,

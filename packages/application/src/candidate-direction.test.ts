@@ -93,6 +93,7 @@ function agent(outputs: JsonObject[], version: string, recorded: AuthorInputReco
           contextSnapshotId: "context",
           provider: "anthropic",
           company: "anthropic",
+          route: "anthropic-api",
           modelId: "test-model",
           providerRequestId: "request",
           structuredOutputSha256: "c".repeat(64),

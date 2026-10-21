@@ -297,6 +297,7 @@ function agent(outputs: JsonObject[], version = "cli-author-v10") {
           contextSnapshotId: "context",
           provider: "anthropic",
           company: "anthropic",
+          route: "anthropic-api",
           modelId: "test-model",
           providerRequestId: "request",
           structuredOutputSha256: "c".repeat(64),

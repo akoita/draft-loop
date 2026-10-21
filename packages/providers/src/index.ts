@@ -10,9 +10,11 @@ import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
+import type { AnthropicRoute, ProviderRoute } from "./provider-route.js";
 
 export * from "./anthropic-billing-error.js";
 export * from "./author-model-preflight.js";
+export * from "./provider-route.js";
 export * from "./user-session.js";
 
 export type ProviderId = ModelCompany;
@@ -115,6 +117,8 @@ export interface ModelResponse<Output extends JsonValue = JsonValue> {
   readonly contextSnapshotId: string;
   readonly provider: ProviderId;
   readonly company: ProviderId;
+  /** The endpoint that served the call; run history records it with the model identity. */
+  readonly route: ProviderRoute;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly structuredOutputSha256: string;
@@ -553,6 +557,11 @@ export interface ProviderAdapterOptions {
   readonly retry?: RetryOptions;
 }
 
+export interface AnthropicAdapterOptions extends ProviderAdapterOptions {
+  /** The endpoint the client reaches, such as Claude on Vertex AI; the Claude API by default. */
+  readonly route?: AnthropicRoute;
+}
+
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export async function executeWithRetry<T>(
@@ -674,13 +683,15 @@ export class AnthropicAdapter<
   Output extends JsonValue = JsonValue,
 > {
   readonly provider = "anthropic" as const;
+  readonly route: AnthropicRoute;
   private readonly client: AnthropicClient;
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
   private readonly retry: RetryOptions | undefined;
 
-  constructor(client: AnthropicClient, options: ProviderAdapterOptions) {
+  constructor(client: AnthropicClient, options: AnthropicAdapterOptions) {
     this.client = client;
+    this.route = options.route ?? "anthropic-api";
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
     this.retry = options.retry;
@@ -765,6 +776,7 @@ export class AnthropicAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: this.provider,
           company: this.provider,
+          route: this.route,
           modelId: request.model.modelId,
           providerRequestId: response.request_id ?? null,
           structuredOutputSha256: hashStructuredOutput(output),
@@ -794,6 +806,7 @@ export class OpenAIAdapter<
   Output extends JsonValue = JsonValue,
 > {
   readonly provider = "openai" as const;
+  readonly route = "openai-api" as const;
   private readonly client: OpenAIClient;
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
@@ -873,6 +886,7 @@ export class OpenAIAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: this.provider,
           company: this.provider,
+          route: this.route,
           modelId: request.model.modelId,
           providerRequestId: response._request_id ?? null,
           structuredOutputSha256: hashStructuredOutput(output),
@@ -888,7 +902,7 @@ export class OpenAIAdapter<
 export function createAnthropicAdapter<
   Input extends JsonValue = JsonValue,
   Output extends JsonValue = JsonValue,
->(client: AnthropicClient, options: ProviderAdapterOptions): AnthropicAdapter<Input, Output> {
+>(client: AnthropicClient, options: AnthropicAdapterOptions): AnthropicAdapter<Input, Output> {
   return new AnthropicAdapter<Input, Output>(client, options);
 }
 
@@ -909,6 +923,7 @@ export class LocalModelAdapter<
   Output extends JsonValue = JsonValue,
 > {
   readonly provider = "local" as const;
+  readonly route = "local" as const;
   private readonly endpoint: string;
   private readonly fetchImpl: typeof fetch;
   private readonly configuredModel: ModelSelection;
@@ -1008,6 +1023,7 @@ export class LocalModelAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: this.provider,
           company: this.provider,
+          route: this.route,
           modelId: request.model.modelId,
           providerRequestId: data.id ?? null,
           structuredOutputSha256: hashStructuredOutput(output),

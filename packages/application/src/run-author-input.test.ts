@@ -197,6 +197,7 @@ describe("the provider author agent", () => {
             contextSnapshotId: "context",
             provider: "anthropic",
             company: "anthropic",
+            route: "anthropic-api",
             modelId: "test-model",
             providerRequestId: "request",
             structuredOutputSha256: "c".repeat(64),

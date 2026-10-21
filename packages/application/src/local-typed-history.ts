@@ -108,7 +108,10 @@ export async function saveTypedHistory(
       completedAt: executionRecord.completedAt,
       errorCode: executionRecord.errorCode ?? null,
       output: executionRecord.output === undefined ? null : asJsonObject(executionRecord.output),
-      payload: { source: "phase-zero-cli" },
+      payload: {
+        source: "phase-zero-cli",
+        ...(executionRecord.route === undefined ? {} : { route: executionRecord.route }),
+      },
     });
   }
   for (const [findingIndex, finding] of snapshot.findings.entries()) {
