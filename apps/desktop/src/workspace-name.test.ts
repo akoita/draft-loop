@@ -7,8 +7,8 @@ import {
 
 describe("normalizeWorkspaceDisplayName", () => {
   it("trims and keeps spaces, accents and dashes", () => {
-    expect(normalizeWorkspaceDisplayName("  Mergify — Staff Engineer  ")).toBe(
-      "Mergify — Staff Engineer",
+    expect(normalizeWorkspaceDisplayName("  Northwind — Staff Engineer  ")).toBe(
+      "Northwind — Staff Engineer",
     );
     expect(normalizeWorkspaceDisplayName("Équipe Données (2026)")).toBe("Équipe Données (2026)");
   });
@@ -33,7 +33,7 @@ describe("normalizeWorkspaceDisplayName", () => {
 
 describe("workspaceFolderName", () => {
   it("slugs a display name to lowercase ASCII", () => {
-    expect(workspaceFolderName("Mergify — Staff Engineer")).toBe("mergify-staff-engineer");
+    expect(workspaceFolderName("Northwind — Staff Engineer")).toBe("northwind-staff-engineer");
     expect(workspaceFolderName("Équipe Données")).toBe("equipe-donnees");
   });
 

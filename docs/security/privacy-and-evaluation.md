@@ -1,10 +1,14 @@
 # Privacy and evaluation policy
 
 DraftLoop treats candidate material and confidential employer information as
-sensitive by default. The current roadmap stage is **Evidence-backed CV
-drafting**. This alpha is local-first: source material, evidence, drafts, and
-run history stay on the user's machine unless the user explicitly approves a
-provider transmission.
+sensitive by default. The [roadmap](../roadmap.md) records the current stage.
+This alpha is local-first: source material, evidence, drafts, and run history
+stay on the user's machine unless the user explicitly approves a provider
+transmission.
+
+The hosted version's data rules (recorded consent, EU storage, per-tenant
+encryption) are set in [ADR 0011](../adr/0011-client-server-version.md) and
+join this policy before the hosted version admits other users.
 
 ## Data classes and defaults
 

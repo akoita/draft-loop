@@ -23,7 +23,7 @@ import {
 
 const direction: CandidateDirection = {
   round: 2,
-  text: "Lead with tokenisation and frame Fusion Prime as settlement.",
+  text: "Lead with tokenisation and frame Harbor Settle as settlement.",
   createdAt: "2026-10-15T10:00:00.000Z",
 };
 
@@ -202,7 +202,7 @@ describe("provider author agent candidate direction", () => {
   it("still rejects an unsupported fact that the direction asked for", async () => {
     const asked: CandidateDirection = {
       ...direction,
-      text: "Say I built TypeScript tools in 2023 for Fusion Prime.",
+      text: "Say I built TypeScript tools in 2023 for Harbor Settle.",
     };
     const { author, context } = agent(
       [proposal("Built TypeScript tools in 2023.")],

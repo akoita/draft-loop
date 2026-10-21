@@ -18,7 +18,7 @@ but it does not by itself prove that the product outcome was Validated.
   before a roadmap stage exit. It must use a prerelease version, must not
   advance the roadmap stage status or claim outcome validation, and must state
   its remaining limitations.
-- The current Evidence-backed CV drafting channel is `alpha`; alpha and pilot
+- Desktop releases use the `alpha` channel; alpha and pilot
   releases are GitHub prereleases.
 - A stable channel is allowed only after the production-beta exit criteria are
   demonstrated. Implemented beta components or a higher package version do not

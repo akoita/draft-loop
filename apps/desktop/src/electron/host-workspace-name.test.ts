@@ -56,22 +56,22 @@ async function recentList(host: Host) {
 describe("workspace display names in the native host", () => {
   it("creates a slug folder and keeps the typed display name", async () => {
     const host = createHost(createRecentWorkspaceStore());
-    const created = await create(host, "Mergify — Staff Engineer");
-    expect(created.workspace.name).toBe("Mergify — Staff Engineer");
-    expect(await readdir(parent)).toEqual(["mergify-staff-engineer"]);
+    const created = await create(host, "Northwind — Staff Engineer");
+    expect(created.workspace.name).toBe("Northwind — Staff Engineer");
+    expect(await readdir(parent)).toEqual(["northwind-staff-engineer"]);
 
     const preferences = JSON.parse(
       await readFile(
-        join(parent, "mergify-staff-engineer", ".draft-loop", "review-overrides.json"),
+        join(parent, "northwind-staff-engineer", ".draft-loop", "review-overrides.json"),
         "utf8",
       ),
     ) as { workspaceName?: string };
-    expect(preferences.workspaceName).toBe("Mergify — Staff Engineer");
+    expect(preferences.workspaceName).toBe("Northwind — Staff Engineer");
 
     const review = await value<DesktopReviewState>(host, { type: "review.load", input: {} });
-    expect(review.workspaceName).toBe("Mergify — Staff Engineer");
+    expect(review.workspaceName).toBe("Northwind — Staff Engineer");
     expect((await recentList(host)).workspaces).toMatchObject([
-      { name: "Mergify — Staff Engineer" },
+      { name: "Northwind — Staff Engineer" },
     ]);
   });
 
@@ -108,20 +108,20 @@ describe("workspace display names in the native host", () => {
 
     const renamed = await value<{ name: string }>(host, {
       type: "workspace.rename",
-      input: { workspaceId: created.workspace.id, name: "  Mergify — Staff Engineer " },
+      input: { workspaceId: created.workspace.id, name: "  Northwind — Staff Engineer " },
     });
-    expect(renamed).toEqual({ name: "Mergify — Staff Engineer" });
+    expect(renamed).toEqual({ name: "Northwind — Staff Engineer" });
 
     const after = JSON.parse(await readFile(preferencesPath, "utf8")) as {
       workspaceName?: string;
       decisions?: Record<string, string>;
     };
-    expect(after.workspaceName).toBe("Mergify — Staff Engineer");
+    expect(after.workspaceName).toBe("Northwind — Staff Engineer");
     expect(after.decisions).toEqual({ "finding-1": "accepted" });
 
     const listed = (await recentList(host)).workspaces;
     expect(listed).toHaveLength(1);
-    expect(listed[0]?.name).toBe("Mergify — Staff Engineer");
+    expect(listed[0]?.name).toBe("Northwind — Staff Engineer");
 
     // Reopening in a fresh host reads the stored name back, by dialog and by recent id.
     const reopened = createHost(recent, () => root);
@@ -129,16 +129,16 @@ describe("workspace display names in the native host", () => {
       type: "workspace.open",
       input: { selection: "native-dialog" },
     });
-    expect(opened.workspace.name).toBe("Mergify — Staff Engineer");
+    expect(opened.workspace.name).toBe("Northwind — Staff Engineer");
     const fresh = createHost(recent);
     const byRecent = await value<{ workspace: { name: string } }>(fresh, {
       type: "workspace.recent-open",
       input: { id: listed[0]?.id ?? "" },
     });
-    expect(byRecent.workspace.name).toBe("Mergify — Staff Engineer");
+    expect(byRecent.workspace.name).toBe("Northwind — Staff Engineer");
     expect(
       (await value<DesktopReviewState>(fresh, { type: "review.load", input: {} })).workspaceName,
-    ).toBe("Mergify — Staff Engineer");
+    ).toBe("Northwind — Staff Engineer");
   });
 
   it("rejects an invalid rename or create name without changing anything", async () => {
@@ -176,11 +176,11 @@ describe("workspace display names in the native host", () => {
     chosen = other;
     await create(host, "draft-loop-workspace");
     chosen = parent;
-    await create(host, "Mergify — Staff Engineer");
+    await create(host, "Northwind — Staff Engineer");
 
     const listed = (await recentList(host)).workspaces;
     expect(listed.map(({ name, location }) => [name, location])).toEqual([
-      ["Mergify — Staff Engineer", undefined],
+      ["Northwind — Staff Engineer", undefined],
       ["draft-loop-workspace", "hc6"],
       ["draft-loop-workspace", "hc5"],
     ]);
