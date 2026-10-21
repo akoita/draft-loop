@@ -35,6 +35,10 @@
       "types": "./src/filesystem-blob-storage.ts",
       "import": "./src/filesystem-blob-storage.ts"
     },
+    "./run-knowledge-store": {
+      "types": "./src/run-knowledge-store.ts",
+      "import": "./src/run-knowledge-store.ts"
+    },
     "./workspace-settings": {
       "types": "./src/filesystem-workspace-settings.ts",
       "import": "./src/filesystem-workspace-settings.ts"

@@ -64,7 +64,6 @@ import {
   type ManagedCandidateKnowledgeUrlVersionInput,
   maximumManagedCandidateKnowledgeFileBytes,
   maximumManagedCandidateKnowledgeUrlResponseBytes,
-  openCandidateKnowledgeStore,
   restoreCandidateKnowledgePortableBackup,
 } from "@draft-loop/storage/knowledge-store";
 import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
@@ -74,6 +73,7 @@ import {
   lexicalIndexFailure,
 } from "./candidate-knowledge-query-batch.js";
 import { toKnowledgeSelectionSnapshotEntry } from "./knowledge-selection-entry.js";
+import { type KnowledgeStoreOpener, openKnowledgeStore } from "./knowledge-store-opener.js";
 import { monotonicTimestamp } from "./monotonic-timestamp.js";
 
 export type {
@@ -919,7 +919,7 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly generateId?: () => string;
   readonly now?: () => string;
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
-  readonly open?: typeof openCandidateKnowledgeStore;
+  readonly open?: KnowledgeStoreOpener;
   readonly exportPortableBackup?: typeof exportCandidateKnowledgePortableBackup;
   readonly restorePortableBackup?: typeof restoreCandidateKnowledgePortableBackup;
   readonly ingestFile?: typeof ingestFile;
@@ -937,7 +937,7 @@ interface ResolvedDependencies {
   readonly generateId: () => string;
   readonly now: () => string;
   readonly initialize: typeof initializeCandidateKnowledgeStore;
-  readonly open: typeof openCandidateKnowledgeStore;
+  readonly open: KnowledgeStoreOpener;
   readonly exportPortableBackup: typeof exportCandidateKnowledgePortableBackup;
   readonly restorePortableBackup: typeof restoreCandidateKnowledgePortableBackup;
   readonly ingestFile: typeof ingestFile;
@@ -3839,7 +3839,7 @@ function resolveDependencies(
     generateId: dependencies.generateId ?? randomUUID,
     now: monotonicTimestamp(dependencies.now ?? (() => new Date().toISOString())),
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
-    open: dependencies.open ?? openCandidateKnowledgeStore,
+    open: dependencies.open ?? openKnowledgeStore,
     exportPortableBackup:
       dependencies.exportPortableBackup ?? exportCandidateKnowledgePortableBackup,
     restorePortableBackup:

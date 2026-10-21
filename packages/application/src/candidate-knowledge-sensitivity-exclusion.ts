@@ -2,13 +2,11 @@ import type { CandidateKnowledgeSelectionSnapshot, ContextSnapshot } from "@draf
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { ingestBytes as defaultIngestBytes } from "@draft-loop/ingestion";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
-import {
-  type CandidateKnowledgeStoreHandle,
-  openCandidateKnowledgeStore as defaultOpenCandidateKnowledgeStore,
-} from "@draft-loop/storage/knowledge-store";
+import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 
 import { CliUserError } from "./cli-user-error.js";
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
+import { openKnowledgeStore } from "./knowledge-store-opener.js";
 import { openPinnedEntryStore, readPinnedEntrySections } from "./pinned-source-sections.js";
 import { excludedSensitivityTiersForConsent } from "./sensitive-knowledge-consent.js";
 
@@ -113,7 +111,7 @@ export function createCandidateKnowledgeSensitivityExclusions(
   snapshot: CandidateKnowledgeSelectionSnapshot,
   dependencies: CandidateKnowledgeSensitivityExclusionDependencies = {},
 ): CandidateKnowledgeSensitivityExclusions {
-  const open = dependencies.open ?? defaultOpenCandidateKnowledgeStore;
+  const open = dependencies.open ?? openKnowledgeStore;
   const ingest = dependencies.ingestBytes ?? defaultIngestBytes;
   const excludedTiers = dependencies.excludedTiers ?? excludedSensitivityTiersForConsent(false);
 
