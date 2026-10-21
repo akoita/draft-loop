@@ -621,6 +621,28 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         ON candidate_knowledge_bases (tenant_id, is_default) WHERE is_default = 1;
     `,
   },
+  {
+    version: 9,
+    name: "workspace settings documents",
+    sql: `
+      -- No foreign key to workspaces: a workspace's configuration is a setting, written before
+      -- its history record exists, and the reference is the driver's, not the workspace id.
+      CREATE TABLE workspace_settings (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        workspace_ref TEXT NOT NULL CHECK (workspace_ref <> ''),
+        name TEXT NOT NULL CHECK (name <> ''),
+        content TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (tenant_id, workspace_ref, name)
+      );
+      ALTER TABLE workspace_settings ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE workspace_settings FORCE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON workspace_settings
+        USING (tenant_id = current_setting('draft_loop.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

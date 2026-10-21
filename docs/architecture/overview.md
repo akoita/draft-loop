@@ -68,9 +68,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `packages/application/src/local-storage-factory.ts`, is the one application
   module that opens SQLite. It alone reaches SQLite maintenance such as backup,
   integrity checks and history compaction.
-- A workspace's settings go through a settings port: its configuration, the
-  managed writing policy, and the small documents that record its modes,
-  model pair, consent and decisions. The local driver keeps them as files under
+- A workspace's settings go through a settings port
+  (`ports/workspace-settings.ts`): its configuration, the managed writing
+  policy, and the small documents that record its modes, model pair, consent
+  and decisions. The local driver keeps them as files under
   `<root>/.draft-loop/`, written atomically. A driver that keeps them elsewhere
   wraps each call in `withWorkspaceSettings`, which reaches every module the
   call goes through.
@@ -111,6 +112,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   knowledge base's vectors exactly, in the application, with the shared rules.
   It has no approximate (HNSW) index: a single person's knowledge base is small,
   and exact ranking keeps hits and scores identical to the local index.
+- Postgres keeps workspace settings as one row per document, keyed by the
+  driver's workspace reference and the document name. It passes the same
+  `workspace-settings` conformance group as the local files.
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;

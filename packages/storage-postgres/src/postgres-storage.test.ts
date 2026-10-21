@@ -5,7 +5,9 @@ import {
   describeCandidateKnowledgeRetrievalConformance,
   describeCandidateKnowledgeVectorConformance,
   describeHistoryRecordsConformance,
+  describeWorkspaceSettingsConformance,
 } from "@draft-loop/storage/conformance";
+import { StorageValidationError } from "@draft-loop/storage/errors";
 import { describe, expect, it } from "vitest";
 import { postgresMigrations } from "./migrations.js";
 import { migratePostgresStorage, openPostgresStorage } from "./postgres-storage.js";
@@ -26,6 +28,16 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
   describeApplicationsConformance("Postgres", () => openIsolated(url));
   describeCandidateKnowledgeRetrievalConformance("Postgres", () => openIsolated(url));
   describeCandidateKnowledgeVectorConformance("Postgres", () => openIsolated(url));
+  describeWorkspaceSettingsConformance("Postgres", async () => {
+    const { storage, close } = await openIsolated(url);
+    return {
+      storage: {
+        settings: storage.workspaceSettings,
+        workspaces: ["workspaces/first", "workspaces/second"],
+      },
+      close,
+    };
+  });
 
   it("chains concurrent writes to one workspace into a single verifiable sequence", async () => {
     const { storage, close } = await openIsolated(url);
@@ -278,6 +290,47 @@ describe.runIf(connectionString !== undefined)("Postgres storage", () => {
       await tenantA.close();
       await tenantB.close();
       await drop();
+    }
+  });
+
+  it("keeps each tenant's workspace settings to that tenant", async () => {
+    const { open, drop } = await createTestSchema(url, "settings");
+    const tenantA = await open("tenant-a");
+    const tenantB = await open("tenant-b");
+    try {
+      await tenantA.workspaceSettings.write("workspaces/one", "workspace.json", "a\n");
+
+      await expect(
+        tenantB.workspaceSettings.read("workspaces/one", "workspace.json"),
+      ).resolves.toBeUndefined();
+      await expect(
+        tenantB.workspaceSettings.remove("workspaces/one", "workspace.json"),
+      ).resolves.toBe(false);
+      await tenantB.workspaceSettings.write("workspaces/one", "workspace.json", "b\n");
+      await expect(
+        tenantA.workspaceSettings.read("workspaces/one", "workspace.json"),
+      ).resolves.toBe("a\n");
+    } finally {
+      await tenantA.close();
+      await tenantB.close();
+      await drop();
+    }
+  });
+
+  it("refuses workspace settings it cannot store faithfully", async () => {
+    const { storage, close } = await openIsolated(url);
+    try {
+      await expect(
+        storage.workspaceSettings.write("workspaces/one", "workspace.json", "a\u0000b"),
+      ).rejects.toBeInstanceOf(StorageValidationError);
+      await expect(storage.workspaceSettings.read("", "workspace.json")).rejects.toBeInstanceOf(
+        StorageValidationError,
+      );
+      await expect(
+        storage.workspaceSettings.read("workspaces/one", "other.json" as "workspace.json"),
+      ).rejects.toBeInstanceOf(StorageValidationError);
+    } finally {
+      await close();
     }
   });
 

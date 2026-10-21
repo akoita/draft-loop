@@ -6,3 +6,4 @@ export * from "./retrieval.js";
 export * from "./versioned-records.js";
 export * from "./workspace.js";
 export * from "./workspace-history.js";
+export * from "./workspace-settings.js";
