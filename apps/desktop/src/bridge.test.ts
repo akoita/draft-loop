@@ -548,11 +548,11 @@ describe("workspace rename bridge contract", () => {
     expect(
       validateBridgeCommand({
         type: "workspace.rename",
-        input: { workspaceId: "workspace-1", name: "  Mergify — Staff Engineer " },
+        input: { workspaceId: "workspace-1", name: "  Northwind — Staff Engineer " },
       }),
     ).toEqual({
       type: "workspace.rename",
-      input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+      input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
     });
     for (const input of [
       { workspaceId: "workspace-1" },
@@ -570,14 +570,14 @@ describe("workspace rename bridge contract", () => {
 
   it("returns only the stored name and rejects drifted results", async () => {
     const port = createCapabilityPort(
-      bridge(async () => ({ ok: true, value: { name: "Mergify — Staff Engineer" } })),
+      bridge(async () => ({ ok: true, value: { name: "Northwind — Staff Engineer" } })),
     );
     await expect(
       port.execute({
         type: "workspace.rename",
-        input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+        input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
       }),
-    ).resolves.toEqual({ ok: true, value: { name: "Mergify — Staff Engineer" } });
+    ).resolves.toEqual({ ok: true, value: { name: "Northwind — Staff Engineer" } });
     const drifted = createCapabilityPort(
       bridge(async () => ({ ok: true, value: { name: "ok", path: "/private" } })),
     );

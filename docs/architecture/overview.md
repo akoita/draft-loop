@@ -3,7 +3,9 @@
 DraftLoop is a local-first, multi-model drafting and review workspace. The
 first artifact is a job-specific CV, but the contracts are shaped around a
 reusable workflow: canonical requirements and evidence produce an artifact,
-an independent critic evaluates it, and a human approves the result.
+an independent critic evaluates it, and a human approves the result. A hosted
+client-server version is being built on the same packages
+([ADR 0011](../adr/0011-client-server-version.md)).
 
 ## Boundaries
 

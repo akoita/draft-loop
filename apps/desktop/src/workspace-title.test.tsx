@@ -12,9 +12,9 @@ interface KeyEvent {
 type Props = Parameters<typeof WorkspaceTitleView>[0];
 
 const baseProps: Props = {
-  name: "Mergify — Staff Engineer",
+  name: "Northwind — Staff Engineer",
   editing: false,
-  draft: "Mergify — Staff Engineer",
+  draft: "Northwind — Staff Engineer",
   busy: false,
   errorMessage: null,
   canRename: true,
@@ -49,8 +49,8 @@ describe("workspace title rename control", () => {
     const view = WorkspaceTitleView({ ...baseProps, onStartEditing });
     const markup = renderToStaticMarkup(view);
     expect(markup).toContain("<h1");
-    expect(markup).toContain("Mergify — Staff Engineer");
-    expect(markup).toContain('aria-label="Rename workspace Mergify — Staff Engineer"');
+    expect(markup).toContain("Northwind — Staff Engineer");
+    expect(markup).toContain('aria-label="Rename workspace Northwind — Staff Engineer"');
     expect(markup).not.toContain(">Rename<");
     expect(markup).toContain("<svg");
 
@@ -74,7 +74,7 @@ describe("workspace title rename control", () => {
     const view = WorkspaceTitleView({ ...baseProps, editing: true, onSave, onCommit, onCancel });
     const markup = renderToStaticMarkup(view);
     expect(markup).toContain('aria-label="Workspace name"');
-    expect(markup).toContain('value="Mergify — Staff Engineer"');
+    expect(markup).toContain('value="Northwind — Staff Engineer"');
     expect(markup).not.toContain("Save");
     expect(markup).not.toContain("Cancel");
     expect(markup).not.toContain("<h1");
