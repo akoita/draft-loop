@@ -28,6 +28,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/node_modules", "!**/dist", "!coverage", "!pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!coverage",
+      "!pnpm-lock.yaml",
+      "!apps/api/openapi.json"
+    ]
   }
 }

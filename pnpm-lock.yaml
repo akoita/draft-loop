@@ -56,6 +56,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@draft-loop/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@fastify/helmet':
         specifier: 13.1.1
         version: 13.1.1

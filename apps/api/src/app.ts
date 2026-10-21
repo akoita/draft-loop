@@ -1,21 +1,31 @@
+import type { ApplicationService } from "@draft-loop/application";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
+import type { FastifySerializerCompiler } from "fastify/types/schema.js";
 import {
   jsonSchemaTransform,
   jsonSchemaTransformObject,
-  serializerCompiler,
+  ResponseSerializationError,
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
-import { z } from "zod";
+import { type ZodType, z } from "zod";
 
+import { registerApplicationRoutes } from "./application-routes.js";
 import { apiError, sendError, sendNotFound } from "./errors.js";
+import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 
 export interface ApiOptions {
   readonly ownerToken: string;
   readonly logger?: FastifyServerOptions["logger"];
+  /** The application service and how to address its workspaces; without it only health is served. */
+  readonly application?: {
+    readonly service: ApplicationService;
+    readonly workspaceRoot: (workspaceId: string) => string;
+    readonly idempotency?: IdempotencyStore;
+  };
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
@@ -24,6 +34,19 @@ export const apiBodyLimitBytes = 1_048_576;
 const publicRoutes = new Set(["/v1/health"]);
 
 const healthSchema = z.object({ status: z.literal("ok") }).meta({ id: "Health" });
+
+/**
+ * Responses are checked by parsing them against their schema. The provider's own serializer
+ * encodes instead, which refuses the one-way transforms that shared schemas use to normalize
+ * values, such as lower-casing checksums.
+ */
+const serializerCompiler: FastifySerializerCompiler<ZodType> =
+  ({ schema, method, url }) =>
+  (data) => {
+    const result = schema.safeParse(data);
+    if (!result.success) throw new ResponseSerializationError(method, url, { cause: result.error });
+    return JSON.stringify(result.data);
+  };
 
 /**
  * Builds the hosted API (ADR 0011, D10): a thin Fastify adapter whose routes are typed by Zod
@@ -88,6 +111,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     },
     async () => app.swagger(),
   );
+
+  if (options.application !== undefined) {
+    registerApplicationRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
+      idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
+    });
+  }
 
   return app;
 }
