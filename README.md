@@ -117,6 +117,10 @@ pnpm test
 pnpm validate
 ```
 
+The client-server version's storage, Postgres and a Cloud Storage emulator,
+runs locally with Docker Compose: `pnpm server:up`, then `pnpm server:test`.
+See the [local server stack](docs/operations/local-server-stack.md).
+
 ### Local semantic retrieval model (optional)
 
 DraftLoop can use a pinned, local embedding model (Apache-2.0; Granite, about
@@ -243,7 +247,7 @@ approving or exporting.
 - [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
 - [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
-- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
+- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md) · [Local server stack](docs/operations/local-server-stack.md)
 
 Human approval is mandatory before an artifact is exported. DraftLoop can help
 prepare a CV, but the candidate remains responsible for factual review, final

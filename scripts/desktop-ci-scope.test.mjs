@@ -10,6 +10,7 @@ describe("desktop CI scope", () => {
         "docs/roadmap.md",
         "README.md",
         "AGENTS.md",
+        "compose.yaml",
         ".claude/skills/steward/SKILL.md",
         "packages/storage/src/conformance/sqlite.test.ts",
         "apps/desktop/src/renderer/app.test.tsx",

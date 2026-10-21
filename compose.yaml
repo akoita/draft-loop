@@ -1,0 +1,38 @@
+# The server's storage for local development and tests, with no cloud account and no provider
+# calls (ADR 0011, D15). Start it with `pnpm server:up`; see docs/operations/local-server-stack.md.
+# The API and the worker join this stack when those apps exist (sprint 1c).
+name: draft-loop-server
+
+services:
+  postgres:
+    # The same image as the CI `Server storage` job.
+    image: pgvector/pgvector:0.8.0-pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  gcs:
+    # A Cloud Storage emulator, the same version as the CI `Server storage` job.
+    image: fsouza/fake-gcs-server:1.56.1
+    command: ["-scheme", "http", "-port", "4443", "-backend", "filesystem", "-filesystem-root", "/storage"]
+    ports:
+      - "127.0.0.1:4443:4443"
+    volumes:
+      - gcs-data:/storage
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4443/_internal/healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres-data:
+  gcs-data:

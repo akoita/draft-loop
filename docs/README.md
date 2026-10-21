@@ -20,6 +20,7 @@ contributors, maintainers, and operators to the current information they need.
 | Understand recorded design decisions | [Architecture decision records](adr/) |
 | Release DraftLoop | [Release procedure](operations/releasing.md) |
 | Follow the hosted version's design and phases | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md) |
+| Run the server's storage locally | [Local server stack](operations/local-server-stack.md) |
 
 ## Document types
 
@@ -40,7 +41,7 @@ contributors, maintainers, and operators to the current information they need.
 - **Security:** `security/` contains privacy, retention, threat, and evaluation
   policy that governs the product.
 - **Reference:** `reference/` contains task-oriented CLI and desktop usage.
-- **Operations:** `operations/` contains release and maintenance procedures.
+- **Operations:** `operations/` contains release, maintenance and local server procedures.
 - **Architecture decisions:** `adr/` records decisions that should remain
   durable even when implementation details change.
 
