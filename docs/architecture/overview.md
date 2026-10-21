@@ -46,6 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
 | `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspaces, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage-limited run for its reset time, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 
 ## Key flow
 
@@ -133,7 +134,7 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     replaced objects, then download that exact generation and hash it;
   - delete names the generation it verified, so a concurrent write survives.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's, and `pnpm test:gcs` runs the Cloud Storage
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's and the worker's, and `pnpm test:gcs` runs the Cloud Storage
   suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI
   `Server storage` job runs both, against Postgres 16 with `pgvector` and the
   `fake-gcs-server` emulator. Locally, `pnpm server:up` starts both with
@@ -150,8 +151,16 @@ The hosted service starts runs through a queue rather than in the request
 - The queue keeps at most one waiting and one active job per run, so repeated
   requests collapse, and a paused run can queue its resumption while the
   paused attempt finishes.
-- A job that stops sending heartbeats, as after a crash, is retried with
-  backoff, and the worker resumes the run from its last saved step.
+- `apps/worker` claims a job, reads the run, and resumes it only when its
+  state allows: a run the person paused, one awaiting approval, or one
+  finished is left alone, so a duplicate or late job does nothing.
+- A run paused on a provider usage limit is queued again for the reset time
+  (15 minutes when the provider names none) and resumed then.
+- A job that fails or stops sending heartbeats, as after a crash, is retried
+  with backoff, and the worker resumes the run from its last saved step.
+- On SIGTERM the worker stops claiming and gives the job in flight 8 seconds.
+  It never cancels a step, which would record the run as cancelled; a step
+  still running is failed back to the queue and repeated by the retry.
 - Queue migrations run as the schema owner (`migrateRunQueue`), and
   `grantRunQueueAccess` gives the runtime role table and function access only.
 

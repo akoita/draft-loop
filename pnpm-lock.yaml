@@ -165,6 +165,25 @@ importers:
         specifier: 8.2.2
         version: 8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.1)
 
+  apps/worker:
+    dependencies:
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@draft-loop/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
+      '@draft-loop/run-queue':
+        specifier: workspace:*
+        version: link:../../packages/run-queue
+    devDependencies:
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
+
   packages/application:
     dependencies:
       '@anthropic-ai/sdk':
