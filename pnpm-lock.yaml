@@ -62,24 +62,39 @@ importers:
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@draft-loop/run-queue':
+        specifier: workspace:*
+        version: link:../../packages/run-queue
       '@draft-loop/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
       '@draft-loop/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@draft-loop/storage-gcs':
+        specifier: workspace:*
+        version: link:../../packages/storage-gcs
+      '@draft-loop/storage-postgres':
+        specifier: workspace:*
+        version: link:../../packages/storage-postgres
       '@fastify/helmet':
         specifier: 13.1.1
         version: 13.1.1
       '@fastify/swagger':
         specifier: 9.9.0
         version: 9.9.0
+      '@google-cloud/storage':
+        specifier: 8.3.0
+        version: 8.3.0
       fastify:
         specifier: 5.12.5
         version: 5.12.5
       fastify-type-provider-zod:
         specifier: 7.0.0
         version: 7.0.0(@fastify/swagger@9.9.0)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.4.3)
+      tsx:
+        specifier: 4.23.12
+        version: 4.23.12
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -179,9 +194,18 @@ importers:
       '@draft-loop/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@draft-loop/storage-gcs':
+        specifier: workspace:*
+        version: link:../../packages/storage-gcs
       '@draft-loop/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@google-cloud/storage':
+        specifier: 8.3.0
+        version: 8.3.0
+      tsx:
+        specifier: 4.23.12
+        version: 4.23.12
     devDependencies:
       '@types/pg':
         specifier: 8.23.1

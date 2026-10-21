@@ -117,8 +117,9 @@ pnpm test
 pnpm validate
 ```
 
-The client-server version's storage, Postgres and a Cloud Storage emulator,
-runs locally with Docker Compose: `pnpm server:up`, then `pnpm server:test`.
+The client-server version (Postgres, a Cloud Storage emulator, the API and one
+worker) runs locally with Docker Compose: `pnpm server:up` starts it, and
+`pnpm server:test` runs the server suites and an end-to-end smoke against it.
 See the [local server stack](docs/operations/local-server-stack.md).
 
 ### Local semantic retrieval model (optional)

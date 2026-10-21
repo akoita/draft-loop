@@ -150,6 +150,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   step executions and artifacts) lives in `run_state_entries`, its key-value
   port. The legacy local evidence folder and semantic retrieval traces refuse,
   since hosted runs take evidence from candidate knowledge bases.
+- `hostedApplicationPorts` gives the hosted driver its ports over one
+  tenant's Postgres and blob storage, and `hostedWorkspaceReference` and
+  `hostedKnowledgeStoreReference` build the references it addresses. The API's
+  and the worker's entry points compose them at startup, with Cloud Storage and
+  the run queue; phase 1 serves one tenant per deployment.
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
@@ -167,12 +172,15 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     replaced objects, then download that exact generation and hash it;
   - delete names the generation it verified, so a concurrent write survives.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's and the worker's, and `pnpm test:gcs` runs the Cloud Storage
-  suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI
-  `Server storage` job runs both, against Postgres 16 with `pgvector` and the
-  `fake-gcs-server` emulator. Locally, `pnpm server:up` starts both with
-  Docker Compose and `pnpm server:test` runs both suites against them; see
-  the [local server stack](../operations/local-server-stack.md).
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's and the worker's,
+  and `pnpm test:gcs` runs the Cloud Storage suites against the emulator named
+  by `DRAFT_LOOP_TEST_GCS_URL`. The CI `Server storage` job runs both, against
+  Postgres 16 with `pgvector` and the `fake-gcs-server` emulator.
+- Locally, `pnpm server:up` starts Postgres, the emulator, the API and one
+  worker with Docker Compose. `pnpm server:test` runs both suites and an
+  end-to-end smoke that begins a run through the API and reads it back once
+  the worker has drafted it; see the
+  [local server stack](../operations/local-server-stack.md).
 
 The hosted service starts runs through a queue rather than in the request
 (ADR 0011, D4):

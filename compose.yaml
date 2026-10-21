@@ -1,7 +1,15 @@
-# The server's storage for local development and tests, with no cloud account and no provider
-# calls (ADR 0011, D15). Start it with `pnpm server:up`; see docs/operations/local-server-stack.md.
-# The API and the worker join this stack when those apps exist (sprint 1c).
+# The hosted service for local development and tests, with no cloud account and no provider
+# calls (ADR 0011, D15): Postgres, a Cloud Storage emulator, the API and one worker. Start it with
+# `pnpm server:up`; see docs/operations/local-server-stack.md. Every credential here is a fixed
+# local-only value; a deployment takes its own from its secrets.
 name: draft-loop-server
+
+# What the API and the worker share: the runtime role, the tenant and the emulated bucket.
+x-hosted-environment: &hosted-environment
+  DRAFT_LOOP_DATABASE_URL: postgres://draft_loop_app:draft_loop_app@postgres:5432/postgres
+  DRAFT_LOOP_TENANT_ID: local
+  DRAFT_LOOP_BLOB_BUCKET: draft-loop-local
+  DRAFT_LOOP_GCS_ENDPOINT: http://gcs:4443
 
 services:
   postgres:
@@ -29,6 +37,97 @@ services:
       - gcs-data:/storage
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4443/_internal/healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Local-only setup a deployment's infrastructure does instead: the runtime role, then the bucket.
+  postgres-setup:
+    image: pgvector/pgvector:0.8.0-pg16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: postgres
+    command:
+      - psql
+      - --host=postgres
+      - --username=postgres
+      - --set=ON_ERROR_STOP=1
+      - --command=DO $$$$ BEGIN CREATE ROLE draft_loop_app LOGIN PASSWORD 'draft_loop_app'; EXCEPTION WHEN duplicate_object THEN NULL; END $$$$;
+    restart: "no"
+
+  gcs-setup:
+    # The worker's image, which the worker service builds.
+    image: draft-loop-worker:local
+    pull_policy: never
+    depends_on:
+      gcs:
+        condition: service_healthy
+    # Creates the bucket; the emulator answers 409 when it already exists.
+    command:
+      - node
+      - --eval
+      - >-
+        fetch("http://gcs:4443/storage/v1/b?project=draft-loop-local", {method: "POST",
+        headers: {"content-type": "application/json"}, body: JSON.stringify({name: "draft-loop-local"})})
+        .then((response) => process.exit(response.ok || response.status === 409 ? 0 : 1))
+    restart: "no"
+
+  migrate:
+    image: draft-loop-worker:local
+    pull_policy: never
+    depends_on:
+      postgres-setup:
+        condition: service_completed_successfully
+    command: ["/app/node_modules/.bin/tsx", "src/migrate.ts"]
+    environment:
+      DRAFT_LOOP_MIGRATION_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+      DRAFT_LOOP_RUNTIME_ROLE: draft_loop_app
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: draft-loop-api:local
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      gcs-setup:
+        condition: service_completed_successfully
+    environment:
+      <<: *hosted-environment
+      DRAFT_LOOP_API_OWNER_TOKEN: local-stack-owner-token-not-a-secret
+    ports:
+      - "127.0.0.1:58080:8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - --eval
+        - 'fetch("http://127.0.0.1:8080/v1/health").then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))'
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    image: draft-loop-worker:local
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      gcs-setup:
+        condition: service_completed_successfully
+    environment:
+      <<: *hosted-environment
+      DRAFT_LOOP_WORKER_READY_FILE: /tmp/draft-loop-worker.ready
+    # Cloud Run sends SIGTERM and waits 10 seconds; the worker gives its job 8.
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/draft-loop-worker.ready"]
       interval: 2s
       timeout: 5s
       retries: 30

@@ -13,6 +13,8 @@
     "src"
   ],
   "scripts": {
+    "start": "tsx src/main.ts",
+    "migrate": "tsx src/migrate.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -20,7 +22,10 @@
     "@draft-loop/orchestrator": "workspace:*",
     "@draft-loop/run-queue": "workspace:*",
     "@draft-loop/storage": "workspace:*",
-    "@draft-loop/storage-postgres": "workspace:*"
+    "@draft-loop/storage-gcs": "workspace:*",
+    "@draft-loop/storage-postgres": "workspace:*",
+    "@google-cloud/storage": "8.3.0",
+    "tsx": "4.23.12"
   },
   "devDependencies": {
     "pg": "8.23.1",

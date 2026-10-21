@@ -1,8 +1,9 @@
 # Local server stack
 
-The client-server version's storage runs locally with Docker Compose: Postgres
-16 with `pgvector`, and a Cloud Storage emulator. It needs no cloud account and
-makes no provider calls (ADR 0011, D15). The desktop and the CLI do not use it.
+The client-server version runs locally with Docker Compose: Postgres 16 with
+`pgvector`, a Cloud Storage emulator, the API and one worker. It needs no cloud
+account and makes no provider calls (ADR 0011, D15). The desktop and the CLI do
+not use it.
 
 You need Docker with the Compose plugin, plus the repository's usual Node and
 pnpm versions.
@@ -12,8 +13,8 @@ pnpm versions.
 From the repository root:
 
 ```sh
-pnpm server:up     # start both services and wait until they are healthy
-pnpm server:test   # run the Postgres and Cloud Storage suites against them
+pnpm server:up     # build the images, start the stack and wait until it is healthy
+pnpm server:test   # start or update the stack, then run the server suites and the smoke
 pnpm server:down   # stop the services and keep their data
 ```
 
@@ -21,23 +22,71 @@ To also delete the stored data, run `docker compose down --volumes`.
 
 ## Services
 
-| Service    | Image                            | Local address                                         |
-| ---------- | -------------------------------- | ----------------------------------------------------- |
-| `postgres` | `pgvector/pgvector:0.8.0-pg16`   | `postgres://postgres:postgres@127.0.0.1:55432/postgres` |
-| `gcs`      | `fsouza/fake-gcs-server:1.56.1`  | `http://127.0.0.1:4443`                               |
+| Service    | What it is                                    | Local address                                           |
+| ---------- | --------------------------------------------- | ------------------------------------------------------- |
+| `postgres` | `pgvector/pgvector:0.8.0-pg16`                | `postgres://postgres:postgres@127.0.0.1:55432/postgres` |
+| `gcs`      | `fsouza/fake-gcs-server:1.56.1`               | `http://127.0.0.1:4443`                                 |
+| `api`      | `apps/api/Dockerfile`, the `/v1` HTTP API     | `http://127.0.0.1:58080`                                |
+| `worker`   | `apps/worker/Dockerfile`, executes queued runs | none                                                    |
 
-- Both services listen on `127.0.0.1` only. The Postgres port is 55432, so it
-  does not clash with a Postgres server already on 5432.
+- Every published port listens on `127.0.0.1` only. The Postgres port is
+  55432, so it does not clash with a Postgres server already on 5432.
+- Three one-shot services run first, doing what a deployment's infrastructure
+  does instead:
+  - `postgres-setup` creates the runtime role `draft_loop_app`;
+  - `migrate` runs the worker image's migration job, which migrates storage
+    and the run queue as the schema owner and grants the runtime role table
+    access only;
+  - `gcs-setup` creates the bucket `draft-loop-local`.
+- The API and the worker connect as `draft_loop_app`, serve one tenant,
+  `local`, and keep blobs in the emulator. Every credential in `compose.yaml`
+  is a fixed local-only value; the API's owner token is
+  `local-stack-owner-token-not-a-secret`.
 - Data lives in the named volumes `postgres-data` and `gcs-data`.
-- `pnpm server:test` sets `DRAFT_LOOP_TEST_POSTGRES_URL` and
-  `DRAFT_LOOP_TEST_GCS_URL` to these addresses, then runs `pnpm test:postgres`
-  and `pnpm test:gcs`. To run one suite, set its variable yourself.
 
-CI does not use this file. Its `Server storage` job starts the same images as
-its own containers.
+## Images
 
-## What joins later
+Both images are built from the repository root on `node:24.5.0-bookworm-slim`.
+Each installs only its app's production dependency graph from the lockfile and
+runs the TypeScript sources with `tsx`, so there is no separate build step. The
+worker image also runs the migration job (`src/migrate.ts`).
 
-The API and one worker join this stack in sprint 1c, when `apps/api` and
-`apps/worker` exist. Cloud deployment is not part of this repository: it lives
-in a private infrastructure repository (ADR 0011, D2).
+They read their settings from the environment, so the same images run in a
+deployment with that deployment's values:
+
+| Variable                                | Used by        | Meaning                                                         |
+| --------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `DRAFT_LOOP_DATABASE_URL`               | API, worker    | The runtime role's connection                                   |
+| `DRAFT_LOOP_DATABASE_SCHEMA`            | all            | Storage schema, default `draft_loop`                            |
+| `DRAFT_LOOP_QUEUE_SCHEMA`               | all            | Run queue schema, default `draft_loop_queue`                    |
+| `DRAFT_LOOP_TENANT_ID`                  | API, worker    | The one tenant the deployment serves                            |
+| `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket                                        |
+| `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
+| `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters                |
+| `PORT`                                  | API            | Listening port, default 8080                                    |
+| `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
+| `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
+| `DRAFT_LOOP_MIGRATION_DATABASE_URL`     | migration job  | The schema owner's connection                                   |
+| `DRAFT_LOOP_RUNTIME_ROLE`               | migration job  | The role the API and the worker connect as                      |
+
+## Tests against the stack
+
+`pnpm server:test` runs `docker compose up --detach --wait --build`, then three
+suites with the stack's addresses and local values in the environment:
+
+1. `pnpm test:postgres`, against `DRAFT_LOOP_TEST_POSTGRES_URL`;
+2. `pnpm test:gcs`, against `DRAFT_LOOP_TEST_GCS_URL`;
+3. `pnpm test:server-smoke`, the end-to-end smoke against
+   `DRAFT_LOOP_TEST_API_URL`.
+
+The smoke seeds a synthetic knowledge base and a fixture-mode workspace with a
+reviewed job brief directly in storage, since the API has no intake or
+workspace-setup routes yet. It then begins a run through the API, waits for the
+worker to draft it, and reads the run back awaiting approval.
+
+To run one suite, set its variables yourself. CI does not use this file: its
+`Server storage` job starts the Postgres and emulator images as its own
+containers and runs the first two suites.
+
+Cloud deployment is not part of this repository: it lives in a private
+infrastructure repository (ADR 0011, D2).

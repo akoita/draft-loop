@@ -21,12 +21,17 @@
   "dependencies": {
     "@draft-loop/application": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
+    "@draft-loop/run-queue": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/storage": "workspace:*",
+    "@draft-loop/storage-gcs": "workspace:*",
+    "@draft-loop/storage-postgres": "workspace:*",
     "@fastify/helmet": "13.1.1",
     "@fastify/swagger": "9.9.0",
+    "@google-cloud/storage": "8.3.0",
     "fastify": "5.12.5",
     "fastify-type-provider-zod": "7.0.0",
+    "tsx": "4.23.12",
     "zod": "4.4.3"
   },
   "devDependencies": {
