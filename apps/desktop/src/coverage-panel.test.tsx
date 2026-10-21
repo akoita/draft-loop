@@ -208,10 +208,10 @@ describe("blockOpening", () => {
 
   it("cuts a long block at a word boundary with an ellipsis", () => {
     const opening = blockOpening(
-      "Took strategic ownership of Osirisk, the bank's main operational risk application, a fifteen-year-old system.",
+      "Took strategic ownership of Ledgerline, the bank's main operational risk application, a fifteen-year-old system.",
     );
     expect(opening.endsWith("…")).toBe(true);
     expect(opening.length).toBeLessThanOrEqual(COVERAGE_BLOCK_OPENING_LENGTH + 1);
-    expect(opening).toBe("Took strategic ownership of Osirisk, the bank's main operational risk…");
+    expect(opening).toBe("Took strategic ownership of Ledgerline, the bank's main operational…");
   });
 });

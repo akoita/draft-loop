@@ -13,7 +13,7 @@ services fiables, relisez le code, accompagnez les développeurs et travaillez a
 équipes produit sur la feuille de route. Nous utilisons TypeScript, Kubernetes et Terraform
 dans un environnement exigeant où la qualité et la sécurité comptent beaucoup.`;
 
-// Shaped like the TotalEnergies job text a broken PDF text layer produced.
+// Shaped like the job text a broken PDF text layer produced for a real posting.
 const garbled = `Pays / FsaocG / ViHHG Tch Ld FsaocG ViHHG Pays dvlppmnt Fsc ViHHG
 FsaocG Pays rsNP / ViHHG xprnc FsaocG mnGT Pays ViHHG FsaocG dTbs ViHHG Pays FsaocG
 qlfctns ViHHG FsaocG Pays ViHHG FsaocG Pays ViHHG cmmnctn FsaocG ViHHG Pays FsaocG`;

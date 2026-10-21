@@ -97,7 +97,7 @@ describe("recent workspace start-page controls", () => {
           { ...candidate, name: "draft-loop-workspace", location: "hc5" },
           {
             id: "223e4567-e89b-12d3-a456-426614174000",
-            name: "Mergify — Staff Engineer",
+            name: "Northwind — Staff Engineer",
             lastOpenedAt: "2026-10-04T10:00:00.000Z",
           },
         ],
@@ -112,7 +112,7 @@ describe("recent workspace start-page controls", () => {
     );
     expect(markup).toContain("in hc5");
     expect(markup.match(/recent-workspace-location/gu)).toHaveLength(1);
-    expect(markup).toContain("Mergify — Staff Engineer");
+    expect(markup).toContain("Northwind — Staff Engineer");
   });
 
   it("disables selection while busy and gives fixed loading, empty, and failure feedback", () => {

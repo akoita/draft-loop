@@ -660,15 +660,15 @@ describe("desktop recent workspace capabilities", () => {
         invoke: async (command) => {
           expect(command).toEqual({
             type: "workspace.rename",
-            input: { workspaceId: "workspace-1", name: "Mergify — Staff Engineer" },
+            input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
           });
-          return { ok: true, value: { name: "Mergify — Staff Engineer" } };
+          return { ok: true, value: { name: "Northwind — Staff Engineer" } };
         },
       }),
     );
     await expect(
-      withRename.renameWorkspace?.("workspace-1", "Mergify — Staff Engineer"),
-    ).resolves.toBe("Mergify — Staff Engineer");
+      withRename.renameWorkspace?.("workspace-1", "Northwind — Staff Engineer"),
+    ).resolves.toBe("Northwind — Staff Engineer");
     const without = createBridgeReviewPort(
       createNativeCapabilityPort({
         capabilities: ["review.load"],
