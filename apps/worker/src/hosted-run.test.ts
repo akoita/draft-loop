@@ -6,9 +6,10 @@ import { createApplicationService, createHostedApplicationDriver } from "@draft-
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   grantPostgresStorageAccess,
-  hostedWorkspaceHistory,
+  hostedApplicationPorts,
+  hostedKnowledgeStoreReference,
+  hostedWorkspaceReference,
   migratePostgresStorage,
-  openPostgresCandidateKnowledgeStore,
   openPostgresStorage,
   type PostgresStorage,
 } from "@draft-loop/storage-postgres";
@@ -24,8 +25,8 @@ const runtimeRole = "draft_loop_test_app";
 const createdAt = "2026-10-21T10:00:00.000Z";
 const silent = { write: () => undefined };
 const tenantId = "tenant-a";
-const workspace = `/tenants/${tenantId}/workspaces/workspace-1`;
-const storeReference = `/tenants/${tenantId}/knowledge-stores/store-1`;
+const workspace = hostedWorkspaceReference(tenantId, "workspace-1");
+const storeReference = hostedKnowledgeStoreReference(tenantId, "store-1");
 const career = new TextEncoder().encode(
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n",
 );
@@ -106,24 +107,19 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
   it("begins a fixture run through the hosted driver and the worker drives it to approval", async () => {
     const reads: string[] = [];
     const service = createApplicationService(
-      createHostedApplicationDriver({
-        settings: storage.workspaceSettings,
-        storage: { open: async () => hostedWorkspaceHistory(storage), exportBlobs: blobs },
-        openKnowledgeStore: async (reference) => {
-          if (reference !== storeReference) throw new Error("unknown knowledge store");
-          return openPostgresCandidateKnowledgeStore({
-            storage,
-            blobs: {
-              ...blobs,
-              get: (reference) => {
-                reads.push(reference.location);
-                return blobs.get(reference);
-              },
+      createHostedApplicationDriver(
+        hostedApplicationPorts({
+          storage,
+          tenantId,
+          blobs: {
+            ...blobs,
+            get: (reference) => {
+              reads.push(reference.location);
+              return blobs.get(reference);
             },
-            storeId: "store-1",
-          });
-        },
-      }),
+          },
+        }),
+      ),
     );
     await service.initialize(
       { root: workspace, jobDescription: "job.md", sources: "sources", fixtureMode: true },
@@ -178,7 +174,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     const outcomes: RunJobOutcome[] = [];
     const handle = createRunJobHandler({
       service,
-      workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
+      workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: false,
       onOutcome: (_job, outcome) => outcomes.push(outcome),
     });

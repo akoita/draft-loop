@@ -1,0 +1,17 @@
+# The server images copy the repository root; keep local state and build output out of them.
+**/node_modules
+**/dist
+**/out
+**/.cache
+**/coverage
+.git
+.github
+.claude
+.codex
+.entire
+.env
+.env.*
+**/*.sqlite
+**/*.log
+data
+docs
