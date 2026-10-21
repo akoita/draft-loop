@@ -9,6 +9,7 @@ export function responseExecution<T>(
     output,
     provider: response.provider,
     route: response.route,
+    ...(response.routeFallback === undefined ? {} : { routeFallback: response.routeFallback }),
     modelId: response.modelId,
     providerRequestId: response.providerRequestId,
     outputChecksum: response.structuredOutputSha256,

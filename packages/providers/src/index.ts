@@ -10,7 +10,7 @@ import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
-import type { AnthropicRoute, ProviderRoute } from "./provider-route.js";
+import type { AnthropicRoute, ProviderRoute, RouteFallback } from "./provider-route.js";
 
 export * from "./anthropic-billing-error.js";
 export * from "./author-model-preflight.js";
@@ -119,6 +119,8 @@ export interface ModelResponse<Output extends JsonValue = JsonValue> {
   readonly company: ProviderId;
   /** The endpoint that served the call; run history records it with the model identity. */
   readonly route: ProviderRoute;
+  /** Present when the call fell back from its primary route; `route` is then the fallback. */
+  readonly routeFallback?: RouteFallback;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly structuredOutputSha256: string;

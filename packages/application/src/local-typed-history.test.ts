@@ -19,8 +19,10 @@ function execution<T>(output: T, provider: string): AgentExecution<T> {
   return {
     output,
     provider,
-    // The author records a route and the critic none, as a run that predates routes would.
-    ...(provider === "anthropic" ? { route: "vertex-ai" } : {}),
+    // The author records a fallback route and the critic none, as a run that predates routes would.
+    ...(provider === "anthropic"
+      ? { route: "anthropic-api", routeFallback: { from: "vertex-ai", cause: "route-unavailable" } }
+      : {}),
     modelId: `${provider}-fixture`,
     providerRequestId: null,
     outputChecksum: "a".repeat(64),
@@ -149,7 +151,11 @@ describe("automatic revision typed history", () => {
         expect(stored?.payload).toEqual(
           entry.step === "critic"
             ? { source: "phase-zero-cli" }
-            : { source: "phase-zero-cli", route: "vertex-ai" },
+            : {
+                source: "phase-zero-cli",
+                route: "anthropic-api",
+                routeFallback: { from: "vertex-ai", cause: "route-unavailable" },
+              },
         );
       }
       expect(await f.storage.listRunSnapshots(f.snapshot.runId)).toEqual(before);

@@ -111,6 +111,9 @@ export async function saveTypedHistory(
       payload: {
         source: "phase-zero-cli",
         ...(executionRecord.route === undefined ? {} : { route: executionRecord.route }),
+        ...(executionRecord.routeFallback === undefined
+          ? {}
+          : { routeFallback: { ...executionRecord.routeFallback } }),
       },
     });
   }

@@ -112,7 +112,16 @@ export const runViewSchema = z
     approval: z.enum(["pending", "approved", "rejected"]),
     totalCostUsd: z.number(),
     routes: z
-      .array(z.object({ step: z.enum(["author", "critic", "revision"]), route: z.string() }))
+      .array(
+        z.object({
+          step: z.enum(["author", "critic", "revision"]),
+          route: z.string(),
+          fallback: z
+            .object({ from: z.string(), cause: z.string() })
+            .optional()
+            .describe("Present when these calls fell back from their primary route."),
+        }),
+      )
       .describe("The endpoint behind each step's completed calls, in first-use order."),
     findingCount: z.number().int(),
     hasDraft: z.boolean(),

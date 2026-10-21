@@ -25,3 +25,17 @@ const known: ReadonlySet<string> = new Set(providerRoutes);
 export function isProviderRoute(value: unknown): value is ProviderRoute {
   return typeof value === "string" && known.has(value);
 }
+
+/**
+ * Why a call left its primary route: the model is not offered there, or the route refused after
+ * the adapter's own retries. Content errors, policy refusals and budgets never cause a fallback.
+ */
+export const routeFallbackCauses = ["model-not-offered", "route-unavailable"] as const;
+
+export type RouteFallbackCause = (typeof routeFallbackCauses)[number];
+
+/** A fallback a call took, recorded in run history so that it is never silent (ADR 0011, D5). */
+export interface RouteFallback {
+  readonly from: ProviderRoute;
+  readonly cause: RouteFallbackCause;
+}

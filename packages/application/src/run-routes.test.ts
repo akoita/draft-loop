@@ -52,6 +52,26 @@ describe("runStepRoutes", () => {
     );
   });
 
+  it("shows a fallback with the route it left and its cause", () => {
+    const fallback = {
+      ...execution("author", "completed", "anthropic-api"),
+      routeFallback: { from: "vertex-ai", cause: "route-unavailable" },
+    };
+    const history = snapshot([execution("author", "completed", "vertex-ai"), fallback]);
+
+    expect(runStepRoutes(history)).toEqual([
+      { step: "author", route: "vertex-ai" },
+      {
+        step: "author",
+        route: "anthropic-api",
+        fallback: { from: "vertex-ai", cause: "route-unavailable" },
+      },
+    ]);
+    expect(runRoutesLine(history)).toBe(
+      "routes: author=vertex-ai author=anthropic-api(fallback from vertex-ai: route-unavailable)",
+    );
+  });
+
   it("leaves out failed calls and calls recorded before routes, rather than guessing", () => {
     const history = snapshot([
       execution("author", "failed", "vertex-ai"),
