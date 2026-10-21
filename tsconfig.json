@@ -33,6 +33,7 @@
     { "path": "./packages/rendering" },
     { "path": "./packages/storage" },
     { "path": "./packages/storage-postgres" },
+    { "path": "./packages/storage-gcs" },
     { "path": "./packages/security" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },

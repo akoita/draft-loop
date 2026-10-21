@@ -34,8 +34,8 @@ jobs:
       - name: Test
         run: pnpm test
 
-  postgres:
-    name: Postgres storage
+  server-storage:
+    name: Server storage
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -51,6 +51,7 @@ jobs:
           --health-retries 10
     env:
       DRAFT_LOOP_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/postgres
+      DRAFT_LOOP_TEST_GCS_URL: http://localhost:4443
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -65,5 +66,18 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # A service container cannot take arguments, and the emulator needs them to serve plain HTTP.
+      - name: Start the Cloud Storage emulator
+        run: |
+          docker run --detach --name gcs-emulator --publish 4443:4443 \
+            fsouza/fake-gcs-server:1.56.1 -scheme http -port 4443 -backend memory
+          for attempt in $(seq 1 30); do
+            curl --silent --fail "$DRAFT_LOOP_TEST_GCS_URL/storage/v1/b?project=ci" && exit 0
+            sleep 1
+          done
+          docker logs gcs-emulator
+          exit 1
       - name: Run the storage conformance suite against Postgres
         run: pnpm test:postgres
+      - name: Run the blob conformance suite against the Cloud Storage emulator
+        run: pnpm test:gcs
