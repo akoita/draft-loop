@@ -53,7 +53,11 @@ function queueSchema(options: RunQueueOptions): string {
   return schema;
 }
 
-function bossOptions(options: RunQueueOptions, overrides: ConstructorOptions): ConstructorOptions {
+/** @internal Shared with the worker side; not part of the package's exports. */
+export function bossOptions(
+  options: RunQueueOptions,
+  overrides: ConstructorOptions,
+): ConstructorOptions {
   return {
     connectionString: options.connectionString,
     schema: queueSchema(options),
@@ -125,15 +129,20 @@ export async function openRunQueue(options: RunQueueOptions): Promise<RunQueue> 
   boss.on("error", () => undefined);
   await boss.start();
   return {
-    enqueue: async (job, enqueueOptions = {}) => {
-      const data = runJobSchema.parse(job);
-      await boss.send(runQueueName, data, {
-        singletonKey: runJobKey(data),
-        ...(enqueueOptions.startAfter === undefined
-          ? {}
-          : { startAfter: enqueueOptions.startAfter }),
-      });
-    },
+    enqueue: (job, enqueueOptions) => sendRunJob(boss, job, enqueueOptions),
     close: () => boss.stop({ graceful: false, close: true }),
   };
+}
+
+/** @internal Shared with the worker side; not part of the package's exports. */
+export async function sendRunJob(
+  boss: PgBoss,
+  job: RunJob,
+  options: EnqueueRunOptions = {},
+): Promise<void> {
+  const data = runJobSchema.parse(job);
+  await boss.send(runQueueName, data, {
+    singletonKey: runJobKey(data),
+    ...(options.startAfter === undefined ? {} : { startAfter: options.startAfter }),
+  });
 }

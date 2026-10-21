@@ -1,0 +1,27 @@
+{
+  "name": "@draft-loop/worker",
+  "version": "0.8.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@draft-loop/application": "workspace:*",
+    "@draft-loop/orchestrator": "workspace:*",
+    "@draft-loop/run-queue": "workspace:*"
+  },
+  "devDependencies": {
+    "pg": "8.23.1",
+    "@types/pg": "8.23.1"
+  }
+}
