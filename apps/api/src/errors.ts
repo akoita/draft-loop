@@ -28,6 +28,17 @@ export function apiError(code: string, message: string): ApiError {
   return { error: { code, message } };
 }
 
+/** The run was saved but not queued; a retry with the same Idempotency-Key queues it. */
+export class RunQueueUnavailableError extends Error {
+  constructor(options?: ErrorOptions) {
+    super(
+      "The run was saved but could not be queued. Retry with the same Idempotency-Key.",
+      options,
+    );
+    this.name = "RunQueueUnavailableError";
+  }
+}
+
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.code(404).send(apiError("not_found", "No such route."));
 }
@@ -48,6 +59,14 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error instanceof IdempotencyConflictError) {
     void reply.code(409).send(apiError("idempotency_conflict", error.message));
+    return;
+  }
+  if (error instanceof RunQueueUnavailableError) {
+    request.log.error(
+      { err: { type: error.name, cause: (error.cause as Error | undefined)?.name } },
+      "run queue unavailable",
+    );
+    void reply.code(503).send(apiError("queue_unavailable", error.message));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals.

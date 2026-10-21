@@ -15,6 +15,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     application: {
       service: {} as ApplicationService,
       workspaceRoot: (workspaceId) => workspaceId,
+      enqueueRun: async () => undefined,
     },
   });
   try {

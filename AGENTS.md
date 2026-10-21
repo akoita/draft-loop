@@ -79,6 +79,9 @@ recorded limit in the same change so the reduction cannot regress.
   hosted service. The desktop and the CLI never depend on it.
 - `packages/storage-gcs` implements the blob storage port on Cloud Storage for
   the hosted service. The desktop and the CLI never depend on it.
+- `packages/run-queue` owns the hosted service's durable run queue on
+  Postgres (pg-boss): job payloads carry ids only, never candidate material.
+  The desktop and the CLI never depend on it.
 - `packages/embeddings` owns local text-embedding runtimes and the pinned model
   manifest behind a provider-independent port. It does not download models or
   persist vectors.

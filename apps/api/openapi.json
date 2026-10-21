@@ -2600,7 +2600,7 @@
     "/v1/workspaces/{workspaceId}/runs": {
       "post": {
         "summary": "Begin a run; a worker executes it",
-        "description": "Persists the run and its context without calling a provider. A retry with the same Idempotency-Key returns the same run.",
+        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2699,6 +2699,16 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {

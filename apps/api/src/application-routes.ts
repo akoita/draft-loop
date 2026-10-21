@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { apiError, apiErrorSchema } from "./errors.js";
+import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 import {
   applicationView,
@@ -22,6 +22,11 @@ export interface ApplicationRoutesOptions {
   /** The driver's reference for a workspace id; the API never accepts a reference from a client. */
   readonly workspaceRoot: (workspaceId: string) => string;
   readonly idempotency: IdempotencyStore;
+  /**
+   * Hands a begun run to the workers. It must be safe to repeat: a retried request queues the run
+   * again, and the queue keeps at most one waiting job per run.
+   */
+  readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
 }
 
 const identifierSchema = z
@@ -123,7 +128,7 @@ export function registerApplicationRoutes(
   options: ApplicationRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, idempotency } = options;
+  const { service, workspaceRoot, idempotency, enqueueRun } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -245,11 +250,16 @@ export function registerApplicationRoutes(
       schema: {
         summary: "Begin a run; a worker executes it",
         description:
-          "Persists the run and its context without calling a provider. A retry with the same Idempotency-Key returns the same run.",
+          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting.",
         params: workspaceParams,
         headers: idempotencyHeaders,
         body: beginRunBody,
-        response: { 201: runViewSchema, 409: apiErrorSchema, ...errorResponses },
+        response: {
+          201: runViewSchema,
+          409: apiErrorSchema,
+          503: apiErrorSchema,
+          ...errorResponses,
+        },
       },
     },
     async (request, reply) => {
@@ -269,6 +279,13 @@ export function registerApplicationRoutes(
         request.body,
         () => service.begin(command),
       );
+      // Outside the replay cache on purpose: a run saved by a request whose queueing failed is
+      // queued by the retry, and repeated queueing collapses in the queue.
+      try {
+        await enqueueRun(workspaceId, snapshot.runId);
+      } catch (error) {
+        throw new RunQueueUnavailableError({ cause: error });
+      }
       return reply.code(201).send(runView(snapshot));
     },
   );
