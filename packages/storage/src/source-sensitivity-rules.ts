@@ -119,7 +119,10 @@ function requireTimestamp(value: string): string {
   return value;
 }
 
-function recordFromRow(row: Record<string, unknown>): SourceSensitivityRuleVersionRecord {
+/** Reads a stored version back, failing closed when its JSON, checksum or rules do not hold. */
+export function sourceSensitivityRuleVersionFromRow(
+  row: Record<string, unknown>,
+): SourceSensitivityRuleVersionRecord {
   const { knowledge_base_id: knowledgeBaseId, version, created_at: createdAt } = row;
   const { rules_json: rulesJson, checksum } = row;
   if (
@@ -153,13 +156,22 @@ function recordFromRow(row: Record<string, unknown>): SourceSensitivityRuleVersi
   });
 }
 
-const columns = "knowledge_base_id, version, rules_json, checksum, created_at";
+export const sourceSensitivityRuleColumns =
+  "knowledge_base_id, version, rules_json, checksum, created_at";
+const columns = sourceSensitivityRuleColumns;
 
-export function appendSourceSensitivityRules(
-  database: SourceSensitivityRuleDatabase,
+export interface PreparedSourceSensitivityRulesAppend {
+  readonly knowledgeBaseId: string;
+  readonly rulesJson: string;
+  readonly checksum: string;
+  readonly createdAt: string;
+}
+
+/** Validates and canonicalizes a new version, so every store hashes the same rules the same way. */
+export function prepareSourceSensitivityRulesAppend(
   knowledgeBaseIdInput: string,
   input: SourceSensitivityRuleAppendInput,
-): SourceSensitivityRuleVersionRecord {
+): PreparedSourceSensitivityRulesAppend {
   const knowledgeBaseId = requireKnowledgeBaseId(knowledgeBaseIdInput);
   const parsed = sourceSensitivityRuleListSchema.safeParse(input.rules);
   if (!parsed.success) {
@@ -167,6 +179,30 @@ export function appendSourceSensitivityRules(
   }
   const createdAt = requireTimestamp(input.createdAt);
   const rulesJson = JSON.stringify(canonicalize(parsed.data));
+  return { knowledgeBaseId, rulesJson, checksum: checksumOf(rulesJson), createdAt };
+}
+
+/** Refuses a version older than the latest one: versions only move forward in time. */
+export function requireSourceSensitivityRulesChronology(
+  createdAt: string,
+  latestCreatedAt: string | undefined,
+): void {
+  if (latestCreatedAt !== undefined && Date.parse(createdAt) < Date.parse(latestCreatedAt)) {
+    throw new StorageValidationError(
+      "candidate knowledge source sensitivity rules createdAt must not move backwards",
+    );
+  }
+}
+
+export function appendSourceSensitivityRules(
+  database: SourceSensitivityRuleDatabase,
+  knowledgeBaseIdInput: string,
+  input: SourceSensitivityRuleAppendInput,
+): SourceSensitivityRuleVersionRecord {
+  const { knowledgeBaseId, rulesJson, checksum, createdAt } = prepareSourceSensitivityRulesAppend(
+    knowledgeBaseIdInput,
+    input,
+  );
   return database.transaction(() => {
     if (
       database
@@ -180,16 +216,15 @@ export function appendSourceSensitivityRules(
         `SELECT version, created_at FROM ${table} WHERE knowledge_base_id = ? ORDER BY version DESC LIMIT 1`,
       )
       .get(knowledgeBaseId);
-    if (latest !== undefined && Date.parse(createdAt) < Date.parse(String(latest.created_at))) {
-      throw new StorageValidationError(
-        "candidate knowledge source sensitivity rules createdAt must not move backwards",
-      );
-    }
+    requireSourceSensitivityRulesChronology(
+      createdAt,
+      latest === undefined ? undefined : String(latest.created_at),
+    );
     const version = latest === undefined ? 1 : Number(latest.version) + 1;
     database
       .prepare(`INSERT INTO ${table} (${columns}) VALUES (?, ?, ?, ?, ?)`)
-      .run(knowledgeBaseId, version, rulesJson, checksumOf(rulesJson), createdAt);
-    return recordFromRow(
+      .run(knowledgeBaseId, version, rulesJson, checksum, createdAt);
+    return sourceSensitivityRuleVersionFromRow(
       database
         .prepare(`SELECT ${columns} FROM ${table} WHERE knowledge_base_id = ? AND version = ?`)
         .get(knowledgeBaseId, version) ?? {},
@@ -206,7 +241,7 @@ export function readCurrentSourceSensitivityRules(
       `SELECT ${columns} FROM ${table} WHERE knowledge_base_id = ? ORDER BY version DESC LIMIT 1`,
     )
     .get(requireKnowledgeBaseId(knowledgeBaseIdInput));
-  return row === undefined ? undefined : recordFromRow(row);
+  return row === undefined ? undefined : sourceSensitivityRuleVersionFromRow(row);
 }
 
 export function readSourceSensitivityRulesVersion(
@@ -222,7 +257,7 @@ export function readSourceSensitivityRulesVersion(
   const row = database
     .prepare(`SELECT ${columns} FROM ${table} WHERE knowledge_base_id = ? AND version = ?`)
     .get(requireKnowledgeBaseId(knowledgeBaseIdInput), version);
-  return row === undefined ? undefined : recordFromRow(row);
+  return row === undefined ? undefined : sourceSensitivityRuleVersionFromRow(row);
 }
 
 export function listSourceSensitivityRuleVersions(
@@ -234,7 +269,7 @@ export function listSourceSensitivityRuleVersions(
     .all(requireKnowledgeBaseId(knowledgeBaseIdInput));
   return Object.freeze(
     rows.map((row) => {
-      const { rules: _rules, ...summary } = recordFromRow(row);
+      const { rules: _rules, ...summary } = sourceSensitivityRuleVersionFromRow(row);
       return Object.freeze(summary);
     }),
   );

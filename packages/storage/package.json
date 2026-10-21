@@ -35,6 +35,10 @@
       "types": "./src/filesystem-blob-storage.ts",
       "import": "./src/filesystem-blob-storage.ts"
     },
+    "./source-sensitivity-rules": {
+      "types": "./src/source-sensitivity-rules.ts",
+      "import": "./src/source-sensitivity-rules.ts"
+    },
     "./run-knowledge-store": {
       "types": "./src/run-knowledge-store.ts",
       "import": "./src/run-knowledge-store.ts"

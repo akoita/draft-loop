@@ -2,6 +2,7 @@ import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
+import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
 import { createRunHistory } from "./run-history.js";
@@ -97,6 +98,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createRunHistory(client),
     ...createVersionedRecords(client),
     ...createKnowledgeBaseRecords(client),
+    ...createKnowledgeRunRecords(client),
     ...createLexicalIndex(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),

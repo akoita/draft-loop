@@ -643,6 +643,78 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
     `,
   },
+  {
+    version: 10,
+    name: "candidate knowledge stores, managed source versions and sensitivity rules",
+    sql: `
+      CREATE TABLE candidate_knowledge_stores (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        id TEXT NOT NULL CHECK (length(trim(id)) > 0),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, id)
+      );
+
+      -- A version whose bytes the service holds in blob storage, at this location.
+      CREATE TABLE candidate_knowledge_managed_source_versions (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        version_id TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        blob_location TEXT NOT NULL CHECK (length(trim(blob_location)) > 0),
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, version_id),
+        FOREIGN KEY (tenant_id, version_id, source_id)
+          REFERENCES candidate_knowledge_source_versions (tenant_id, id, source_id)
+      );
+      CREATE INDEX candidate_knowledge_managed_source_versions_source
+        ON candidate_knowledge_managed_source_versions (tenant_id, source_id);
+
+      CREATE TABLE candidate_knowledge_source_sensitivity_rule_versions (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        knowledge_base_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version >= 1),
+        rules_json TEXT NOT NULL,
+        checksum TEXT NOT NULL CHECK (checksum ~ '^[0-9a-f]{64}$'),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, knowledge_base_id, version),
+        FOREIGN KEY (tenant_id, knowledge_base_id)
+          REFERENCES candidate_knowledge_bases (tenant_id, id)
+      );
+
+      CREATE TRIGGER candidate_knowledge_stores_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_stores
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER candidate_knowledge_managed_source_versions_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_managed_source_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+      CREATE TRIGGER candidate_knowledge_source_sensitivity_rule_versions_immutable
+        BEFORE UPDATE OR DELETE ON candidate_knowledge_source_sensitivity_rule_versions
+        FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+
+      DO $migration$
+      DECLARE
+        table_name text;
+      BEGIN
+        FOREACH table_name IN ARRAY ARRAY[
+          'candidate_knowledge_stores',
+          'candidate_knowledge_managed_source_versions',
+          'candidate_knowledge_source_sensitivity_rule_versions'
+        ] LOOP
+          EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', table_name);
+          EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', table_name);
+          EXECUTE format(
+            'CREATE POLICY tenant_isolation ON %I '
+            'USING (tenant_id = current_setting(''draft_loop.tenant_id'', true)) '
+            'WITH CHECK (tenant_id = current_setting(''draft_loop.tenant_id'', true))',
+            table_name
+          );
+        END LOOP;
+      END
+      $migration$;
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

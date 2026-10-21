@@ -124,6 +124,15 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - Postgres keeps workspace settings as one row per document, keyed by the
   driver's workspace reference and the document name. It passes the same
   `workspace-settings` conformance group as the local files.
+- `openPostgresCandidateKnowledgeStore` opens one tenant's candidate knowledge
+  store for runs. It reads records and projections from Postgres and source
+  bytes from blob storage, checked against each version's checksum and size,
+  and offers a run's operations only.
+  - Postgres records the store, which versions the service holds bytes for and
+    where, and the versioned sensitivity rules, hashed as the local store
+    hashes them.
+  - A hosted file source has no local origin to refresh from: its origin is
+    the upload, so it is ready once its latest version's bytes are held.
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
