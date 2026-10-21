@@ -79,6 +79,9 @@ recorded limit in the same change so the reduction cannot regress.
   hosted service. The desktop and the CLI never depend on it.
 - `packages/storage-gcs` implements the blob storage port on Cloud Storage for
   the hosted service. The desktop and the CLI never depend on it.
+- `packages/model-gateway` owns the hosted service's model routes: Claude on
+  Vertex AI in an EU location, with its pricing and route identity. The
+  desktop and the CLI never depend on it.
 - `packages/run-queue` owns the hosted service's durable run queue on
   Postgres (pg-boss): job payloads carry ids only, never candidate material.
   The desktop and the CLI never depend on it.
