@@ -68,6 +68,13 @@ is the natural shape of the server API.
 
 ## Decisions
 
+The diagram shows where these decisions lead. It is a plan: on `main` today,
+only the Postgres storage package and the shared packages exist on the
+hosted side. The [architecture overview](../architecture/overview.md)
+describes what runs now.
+
+![Planned client-server architecture: a web app and AI agents reach a Fastify API on Cloud Run in europe-west1; the API queues runs for workers, which call a model gateway that sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic in an EU data-residency project; data lives in Cloud SQL Postgres with pgvector, already built, and Cloud Storage; sign-in uses Keycloak on Clever Cloud; every service uses the desktop app's packages, and the local-first desktop app, CLI, a planned local MCP server and SQLite keep running on the user's machine.](../assets/client-server-target-architecture.svg)
+
 ### D1. Topology: a modular monolith with background workers
 
 One TypeScript service exposes the API and runs the application service.
