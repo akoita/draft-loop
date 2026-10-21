@@ -37,6 +37,7 @@
     { "path": "./packages/security" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
+    { "path": "./apps/api" },
     { "path": "./apps/cli" },
     { "path": "./apps/desktop" }
   ]
