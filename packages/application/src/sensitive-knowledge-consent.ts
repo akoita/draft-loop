@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 
 import { CliUserError } from "./cli-user-error.js";
+import { workspaceSettings } from "./workspace-settings.js";
 
 /**
  * Workspace consent to send `sensitive` knowledge-source sections to providers.
@@ -14,9 +12,7 @@ import { CliUserError } from "./cli-user-error.js";
  * back strictly is an error that stops the caller before any provider request.
  */
 
-const consentDirectory = ".draft-loop";
 export const sensitiveKnowledgeConsentFilename = "sensitive-knowledge-consent.json";
-const workspaceConfigFilename = "workspace.json";
 
 export const sensitiveKnowledgeConsentInvalidMessage =
   "The sensitive-knowledge consent file is unreadable or invalid, so nothing was sent. Run `draft-loop knowledge sensitivity consent <workspace> --deny` to reset it.";
@@ -35,10 +31,6 @@ export function excludedSensitivityTiersForConsent(
   return new Set<SourceSensitivityTier>(
     allowSensitive ? ["never-share"] : ["never-share", "sensitive"],
   );
-}
-
-function consentPath(root: string): string {
-  return join(root, consentDirectory, sensitiveKnowledgeConsentFilename);
 }
 
 function parseConsent(content: string): SensitiveKnowledgeConsent {
@@ -66,15 +58,13 @@ function parseConsent(content: string): SensitiveKnowledgeConsent {
 export async function readSensitiveKnowledgeConsent(
   rootInput: string,
 ): Promise<SensitiveKnowledgeConsent> {
-  let content: string;
+  let content: string | undefined;
   try {
-    content = await readFile(consentPath(rootInput), "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return { allowSensitive: false, updatedAt: null };
-    }
+    content = await workspaceSettings().read(rootInput, sensitiveKnowledgeConsentFilename);
+  } catch {
     throw new CliUserError(sensitiveKnowledgeConsentInvalidMessage);
   }
+  if (content === undefined) return { allowSensitive: false, updatedAt: null };
   try {
     return parseConsent(content);
   } catch {
@@ -82,7 +72,7 @@ export async function readSensitiveKnowledgeConsent(
   }
 }
 
-/** Write the consent atomically (temporary file, then rename) in an existing workspace. */
+/** Write the consent atomically in an existing workspace. */
 export async function setSensitiveKnowledgeConsent(
   rootInput: string,
   allowSensitive: boolean,
@@ -91,27 +81,21 @@ export async function setSensitiveKnowledgeConsent(
   if (typeof allowSensitive !== "boolean") {
     throw new CliUserError("Sensitive-knowledge consent must be explicitly allowed or denied.");
   }
-  try {
-    await readFile(join(rootInput, consentDirectory, workspaceConfigFilename));
-  } catch {
+  const settings = workspaceSettings();
+  if ((await settings.read(rootInput, "workspace.json").catch(() => undefined)) === undefined) {
     throw new CliUserError(
       `No DraftLoop workspace found at ${rootInput}. Run draft-loop init first.`,
     );
   }
   const consent: SensitiveKnowledgeConsent = { allowSensitive, updatedAt: now() };
   parseConsent(JSON.stringify({ schemaVersion: 1, ...consent }));
-  const target = consentPath(rootInput);
-  const temporary = `${target}.${randomUUID()}.tmp`;
-  await mkdir(join(rootInput, consentDirectory), { recursive: true });
   try {
-    await writeFile(
-      temporary,
+    await settings.write(
+      rootInput,
+      sensitiveKnowledgeConsentFilename,
       `${JSON.stringify({ schemaVersion: 1, ...consent }, null, 2)}\n`,
-      "utf8",
     );
-    await rename(temporary, target);
   } catch {
-    await rm(temporary, { force: true }).catch(() => undefined);
     throw new CliUserError("The sensitive-knowledge consent could not be saved.");
   }
   return consent;

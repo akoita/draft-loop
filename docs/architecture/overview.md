@@ -68,6 +68,12 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `packages/application/src/local-storage-factory.ts`, is the one application
   module that opens SQLite. It alone reaches SQLite maintenance such as backup,
   integrity checks and history compaction.
+- A workspace's settings go through a settings port: its configuration, the
+  managed writing policy, and the small documents that record its modes,
+  model pair, consent and decisions. The local driver keeps them as files under
+  `<root>/.draft-loop/`, written atomically. A driver that keeps them elsewhere
+  wraps each call in `withWorkspaceSettings`, which reaches every module the
+  call goes through.
 - Exported documents go through a blob port, read and checked by content
   checksum. The local filesystem implementation keeps today's export paths;
   `packages/storage-gcs` implements the same port on Cloud Storage for the

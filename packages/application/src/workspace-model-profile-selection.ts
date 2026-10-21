@@ -1,12 +1,11 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { z } from "zod";
 
 import { CliUserError } from "./cli-user-error.js";
 import type { ModelProfileReferences } from "./index.js";
 import { readWorkspace } from "./local.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
+import { workspaceSettings } from "./workspace-settings.js";
 
 /**
  * The applied author and critic profile pair of a workspace. New runs that name no profiles use it,
@@ -14,7 +13,6 @@ import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-
  * pair is applied, and a file that cannot be read back strictly stops the caller (fail closed).
  * Exact ids and versions are stored; each run still records its own snapshot of the profiles.
  */
-const selectionDirectory = ".draft-loop";
 export const workspaceModelProfileSelectionFilename = "model-profile-selection.json";
 
 export const workspaceModelProfileSelectionInvalidMessage =
@@ -43,21 +41,20 @@ export interface ConfiguredModelPair {
   readonly critic: { readonly company: string; readonly model: string };
 }
 
-function selectionPath(root: string): string {
-  return join(root, selectionDirectory, workspaceModelProfileSelectionFilename);
-}
-
 /** Missing file: no pair applied. Present but invalid: a CliUserError, never a silent fallback. */
 export async function readWorkspaceModelProfileSelection(
   rootInput: string,
 ): Promise<WorkspaceModelProfileSelection | undefined> {
-  let content: string;
+  let content: string | undefined;
   try {
-    content = await readFile(selectionPath(resolve(rootInput)), "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    content = await workspaceSettings().read(
+      resolve(rootInput),
+      workspaceModelProfileSelectionFilename,
+    );
+  } catch {
     throw new CliUserError(workspaceModelProfileSelectionInvalidMessage);
   }
+  if (content === undefined) return undefined;
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -143,14 +140,9 @@ export async function saveWorkspaceModelProfileSelection(
   if (!selectionFileSchema.safeParse(JSON.parse(text)).success) {
     throw new CliUserError("The model profiles were not applied: the references are invalid.");
   }
-  const target = selectionPath(root);
-  const temporary = `${target}.${randomUUID()}.tmp`;
-  await mkdir(join(root, selectionDirectory), { recursive: true });
   try {
-    await writeFile(temporary, text, "utf8");
-    await rename(temporary, target);
+    await workspaceSettings().write(root, workspaceModelProfileSelectionFilename, text);
   } catch {
-    await rm(temporary, { force: true }).catch(() => undefined);
     throw new CliUserError("The model profile selection could not be saved.");
   }
   return { modelProfiles: exact, appliedAt };
@@ -160,16 +152,9 @@ export async function saveWorkspaceModelProfileSelection(
 export async function clearWorkspaceModelProfileSelection(rootInput: string): Promise<boolean> {
   const root = resolve(rootInput);
   await readWorkspace(root);
-  const path = selectionPath(root);
   try {
-    await readFile(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-  }
-  try {
-    await rm(path, { force: true });
+    return await workspaceSettings().remove(root, workspaceModelProfileSelectionFilename);
   } catch {
     throw new CliUserError("The model profile selection could not be cleared.");
   }
-  return true;
 }

@@ -1,8 +1,7 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 
 import { CliUserError } from "./cli-user-error.js";
+import { workspaceSettings } from "./workspace-settings.js";
 
 /**
  * The workspace evidence mode decides what candidate material a run's author and critic receive.
@@ -14,9 +13,6 @@ export const evidenceModes = ["retrieval", "full-source"] as const;
 export type EvidenceMode = (typeof evidenceModes)[number];
 
 export const defaultEvidenceMode: EvidenceMode = "full-source";
-
-const evidenceModeFilename = "evidence-mode.json";
-const evidenceModeDirectory = ".draft-loop";
 
 export const evidenceModeInvalidMessage =
   "The workspace evidence mode file is invalid. Set it again with `evidence mode <workspace> retrieval` or `full-source`.";
@@ -33,21 +29,17 @@ export interface WorkspaceEvidenceModeRecord {
   readonly updatedAt?: string;
 }
 
-function evidenceModePath(root: string): string {
-  return join(root, evidenceModeDirectory, evidenceModeFilename);
-}
-
 /** A missing file means the default; any unreadable or unrecognized content fails closed. */
 export async function readWorkspaceEvidenceMode(
   root: string,
 ): Promise<WorkspaceEvidenceModeRecord> {
-  let content: string;
+  let content: string | undefined;
   try {
-    content = await readFile(evidenceModePath(root), "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { mode: defaultEvidenceMode };
+    content = await workspaceSettings().read(root, "evidence-mode.json");
+  } catch {
     throw new CliUserError(evidenceModeInvalidMessage);
   }
+  if (content === undefined) return { mode: defaultEvidenceMode };
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -65,15 +57,11 @@ export async function writeWorkspaceEvidenceMode(
   now: () => Date = () => new Date(),
 ): Promise<WorkspaceEvidenceModeRecord> {
   const updatedAt = now().toISOString();
-  const path = evidenceModePath(root);
-  await mkdir(join(root, evidenceModeDirectory), { recursive: true });
-  const temporaryPath = `${path}.tmp`;
-  await writeFile(
-    temporaryPath,
+  await workspaceSettings().write(
+    root,
+    "evidence-mode.json",
     `${JSON.stringify({ schemaVersion: 1, mode, updatedAt }, null, 2)}\n`,
-    "utf8",
   );
-  await rename(temporaryPath, path);
   return { mode, updatedAt };
 }
 
