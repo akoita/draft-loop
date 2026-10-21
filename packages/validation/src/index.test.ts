@@ -438,6 +438,28 @@ describe("deterministic artifact validation", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("warns when a block narrates the candidate in the third person", () => {
+    const text = "Owned the risk engine. He held technical-lead duties without the title.";
+    const result = validateDraftArtifact(
+      artifactWithClaim(text, [evidence(text)]),
+      context({ requirements: [], outputConstraints: { requiredSections: [] } }),
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: "editorial-source-note",
+        category: "quality",
+        severity: "warning",
+        message:
+          'block narrates the candidate like a copied career note instead of CV prose: "He held technical-lead duties without the title."',
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        location: expect.objectContaining({ start: 23, end: 25 }),
+      }),
+    ]);
+  });
+
   it("warns about a phrase repeated back to back inside one block", () => {
     const text = "Owned the API and the Keycloak stack; the API and the Keycloak stack.";
     const result = validateDraftArtifact(
