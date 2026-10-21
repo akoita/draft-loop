@@ -14,6 +14,7 @@ import {
 import { createVectorIndex } from "./vector-index.js";
 import { createVersionedRecords } from "./versioned-records.js";
 import { createWorkspaceRecords } from "./workspace-records.js";
+import { createWorkspaceSettings } from "./workspace-settings.js";
 
 /** Where the storage lives, without a tenant: what migrations and grants act on. */
 export type PostgresSchemaOptions = Omit<SqlClientOptions, "tenantId">;
@@ -99,6 +100,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createLexicalIndex(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
+    workspaceSettings: createWorkspaceSettings(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

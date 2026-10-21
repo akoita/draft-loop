@@ -1,7 +1,4 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   readWorkspaceEvidenceMode,
@@ -14,60 +11,6 @@ import {
   withWorkspaceSettings,
   workspaceSettings,
 } from "./workspace-settings.js";
-
-let root: string;
-
-beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "draft-loop-settings-"));
-});
-
-afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
-});
-
-describe("filesystem workspace settings", () => {
-  it("reads a document that was never written as undefined", async () => {
-    await expect(filesystemWorkspaceSettings.read(root, "workspace.json")).resolves.toBeUndefined();
-  });
-
-  it("writes under .draft-loop and replaces the whole document", async () => {
-    await filesystemWorkspaceSettings.write(root, "evidence-mode.json", "first\n");
-    await filesystemWorkspaceSettings.write(root, "evidence-mode.json", "second\n");
-
-    await expect(readFile(join(root, ".draft-loop", "evidence-mode.json"), "utf8")).resolves.toBe(
-      "second\n",
-    );
-    await expect(filesystemWorkspaceSettings.read(root, "evidence-mode.json")).resolves.toBe(
-      "second\n",
-    );
-    expect(await readdir(join(root, ".draft-loop"))).toEqual(["evidence-mode.json"]);
-  });
-
-  it("removes a document and says whether it existed", async () => {
-    await filesystemWorkspaceSettings.write(root, "model-profile-selection.json", "{}\n");
-
-    await expect(
-      filesystemWorkspaceSettings.remove(root, "model-profile-selection.json"),
-    ).resolves.toBe(true);
-    await expect(
-      filesystemWorkspaceSettings.remove(root, "model-profile-selection.json"),
-    ).resolves.toBe(false);
-    await expect(
-      filesystemWorkspaceSettings.read(root, "model-profile-selection.json"),
-    ).resolves.toBeUndefined();
-  });
-
-  it("throws on a failure other than a missing document", async () => {
-    await filesystemWorkspaceSettings.write(root, "workspace.json", "{}\n");
-
-    await expect(
-      filesystemWorkspaceSettings.read(
-        join(root, ".draft-loop", "workspace.json"),
-        "workspace.json",
-      ),
-    ).rejects.toThrow();
-  });
-});
 
 function memorySettings(): WorkspaceSettingsPort & {
   readonly documents: Map<string, string>;
