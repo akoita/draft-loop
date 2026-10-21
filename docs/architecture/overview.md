@@ -122,7 +122,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `DRAFT_LOOP_TEST_POSTGRES_URL`, and `pnpm test:gcs` runs the Cloud Storage
   suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI
   `Server storage` job runs both, against Postgres 16 with `pgvector` and the
-  `fake-gcs-server` emulator.
+  `fake-gcs-server` emulator. Locally, `pnpm server:up` starts both with
+  Docker Compose and `pnpm server:test` runs both suites against them; see
+  the [local server stack](../operations/local-server-stack.md).
 
 ## Data and quality contracts
 

@@ -10,6 +10,7 @@ const outOfScope = [
   (path) => path.startsWith("docs/"),
   (path) => path.startsWith(".claude/"),
   (path) => !path.includes("/") && path.endsWith(".md"),
+  (path) => path === "compose.yaml",
   (path) => /\.test\.(?:ts|tsx|mjs)$/.test(path),
 ];
 
