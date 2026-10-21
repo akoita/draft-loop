@@ -40,6 +40,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/artifacts` and `packages/rendering`    | Approved structured output and local Markdown/DOCX/PDF rendering                                                                      | Submission or publishing                                                |
 | `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
 | `packages/storage-postgres`                      | The Postgres implementation of the storage ports for the hosted service, its SQL migrations, and its audit-chain writes               | Desktop or CLI wiring, provider calls, or object storage                |
+| `packages/storage-gcs`                           | The Cloud Storage implementation of the blob port for the hosted service: tenant-prefixed keys, checksum metadata and verified deletes | Desktop or CLI wiring, encryption keys, or bucket provisioning          |
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
@@ -68,7 +69,8 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   integrity checks and history compaction.
 - Exported documents go through a blob port, read and checked by content
   checksum. The local filesystem implementation keeps today's export paths;
-  object storage implements the same port on the server.
+  `packages/storage-gcs` implements the same port on Cloud Storage for the
+  server.
 - Managed candidate-knowledge files go through a managed-file port, keyed by
   source and version and checked against the recorded checksum and size.
   Intake stages and verifies the bytes, then publishes them without ever
@@ -111,9 +113,18 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     and the store refuses to open as a superuser or `BYPASSRLS` role;
   - migrations run separately as the schema owner (`migratePostgresStorage`),
     and `grantPostgresStorageAccess` gives the runtime role table access only.
+- `packages/storage-gcs` passes the `blobs` group, which the filesystem
+  implementation also runs (ADR 0011, D3):
+  - a blob's location is its full object key, and every operation refuses a
+    key outside `tenants/<tenantId>/`;
+  - put stores the content's SHA-256 as object metadata; reads use it to skip
+    replaced objects, then download that exact generation and hash it;
+  - delete names the generation it verified, so a concurrent write survives.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, and the CI `Postgres storage` job runs them
-  against Postgres 16 with `pgvector`.
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, and `pnpm test:gcs` runs the Cloud Storage
+  suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI
+  `Server storage` job runs both, against Postgres 16 with `pgvector` and the
+  `fake-gcs-server` emulator.
 
 ## Data and quality contracts
 

@@ -77,6 +77,8 @@ recorded limit in the same change so the reduction cannot regress.
   package. Keep dependencies flowing toward domain contracts.
 - `packages/storage-postgres` implements the storage ports on Postgres for the
   hosted service. The desktop and the CLI never depend on it.
+- `packages/storage-gcs` implements the blob storage port on Cloud Storage for
+  the hosted service. The desktop and the CLI never depend on it.
 - `packages/embeddings` owns local text-embedding runtimes and the pinned model
   manifest behind a provider-independent port. It does not download models or
   persist vectors.

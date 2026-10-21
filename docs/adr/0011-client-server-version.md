@@ -94,7 +94,8 @@ durable queue. A **web client** is the main interface.
 
 ### D2. Repository: same monorepo, new apps
 
-Add `apps/api`, `apps/worker`, `apps/web` and `packages/storage-postgres`.
+Add `apps/api`, `apps/worker`, `apps/web`, `packages/storage-postgres` and
+`packages/storage-gcs`.
 The architecture rules in `AGENTS.md` apply unchanged: domain owns concepts,
 the orchestrator stays SDK-free, and adapters do not hold domain logic.
 
@@ -145,8 +146,14 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
   - **row-level security** enforces isolation as defence in depth;
   - the hash-chained audit events (`verifyAuditChain`) and the slim snapshot
     format (#1293–#1295) carry over as is.
-- **Object storage** (S3-compatible) holds uploaded sources and exports.
-  Objects are encrypted at rest and addressed by content checksum.
+- **Object storage** (Cloud Storage, D14) holds uploaded sources and exports
+  behind the same blob port as the local filesystem:
+  - every object key sits under its tenant's prefix, and a key outside it is
+    refused;
+  - the content's SHA-256 is stored with the object and checked on every
+    read, and a delete removes only the generation it verified;
+  - objects are encrypted at rest with the bucket's default customer-managed
+    key, which infrastructure sets; the adapter never holds keys.
 - **Why:** the 14,500-line storage class is the largest coupling in the
   repo. A port is needed for any server, and it makes the SQLite path
   testable too.
