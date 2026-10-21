@@ -22,6 +22,12 @@ candidate decides what to approve and export.
 > [roadmap and current status](docs/roadmap.md) record the evidence and
 > remaining gaps. This project is not production-ready.
 
+**Where DraftLoop is going:** a hosted, client-server version is being built
+in this repository beside the desktop app, on the same packages
+([ADR 0011](docs/adr/0011-client-server-version.md)). It is not available yet.
+The desktop app keeps evolving and is what the rest of this README describes;
+the [roadmap](docs/roadmap.md) tracks the hosted version's phases.
+
 ## How DraftLoop works
 
 The workflow keeps the job description and career evidence in a local
@@ -154,6 +160,7 @@ see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requi
 | Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports |
 | Providers             | Explicit Anthropic and OpenAI SDK adapters                       |
 | Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
+| Hosted storage        | Postgres with pgvector behind the same storage ports (in development) |
 | Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
 
 [![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/architecture-at-a-glance.svg)
@@ -235,6 +242,7 @@ approving or exporting.
 - [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
 - [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
+- [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
 
 Human approval is mandatory before an artifact is exported. DraftLoop can help
