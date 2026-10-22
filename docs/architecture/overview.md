@@ -286,6 +286,11 @@ The owner sets up a hosted workspace through the API before any run:
   budget above the deployment's ceiling answers 422 before anything is saved.
   The request names no file or folder, and an existing workspace answers 409
   instead of being overwritten.
+- `PATCH /v1/workspaces/:id/opportunities/:briefId` saves an edit of a job
+  brief as a new draft version, from a patch of its editable fields in their
+  brief shape. Its `expectedVersion` must be the latest, or the edit answers
+  409 `brief_version_stale`, as a review of a stale version does.
+  `GET .../versions` lists each version's number, status and dates.
 
 ## Data and quality contracts
 
