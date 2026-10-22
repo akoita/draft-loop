@@ -106,6 +106,13 @@
           },
           "fixtureMode": {
             "type": "boolean"
+          },
+          "knowledgeBaseIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The knowledge bases the workspace's runs use; empty until one is selected."
           }
         },
         "required": [
@@ -115,7 +122,8 @@
           "maxRounds",
           "author",
           "critic",
-          "fixtureMode"
+          "fixtureMode",
+          "knowledgeBaseIds"
         ]
       },
       "OpportunityInput": {
@@ -1441,6 +1449,13 @@
           },
           "fixtureMode": {
             "type": "boolean"
+          },
+          "knowledgeBaseIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The knowledge bases the workspace's runs use; empty until one is selected."
           }
         },
         "required": [
@@ -1450,7 +1465,8 @@
           "maxRounds",
           "author",
           "critic",
-          "fixtureMode"
+          "fixtureMode",
+          "knowledgeBaseIds"
         ],
         "additionalProperties": false
       },
@@ -2873,6 +2889,94 @@
       },
       "get": {
         "summary": "Read a workspace's configuration",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/knowledge-selection": {
+      "put": {
+        "summary": "Select the knowledge bases a workspace's runs use",
+        "description": "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with every source's file held.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "knowledgeBaseIds": {
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                    }
+                  },
+                  "combinationApproved": {
+                    "description": "Required to combine several knowledge bases in one workspace's runs.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "knowledgeBaseIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "schema": {

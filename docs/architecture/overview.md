@@ -317,6 +317,10 @@ storage location:
   Another type answers 415, a file over the limit 413
   (`DRAFT_LOOP_MAX_SOURCE_BYTES`), and the same bytes again 200 with the
   existing source, so a retry is safe. Every other route keeps parsing JSON.
+- `PUT /v1/workspaces/:id/knowledge-selection` selects the knowledge bases a
+  workspace's runs use, by id. The API names the tenant's store itself, an
+  unknown base answers 404, and several bases need `combinationApproved`. The
+  workspace view lists the selected `knowledgeBaseIds`.
 
 ## Data and quality contracts
 

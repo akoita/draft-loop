@@ -9,6 +9,7 @@ import { openRunQueue } from "@draft-loop/run-queue";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedApplicationPorts,
+  hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
@@ -78,6 +79,10 @@ export async function openHostedApplication(
             `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
           ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
         }),
+        knowledgeStore: {
+          id: hostedKnowledgeStoreId,
+          reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),
+        },
       },
       close: async () => {
         await queue.close();

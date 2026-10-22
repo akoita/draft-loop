@@ -1,6 +1,8 @@
 import {
   type ApplicationService,
   CliUserError,
+  type ConfigureKnowledgeSelectionCommand,
+  type HostedKnowledgeIntake,
   type InitializeWorkspaceCommand,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -35,6 +37,10 @@ const missing = async (): Promise<WorkspaceDescriptor> => {
 
 let app: FastifyInstance;
 
+const knowledgeIntake = {
+  listKnowledgeBases: async () => [{ id: "base-1" }, { id: "base-2" }],
+} as unknown as HostedKnowledgeIntake;
+
 async function build(methods: Partial<ApplicationService>): Promise<void> {
   app = await buildApi({
     ownerToken,
@@ -44,6 +50,8 @@ async function build(methods: Partial<ApplicationService>): Promise<void> {
       enqueueRun: async () => undefined,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
+      knowledgeIntake,
+      knowledgeStore: { id: "knowledge", reference: "/tenants/owner/knowledge-stores/knowledge" },
     },
   });
 }
@@ -98,6 +106,7 @@ describe("workspace setup", () => {
       author: { company: "anthropic", model: "claude-sonnet-5-5" },
       critic: { company: "openai", model: "gpt-6-luna" },
       fixtureMode: false,
+      knowledgeBaseIds: [],
     });
     expect(response.body).not.toContain("/tenants/");
   });
@@ -165,5 +174,95 @@ describe("workspace setup", () => {
     const response = await create({}, "..%2Fother");
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe("knowledge selection", () => {
+  const select = (payload: unknown) =>
+    app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/knowledge-selection",
+      headers: { authorization },
+      payload: payload as Record<string, unknown>,
+    });
+
+  it("selects knowledge bases in the tenant's store, which the client never names", async () => {
+    const configureKnowledgeSelection = vi.fn(
+      async (_command: ConfigureKnowledgeSelectionCommand) =>
+        ({
+          ...descriptor,
+          candidateKnowledgeSelection: [
+            { storeId: "knowledge", knowledgeBaseId: "base-1" },
+            { storeId: "knowledge", knowledgeBaseId: "base-2" },
+          ],
+        }) as WorkspaceDescriptor,
+    );
+    await build({ configureKnowledgeSelection });
+
+    const response = await select({
+      knowledgeBaseIds: ["base-1", "base-2"],
+      combinationApproved: true,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(configureKnowledgeSelection.mock.calls[0]?.[0]).toEqual({
+      root,
+      entries: [
+        {
+          storeRoot: "/tenants/owner/knowledge-stores/knowledge",
+          storeId: "knowledge",
+          knowledgeBaseId: "base-1",
+        },
+        {
+          storeRoot: "/tenants/owner/knowledge-stores/knowledge",
+          storeId: "knowledge",
+          knowledgeBaseId: "base-2",
+        },
+      ],
+      combinationApproved: true,
+    });
+    expect(response.json().knowledgeBaseIds).toEqual(["base-1", "base-2"]);
+    expect(response.body).not.toContain("/tenants/");
+  });
+
+  it("answers 404 for a knowledge base the tenant does not have", async () => {
+    const configureKnowledgeSelection = vi.fn();
+    await build({ configureKnowledgeSelection });
+
+    const response = await select({
+      knowledgeBaseIds: ["base-1", "missing"],
+      combinationApproved: true,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("knowledge_base_not_found");
+    expect(configureKnowledgeSelection).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["several bases without approval", { knowledgeBaseIds: ["base-1", "base-2"] }],
+    ["no base", { knowledgeBaseIds: [] }],
+    ["the same base twice", { knowledgeBaseIds: ["base-1", "base-1"], combinationApproved: true }],
+    ["a store of the client's choosing", { knowledgeBaseIds: ["base-1"], storeRoot: "/other" }],
+  ])("refuses %s", async (_name, payload) => {
+    const configureKnowledgeSelection = vi.fn();
+    await build({ configureKnowledgeSelection });
+
+    const response = await select(payload);
+
+    expect(response.statusCode).toBe(400);
+    expect(configureKnowledgeSelection).not.toHaveBeenCalled();
+  });
+
+  it("answers the service's refusal, such as a base that is not ready, as 422", async () => {
+    await build({
+      configureKnowledgeSelection: async () => {
+        throw new CliUserError("The candidate knowledge selection could not be configured.");
+      },
+    });
+
+    const response = await select({ knowledgeBaseIds: ["base-1"] });
+
+    expect(response.statusCode).toBe(422);
   });
 });

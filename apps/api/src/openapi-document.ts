@@ -19,6 +19,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       budgetCeiling: { maxRounds: 1, maxCostUsd: 1, maxDurationMs: 1 },
       monthUsage: async () => [],
       knowledgeIntake: {} as HostedKnowledgeIntake,
+      knowledgeStore: { id: "knowledge", reference: "/knowledge" },
     },
   });
   try {
