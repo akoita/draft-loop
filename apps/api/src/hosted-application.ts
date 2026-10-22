@@ -1,6 +1,7 @@
 import {
   createApplicationService,
   createHostedApplicationDriver,
+  createHostedKnowledgeIntake,
   type RunBudgetCeiling,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
@@ -17,6 +18,9 @@ import type { ApiOptions } from "./app.js";
 import type { HostedStorageConfig } from "./config.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
+
+/** The tenant's one candidate knowledge store: knowledge bases belong to the tenant. */
+export const hostedKnowledgeStoreId = "knowledge";
 
 export interface HostedApplication {
   readonly application: NonNullable<ApiOptions["application"]>;
@@ -66,6 +70,13 @@ export async function openHostedApplication(
         budgetCeiling,
         monthUsage: storage.monthUsage,
         idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
+        knowledgeIntake: createHostedKnowledgeIntake({
+          records: storage,
+          blobs,
+          storeId: hostedKnowledgeStoreId,
+          locate: (versionId) =>
+            `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
+        }),
       },
       close: async () => {
         await queue.close();

@@ -1,4 +1,9 @@
-import type { ApplicationService, RunBudgetCeiling, UsageLine } from "@draft-loop/application";
+import type {
+  ApplicationService,
+  HostedKnowledgeIntake,
+  RunBudgetCeiling,
+  UsageLine,
+} from "@draft-loop/application";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
@@ -15,6 +20,7 @@ import { type ZodType, z } from "zod";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { apiError, sendError, sendNotFound } from "./errors.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { registerWorkspaceRoutes } from "./workspace-routes.js";
@@ -33,6 +39,8 @@ export interface ApiOptions {
     readonly budgetCeiling: RunBudgetCeiling;
     /** The tenant's completed calls in a `YYYY-MM` month, grouped by company, model and route. */
     readonly monthUsage: (month: string) => Promise<readonly UsageLine[]>;
+    /** The tenant's knowledge intake; without it the knowledge routes are not served. */
+    readonly knowledgeIntake?: HostedKnowledgeIntake;
   };
 }
 
@@ -138,6 +146,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: options.application.workspaceRoot,
       monthUsage: options.application.monthUsage,
     });
+    if (options.application.knowledgeIntake !== undefined) {
+      registerKnowledgeRoutes(app, { intake: options.application.knowledgeIntake });
+    }
   }
 
   return app;

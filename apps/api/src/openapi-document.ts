@@ -1,4 +1,4 @@
-import type { ApplicationService } from "@draft-loop/application";
+import type { ApplicationService, HostedKnowledgeIntake } from "@draft-loop/application";
 
 import { buildApi } from "./app.js";
 
@@ -18,6 +18,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       enqueueRun: async () => undefined,
       budgetCeiling: { maxRounds: 1, maxCostUsd: 1, maxDurationMs: 1 },
       monthUsage: async () => [],
+      knowledgeIntake: {} as HostedKnowledgeIntake,
     },
   });
   try {
