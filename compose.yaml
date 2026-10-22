@@ -4,12 +4,16 @@
 # local-only value; a deployment takes its own from its secrets.
 name: draft-loop-server
 
-# What the API and the worker share: the runtime role, the tenant and the emulated bucket.
+# What the API and the worker share: the runtime role, the tenant, the emulated bucket and the
+# limits per run.
 x-hosted-environment: &hosted-environment
   DRAFT_LOOP_DATABASE_URL: postgres://draft_loop_app:draft_loop_app@postgres:5432/postgres
   DRAFT_LOOP_TENANT_ID: local
   DRAFT_LOOP_BLOB_BUCKET: draft-loop-local
   DRAFT_LOOP_GCS_ENDPOINT: http://gcs:4443
+  DRAFT_LOOP_RUN_MAX_ROUNDS: "5"
+  DRAFT_LOOP_RUN_MAX_COST_USD: "3"
+  DRAFT_LOOP_RUN_MAX_DURATION_MS: "1800000"
 
 services:
   postgres:

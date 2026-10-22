@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApplicationService, createHostedApplicationDriver } from "@draft-loop/application";
+import {
+  createApplicationService,
+  createHostedApplicationDriver,
+  withRunBudgetDefaults,
+} from "@draft-loop/application";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   grantPostgresStorageAccess,
@@ -27,6 +31,7 @@ const silent = { write: () => undefined };
 const tenantId = "tenant-a";
 const workspace = hostedWorkspaceReference(tenantId, "workspace-1");
 const storeReference = hostedKnowledgeStoreReference(tenantId, "store-1");
+const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
 const career = new TextEncoder().encode(
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n",
 );
@@ -106,20 +111,23 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
 
   it("begins a fixture run through the hosted driver and the worker drives it to approval", async () => {
     const reads: string[] = [];
+    const ports = hostedApplicationPorts({
+      storage,
+      tenantId,
+      blobs: {
+        ...blobs,
+        get: (reference) => {
+          reads.push(reference.location);
+          return blobs.get(reference);
+        },
+      },
+    });
+    // As the API composes it: the ceiling fills the cost and duration limits the workspace lacks.
     const service = createApplicationService(
-      createHostedApplicationDriver(
-        hostedApplicationPorts({
-          storage,
-          tenantId,
-          blobs: {
-            ...blobs,
-            get: (reference) => {
-              reads.push(reference.location);
-              return blobs.get(reference);
-            },
-          },
-        }),
-      ),
+      createHostedApplicationDriver({
+        ...ports,
+        settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+      }),
     );
     await service.initialize(
       { root: workspace, jobDescription: "job.md", sources: "sources", fixtureMode: true },
@@ -176,6 +184,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       service,
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: false,
+      budgetCeiling,
       onOutcome: (_job, outcome) => outcomes.push(outcome),
     });
 

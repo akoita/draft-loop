@@ -1,11 +1,16 @@
 import process from "node:process";
 
+import { readRunBudgetCeiling } from "@draft-loop/application";
+
 import { buildApi } from "./app.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { openHostedApplication } from "./hosted-application.js";
 
 const config = readApiConfig(process.env);
-const hosted = await openHostedApplication(readHostedStorageConfig(process.env));
+const hosted = await openHostedApplication(
+  readHostedStorageConfig(process.env),
+  readRunBudgetCeiling(process.env),
+);
 const app = await buildApi({
   ownerToken: config.ownerToken,
   logger: true,

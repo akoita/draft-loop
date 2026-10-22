@@ -1,3 +1,5 @@
+import { type RunBudgetCeiling, readRunBudgetCeiling } from "@draft-loop/application";
+
 export class WorkerConfigError extends Error {
   override readonly name = "WorkerConfigError";
 }
@@ -14,6 +16,8 @@ export interface WorkerConfig {
   readonly gcsEndpoint?: string;
   /** Whether runs may send approved material to providers; off unless the deployment says so. */
   readonly allowProviderData: boolean;
+  /** The deployment's limit per run, re-checked before each run executes. */
+  readonly budgetCeiling: RunBudgetCeiling;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
 }
@@ -70,6 +74,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
     ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
     allowProviderData: allow === "true",
+    budgetCeiling: readRunBudgetCeiling(env),
     ...(readyFile === undefined ? {} : { readyFile }),
   };
 }

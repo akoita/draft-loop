@@ -1,4 +1,4 @@
-import type { ApplicationService } from "@draft-loop/application";
+import type { ApplicationService, RunBudgetCeiling } from "@draft-loop/application";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
@@ -27,6 +27,8 @@ export interface ApiOptions {
     readonly idempotency?: IdempotencyStore;
     /** Queues a begun run for the workers, such as the run queue bound to the deployment's tenant. */
     readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
+    /** The most one run may spend; a workspace whose budget is higher cannot begin one. */
+    readonly budgetCeiling: RunBudgetCeiling;
   };
 }
 
@@ -120,6 +122,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: options.application.workspaceRoot,
       idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
       enqueueRun: options.application.enqueueRun,
+      budgetCeiling: options.application.budgetCeiling,
     });
   }
 

@@ -8,9 +8,22 @@ const job = { tenantId: "tenant-a", workspaceId: "workspace-1", runId: "run-1" }
 const now = new Date("2026-10-21T12:00:00.000Z");
 const root = "/tenants/tenant-a/workspaces/workspace-1";
 
+const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
+const withinCeiling = { maxRounds: 3, maxCostUsd: 2, maxDurationMs: 600_000 };
+
 /** Only the fields the handler reads; the rest of a snapshot does not matter here. */
-function snapshot(state: string, lastError: object | null = null): RunSnapshot {
-  return { runId: job.runId, workspaceId: job.workspaceId, state, lastError } as RunSnapshot;
+function snapshot(
+  state: string,
+  lastError: object | null = null,
+  budget: object = withinCeiling,
+): RunSnapshot {
+  return {
+    runId: job.runId,
+    workspaceId: job.workspaceId,
+    state,
+    lastError,
+    budget,
+  } as RunSnapshot;
 }
 
 const usageLimit = (usageLimitResetsAt?: string) => ({
@@ -35,6 +48,7 @@ async function handle(status: RunSnapshot | undefined, resumed?: RunSnapshot) {
     service,
     workspaceRoot: (queued) => `/tenants/${queued.tenantId}/workspaces/${queued.workspaceId}`,
     allowProviderData: true,
+    budgetCeiling,
     now: () => now,
     onOutcome: (_job, outcome) => outcomes.push(outcome),
   });
@@ -57,6 +71,18 @@ describe("run job handler", () => {
       allowProviderData: true,
     });
     expect(requeue).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["more rounds", { ...withinCeiling, maxRounds: 6 }],
+    ["a higher cost limit", { ...withinCeiling, maxCostUsd: 3.5 }],
+    ["no cost limit", { maxRounds: 3, maxDurationMs: 600_000 }],
+    ["no duration limit", { maxRounds: 3, maxCostUsd: 2 }],
+  ])("does not execute a run saved with %s than the ceiling allows", async (_label, budget) => {
+    const { service, outcome } = await handle(snapshot("drafting", null, budget));
+
+    expect(outcome).toBe("over-ceiling");
+    expect(service.resume).not.toHaveBeenCalled();
   });
 
   it("retries a failed step through resume, which applies the step's retry rules", async () => {
@@ -147,6 +173,7 @@ describe("run job handler", () => {
       service,
       workspaceRoot: () => root,
       allowProviderData: true,
+      budgetCeiling,
     });
 
     await expect(handler(job, { requeue: async () => undefined })).rejects.toThrow(

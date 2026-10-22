@@ -28,7 +28,8 @@ function runtimeUrl(url: string): string {
 }
 
 function snapshot(runId: string, state: string, lastError: object | null = null): RunSnapshot {
-  return { runId, workspaceId: "workspace-1", state, lastError } as RunSnapshot;
+  const budget = { maxRounds: 3, maxCostUsd: 2, maxDurationMs: 600_000 };
+  return { runId, workspaceId: "workspace-1", state, lastError, budget } as RunSnapshot;
 }
 
 /** Resolves once `check` passes, polling the way a person would refresh a page. */
@@ -76,6 +77,7 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
         service,
         workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
         allowProviderData: true,
+        budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       },
     });
   };

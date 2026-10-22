@@ -1495,6 +1495,32 @@ describe("durable orchestration", () => {
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("budget.exhausted");
   });
 
+  it("stops a cost-capped run after a metered call whose cost could not be estimated", async () => {
+    const unpriced = async () => ({
+      ...execution(artifact(), "anthropic", "author-test"),
+      route: "vertex-ai",
+      estimatedUsd: null,
+    });
+    const capped = engineFixture({ author: unpriced });
+    const subscription = engineFixture({
+      author: async () => ({ ...(await unpriced()), route: "user-session" }),
+    });
+
+    const stopped = await capped.engine.start(request({ budget: { maxRounds: 3, maxCostUsd: 5 } }));
+    const unmetered = await subscription.engine.start(
+      request({ budget: { maxRounds: 3, maxCostUsd: 5 } }),
+    );
+
+    expect(stopped.state).toBe("awaiting-approval");
+    expect(capped.critic).not.toHaveBeenCalled();
+    expect(
+      (await capped.engine.events("run-1")).find((event) => event.type === "budget.exhausted")
+        ?.details,
+    ).toMatchObject({ reason: expect.stringContaining("could not be estimated") });
+    expect(subscription.critic).toHaveBeenCalled();
+    expect(unmetered.state).toBe("awaiting-approval");
+  });
+
   it("reuses a completed persisted execution instead of calling the provider twice", async () => {
     const store = new InMemoryRunStore();
     const savedArtifact = artifact();

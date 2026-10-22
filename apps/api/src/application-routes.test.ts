@@ -25,6 +25,8 @@ const descriptor = {
   outputFormat: "markdown",
   requiredSections: ["Experience"],
   maxRounds: 3,
+  maxCostUsd: 2,
+  maxDurationMs: 600_000,
   author: { company: "anthropic", model: "claude-haiku-5-5" },
   critic: { company: "openai", model: "gpt-6-luna" },
   fixtureMode: true,
@@ -111,6 +113,7 @@ async function build(
       service: scriptedService(methods),
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
       enqueueRun,
+      budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
     },
   });
 }
@@ -334,7 +337,7 @@ describe("runs", () => {
   it("begins a run once per idempotency key and queues it on every attempt", async () => {
     const begin = vi.fn(async () => snapshot);
     const enqueueRun = vi.fn<EnqueueRun>(async () => undefined);
-    await build({ begin }, enqueueRun);
+    await build({ readWorkspace: async () => descriptor, begin }, enqueueRun);
 
     const first = await app.inject(beginRequest("key-00000001", { applicationId: "default" }));
     const retry = await app.inject(beginRequest("key-00000001", { applicationId: "default" }));
@@ -360,7 +363,7 @@ describe("runs", () => {
       .fn<EnqueueRun>()
       .mockRejectedValueOnce(new Error("connection refused to queue-host"))
       .mockResolvedValue(undefined);
-    await build({ begin }, enqueueRun);
+    await build({ readWorkspace: async () => descriptor, begin }, enqueueRun);
 
     const failed = await app.inject(beginRequest("key-00000003"));
     const retry = await app.inject(beginRequest("key-00000003"));
@@ -373,8 +376,26 @@ describe("runs", () => {
     expect(enqueueRun).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ["more rounds", { maxRounds: 6 }, "maxRounds"],
+    ["a higher cost limit", { maxCostUsd: 3.5 }, "maxCostUsd"],
+    ["a longer duration limit", { maxDurationMs: 3_600_000 }, "maxDurationMs"],
+  ])("refuses to begin a run with %s than the deployment allows", async (_label, budget, limit) => {
+    const begin = vi.fn(async () => snapshot);
+    const enqueueRun = vi.fn<EnqueueRun>(async () => undefined);
+    await build({ readWorkspace: async () => ({ ...descriptor, ...budget }), begin }, enqueueRun);
+
+    const response = await app.inject(beginRequest("key-00000004"));
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.code).toBe("budget_above_ceiling");
+    expect(response.json().error.message).toContain(limit);
+    expect(begin).not.toHaveBeenCalled();
+    expect(enqueueRun).not.toHaveBeenCalled();
+  });
+
   it("refuses a reused key with another request, and a missing key", async () => {
-    await build({ begin: async () => snapshot });
+    await build({ readWorkspace: async () => descriptor, begin: async () => snapshot });
 
     await app.inject(beginRequest("key-00000002"));
     const reused = await app.inject(beginRequest("key-00000002", { applicationId: "other" }));

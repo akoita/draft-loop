@@ -1,4 +1,8 @@
-import type { ApplicationService } from "@draft-loop/application";
+import {
+  type ApplicationService,
+  type RunBudgetCeiling,
+  runBudgetCeilingViolation,
+} from "@draft-loop/application";
 import type { RunSnapshot, RunState } from "@draft-loop/orchestrator";
 import type { RunJob, RunJobHandler } from "@draft-loop/run-queue";
 
@@ -12,6 +16,8 @@ export type RunJobOutcome =
   | "settled"
   /** A usage limit stopped the run; it is queued again for the reset time. */
   | "rescheduled"
+  /** The run's saved budget is above the deployment's ceiling, so it is not executed. */
+  | "over-ceiling"
   /** The run advanced as far as it could without the person. */
   | "advanced";
 
@@ -24,6 +30,11 @@ export interface RunJobHandlerOptions {
    * it from the deployment's consent policy; the worker never assumes it.
    */
   readonly allowProviderData: boolean;
+  /**
+   * The deployment's limit per run. A run saved before the ceiling was lowered keeps its budget,
+   * so the worker checks it again before executing.
+   */
+  readonly budgetCeiling: RunBudgetCeiling;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   readonly now?: () => Date;
@@ -80,6 +91,9 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
       }
     } else if (!executableStates.has(snapshot.state)) {
       return "settled";
+    }
+    if (runBudgetCeilingViolation(snapshot.budget, options.budgetCeiling) !== undefined) {
+      return "over-ceiling";
     }
     const advanced = await options.service.resume({
       root,
