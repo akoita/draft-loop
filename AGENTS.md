@@ -144,6 +144,10 @@ client-server live evaluation (ADR 0011, D16): a manually triggered job in a
 separate cloud evaluation project, on synthetic data only, never in GitHub
 Actions.
 
+A server release (a `server-v*` tag, ADR 0011, D2) is not a desktop release.
+Tag it only on a commit whose CI gate passed; its deploy runs the synthetic
+smoke on staging, and production receives only an image that passed there.
+
 ## Data, privacy, and model rules
 
 - Local-first version: keep candidate material and run history local by

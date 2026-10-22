@@ -131,6 +131,9 @@ the orchestrator stays SDK-free, and adapters do not hold domain logic.
   checks out a `server-v*` tag of this repository, builds the API and worker
   images, and deploys them to Cloud Run through Workload Identity Federation
   (D14). Staging comes first, then production behind a manual approval.
+  - A `server-v*` tag needs the CI gate green on its commit.
+  - The synthetic smoke on staging gates production, as
+    `pnpm release:preflight` gates a desktop release (decided 2026-10-22).
 
 ### D3. Persistence: a storage port, then Postgres and object storage
 
@@ -170,6 +173,11 @@ resumes rather than restarts.
   workflow engine (Temporal) only if runs need cross-service orchestration.
 - **Progress** streams to the client over server-sent events, from the same
   run events the desktop shows today.
+- **On-demand worker (decided 2026-10-22).** On Cloud Run the worker is a job
+  that drains the queue and exits once it stays empty. The API starts it
+  after each enqueue, and a scheduled sweep starts it every few minutes for
+  retries and resumed runs. An always-on worker would be the main fixed cost
+  while one person uses the service.
 
 ### D5. Providers: API routes, a platform-managed default, optional BYOK
 
@@ -450,6 +458,21 @@ services in that region:
   to Assured Workloads controls.
 - **Cost.** Cloud Run scales to zero for the API, and a small Cloud SQL
   instance is the main fixed cost at the start.
+- **Phase 1 deployment (decided 2026-10-22).** Phase 1 serves only the owner,
+  so it deploys a smaller footprint than the table above, for about US$50 a
+  month in fixed cost:
+  - **No load balancer or Cloud Armor yet.** The API serves its Cloud Run
+    address behind the owner token, with a low instance cap. The load
+    balancer and Cloud Armor arrive with sign-in in phase 2.
+  - **The worker is an on-demand job** (D4).
+  - **No database password at runtime.** The API and the worker sign in to
+    Cloud SQL with IAM database authentication through Google's Cloud SQL
+    connector, on its private IP. Only the migration job uses a password,
+    from Secret Manager.
+  - **Staging and production** are separate projects, and production
+    receives the image digest staging tested.
+  - **Egress.** The worker reaches only Google APIs and the OpenAI EU
+    endpoint; the API has no internet egress.
 - **European exit: Scaleway.** Scaleway is the planned move if Google Cloud
   stops fitting. It has serverless containers and jobs, serverless Postgres
   with `pgvector` in Paris, and S3-compatible storage. OVH needs more
@@ -512,11 +535,15 @@ The existing offline fixture mode keeps local runs free of provider calls.
 ### D16. Observability and quality evaluation
 
 - **Observability:** the OpenTelemetry instrumentation feeds Cloud Logging,
-  Monitoring and Trace with content-free attributes only. Dashboards cover
-  run success and duration, cost per run and per tenant, provider errors and
-  limits, and grounding failures. Alerts fire on cost spikes, failed runs
-  and cross-tenant denials. No tracing tool that captures prompts is used
-  unless it is self-hosted in the EU with capture off.
+  Monitoring and Trace with content-free attributes only.
+  - Dashboards cover run success and duration, cost per run and per tenant,
+    provider errors and limits, and grounding failures.
+  - Alerts fire on cost spikes, failed runs and cross-tenant denials.
+  - No tracing tool that captures prompts is used unless it is self-hosted
+    in the EU with capture off.
+  - Phase 1 starts with structured logs, log-based metrics and alerts.
+    Tracing waits for phase 2, when more than one person uses the service
+    (decided 2026-10-22).
 - **Offline evaluation is the change gate.** The `evaluations` package and
   the manual-parity rubric run before any prompt, model or orchestration
   change, against synthetic cases and consented references kept outside the
