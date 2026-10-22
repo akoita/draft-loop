@@ -41,6 +41,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
 | `packages/storage-postgres`                      | The Postgres implementation of the storage ports for the hosted service, its SQL migrations, and its audit-chain writes               | Desktop or CLI wiring, provider calls, or object storage                |
 | `packages/storage-gcs`                           | The Cloud Storage implementation of the blob port for the hosted service: tenant-prefixed keys, checksum metadata and verified deletes | Desktop or CLI wiring, encryption keys, or bucket provisioning          |
+| `packages/model-gateway`                         | The hosted service's model routes: a Claude on Vertex AI client limited to EU locations and listed models, Vertex pricing, and the `vertex-ai` route in run history | Desktop or CLI wiring, prompts, or provider keys in images |
 | `packages/run-queue`                             | The hosted service's durable run queue on Postgres (pg-boss): ids-only job payloads, one waiting job per run, retry and heartbeat settings, queue migrations and runtime grants | Run execution, candidate material in payloads, or desktop and CLI wiring |
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
@@ -204,6 +205,21 @@ The hosted service starts runs through a queue rather than in the request
   still running is failed back to the queue and repeated by the retry.
 - Queue migrations run as the schema owner (`migrateRunQueue`), and
   `grantRunQueueAccess` gives the runtime role table and function access only.
+
+Every provider call records its route beside its company and model, such as
+`anthropic-api`, `vertex-ai` or `openai-api`, so a change of endpoint is never
+silent (ADR 0011, D5). Run status in the CLI and the API lists each step's
+routes. For the hosted author, `packages/model-gateway` reaches Claude on
+Vertex AI:
+
+- Only an EU location is accepted: the `eu` multi-region or a `europe-*`
+  region. The endpoint is set explicitly, never from the environment.
+- Authentication uses the runtime's service identity, so no long-lived key
+  exists.
+- Only listed models are called, under their first-party ids; any other model
+  is refused rather than replaced.
+- Cost estimates apply the location's price factor, which the deployment takes
+  from Google's price list.
 
 ## Data and quality contracts
 

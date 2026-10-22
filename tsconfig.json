@@ -34,6 +34,7 @@
     { "path": "./packages/storage" },
     { "path": "./packages/storage-postgres" },
     { "path": "./packages/storage-gcs" },
+    { "path": "./packages/model-gateway" },
     { "path": "./packages/run-queue" },
     { "path": "./packages/security" },
     { "path": "./packages/embeddings" },
