@@ -37,6 +37,7 @@
     "test:model-suggestions:live": "tsx packages/application/src/model-suggestion-preflight-command.ts",
     "test:profile-windows:live": "tsx packages/application/src/profile-window-live-check-command.ts",
     "test:e2e:live": "node scripts/desktop-live-e2e.mjs",
+    "test:gateway:live": "tsx apps/worker/src/gateway-live-check.ts",
     "security:licenses": "node scripts/licenses.mjs",
     "security:secrets": "node scripts/secrets.mjs",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm security:licenses && pnpm security:secrets && pnpm test",

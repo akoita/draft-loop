@@ -282,3 +282,25 @@ describe("application OpenAI API retry budget", () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+describe("hosted Anthropic route", () => {
+  it("replaces the API-key route and reads no Claude API key", async () => {
+    const execute = vi.fn(async () => ({}) as never);
+    const anthropicRoute = vi.fn<NonNullable<ProviderClientFactories["anthropicRoute"]>>(() => ({
+      execute,
+    }));
+    const resolveCredential = vi.fn<ProviderCredentialResolver>(async () => "unused-key");
+    const author: ModelSelection = { ...model, company: "anthropic", modelId: "claude-sonnet-5-5" };
+
+    const adapter = await createProviderAdapter({}, author, true, resolveCredential, {
+      anthropicRoute,
+    });
+    await adapter.execute(request);
+
+    expect(anthropicRoute).toHaveBeenCalledWith(
+      expect.objectContaining({ configuredModel: author }),
+    );
+    expect(execute).toHaveBeenCalledOnce();
+    expect(resolveCredential).not.toHaveBeenCalled();
+  });
+});

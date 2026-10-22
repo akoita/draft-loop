@@ -838,6 +838,7 @@ export type { KnowledgeStoreOpener } from "./knowledge-store-opener.js";
 export * from "./legacy-evidence-migration.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
+export type { AnthropicRouteFactory } from "./local-provider-adapter.js";
 export { JobRequirementUserError, localJobRequirements } from "./local-requirements.js";
 export type { StorageFactory } from "./local-storage-factory.js";
 export * from "./opportunity-brief.js";

@@ -1,8 +1,9 @@
 import { type RunBudgetCeiling, readRunBudgetCeiling } from "@draft-loop/application";
 
-export class WorkerConfigError extends Error {
-  override readonly name = "WorkerConfigError";
-}
+import { WorkerConfigError } from "./config-error.js";
+import { type ModelGatewayConfig, readModelGatewayConfig } from "./model-routes.js";
+
+export { WorkerConfigError } from "./config-error.js";
 
 export interface WorkerConfig {
   /** The runtime role's connection: no superuser and no `BYPASSRLS`, so row-level security holds. */
@@ -18,6 +19,8 @@ export interface WorkerConfig {
   readonly allowProviderData: boolean;
   /** The deployment's limit per run, re-checked before each run executes. */
   readonly budgetCeiling: RunBudgetCeiling;
+  /** The model routes; absent on the local stack, where runs use fixtures and call no provider. */
+  readonly modelGateway?: ModelGatewayConfig;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
 }
@@ -66,6 +69,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   }
   const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
+  const modelGateway = readModelGatewayConfig(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -75,6 +79,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
     allowProviderData: allow === "true",
     budgetCeiling: readRunBudgetCeiling(env),
+    ...(modelGateway === undefined ? {} : { modelGateway }),
     ...(readyFile === undefined ? {} : { readyFile }),
   };
 }

@@ -41,7 +41,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/storage`                               | Workspace history and portable CKB persistence, including managed bytes, derived lexical and vector projections, and local-only state | CKB selection, retrieval policy, or UI                                  |
 | `packages/storage-postgres`                      | The Postgres implementation of the storage ports for the hosted service, its SQL migrations, and its audit-chain writes               | Desktop or CLI wiring, provider calls, or object storage                |
 | `packages/storage-gcs`                           | The Cloud Storage implementation of the blob port for the hosted service: tenant-prefixed keys, checksum metadata and verified deletes | Desktop or CLI wiring, encryption keys, or bucket provisioning          |
-| `packages/model-gateway`                         | The hosted service's model routes: a Claude on Vertex AI client limited to EU locations and listed models, Vertex pricing, and the `vertex-ai` route in run history | Desktop or CLI wiring, prompts, or provider keys in images |
+| `packages/model-gateway`                         | The hosted service's model routes: a Claude on Vertex AI client limited to EU locations and listed models, Vertex pricing, the `vertex-ai` route in run history, the opt-in Claude API fallback, the OpenAI EU client and Secret Manager keys | Desktop or CLI wiring, prompts, or provider keys in images |
 | `packages/run-queue`                             | The hosted service's durable run queue on Postgres (pg-boss): ids-only job payloads, one waiting job per run, retry and heartbeat settings, queue migrations and runtime grants | Run execution, candidate material in payloads, or desktop and CLI wiring |
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
@@ -243,6 +243,13 @@ Claude API key only when the fallback is on, since Vertex AI needs none. A key
 stays in memory for five minutes, so a rotated key takes effect without a
 restart. A failed read names only the provider, never the value or the
 client's error.
+
+`apps/worker` composes these routes at startup from its settings, listed in
+the [local server stack](../operations/local-server-stack.md#model-routes)
+guide. The author's Anthropic models go through `createHostedAnthropicRoute`,
+which the shared driver takes as `providerClientFactories.anthropicRoute`. The
+critic's OpenAI client targets the EU endpoint. Without these settings, as on
+the local stack, the worker knows no key, so only fixture runs work.
 
 Each hosted deployment sets a ceiling per run: rounds, cost and duration, all
 required. A workspace without a cost or duration limit gets the ceiling's

@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@draft-loop/application": "workspace:*",
+    "@draft-loop/model-gateway": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
+    "@draft-loop/providers": "workspace:*",
     "@draft-loop/run-queue": "workspace:*",
     "@draft-loop/storage": "workspace:*",
     "@draft-loop/storage-gcs": "workspace:*",

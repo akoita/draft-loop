@@ -10,6 +10,7 @@ import {
 import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
+import { workerProviderOptions } from "./model-routes.js";
 import { startWorker, stopOnSignals } from "./worker.js";
 
 // The worker's entry point: one tenant's storage, bucket and queue, composed at startup.
@@ -26,13 +27,15 @@ const bucket = new Storage(
     : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
 ).bucket(config.blobBucket);
 const service = createApplicationService(
-  createHostedApplicationDriver(
-    hostedApplicationPorts({
+  createHostedApplicationDriver({
+    ...hostedApplicationPorts({
       storage,
       tenantId,
       blobs: createGcsBlobStorage({ bucket, tenantId }),
     }),
-  ),
+    // Claude on Vertex AI and OpenAI's EU endpoint, keys from Secret Manager; none on the stack.
+    local: workerProviderOptions(config.modelGateway),
+  }),
 );
 
 const worker = await startWorker({

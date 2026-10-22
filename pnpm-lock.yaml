@@ -185,9 +185,15 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@draft-loop/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@draft-loop/run-queue':
         specifier: workspace:*
         version: link:../../packages/run-queue
@@ -336,6 +342,9 @@ importers:
       '@google-cloud/secret-manager':
         specifier: 7.1.1
         version: 7.1.1
+      openai:
+        specifier: 7.23.0
+        version: 7.23.0(undici@7.30.0)(ws@8.22.0)(zod@4.4.3)
 
   packages/orchestrator:
     dependencies:
