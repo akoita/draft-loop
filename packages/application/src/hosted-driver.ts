@@ -3,7 +3,7 @@ import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
 import { type StorageFactory, withStorageFactory } from "./local-storage-factory.js";
-import { assertReviewDecisionTarget, readRunReview } from "./run-review.js";
+import { assertReviewDecisionTarget, assertRunInWorkspace, readRunReview } from "./run-review.js";
 import { noWorkspaceFiles, withWorkspaceFiles } from "./workspace-files.js";
 import { type WorkspaceSettingsPort, withWorkspaceSettings } from "./workspace-settings.js";
 
@@ -40,6 +40,7 @@ export const hostedDriverMethods = [
   "status",
   "readIndependentReview",
   "recordReviewDecision",
+  "lifecycle",
 ] as const satisfies readonly (keyof ApplicationDriver)[];
 
 const offered: ReadonlySet<string> = new Set(hostedDriverMethods);
@@ -83,6 +84,13 @@ export function createHostedApplicationDriver(
   const driver = Object.fromEntries(methods) as ApplicationDriver;
   return Object.freeze({
     ...driver,
+    // Lifecycle actions change a run's state only: their engine has no agents, so none reaches a
+    // provider, and the run's next step, if any, is the worker's.
+    lifecycle: (command, io) =>
+      inHostedContext(async () => {
+        if (command.runId !== undefined) await assertRunInWorkspace(command.root, command.runId);
+        return local.lifecycle(command, io);
+      }),
     recordReviewDecision: (command) =>
       inHostedContext(async () => {
         await assertReviewDecisionTarget(command);

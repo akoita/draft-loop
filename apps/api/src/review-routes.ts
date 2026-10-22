@@ -33,6 +33,19 @@ const findingDecisionBody = z.strictObject({
   rationale: z.string().trim().min(1).max(maximumRationaleCharacters).optional(),
 });
 
+/** The orchestrator's limit for a reason to approve past failing final CV checks. */
+const maximumReadinessOverrideCharacters = 500;
+
+const approveBody = z.strictObject({
+  readinessOverrideRationale: z
+    .string()
+    .trim()
+    .min(1)
+    .max(maximumReadinessOverrideCharacters)
+    .optional()
+    .describe("Required only when the final CV checks fail; recorded with the approval."),
+});
+
 const blockEditBody = z.strictObject({
   text: z.string().trim().min(1).max(maximumBlockCharacters),
 });
@@ -132,6 +145,7 @@ export function runReviewView(review: RunReview): z.infer<typeof runReviewSchema
 
 const notFound = (what: string) => apiError("not_found", `No such ${what}.`);
 const errorResponses = { 400: apiErrorSchema, 404: apiErrorSchema, 422: apiErrorSchema };
+const actionResponses = { 200: runViewSchema, 409: apiErrorSchema, ...errorResponses };
 const decisionResponses = { 200: runReviewSchema, 409: apiErrorSchema, ...errorResponses };
 
 /**
@@ -216,6 +230,51 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
         replacementText: request.body.text,
       });
       return reviewAfter(workspaceId, runId);
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/runs/:runId/approve",
+    {
+      schema: {
+        summary: "Approve the run's current draft",
+        description:
+          "Approves a run awaiting approval after its independent critic review. When the final CV checks fail, it answers 409 readiness_blocked and the review's approvalCheck lists the blockers; approving past them needs readinessOverrideRationale.",
+        params: runParams,
+        body: approveBody,
+        response: actionResponses,
+      },
+    },
+    async (request) => {
+      const rationale = request.body.readinessOverrideRationale;
+      const snapshot = await service.lifecycle({
+        root: workspaceRoot(request.params.workspaceId),
+        runId: request.params.runId,
+        action: "approve",
+        ...(rationale === undefined ? {} : { readinessOverrideRationale: rationale }),
+      });
+      return runView(snapshot);
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/runs/:runId/stop",
+    {
+      schema: {
+        summary: "Stop the run for good",
+        description:
+          "Stops a run that is not finished; a stopped run is never resumed. Stopping it again answers the stopped run.",
+        params: runParams,
+        response: actionResponses,
+      },
+    },
+    async (request) => {
+      const snapshot = await service.lifecycle({
+        root: workspaceRoot(request.params.workspaceId),
+        runId: request.params.runId,
+        action: "stop",
+      });
+      return runView(snapshot);
     },
   );
 }

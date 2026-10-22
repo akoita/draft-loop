@@ -111,6 +111,7 @@ import {
   slimSnapshotPayload,
   slimSnapshotWritesDefault,
 } from "./run-snapshot-slim.js";
+import { RunTransitionError } from "./run-transition-error.js";
 import { hasUnpricedMeteredCall, meteredCalls } from "./unpriced-cost.js";
 
 export type RunState = WorkflowState | "provider-error";
@@ -2377,7 +2378,7 @@ export function createOrchestrationEngine(
       snapshot.state === "awaiting-approval" ||
       snapshot.state === "provider-error"
     )
-      throw new Error("Only an active run can be paused.");
+      throw new RunTransitionError("Only an active run can be paused.");
     const now = clock();
     const updated = {
       ...settledForTransition(snapshot, now),
@@ -2392,7 +2393,8 @@ export function createOrchestrationEngine(
   const stop = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state === "stopped") return snapshot;
-    if (terminalStates.has(snapshot.state)) throw new Error("The run is already terminal.");
+    if (terminalStates.has(snapshot.state))
+      throw new RunTransitionError("The run is already terminal.");
     const now = clock();
     const updated = {
       ...settledForTransition(snapshot, now),
@@ -2408,15 +2410,15 @@ export function createOrchestrationEngine(
   const recoverToReview = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "provider-error") {
-      throw new Error("Only a run with a provider error can return to review.");
+      throw new RunTransitionError("Only a run with a provider error can return to review.");
     }
     if (!hasCompletedIndependentCritique(snapshot)) {
-      throw new Error(
+      throw new RunTransitionError(
         "A completed independent critic review is required before returning to review.",
       );
     }
     if (snapshot.artifact === null) {
-      throw new Error("A draft artifact is required to return to review.");
+      throw new RunTransitionError("A draft artifact is required to return to review.");
     }
     const now = clock();
     const updated = {
@@ -2441,16 +2443,18 @@ export function createOrchestrationEngine(
         : readinessOverrideRationale(approveOptions.readinessOverrideRationale);
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
-      throw new Error("Only a run awaiting approval can be approved.");
+      throw new RunTransitionError("Only a run awaiting approval can be approved.");
     if (!hasCompletedIndependentCritique(snapshot))
-      throw new Error("A completed independent critic review is required before approval.");
+      throw new RunTransitionError(
+        "A completed independent critic review is required before approval.",
+      );
     const context =
       contextsByRunId.get(runId) ?? (await options.contextResolver?.(snapshot.contextSnapshotId));
     if (context === undefined)
       throw new Error("A context snapshot is required to approve this run.");
     contextsByRunId.set(runId, context);
     if (snapshot.artifact === null)
-      throw new Error("A draft artifact is required before approval.");
+      throw new RunTransitionError("A draft artifact is required before approval.");
     const currentCritiques = snapshot.executionHistory.filter(
       (execution) =>
         execution.runId === snapshot.runId &&
@@ -2495,10 +2499,11 @@ export function createOrchestrationEngine(
     };
     if (!readinessDecision.applicationReady && overrideRationale === undefined) {
       await save(reviewed);
-      throw new Error(
+      throw new RunTransitionError(
         `The current artifact is not application-ready (${readinessDecision.blockers
           .map((blocker) => blocker.code)
           .join(", ")}).`,
+        "readiness_blocked",
       );
     }
     const updated = {
@@ -2532,9 +2537,11 @@ export function createOrchestrationEngine(
   const markExported = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "approved" && snapshot.state !== "exported")
-      throw new Error("Only an approved run can be marked as exported.");
+      throw new RunTransitionError("Only an approved run can be marked as exported.");
     if (!hasCompletedIndependentCritique(snapshot))
-      throw new Error("A completed independent critic review is required before export.");
+      throw new RunTransitionError(
+        "A completed independent critic review is required before export.",
+      );
     assertExactApprovedArtifact(
       snapshot.artifact,
       snapshot.approvedArtifact,
@@ -2542,7 +2549,7 @@ export function createOrchestrationEngine(
     );
     if (snapshot.state === "exported") return snapshot;
     if (snapshot.approval !== "approved")
-      throw new Error("Only an approved run can be marked as exported.");
+      throw new RunTransitionError("Only an approved run can be marked as exported.");
     const now = clock();
     const updated = {
       ...settledForTransition(snapshot, now),
@@ -2667,21 +2674,21 @@ export function createOrchestrationEngine(
     const directionText = normalizeCandidateDirectionText(revisionOptions.candidateDirection);
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
-      throw new Error("Only a run awaiting approval can request revision.");
+      throw new RunTransitionError("Only a run awaiting approval can request revision.");
     if (!hasCompletedIndependentCritique(snapshot)) {
-      throw new Error(
+      throw new RunTransitionError(
         "A completed independent critic review is required before requesting revision.",
       );
     }
     if (snapshot.round >= snapshot.budget.maxRounds) {
-      throw new Error(
+      throw new RunTransitionError(
         `Maximum round limit reached (${snapshot.budget.maxRounds}). Increase the workspace limit before requesting another revision.`,
       );
     }
     const now = clock();
     const exhaustedReason = budgetReason(snapshot, now);
     if (exhaustedReason !== undefined) {
-      throw new Error(`Cannot request revision: ${exhaustedReason}.`);
+      throw new RunTransitionError(`Cannot request revision: ${exhaustedReason}.`);
     }
     const { candidateDirection: _earlier, ...activated } = activatedForTransition(snapshot, now);
     const updated = {
@@ -2733,7 +2740,7 @@ export function createOrchestrationEngine(
       !previousCritique ||
       snapshot.artifact === null
     ) {
-      throw new Error("This run is not eligible for round-limit recovery.");
+      throw new RunTransitionError("This run is not eligible for round-limit recovery.");
     }
     const now = clock();
     const updated = {
@@ -2812,5 +2819,6 @@ export {
   slimSnapshotWritesDefault,
   snapshotPayloadArtifactId,
 } from "./run-snapshot-slim.js";
+export * from "./run-transition-error.js";
 export { hasUnpricedMeteredCall } from "./unpriced-cost.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

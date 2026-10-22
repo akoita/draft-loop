@@ -1,5 +1,5 @@
 import { type ApplicationService, RunActionError, type RunReview } from "@draft-loop/application";
-import type { RunSnapshot } from "@draft-loop/orchestrator";
+import { type RunSnapshot, RunTransitionError } from "@draft-loop/orchestrator";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -277,5 +277,102 @@ describe("review decisions", () => {
 
     expect(response.statusCode).toBe(status);
     expect(response.json().error.code).toBe(code);
+  });
+});
+
+describe("approve and stop", () => {
+  it("approves a run, passing the owner's reason to approve past failing checks", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "approved", approval: "approved" }));
+    await build({ lifecycle } as unknown as Partial<ApplicationService>);
+
+    const plain = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: {},
+    });
+    const overridden = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: { readinessOverrideRationale: "The page length is what the employer asked for." },
+    });
+
+    expect(plain.statusCode).toBe(200);
+    expect(plain.json()).toMatchObject({ runId: "run-1", state: "approved", approval: "approved" });
+    expect(overridden.statusCode).toBe(200);
+    expect(lifecycle).toHaveBeenNthCalledWith(1, { root, runId: "run-1", action: "approve" });
+    expect(lifecycle).toHaveBeenNthCalledWith(2, {
+      root,
+      runId: "run-1",
+      action: "approve",
+      readinessOverrideRationale: "The page length is what the employer asked for.",
+    });
+  });
+
+  it("answers a blocked approval and a state conflict with 409 and their codes", async () => {
+    const lifecycle = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new RunTransitionError(
+          "The current artifact is not application-ready (deterministic-error).",
+          "readiness_blocked",
+        ),
+      )
+      .mockRejectedValueOnce(
+        new RunTransitionError("Only a run awaiting approval can be approved."),
+      );
+    await build({ lifecycle } as unknown as Partial<ApplicationService>);
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: {},
+    });
+    const conflict = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: {},
+    });
+
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json().error.code).toBe("readiness_blocked");
+    expect(conflict.statusCode).toBe(409);
+    expect(conflict.json().error).toEqual({
+      code: "run_state_conflict",
+      message: "Only a run awaiting approval can be approved.",
+    });
+  });
+
+  it("refuses an overlong reason before calling the service", async () => {
+    const lifecycle = vi.fn();
+    await build({ lifecycle } as unknown as Partial<ApplicationService>);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: { readinessOverrideRationale: "x".repeat(501) },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(lifecycle).not.toHaveBeenCalled();
+  });
+
+  it("stops a run", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "stopped" }));
+    await build({ lifecycle } as unknown as Partial<ApplicationService>);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/stop",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().state).toBe("stopped");
+    expect(lifecycle).toHaveBeenCalledWith({ root, runId: "run-1", action: "stop" });
   });
 });

@@ -7,6 +7,7 @@ import {
   RunActionError,
   type RunActionErrorCode,
 } from "@draft-loop/application";
+import { RunTransitionError } from "@draft-loop/orchestrator";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -112,6 +113,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error instanceof HostedKnowledgeIntakeError) {
     void reply.code(intakeStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  // An action the run's state does not allow, such as approving a run that is still drafting.
+  if (error instanceof RunTransitionError) {
+    void reply.code(409).send(apiError(error.code, error.message));
     return;
   }
   if (error instanceof RunActionError) {

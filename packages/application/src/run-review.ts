@@ -296,3 +296,17 @@ export async function assertReviewDecisionTarget(
     await storage.close();
   }
 }
+
+/** Refuses an action on a run the workspace does not have, before the engine looks it up. */
+export async function assertRunInWorkspace(rootInput: string, runId: string): Promise<void> {
+  const root = resolve(rootInput);
+  const config = await readWorkspace(root);
+  const storage = await storageFactory().open(root);
+  try {
+    const snapshot = await createStorageRunStore(storage).loadRun(runId);
+    if (snapshot === undefined || snapshot.workspaceId !== config.id)
+      throw new RunActionError("run_not_found", "No such run.");
+  } finally {
+    await storage.close();
+  }
+}
