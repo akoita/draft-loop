@@ -16,6 +16,7 @@ import { Storage } from "@google-cloud/storage";
 import type { ApiOptions } from "./app.js";
 import type { HostedStorageConfig } from "./config.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
+import { apiProviderOptions } from "./provider-boundary.js";
 
 export interface HostedApplication {
   readonly application: NonNullable<ApiOptions["application"]>;
@@ -25,7 +26,8 @@ export interface HostedApplication {
 /**
  * Composes the API's application over the tenant's Postgres storage, Cloud Storage bucket and run
  * queue. Credentials come from the runtime: the database URL from a secret and Cloud Storage from
- * the service account, or the emulator on the local stack.
+ * the service account, or the emulator on the local stack. It holds no provider credential: only
+ * the worker calls models.
  */
 export async function openHostedApplication(
   config: HostedStorageConfig,
@@ -53,6 +55,7 @@ export async function openHostedApplication(
       createHostedApplicationDriver({
         ...ports,
         settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+        local: apiProviderOptions(),
       }),
     );
     return {

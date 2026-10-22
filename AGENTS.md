@@ -125,6 +125,12 @@ for the checks that run on it.
 Resolve conflicts on the branch rather than on `main`, and say in the PR body
 which side of any conflict was taken and why.
 
+A milestone's ordered issues ship as one GitHub native stack: one PR per
+issue, each based on the previous issue's branch, with the first PR based on
+`main`. Merging the top PR merges every layer in order, one squash commit each.
+A fix to a lower layer needs the layers above it rebased before the stack can
+merge.
+
 ## Release guardrail
 
 Before initiating any release action locally, including dispatching the
