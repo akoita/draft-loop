@@ -832,6 +832,7 @@ export {
   type HostedApplicationDriverOptions,
   hostedDriverMethods,
 } from "./hosted-driver.js";
+export * from "./hosted-knowledge-intake.js";
 export * from "./knowledge-base.js";
 export * from "./knowledge-source-dedupe.js";
 export type { KnowledgeStoreOpener } from "./knowledge-store-opener.js";
