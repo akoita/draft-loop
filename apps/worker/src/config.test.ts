@@ -21,6 +21,7 @@ describe("readWorkerConfig", () => {
       blobBucket: "draft-loop-local",
       allowProviderData: false,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+      mode: { kind: "serve" },
     });
     expect(
       readWorkerConfig({ ...env, DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true" }).allowProviderData,
@@ -31,6 +32,15 @@ describe("readWorkerConfig", () => {
     ["without a database", { DRAFT_LOOP_DATABASE_URL: "" }],
     ["with an unsafe tenant", { DRAFT_LOOP_TENANT_ID: "a/b" }],
     ["with an unclear provider-data setting", { DRAFT_LOOP_ALLOW_PROVIDER_DATA: "yes" }],
+    ["with an unknown mode", { DRAFT_LOOP_WORKER_MODE: "batch" }],
+    [
+      "with too short an idle time",
+      { DRAFT_LOOP_WORKER_MODE: "drain", DRAFT_LOOP_WORKER_IDLE_MS: "10" },
+    ],
+    [
+      "with a fractional idle time",
+      { DRAFT_LOOP_WORKER_MODE: "drain", DRAFT_LOOP_WORKER_IDLE_MS: "1500.5" },
+    ],
   ])("refuses settings %s", (_label, override) => {
     expect(() => readWorkerConfig({ ...env, ...override })).toThrow(WorkerConfigError);
   });
@@ -45,6 +55,20 @@ describe("readWorkerConfig", () => {
 
     expect(readWorkerConfig(env).modelGateway).toBeUndefined();
     expect(gateway).toMatchObject({ vertexProjectId: "synthetic-project", vertexLocation: "eu" });
+  });
+
+  it("reads drain mode with its idle time, a minute by default", () => {
+    expect(readWorkerConfig({ ...env, DRAFT_LOOP_WORKER_MODE: "drain" }).mode).toEqual({
+      kind: "drain",
+      idleMs: 60_000,
+    });
+    expect(
+      readWorkerConfig({
+        ...env,
+        DRAFT_LOOP_WORKER_MODE: "drain",
+        DRAFT_LOOP_WORKER_IDLE_MS: "5000",
+      }).mode,
+    ).toEqual({ kind: "drain", idleMs: 5_000 });
   });
 
   it("refuses to start without a run ceiling", () => {

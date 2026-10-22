@@ -6,13 +6,12 @@ import {
   migrateRunQueue,
   openRunQueue,
   type RunQueue,
-  type RunWorker,
   runQueueName,
 } from "@draft-loop/run-queue";
 import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { startWorker, stopOnSignals } from "./worker.js";
+import { startWorker, stopOnSignals, stopWhenIdle, type Worker } from "./worker.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -54,7 +53,7 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
   const admin = new pg.Client({ connectionString: url });
   const errors: Error[] = [];
   let queue: RunQueue;
-  let worker: RunWorker | undefined;
+  let worker: Worker | undefined;
 
   const jobsFor = async (runId: string) =>
     (
@@ -192,7 +191,7 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       return snapshot(runId, "awaiting-approval");
     });
     await start({ status: async ({ runId = "" }) => snapshot(runId, "drafting"), resume });
-    const running = worker as RunWorker;
+    const running = worker as Worker;
     const stopped = new Promise<unknown>((resolve) => {
       stopOnSignals(running, { graceMs: 10_000, signals: ["SIGUSR2"], onStopped: resolve });
     });
@@ -208,5 +207,55 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
     expect(await jobsFor("run-4")).toEqual([expect.objectContaining({ state: "completed" })]);
     expect(await jobsFor("run-5")).toEqual([expect.objectContaining({ state: "created" })]);
     expect(resume).toHaveBeenCalledTimes(1);
+  });
+
+  it("in drain mode, finishes the job in flight, stops once idle and leaves later jobs queued", async () => {
+    let release: () => void = () => undefined;
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // Runs left queued by the tests above finish at once; run-6 takes a long step.
+    const resume = vi.fn<Service["resume"]>(async ({ runId = "" }) => {
+      if (runId === "run-6") await inFlight;
+      return snapshot(runId, "awaiting-approval");
+    });
+    await start({ status: async ({ runId = "" }) => snapshot(runId, "drafting"), resume });
+    const running = worker as Worker;
+    let stoppedAt: number | undefined;
+    const stopped = new Promise<unknown>((resolve) => {
+      stopWhenIdle(running, {
+        idleMs: 1_500,
+        checkEveryMs: 100,
+        graceMs: 10_000,
+        onStopped: (error) => {
+          stoppedAt = Date.now();
+          resolve(error);
+        },
+      });
+    });
+
+    await queue.enqueue(
+      { tenantId: "tenant-a", workspaceId: "workspace-1", runId: "run-7" },
+      { startAfter: new Date(Date.now() + 60 * 60 * 1_000) },
+    );
+    await enqueue("run-6");
+    await eventually(() =>
+      expect(resume).toHaveBeenCalledWith(expect.objectContaining({ runId: "run-6" })),
+    );
+    // A long step keeps the worker busy past the idle time.
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    expect(stoppedAt).toBeUndefined();
+    const releasedAt = Date.now();
+    release();
+
+    expect(await stopped).toBeUndefined();
+    worker = undefined;
+    expect((stoppedAt ?? 0) - releasedAt).toBeGreaterThanOrEqual(1_500);
+    expect(await jobsFor("run-6")).toEqual([expect.objectContaining({ state: "completed" })]);
+    expect(await jobsFor("run-7")).toEqual([expect.objectContaining({ state: "created" })]);
+    // The queue is shared with the tests above, so only this test's runs are counted.
+    const resumed = resume.mock.calls.map(([options]) => options.runId);
+    expect(resumed.filter((runId) => runId === "run-6")).toHaveLength(1);
+    expect(resumed).not.toContain("run-7");
   });
 });

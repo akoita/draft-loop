@@ -12,9 +12,60 @@ export interface WorkerOptions {
   readonly runs: RunJobHandlerOptions;
 }
 
+export interface Worker extends RunWorker {
+  /** How long no job has been running, in milliseconds; undefined while one is. */
+  readonly idleMs: () => number | undefined;
+}
+
 /** Starts executing queued runs through the application service the composition root built. */
-export function startWorker(options: WorkerOptions): Promise<RunWorker> {
-  return startRunWorker(options.queue, createRunJobHandler(options.runs));
+export async function startWorker(
+  options: WorkerOptions,
+  now: () => number = Date.now,
+): Promise<Worker> {
+  const handle = createRunJobHandler(options.runs);
+  let running = 0;
+  let lastActiveAt = now();
+  const worker = await startRunWorker(options.queue, async (job, control) => {
+    running += 1;
+    try {
+      await handle(job, control);
+    } finally {
+      running -= 1;
+      lastActiveAt = now();
+    }
+  });
+  return {
+    stop: (stopOptions) => worker.stop(stopOptions),
+    idleMs: () => (running > 0 ? undefined : now() - lastActiveAt),
+  };
+}
+
+export interface DrainOptions extends StopRunWorkerOptions {
+  /** How long the worker may find no job before it stops, in milliseconds. */
+  readonly idleMs: number;
+  /** How often it checks, in milliseconds. Defaults to 1,000. */
+  readonly checkEveryMs?: number;
+  /** Called once the worker has stopped, or failed to; the entry point exits there. */
+  readonly onStopped: (error?: unknown) => void;
+}
+
+/**
+ * Drain mode, for a worker that runs as a Cloud Run job: once no job has run for `idleMs`, the
+ * worker stops and the job execution ends. Jobs queued for later stay queued for the next
+ * execution. A job claimed just as it stops gets the whole grace period, so give it the run's
+ * longest duration: the step is never cut short.
+ */
+export function stopWhenIdle(worker: Worker, options: DrainOptions): () => void {
+  const timer = setInterval(() => {
+    const idle = worker.idleMs();
+    if (idle === undefined || idle < options.idleMs) return;
+    clearInterval(timer);
+    worker.stop(options.graceMs === undefined ? {} : { graceMs: options.graceMs }).then(
+      () => options.onStopped(),
+      (error: unknown) => options.onStopped(error),
+    );
+  }, options.checkEveryMs ?? 1_000);
+  return () => clearInterval(timer);
 }
 
 export interface ShutdownOptions extends StopRunWorkerOptions {
