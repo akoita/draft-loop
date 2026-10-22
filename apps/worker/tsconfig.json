@@ -11,7 +11,13 @@
       "path": "../../packages/application"
     },
     {
+      "path": "../../packages/model-gateway"
+    },
+    {
       "path": "../../packages/orchestrator"
+    },
+    {
+      "path": "../../packages/providers"
     },
     {
       "path": "../../packages/run-queue"

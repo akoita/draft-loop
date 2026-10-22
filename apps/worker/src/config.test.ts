@@ -35,6 +35,18 @@ describe("readWorkerConfig", () => {
     expect(() => readWorkerConfig({ ...env, ...override })).toThrow(WorkerConfigError);
   });
 
+  it("reads the model gateway when a Vertex project is set", () => {
+    const gateway = readWorkerConfig({
+      ...env,
+      DRAFT_LOOP_VERTEX_PROJECT_ID: "synthetic-project",
+      DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
+      DRAFT_LOOP_OPENAI_KEY_SECRET: "projects/synthetic/secrets/openai-key/versions/latest",
+    }).modelGateway;
+
+    expect(readWorkerConfig(env).modelGateway).toBeUndefined();
+    expect(gateway).toMatchObject({ vertexProjectId: "synthetic-project", vertexLocation: "eu" });
+  });
+
   it("refuses to start without a run ceiling", () => {
     expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_RUN_MAX_COST_USD: "" })).toThrow(
       RunBudgetCeilingConfigError,

@@ -72,6 +72,44 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_MIGRATION_DATABASE_URL`     | migration job  | The schema owner's connection                                   |
 | `DRAFT_LOOP_RUNTIME_ROLE`               | migration job  | The role the API and the worker connect as                      |
 
+## Model routes
+
+The stack sets no model routes, so its runs use fixtures and call no provider.
+Without them the worker knows no provider key, so a provider call fails rather
+than reading a key from the environment.
+
+A deployment turns the routes on with the worker settings below. Values come
+from the deployment's configuration, never from this repository.
+
+| Variable                          | Meaning                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_VERTEX_PROJECT_ID`    | The Google Cloud project that serves Claude on Vertex AI; setting it turns the routes on |
+| `DRAFT_LOOP_VERTEX_LOCATION`      | `eu` (the default) or a `europe-*` region; any other location is refused         |
+| `DRAFT_LOOP_VERTEX_PRICE_FACTOR`  | The location's price factor over first-party rates, at least 1                   |
+| `DRAFT_LOOP_OPENAI_KEY_SECRET`    | The Secret Manager version holding the critic's OpenAI EU project key            |
+| `DRAFT_LOOP_ANTHROPIC_FALLBACK`   | `true` allows the direct Claude API as a recorded fallback; default `false`      |
+| `DRAFT_LOOP_ANTHROPIC_KEY_SECRET` | The Secret Manager version holding the Claude API key; only with the fallback on |
+
+- The author calls Claude on Vertex AI with the worker's service identity, so
+  no Claude key exists unless the fallback is on. The direct Claude API
+  processes material outside the EU, which is why the fallback is off by
+  default.
+- The critic calls OpenAI's EU endpoint, `https://eu.api.openai.com/v1`, with
+  a key from a project created with EU data residency.
+- Keys are read from Secret Manager at call time and kept in memory for five
+  minutes.
+
+To check both routes by hand with synthetic data, set the same variables, sign
+in with an identity that may call Vertex AI and read the secrets, and run:
+
+```sh
+DRAFT_LOOP_LIVE_CRITIC_MODEL=<the critic's OpenAI model> pnpm test:gateway:live
+```
+
+It makes one Vertex call and one OpenAI EU call, and prints each route, model,
+token count and cost. It never runs in CI. `DRAFT_LOOP_LIVE_AUTHOR_MODEL`
+picks the Claude model, `claude-haiku-5-5` by default.
+
 ## Tests against the stack
 
 `pnpm server:test` runs `docker compose up --detach --wait --build`, then three

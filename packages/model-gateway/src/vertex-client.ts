@@ -58,10 +58,21 @@ export function createVertexAnthropicClient(
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
 
+  return streamingAnthropicClient(client, refuseUnlistedModel);
+}
+
+/**
+ * Adapts an Anthropic SDK client, direct or on Vertex AI, to the adapter's client shape. Requests
+ * stream and resolve to the final message, so long drafts never hit a request timeout.
+ */
+export function streamingAnthropicClient(
+  client: Pick<AnthropicVertex, "messages">,
+  guard: (model: string) => void = () => undefined,
+): AnthropicClient {
   return {
     messages: {
       create(parameters, requestOptions) {
-        refuseUnlistedModel(parameters.model);
+        guard(parameters.model);
         const stream = client.messages.stream(parameters, requestOptions);
         const finalMessage = stream.finalMessage();
 

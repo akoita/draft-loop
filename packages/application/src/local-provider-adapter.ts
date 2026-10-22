@@ -18,6 +18,9 @@ import {
   type LocalClient,
   LocalModelAdapter,
   type MistralClient,
+  type ModelPricing,
+  type ModelRequest,
+  type ModelResponse,
   mistralCompany,
   mistralLarge4ModelId,
   OpenAIAdapter,
@@ -36,8 +39,22 @@ import { catalogModelPricing } from "./provider-model-pricing.js";
 export type { ProviderCredentialResolver } from "./glm-provider-routing.js";
 
 /** Concrete local driver shared by CLI and the native desktop host. */
+/**
+ * Builds the whole Anthropic route instead of an API-key client, as the hosted model gateway does
+ * with Claude on Vertex AI. No Claude API key is read here; the route resolves what it needs.
+ */
+export type AnthropicRouteFactory = (options: {
+  readonly configuredModel: ModelSelection;
+  readonly pricing?: ModelPricing;
+  readonly retry?: RetryOptions;
+}) => {
+  readonly execute: (request: ModelRequest<JsonObject>) => Promise<ModelResponse<JsonObject>>;
+};
+
 export interface ProviderClientFactories {
   readonly anthropic?: (apiKey: string) => AnthropicClient;
+  /** Replaces the API-key route for Anthropic models; the desktop and the CLI leave it unset. */
+  readonly anthropicRoute?: AnthropicRouteFactory;
   readonly openai?: (apiKey: string) => OpenAIClient;
   readonly deepinfra?: (apiKey: string) => DeepInfraGLMClient;
   readonly google?: (apiKey: string) => GoogleGeminiClient;
@@ -208,6 +225,13 @@ export async function createProviderAdapter(
         ...(localClaudeCategoryCaptureParent === undefined
           ? {}
           : { localClaudeCategoryCaptureParent }),
+      });
+    }
+    if (providerClientFactories?.anthropicRoute !== undefined) {
+      return providerClientFactories.anthropicRoute({
+        configuredModel: model,
+        ...(config.retry === undefined ? {} : { retry: config.retry }),
+        ...pricingOption,
       });
     }
     const apiKey = await resolveCredential("anthropic");
