@@ -51,6 +51,23 @@ Each installs only its app's production dependency graph from the lockfile and
 runs the TypeScript sources with `tsx`, so there is no separate build step. The
 worker image also runs the migration job (`src/migrate.ts`).
 
+The install happens in a separate build stage, so pnpm and its store stay out
+of the images. The embedding runtime (`onnxruntime-node`) ships native binaries
+for every platform:
+
+- The API image leaves it out, because the API never embeds text and the
+  runtime loads only on demand.
+- The worker image keeps only the Linux build for the image's architecture:
+  x64 for Cloud Run, or arm64 on an Apple-silicon machine.
+
+| Image  | Before (2026-10-22) | After   | `node_modules` before → after |
+| ------ | ------------------- | ------- | ----------------------------- |
+| api    | 1.09 GB             | 630 MB  | 515 MB → 228 MB               |
+| worker | 1.09 GB             | 694 MB  | 515 MB → 272 MB               |
+
+Sizes are as `docker images` reports them; about 330 MB of each is the Node
+base image.
+
 They read their settings from the environment, so the same images run in a
 deployment with that deployment's values:
 
