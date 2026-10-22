@@ -1,3 +1,4 @@
+import { RunBudgetCeilingConfigError } from "@draft-loop/application";
 import { describe, expect, it } from "vitest";
 import { readMigrationConfig, readWorkerConfig, WorkerConfigError } from "./config.js";
 
@@ -5,10 +6,13 @@ const env = {
   DRAFT_LOOP_DATABASE_URL: "postgres://runtime@db.example.test/draft_loop",
   DRAFT_LOOP_TENANT_ID: "owner",
   DRAFT_LOOP_BLOB_BUCKET: "draft-loop-local",
+  DRAFT_LOOP_RUN_MAX_ROUNDS: "5",
+  DRAFT_LOOP_RUN_MAX_COST_USD: "3",
+  DRAFT_LOOP_RUN_MAX_DURATION_MS: "1800000",
 };
 
 describe("readWorkerConfig", () => {
-  it("reads the database, tenant and bucket, with provider data off by default", () => {
+  it("reads the database, tenant, bucket and run ceiling, with provider data off by default", () => {
     expect(readWorkerConfig(env)).toEqual({
       databaseUrl: env.DRAFT_LOOP_DATABASE_URL,
       databaseSchema: "draft_loop",
@@ -16,6 +20,7 @@ describe("readWorkerConfig", () => {
       tenantId: "owner",
       blobBucket: "draft-loop-local",
       allowProviderData: false,
+      budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
     });
     expect(
       readWorkerConfig({ ...env, DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true" }).allowProviderData,
@@ -28,6 +33,12 @@ describe("readWorkerConfig", () => {
     ["with an unclear provider-data setting", { DRAFT_LOOP_ALLOW_PROVIDER_DATA: "yes" }],
   ])("refuses settings %s", (_label, override) => {
     expect(() => readWorkerConfig({ ...env, ...override })).toThrow(WorkerConfigError);
+  });
+
+  it("refuses to start without a run ceiling", () => {
+    expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_RUN_MAX_COST_USD: "" })).toThrow(
+      RunBudgetCeilingConfigError,
+    );
   });
 });
 

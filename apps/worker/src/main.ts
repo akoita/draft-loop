@@ -50,6 +50,7 @@ const worker = await startWorker({
       return hostedWorkspaceReference(job.tenantId, job.workspaceId);
     },
     allowProviderData: config.allowProviderData,
+    budgetCeiling: config.budgetCeiling,
     onOutcome: (job, outcome) => console.info(JSON.stringify({ runId: job.runId, outcome })),
   },
 });

@@ -1,4 +1,9 @@
-import { createApplicationService, createHostedApplicationDriver } from "@draft-loop/application";
+import {
+  createApplicationService,
+  createHostedApplicationDriver,
+  type RunBudgetCeiling,
+  withRunBudgetDefaults,
+} from "@draft-loop/application";
 import { openRunQueue } from "@draft-loop/run-queue";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
@@ -23,6 +28,7 @@ export interface HostedApplication {
  */
 export async function openHostedApplication(
   config: HostedStorageConfig,
+  budgetCeiling: RunBudgetCeiling,
 ): Promise<HostedApplication> {
   const { tenantId } = config;
   const storage = await openPostgresStorage({
@@ -41,14 +47,19 @@ export async function openHostedApplication(
         : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
     ).bucket(config.blobBucket);
     const blobs = createGcsBlobStorage({ bucket, tenantId });
+    const ports = hostedApplicationPorts({ storage, tenantId, blobs });
     const service = createApplicationService(
-      createHostedApplicationDriver(hostedApplicationPorts({ storage, tenantId, blobs })),
+      createHostedApplicationDriver({
+        ...ports,
+        settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+      }),
     );
     return {
       application: {
         service,
         workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
         enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+        budgetCeiling,
       },
       close: async () => {
         await queue.close();

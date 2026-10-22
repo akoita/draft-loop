@@ -16,6 +16,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       service: {} as ApplicationService,
       workspaceRoot: (workspaceId) => workspaceId,
       enqueueRun: async () => undefined,
+      budgetCeiling: { maxRounds: 1, maxCostUsd: 1, maxDurationMs: 1 },
     },
   });
   try {

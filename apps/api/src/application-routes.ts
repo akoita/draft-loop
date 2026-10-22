@@ -1,4 +1,10 @@
-import type { ApplicationService, OpportunitySourceInput } from "@draft-loop/application";
+import {
+  type ApplicationService,
+  type OpportunitySourceInput,
+  type RunBudgetCeiling,
+  runBudgetCeilingMessage,
+  runBudgetCeilingViolation,
+} from "@draft-loop/application";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -27,6 +33,8 @@ export interface ApplicationRoutesOptions {
    * again, and the queue keeps at most one waiting job per run.
    */
   readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
+  /** The deployment's limit per run; the workspace's budget is checked against it before a run. */
+  readonly budgetCeiling: RunBudgetCeiling;
 }
 
 const identifierSchema = z
@@ -128,7 +136,7 @@ export function registerApplicationRoutes(
   options: ApplicationRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, idempotency, enqueueRun } = options;
+  const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -264,6 +272,15 @@ export function registerApplicationRoutes(
     },
     async (request, reply) => {
       const { workspaceId } = request.params;
+      // The budget comes from the workspace's settings; one above the ceiling is refused, never
+      // silently lowered, so the owner sees which limit to change.
+      const workspace = await service.readWorkspace(workspaceRoot(workspaceId));
+      const violation = runBudgetCeilingViolation(workspace, budgetCeiling);
+      if (violation !== undefined) {
+        return reply
+          .code(422)
+          .send(apiError("budget_above_ceiling", runBudgetCeilingMessage(violation)));
+      }
       const command = {
         root: workspaceRoot(workspaceId),
         ...(request.body.applicationId === undefined

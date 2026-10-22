@@ -237,6 +237,18 @@ stays in memory for five minutes, so a rotated key takes effect without a
 restart. A failed read names only the provider, never the value or the
 client's error.
 
+Each hosted deployment sets a ceiling per run: rounds, cost and duration, all
+required. A workspace without a cost or duration limit gets the ceiling's
+(`withRunBudgetDefaults`). Beginning a run whose workspace asks for more than
+the ceiling answers 422 `budget_above_ceiling` and names the limit to change,
+and the worker re-checks each run's saved budget before it executes, so a
+lowered ceiling also holds for runs already queued.
+
+A cost limit holds only while every call is priced. When a call on a metered
+route returns no cost estimate, a run with a cost limit stops as
+budget-exhausted. Subscription sessions, local models and fixtures are
+unmetered and exempt.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge

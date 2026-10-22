@@ -111,6 +111,7 @@ import {
   slimSnapshotPayload,
   slimSnapshotWritesDefault,
 } from "./run-snapshot-slim.js";
+import { hasUnpricedMeteredCall } from "./unpriced-cost.js";
 
 export type RunState = WorkflowState | "provider-error";
 export {
@@ -1533,6 +1534,11 @@ export function createOrchestrationEngine(
     )
       return "maximum cost budget exhausted";
     if (
+      snapshot.budget.maxCostUsd !== undefined &&
+      hasUnpricedMeteredCall(snapshot.executionHistory)
+    )
+      return "cost budget cannot be enforced: a call's cost could not be estimated";
+    if (
       snapshot.budget.maxDurationMs !== undefined &&
       (() => {
         const accounting = inspectDurationAccounting(
@@ -2809,4 +2815,5 @@ export {
   slimSnapshotWritesDefault,
   snapshotPayloadArtifactId,
 } from "./run-snapshot-slim.js";
+export { hasUnpricedMeteredCall } from "./unpriced-cost.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

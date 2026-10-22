@@ -66,6 +66,9 @@ deployment with that deployment's values:
 | `PORT`                                  | API            | Listening port, default 8080                                    |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
+| `DRAFT_LOOP_RUN_MAX_ROUNDS`             | API, worker    | Required ceiling on a run's rounds                              |
+| `DRAFT_LOOP_RUN_MAX_COST_USD`           | API, worker    | Required ceiling on a run's estimated cost, in US dollars       |
+| `DRAFT_LOOP_RUN_MAX_DURATION_MS`        | API, worker    | Required ceiling on a run's duration, in milliseconds           |
 | `DRAFT_LOOP_MIGRATION_DATABASE_URL`     | migration job  | The schema owner's connection                                   |
 | `DRAFT_LOOP_RUNTIME_ROLE`               | migration job  | The role the API and the worker connect as                      |
 
