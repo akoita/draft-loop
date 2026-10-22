@@ -123,6 +123,8 @@ export const applicationPlanStepRecordSchema = z.strictObject({
   step: z.enum(applicationPlanStepNames),
   provider: nonEmptyString,
   modelId: nonEmptyString,
+  /** The endpoint that served the call; absent on runs that predate route identity. */
+  route: nonEmptyString.optional(),
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   estimatedUsd: z.number().nonnegative().nullable(),

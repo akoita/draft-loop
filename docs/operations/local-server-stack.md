@@ -112,9 +112,8 @@ picks the Claude model, `claude-haiku-5-5` by default.
 
 In CI, `pnpm test:postgres` drives one run through the same routes with
 scripted Vertex AI, OpenAI and Secret Manager endpoints. It checks each call's
-recorded route and cost against the usage routes. The application plan's calls
-are not metered yet (#1475), so those totals cover the draft and critique
-calls only.
+recorded route and cost, including the application plan's calls, and that
+the usage routes report the run's whole cost.
 
 ## Tests against the stack
 

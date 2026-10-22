@@ -4,9 +4,27 @@
  */
 const unmeteredRoutes: ReadonlySet<string> = new Set(["user-session", "local", "fixture"]);
 
+interface MeteredSnapshot {
+  readonly executionHistory: readonly PricedCall[];
+  readonly applicationPlan?: {
+    readonly steps: readonly {
+      readonly route?: string | undefined;
+      readonly estimatedUsd: number | null;
+    }[];
+  } | null;
+}
+
+/** A run's provider calls: its executions and the plan step's calls, which are completed ones. */
+export function meteredCalls(snapshot: MeteredSnapshot): readonly PricedCall[] {
+  return [
+    ...snapshot.executionHistory,
+    ...(snapshot.applicationPlan?.steps ?? []).map((step) => ({ ...step, status: "completed" })),
+  ];
+}
+
 interface PricedCall {
   readonly status: string;
-  readonly route?: string;
+  readonly route?: string | undefined;
   readonly estimatedUsd: number | null;
 }
 

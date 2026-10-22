@@ -139,6 +139,8 @@ function harness(options: {
   readonly failReviewOnce?: boolean;
   readonly applies?: boolean;
   readonly maxCostUsd?: number;
+  /** The plan call is served by a metered route that could not price it. */
+  readonly unpricedPlan?: boolean;
 }) {
   const calls: string[] = [];
   const authorRequests: AuthorRequest[] = [];
@@ -148,7 +150,10 @@ function harness(options: {
     applies: () => options.applies ?? true,
     plan: async () => {
       calls.push("plan");
-      return execution(plan("Payments first"), "anthropic", "author-test");
+      const planned = execution(plan("Payments first"), "anthropic", "author-test");
+      return options.unpricedPlan === true
+        ? { ...planned, route: "vertex-ai", estimatedUsd: null }
+        : planned;
     },
     review: async () => {
       calls.push("review");
@@ -244,6 +249,16 @@ describe("application plan step", () => {
     expect(snapshot.state).toBe("awaiting-approval");
     expect(snapshot.artifact).toBeNull();
     expect(snapshot.totalCostUsd).toBeCloseTo(0.02);
+  });
+
+  it("records the plan call's route and stops a cost-capped run when it could not be priced", async () => {
+    const { calls, start } = harness({ maxCostUsd: 3, unpricedPlan: true });
+    const snapshot = await start();
+    expect(calls).toEqual(["plan"]);
+    expect(snapshot.applicationPlan?.steps).toMatchObject([
+      { step: "plan", route: "vertex-ai", estimatedUsd: null },
+    ]);
+    expect(snapshot.artifact).toBeNull();
   });
 
   it("resumes mid-plan without repeating the plan call", async () => {
