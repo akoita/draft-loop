@@ -396,6 +396,12 @@ describe("runs", () => {
       state: "provider-error",
       executionHistory: [
         { step: "author", status: "completed", route: "vertex-ai" },
+        {
+          step: "revision",
+          status: "completed",
+          route: "anthropic-api",
+          routeFallback: { from: "vertex-ai", cause: "model-not-offered" },
+        },
         { step: "critic", status: "failed", route: "openai-api" },
       ],
       lastError: {
@@ -429,7 +435,14 @@ describe("runs", () => {
       retryable: true,
       usageLimitResetsAt: "2026-10-21T11:00:00.000Z",
     });
-    expect(response.json().routes).toEqual([{ step: "author", route: "vertex-ai" }]);
+    expect(response.json().routes).toEqual([
+      { step: "author", route: "vertex-ai" },
+      {
+        step: "revision",
+        route: "anthropic-api",
+        fallback: { from: "vertex-ai", cause: "model-not-offered" },
+      },
+    ]);
     expect(response.body).not.toContain("provider text");
   });
 

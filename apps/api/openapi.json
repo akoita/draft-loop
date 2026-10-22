@@ -955,6 +955,22 @@
                 },
                 "route": {
                   "type": "string"
+                },
+                "fallback": {
+                  "description": "Present when these calls fell back from their primary route.",
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "cause": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "cause"
+                  ]
                 }
               },
               "required": [
@@ -1982,6 +1998,23 @@
                 },
                 "route": {
                   "type": "string"
+                },
+                "fallback": {
+                  "description": "Present when these calls fell back from their primary route.",
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "cause": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "cause"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [

@@ -221,6 +221,14 @@ Vertex AI:
 - Cost estimates apply the location's price factor, which the deployment takes
   from Google's price list.
 
+`createRoutedAdapter` applies the deployment's route policy. The direct Claude
+API is an optional fallback, off unless the deployment turns it on, because it
+processes material outside the EU. A call falls back only when its model is
+not offered on the primary route (`model-not-offered`) or the route still
+refuses after the adapter's retries (`route-unavailable`). It never falls back
+on content, policy, authentication or budget errors. A fallback keeps the
+company and the model, and run history records the route it left and why.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge

@@ -176,11 +176,19 @@ export interface RequestAdjudicatedRevisionInput {
   readonly acceptedEffectOverrides?: readonly AdjudicatedRevisionEffectOverride[];
 }
 
+/** A provider call's fallback: the primary route it left and the listed cause (ADR 0011, D5). */
+export interface RouteFallbackRecord {
+  readonly from: string;
+  readonly cause: string;
+}
+
 export interface AgentExecution<T> {
   readonly output: T;
   readonly provider: string;
   /** The endpoint that served the call, such as `vertex-ai`; absent when the agent reports none. */
   readonly route?: string;
+  /** Where the call came from when it fell back from its primary route, and why. */
+  readonly routeFallback?: RouteFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum: string;
@@ -262,6 +270,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly provider: string;
   /** The endpoint that served a completed call; absent on failures and on runs that predate it. */
   readonly route?: string;
+  /** Present when the completed call fell back from its primary route. */
+  readonly routeFallback?: RouteFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum?: string;
@@ -1907,6 +1917,9 @@ export function createOrchestrationEngine(
         output: execution.output,
         provider: execution.provider,
         ...(execution.route === undefined ? {} : { route: execution.route }),
+        ...(execution.routeFallback === undefined
+          ? {}
+          : { routeFallback: execution.routeFallback }),
         modelId: execution.modelId,
         providerRequestId: execution.providerRequestId,
         outputChecksum: execution.outputChecksum,
