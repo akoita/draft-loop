@@ -1,4 +1,4 @@
-import type { ApplicationService, RunBudgetCeiling } from "@draft-loop/application";
+import type { ApplicationService, RunBudgetCeiling, UsageLine } from "@draft-loop/application";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
@@ -16,6 +16,7 @@ import { registerApplicationRoutes } from "./application-routes.js";
 import { apiError, sendError, sendNotFound } from "./errors.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { isOwnerAuthorization } from "./owner-access.js";
+import { registerUsageRoutes } from "./usage-routes.js";
 
 export interface ApiOptions {
   readonly ownerToken: string;
@@ -29,6 +30,8 @@ export interface ApiOptions {
     readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
     /** The most one run may spend; a workspace whose budget is higher cannot begin one. */
     readonly budgetCeiling: RunBudgetCeiling;
+    /** The tenant's completed calls in a `YYYY-MM` month, grouped by company, model and route. */
+    readonly monthUsage: (month: string) => Promise<readonly UsageLine[]>;
   };
 }
 
@@ -123,6 +126,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
       enqueueRun: options.application.enqueueRun,
       budgetCeiling: options.application.budgetCeiling,
+    });
+    registerUsageRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
+      monthUsage: options.application.monthUsage,
     });
   }
 

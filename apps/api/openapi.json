@@ -1045,6 +1045,163 @@
           "lastError"
         ]
       },
+      "UsageLineInput": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for calls recorded before routes were."
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          }
+        },
+        "required": [
+          "company",
+          "model",
+          "route",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls"
+        ]
+      },
+      "RunUsageInput": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageLineInput"
+            }
+          },
+          "runId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls",
+          "lines",
+          "runId",
+          "workspaceId"
+        ]
+      },
+      "MonthUsageInput": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageLineInput"
+            }
+          },
+          "month": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls",
+          "lines",
+          "month"
+        ]
+      },
       "HealthInput": {
         "type": "object",
         "properties": {
@@ -2092,6 +2249,166 @@
         ],
         "additionalProperties": false
       },
+      "UsageLine": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for calls recorded before routes were."
+          },
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          }
+        },
+        "required": [
+          "company",
+          "model",
+          "route",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls"
+        ],
+        "additionalProperties": false
+      },
+      "RunUsage": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageLine"
+            }
+          },
+          "runId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls",
+          "lines",
+          "runId",
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "MonthUsage": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "description": "The priced calls' estimated cost, in US dollars."
+          },
+          "unpricedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Calls whose cost could not be estimated; they add nothing to estimatedUsd."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageLine"
+            }
+          },
+          "month": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd",
+          "unpricedCalls",
+          "lines",
+          "month"
+        ],
+        "additionalProperties": false
+      },
       "Health": {
         "type": "object",
         "properties": {
@@ -2860,6 +3177,102 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/usage": {
+      "get": {
+        "summary": "Read what a run used and cost, by company, model and route",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage": {
+      "get": {
+        "summary": "Read the tenant's usage and estimated cost for a month",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "description": "The UTC month, as YYYY-MM; calls count in the month they completed in."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthUsage"
+                }
+              }
+            }
+          },
+          "400": {
             "description": "Default Response",
             "content": {
               "application/json": {

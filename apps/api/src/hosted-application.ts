@@ -60,6 +60,7 @@ export async function openHostedApplication(
         workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
         enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
         budgetCeiling,
+        monthUsage: storage.monthUsage,
       },
       close: async () => {
         await queue.close();

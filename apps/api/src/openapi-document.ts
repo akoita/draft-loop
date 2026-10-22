@@ -17,6 +17,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       workspaceRoot: (workspaceId) => workspaceId,
       enqueueRun: async () => undefined,
       budgetCeiling: { maxRounds: 1, maxCostUsd: 1, maxDurationMs: 1 },
+      monthUsage: async () => [],
     },
   });
   try {
