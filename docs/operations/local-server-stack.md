@@ -143,13 +143,27 @@ suites with the stack's addresses and local values in the environment:
 3. `pnpm test:server-smoke`, the end-to-end smoke against
    `DRAFT_LOOP_TEST_API_URL`.
 
-The smoke goes through the API only, with synthetic data. It creates a
-fixture-mode workspace and a knowledge base, uploads one Markdown source,
-selects it, then creates, edits and reviews a job brief. It begins a run, waits
-for the worker to draft it, and reads the run back awaiting approval.
+The smoke takes runs from setup to a downloaded CV through the API only, with
+synthetic data and no database seeding:
 
-`pnpm test:postgres` drives the same setup in-process against Postgres, without
-the containers, so the CI `Server storage` job covers it too.
+1. **Setup.** It creates a fixture-mode workspace and a knowledge base, uploads
+   one Markdown source and selects it, then creates, edits and reviews a job
+   brief.
+2. **Draft.** It begins a run and waits for the worker to draft it to the
+   person's review.
+3. **Review and approve.** It reads the review, accepts every finding and
+   approves the run, with an override rationale when the final checks block
+   approval.
+4. **Export.** It exports a DOCX, lists the run's exports, downloads the
+   document and checks its size and SHA-256 against the export's record.
+
+A second run takes one revision round with a candidate direction before the
+same review, approval and export.
+
+`pnpm test:postgres` drives the same flow in-process against Postgres, without
+the containers, so the CI `Server storage` job covers it too. That test runs
+the API's routes and the worker's job handler over one database, with exports
+in a local folder in place of the bucket.
 
 To run one suite, set its variables yourself. CI does not use this file: its
 `Server storage` job starts the Postgres and emulator images as its own

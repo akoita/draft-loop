@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -16,7 +16,16 @@ interface ResponseBody {
   readonly id: string;
   readonly runId: string;
   readonly state: string;
+  readonly round: number;
   readonly brief: { readonly id: string; readonly version: number };
+  readonly run: { readonly state: string; readonly round: number };
+  readonly draft: { readonly sections: readonly unknown[] } | null;
+  readonly findings: readonly { readonly id: string; readonly decision: string }[];
+  readonly candidateDirection: string | null;
+  readonly error: { readonly code: string };
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly exports: readonly { readonly id: string }[];
 }
 
 describe.runIf(apiUrl !== undefined)("local server stack", () => {
@@ -38,6 +47,17 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
   };
   const send = (method: string, path: string, body: object, headers: HeadersInit = {}) =>
     request(path, { method, headers, body: JSON.stringify(body) });
+  /** Waits for the worker to bring a run to the person's review. */
+  const awaitReview = async (runId: string) => {
+    let latest = (await request(`${workspacePath}/runs/${runId}`)).body;
+    for (let attempt = 0; attempt < 60 && latest.state !== "awaiting-approval"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      latest = (await request(`${workspacePath}/runs/${runId}`)).body;
+    }
+    return latest;
+  };
+  let brief: { briefId: string; version: number } | undefined;
+  let firstRunId = "";
 
   it("sets up a workspace through the API and reads its run back once the worker has drafted it", async () => {
     expect(await send("PUT", workspacePath, { fixtureMode: true })).toMatchObject({ status: 201 });
@@ -88,25 +108,101 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     });
     expect(reviewed.status).toBe(200);
 
+    brief = { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version };
     const begun = await send(
       "POST",
       `${workspacePath}/runs`,
-      {
-        opportunityBrief: { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version },
-      },
+      { opportunityBrief: brief },
       { "idempotency-key": `smoke-${suffix}` },
     );
     expect(begun.status).toBe(201);
-    let latest = begun.body;
-    for (let attempt = 0; attempt < 60 && latest.state !== "awaiting-approval"; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-      latest = (await request(`${workspacePath}/runs/${begun.body.runId}`)).body;
-    }
-    expect(latest).toMatchObject({
-      runId: begun.body.runId,
+    firstRunId = begun.body.runId;
+    expect(await awaitReview(firstRunId)).toMatchObject({
+      runId: firstRunId,
       state: "awaiting-approval",
       hasDraft: true,
       approval: "pending",
     });
+  }, 120_000);
+
+  /** Decides every finding, approves, exports a DOCX and downloads it, checking its bytes. */
+  const approveAndDownload = async (runId: string) => {
+    const runPath = `${workspacePath}/runs/${runId}`;
+    const review = await request(`${runPath}/review`);
+    expect(review.status).toBe(200);
+    expect(review.body.draft?.sections.length).toBeGreaterThan(0);
+    for (const finding of review.body.findings) {
+      const decided = await send(
+        "PUT",
+        `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
+        { decision: "accepted", rationale: "Checked against the source." },
+      );
+      expect(decided.status).toBe(200);
+    }
+    const decided = await request(`${runPath}/review`);
+    expect(decided.body.findings.filter(({ decision }) => decision !== "accepted")).toEqual([]);
+
+    let approved = await send("POST", `${runPath}/approve`, {});
+    if (approved.status === 409 && approved.body.error.code === "readiness_blocked") {
+      approved = await send("POST", `${runPath}/approve`, {
+        readinessOverrideRationale: "Synthetic smoke run: the owner accepts the open checks.",
+      });
+    }
+    expect(approved).toMatchObject({ status: 200, body: { state: "approved" } });
+
+    const exported = await send(
+      "POST",
+      `${runPath}/exports`,
+      { format: "docx" },
+      { "idempotency-key": `export-${runId}` },
+    );
+    expect(exported.status).toBe(201);
+    expect((await request(`${runPath}/exports`)).body.exports.map(({ id }) => id)).toEqual([
+      exported.body.id,
+    ]);
+    const download = await fetch(
+      `${apiUrl}${runPath}/exports/${encodeURIComponent(exported.body.id)}/content`,
+      { headers: { authorization: `Bearer ${process.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN ?? ""}` } },
+    );
+    expect(download.status).toBe(200);
+    const bytes = Buffer.from(await download.arrayBuffer());
+    expect(bytes.byteLength).toBe(exported.body.sizeBytes);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(exported.body.checksum);
+    expect(download.headers.get("x-content-sha256")).toBe(exported.body.checksum);
+    // A DOCX is a zip archive.
+    expect(bytes.subarray(0, 2).toString("latin1")).toBe("PK");
+    expect((await request(runPath)).body.state).toBe("exported");
+  };
+
+  it("decides the run's findings, approves it and downloads its DOCX", async () => {
+    await approveAndDownload(firstRunId);
+  }, 60_000);
+
+  it("takes a second run through one revision round before exporting it", async () => {
+    const begun = await send(
+      "POST",
+      `${workspacePath}/runs`,
+      { opportunityBrief: brief },
+      { "idempotency-key": `smoke-revision-${suffix}` },
+    );
+    expect(begun.status).toBe(201);
+    const drafted = await awaitReview(begun.body.runId);
+    expect(drafted.state).toBe("awaiting-approval");
+
+    const revision = await send(
+      "POST",
+      `${workspacePath}/runs/${begun.body.runId}/revision`,
+      { candidateDirection: "Lead with the TypeScript services." },
+      { "idempotency-key": `revision-${suffix}` },
+    );
+    expect(revision).toMatchObject({ status: 200, body: { state: "revising" } });
+    expect(await awaitReview(begun.body.runId)).toMatchObject({
+      state: "awaiting-approval",
+      round: drafted.round + 1,
+    });
+    expect((await request(`${workspacePath}/runs/${begun.body.runId}/review`)).body).toMatchObject({
+      candidateDirection: "Lead with the TypeScript services.",
+    });
+    await approveAndDownload(begun.body.runId);
   }, 120_000);
 });

@@ -369,6 +369,13 @@ The owner exports an approved hosted run through the API:
   that changed answers 409 `export_integrity` and is never served. Downloads go
   through the owner token, with no signed storage URLs.
 
+Together these routes take a hosted run from setup to a downloaded CV through
+the API only: set up the workspace and its knowledge, review a brief, begin a
+run, let the worker draft it, decide the findings, approve, export and
+download. The local server stack's smoke and `pnpm test:postgres` both run
+that flow, one of them through a revision round
+([local server stack](../operations/local-server-stack.md#tests-against-the-stack)).
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge
