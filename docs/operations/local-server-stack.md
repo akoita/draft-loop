@@ -110,6 +110,12 @@ It makes one Vertex call and one OpenAI EU call, and prints each route, model,
 token count and cost. It never runs in CI. `DRAFT_LOOP_LIVE_AUTHOR_MODEL`
 picks the Claude model, `claude-haiku-5-5` by default.
 
+In CI, `pnpm test:postgres` drives one run through the same routes with
+scripted Vertex AI, OpenAI and Secret Manager endpoints. It checks each call's
+recorded route and cost against the usage routes. The application plan's calls
+are not metered yet (#1475), so those totals cover the draft and critique
+calls only.
+
 ## Tests against the stack
 
 `pnpm server:test` runs `docker compose up --detach --wait --build`, then three
