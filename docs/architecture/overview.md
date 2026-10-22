@@ -46,7 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage-limited run for its reset time, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 
 ## Key flow
@@ -322,6 +322,15 @@ storage location:
   workspace's runs use, by id. The API names the tenant's store itself, an
   unknown base answers 404, and several bases need `combinationApproved`. The
   workspace view lists the selected `knowledgeBaseIds`.
+
+The owner reviews a hosted run through the API, with the same rules as the
+desktop review:
+
+- `GET /v1/workspaces/:id/runs/:runId/review` returns the draft with the
+  owner's latest block edits, each claim with its evidence excerpts, the
+  critic's findings with their ids and decisions, the run's recorded review
+  independence, and the latest readiness scores. Before the first draft, the
+  draft is null.
 
 ## Data and quality contracts
 

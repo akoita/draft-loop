@@ -22,6 +22,7 @@ import { apiError, sendError, sendNotFound } from "./errors.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
+import { registerReviewRoutes } from "./review-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 
@@ -146,6 +147,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
       enqueueRun: options.application.enqueueRun,
       budgetCeiling: options.application.budgetCeiling,
+    });
+    registerReviewRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
     });
     registerUsageRoutes(app, {
       service: options.application.service,

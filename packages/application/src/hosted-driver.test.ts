@@ -78,81 +78,86 @@ async function knowledgeStore(directory: string): Promise<string> {
   return storeRoot;
 }
 
-describe("hosted application driver", () => {
-  it("runs a fixture round from a reviewed brief without touching the workspace reference", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "draft-loop-hosted-"));
-    scratch.push(directory);
-    await mkdir(join(directory, "history"));
-    const storeRoot = await knowledgeStore(directory);
-    const opened: string[] = [];
-    const service = createApplicationService(
-      createHostedApplicationDriver({
-        settings: memorySettings(),
-        storage: scratchHistory(join(directory, "history")),
-        openKnowledgeStore: async (reference) => {
-          opened.push(reference);
-          if (reference !== storeReference) throw new Error(`unknown store ${reference}`);
-          return runOnlyCandidateKnowledgeStore(
-            runOperationsOf(await openCandidateKnowledgeStore(storeRoot)),
-          );
-        },
-      }),
-    );
-
-    await service.initialize(
-      { root: workspace, jobDescription: "job.md", sources: "sources", fixtureMode: true },
-      silent,
-    );
-    await service.configureKnowledgeSelection(
-      {
-        root: workspace,
-        entries: [
-          { storeRoot: storeReference, storeId: "hosted-store", knowledgeBaseId: "hosted-ckb" },
-        ],
+/** A hosted service with one fixture run awaiting approval, drafted from a reviewed brief. */
+async function awaitingApprovalRun() {
+  const directory = await mkdtemp(join(tmpdir(), "draft-loop-hosted-"));
+  scratch.push(directory);
+  await mkdir(join(directory, "history"));
+  const storeRoot = await knowledgeStore(directory);
+  const opened: string[] = [];
+  const service = createApplicationService(
+    createHostedApplicationDriver({
+      settings: memorySettings(),
+      storage: scratchHistory(join(directory, "history")),
+      openKnowledgeStore: async (reference) => {
+        opened.push(reference);
+        if (reference !== storeReference) throw new Error(`unknown store ${reference}`);
+        return runOnlyCandidateKnowledgeStore(
+          runOperationsOf(await openCandidateKnowledgeStore(storeRoot)),
+        );
       },
-      silent,
-    );
-    const brief = await service.createOpportunity({
+    }),
+  );
+  await service.initialize(
+    { root: workspace, jobDescription: "job.md", sources: "sources", fixtureMode: true },
+    silent,
+  );
+  await service.configureKnowledgeSelection(
+    {
       root: workspace,
-      sources: [
+      entries: [
+        { storeRoot: storeReference, storeId: "hosted-store", knowledgeBaseId: "hosted-ckb" },
+      ],
+    },
+    silent,
+  );
+  const brief = await service.createOpportunity({
+    root: workspace,
+    sources: [
+      {
+        id: "posting",
+        kind: "pasted-content",
+        classification: "job-posting",
+        content:
+          "Platform Engineer at Example Ledger\n\nRequirements:\n- Build TypeScript services\n- Practise deterministic testing\n",
+      },
+    ],
+  });
+  const edited = await service.editOpportunity({
+    root: workspace,
+    briefId: brief.brief.id,
+    expectedVersion: brief.brief.version,
+    patch: {
+      role: { value: "Platform Engineer", sourceIds: ["posting"] },
+      requirements: [
         {
-          id: "posting",
-          kind: "pasted-content",
-          classification: "job-posting",
-          content:
-            "Platform Engineer at Example Ledger\n\nRequirements:\n- Build TypeScript services\n- Practise deterministic testing\n",
+          id: "typescript-services",
+          text: "Build TypeScript services with deterministic testing",
+          priority: "critical",
+          sourceIds: ["posting"],
         },
       ],
-    });
-    const edited = await service.editOpportunity({
+    },
+  });
+  const reviewed = await service.reviewOpportunity({
+    root: workspace,
+    briefId: brief.brief.id,
+    expectedVersion: edited.brief.version,
+  });
+  const begun = await service.begin(
+    {
       root: workspace,
-      briefId: brief.brief.id,
-      expectedVersion: brief.brief.version,
-      patch: {
-        role: { value: "Platform Engineer", sourceIds: ["posting"] },
-        requirements: [
-          {
-            id: "typescript-services",
-            text: "Build TypeScript services with deterministic testing",
-            priority: "critical",
-            sourceIds: ["posting"],
-          },
-        ],
-      },
-    });
-    const reviewed = await service.reviewOpportunity({
-      root: workspace,
-      briefId: brief.brief.id,
-      expectedVersion: edited.brief.version,
-    });
-    const begun = await service.begin(
-      {
-        root: workspace,
-        opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
-      },
-      silent,
-    );
-    const resumed = await service.resume({ root: workspace, runId: begun.runId }, silent);
+      opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
+    },
+    silent,
+  );
+  const resumed = await service.resume({ root: workspace, runId: begun.runId }, silent);
+  return { service, begun, resumed, opened };
+}
+
+describe("hosted application driver", () => {
+  it("runs a fixture round from a reviewed brief without touching the workspace reference", async () => {
+    const { service, begun, resumed, opened } = await awaitingApprovalRun();
     const status = await service.status({ root: workspace, runId: begun.runId }, silent);
 
     expect(begun.state).toBe("drafting");
@@ -160,6 +165,29 @@ describe("hosted application driver", () => {
     expect(status?.state).toBe("awaiting-approval");
     expect(new Set(opened)).toEqual(new Set([storeReference]));
     await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
+  it("reads a run's review: the draft, its findings and the recorded independence", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+
+    const review = await service.readRunReview?.({ root: workspace, runId: resumed.runId });
+
+    expect(review?.snapshot.state).toBe("awaiting-approval");
+    expect(review?.draft?.version).toBe(resumed.artifact?.version);
+    expect(review?.draft?.sections.length).toBeGreaterThan(0);
+    expect(
+      review?.draft?.sections.flatMap((section) => section.blocks).every((block) => !block.edited),
+    ).toBe(true);
+    expect(review?.findings).toHaveLength(resumed.findings.length);
+    for (const finding of review?.findings ?? []) {
+      expect(finding.id.startsWith(`${resumed.runId}:finding:`)).toBe(true);
+      expect(finding.decision).toBe("pending");
+    }
+    expect(review?.independentReview).not.toBeNull();
+    expect(review?.readiness).not.toBeNull();
+    await expect(
+      service.readRunReview?.({ root: workspace, runId: "missing" }),
+    ).resolves.toBeUndefined();
   }, 120_000);
 
   it("refuses the methods it does not offer yet", async () => {

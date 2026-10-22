@@ -33,6 +33,7 @@ import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
 import type { RunInputs } from "./run-inputs-read.js";
 import type { RunModels } from "./run-models-read.js";
+import type { RunReview, RunReviewCommand } from "./run-review.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
   ApplicationView,
@@ -559,6 +560,12 @@ export interface ApplicationDriver {
    */
   readonly readRunInputs?: (command: StatusCommand) => Promise<RunInputs | undefined>;
   /**
+   * The review of one run: its draft with the candidate's edits, its findings with their
+   * decisions, and its recorded readiness; `undefined` for an unknown run. The hosted driver
+   * offers it; the desktop builds its own review from `status`.
+   */
+  readonly readRunReview?: (command: RunReviewCommand) => Promise<RunReview | undefined>;
+  /**
    * The evidence a run started now would send, decided as the start decides it but without
    * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
    */
@@ -750,6 +757,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunInputs === undefined
         ? undefined
         : driver.readRunInputs({ ...command, root: requireRoot(command.root) }),
+    readRunReview: async (command) =>
+      driver.readRunReview === undefined
+        ? undefined
+        : driver.readRunReview({ ...command, root: requireRoot(command.root) }),
     previewEvidenceMode: async (command) =>
       driver.previewEvidenceMode === undefined
         ? undefined
@@ -873,13 +884,20 @@ export {
 } from "./run-inputs-read.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
-export { type RunStepRoute, runStepRoutes } from "./run-routes.js";
 export {
-  runUsage,
-  summarizeUsage,
-  type UsageLine,
-  type UsageSummary,
-} from "./run-usage.js";
+  type RunReview,
+  type RunReviewApprovalCheck,
+  type RunReviewBlock,
+  type RunReviewClaim,
+  type RunReviewCommand,
+  type RunReviewDraft,
+  type RunReviewFinding,
+  type RunReviewReadiness,
+  type RunReviewSection,
+  readRunReview,
+} from "./run-review.js";
+export { type RunStepRoute, runStepRoutes } from "./run-routes.js";
+export { runUsage, summarizeUsage, type UsageLine, type UsageSummary } from "./run-usage.js";
 export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";
