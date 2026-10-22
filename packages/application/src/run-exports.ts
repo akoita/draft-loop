@@ -116,3 +116,36 @@ export async function assertRunExportable(command: RunExportsCommand): Promise<v
 export function hostedExportPath(runId: string, format: OutputFormat): string {
   return `exports/${runId}/${randomUUID()}${extensionForFormat(format)}`;
 }
+
+export interface RunExportContentCommand extends RunExportsCommand {
+  readonly exportId: string;
+}
+
+/** One export's document, read back and verified against the checksum and size it recorded. */
+export interface RunExportContent {
+  readonly export: RunExport;
+  readonly content: Uint8Array;
+}
+
+/**
+ * Reads one export's document. The blob store returns the bytes only while they match the
+ * recorded checksum and size, so a replaced or damaged document is refused, never served.
+ */
+export async function readRunExportContent(
+  command: RunExportContentCommand,
+): Promise<RunExportContent> {
+  const entry = (await listRunExports(command)).find(({ id }) => id === command.exportId);
+  if (entry === undefined)
+    throw new RunActionError("export_not_found", "No such export of this run.");
+  const content = await storageFactory().exportBlobs.get({
+    location: entry.location,
+    checksum: entry.checksum,
+    sizeBytes: entry.sizeBytes,
+  });
+  if (content === undefined)
+    throw new RunActionError(
+      "export_integrity",
+      "The exported document no longer matches its recorded checksum. Export the run again.",
+    );
+  return { export: entry, content };
+}

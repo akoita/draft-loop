@@ -1,4 +1,4 @@
-import type { ApplicationService, RunExport } from "@draft-loop/application";
+import { type ApplicationService, RunActionError, type RunExport } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -99,5 +99,64 @@ describe("exports", () => {
 
     expect(response.statusCode).toBe(409);
     expect(response.json().error.code).toBe("run_state_conflict");
+  });
+});
+
+describe("export downloads", () => {
+  const content = new TextEncoder().encode("Synthetic exported document.");
+
+  it("lists a run's exports without their storage locations", async () => {
+    const listRunExports = vi.fn(async () => [docxExport]);
+    await build({ listRunExports });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1/exports",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(listRunExports).toHaveBeenCalledWith({ root, runId: "run-1" });
+    expect(response.json().exports).toHaveLength(1);
+    expect(response.body).not.toContain("/tenants/");
+  });
+
+  it("sends the verified bytes as an attachment with their media type and checksum", async () => {
+    const readRunExport = vi.fn(async () => ({ export: docxExport, content }));
+    await build({ readRunExport });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1/exports/export-1/content",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(readRunExport).toHaveBeenCalledWith({ root, runId: "run-1", exportId: "export-1" });
+    expect(response.headers["content-type"]).toBe(docxExport.mimeType);
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="run-1.docx"');
+    expect(response.headers["x-content-sha256"]).toBe(docxExport.checksum);
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(new Uint8Array(response.rawPayload)).toEqual(content);
+  });
+
+  it.each([
+    ["export_integrity", 409],
+    ["export_not_found", 404],
+  ] as const)("never sends a document the service refuses with %s", async (code, status) => {
+    await build({
+      readRunExport: async () => {
+        throw new RunActionError(code, "Refused.");
+      },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1/exports/export-1/content",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json().error.code).toBe(code);
   });
 });

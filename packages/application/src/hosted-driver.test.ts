@@ -398,6 +398,23 @@ describe("hosted application driver", () => {
     }
   }, 120_000);
 
+  it("reads an export's verified bytes, and refuses them once they change", async () => {
+    const { service, resumed } = await approvedRun();
+    await service.export({ root: workspace, runId: resumed.runId, format: "markdown" }, silent);
+    const [entry] =
+      (await service.listRunExports?.({ root: workspace, runId: resumed.runId })) ?? [];
+    const read = (exportId: string) =>
+      service.readRunExport?.({ root: workspace, runId: resumed.runId, exportId });
+
+    const verified = await read(entry?.id ?? "");
+    exportedDocuments.set(entry?.location ?? "", new TextEncoder().encode("Replaced."));
+
+    expect(verified?.content).toBeDefined();
+    expect(sha256(verified?.content ?? new Uint8Array())).toBe(entry?.checksum);
+    await expect(read(entry?.id ?? "")).rejects.toMatchObject({ code: "export_integrity" });
+    await expect(read("missing")).rejects.toMatchObject({ code: "export_not_found" });
+  }, 120_000);
+
   it("refuses to export a run before approval, or at a path the client names", async () => {
     const { service, resumed } = await awaitingApprovalRun();
 

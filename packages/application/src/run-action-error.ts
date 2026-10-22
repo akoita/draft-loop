@@ -6,7 +6,11 @@ export type RunActionErrorCode =
   /** The run is not awaiting review, so its findings and draft can no longer be decided. */
   | "review_closed"
   /** The finding or block is not part of the run's current draft. */
-  | "review_target_not_found";
+  | "review_target_not_found"
+  /** The run has no completed export by that id. */
+  | "export_not_found"
+  /** The stored document is missing or no longer matches the checksum its export recorded. */
+  | "export_integrity";
 
 /**
  * Why the hosted service refused an action on a run. Its message is safe to show, and its code

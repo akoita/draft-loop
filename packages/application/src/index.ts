@@ -32,7 +32,12 @@ import type { RunApplicationPlan } from "./run-application-plan.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
-import type { RunExport, RunExportsCommand } from "./run-exports.js";
+import type {
+  RunExport,
+  RunExportContent,
+  RunExportContentCommand,
+  RunExportsCommand,
+} from "./run-exports.js";
 import type { RunInputs } from "./run-inputs-read.js";
 import type { RunModels } from "./run-models-read.js";
 import type { ReleasePauseCommand } from "./run-pause-release.js";
@@ -575,6 +580,8 @@ export interface ApplicationDriver {
   readonly releasePause?: (command: ReleasePauseCommand) => Promise<RunSnapshot>;
   /** A run's completed, verifiable exports, newest first. The hosted driver offers it. */
   readonly listRunExports?: (command: RunExportsCommand) => Promise<readonly RunExport[]>;
+  /** One export's document, verified against its recorded checksum. The hosted driver offers it. */
+  readonly readRunExport?: (command: RunExportContentCommand) => Promise<RunExportContent>;
   /**
    * The evidence a run started now would send, decided as the start decides it but without
    * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
@@ -776,6 +783,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.listRunExports === undefined
         ? []
         : driver.listRunExports({ ...command, root: requireRoot(command.root) }),
+    readRunExport: async (command) => {
+      if (driver.readRunExport === undefined)
+        throw new CliUserError("This application driver keeps exports as local files.");
+      return driver.readRunExport({ ...command, root: requireRoot(command.root) });
+    },
     readRunReview: async (command) =>
       driver.readRunReview === undefined
         ? undefined
@@ -900,7 +912,10 @@ export {
   hostedExportPath,
   listRunExports,
   type RunExport,
+  type RunExportContent,
+  type RunExportContentCommand,
   type RunExportsCommand,
+  readRunExportContent,
 } from "./run-exports.js";
 export {
   type RunBriefInput,

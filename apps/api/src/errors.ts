@@ -61,6 +61,8 @@ const runActionStatus: Readonly<Record<RunActionErrorCode, number>> = {
   run_not_found: 404,
   review_closed: 409,
   review_target_not_found: 404,
+  export_not_found: 404,
+  export_integrity: 409,
 };
 
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {

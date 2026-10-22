@@ -362,6 +362,12 @@ The owner exports an approved hosted run through the API:
   size. The API never shows where a document is stored.
 - PDFs come from the built-in writer: the server images carry no browser
   engine.
+- `GET .../exports` lists a run's exports, newest first, and
+  `GET .../exports/:exportId/content` downloads one as an attachment with its
+  media type and its SHA-256 in `X-Content-SHA256`. The bytes are checked
+  against the recorded checksum and size before they are sent: a document
+  that changed answers 409 `export_integrity` and is never served. Downloads go
+  through the owner token, with no signed storage URLs.
 
 ## Data and quality contracts
 
