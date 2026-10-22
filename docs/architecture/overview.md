@@ -46,7 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage-limited run for its reset time, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 
 ## Key flow
@@ -305,6 +305,13 @@ and the blob port:
 - The bytes go to the tenant's blob prefix first, then the source and its
   managed version are recorded, so a recorded version always has its bytes.
   The same bytes in the same knowledge base return the existing source.
+
+The owner manages that knowledge through the API, never naming a store or a
+storage location:
+
+- `POST /v1/knowledge-bases` creates a knowledge base, and `GET` lists them.
+- `GET /v1/knowledge-bases/:id/sources` lists a base's sources with their
+  latest file's name, media type, size, checksum and date, never its content.
 
 ## Data and quality contracts
 

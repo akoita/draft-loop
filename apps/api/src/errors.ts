@@ -1,5 +1,7 @@
 import {
   CliUserError,
+  HostedKnowledgeIntakeError,
+  type HostedKnowledgeIntakeErrorCode,
   opportunityBriefNotFoundErrorMessage,
   opportunityBriefVersionStaleErrorMessage,
 } from "@draft-loop/application";
@@ -42,6 +44,14 @@ export class RunQueueUnavailableError extends Error {
     this.name = "RunQueueUnavailableError";
   }
 }
+
+/** Intake's refusals by HTTP status; the codes are the API's error codes too. */
+const intakeStatus: Readonly<Record<HostedKnowledgeIntakeErrorCode, number>> = {
+  knowledge_base_not_found: 404,
+  source_empty: 400,
+  source_too_large: 413,
+  unsupported_media_type: 415,
+};
 
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.code(404).send(apiError("not_found", "No such route."));
@@ -89,6 +99,10 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error.message === opportunityBriefNotFoundErrorMessage) {
     void reply.code(404).send(apiError("not_found", "No such job brief."));
+    return;
+  }
+  if (error instanceof HostedKnowledgeIntakeError) {
+    void reply.code(intakeStatus[error.code]).send(apiError(error.code, error.message));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals.
