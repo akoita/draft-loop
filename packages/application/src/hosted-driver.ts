@@ -3,7 +3,12 @@ import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
 import { type StorageFactory, withStorageFactory } from "./local-storage-factory.js";
-import { assertRunExportable, hostedExportPath, listRunExports } from "./run-exports.js";
+import {
+  assertRunExportable,
+  hostedExportPath,
+  listRunExports,
+  readRunExportContent,
+} from "./run-exports.js";
 import { releaseRunPause } from "./run-pause-release.js";
 import { assertReviewDecisionTarget, assertRunInWorkspace, readRunReview } from "./run-review.js";
 import { noWorkspaceFiles, withWorkspaceFiles } from "./workspace-files.js";
@@ -114,6 +119,7 @@ export function createHostedApplicationDriver(
         );
       }),
     listRunExports: (command) => inHostedContext(() => listRunExports(command)),
+    readRunExport: (command) => inHostedContext(() => readRunExportContent(command)),
     recordReviewDecision: (command) =>
       inHostedContext(async () => {
         await assertReviewDecisionTarget(command);
