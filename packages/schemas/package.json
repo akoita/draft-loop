@@ -26,6 +26,10 @@
     "./application": {
       "types": "./src/application.ts",
       "import": "./src/application.ts"
+    },
+    "./opportunity-draft-patch": {
+      "types": "./src/opportunity-draft-patch.ts",
+      "import": "./src/opportunity-draft-patch.ts"
     }
   },
   "files": [

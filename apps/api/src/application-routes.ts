@@ -6,6 +6,7 @@ import {
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
+import { opportunityDraftPatchSchema } from "@draft-loop/schemas/opportunity-draft-patch";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -108,6 +109,33 @@ const reviewOpportunityBody = z.strictObject({
   expectedVersion: z.number().int().positive(),
 });
 
+const editOpportunityBody = z.strictObject({
+  expectedVersion: z.number().int().positive(),
+  patch: opportunityDraftPatchSchema,
+});
+
+const opportunityVersionsSchema = z
+  .object({
+    versions: z.array(
+      z.object({
+        version: z.number().int(),
+        status: z.string(),
+        createdAt: z.string(),
+        reviewedAt: z.string().nullable(),
+      }),
+    ),
+  })
+  .meta({ id: "OpportunityVersions" });
+
+/** Zod marks absent optional fields `undefined`; the service's patch leaves them out. */
+function definedFields<Value extends object>(
+  value: Value,
+): { [Key in keyof Value]?: Exclude<Value[Key], undefined> } {
+  return Object.fromEntries(Object.entries(value).filter(([, field]) => field !== undefined)) as {
+    [Key in keyof Value]?: Exclude<Value[Key], undefined>;
+  };
+}
+
 const versionQuery = z.strictObject({ version: z.coerce.number().int().positive().optional() });
 
 const beginRunBody = z.strictObject({
@@ -194,6 +222,55 @@ export function registerApplicationRoutes(
     },
   );
 
+  app.patch(
+    "/v1/workspaces/:workspaceId/opportunities/:briefId",
+    {
+      schema: {
+        summary: "Edit a job brief, saving a new draft version",
+        description:
+          "Replaces the patch's fields on the latest version and saves the result as a new draft. A stale expectedVersion answers 409, so an edit never overwrites one the client has not seen.",
+        params: opportunityParams,
+        body: editOpportunityBody,
+        response: { 200: opportunityViewSchema, 409: apiErrorSchema, ...errorResponses },
+      },
+    },
+    async (request) =>
+      opportunityView(
+        await service.editOpportunity({
+          root: workspaceRoot(request.params.workspaceId),
+          briefId: request.params.briefId,
+          expectedVersion: request.body.expectedVersion,
+          patch: definedFields(request.body.patch),
+        }),
+      ),
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/opportunities/:briefId/versions",
+    {
+      schema: {
+        summary: "List a job brief's versions, oldest first",
+        params: opportunityParams,
+        response: { 200: opportunityVersionsSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const records = await service.listOpportunityVersions({
+        root: workspaceRoot(request.params.workspaceId),
+        briefId: request.params.briefId,
+      });
+      if (records.length === 0) return reply.code(404).send(notFound("job brief"));
+      return {
+        versions: records.map(({ brief }) => ({
+          version: brief.version,
+          status: brief.status,
+          createdAt: brief.createdAt,
+          reviewedAt: brief.reviewedAt,
+        })),
+      };
+    },
+  );
+
   app.post(
     "/v1/workspaces/:workspaceId/opportunities/:briefId/review",
     {
@@ -201,7 +278,7 @@ export function registerApplicationRoutes(
         summary: "Mark a job brief version as reviewed",
         params: opportunityParams,
         body: reviewOpportunityBody,
-        response: { 200: opportunityViewSchema, ...errorResponses },
+        response: { 200: opportunityViewSchema, 409: apiErrorSchema, ...errorResponses },
       },
     },
     async (request) =>

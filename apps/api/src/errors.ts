@@ -1,4 +1,8 @@
-import { CliUserError } from "@draft-loop/application";
+import {
+  CliUserError,
+  opportunityBriefNotFoundErrorMessage,
+  opportunityBriefVersionStaleErrorMessage,
+} from "@draft-loop/application";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -74,6 +78,17 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
       "run queue unavailable",
     );
     void reply.code(503).send(apiError("queue_unavailable", error.message));
+    return;
+  }
+  // A brief edited or reviewed since the client read it: reload and retry.
+  if (error.message === opportunityBriefVersionStaleErrorMessage) {
+    void reply
+      .code(409)
+      .send(apiError("brief_version_stale", "The job brief has a newer version; reload it."));
+    return;
+  }
+  if (error.message === opportunityBriefNotFoundErrorMessage) {
+    void reply.code(404).send(apiError("not_found", "No such job brief."));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals.
