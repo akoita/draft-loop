@@ -48,4 +48,8 @@ sets them from its infrastructure. Unlike the local stack, it:
 - sets `DRAFT_LOOP_CLOUD_SQL_INSTANCE`, so the services reach the database
   through the Cloud SQL connector with no runtime password, and lists their IAM
   database users in the migration job's `DRAFT_LOOP_RUNTIME_MEMBERS`;
+- runs the worker in drain mode (`DRAFT_LOOP_WORKER_MODE=drain`) and gives the
+  API `DRAFT_LOOP_WORKER_JOB`, so the API starts the worker job after each
+  queued run; a Cloud Scheduler sweep starts it every 10 minutes for retries
+  and resumed runs, and the API's identity needs permission to run that job;
 - sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker.

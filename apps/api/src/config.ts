@@ -1,9 +1,12 @@
 import { ownerTokenMinimumLength } from "./owner-access.js";
+import { isCloudRunJobName } from "./worker-wake.js";
 
 export interface ApiConfig {
   readonly host: string;
   readonly port: number;
   readonly ownerToken: string;
+  /** The worker's Cloud Run job, started after each queued run; unset on the local stack. */
+  readonly workerJob?: string;
 }
 
 export class ApiConfigError extends Error {
@@ -26,7 +29,18 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
   if (!/^\d+$/u.test(portText) || port < 1 || port > 65_535) {
     throw new ApiConfigError("PORT must be a TCP port number.");
   }
-  return { host: env.DRAFT_LOOP_API_HOST ?? "0.0.0.0", port, ownerToken };
+  const workerJob = env.DRAFT_LOOP_WORKER_JOB ?? "";
+  if (workerJob !== "" && !isCloudRunJobName(workerJob)) {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_WORKER_JOB must be a Cloud Run job name, projects/<project>/locations/<region>/jobs/<job>.",
+    );
+  }
+  return {
+    host: env.DRAFT_LOOP_API_HOST ?? "0.0.0.0",
+    port,
+    ownerToken,
+    ...(workerJob === "" ? {} : { workerJob }),
+  };
 }
 
 export interface HostedStorageConfig {
