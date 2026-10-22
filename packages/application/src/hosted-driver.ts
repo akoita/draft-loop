@@ -3,6 +3,7 @@ import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
 import { type StorageFactory, withStorageFactory } from "./local-storage-factory.js";
+import { assertRunExportable, hostedExportPath, listRunExports } from "./run-exports.js";
 import { releaseRunPause } from "./run-pause-release.js";
 import { assertReviewDecisionTarget, assertRunInWorkspace, readRunReview } from "./run-review.js";
 import { noWorkspaceFiles, withWorkspaceFiles } from "./workspace-files.js";
@@ -42,6 +43,8 @@ export const hostedDriverMethods = [
   "readIndependentReview",
   "recordReviewDecision",
   "lifecycle",
+  "export",
+  "latestExportPath",
 ] as const satisfies readonly (keyof ApplicationDriver)[];
 
 const offered: ReadonlySet<string> = new Set(hostedDriverMethods);
@@ -93,6 +96,24 @@ export function createHostedApplicationDriver(
         return local.lifecycle(command, io);
       }),
     releasePause: (command) => inHostedContext(() => releaseRunPause(command)),
+    // The service picks every export's path: a new one under the workspace, never the client's.
+    // PDFs come from the built-in writer, since a server image carries no browser engine.
+    export: (command, io) =>
+      inHostedContext(async () => {
+        if (command.runId === undefined || command.outputPath !== undefined)
+          throw new CliUserError("A hosted export names its run and never an output path.");
+        if (command.printPdf !== undefined)
+          throw new CliUserError("A hosted export prints PDFs with the built-in writer.");
+        await assertRunExportable({ root: command.root, runId: command.runId });
+        return local.export(
+          {
+            ...command,
+            outputPath: hostedExportPath(command.runId, command.format ?? "markdown"),
+          },
+          io,
+        );
+      }),
+    listRunExports: (command) => inHostedContext(() => listRunExports(command)),
     recordReviewDecision: (command) =>
       inHostedContext(async () => {
         await assertReviewDecisionTarget(command);

@@ -4,6 +4,7 @@ export {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
+  workspaceReferenceBlobs,
 } from "./hosted-application-ports.js";
 export { hostedWorkspaceHistory } from "./hosted-workspace-history.js";
 export type {

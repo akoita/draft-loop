@@ -145,7 +145,7 @@ export async function exportApprovedRun(
       renderOptions,
       options.printPdf,
     );
-    await dependencies.exportBlobs.put(outputPath, rendered.content);
+    const stored = await dependencies.exportBlobs.put(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
       id: exportRecordId(runId, outputChecksum, outputPath, rendered.metadata.generatedAt),
@@ -163,6 +163,8 @@ export async function exportApprovedRun(
         artifactVersion: rendered.metadata.artifactVersion,
         ...exportTemplateRecord(rendered),
         mimeType: rendered.mimeType,
+        // With the checksum, the stored blob's full reference, so a reader can verify the bytes.
+        sizeBytes: stored.sizeBytes,
         renderingQa: qa.report,
       },
     });

@@ -1096,6 +1096,53 @@
           "versions"
         ]
       },
+      "RunExportInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Lowercase hex SHA-256 of the document."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "artifactVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "templateId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "format",
+          "mimeType",
+          "createdAt",
+          "checksum",
+          "sizeBytes"
+        ],
+        "description": "Where the document is stored is never shown."
+      },
       "KnowledgeBaseInput": {
         "type": "object",
         "properties": {
@@ -2781,6 +2828,54 @@
           "versions"
         ],
         "additionalProperties": false
+      },
+      "RunExport": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Lowercase hex SHA-256 of the document."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "artifactVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "templateId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "format",
+          "mimeType",
+          "createdAt",
+          "checksum",
+          "sizeBytes"
+        ],
+        "additionalProperties": false,
+        "description": "Where the document is stored is never shown."
       },
       "KnowledgeBase": {
         "type": "object",
@@ -5742,6 +5837,122 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/exports": {
+      "post": {
+        "summary": "Export the approved draft as Markdown, DOCX or PDF",
+        "description": "Renders the approved draft, checks it, and stores the document with its checksum; the run becomes exported. A run not yet approved answers 409. PDFs come from the built-in writer. A retry with the same Idempotency-Key answers the same export.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "markdown",
+                      "docx",
+                      "pdf"
+                    ]
+                  },
+                  "templateId": {
+                    "description": "A built-in rendering template, such as classic, modern or compact.",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                  }
+                },
+                "required": [
+                  "format"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunExport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -350,6 +350,19 @@ desktop review:
 - These actions change the run's state only. Their engine has no agents, so
   the API still reaches no provider.
 
+The owner exports an approved hosted run through the API:
+
+- `POST /v1/workspaces/:id/runs/:runId/exports` renders the approved draft as
+  Markdown, DOCX or PDF, with an optional built-in template, under an
+  `Idempotency-Key`. It runs the same rendering checks as the desktop and marks
+  the run exported. A run not yet approved answers 409.
+- Each export gets a new path under its workspace, so an earlier document is
+  never replaced. Its bytes go to the tenant's blob prefix
+  (`workspaceReferenceBlobs`), and the export record keeps their checksum and
+  size. The API never shows where a document is stored.
+- PDFs come from the built-in writer: the server images carry no browser
+  engine.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge
