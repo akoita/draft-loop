@@ -3,7 +3,7 @@
 This reference documents the source-only CLI command groups and the equivalent
 desktop operations. Start from the [developer quick start](../../README.md#developer-quick-start)
 for installation and the fixture demo; run any command below from the
-repository root with Node.js 24.5.0 and pnpm 10.18.3.
+repository root with Node.js 24.22.1 and pnpm 10.18.3.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

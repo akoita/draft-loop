@@ -1,7 +1,7 @@
 <h1><img src="docs/assets/draftloop-hero.svg" alt="DraftLoop: job-specific CVs grounded in your own evidence. One AI drafts, another critiques, you decide."></h1>
 
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
-![Node.js](https://img.shields.io/badge/Node.js-24.5.0-339933?logo=node.js&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-24.22.1-339933?logo=node.js&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-10.18.3-F69220?logo=pnpm&logoColor=white)
 ![Anthropic](https://img.shields.io/badge/provider-Anthropic-D97757)
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
@@ -73,7 +73,7 @@ separate, source-only interface and has no standalone installer.
 
 ## Developer quick start
 
-Use Node.js **24.5.0** and pnpm **10.18.3**:
+Use Node.js **24.22.1** and pnpm **10.18.3**:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -160,7 +160,7 @@ see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requi
 
 | Area                  | Technology or boundary                                           |
 | --------------------- | ---------------------------------------------------------------- |
-| Runtime               | TypeScript, Node.js 24.5.0, pnpm 10.18.3                         |
+| Runtime               | TypeScript, Node.js 24.22.1, pnpm 10.18.3                        |
 | User interfaces       | React 19, Vite, Electron 43; source-only Commander CLI           |
 | Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports |
 | Providers             | Explicit Anthropic and OpenAI SDK adapters                       |
