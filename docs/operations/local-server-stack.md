@@ -169,5 +169,6 @@ To run one suite, set its variables yourself. CI does not use this file: its
 `Server storage` job starts the Postgres and emulator images as its own
 containers and runs the first two suites.
 
-Cloud deployment is not part of this repository: it lives in a private
-infrastructure repository (ADR 0011, D2).
+Cloud deployment is described in [Deploying the hosted service](server-deploy.md);
+its Terraform and workflow live in a private infrastructure repository
+(ADR 0011, D2).
