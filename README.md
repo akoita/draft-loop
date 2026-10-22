@@ -161,7 +161,7 @@ see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requi
 | Area                  | Technology or boundary                                           |
 | --------------------- | ---------------------------------------------------------------- |
 | Runtime               | TypeScript, Node.js 24.22.1, pnpm 10.18.3                        |
-| User interfaces       | React 19, Vite, Electron 43; source-only Commander CLI           |
+| User interfaces       | React 19, Vite, Electron 44; source-only Commander CLI           |
 | Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports |
 | Providers             | Explicit Anthropic and OpenAI SDK adapters                       |
 | Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |

@@ -36,7 +36,7 @@
     <rect x="44" y="157" width="624" height="90" rx="16" fill="none" stroke="#2e3742" stroke-width="1.5" stroke-dasharray="4 5"/>
     <rect x="56" y="166" width="290" height="70" rx="12" fill="#1d232c" stroke="#3b4652"/>
     <text x="76" y="196" font-size="17" font-weight="700" fill="#f2fbf8">Desktop app</text>
-    <text x="76" y="220" font-size="14" fill="#9aa7b4">Electron 43 · React 19 · Vite</text>
+    <text x="76" y="220" font-size="14" fill="#9aa7b4">Electron 44 · React 19 · Vite</text>
     <rect x="366" y="166" width="290" height="70" rx="12" fill="#1d232c" stroke="#3b4652"/>
     <text x="386" y="196" font-size="17" font-weight="700" fill="#f2fbf8">CLI</text>
     <text x="386" y="220" font-size="14" fill="#9aa7b4">Commander · source-only</text>
