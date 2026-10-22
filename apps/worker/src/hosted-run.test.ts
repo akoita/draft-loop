@@ -2,7 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildApi } from "@draft-loop/api";
 import {
+  type ApplicationService,
   createApplicationService,
   createHostedApplicationDriver,
   withRunBudgetDefaults,
@@ -20,6 +22,8 @@ import {
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { scriptedGateway, scriptedUsage } from "./gateway-test-support.js";
+import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
 import { createRunJobHandler, type RunJobOutcome } from "./run-job-handler.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -41,6 +45,56 @@ function runtimeUrl(url: string): string {
   parsed.username = runtimeRole;
   parsed.password = runtimeRole;
   return parsed.toString();
+}
+
+/** Selects the synthetic knowledge base, reviews a one-requirement brief and begins its run. */
+async function beginRun(service: ApplicationService, root: string) {
+  await service.configureKnowledgeSelection(
+    {
+      root,
+      entries: [{ storeRoot: storeReference, storeId: "store-1", knowledgeBaseId: "ckb-1" }],
+    },
+    silent,
+  );
+  const created = await service.createOpportunity({
+    root,
+    sources: [
+      {
+        id: "posting",
+        kind: "pasted-content",
+        classification: "job-posting",
+        content: "Platform Engineer at Example Ledger: build TypeScript services.",
+      },
+    ],
+  });
+  const edited = await service.editOpportunity({
+    root,
+    briefId: created.brief.id,
+    expectedVersion: created.brief.version,
+    patch: {
+      role: { value: "Platform Engineer", sourceIds: ["posting"] },
+      requirements: [
+        {
+          id: "typescript-services",
+          text: "Build TypeScript services with deterministic testing",
+          priority: "critical",
+          sourceIds: ["posting"],
+        },
+      ],
+    },
+  });
+  const reviewed = await service.reviewOpportunity({
+    root,
+    briefId: created.brief.id,
+    expectedVersion: edited.brief.version,
+  });
+  return service.begin(
+    {
+      root,
+      opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
+    },
+    silent,
+  );
 }
 
 describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
@@ -133,52 +187,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       { root: workspace, jobDescription: "job.md", sources: "sources", fixtureMode: true },
       silent,
     );
-    await service.configureKnowledgeSelection(
-      {
-        root: workspace,
-        entries: [{ storeRoot: storeReference, storeId: "store-1", knowledgeBaseId: "ckb-1" }],
-      },
-      silent,
-    );
-    const created = await service.createOpportunity({
-      root: workspace,
-      sources: [
-        {
-          id: "posting",
-          kind: "pasted-content",
-          classification: "job-posting",
-          content: "Platform Engineer at Example Ledger: build TypeScript services.",
-        },
-      ],
-    });
-    const edited = await service.editOpportunity({
-      root: workspace,
-      briefId: created.brief.id,
-      expectedVersion: created.brief.version,
-      patch: {
-        role: { value: "Platform Engineer", sourceIds: ["posting"] },
-        requirements: [
-          {
-            id: "typescript-services",
-            text: "Build TypeScript services with deterministic testing",
-            priority: "critical",
-            sourceIds: ["posting"],
-          },
-        ],
-      },
-    });
-    const reviewed = await service.reviewOpportunity({
-      root: workspace,
-      briefId: created.brief.id,
-      expectedVersion: edited.brief.version,
-    });
-    const begun = await service.begin(
-      {
-        root: workspace,
-        opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
-      },
-      silent,
-    );
+    const begun = await beginRun(service, workspace);
     const outcomes: RunJobOutcome[] = [];
     const handle = createRunJobHandler({
       service,
@@ -202,5 +211,142 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     expect(runs.rows).toEqual([{ tenant_id: tenantId }]);
     expect(reads.length).toBeGreaterThan(0);
     expect(new Set(reads)).toEqual(new Set([join(blobRoot, "source-1", "version-1")]));
+  }, 120_000);
+
+  it("drives a provider run through the model gateway and meters each call's route", async () => {
+    const gatewayEnv = {
+      DRAFT_LOOP_VERTEX_PROJECT_ID: "synthetic-project",
+      DRAFT_LOOP_VERTEX_LOCATION: "eu",
+      DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
+      DRAFT_LOOP_OPENAI_KEY_SECRET: "projects/synthetic/secrets/openai-key/versions/1",
+    };
+    const gateway = scriptedGateway(gatewayEnv.DRAFT_LOOP_OPENAI_KEY_SECRET);
+    const ports = hostedApplicationPorts({ storage, tenantId, blobs });
+    // As the worker composes it, with the gateway's endpoints and Secret Manager scripted.
+    const service = createApplicationService(
+      createHostedApplicationDriver({
+        ...ports,
+        settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+        local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
+      }),
+    );
+    const root = hostedWorkspaceReference(tenantId, "workspace-2");
+    await service.initialize(
+      {
+        root,
+        jobDescription: "job.md",
+        sources: "sources",
+        authorCompany: "anthropic",
+        authorModel: "claude-sonnet-5-5",
+        criticCompany: "openai",
+        criticModel: "gpt-6-luna",
+      },
+      silent,
+    );
+    const begun = await beginRun(service, root);
+    const outcomes: RunJobOutcome[] = [];
+    const handle = createRunJobHandler({
+      service,
+      workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
+      allowProviderData: true,
+      budgetCeiling,
+      onOutcome: (_job, outcome) => outcomes.push(outcome),
+    });
+
+    const job = { tenantId, workspaceId: "workspace-2", runId: begun.runId };
+    while (outcomes.at(-1) !== "settled" && outcomes.length < 10) {
+      await handle(job, { requeue: async () => undefined });
+    }
+
+    const snapshot = await service.status({ root, runId: begun.runId });
+    expect(snapshot?.state).toBe("awaiting-approval");
+    // The author reached Claude in the EU multi-region and the critic OpenAI's EU endpoint,
+    // with the key Secret Manager holds; no call left the scripted gateway.
+    expect(gateway.vertexUrls.length).toBeGreaterThan(0);
+    for (const url of gateway.vertexUrls) {
+      expect(url).toMatch(/^https:\/\/aiplatform\.eu\.rep\.googleapis\.com\//u);
+    }
+    expect(gateway.openAiOutputs).toEqual(["application_plan_review", "draft_critique"]);
+    expect(new Set(gateway.openAiKeys)).toEqual(new Set(["synthetic-openai-key"]));
+
+    // Run history records each draft and critique call's route and its Vertex-priced cost. The
+    // plan step's calls are not metered yet (#1475), so they are left out of these totals.
+    const executions = await admin.query<{
+      provider: string;
+      model_id: string;
+      route: string;
+      estimated_usd: number;
+      completed_at: string;
+    }>(
+      `SELECT provider, model_id, (payload_json::jsonb)->>'route' AS route,
+              estimated_usd, completed_at
+         FROM ${schema}.executions WHERE run_id = $1 AND status = 'completed'`,
+      [begun.runId],
+    );
+    const vertexCallUsd =
+      ((scriptedUsage.vertex.inputTokens * 2 + scriptedUsage.vertex.outputTokens * 10) / 1e6) * 1.1;
+    const openAiCallUsd =
+      (scriptedUsage.openai.inputTokens * 0.1 + scriptedUsage.openai.outputTokens * 0.5) / 1e6;
+    const authorCalls = executions.rows.filter((row) => row.provider === "anthropic");
+    const criticCalls = executions.rows.filter((row) => row.provider === "openai");
+    expect(authorCalls.length).toBeGreaterThan(0);
+    expect(criticCalls.length).toBeGreaterThan(0);
+    for (const row of authorCalls) {
+      expect(row).toMatchObject({ model_id: "claude-sonnet-5-5", route: "vertex-ai" });
+      expect(Number(row.estimated_usd)).toBeCloseTo(vertexCallUsd, 10);
+    }
+    for (const row of criticCalls) {
+      expect(row).toMatchObject({ model_id: "gpt-6-luna", route: "openai-api" });
+      expect(Number(row.estimated_usd)).toBeCloseTo(openAiCallUsd, 10);
+    }
+    const expected = {
+      calls: executions.rows.length,
+      inputTokens:
+        authorCalls.length * scriptedUsage.vertex.inputTokens +
+        criticCalls.length * scriptedUsage.openai.inputTokens,
+      outputTokens:
+        authorCalls.length * scriptedUsage.vertex.outputTokens +
+        criticCalls.length * scriptedUsage.openai.outputTokens,
+      unpricedCalls: 0,
+    };
+    const expectedUsd = authorCalls.length * vertexCallUsd + criticCalls.length * openAiCallUsd;
+
+    // The API's usage routes report the same totals, per run and for the tenant's month.
+    const ownerToken = "owner-token-for-tests-0123456789abcdef";
+    const api = await buildApi({
+      ownerToken,
+      application: {
+        service,
+        workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
+        enqueueRun: async () => undefined,
+        budgetCeiling,
+        monthUsage: (month) => storage.monthUsage(month),
+      },
+    });
+    try {
+      const month = String(executions.rows[0]?.completed_at).slice(0, 7);
+      const [runUsage, monthUsage] = await Promise.all(
+        [`/v1/workspaces/workspace-2/runs/${begun.runId}/usage`, `/v1/usage?month=${month}`].map(
+          async (path) => {
+            const response = await api.inject({
+              method: "GET",
+              url: path,
+              headers: { authorization: `Bearer ${ownerToken}` },
+            });
+            expect(response.statusCode).toBe(200);
+            return response.json<{ estimatedUsd: number; lines: { route: string | null }[] }>();
+          },
+        ),
+      );
+      expect(runUsage).toMatchObject(expected);
+      expect(runUsage?.estimatedUsd).toBeCloseTo(expectedUsd, 8);
+      expect(new Set(runUsage?.lines.map((line) => line.route))).toEqual(
+        new Set(["vertex-ai", "openai-api"]),
+      );
+      // The month also holds the other workspace's fixture run, which costs nothing.
+      expect(monthUsage?.lines.filter((line) => line.route !== "fixture")).toEqual(runUsage?.lines);
+    } finally {
+      await api.close();
+    }
   }, 120_000);
 });

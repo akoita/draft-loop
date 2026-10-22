@@ -30,6 +30,7 @@
     "tsx": "4.23.12"
   },
   "devDependencies": {
+    "@draft-loop/api": "workspace:*",
     "pg": "8.23.1",
     "@types/pg": "8.23.1"
   }
