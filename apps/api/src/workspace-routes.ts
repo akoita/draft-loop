@@ -1,5 +1,6 @@
 import {
   type ApplicationService,
+  type HostedKnowledgeIntake,
   type InitializeWorkspaceCommand,
   type RunBudgetCeiling,
   runBudgetCeilingMessage,
@@ -18,6 +19,17 @@ export interface WorkspaceRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   /** The deployment's limit per run; a new workspace's budget must fit inside it. */
   readonly budgetCeiling: RunBudgetCeiling;
+  /** The tenant's knowledge; without it workspaces cannot select any. */
+  readonly knowledge?: {
+    readonly intake: HostedKnowledgeIntake;
+    readonly store: KnowledgeStoreAddress;
+  };
+}
+
+/** How the driver addresses the tenant's knowledge store; the API never takes one from a client. */
+export interface KnowledgeStoreAddress {
+  readonly id: string;
+  readonly reference: string;
 }
 
 const identifierSchema = z
@@ -49,6 +61,23 @@ const createWorkspaceBody = z.strictObject({
 });
 
 type CreateWorkspaceBody = z.infer<typeof createWorkspaceBody>;
+
+const knowledgeSelectionBody = z
+  .strictObject({
+    knowledgeBaseIds: z
+      .array(identifierSchema)
+      .min(1)
+      .max(10)
+      .refine((ids) => new Set(ids).size === ids.length, "must not repeat a knowledge base"),
+    combinationApproved: z
+      .boolean()
+      .optional()
+      .describe("Required to combine several knowledge bases in one workspace's runs."),
+  })
+  .refine(
+    (body) => body.knowledgeBaseIds.length === 1 || body.combinationApproved === true,
+    "combining several knowledge bases needs combinationApproved",
+  );
 
 /** The round limit `initialize` records when the request sets none. */
 const defaultMaxRounds = 3;
@@ -129,6 +158,50 @@ export function registerWorkspaceRoutes(
       }
       const descriptor = await service.initialize(initializeCommand(root, body), silent);
       return reply.code(201).send(workspaceView(descriptor));
+    },
+  );
+
+  const { knowledge } = options;
+  if (knowledge === undefined) return;
+
+  app.put(
+    "/v1/workspaces/:workspaceId/knowledge-selection",
+    {
+      schema: {
+        summary: "Select the knowledge bases a workspace's runs use",
+        description:
+          "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with every source's file held.",
+        params: workspaceParams,
+        body: knowledgeSelectionBody,
+        response: {
+          200: workspaceViewSchema,
+          400: apiErrorSchema,
+          404: apiErrorSchema,
+          422: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { knowledgeBaseIds, combinationApproved } = request.body;
+      const known = new Set((await knowledge.intake.listKnowledgeBases()).map(({ id }) => id));
+      if (knowledgeBaseIds.some((id) => !known.has(id))) {
+        return reply
+          .code(404)
+          .send(apiError("knowledge_base_not_found", "No such knowledge base."));
+      }
+      const descriptor = await service.configureKnowledgeSelection(
+        {
+          root: workspaceRoot(request.params.workspaceId),
+          entries: knowledgeBaseIds.map((knowledgeBaseId) => ({
+            storeRoot: knowledge.store.reference,
+            storeId: knowledge.store.id,
+            knowledgeBaseId,
+          })),
+          ...(combinationApproved === true ? { combinationApproved } : {}),
+        },
+        silent,
+      );
+      return workspaceView(descriptor);
     },
   );
 }

@@ -23,7 +23,7 @@ import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempoten
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 import { registerUsageRoutes } from "./usage-routes.js";
-import { registerWorkspaceRoutes } from "./workspace-routes.js";
+import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 
 export interface ApiOptions {
   readonly ownerToken: string;
@@ -41,6 +41,8 @@ export interface ApiOptions {
     readonly monthUsage: (month: string) => Promise<readonly UsageLine[]>;
     /** The tenant's knowledge intake; without it the knowledge routes are not served. */
     readonly knowledgeIntake?: HostedKnowledgeIntake;
+    /** The tenant's one knowledge store, as workspaces select from it; set with the intake. */
+    readonly knowledgeStore?: KnowledgeStoreAddress;
   };
 }
 
@@ -129,10 +131,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   );
 
   if (options.application !== undefined) {
+    const { knowledgeIntake, knowledgeStore } = options.application;
     registerWorkspaceRoutes(app, {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,
       budgetCeiling: options.application.budgetCeiling,
+      ...(knowledgeIntake === undefined || knowledgeStore === undefined
+        ? {}
+        : { knowledge: { intake: knowledgeIntake, store: knowledgeStore } }),
     });
     registerApplicationRoutes(app, {
       service: options.application.service,

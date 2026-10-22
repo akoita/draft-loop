@@ -144,6 +144,7 @@ describe("workspaces", () => {
       author: { company: "anthropic", model: "claude-haiku-5-5" },
       critic: { company: "openai", model: "gpt-6-luna" },
       fixtureMode: true,
+      knowledgeBaseIds: [],
     });
     expect(response.body).not.toContain("/tenants/");
   });

@@ -24,6 +24,9 @@ export const workspaceViewSchema = z
     author: modelSchema,
     critic: modelSchema,
     fixtureMode: z.boolean(),
+    knowledgeBaseIds: z
+      .array(z.string())
+      .describe("The knowledge bases the workspace's runs use; empty until one is selected."),
   })
   .meta({ id: "Workspace" });
 
@@ -38,6 +41,9 @@ export function workspaceView(
     author: { company: descriptor.author.company, model: descriptor.author.model },
     critic: { company: descriptor.critic.company, model: descriptor.critic.model },
     fixtureMode: descriptor.fixtureMode,
+    knowledgeBaseIds: (descriptor.candidateKnowledgeSelection ?? []).map(
+      ({ knowledgeBaseId }) => knowledgeBaseId,
+    ),
   };
 }
 
