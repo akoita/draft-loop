@@ -17,6 +17,7 @@ import { apiError, sendError, sendNotFound } from "./errors.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 import { registerUsageRoutes } from "./usage-routes.js";
+import { registerWorkspaceRoutes } from "./workspace-routes.js";
 
 export interface ApiOptions {
   readonly ownerToken: string;
@@ -120,6 +121,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   );
 
   if (options.application !== undefined) {
+    registerWorkspaceRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
+      budgetCeiling: options.application.budgetCeiling,
+    });
     registerApplicationRoutes(app, {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,

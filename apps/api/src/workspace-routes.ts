@@ -1,0 +1,134 @@
+import {
+  type ApplicationService,
+  type InitializeWorkspaceCommand,
+  type RunBudgetCeiling,
+  runBudgetCeilingMessage,
+  runBudgetCeilingViolation,
+} from "@draft-loop/application";
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
+
+import { apiError, apiErrorSchema } from "./errors.js";
+import { workspaceView, workspaceViewSchema } from "./views.js";
+
+export interface WorkspaceRoutesOptions {
+  readonly service: ApplicationService;
+  /** The driver's reference for a workspace id; the API never accepts a reference from a client. */
+  readonly workspaceRoot: (workspaceId: string) => string;
+  /** The deployment's limit per run; a new workspace's budget must fit inside it. */
+  readonly budgetCeiling: RunBudgetCeiling;
+}
+
+const identifierSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier");
+
+const workspaceParams = z.strictObject({ workspaceId: identifierSchema });
+
+/** The companies the model gateway routes; local models and their endpoints are desktop-only. */
+const hostedModelSchema = z.strictObject({
+  company: z.enum(["anthropic", "openai"]),
+  model: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u, "must be a model id"),
+});
+
+const createWorkspaceBody = z.strictObject({
+  language: z.string().min(2).max(35).optional(),
+  instructions: z.string().min(1).max(4_000).optional(),
+  truthfulnessPolicy: z.string().min(1).max(4_000).optional(),
+  author: hostedModelSchema.optional(),
+  critic: hostedModelSchema.optional(),
+  maxRounds: z.number().int().positive().optional(),
+  maxCostUsd: z.number().positive().optional(),
+  maxDurationMs: z.number().int().positive().optional(),
+  maxWords: z.number().int().positive().optional(),
+  maxCharacters: z.number().int().positive().optional(),
+  requiredSections: z.array(z.string().min(1).max(100)).min(1).max(20).optional(),
+  fixtureMode: z.boolean().optional(),
+  autopilot: z.boolean().optional(),
+});
+
+type CreateWorkspaceBody = z.infer<typeof createWorkspaceBody>;
+
+/** The round limit `initialize` records when the request sets none. */
+const defaultMaxRounds = 3;
+
+/**
+ * A hosted workspace has no job file or source folder: job briefs and knowledge come through the
+ * API. The driver still records the two settings, so they are fixed names that address nothing.
+ */
+function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeWorkspaceCommand {
+  const { author, critic, ...settings } = body;
+  return {
+    root,
+    jobDescription: "job.md",
+    sources: "sources",
+    ...Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)),
+    ...(author === undefined ? {} : { authorCompany: author.company, authorModel: author.model }),
+    ...(critic === undefined ? {} : { criticCompany: critic.company, criticModel: critic.model }),
+  };
+}
+
+async function workspaceExists(service: ApplicationService, root: string): Promise<boolean> {
+  try {
+    await service.readWorkspace(root);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const silent = { write: () => undefined };
+
+/** Workspace setup: the owner creates a hosted workspace before adding knowledge and briefs. */
+export function registerWorkspaceRoutes(
+  parent: FastifyInstance,
+  options: WorkspaceRoutesOptions,
+): void {
+  const app = parent.withTypeProvider<ZodTypeProvider>();
+  const { service, workspaceRoot, budgetCeiling } = options;
+
+  app.put(
+    "/v1/workspaces/:workspaceId",
+    {
+      schema: {
+        summary: "Create a workspace",
+        description:
+          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409.",
+        params: workspaceParams,
+        body: createWorkspaceBody,
+        response: {
+          201: workspaceViewSchema,
+          400: apiErrorSchema,
+          409: apiErrorSchema,
+          422: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const root = workspaceRoot(request.params.workspaceId);
+      const { body } = request;
+      // Checked before anything is saved, so a workspace never exists that cannot begin a run.
+      const violation = runBudgetCeilingViolation(
+        {
+          maxRounds: body.maxRounds ?? defaultMaxRounds,
+          maxCostUsd: body.maxCostUsd ?? budgetCeiling.maxCostUsd,
+          maxDurationMs: body.maxDurationMs ?? budgetCeiling.maxDurationMs,
+        },
+        budgetCeiling,
+      );
+      if (violation !== undefined) {
+        return reply
+          .code(422)
+          .send(apiError("budget_above_ceiling", runBudgetCeilingMessage(violation)));
+      }
+      if (await workspaceExists(service, root)) {
+        return reply
+          .code(409)
+          .send(apiError("workspace_exists", "A workspace with this id already exists."));
+      }
+      const descriptor = await service.initialize(initializeCommand(root, body), silent);
+      return reply.code(201).send(workspaceView(descriptor));
+    },
+  );
+}
