@@ -251,6 +251,10 @@ which the shared driver takes as `providerClientFactories.anthropicRoute`. The
 critic's OpenAI client targets the EU endpoint. Without these settings, as on
 the local stack, the worker knows no key, so only fixture runs work.
 
+`apps/api` never calls a model. Its driver resolves no key and refuses to build
+any provider client (`apiProviderOptions`), whatever its environment holds, so
+only the worker reaches a provider.
+
 Each hosted deployment sets a ceiling per run: rounds, cost and duration, all
 required. A workspace without a cost or duration limit gets the ceiling's
 (`withRunBudgetDefaults`). Beginning a run whose workspace asks for more than
