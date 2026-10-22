@@ -81,6 +81,13 @@ async function knowledgeStore(directory: string): Promise<string> {
 
 /** A hosted service with one fixture run awaiting approval, drafted from a reviewed brief. */
 async function awaitingApprovalRun() {
+  const { service, begun, opened } = await begunRun();
+  const resumed = await service.resume({ root: workspace, runId: begun.runId }, silent);
+  return { service, begun, resumed, opened };
+}
+
+/** A hosted service with one fixture run begun and not yet executed, as the API leaves it. */
+async function begunRun() {
   const directory = await mkdtemp(join(tmpdir(), "draft-loop-hosted-"));
   scratch.push(directory);
   await mkdir(join(directory, "history"));
@@ -152,8 +159,7 @@ async function awaitingApprovalRun() {
     },
     silent,
   );
-  const resumed = await service.resume({ root: workspace, runId: begun.runId }, silent);
-  return { service, begun, resumed, opened };
+  return { service, begun, opened };
 }
 
 describe("hosted application driver", () => {
@@ -296,6 +302,46 @@ describe("hosted application driver", () => {
     expect((await stop(resumed.runId)).state).toBe("stopped");
     expect((await stop(resumed.runId)).state).toBe("stopped");
     await expect(stop("missing")).rejects.toMatchObject({ code: "run_not_found" });
+  }, 120_000);
+
+  it("moves a revision to revising without executing it; a resume drafts the next round", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+
+    const revising = await service.lifecycle(
+      {
+        root: workspace,
+        runId: resumed.runId,
+        action: "revision",
+        candidateDirection: "Lead with the testing practice.",
+      },
+      silent,
+    );
+    const drafted = await service.resume({ root: workspace, runId: resumed.runId }, silent);
+
+    expect(revising).toMatchObject({ state: "revising", round: resumed.round + 1 });
+    expect(drafted).toMatchObject({ state: "awaiting-approval", round: resumed.round + 1 });
+  }, 120_000);
+
+  it("releases a pause without executing, so a worker's resume continues the run", async () => {
+    const { service, begun } = await begunRun();
+    const pause = () =>
+      service.lifecycle({ root: workspace, runId: begun.runId, action: "pause" }, silent);
+
+    const paused = await pause();
+    const released = await service.releasePause?.({ root: workspace, runId: begun.runId });
+    const drafted = await service.resume({ root: workspace, runId: begun.runId }, silent);
+
+    expect(paused.state).toBe("paused");
+    expect(released).toMatchObject({ state: "drafting", artifact: null });
+    expect(drafted.state).toBe("awaiting-approval");
+    await expect(
+      service.releasePause?.({ root: workspace, runId: begun.runId }),
+    ).rejects.toBeInstanceOf(RunTransitionError);
+    await expect(
+      service.releasePause?.({ root: workspace, runId: "missing" }),
+    ).rejects.toMatchObject({
+      code: "run_not_found",
+    });
   }, 120_000);
 
   it("refuses the methods it does not offer yet", async () => {

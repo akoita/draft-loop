@@ -342,6 +342,11 @@ desktop review:
   the blockers, and approving past them needs `readinessOverrideRationale`.
   `POST .../stop` stops a run for good. Any action the run's state does not
   allow answers 409 `run_state_conflict` (`RunTransitionError`).
+- `POST .../revision` sends a run awaiting approval back for another round,
+  with the owner's optional direction for the author. `POST .../pause` pauses
+  an active run, and `POST .../resume` lifts the pause without running a step
+  (`releasePause`). Revision and resume take an `Idempotency-Key` and queue
+  the run, so a worker drafts the next round or continues the step.
 - These actions change the run's state only. Their engine has no agents, so
   the API still reaches no provider.
 

@@ -504,6 +504,11 @@ export interface OrchestrationEngine {
   readonly start: (request: OrchestrationRequest) => Promise<RunSnapshot>;
   readonly resume: (runId: string, options?: ResumeOptions) => Promise<RunSnapshot>;
   readonly pause: (runId: string) => Promise<RunSnapshot>;
+  /**
+   * Lift the person's pause without executing: the run returns to the state of its current step,
+   * so a background worker can resume it. `resume` lifts a pause and executes in one call.
+   */
+  readonly releasePause: (runId: string) => Promise<RunSnapshot>;
   readonly stop: (runId: string) => Promise<RunSnapshot>;
   readonly recoverToReview: (runId: string) => Promise<RunSnapshot>;
   readonly recoverRoundBudget: (runId: string) => Promise<RunSnapshot>;
@@ -2390,6 +2395,22 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  const releasePause = async (runId: string): Promise<RunSnapshot> => {
+    const snapshot = await loadForAction(runId);
+    if (snapshot.state !== "paused")
+      throw new RunTransitionError("Only a paused run can be resumed.");
+    const now = clock();
+    const updated = {
+      ...activatedForTransition(snapshot, now),
+      state: stepStates[snapshot.currentStep ?? "author"],
+      lastError: null,
+      updatedAt: now,
+    };
+    await save(updated);
+    await emit(updated, "state.changed", { to: updated.state, reason: "pause-released" });
+    return updated;
+  };
+
   const stop = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state === "stopped") return snapshot;
@@ -2769,6 +2790,7 @@ export function createOrchestrationEngine(
     run: start,
     resume,
     pause,
+    releasePause,
     stop,
     recoverToReview,
     recoverRoundBudget,
