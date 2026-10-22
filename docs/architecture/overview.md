@@ -229,6 +229,14 @@ refuses after the adapter's retries (`route-unavailable`). It never falls back
 on content, policy, authentication or budget errors. A fallback keeps the
 company and the model, and run history records the route it left and why.
 
+Provider keys come from Secret Manager at call time, never from an image or an
+environment file. `createSecretManagerCredentialResolver` reads the secret
+version the deployment names for each key: OpenAI's key for the critic, and the
+Claude API key only when the fallback is on, since Vertex AI needs none. A key
+stays in memory for five minutes, so a rotated key takes effect without a
+restart. A failed read names only the provider, never the value or the
+client's error.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge
