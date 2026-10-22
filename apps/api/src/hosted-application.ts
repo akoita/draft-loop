@@ -6,12 +6,14 @@ import {
   withRunBudgetDefaults,
 } from "@draft-loop/application";
 import { openRunQueue } from "@draft-loop/run-queue";
+import type { BlobStoragePort } from "@draft-loop/storage";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
   openPostgresStorage,
+  type PostgresStorage,
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
 
@@ -26,6 +28,56 @@ export const hostedKnowledgeStoreId = "knowledge";
 export interface HostedApplication {
   readonly application: NonNullable<ApiOptions["application"]>;
   readonly close: () => Promise<void>;
+}
+
+export interface HostedApplicationParts {
+  /** One tenant's open storage; the application borrows it. */
+  readonly storage: PostgresStorage;
+  readonly blobs: BlobStoragePort;
+  readonly tenantId: string;
+  readonly budgetCeiling: RunBudgetCeiling;
+  readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
+  /** Where a knowledge source version's bytes go in `blobs`. */
+  readonly knowledgeLocation: (versionId: string) => string;
+  readonly maxSourceBytes?: number;
+}
+
+/**
+ * The API's application over one tenant's storage and blobs: the shared hosted driver with no
+ * provider wiring, the tenant's knowledge intake and its one store. The server and the API's
+ * Postgres tests both build it here.
+ */
+export function composeHostedApplication(
+  parts: HostedApplicationParts,
+): NonNullable<ApiOptions["application"]> {
+  const { storage, blobs, tenantId, budgetCeiling } = parts;
+  const ports = hostedApplicationPorts({ storage, tenantId, blobs });
+  const service = createApplicationService(
+    createHostedApplicationDriver({
+      ...ports,
+      settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+      local: apiProviderOptions(),
+    }),
+  );
+  return {
+    service,
+    workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
+    enqueueRun: parts.enqueueRun,
+    budgetCeiling,
+    monthUsage: storage.monthUsage,
+    idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
+    knowledgeIntake: createHostedKnowledgeIntake({
+      records: storage,
+      blobs,
+      storeId: hostedKnowledgeStoreId,
+      locate: parts.knowledgeLocation,
+      ...(parts.maxSourceBytes === undefined ? {} : { maxSourceBytes: parts.maxSourceBytes }),
+    }),
+    knowledgeStore: {
+      id: hostedKnowledgeStoreId,
+      reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),
+    },
+  };
 }
 
 /**
@@ -55,35 +107,17 @@ export async function openHostedApplication(
         : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
     ).bucket(config.blobBucket);
     const blobs = createGcsBlobStorage({ bucket, tenantId });
-    const ports = hostedApplicationPorts({ storage, tenantId, blobs });
-    const service = createApplicationService(
-      createHostedApplicationDriver({
-        ...ports,
-        settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
-        local: apiProviderOptions(),
-      }),
-    );
     return {
-      application: {
-        service,
-        workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
-        enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+      application: composeHostedApplication({
+        storage,
+        blobs,
+        tenantId,
         budgetCeiling,
-        monthUsage: storage.monthUsage,
-        idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
-        knowledgeIntake: createHostedKnowledgeIntake({
-          records: storage,
-          blobs,
-          storeId: hostedKnowledgeStoreId,
-          locate: (versionId) =>
-            `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
-          ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
-        }),
-        knowledgeStore: {
-          id: hostedKnowledgeStoreId,
-          reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),
-        },
-      },
+        enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+        knowledgeLocation: (versionId) =>
+          `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
+        ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
+      }),
       close: async () => {
         await queue.close();
         await storage.close();

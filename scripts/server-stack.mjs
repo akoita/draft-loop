@@ -10,12 +10,8 @@ export const localServerStack = Object.freeze({
   DRAFT_LOOP_TEST_API_URL: "http://127.0.0.1:58080",
 });
 
-// What the smoke needs besides the URLs: the stack's fixed local-only values from compose.yaml.
+// What the smoke needs besides the URLs: the stack's fixed, local-only owner token from compose.yaml.
 export const localServerStackSettings = Object.freeze({
-  DRAFT_LOOP_TEST_RUNTIME_POSTGRES_URL:
-    "postgres://draft_loop_app:draft_loop_app@127.0.0.1:55432/postgres",
-  DRAFT_LOOP_TEST_TENANT_ID: "local",
-  DRAFT_LOOP_TEST_BLOB_BUCKET: "draft-loop-local",
   DRAFT_LOOP_TEST_API_OWNER_TOKEN: "local-stack-owner-token-not-a-secret",
 });
 
