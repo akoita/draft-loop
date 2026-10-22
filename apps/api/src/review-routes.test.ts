@@ -1,4 +1,4 @@
-import type { ApplicationService, RunReview } from "@draft-loop/application";
+import { type ApplicationService, RunActionError, type RunReview } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -177,5 +177,105 @@ describe("run review", () => {
     });
 
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("review decisions", () => {
+  const findingId = "run-1:finding:0123456789abcdef:0:unsupported-claim";
+
+  it("records a finding decision with its rationale and answers the updated review", async () => {
+    const recordReviewDecision = vi.fn(async () => undefined);
+    await build({ recordReviewDecision, readRunReview: async () => syntheticReview });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/v1/workspaces/workspace-1/runs/run-1/findings/${encodeURIComponent(findingId)}/decision`,
+      headers: { authorization },
+      payload: { decision: "rejected", rationale: "The source dates it." },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(recordReviewDecision).toHaveBeenCalledWith({
+      root,
+      runId: "run-1",
+      kind: "finding",
+      targetId: findingId,
+      decision: "rejected",
+      rationale: "The source dates it.",
+    });
+    expect(response.json().run.runId).toBe("run-1");
+  });
+
+  it("records a block edit", async () => {
+    const recordReviewDecision = vi.fn(async () => undefined);
+    await build({ recordReviewDecision, readRunReview: async () => syntheticReview });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/runs/run-1/edits/block-1",
+      headers: { authorization },
+      payload: { text: "Built TypeScript services with deterministic tests." },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(recordReviewDecision).toHaveBeenCalledWith({
+      root,
+      runId: "run-1",
+      kind: "edit",
+      targetId: "block-1",
+      replacementText: "Built TypeScript services with deterministic tests.",
+    });
+  });
+
+  it("refuses an unknown decision, an empty edit and an overlong rationale", async () => {
+    const recordReviewDecision = vi.fn(async () => undefined);
+    await build({ recordReviewDecision, readRunReview: async () => syntheticReview });
+
+    const responses = await Promise.all([
+      app.inject({
+        method: "PUT",
+        url: `/v1/workspaces/workspace-1/runs/run-1/findings/${findingId}/decision`,
+        headers: { authorization },
+        payload: { decision: "ignored" },
+      }),
+      app.inject({
+        method: "PUT",
+        url: "/v1/workspaces/workspace-1/runs/run-1/edits/block-1",
+        headers: { authorization },
+        payload: { text: "   " },
+      }),
+      app.inject({
+        method: "PUT",
+        url: `/v1/workspaces/workspace-1/runs/run-1/findings/${findingId}/decision`,
+        headers: { authorization },
+        payload: { decision: "rejected", rationale: "x".repeat(2_001) },
+      }),
+    ]);
+
+    expect(responses.map((response) => response.statusCode)).toEqual([400, 400, 400]);
+    expect(recordReviewDecision).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["review_closed", 409],
+    ["review_target_not_found", 404],
+    ["run_not_found", 404],
+  ] as const)("answers the service's %s refusal with %i", async (code, status) => {
+    await build({
+      recordReviewDecision: async () => {
+        throw new RunActionError(code, "Refused.");
+      },
+      readRunReview: async () => syntheticReview,
+    });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/v1/workspaces/workspace-1/runs/run-1/findings/${findingId}/decision`,
+      headers: { authorization },
+      payload: { decision: "accepted" },
+    });
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json().error.code).toBe(code);
   });
 });

@@ -15,8 +15,27 @@ const identifierSchema = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier");
 const runParams = z.strictObject({ workspaceId: identifierSchema, runId: identifierSchema });
+const findingParams = runParams.extend({
+  findingId: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u, "must be a finding id from the review"),
+});
+const blockParams = runParams.extend({ blockId: identifierSchema });
 
 const findingDecisionSchema = z.enum(["pending", "accepted", "rejected", "deferred", "overridden"]);
+
+/** A rationale and an edited block are short, like the desktop's review fields. */
+const maximumRationaleCharacters = 2_000;
+const maximumBlockCharacters = 4_000;
+
+const findingDecisionBody = z.strictObject({
+  decision: findingDecisionSchema,
+  rationale: z.string().trim().min(1).max(maximumRationaleCharacters).optional(),
+});
+
+const blockEditBody = z.strictObject({
+  text: z.string().trim().min(1).max(maximumBlockCharacters),
+});
 
 const reviewDraftSchema = z
   .object({
@@ -113,6 +132,7 @@ export function runReviewView(review: RunReview): z.infer<typeof runReviewSchema
 
 const notFound = (what: string) => apiError("not_found", `No such ${what}.`);
 const errorResponses = { 400: apiErrorSchema, 404: apiErrorSchema, 422: apiErrorSchema };
+const decisionResponses = { 200: runReviewSchema, 409: apiErrorSchema, ...errorResponses };
 
 /**
  * The review of a hosted run (ADR 0011, D9): what the person reads before deciding findings and
@@ -138,6 +158,64 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
       });
       if (review === undefined) return reply.code(404).send(notFound("run"));
       return runReviewView(review);
+    },
+  );
+
+  /** The review after a decision, so a client redraws from what was saved. */
+  const reviewAfter = async (workspaceId: string, runId: string) => {
+    const review = await service.readRunReview?.({ root: workspaceRoot(workspaceId), runId });
+    if (review === undefined) throw new Error("The decided run's review could not be read.");
+    return runReviewView(review);
+  };
+
+  app.put(
+    "/v1/workspaces/:workspaceId/runs/:runId/findings/:findingId/decision",
+    {
+      schema: {
+        summary: "Decide a finding of the run's current draft",
+        description:
+          "Records the owner's decision on one finding, by the id the review gives it. Only a run awaiting approval takes decisions (409 review_closed otherwise); the latest decision for a finding wins.",
+        params: findingParams,
+        body: findingDecisionBody,
+        response: decisionResponses,
+      },
+    },
+    async (request) => {
+      const { workspaceId, runId, findingId } = request.params;
+      await service.recordReviewDecision({
+        root: workspaceRoot(workspaceId),
+        runId,
+        kind: "finding",
+        targetId: findingId,
+        decision: request.body.decision,
+        ...(request.body.rationale === undefined ? {} : { rationale: request.body.rationale }),
+      });
+      return reviewAfter(workspaceId, runId);
+    },
+  );
+
+  app.put(
+    "/v1/workspaces/:workspaceId/runs/:runId/edits/:blockId",
+    {
+      schema: {
+        summary: "Edit a block of the run's current draft",
+        description:
+          "Records the owner's replacement text for one block. The review shows the latest edit in place of the draft's text. Only a run awaiting approval takes edits (409 review_closed otherwise).",
+        params: blockParams,
+        body: blockEditBody,
+        response: decisionResponses,
+      },
+    },
+    async (request) => {
+      const { workspaceId, runId, blockId } = request.params;
+      await service.recordReviewDecision({
+        root: workspaceRoot(workspaceId),
+        runId,
+        kind: "edit",
+        targetId: blockId,
+        replacementText: request.body.text,
+      });
+      return reviewAfter(workspaceId, runId);
     },
   );
 }

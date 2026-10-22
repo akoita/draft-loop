@@ -861,6 +861,7 @@ export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
+export { RunActionError, type RunActionErrorCode } from "./run-action-error.js";
 export type { RunApplicationPlan } from "./run-application-plan.js";
 export { readRunApplicationPlan } from "./run-application-plan-read.js";
 export {
