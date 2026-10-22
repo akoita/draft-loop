@@ -100,7 +100,7 @@ recorded limit in the same change so the reduction cannot regress.
 
 ## Commands and quality gates
 
-Use Node 24.5.0 and pnpm 10.18.3. From the repository root:
+Use Node 24.22.1 and pnpm 10.18.3. From the repository root:
 
 ```text
 pnpm install --frozen-lockfile

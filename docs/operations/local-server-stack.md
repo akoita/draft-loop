@@ -46,7 +46,7 @@ To also delete the stored data, run `docker compose down --volumes`.
 
 ## Images
 
-Both images are built from the repository root on `node:24.5.0-bookworm-slim`.
+Both images are built from the repository root on `node:24.22.1-bookworm-slim`.
 Each installs only its app's production dependency graph from the lockfile and
 runs the TypeScript sources with `tsx`, so there is no separate build step. The
 worker image also runs the migration job (`src/migrate.ts`).

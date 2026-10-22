@@ -5,7 +5,7 @@ with the package boundaries described in [AGENTS.md](AGENTS.md).
 
 ## Development
 
-Use Node 24.5.0 and pnpm 10.18.3, then run:
+Use Node 24.22.1 and pnpm 10.18.3, then run:
 
 ```sh
 pnpm install --frozen-lockfile

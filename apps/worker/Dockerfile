@@ -1,7 +1,7 @@
 # The hosted worker image, built from the repository root: `docker build -f apps/worker/Dockerfile .`.
 # It runs the workspace's TypeScript sources with tsx, so the image needs no separate build step.
 # Cloud project identifiers, credentials and bucket names come from the runtime, never from here.
-FROM node:24.5.0-bookworm-slim
+FROM node:24.22.1-bookworm-slim
 
 ENV CI=true \
     NODE_ENV=production \
