@@ -83,6 +83,7 @@ function stepRecord(
     step,
     provider: execution.provider,
     modelId: execution.modelId,
+    ...(execution.route === undefined ? {} : { route: execution.route }),
     inputTokens: execution.inputTokens,
     outputTokens: execution.outputTokens,
     estimatedUsd: execution.estimatedUsd,

@@ -1,4 +1,4 @@
-import type { ExecutionRecord } from "@draft-loop/orchestrator";
+import type { RunSnapshot } from "@draft-loop/orchestrator";
 
 /** What one company, model and route used: content-free counts and amounts only. */
 export interface UsageLine {
@@ -63,20 +63,35 @@ export function summarizeUsage(lines: readonly UsageLine[]): UsageSummary {
   };
 }
 
-/** A run's usage from its completed calls; a failed attempt records no usage. */
-export function runUsage(history: readonly ExecutionRecord[]): UsageSummary {
-  return summarizeUsage(
-    history
-      .filter((record) => record.status === "completed")
-      .map((record) => ({
-        company: record.provider,
-        model: record.modelId,
-        route: record.route ?? null,
-        calls: 1,
-        inputTokens: record.inputTokens,
-        outputTokens: record.outputTokens,
-        estimatedUsd: record.estimatedUsd ?? 0,
-        unpricedCalls: record.estimatedUsd === null ? 1 : 0,
-      })),
-  );
+interface MeteredCall {
+  readonly provider: string;
+  readonly modelId: string;
+  readonly route?: string | undefined;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly estimatedUsd: number | null;
+}
+
+const usageLine = (call: MeteredCall): UsageLine => ({
+  company: call.provider,
+  model: call.modelId,
+  route: call.route ?? null,
+  calls: 1,
+  inputTokens: call.inputTokens,
+  outputTokens: call.outputTokens,
+  estimatedUsd: call.estimatedUsd ?? 0,
+  unpricedCalls: call.estimatedUsd === null ? 1 : 0,
+});
+
+/**
+ * A run's usage from its completed calls: its executions and the application plan step's calls,
+ * which the plan records apart. A failed attempt records no usage.
+ */
+export function runUsage(
+  run: Pick<RunSnapshot, "executionHistory" | "applicationPlan">,
+): UsageSummary {
+  return summarizeUsage([
+    ...run.executionHistory.filter((record) => record.status === "completed").map(usageLine),
+    ...(run.applicationPlan?.steps ?? []).map(usageLine),
+  ]);
 }

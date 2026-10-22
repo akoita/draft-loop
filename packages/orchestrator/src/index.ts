@@ -111,7 +111,7 @@ import {
   slimSnapshotPayload,
   slimSnapshotWritesDefault,
 } from "./run-snapshot-slim.js";
-import { hasUnpricedMeteredCall } from "./unpriced-cost.js";
+import { hasUnpricedMeteredCall, meteredCalls } from "./unpriced-cost.js";
 
 export type RunState = WorkflowState | "provider-error";
 export {
@@ -1533,10 +1533,7 @@ export function createOrchestrationEngine(
       snapshot.totalCostUsd >= snapshot.budget.maxCostUsd
     )
       return "maximum cost budget exhausted";
-    if (
-      snapshot.budget.maxCostUsd !== undefined &&
-      hasUnpricedMeteredCall(snapshot.executionHistory)
-    )
+    if (snapshot.budget.maxCostUsd !== undefined && hasUnpricedMeteredCall(meteredCalls(snapshot)))
       return "cost budget cannot be enforced: a call's cost could not be estimated";
     if (
       snapshot.budget.maxDurationMs !== undefined &&

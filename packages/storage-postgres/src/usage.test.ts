@@ -87,11 +87,13 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
   let schema: TestSchema;
   let tenantA: PostgresStorage;
   let tenantB: PostgresStorage;
+  let tenantC: PostgresStorage;
 
   beforeAll(async () => {
     schema = await createTestSchema(connectionString ?? "", "usage");
     tenantA = await schema.open("tenant-a");
     tenantB = await schema.open("tenant-b");
+    tenantC = await schema.open("tenant-c");
     await seedRun(tenantA);
     await seedRun(tenantB);
     await tenantA.saveExecution(execution({}));
@@ -117,6 +119,7 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
   afterAll(async () => {
     await tenantA?.close();
     await tenantB?.close();
+    await tenantC?.close();
     await schema?.drop();
   });
 
@@ -162,5 +165,58 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
     expect(other).toHaveLength(1);
     expect(other[0]).toMatchObject({ calls: 1, estimatedUsd: 9 });
     await expect(tenantA.monthUsage("2026-13")).rejects.toThrow("YYYY-MM");
+  });
+
+  it("counts the plan step's calls once each, from the run's latest plan event", async () => {
+    await seedRun(tenantC);
+    const step = (name: string, provider: string, modelId: string, completedAt: string) => ({
+      step: name,
+      provider,
+      modelId,
+      route: provider === "openai" ? "openai-api" : "vertex-ai",
+      inputTokens: 10,
+      outputTokens: 5,
+      estimatedUsd: 0.01,
+      completedAt,
+    });
+    const plan = step("plan", "anthropic", "claude-sonnet-5-5", "2026-09-30T23:59:00.000Z");
+    const review = step("review", "openai", "gpt-6-luna", "2026-10-01T00:01:00.000Z");
+    // Each event holds every call of the step so far, so only the latest one is read.
+    for (const [index, steps] of [[plan], [plan, review]].entries()) {
+      await tenantC.appendAuditEvent({
+        id: `plan-event-${index}`,
+        workspaceId: "workspace-1",
+        eventType: "run.application-plan",
+        entityType: "run",
+        entityId: "run-1",
+        payload: { schemaVersion: 1, steps },
+        createdAt: review.completedAt,
+      });
+    }
+    await tenantC.saveExecution(execution({ estimatedUsd: 0.5 }));
+
+    expect(await tenantC.monthUsage("2026-10")).toEqual([
+      {
+        company: "anthropic",
+        model: "claude-sonnet-5-5",
+        route: "vertex-ai",
+        calls: 1,
+        inputTokens: 100,
+        outputTokens: 50,
+        estimatedUsd: 0.5,
+        unpricedCalls: 0,
+      },
+      {
+        company: "openai",
+        model: "gpt-6-luna",
+        route: "openai-api",
+        calls: 1,
+        inputTokens: 10,
+        outputTokens: 5,
+        estimatedUsd: 0.01,
+        unpricedCalls: 0,
+      },
+    ]);
+    expect(await tenantC.monthUsage("2026-09")).toMatchObject([{ calls: 1, inputTokens: 10 }]);
   });
 });

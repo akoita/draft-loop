@@ -97,7 +97,7 @@ export function registerUsageRoutes(parent: FastifyInstance, options: UsageRoute
       if (snapshot === undefined) {
         return reply.code(404).send(apiError("not_found", "No such run."));
       }
-      return { runId, workspaceId, ...usageView(runUsage(snapshot.executionHistory)) };
+      return { runId, workspaceId, ...usageView(runUsage(snapshot)) };
     },
   );
 

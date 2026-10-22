@@ -269,8 +269,8 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     expect(gateway.openAiOutputs).toEqual(["application_plan_review", "draft_critique"]);
     expect(new Set(gateway.openAiKeys)).toEqual(new Set(["synthetic-openai-key"]));
 
-    // Run history records each draft and critique call's route and its Vertex-priced cost. The
-    // plan step's calls are not metered yet (#1475), so they are left out of these totals.
+    // Run history records each call's route and its Vertex-priced cost: the draft and critique
+    // as executions, the plan and its review in the plan step's records.
     const executions = await admin.query<{
       provider: string;
       model_id: string;
@@ -283,24 +283,33 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
          FROM ${schema}.executions WHERE run_id = $1 AND status = 'completed'`,
       [begun.runId],
     );
+    const calls = [
+      ...executions.rows.map((row) => ({
+        provider: row.provider,
+        modelId: row.model_id,
+        route: row.route,
+        estimatedUsd: Number(row.estimated_usd),
+      })),
+      ...(snapshot?.applicationPlan?.steps ?? []),
+    ];
     const vertexCallUsd =
       ((scriptedUsage.vertex.inputTokens * 2 + scriptedUsage.vertex.outputTokens * 10) / 1e6) * 1.1;
     const openAiCallUsd =
       (scriptedUsage.openai.inputTokens * 0.1 + scriptedUsage.openai.outputTokens * 0.5) / 1e6;
-    const authorCalls = executions.rows.filter((row) => row.provider === "anthropic");
-    const criticCalls = executions.rows.filter((row) => row.provider === "openai");
-    expect(authorCalls.length).toBeGreaterThan(0);
-    expect(criticCalls.length).toBeGreaterThan(0);
-    for (const row of authorCalls) {
-      expect(row).toMatchObject({ model_id: "claude-sonnet-5-5", route: "vertex-ai" });
-      expect(Number(row.estimated_usd)).toBeCloseTo(vertexCallUsd, 10);
+    const authorCalls = calls.filter((call) => call.provider === "anthropic");
+    const criticCalls = calls.filter((call) => call.provider === "openai");
+    // The plan and the draft; the plan review and the critique.
+    expect([authorCalls.length, criticCalls.length]).toEqual([2, 2]);
+    for (const call of authorCalls) {
+      expect(call).toMatchObject({ modelId: "claude-sonnet-5-5", route: "vertex-ai" });
+      expect(call.estimatedUsd).toBeCloseTo(vertexCallUsd, 10);
     }
-    for (const row of criticCalls) {
-      expect(row).toMatchObject({ model_id: "gpt-6-luna", route: "openai-api" });
-      expect(Number(row.estimated_usd)).toBeCloseTo(openAiCallUsd, 10);
+    for (const call of criticCalls) {
+      expect(call).toMatchObject({ modelId: "gpt-6-luna", route: "openai-api" });
+      expect(call.estimatedUsd).toBeCloseTo(openAiCallUsd, 10);
     }
     const expected = {
-      calls: executions.rows.length,
+      calls: calls.length,
       inputTokens:
         authorCalls.length * scriptedUsage.vertex.inputTokens +
         criticCalls.length * scriptedUsage.openai.inputTokens,
@@ -310,6 +319,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       unpricedCalls: 0,
     };
     const expectedUsd = authorCalls.length * vertexCallUsd + criticCalls.length * openAiCallUsd;
+    expect(snapshot?.totalCostUsd).toBeCloseTo(expectedUsd, 10);
 
     // The API's usage routes report the same totals, per run and for the tenant's month.
     const ownerToken = "owner-token-for-tests-0123456789abcdef";
