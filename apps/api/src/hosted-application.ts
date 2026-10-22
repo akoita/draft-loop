@@ -76,6 +76,7 @@ export async function openHostedApplication(
           storeId: hostedKnowledgeStoreId,
           locate: (versionId) =>
             `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
+          ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
         }),
       },
       close: async () => {
