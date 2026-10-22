@@ -292,6 +292,20 @@ The owner sets up a hosted workspace through the API before any run:
   409 `brief_version_stale`, as a review of a stale version does.
   `GET .../versions` lists each version's number, status and dates.
 
+Candidate sources reach a hosted knowledge store through
+`createHostedKnowledgeIntake` in `packages/application`, over the storage ports
+and the blob port:
+
+- A tenant has one knowledge store, created with its first knowledge base,
+  because knowledge bases belong to the tenant.
+- A source file is a PDF, DOCX, Markdown or plain text file of at most 10 MB by
+  default. Its type is checked by its signature only: the service never parses
+  an upload (ADR 0011, D11), and the run worker extracts the text from the
+  stored bytes.
+- The bytes go to the tenant's blob prefix first, then the source and its
+  managed version are recorded, so a recorded version always has its bytes.
+  The same bytes in the same knowledge base return the existing source.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge

@@ -42,8 +42,8 @@ export interface ManagedCandidateKnowledgeSourceVersionLocation {
 /**
  * What a run reads from a hosted candidate knowledge store beyond the knowledge-base records: the
  * store itself, which versions the service holds bytes for, their lifecycle readiness, and the
- * sensitivity rules. Writes here are the narrow ones tests and the local stack's seeding need;
- * uploading sources is a later sprint.
+ * sensitivity rules. The writes here are the ones hosted intake (`createHostedKnowledgeIntake` in
+ * `@draft-loop/application`) needs to store an uploaded source.
  */
 export interface CandidateKnowledgeRunRecords
   extends Pick<
