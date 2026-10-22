@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { RunTransitionError } from "@draft-loop/orchestrator";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
@@ -250,6 +251,51 @@ describe("hosted application driver", () => {
         replacementText: "Synthetic text.",
       }),
     ).rejects.toMatchObject({ code: "review_target_not_found" });
+  }, 120_000);
+
+  it("approves a run without reaching a provider, then refuses review decisions", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+    const approve = (readinessOverrideRationale?: string) =>
+      service.lifecycle(
+        {
+          root: workspace,
+          runId: resumed.runId,
+          action: "approve",
+          ...(readinessOverrideRationale === undefined ? {} : { readinessOverrideRationale }),
+        },
+        silent,
+      );
+
+    // A fixture draft may fail the final CV checks; the owner's reason then approves it.
+    const approved = await approve().catch(async (error: unknown) => {
+      expect(error).toBeInstanceOf(RunTransitionError);
+      expect((error as RunTransitionError).code).toBe("readiness_blocked");
+      const review = await service.readRunReview?.({ root: workspace, runId: resumed.runId });
+      expect(review?.approvalCheck?.applicationReady).toBe(false);
+      return approve("Synthetic fixture draft, approved for the test.");
+    });
+
+    expect(approved.state).toBe("approved");
+    await expect(
+      service.recordReviewDecision({
+        root: workspace,
+        runId: resumed.runId,
+        kind: "edit",
+        targetId: approved.artifact?.sections[0]?.blocks[0]?.id ?? "",
+        replacementText: "Too late.",
+      }),
+    ).rejects.toMatchObject({ code: "review_closed" });
+    await expect(approve()).rejects.toBeInstanceOf(RunTransitionError);
+  }, 120_000);
+
+  it("stops a run once, and refuses actions on an unknown run", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+    const stop = (runId: string) =>
+      service.lifecycle({ root: workspace, runId, action: "stop" }, silent);
+
+    expect((await stop(resumed.runId)).state).toBe("stopped");
+    expect((await stop(resumed.runId)).state).toBe("stopped");
+    await expect(stop("missing")).rejects.toMatchObject({ code: "run_not_found" });
   }, 120_000);
 
   it("refuses the methods it does not offer yet", async () => {

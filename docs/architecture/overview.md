@@ -337,6 +337,13 @@ desktop review:
   for one block. Both answer the updated review. Only a run awaiting approval
   takes them (409 `review_closed`), and a finding or block outside the current
   draft answers 404.
+- `POST .../approve` approves a run awaiting approval. When the final CV checks
+  fail it answers 409 `readiness_blocked`, the review's `approvalCheck` lists
+  the blockers, and approving past them needs `readinessOverrideRationale`.
+  `POST .../stop` stops a run for good. Any action the run's state does not
+  allow answers 409 `run_state_conflict` (`RunTransitionError`).
+- These actions change the run's state only. Their engine has no agents, so
+  the API still reaches no provider.
 
 ## Data and quality contracts
 
