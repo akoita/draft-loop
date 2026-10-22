@@ -1,4 +1,5 @@
 export * from "./routed-adapter.js";
+export * from "./secret-credentials.js";
 export * from "./vertex-client.js";
 export * from "./vertex-location.js";
 export * from "./vertex-models.js";
