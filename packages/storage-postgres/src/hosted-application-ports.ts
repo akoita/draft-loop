@@ -1,4 +1,5 @@
 import type {
+  BlobReference,
   BlobStoragePort,
   WorkspaceHistoryStorage,
   WorkspaceSettingsPort,
@@ -24,6 +25,30 @@ export function hostedWorkspaceReference(tenantId: string, workspaceId: string):
 /** The reference a hosted workspace's knowledge selection names a candidate knowledge store by. */
 export function hostedKnowledgeStoreReference(tenantId: string, storeId: string): string {
   return `/tenants/${requireIdentifier(tenantId, "tenant id")}/knowledge-stores/${requireIdentifier(storeId, "store id")}`;
+}
+
+/**
+ * Blobs addressed by workspace reference: the application writes an export at a path under its
+ * workspace reference, `/tenants/<tenant>/workspaces/<id>/...`, and the object key is that path
+ * without its leading slash, so it sits under the tenant's blob prefix. References keep the
+ * application's location, so a recorded export path reads back through the same mapping.
+ */
+export function workspaceReferenceBlobs(blobs: BlobStoragePort): BlobStoragePort {
+  const key = (location: string): string => {
+    if (!location.startsWith("/tenants/"))
+      throw new StorageSecurityError("An export location must sit under a workspace reference.");
+    return location.slice(1);
+  };
+  const stored = (reference: BlobReference): BlobReference => ({
+    ...reference,
+    location: key(reference.location),
+  });
+  return {
+    put: async (location, content) => ({ ...(await blobs.put(key(location), content)), location }),
+    get: (reference) => blobs.get(stored(reference)),
+    exists: (reference) => blobs.exists(stored(reference)),
+    delete: (reference) => blobs.delete(stored(reference)),
+  };
 }
 
 export interface HostedApplicationPortsOptions {
@@ -61,7 +86,7 @@ export function hostedApplicationPorts(
   const history = hostedWorkspaceHistory(storage);
   return {
     settings: storage.workspaceSettings,
-    storage: { open: async () => history, exportBlobs: blobs },
+    storage: { open: async () => history, exportBlobs: workspaceReferenceBlobs(blobs) },
     openKnowledgeStore: async (reference) => {
       if (!reference.startsWith(storePrefix)) {
         throw new StorageSecurityError(

@@ -19,6 +19,7 @@ import { type ZodType, z } from "zod";
 
 import { registerApplicationRoutes } from "./application-routes.js";
 import { apiError, sendError, sendNotFound } from "./errors.js";
+import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
@@ -155,6 +156,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: options.application.workspaceRoot,
       idempotency,
       enqueueRun: options.application.enqueueRun,
+    });
+    registerExportRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
+      idempotency,
     });
     registerUsageRoutes(app, {
       service: options.application.service,

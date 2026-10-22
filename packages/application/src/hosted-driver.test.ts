@@ -3,8 +3,7 @@ import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RunTransitionError } from "@draft-loop/orchestrator";
-import { openSqliteStorage } from "@draft-loop/storage";
-import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
+import { type BlobStoragePort, openSqliteStorage } from "@draft-loop/storage";
 import {
   type CandidateKnowledgeStoreHandle,
   openCandidateKnowledgeStore,
@@ -43,14 +42,30 @@ function memorySettings(): WorkspaceSettingsPort {
   };
 }
 
+const sha256 = (content: Uint8Array) => createHash("sha256").update(content).digest("hex");
+
+/** Exported documents kept in memory by location, as a bucket keeps objects by key. */
+const exportedDocuments = new Map<string, Uint8Array>();
+
+const memoryBlobs: BlobStoragePort = {
+  put: async (location, content) => {
+    exportedDocuments.set(location, content);
+    return { location, checksum: sha256(content), sizeBytes: content.byteLength };
+  },
+  get: async ({ location, checksum }) => {
+    const content = exportedDocuments.get(location);
+    return content !== undefined && sha256(content) === checksum ? content : undefined;
+  },
+  exists: async ({ location }) => exportedDocuments.has(location),
+  delete: async ({ location }) => exportedDocuments.delete(location),
+};
+
 /** History kept away from the reference, as a database keeps it: one SQLite file per workspace. */
 function scratchHistory(directory: string): StorageFactory {
   return {
     open: async (reference) =>
-      openSqliteStorage(
-        join(directory, `${createHash("sha256").update(reference).digest("hex")}.sqlite`),
-      ),
-    exportBlobs: createFilesystemBlobStorage(),
+      openSqliteStorage(join(directory, `${sha256(Buffer.from(reference))}.sqlite`)),
+    exportBlobs: memoryBlobs,
   };
 }
 
@@ -84,6 +99,23 @@ async function awaitingApprovalRun() {
   const { service, begun, opened } = await begunRun();
   const resumed = await service.resume({ root: workspace, runId: begun.runId }, silent);
   return { service, begun, resumed, opened };
+}
+
+/** A hosted service with one approved fixture run, approved past failing checks if it must be. */
+async function approvedRun() {
+  const ready = await awaitingApprovalRun();
+  const approve = (readinessOverrideRationale?: string) =>
+    ready.service.lifecycle(
+      {
+        root: workspace,
+        runId: ready.resumed.runId,
+        action: "approve",
+        ...(readinessOverrideRationale === undefined ? {} : { readinessOverrideRationale }),
+      },
+      silent,
+    );
+  await approve().catch(() => approve("Synthetic fixture draft, approved for the test."));
+  return ready;
 }
 
 /** A hosted service with one fixture run begun and not yet executed, as the API leaves it. */
@@ -344,6 +376,45 @@ describe("hosted application driver", () => {
     });
   }, 120_000);
 
+  it("exports an approved run under the workspace, a new document each time", async () => {
+    const { service, resumed } = await approvedRun();
+    const exportAs = (format: "docx" | "markdown") =>
+      service.export({ root: workspace, runId: resumed.runId, format }, silent);
+
+    const docxPath = await exportAs("docx");
+    const markdownPath = await exportAs("markdown");
+    const exports = await service.listRunExports?.({ root: workspace, runId: resumed.runId });
+    const status = await service.status({ root: workspace, runId: resumed.runId }, silent);
+
+    expect(docxPath.startsWith(`${workspace}/exports/${resumed.runId}/`)).toBe(true);
+    expect(docxPath.endsWith(".docx")).toBe(true);
+    expect(markdownPath).not.toBe(docxPath);
+    expect(status?.state).toBe("exported");
+    expect(exports?.map((entry) => entry.format).sort()).toEqual(["docx", "markdown"]);
+    for (const entry of exports ?? []) {
+      const content = exportedDocuments.get(entry.location);
+      expect(content?.byteLength).toBe(entry.sizeBytes);
+      expect(content === undefined ? undefined : sha256(content)).toBe(entry.checksum);
+    }
+  }, 120_000);
+
+  it("refuses to export a run before approval, or at a path the client names", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+
+    await expect(
+      service.export({ root: workspace, runId: resumed.runId, format: "docx" }, silent),
+    ).rejects.toBeInstanceOf(RunTransitionError);
+    await expect(
+      service.export({ root: workspace, runId: "missing", format: "docx" }, silent),
+    ).rejects.toMatchObject({ code: "run_not_found" });
+    await expect(
+      service.export(
+        { root: workspace, runId: resumed.runId, format: "docx", outputPath: "../other.docx" },
+        silent,
+      ),
+    ).rejects.toThrow("never an output path");
+  }, 120_000);
+
   it("refuses the methods it does not offer yet", async () => {
     const driver = createHostedApplicationDriver({
       settings: memorySettings(),
@@ -353,8 +424,8 @@ describe("hosted application driver", () => {
       },
     });
 
-    await expect(driver.export({ root: workspace, format: "markdown" }, silent)).rejects.toThrow(
-      "export is not available in the hosted service yet.",
-    );
+    await expect(
+      driver.queryEvidence({ root: workspace, query: "testing" }, silent),
+    ).rejects.toThrow("queryEvidence is not available in the hosted service yet.");
   });
 });
