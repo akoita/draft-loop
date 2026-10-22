@@ -1,14 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { buildApi } from "@draft-loop/api";
+import { isAbsolute, join } from "node:path";
+import { buildApi, composeHostedApplication } from "@draft-loop/api";
 import {
   type ApplicationService,
   createApplicationService,
   createHostedApplicationDriver,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
+import type { BlobStoragePort } from "@draft-loop/storage";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   grantPostgresStorageAccess,
@@ -45,6 +46,23 @@ function runtimeUrl(url: string): string {
   parsed.username = runtimeRole;
   parsed.password = runtimeRole;
   return parsed.toString();
+}
+
+/**
+ * Filesystem blobs that also take the tenant's relative keys, as Cloud Storage does, by placing
+ * them under `root`; references keep the key the caller gave.
+ */
+function tenantKeyBlobs(root: string, blobs: BlobStoragePort): BlobStoragePort {
+  const path = (location: string) => (isAbsolute(location) ? location : join(root, location));
+  return {
+    put: async (location, content) => ({
+      ...(await blobs.put(path(location), content)),
+      location,
+    }),
+    get: (reference) => blobs.get({ ...reference, location: path(reference.location) }),
+    exists: (reference) => blobs.exists({ ...reference, location: path(reference.location) }),
+    delete: (reference) => blobs.delete({ ...reference, location: path(reference.location) }),
+  };
 }
 
 /** Selects the synthetic knowledge base, reviews a one-requirement brief and begins its run. */
@@ -357,6 +375,208 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       expect(monthUsage?.lines.filter((line) => line.route !== "fixture")).toEqual(runUsage?.lines);
     } finally {
       await api.close();
+    }
+  }, 120_000);
+
+  it("takes runs from setup to a downloaded DOCX through the API only, one after a revision", async () => {
+    const ownerToken = "owner-token-for-tests-0123456789abcdef";
+    const apiTenant = "tenant-api";
+    const tenantBlobs = tenantKeyBlobs(blobRoot, blobs);
+    const queued: { tenantId: string; workspaceId: string; runId: string }[] = [];
+    const apiStorage = await openPostgresStorage({
+      connectionString: runtimeUrl(url),
+      schema,
+      tenantId: apiTenant,
+    });
+    // The API and the worker share the tenant's database and blobs, as their containers do.
+    const api = await buildApi({
+      ownerToken,
+      application: composeHostedApplication({
+        storage: apiStorage,
+        blobs: tenantBlobs,
+        tenantId: apiTenant,
+        budgetCeiling,
+        enqueueRun: async (workspaceId, runId) => {
+          queued.push({ tenantId: apiTenant, workspaceId, runId });
+        },
+        knowledgeLocation: (versionId) => `tenants/${apiTenant}/knowledge/${versionId}`,
+      }),
+    });
+    const ports = hostedApplicationPorts({
+      storage: apiStorage,
+      tenantId: apiTenant,
+      blobs: tenantBlobs,
+    });
+    const worker = createRunJobHandler({
+      service: createApplicationService(
+        createHostedApplicationDriver({
+          ...ports,
+          settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+        }),
+      ),
+      workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
+      allowProviderData: false,
+      budgetCeiling,
+    });
+    const drainQueue = async () => {
+      for (let job = queued.shift(); job !== undefined; job = queued.shift()) {
+        await worker(job, { requeue: async () => undefined });
+      }
+    };
+    let keys = 0;
+    // The routes' JSON is read as it comes; each route's schema is tested in the API package.
+    const call = async (
+      method: "GET" | "POST" | "PUT" | "PATCH",
+      path: string,
+      payload?: object,
+    ) => {
+      keys += 1;
+      const response = await api.inject({
+        method,
+        url: path,
+        headers: {
+          authorization: `Bearer ${ownerToken}`,
+          "idempotency-key": `exit-key-${String(keys).padStart(4, "0")}`,
+        },
+        ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }),
+      });
+      return { status: response.statusCode, body: response.json() };
+    };
+
+    try {
+      const workspacePath = "/v1/workspaces/exit-1";
+      expect((await call("PUT", workspacePath, { fixtureMode: true })).status).toBe(201);
+      const base = await call("POST", "/v1/knowledge-bases", { displayName: "Career" });
+      const upload = await api.inject({
+        method: "POST",
+        url: `/v1/knowledge-bases/${base.body.id}/sources?name=career.md`,
+        headers: { authorization: `Bearer ${ownerToken}`, "content-type": "text/markdown" },
+        payload: Buffer.from(career),
+      });
+      expect(upload.statusCode).toBe(201);
+      expect(
+        (
+          await call("PUT", `${workspacePath}/knowledge-selection`, {
+            knowledgeBaseIds: [base.body.id],
+          })
+        ).status,
+      ).toBe(200);
+      const created = await call("POST", `${workspacePath}/opportunities`, {
+        sources: [
+          {
+            id: "posting",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "Platform Engineer at Example Ledger: build TypeScript services.",
+          },
+        ],
+      });
+      const briefPath = `${workspacePath}/opportunities/${created.body.brief.id}`;
+      const edited = await call("PATCH", briefPath, {
+        expectedVersion: created.body.brief.version,
+        patch: {
+          role: { value: "Platform Engineer", sourceIds: ["posting"] },
+          requirements: [
+            {
+              id: "typescript-services",
+              text: "Build TypeScript services with deterministic testing",
+              priority: "critical",
+              sourceIds: ["posting"],
+            },
+          ],
+        },
+      });
+      const reviewed = await call("POST", `${briefPath}/review`, {
+        expectedVersion: edited.body.brief.version,
+      });
+      expect(reviewed.status).toBe(200);
+      const brief = { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version };
+
+      /** Begins a run and lets the worker draft it to the person's review. */
+      const draftedRun = async (): Promise<string> => {
+        const begun = await call("POST", `${workspacePath}/runs`, { opportunityBrief: brief });
+        expect(begun.status).toBe(201);
+        await drainQueue();
+        const review = await call("GET", `${workspacePath}/runs/${begun.body.runId}/review`);
+        expect(review.body.run.state).toBe("awaiting-approval");
+        return begun.body.runId;
+      };
+
+      /** Decides every finding, approves, exports a DOCX and downloads it, checking its bytes. */
+      const approveAndDownload = async (runId: string) => {
+        const runPath = `${workspacePath}/runs/${runId}`;
+        let review = (await call("GET", `${runPath}/review`)).body;
+        expect(review.draft?.sections.length).toBeGreaterThan(0);
+        for (const finding of review.findings) {
+          const decided = await call(
+            "PUT",
+            `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
+            { decision: "accepted", rationale: "Checked against the source." },
+          );
+          expect(decided.status).toBe(200);
+          review = decided.body;
+        }
+        expect(
+          review.findings.every(({ decision }: { decision: string }) => decision === "accepted"),
+        ).toBe(true);
+        let approved = await call("POST", `${runPath}/approve`, {});
+        if (approved.status === 409 && approved.body.error.code === "readiness_blocked") {
+          approved = await call("POST", `${runPath}/approve`, {
+            readinessOverrideRationale: "Synthetic test run: the owner accepts the open checks.",
+          });
+        }
+        expect(approved.body).toMatchObject({ runId, state: "approved", approval: "approved" });
+
+        const exported = await call("POST", `${runPath}/exports`, { format: "docx" });
+        expect(exported.status).toBe(201);
+        expect(exported.body).not.toHaveProperty("location");
+        const listed = await call("GET", `${runPath}/exports`);
+        expect(listed.body.exports).toEqual([exported.body]);
+        const download = await api.inject({
+          method: "GET",
+          url: `${runPath}/exports/${encodeURIComponent(exported.body.id)}/content`,
+          headers: { authorization: `Bearer ${ownerToken}` },
+        });
+        expect(download.statusCode).toBe(200);
+        expect(download.headers["content-type"]).toContain(
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        );
+        const sha256 = createHash("sha256").update(download.rawPayload).digest("hex");
+        expect(sha256).toBe(exported.body.checksum);
+        expect(download.headers["x-content-sha256"]).toBe(sha256);
+        expect(download.rawPayload.byteLength).toBe(exported.body.sizeBytes);
+        // A DOCX is a zip archive.
+        expect(download.rawPayload.subarray(0, 2).toString("latin1")).toBe("PK");
+        expect((await call("GET", runPath)).body.state).toBe("exported");
+      };
+
+      const firstRun = await draftedRun();
+      await approveAndDownload(firstRun);
+
+      const revisedRun = await draftedRun();
+      const firstRound = (await call("GET", `${workspacePath}/runs/${revisedRun}`)).body.round;
+      const revision = await call("POST", `${workspacePath}/runs/${revisedRun}/revision`, {
+        candidateDirection: "Lead with the TypeScript services.",
+      });
+      expect(revision.status).toBe(200);
+      expect(queued).toHaveLength(1);
+      await drainQueue();
+      const revised = await call("GET", `${workspacePath}/runs/${revisedRun}/review`);
+      expect(revised.body.run).toMatchObject({ state: "awaiting-approval", round: firstRound + 1 });
+      expect(revised.body.candidateDirection).toBe("Lead with the TypeScript services.");
+      await approveAndDownload(revisedRun);
+
+      // Each document is in the tenant's blobs, under its workspace and run.
+      const stored = await readdir(join(blobRoot, "tenants", apiTenant, "workspaces", "exit-1"), {
+        recursive: true,
+      });
+      const documentRuns = stored
+        .filter((path) => path.endsWith(".docx"))
+        .map((path) => path.split("/")[1]);
+      expect(documentRuns.sort()).toEqual([firstRun, revisedRun].sort());
+    } finally {
+      await api.close();
+      await apiStorage.close();
     }
   }, 120_000);
 });

@@ -3,6 +3,11 @@ export { type ApplicationRoutesOptions, registerApplicationRoutes } from "./appl
 export { type ApiConfig, ApiConfigError, readApiConfig } from "./config.js";
 export { type ApiError, apiErrorSchema } from "./errors.js";
 export {
+  composeHostedApplication,
+  type HostedApplicationParts,
+  hostedKnowledgeStoreId,
+} from "./hosted-application.js";
+export {
   createMemoryIdempotencyStore,
   IdempotencyConflictError,
   IdempotencyInProgressError,
