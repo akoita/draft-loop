@@ -48,7 +48,10 @@ const sourceView: HostedKnowledgeSourceView = {
 let app: FastifyInstance;
 
 /** Only the intake methods a test scripts exist; calling any other one fails the test. */
-async function build(intake: Partial<HostedKnowledgeIntake>): Promise<void> {
+async function build(
+  intake: Partial<HostedKnowledgeIntake>,
+  maxSourceBytes = 1_024,
+): Promise<void> {
   app = await buildApi({
     ownerToken,
     application: {
@@ -57,7 +60,7 @@ async function build(intake: Partial<HostedKnowledgeIntake>): Promise<void> {
       enqueueRun: async () => undefined,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
-      knowledgeIntake: intake as HostedKnowledgeIntake,
+      knowledgeIntake: { maxSourceBytes, ...intake } as HostedKnowledgeIntake,
     },
   });
 }
@@ -190,5 +193,123 @@ describe("knowledge sources", () => {
     });
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe("source uploads", () => {
+  const upload = (
+    payload: string | Buffer,
+    contentType: string,
+    url = "/v1/knowledge-bases/base-1/sources?name=career.md",
+  ) =>
+    app.inject({
+      method: "POST",
+      url,
+      headers: { authorization, "content-type": contentType },
+      payload,
+    });
+
+  it("passes the raw file to intake and answers 201 for a new source", async () => {
+    const addFileSource = vi.fn(async () => ({ ...sourceView, created: true }));
+    await build({ addFileSource });
+
+    const response = await upload("# Experience\n", "text/markdown; charset=utf-8");
+
+    expect(response.statusCode).toBe(201);
+    expect(addFileSource).toHaveBeenCalledWith({
+      knowledgeBaseId: "base-1",
+      displayName: "career.md",
+      mediaType: "text/markdown",
+      bytes: new Uint8Array(Buffer.from("# Experience\n")),
+    });
+    expect(response.json().id).toBe("source-1");
+  });
+
+  it("answers 200 with the existing source for the same bytes", async () => {
+    await build({ addFileSource: async () => ({ ...sourceView, created: false }) });
+
+    const response = await upload("%PDF-1.7", "application/pdf");
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it("refuses a media type intake does not take before reading the body", async () => {
+    const addFileSource = vi.fn();
+    await build({ addFileSource });
+
+    const response = await upload("<p>Experience</p>", "text/html");
+
+    expect(response.statusCode).toBe(415);
+    expect(response.json().error.code).toBe("unsupported_media_type");
+    expect(addFileSource).not.toHaveBeenCalled();
+  });
+
+  it("refuses JSON, so a file is never sent wrapped in another document", async () => {
+    const addFileSource = vi.fn();
+    await build({ addFileSource });
+
+    const response = await upload(JSON.stringify({ content: "x" }), "application/json");
+
+    expect(response.statusCode).toBe(415);
+    expect(addFileSource).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file over the limit with 413", async () => {
+    const addFileSource = vi.fn();
+    await build({ addFileSource }, 16);
+
+    const response = await upload("x".repeat(17), "text/plain");
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json().error.code).toBe("payload_too_large");
+    expect(addFileSource).not.toHaveBeenCalled();
+  });
+
+  it("answers intake's refusals with their codes", async () => {
+    await build({
+      addFileSource: async () => {
+        throw new HostedKnowledgeIntakeError(
+          "unsupported_media_type",
+          "The file's content does not match its media type.",
+        );
+      },
+    });
+
+    const response = await upload("not a pdf", "application/pdf");
+
+    expect(response.statusCode).toBe(415);
+    expect(response.json()).toEqual({
+      error: {
+        code: "unsupported_media_type",
+        message: "The file's content does not match its media type.",
+      },
+    });
+  });
+
+  it.each([
+    ["without a name", "/v1/knowledge-bases/base-1/sources"],
+    ["with a path as its name", "/v1/knowledge-bases/base-1/sources?name=..%2Fcareer.md"],
+    ["with a control character in its name", "/v1/knowledge-bases/base-1/sources?name=a%0Ab"],
+  ])("refuses an upload %s", async (_name, url) => {
+    const addFileSource = vi.fn();
+    await build({ addFileSource });
+
+    const response = await upload("# Experience", "text/markdown", url);
+
+    expect(response.statusCode).toBe(400);
+    expect(addFileSource).not.toHaveBeenCalled();
+  });
+
+  it("keeps parsing JSON on every other route", async () => {
+    await build({ createKnowledgeBase: async () => base });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/knowledge-bases",
+      headers: { authorization },
+      payload: { displayName: "Career" },
+    });
+
+    expect(response.statusCode).toBe(201);
   });
 });

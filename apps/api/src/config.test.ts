@@ -51,6 +51,9 @@ describe("readHostedStorageConfig", () => {
     expect(
       readHostedStorageConfig({ ...env, DRAFT_LOOP_GCS_ENDPOINT: "http://gcs:4443" }).gcsEndpoint,
     ).toBe("http://gcs:4443");
+    expect(
+      readHostedStorageConfig({ ...env, DRAFT_LOOP_MAX_SOURCE_BYTES: "5242880" }).maxSourceBytes,
+    ).toBe(5_242_880);
   });
 
   it.each([
@@ -58,6 +61,9 @@ describe("readHostedStorageConfig", () => {
     ["without a bucket", { DRAFT_LOOP_BLOB_BUCKET: "" }],
     ["with an unsafe tenant", { DRAFT_LOOP_TENANT_ID: "../other" }],
     ["with an unsafe schema", { DRAFT_LOOP_DATABASE_SCHEMA: "draft-loop; drop" }],
+    ["with a source limit of no bytes", { DRAFT_LOOP_MAX_SOURCE_BYTES: "0" }],
+    ["with a source limit Cloud Run refuses", { DRAFT_LOOP_MAX_SOURCE_BYTES: "40000000" }],
+    ["with a source limit that is not a number", { DRAFT_LOOP_MAX_SOURCE_BYTES: "10MB" }],
   ])("refuses settings %s", (_label, override) => {
     expect(() => readHostedStorageConfig({ ...env, ...override })).toThrow(ApiConfigError);
   });

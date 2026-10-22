@@ -39,6 +39,23 @@ export interface HostedStorageConfig {
   readonly blobBucket: string;
   /** A Cloud Storage emulator, for the local stack only; unset in a deployment. */
   readonly gcsEndpoint?: string;
+  /** The largest candidate source file the API takes; intake's default when unset. */
+  readonly maxSourceBytes?: number;
+}
+
+/** Cloud Run refuses requests over 32 MiB, so a larger limit could never be reached. */
+const maximumSourceBytesLimit = 30 * 1024 * 1024;
+
+function optionalSourceLimit(env: NodeJS.ProcessEnv): number | undefined {
+  const text = env.DRAFT_LOOP_MAX_SOURCE_BYTES ?? "";
+  if (text === "") return undefined;
+  const value = Number(text);
+  if (!Number.isInteger(value) || value < 1 || value > maximumSourceBytesLimit) {
+    throw new ApiConfigError(
+      `DRAFT_LOOP_MAX_SOURCE_BYTES must be a whole number of bytes from 1 to ${maximumSourceBytesLimit}.`,
+    );
+  }
+  return value;
 }
 
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
@@ -66,6 +83,7 @@ export function readHostedStorageConfig(env: NodeJS.ProcessEnv): HostedStorageCo
     throw new ApiConfigError("DRAFT_LOOP_TENANT_ID must be a safe identifier.");
   }
   const gcsEndpoint = env.DRAFT_LOOP_GCS_ENDPOINT ?? "";
+  const maxSourceBytes = optionalSourceLimit(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -73,5 +91,6 @@ export function readHostedStorageConfig(env: NodeJS.ProcessEnv): HostedStorageCo
     tenantId,
     blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
     ...(gcsEndpoint === "" ? {} : { gcsEndpoint }),
+    ...(maxSourceBytes === undefined ? {} : { maxSourceBytes }),
   };
 }

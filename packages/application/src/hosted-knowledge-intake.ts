@@ -101,6 +101,8 @@ export interface AddedHostedKnowledgeSource extends HostedKnowledgeSourceView {
 }
 
 export interface HostedKnowledgeIntake {
+  /** The largest source file this intake takes, in bytes. */
+  readonly maxSourceBytes: number;
   readonly ensureStore: () => Promise<CandidateKnowledgeStoreDescriptor>;
   readonly createKnowledgeBase: (input: {
     readonly displayName: string;
@@ -208,6 +210,7 @@ export function createHostedKnowledgeIntake(
   };
 
   return {
+    maxSourceBytes,
     ensureStore,
     createKnowledgeBase: async (input) => {
       await ensureStore();

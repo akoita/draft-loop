@@ -298,7 +298,7 @@ and the blob port:
 
 - A tenant has one knowledge store, created with its first knowledge base,
   because knowledge bases belong to the tenant.
-- A source file is a PDF, DOCX, Markdown or plain text file of at most 10 MB by
+- A source file is a PDF, DOCX, Markdown or plain text file of at most 10 MiB by
   default. Its type is checked by its signature only: the service never parses
   an upload (ADR 0011, D11), and the run worker extracts the text from the
   stored bytes.
@@ -312,6 +312,11 @@ storage location:
 - `POST /v1/knowledge-bases` creates a knowledge base, and `GET` lists them.
 - `GET /v1/knowledge-bases/:id/sources` lists a base's sources with their
   latest file's name, media type, size, checksum and date, never its content.
+- `POST /v1/knowledge-bases/:id/sources?name=<file name>` uploads one source
+  file as the raw request body, with its media type as the `Content-Type`.
+  Another type answers 415, a file over the limit 413
+  (`DRAFT_LOOP_MAX_SOURCE_BYTES`), and the same bytes again 200 with the
+  existing source, so a retry is safe. Every other route keeps parsing JSON.
 
 ## Data and quality contracts
 
