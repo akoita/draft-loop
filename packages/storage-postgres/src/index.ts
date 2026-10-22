@@ -1,4 +1,14 @@
 export {
+  CloudSqlConfigError,
+  type CloudSqlConnector,
+  type CloudSqlProxy,
+  type CloudSqlProxyConfig,
+  type CloudSqlProxyOptions,
+  readCloudSqlProxyConfig,
+  startCloudSqlProxy,
+  startConfiguredCloudSqlProxy,
+} from "./cloud-sql.js";
+export {
   type HostedApplicationPorts,
   type HostedApplicationPortsOptions,
   hostedApplicationPorts,
@@ -31,6 +41,7 @@ export {
   type PostgresStorage,
   type PostgresStorageOptions,
 } from "./postgres-storage.js";
+export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
   createSqlClient,
   type SqlClient,

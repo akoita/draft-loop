@@ -66,6 +66,7 @@ describe("readMigrationConfig", () => {
       databaseSchema: "draft_loop",
       queueSchema: "draft_loop_queue",
       runtimeRole: "draft_loop_app",
+      runtimeMembers: [],
     });
     expect(() =>
       readMigrationConfig({
@@ -73,5 +74,24 @@ describe("readMigrationConfig", () => {
         DRAFT_LOOP_RUNTIME_ROLE: "app; drop",
       }),
     ).toThrow(WorkerConfigError);
+  });
+
+  it("reads the IAM database users that join the runtime role, and refuses anything else", () => {
+    const base = {
+      DRAFT_LOOP_MIGRATION_DATABASE_URL: "postgres://owner@db.example.test/draft_loop",
+      DRAFT_LOOP_RUNTIME_ROLE: "draft_loop_app",
+    };
+    expect(
+      readMigrationConfig({
+        ...base,
+        DRAFT_LOOP_RUNTIME_MEMBERS:
+          " api-runtime@example-proj.iam, worker-runtime@example-proj.iam ",
+      }).runtimeMembers,
+    ).toEqual(["api-runtime@example-proj.iam", "worker-runtime@example-proj.iam"]);
+    for (const members of ['api"; drop role x; --@example-proj.iam', "postgres", "a@b.iam"]) {
+      expect(() => readMigrationConfig({ ...base, DRAFT_LOOP_RUNTIME_MEMBERS: members })).toThrow(
+        WorkerConfigError,
+      );
+    }
   });
 });

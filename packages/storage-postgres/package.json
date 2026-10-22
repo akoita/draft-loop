@@ -18,6 +18,7 @@
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/storage": "workspace:*",
+    "@google-cloud/cloud-sql-connector": "1.12.0",
     "pg": "8.23.1"
   },
   "devDependencies": {

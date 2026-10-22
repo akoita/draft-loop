@@ -42,6 +42,10 @@ API has no internet egress.
 The images read the settings listed in
 [the local server stack](local-server-stack.md): the database, the tenant, the
 bucket, the owner token, the run ceilings and the model routes. A deployment
-sets them from its infrastructure. Unlike the local stack, it leaves
-`DRAFT_LOOP_GCS_ENDPOINT` unset, and it sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA`
-and the model routes on the worker.
+sets them from its infrastructure. Unlike the local stack, it:
+
+- leaves `DRAFT_LOOP_GCS_ENDPOINT` unset;
+- sets `DRAFT_LOOP_CLOUD_SQL_INSTANCE`, so the services reach the database
+  through the Cloud SQL connector with no runtime password, and lists their IAM
+  database users in the migration job's `DRAFT_LOOP_RUNTIME_MEMBERS`;
+- sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker.
