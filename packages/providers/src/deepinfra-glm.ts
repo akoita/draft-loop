@@ -759,6 +759,7 @@ export class DeepInfraGLMAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: deepInfraGLMProvider,
           company: deepInfraGLMCompany,
+          route: "deepinfra-api",
           modelId: deepInfraGLMModelId,
           providerRequestId: typeof response.id === "string" ? response.id : null,
           structuredOutputSha256: sha256(output),

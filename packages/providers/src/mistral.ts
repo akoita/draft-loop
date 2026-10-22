@@ -464,6 +464,7 @@ export class MistralAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: mistralProvider,
           company: mistralCompany,
+          route: "mistral-api",
           modelId: controls.modelId,
           providerRequestId: completion.responseId ?? null,
           structuredOutputSha256: sha256(output),

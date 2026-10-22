@@ -41,6 +41,7 @@ const snapshot = {
   artifact: null,
   findings: [],
   totalCostUsd: 0,
+  executionHistory: [],
   approval: "pending",
   startedAt: at,
   updatedAt: at,
@@ -393,6 +394,10 @@ describe("runs", () => {
     const failed = {
       ...snapshot,
       state: "provider-error",
+      executionHistory: [
+        { step: "author", status: "completed", route: "vertex-ai" },
+        { step: "critic", status: "failed", route: "openai-api" },
+      ],
       lastError: {
         code: "provider-usage-limit",
         message: "provider text that may quote the prompt",
@@ -424,6 +429,7 @@ describe("runs", () => {
       retryable: true,
       usageLimitResetsAt: "2026-10-21T11:00:00.000Z",
     });
+    expect(response.json().routes).toEqual([{ step: "author", route: "vertex-ai" }]);
     expect(response.body).not.toContain("provider text");
   });
 

@@ -1,4 +1,8 @@
-import type { ApplicationView, WorkspaceDescriptor } from "@draft-loop/application";
+import {
+  type ApplicationView,
+  runStepRoutes,
+  type WorkspaceDescriptor,
+} from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
@@ -107,6 +111,9 @@ export const runViewSchema = z
     currentStep: z.enum(["author", "critic", "revision"]).nullable(),
     approval: z.enum(["pending", "approved", "rejected"]),
     totalCostUsd: z.number(),
+    routes: z
+      .array(z.object({ step: z.enum(["author", "critic", "revision"]), route: z.string() }))
+      .describe("The endpoint behind each step's completed calls, in first-use order."),
     findingCount: z.number().int(),
     hasDraft: z.boolean(),
     startedAt: z.string(),
@@ -131,6 +138,7 @@ export function runView(snapshot: RunSnapshot): z.infer<typeof runViewSchema> {
     currentStep: snapshot.currentStep,
     approval: snapshot.approval,
     totalCostUsd: snapshot.totalCostUsd,
+    routes: runStepRoutes(snapshot),
     findingCount: snapshot.findings.length,
     hasDraft: snapshot.artifact !== null,
     startedAt: snapshot.startedAt,

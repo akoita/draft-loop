@@ -830,6 +830,7 @@ export class GoogleGeminiAdapter<
           contextSnapshotId: request.contextSnapshotId,
           provider: googleGeminiProvider,
           company: googleGeminiCompany,
+          route: "gemini-api",
           modelId: controls.modelId,
           providerRequestId: response.responseId ?? null,
           structuredOutputSha256: sha256(output),

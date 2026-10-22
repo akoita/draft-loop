@@ -40,6 +40,7 @@ function execution<T>(output: T, provider: string, modelId: string): AgentExecut
   return {
     output,
     provider,
+    route: "fixture",
     modelId,
     providerRequestId: null,
     outputChecksum: digest,

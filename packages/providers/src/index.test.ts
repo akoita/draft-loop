@@ -143,6 +143,7 @@ describe("provider-neutral model adapters", () => {
       contextSnapshotId: "snapshot-1",
       provider: "anthropic",
       company: "anthropic",
+      route: "anthropic-api",
       modelId: model.modelId,
       providerRequestId: "anthropic-request-1",
       usage: { inputTokens: 11, outputTokens: 7, totalTokens: 18 },
@@ -152,6 +153,32 @@ describe("provider-neutral model adapters", () => {
       createHash("sha256").update('{"answer":"yes"}').digest("hex"),
     );
     expect(seenOptions?.signal).toBe(controller.signal);
+  });
+
+  it("reports the route its client reaches, keeping the company and the model", async () => {
+    const response = {
+      id: "msg-1",
+      content: [{ type: "text", text: '{"answer":"yes"}' }],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 1, output_tokens: 1 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          Object.assign(Promise.resolve(response), {
+            withResponse: async () => ({ data: response, request_id: "vertex-request-1" }),
+          }) as ReturnType<AnthropicClient["messages"]["create"]>,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model, route: "vertex-ai" });
+
+    await expect(adapter.execute(request())).resolves.toMatchObject({
+      provider: "anthropic",
+      company: "anthropic",
+      route: "vertex-ai",
+      modelId: model.modelId,
+    });
   });
 
   it("counts Anthropic prompt-cache reads and writes as input and prices them at cache rates", async () => {
@@ -314,6 +341,7 @@ describe("provider-neutral model adapters", () => {
       output: { answer: "yes" },
       provider: "openai",
       company: "openai",
+      route: "openai-api",
       modelId: openAIModel.modelId,
       providerRequestId: "openai-request-1",
       usage: {
