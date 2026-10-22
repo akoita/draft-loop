@@ -33,6 +33,8 @@ try {
   await grantRunQueueAccess(queue, config.runtimeRole);
   console.info(
     JSON.stringify({
+      severity: "INFO",
+      message: "migrated",
       migrated: applied,
       runtimeRole: config.runtimeRole,
       runtimeMembers: config.runtimeMembers.length,
