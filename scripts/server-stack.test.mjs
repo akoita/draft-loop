@@ -12,11 +12,7 @@ describe("local server stack", () => {
       const { hostname, port } = new URL(url);
       assert.ok(compose.includes(`"${hostname}:${port}:`), `compose.yaml publishes ${url}`);
     }
-    for (const value of [
-      localServerStackSettings.DRAFT_LOOP_TEST_TENANT_ID,
-      localServerStackSettings.DRAFT_LOOP_TEST_BLOB_BUCKET,
-      localServerStackSettings.DRAFT_LOOP_TEST_API_OWNER_TOKEN,
-    ]) {
+    for (const value of Object.values(localServerStackSettings)) {
       assert.ok(compose.includes(value), `compose.yaml sets ${value}`);
     }
   });

@@ -126,10 +126,13 @@ suites with the stack's addresses and local values in the environment:
 3. `pnpm test:server-smoke`, the end-to-end smoke against
    `DRAFT_LOOP_TEST_API_URL`.
 
-The smoke seeds a synthetic knowledge base and a fixture-mode workspace with a
-reviewed job brief directly in storage, since the API has no intake or
-workspace-setup routes yet. It then begins a run through the API, waits for the
-worker to draft it, and reads the run back awaiting approval.
+The smoke goes through the API only, with synthetic data. It creates a
+fixture-mode workspace and a knowledge base, uploads one Markdown source,
+selects it, then creates, edits and reviews a job brief. It begins a run, waits
+for the worker to draft it, and reads the run back awaiting approval.
+
+`pnpm test:postgres` drives the same setup in-process against Postgres, without
+the containers, so the CI `Server storage` job covers it too.
 
 To run one suite, set its variables yourself. CI does not use this file: its
 `Server storage` job starts the Postgres and emulator images as its own

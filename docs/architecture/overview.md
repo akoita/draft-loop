@@ -179,8 +179,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   Postgres 16 with `pgvector` and the `fake-gcs-server` emulator.
 - Locally, `pnpm server:up` starts Postgres, the emulator, the API and one
   worker with Docker Compose. `pnpm server:test` runs both suites and an
-  end-to-end smoke that begins a run through the API and reads it back once
-  the worker has drafted it; see the
+  end-to-end smoke that sets up a workspace, its knowledge and a reviewed job
+  brief through the API only, begins a run and reads it back once the worker
+  has drafted it; see the
   [local server stack](../operations/local-server-stack.md).
 
 The hosted service starts runs through a queue rather than in the request
