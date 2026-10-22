@@ -18,19 +18,27 @@ export class IdempotencyConflictError extends Error {
   override readonly name = "IdempotencyConflictError";
 }
 
+/** The key's first request is still running elsewhere; the client retries the same request. */
+export class IdempotencyInProgressError extends Error {
+  override readonly name = "IdempotencyInProgressError";
+  constructor() {
+    super("A request with this idempotency key is still running. Retry it shortly.");
+  }
+}
+
 interface Entry {
   readonly fingerprint: string;
   readonly expiresAt: number;
   readonly result: Promise<unknown>;
 }
 
-function fingerprintOf(request: unknown): string {
+export function fingerprintOf(request: unknown): string {
   return createHash("sha256").update(JSON.stringify(request)).digest("hex");
 }
 
 /**
- * Keys live in this process for a day. Enough for one API instance; a deployment with several
- * instances needs a shared store.
+ * Keys live in this process for a day: for tests and a single process. A deployment with a
+ * database shares its keys through `createPostgresIdempotencyStore`.
  */
 export function createMemoryIdempotencyStore(
   options: {

@@ -7,6 +7,12 @@ export {
 } from "./hosted-application-ports.js";
 export { hostedWorkspaceHistory } from "./hosted-workspace-history.js";
 export type {
+  IdempotencyClaim,
+  IdempotencyClaimInput,
+  IdempotencyKeyRef,
+  PostgresIdempotencyKeys,
+} from "./idempotency-keys.js";
+export type {
   CandidateKnowledgeRunRecords,
   ManagedCandidateKnowledgeSourceVersionInput,
   ManagedCandidateKnowledgeSourceVersionLocation,

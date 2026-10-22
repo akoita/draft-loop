@@ -736,6 +736,31 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
     `,
   },
+  {
+    version: 12,
+    name: "idempotency keys",
+    sql: `
+      -- What a command produced under a client's Idempotency-Key, shared by every API instance
+      -- (ADR 0011, D10). A row without a result is a command still running under its lease.
+      CREATE TABLE idempotency_keys (
+        tenant_id TEXT NOT NULL DEFAULT current_setting('draft_loop.tenant_id', true)
+          CHECK (tenant_id <> ''),
+        scope TEXT NOT NULL CHECK (length(scope) BETWEEN 1 AND 256),
+        key TEXT NOT NULL CHECK (length(key) BETWEEN 1 AND 256),
+        fingerprint TEXT NOT NULL CHECK (fingerprint ~ '^[a-f0-9]{64}$'),
+        result_json TEXT,
+        lease_until TIMESTAMPTZ,
+        expires_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (tenant_id, scope, key)
+      );
+      CREATE INDEX idempotency_keys_expiry ON idempotency_keys (tenant_id, expires_at);
+      ALTER TABLE idempotency_keys ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE idempotency_keys FORCE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON idempotency_keys
+        USING (tenant_id = current_setting('draft_loop.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
+    `,
+  },
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

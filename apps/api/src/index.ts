@@ -5,6 +5,11 @@ export { type ApiError, apiErrorSchema } from "./errors.js";
 export {
   createMemoryIdempotencyStore,
   IdempotencyConflictError,
+  IdempotencyInProgressError,
   type IdempotencyStore,
 } from "./idempotency.js";
 export { isOwnerAuthorization, ownerTokenMinimumLength } from "./owner-access.js";
+export {
+  createPostgresIdempotencyStore,
+  type PostgresIdempotencyStoreOptions,
+} from "./postgres-idempotency.js";

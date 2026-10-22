@@ -173,9 +173,9 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     replaced objects, then download that exact generation and hash it;
   - delete names the generation it verified, so a concurrent write survives.
 - `pnpm test:postgres` runs the Postgres suites against the server named by
-  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's and the worker's,
-  and `pnpm test:gcs` runs the Cloud Storage suites against the emulator named
-  by `DRAFT_LOOP_TEST_GCS_URL`. The CI `Server storage` job runs both, against
+  `DRAFT_LOOP_TEST_POSTGRES_URL`, including the run queue's, the worker's and
+  the API's idempotency store, and `pnpm test:gcs` runs the Cloud Storage
+  suites against the emulator named by `DRAFT_LOOP_TEST_GCS_URL`. The CI `Server storage` job runs both, against
   Postgres 16 with `pgvector` and the `fake-gcs-server` emulator.
 - Locally, `pnpm server:up` starts Postgres, the emulator, the API and one
   worker with Docker Compose. `pnpm server:test` runs both suites and an
@@ -190,6 +190,13 @@ The hosted service starts runs through a queue rather than in the request
   provider call, then queues its ids in `packages/run-queue`. A request that
   saved the run but could not queue it answers 503, and a retry with the same
   `Idempotency-Key` queues the saved run.
+- Idempotency keys live in Postgres (`idempotency_keys`, under row-level
+  security), so every API instance replays a key's first result for a day. A
+  retry that arrives while the first request still runs waits up to five
+  seconds, then answers a retryable 409 `idempotency_in_progress`; it never
+  runs the command again. A request that stopped without a result frees its
+  key after a two-minute lease, and each new key removes up to 100 expired
+  ones.
 - The queue keeps at most one waiting and one active job per run, so repeated
   requests collapse, and a paused run can queue its resumption while the
   paused attempt finishes.

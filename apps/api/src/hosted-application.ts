@@ -15,6 +15,7 @@ import { Storage } from "@google-cloud/storage";
 
 import type { ApiOptions } from "./app.js";
 import type { HostedStorageConfig } from "./config.js";
+import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 
 export interface HostedApplication {
   readonly application: NonNullable<ApiOptions["application"]>;
@@ -61,6 +62,7 @@ export async function openHostedApplication(
         enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
         budgetCeiling,
         monthUsage: storage.monthUsage,
+        idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
       },
       close: async () => {
         await queue.close();
