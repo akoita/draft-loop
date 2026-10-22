@@ -3,7 +3,7 @@ import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
 import { type StorageFactory, withStorageFactory } from "./local-storage-factory.js";
-import { readRunReview } from "./run-review.js";
+import { assertReviewDecisionTarget, readRunReview } from "./run-review.js";
 import { noWorkspaceFiles, withWorkspaceFiles } from "./workspace-files.js";
 import { type WorkspaceSettingsPort, withWorkspaceSettings } from "./workspace-settings.js";
 
@@ -39,6 +39,7 @@ export const hostedDriverMethods = [
   "resume",
   "status",
   "readIndependentReview",
+  "recordReviewDecision",
 ] as const satisfies readonly (keyof ApplicationDriver)[];
 
 const offered: ReadonlySet<string> = new Set(hostedDriverMethods);
@@ -82,6 +83,11 @@ export function createHostedApplicationDriver(
   const driver = Object.fromEntries(methods) as ApplicationDriver;
   return Object.freeze({
     ...driver,
+    recordReviewDecision: (command) =>
+      inHostedContext(async () => {
+        await assertReviewDecisionTarget(command);
+        await local.recordReviewDecision(command);
+      }),
     // Hosted-only reads, composed from the shared modules rather than the local driver.
     readRunReview: (command) => inHostedContext(() => readRunReview(command)),
   } satisfies ApplicationDriver);

@@ -4,6 +4,8 @@ import {
   type HostedKnowledgeIntakeErrorCode,
   opportunityBriefNotFoundErrorMessage,
   opportunityBriefVersionStaleErrorMessage,
+  RunActionError,
+  type RunActionErrorCode,
 } from "@draft-loop/application";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
@@ -51,6 +53,13 @@ const intakeStatus: Readonly<Record<HostedKnowledgeIntakeErrorCode, number>> = {
   source_empty: 400,
   source_too_large: 413,
   unsupported_media_type: 415,
+};
+
+/** Refused run actions by HTTP status; the codes are the API's error codes too. */
+const runActionStatus: Readonly<Record<RunActionErrorCode, number>> = {
+  run_not_found: 404,
+  review_closed: 409,
+  review_target_not_found: 404,
 };
 
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
@@ -103,6 +112,10 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error instanceof HostedKnowledgeIntakeError) {
     void reply.code(intakeStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  if (error instanceof RunActionError) {
+    void reply.code(runActionStatus[error.code]).send(apiError(error.code, error.message));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals.

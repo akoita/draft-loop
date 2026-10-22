@@ -5,9 +5,10 @@ import { createStorageRunStore, type RunSnapshot, reviewFindingId } from "@draft
 import { contextSnapshotSchema, type DraftArtifact } from "@draft-loop/schemas";
 import type { DecisionRecord } from "@draft-loop/storage";
 
-import type { FindingDecision } from "./index.js";
+import type { FindingDecision, RecordReviewDecisionCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
 import { storageFactory } from "./local-storage-factory.js";
+import { RunActionError } from "./run-action-error.js";
 import { runRequirementTexts } from "./run-context-read.js";
 
 export interface RunReviewCommand {
@@ -249,6 +250,48 @@ export async function readRunReview(command: RunReviewCommand): Promise<RunRevie
             },
       candidateDirection: snapshot.candidateDirection?.text ?? null,
     };
+  } finally {
+    await storage.close();
+  }
+}
+
+/**
+ * Refuses a review decision the run cannot take: an unknown run, a run no longer awaiting review,
+ * or a finding or block that is not part of its current draft. The hosted driver checks this
+ * before it records the decision, so a stale client never decides a draft the person cannot see.
+ */
+export async function assertReviewDecisionTarget(
+  command: RecordReviewDecisionCommand,
+): Promise<void> {
+  const root = resolve(command.root);
+  const config = await readWorkspace(root);
+  const storage = await storageFactory().open(root);
+  try {
+    const snapshot = await createStorageRunStore(storage).loadRun(command.runId);
+    if (snapshot === undefined || snapshot.workspaceId !== config.id)
+      throw new RunActionError("run_not_found", "No such run.");
+    if (snapshot.state !== "awaiting-approval")
+      throw new RunActionError(
+        "review_closed",
+        "Only a run awaiting approval takes review decisions.",
+      );
+    const known =
+      command.kind === "finding"
+        ? snapshot.findings.some(
+            (finding, index) =>
+              reviewFindingId(snapshot, snapshot.artifact, index, finding.code) ===
+              command.targetId,
+          )
+        : (snapshot.artifact?.sections.some((section) =>
+            section.blocks.some((block) => block.id === command.targetId),
+          ) ?? false);
+    if (!known)
+      throw new RunActionError(
+        "review_target_not_found",
+        command.kind === "finding"
+          ? "No such finding in the run's current draft."
+          : "No such block in the run's current draft.",
+      );
   } finally {
     await storage.close();
   }

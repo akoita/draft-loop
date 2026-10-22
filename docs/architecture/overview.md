@@ -331,6 +331,12 @@ desktop review:
   critic's findings with their ids and decisions, the run's recorded review
   independence, and the latest readiness scores. Before the first draft, the
   draft is null.
+- `PUT .../findings/:findingId/decision` records a decision on one finding
+  (accepted, rejected, deferred, overridden or back to pending, with an
+  optional rationale), and `PUT .../edits/:blockId` records replacement text
+  for one block. Both answer the updated review. Only a run awaiting approval
+  takes them (409 `review_closed`), and a finding or block outside the current
+  draft answers 404.
 
 ## Data and quality contracts
 

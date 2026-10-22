@@ -190,6 +190,68 @@ describe("hosted application driver", () => {
     ).resolves.toBeUndefined();
   }, 120_000);
 
+  it("records the owner's finding decisions and block edits in the review", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+    const before = await service.readRunReview?.({ root: workspace, runId: resumed.runId });
+    const block = before?.draft?.sections[0]?.blocks[0];
+    const finding = before?.findings[0];
+    expect(block).toBeDefined();
+
+    await service.recordReviewDecision({
+      root: workspace,
+      runId: resumed.runId,
+      kind: "edit",
+      targetId: block?.id ?? "",
+      replacementText: "Built TypeScript services with deterministic tests.",
+    });
+    if (finding !== undefined) {
+      await service.recordReviewDecision({
+        root: workspace,
+        runId: resumed.runId,
+        kind: "finding",
+        targetId: finding.id,
+        decision: "accepted",
+      });
+    }
+    const after = await service.readRunReview?.({ root: workspace, runId: resumed.runId });
+
+    const edited = after?.draft?.sections[0]?.blocks[0];
+    expect(edited).toMatchObject({
+      id: block?.id,
+      text: "Built TypeScript services with deterministic tests.",
+      edited: true,
+    });
+    if (finding !== undefined) expect(after?.findings[0]?.decision).toBe("accepted");
+  }, 120_000);
+
+  it("refuses a decision on an unknown run, finding or block", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+    const decide = (runId: string, targetId: string) =>
+      service.recordReviewDecision({
+        root: workspace,
+        runId,
+        kind: "finding",
+        targetId,
+        decision: "rejected",
+      });
+
+    await expect(decide("missing", "missing:finding:0")).rejects.toMatchObject({
+      code: "run_not_found",
+    });
+    await expect(
+      decide(resumed.runId, `${resumed.runId}:finding:0000000000000000:99:unknown`),
+    ).rejects.toMatchObject({ code: "review_target_not_found" });
+    await expect(
+      service.recordReviewDecision({
+        root: workspace,
+        runId: resumed.runId,
+        kind: "edit",
+        targetId: "missing-block",
+        replacementText: "Synthetic text.",
+      }),
+    ).rejects.toMatchObject({ code: "review_target_not_found" });
+  }, 120_000);
+
   it("refuses the methods it does not offer yet", async () => {
     const driver = createHostedApplicationDriver({
       settings: memorySettings(),
