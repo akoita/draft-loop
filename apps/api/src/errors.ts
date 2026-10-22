@@ -3,7 +3,7 @@ import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { IdempotencyConflictError } from "./idempotency.js";
+import { IdempotencyConflictError, IdempotencyInProgressError } from "./idempotency.js";
 
 /**
  * The one error shape every route answers with. It names what went wrong and never echoes the
@@ -59,6 +59,13 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error instanceof IdempotencyConflictError) {
     void reply.code(409).send(apiError("idempotency_conflict", error.message));
+    return;
+  }
+  if (error instanceof IdempotencyInProgressError) {
+    void reply
+      .code(409)
+      .header("retry-after", "1")
+      .send(apiError("idempotency_in_progress", error.message));
     return;
   }
   if (error instanceof RunQueueUnavailableError) {

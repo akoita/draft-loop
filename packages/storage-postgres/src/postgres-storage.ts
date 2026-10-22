@@ -1,6 +1,7 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
+import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
@@ -106,6 +107,7 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     ...createUsageReads(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
+    idempotencyKeys: createIdempotencyKeys(client),
     workspaceSettings: createWorkspaceSettings(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
