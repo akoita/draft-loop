@@ -46,7 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspaces, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, job briefs, applications and runs, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage-limited run for its reset time, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 
 ## Key flow
@@ -277,6 +277,15 @@ The owner reads usage from the API, in counts and amounts only:
   the same shape, summed in Postgres under row-level security.
 - Calls without a cost estimate are counted as `unpricedCalls`, never as zero
   cost.
+
+The owner sets up a hosted workspace through the API before any run:
+
+- `PUT /v1/workspaces/:id` creates the workspace with its language, author and
+  critic models, run limits, fixture mode and autopilot. Only Anthropic and
+  OpenAI models are accepted, because the gateway routes only those, and a
+  budget above the deployment's ceiling answers 422 before anything is saved.
+  The request names no file or folder, and an existing workspace answers 409
+  instead of being overwritten.
 
 ## Data and quality contracts
 
