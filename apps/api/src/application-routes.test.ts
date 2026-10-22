@@ -114,6 +114,7 @@ async function build(
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
       enqueueRun,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+      monthUsage: async () => [],
     },
   });
 }

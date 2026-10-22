@@ -32,3 +32,4 @@ export {
   type SqlRow,
   type SqlTransactionOptions,
 } from "./sql-client.js";
+export type { MonthUsageRow } from "./usage.js";

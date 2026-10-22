@@ -249,6 +249,16 @@ route returns no cost estimate, a run with a cost limit stops as
 budget-exhausted. Subscription sessions, local models and fixtures are
 unmetered and exempt.
 
+The owner reads usage from the API, in counts and amounts only:
+
+- `GET /v1/workspaces/:id/runs/:runId/usage` sums one run's completed calls by
+  company, model and route: calls, input and output tokens, and estimated
+  cost.
+- `GET /v1/usage?month=YYYY-MM` gives the tenant's totals for a UTC month in
+  the same shape, summed in Postgres under row-level security.
+- Calls without a cost estimate are counted as `unpricedCalls`, never as zero
+  cost.
+
 ## Data and quality contracts
 
 Career evidence is the material a run uses. Runs read the selected knowledge
