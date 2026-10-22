@@ -1181,6 +1181,350 @@
           "createdAt"
         ]
       },
+      "ReviewDraftInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "blocks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "The candidate's latest edit when edited, else the draft's."
+                      },
+                      "edited": {
+                        "type": "boolean"
+                      },
+                      "claimIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "text",
+                      "edited",
+                      "claimIds"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "kind",
+                "blocks"
+              ]
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "substantive": {
+                  "type": "boolean"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sourcePath": {
+                        "type": "string"
+                      },
+                      "locator": {
+                        "type": "string"
+                      },
+                      "excerpt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sourcePath",
+                      "excerpt"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "text",
+                "status",
+                "substantive",
+                "evidence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "createdAt",
+          "sections",
+          "claims"
+        ]
+      },
+      "ReviewFindingInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id a finding decision names; scoped to the reviewed draft."
+          },
+          "code": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "deferred",
+              "overridden"
+            ]
+          },
+          "claimId": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          },
+          "requirement": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "category",
+          "severity",
+          "message",
+          "decision"
+        ]
+      },
+      "RunReviewInput": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunInput"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDraftInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until the author has drafted."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewFindingInput"
+            }
+          },
+          "independentReview": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "authorLineage": {
+                    "type": "string"
+                  },
+                  "criticLineage": {
+                    "type": "string"
+                  },
+                  "lineagesDistinct": {
+                    "type": "boolean"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "overrideRationale": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authorLineage",
+                  "criticLineage",
+                  "lineagesDistinct",
+                  "required"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "stopReason": {
+                    "type": "string"
+                  },
+                  "scores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dimension": {
+                          "type": "string"
+                        },
+                        "score": {
+                          "type": "number"
+                        },
+                        "threshold": {
+                          "type": "number"
+                        },
+                        "meets": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dimension",
+                        "score",
+                        "threshold",
+                        "meets"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "ready",
+                  "stopReason",
+                  "scores"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest round's readiness evaluation; null before the first critique."
+          },
+          "approvalCheck": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "applicationReady": {
+                    "type": "boolean"
+                  },
+                  "blockers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "applicationReady",
+                  "blockers"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the last approval attempt found; approving past blockers needs a rationale."
+          },
+          "candidateDirection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run",
+          "draft",
+          "findings",
+          "independentReview",
+          "readiness",
+          "approvalCheck",
+          "candidateDirection"
+        ]
+      },
       "UsageLineInput": {
         "type": "object",
         "properties": {
@@ -2522,6 +2866,362 @@
           "sizeBytes",
           "checksum",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewDraft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "blocks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "The candidate's latest edit when edited, else the draft's."
+                      },
+                      "edited": {
+                        "type": "boolean"
+                      },
+                      "claimIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "text",
+                      "edited",
+                      "claimIds"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "kind",
+                "blocks"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "substantive": {
+                  "type": "boolean"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sourcePath": {
+                        "type": "string"
+                      },
+                      "locator": {
+                        "type": "string"
+                      },
+                      "excerpt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "sourcePath",
+                      "excerpt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "text",
+                "status",
+                "substantive",
+                "evidence"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "createdAt",
+          "sections",
+          "claims"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id a finding decision names; scoped to the reviewed draft."
+          },
+          "code": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "deferred",
+              "overridden"
+            ]
+          },
+          "claimId": {
+            "type": "string"
+          },
+          "sectionId": {
+            "type": "string"
+          },
+          "requirement": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "category",
+          "severity",
+          "message",
+          "decision"
+        ],
+        "additionalProperties": false
+      },
+      "RunReview": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/Run"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDraft"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until the author has drafted."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewFinding"
+            }
+          },
+          "independentReview": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "authorLineage": {
+                    "type": "string"
+                  },
+                  "criticLineage": {
+                    "type": "string"
+                  },
+                  "lineagesDistinct": {
+                    "type": "boolean"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "overrideRationale": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authorLineage",
+                  "criticLineage",
+                  "lineagesDistinct",
+                  "required"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "stopReason": {
+                    "type": "string"
+                  },
+                  "scores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dimension": {
+                          "type": "string"
+                        },
+                        "score": {
+                          "type": "number"
+                        },
+                        "threshold": {
+                          "type": "number"
+                        },
+                        "meets": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dimension",
+                        "score",
+                        "threshold",
+                        "meets"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "ready",
+                  "stopReason",
+                  "scores"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest round's readiness evaluation; null before the first critique."
+          },
+          "approvalCheck": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "applicationReady": {
+                    "type": "boolean"
+                  },
+                  "blockers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "applicationReady",
+                  "blockers"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the last approval attempt found; approving past blockers needs a rationale."
+          },
+          "candidateDirection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run",
+          "draft",
+          "findings",
+          "independentReview",
+          "readiness",
+          "approvalCheck",
+          "candidateDirection"
         ],
         "additionalProperties": false
       },
@@ -4258,6 +4958,73 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/review": {
+      "get": {
+        "summary": "Read a run's review: the draft, its findings and its readiness",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunReview"
                 }
               }
             }
