@@ -11,6 +11,7 @@ import {
 import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
+import { errorFields, logLine, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
@@ -46,7 +47,8 @@ const worker = await startWorker({
   queue: {
     connectionString: config.databaseUrl,
     schema: config.queueSchema,
-    onError: (error) => console.error("run queue error", error),
+    onError: (error) =>
+      console.error(logLine("ERROR", "run queue error", { err: errorFields(error) })),
   },
   runs: {
     service,
@@ -58,7 +60,8 @@ const worker = await startWorker({
     },
     allowProviderData: config.allowProviderData,
     budgetCeiling: config.budgetCeiling,
-    onOutcome: (job, outcome) => console.info(JSON.stringify({ runId: job.runId, outcome })),
+    onOutcome: (job, outcome, run) =>
+      console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run))),
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
@@ -67,7 +70,9 @@ let stopped = false;
 const onStopped = (error?: unknown) => {
   if (stopped) return;
   stopped = true;
-  if (error !== undefined) console.error("worker stopped with an error", error);
+  if (error !== undefined) {
+    console.error(logLine("ERROR", "worker stopped with an error", { err: errorFields(error) }));
+  }
   void storage
     .close()
     .finally(() => cloudSql.close())

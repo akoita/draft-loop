@@ -53,3 +53,20 @@ sets them from its infrastructure. Unlike the local stack, it:
   queued run; a Cloud Scheduler sweep starts it every 10 minutes for retries
   and resumed runs, and the API's identity needs permission to run that job;
 - sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker.
+
+## Logs
+
+The API and the worker write one JSON object per line to standard output, with
+a `severity` and a `message`, which Cloud Logging reads as structured entries.
+The lines are content-free (ADR 0011, D16):
+
+- **API requests** log their method, route pattern, status and duration, never
+  headers, bodies, query strings or client addresses.
+- **Errors** log their type, code and stack frames, never their message, which
+  may quote what a person sent.
+- **Each worker job** logs one `run job finished` line with the tenant,
+  workspace and run ids, the job's outcome, the run's state, and its usage so
+  far: calls, tokens and estimated cost, in total and by company, model and
+  route.
+
+The infrastructure builds its log-based metrics and alerts on these fields.

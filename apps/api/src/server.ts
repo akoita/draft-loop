@@ -6,6 +6,7 @@ import { startConfiguredCloudSqlProxy } from "@draft-loop/storage-postgres";
 import { buildApi } from "./app.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { openHostedApplication } from "./hosted-application.js";
+import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
@@ -23,14 +24,14 @@ const hosted = await openHostedApplication(
         JSON.stringify({
           severity: "WARNING",
           message: "worker wake failed",
-          error: error instanceof Error ? error.message : "unknown",
+          err: errorFields(error),
         }),
       ),
   },
 );
 const app = await buildApi({
   ownerToken: config.ownerToken,
-  logger: true,
+  logger: cloudLoggingOptions(),
   application: hosted.application,
 });
 

@@ -38,7 +38,8 @@ export interface RunJobHandlerOptions {
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   readonly now?: () => Date;
-  readonly onOutcome?: (job: RunJob, outcome: RunJobOutcome) => void;
+  /** Called after each job with what it did and the run as it last read it, if it exists. */
+  readonly onOutcome?: (job: RunJob, outcome: RunJobOutcome, run?: RunSnapshot) => void;
 }
 
 /** States a resume can move forward without the person. */
@@ -77,10 +78,12 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
   const run = async (
     job: RunJob,
     requeue: (startAfter: Date) => Promise<void>,
+    seen: (snapshot: RunSnapshot) => void,
   ): Promise<RunJobOutcome> => {
     const root = options.workspaceRoot(job);
     const snapshot = await options.service.status({ root, runId: job.runId });
     if (snapshot === undefined) return "missing";
+    seen(snapshot);
     if (snapshot.state === "paused") {
       if (!pausedForUsageLimit(snapshot)) return "held";
       // A queued resumption arrives at the reset time; an earlier job waits for it.
@@ -100,6 +103,7 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
       runId: job.runId,
       allowProviderData: options.allowProviderData,
     });
+    seen(advanced);
     if (pausedForUsageLimit(advanced)) {
       await requeue(resumeTime(advanced));
       return "rescheduled";
@@ -108,7 +112,10 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
   };
 
   return async (job, control) => {
-    const outcome = await run(job, control.requeue);
-    options.onOutcome?.(job, outcome);
+    let last: RunSnapshot | undefined;
+    const outcome = await run(job, control.requeue, (snapshot) => {
+      last = snapshot;
+    });
+    options.onOutcome?.(job, outcome, last);
   };
 }
