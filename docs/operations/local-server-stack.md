@@ -84,6 +84,8 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`           | API            | Largest candidate source upload, default 10485760 (10 MiB), at most 30 MiB |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
+| `DRAFT_LOOP_WORKER_MODE`                | worker         | `serve` (the default) keeps claiming jobs; `drain` exits once the queue stays empty, for a Cloud Run job |
+| `DRAFT_LOOP_WORKER_IDLE_MS`             | worker         | In drain mode, how long the queue stays empty before the worker exits, default 60000 |
 | `DRAFT_LOOP_RUN_MAX_ROUNDS`             | API, worker    | Required ceiling on a run's rounds                              |
 | `DRAFT_LOOP_RUN_MAX_COST_USD`           | API, worker    | Required ceiling on a run's estimated cost, in US dollars       |
 | `DRAFT_LOOP_RUN_MAX_DURATION_MS`        | API, worker    | Required ceiling on a run's duration, in milliseconds           |

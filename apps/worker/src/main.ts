@@ -12,7 +12,7 @@ import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
 import { workerProviderOptions } from "./model-routes.js";
-import { startWorker, stopOnSignals } from "./worker.js";
+import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
 // The worker's entry point: one tenant's storage, bucket and queue, composed at startup.
 const config = readWorkerConfig(process.env);
@@ -63,12 +63,22 @@ const worker = await startWorker({
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
 
-stopOnSignals(worker, {
-  onStopped: (error) => {
-    if (error !== undefined) console.error("worker stopped with an error", error);
-    void storage
-      .close()
-      .finally(() => cloudSql.close())
-      .finally(() => process.exit(error === undefined ? 0 : 1));
-  },
-});
+let stopped = false;
+const onStopped = (error?: unknown) => {
+  if (stopped) return;
+  stopped = true;
+  if (error !== undefined) console.error("worker stopped with an error", error);
+  void storage
+    .close()
+    .finally(() => cloudSql.close())
+    .finally(() => process.exit(error === undefined ? 0 : 1));
+};
+stopOnSignals(worker, { onStopped });
+if (config.mode.kind === "drain") {
+  // A job claimed as the worker stops may run to the deployment's longest run.
+  stopWhenIdle(worker, {
+    idleMs: config.mode.idleMs,
+    graceMs: config.budgetCeiling.maxDurationMs,
+    onStopped,
+  });
+}

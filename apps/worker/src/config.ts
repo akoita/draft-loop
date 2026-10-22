@@ -24,6 +24,11 @@ export interface WorkerConfig {
   readonly modelGateway?: ModelGatewayConfig;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
+  /**
+   * `serve` keeps claiming until it is stopped (the local stack); `drain` stops once the queue has
+   * had no job for `idleMs`, for a worker that runs as a Cloud Run job.
+   */
+  readonly mode: { readonly kind: "serve" } | { readonly kind: "drain"; readonly idleMs: number };
 }
 
 export interface MigrationConfig {
@@ -84,7 +89,25 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     budgetCeiling: readRunBudgetCeiling(env),
     ...(modelGateway === undefined ? {} : { modelGateway }),
     ...(readyFile === undefined ? {} : { readyFile }),
+    mode: workerMode(env),
   };
+}
+
+const idleMsRange = { min: 1_000, max: 3_600_000, fallback: 60_000 };
+
+function workerMode(env: NodeJS.ProcessEnv): WorkerConfig["mode"] {
+  const kind = env.DRAFT_LOOP_WORKER_MODE ?? "serve";
+  if (kind === "serve") return { kind };
+  if (kind !== "drain")
+    throw new WorkerConfigError("DRAFT_LOOP_WORKER_MODE must be serve or drain.");
+  const raw = env.DRAFT_LOOP_WORKER_IDLE_MS ?? "";
+  const idleMs = raw === "" ? idleMsRange.fallback : Number(raw);
+  if (!Number.isInteger(idleMs) || idleMs < idleMsRange.min || idleMs > idleMsRange.max) {
+    throw new WorkerConfigError(
+      "DRAFT_LOOP_WORKER_IDLE_MS must be a whole number of milliseconds from 1000 to 3600000.",
+    );
+  }
+  return { kind, idleMs };
 }
 
 function runtimeMembers(env: NodeJS.ProcessEnv): readonly string[] {
