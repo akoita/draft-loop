@@ -91,13 +91,16 @@ const syntheticReview: RunReview = {
 
 let app: FastifyInstance;
 
-async function build(service: Partial<ApplicationService>): Promise<void> {
+async function build(
+  service: Partial<ApplicationService>,
+  enqueueRun: (workspaceId: string, runId: string) => Promise<void> = async () => undefined,
+): Promise<void> {
   app = await buildApi({
     ownerToken,
     application: {
       service: service as ApplicationService,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
-      enqueueRun: async () => undefined,
+      enqueueRun,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
     },
@@ -374,5 +377,110 @@ describe("approve and stop", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().state).toBe("stopped");
     expect(lifecycle).toHaveBeenCalledWith({ root, runId: "run-1", action: "stop" });
+  });
+});
+
+describe("revision, pause and resume", () => {
+  const key = { "idempotency-key": "revision-key-0001" };
+
+  it("moves the run to revising with the owner's direction, then queues it once per key", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "revising", round: 2 }));
+    const enqueueRun = vi.fn(async () => undefined);
+    await build({ lifecycle } as unknown as Partial<ApplicationService>, enqueueRun);
+    const request = {
+      method: "POST" as const,
+      url: "/v1/workspaces/workspace-1/runs/run-1/revision",
+      headers: { authorization, ...key },
+      payload: { candidateDirection: "Lead with the testing practice." },
+    };
+
+    const first = await app.inject(request);
+    const retried = await app.inject(request);
+
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({ state: "revising", round: 2 });
+    expect(retried.json()).toEqual(first.json());
+    expect(lifecycle).toHaveBeenCalledOnce();
+    expect(lifecycle).toHaveBeenCalledWith({
+      root,
+      runId: "run-1",
+      action: "revision",
+      candidateDirection: "Lead with the testing practice.",
+    });
+    // A retry queues again; the queue keeps one waiting job per run.
+    expect(enqueueRun).toHaveBeenCalledTimes(2);
+    expect(enqueueRun).toHaveBeenCalledWith("workspace-1", "run-1");
+  });
+
+  it("needs an Idempotency-Key and refuses an overlong direction", async () => {
+    const lifecycle = vi.fn();
+    await build({ lifecycle } as unknown as Partial<ApplicationService>);
+
+    const keyless = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/revision",
+      headers: { authorization },
+      payload: {},
+    });
+    const overlong = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/revision",
+      headers: { authorization, ...key },
+      payload: { candidateDirection: "x".repeat(1_001) },
+    });
+
+    expect([keyless.statusCode, overlong.statusCode]).toEqual([400, 400]);
+    expect(lifecycle).not.toHaveBeenCalled();
+  });
+
+  it("answers 503 when the revised run cannot be queued", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "revising" }));
+    await build({ lifecycle } as unknown as Partial<ApplicationService>, async () => {
+      throw new Error("queue down");
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/revision",
+      headers: { authorization, ...key },
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe("queue_unavailable");
+  });
+
+  it("pauses a run without queueing it", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "paused" }));
+    const enqueueRun = vi.fn(async () => undefined);
+    await build({ lifecycle } as unknown as Partial<ApplicationService>, enqueueRun);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/pause",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().state).toBe("paused");
+    expect(lifecycle).toHaveBeenCalledWith({ root, runId: "run-1", action: "pause" });
+    expect(enqueueRun).not.toHaveBeenCalled();
+  });
+
+  it("lifts a pause without running a step, then queues the run", async () => {
+    const releasePause = vi.fn(async () => ({ ...snapshot, state: "drafting" }));
+    const enqueueRun = vi.fn(async () => undefined);
+    await build({ releasePause } as unknown as Partial<ApplicationService>, enqueueRun);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/resume",
+      headers: { authorization, "idempotency-key": "resume-key-0001" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().state).toBe("drafting");
+    expect(releasePause).toHaveBeenCalledWith({ root, runId: "run-1" });
+    expect(enqueueRun).toHaveBeenCalledWith("workspace-1", "run-1");
   });
 });

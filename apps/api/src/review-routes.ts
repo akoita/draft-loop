@@ -1,14 +1,19 @@
 import type { ApplicationService, RunReview } from "@draft-loop/application";
+import { maximumCandidateDirectionCharacters, type RunSnapshot } from "@draft-loop/orchestrator";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { apiError, apiErrorSchema } from "./errors.js";
+import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
+import type { IdempotencyStore } from "./idempotency.js";
 import { runView, runViewSchema } from "./views.js";
 
 export interface ReviewRoutesOptions {
   readonly service: ApplicationService;
   readonly workspaceRoot: (workspaceId: string) => string;
+  readonly idempotency: IdempotencyStore;
+  /** Hands a run with work to do to the workers; safe to repeat, as for a begun run. */
+  readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
 }
 
 const identifierSchema = z
@@ -44,6 +49,22 @@ const approveBody = z.strictObject({
     .max(maximumReadinessOverrideCharacters)
     .optional()
     .describe("Required only when the final CV checks fail; recorded with the approval."),
+});
+
+const revisionBody = z.strictObject({
+  candidateDirection: z
+    .string()
+    .trim()
+    .min(1)
+    .max(maximumCandidateDirectionCharacters)
+    .optional()
+    .describe("The owner's short direction for the next round's author, never career evidence."),
+});
+
+const idempotencyHeaders = z.object({
+  "idempotency-key": z
+    .string()
+    .regex(/^[A-Za-z0-9._:-]{8,128}$/u, "must be 8 to 128 safe characters"),
 });
 
 const blockEditBody = z.strictObject({
@@ -146,6 +167,7 @@ export function runReviewView(review: RunReview): z.infer<typeof runReviewSchema
 const notFound = (what: string) => apiError("not_found", `No such ${what}.`);
 const errorResponses = { 400: apiErrorSchema, 404: apiErrorSchema, 422: apiErrorSchema };
 const actionResponses = { 200: runViewSchema, 409: apiErrorSchema, ...errorResponses };
+const queuedActionResponses = { ...actionResponses, 503: apiErrorSchema };
 const decisionResponses = { 200: runReviewSchema, 409: apiErrorSchema, ...errorResponses };
 
 /**
@@ -154,7 +176,33 @@ const decisionResponses = { 200: runReviewSchema, 409: apiErrorSchema, ...errorR
  */
 export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRoutesOptions): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot } = options;
+  const { service, workspaceRoot, idempotency, enqueueRun } = options;
+
+  /**
+   * Runs a state change once per Idempotency-Key, then queues the run. Queueing stays outside the
+   * replay cache, as for a begun run: a retry queues a run whose first request could not.
+   */
+  const changeThenQueue = async (
+    workspaceId: string,
+    runId: string,
+    action: string,
+    key: string,
+    body: unknown,
+    change: () => Promise<RunSnapshot>,
+  ) => {
+    const snapshot = await idempotency.once(
+      `runs:${workspaceId}:${runId}:${action}`,
+      key,
+      body,
+      change,
+    );
+    try {
+      await enqueueRun(workspaceId, snapshot.runId);
+    } catch (error) {
+      throw new RunQueueUnavailableError({ cause: error });
+    }
+    return runView(snapshot);
+  };
 
   app.get(
     "/v1/workspaces/:workspaceId/runs/:runId/review",
@@ -275,6 +323,89 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
         action: "stop",
       });
       return runView(snapshot);
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/runs/:runId/revision",
+    {
+      schema: {
+        summary: "Ask for another round; a worker drafts it",
+        description:
+          "Moves a run awaiting approval to revising, with the owner's optional direction for the author, then queues it. The API runs no model call. The round and budget limits apply (409 run_state_conflict). A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+        params: runParams,
+        headers: idempotencyHeaders,
+        body: revisionBody,
+        response: queuedActionResponses,
+      },
+    },
+    async (request) => {
+      const { workspaceId, runId } = request.params;
+      const direction = request.body.candidateDirection;
+      return changeThenQueue(
+        workspaceId,
+        runId,
+        "revision",
+        request.headers["idempotency-key"],
+        request.body,
+        () =>
+          service.lifecycle({
+            root: workspaceRoot(workspaceId),
+            runId,
+            action: "revision",
+            ...(direction === undefined ? {} : { candidateDirection: direction }),
+          }),
+      );
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/runs/:runId/pause",
+    {
+      schema: {
+        summary: "Pause an active run",
+        description:
+          "Pauses a run that is drafting, reviewing or revising. A step already running finishes, and the worker leaves the run until the owner resumes it.",
+        params: runParams,
+        response: actionResponses,
+      },
+    },
+    async (request) =>
+      runView(
+        await service.lifecycle({
+          root: workspaceRoot(request.params.workspaceId),
+          runId: request.params.runId,
+          action: "pause",
+        }),
+      ),
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/runs/:runId/resume",
+    {
+      schema: {
+        summary: "Resume a paused run; a worker continues it",
+        description:
+          "Lifts the owner's pause without running a step, then queues the run so a worker continues from its current step. A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+        params: runParams,
+        headers: idempotencyHeaders,
+        response: queuedActionResponses,
+      },
+    },
+    async (request) => {
+      const { workspaceId, runId } = request.params;
+      return changeThenQueue(
+        workspaceId,
+        runId,
+        "resume",
+        request.headers["idempotency-key"],
+        {},
+        async () => {
+          if (service.releasePause === undefined)
+            throw new Error("The hosted service cannot release a paused run.");
+          return service.releasePause({ root: workspaceRoot(workspaceId), runId });
+        },
+      );
     },
   );
 }

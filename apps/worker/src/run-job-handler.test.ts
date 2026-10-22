@@ -73,6 +73,20 @@ describe("run job handler", () => {
     expect(requeue).not.toHaveBeenCalled();
   });
 
+  it("drafts the next round of a run the person sent back for revision", async () => {
+    const { service, outcome } = await handle(snapshot("revising"), snapshot("awaiting-approval"));
+
+    expect(outcome).toBe("advanced");
+    expect(service.resume).toHaveBeenCalledOnce();
+  });
+
+  it("continues a run whose pause the person lifted, from the state of its step", async () => {
+    const { service, outcome } = await handle(snapshot("reviewing"), snapshot("awaiting-approval"));
+
+    expect(outcome).toBe("advanced");
+    expect(service.resume).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ["more rounds", { ...withinCeiling, maxRounds: 6 }],
     ["a higher cost limit", { ...withinCeiling, maxCostUsd: 3.5 }],

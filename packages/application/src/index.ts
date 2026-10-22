@@ -24,6 +24,7 @@ import type {
 import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { ChooseApplicationRunCommand } from "./chosen-run.js";
+import { CliUserError } from "./cli-user-error.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
@@ -33,6 +34,7 @@ import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
 import type { RunInputs } from "./run-inputs-read.js";
 import type { RunModels } from "./run-models-read.js";
+import type { ReleasePauseCommand } from "./run-pause-release.js";
 import type { RunReview, RunReviewCommand } from "./run-review.js";
 import type { ImportApplicationCommand } from "./workspace-application-import.js";
 import type {
@@ -566,6 +568,11 @@ export interface ApplicationDriver {
    */
   readonly readRunReview?: (command: RunReviewCommand) => Promise<RunReview | undefined>;
   /**
+   * Lifts the person's pause without executing, for a service whose workers resume runs in the
+   * background; `resume` lifts it and executes in one call. The hosted driver offers it.
+   */
+  readonly releasePause?: (command: ReleasePauseCommand) => Promise<RunSnapshot>;
+  /**
    * The evidence a run started now would send, decided as the start decides it but without
    * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
    */
@@ -757,6 +764,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunInputs === undefined
         ? undefined
         : driver.readRunInputs({ ...command, root: requireRoot(command.root) }),
+    releasePause: async (command) => {
+      if (driver.releasePause === undefined)
+        throw new CliUserError("This application driver resumes runs itself; use resume.");
+      return driver.releasePause({ ...command, root: requireRoot(command.root) });
+    },
     readRunReview: async (command) =>
       driver.readRunReview === undefined
         ? undefined
@@ -885,6 +897,7 @@ export {
 } from "./run-inputs-read.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
+export { type ReleasePauseCommand, releaseRunPause } from "./run-pause-release.js";
 export {
   type RunReview,
   type RunReviewApprovalCheck,

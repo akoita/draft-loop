@@ -133,6 +133,8 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
 
   if (options.application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = options.application;
+    // One store for every route, so a key is never replayed by another route's cache.
+    const idempotency = options.application.idempotency ?? createMemoryIdempotencyStore();
     registerWorkspaceRoutes(app, {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,
@@ -144,13 +146,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerApplicationRoutes(app, {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,
-      idempotency: options.application.idempotency ?? createMemoryIdempotencyStore(),
+      idempotency,
       enqueueRun: options.application.enqueueRun,
       budgetCeiling: options.application.budgetCeiling,
     });
     registerReviewRoutes(app, {
       service: options.application.service,
       workspaceRoot: options.application.workspaceRoot,
+      idempotency,
+      enqueueRun: options.application.enqueueRun,
     });
     registerUsageRoutes(app, {
       service: options.application.service,
