@@ -21,6 +21,7 @@ import type { ApiOptions } from "./app.js";
 import type { HostedStorageConfig } from "./config.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
+import { enqueueThenWake, noWake, type WakeWorker } from "./worker-wake.js";
 
 /** The tenant's one candidate knowledge store: knowledge bases belong to the tenant. */
 export const hostedKnowledgeStoreId = "knowledge";
@@ -89,6 +90,10 @@ export function composeHostedApplication(
 export async function openHostedApplication(
   config: HostedStorageConfig,
   budgetCeiling: RunBudgetCeiling,
+  worker: { readonly wake: WakeWorker; readonly onWakeError: (error: unknown) => void } = {
+    wake: noWake,
+    onWakeError: () => undefined,
+  },
 ): Promise<HostedApplication> {
   const { tenantId } = config;
   const storage = await openPostgresStorage({
@@ -113,7 +118,11 @@ export async function openHostedApplication(
         blobs,
         tenantId,
         budgetCeiling,
-        enqueueRun: (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+        enqueueRun: enqueueThenWake(
+          (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+          worker.wake,
+          worker.onWakeError,
+        ),
         knowledgeLocation: (versionId) =>
           `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),

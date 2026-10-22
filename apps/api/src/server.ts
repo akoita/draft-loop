@@ -6,6 +6,7 @@ import { startConfiguredCloudSqlProxy } from "@draft-loop/storage-postgres";
 import { buildApi } from "./app.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { openHostedApplication } from "./hosted-application.js";
+import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
 // On Cloud Run, the database URL names the connector's socket and the API signs in as its service
@@ -14,6 +15,18 @@ const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
 const hosted = await openHostedApplication(
   readHostedStorageConfig(process.env),
   readRunBudgetCeiling(process.env),
+  {
+    wake: config.workerJob === undefined ? noWake : cloudRunJobWake({ jobName: config.workerJob }),
+    // The run is queued; the scheduled sweep starts the worker if this wake failed.
+    onWakeError: (error) =>
+      console.error(
+        JSON.stringify({
+          severity: "WARNING",
+          message: "worker wake failed",
+          error: error instanceof Error ? error.message : "unknown",
+        }),
+      ),
+  },
 );
 const app = await buildApi({
   ownerToken: config.ownerToken,

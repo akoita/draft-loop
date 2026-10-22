@@ -26,6 +26,18 @@ describe("readApiConfig", () => {
     ).toThrow(ApiConfigError);
   });
 
+  it("reads the worker's Cloud Run job, and refuses anything but a full job name", () => {
+    const workerJob = "projects/example-proj/locations/europe-west1/jobs/draft-loop-worker";
+    expect(
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken, DRAFT_LOOP_WORKER_JOB: workerJob })
+        .workerJob,
+    ).toBe(workerJob);
+    expect(readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken }).workerJob).toBeUndefined();
+    expect(() =>
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken, DRAFT_LOOP_WORKER_JOB: "worker" }),
+    ).toThrow(ApiConfigError);
+  });
+
   it.each(["0", "65536", "80a", ""])("refuses port %j", (port) => {
     expect(() => readApiConfig({ PORT: port, DRAFT_LOOP_API_OWNER_TOKEN: ownerToken })).toThrow(
       ApiConfigError,
