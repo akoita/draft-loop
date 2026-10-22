@@ -1,12 +1,16 @@
 import process from "node:process";
 
 import { readRunBudgetCeiling } from "@draft-loop/application";
+import { startConfiguredCloudSqlProxy } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { openHostedApplication } from "./hosted-application.js";
 
 const config = readApiConfig(process.env);
+// On Cloud Run, the database URL names the connector's socket and the API signs in as its service
+// identity; elsewhere this does nothing.
+const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
 const hosted = await openHostedApplication(
   readHostedStorageConfig(process.env),
   readRunBudgetCeiling(process.env),
@@ -23,6 +27,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     void app
       .close()
       .then(() => hosted.close())
+      .finally(() => cloudSql.close())
       .then(() => process.exit(0));
   });
 }

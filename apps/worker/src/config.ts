@@ -1,4 +1,5 @@
 import { type RunBudgetCeiling, readRunBudgetCeiling } from "@draft-loop/application";
+import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
 import { WorkerConfigError } from "./config-error.js";
 import { type ModelGatewayConfig, readModelGatewayConfig } from "./model-routes.js";
@@ -32,6 +33,8 @@ export interface MigrationConfig {
   readonly queueSchema: string;
   /** The role the API and the worker connect as, granted table access only. */
   readonly runtimeRole: string;
+  /** The IAM database users made members of the runtime role on Cloud SQL; none locally. */
+  readonly runtimeMembers: readonly string[];
 }
 
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
@@ -84,6 +87,16 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   };
 }
 
+function runtimeMembers(env: NodeJS.ProcessEnv): readonly string[] {
+  try {
+    return parseRuntimeRoleMembers(env.DRAFT_LOOP_RUNTIME_MEMBERS);
+  } catch {
+    throw new WorkerConfigError(
+      "DRAFT_LOOP_RUNTIME_MEMBERS must list IAM database users, name@project.iam, separated by commas.",
+    );
+  }
+}
+
 /** Reads the migration job's settings: the owner's connection and the runtime role to grant. */
 export function readMigrationConfig(env: NodeJS.ProcessEnv): MigrationConfig {
   const runtimeRole = required(env, "DRAFT_LOOP_RUNTIME_ROLE");
@@ -95,5 +108,6 @@ export function readMigrationConfig(env: NodeJS.ProcessEnv): MigrationConfig {
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
     runtimeRole,
+    runtimeMembers: runtimeMembers(env),
   };
 }

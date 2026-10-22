@@ -6,6 +6,7 @@ import {
   hostedApplicationPorts,
   hostedWorkspaceReference,
   openPostgresStorage,
+  startConfiguredCloudSqlProxy,
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
 
@@ -16,6 +17,9 @@ import { startWorker, stopOnSignals } from "./worker.js";
 // The worker's entry point: one tenant's storage, bucket and queue, composed at startup.
 const config = readWorkerConfig(process.env);
 const { tenantId } = config;
+// On Cloud Run, the database URL names the connector's socket and the worker signs in as its
+// service identity; elsewhere this does nothing.
+const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
 const storage = await openPostgresStorage({
   connectionString: config.databaseUrl,
   schema: config.databaseSchema,
@@ -62,6 +66,9 @@ if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process
 stopOnSignals(worker, {
   onStopped: (error) => {
     if (error !== undefined) console.error("worker stopped with an error", error);
-    void storage.close().finally(() => process.exit(error === undefined ? 0 : 1));
+    void storage
+      .close()
+      .finally(() => cloudSql.close())
+      .finally(() => process.exit(error === undefined ? 0 : 1));
   },
 });

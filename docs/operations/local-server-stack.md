@@ -89,6 +89,25 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_RUN_MAX_DURATION_MS`        | API, worker    | Required ceiling on a run's duration, in milliseconds           |
 | `DRAFT_LOOP_MIGRATION_DATABASE_URL`     | migration job  | The schema owner's connection                                   |
 | `DRAFT_LOOP_RUNTIME_ROLE`               | migration job  | The role the API and the worker connect as                      |
+| `DRAFT_LOOP_RUNTIME_MEMBERS`            | migration job  | Cloud SQL IAM database users made members of the runtime role, comma-separated; unset locally |
+| `DRAFT_LOOP_CLOUD_SQL_INSTANCE`         | all            | A Cloud SQL connection name; turns on Google's connector, see below |
+| `DRAFT_LOOP_CLOUD_SQL_SOCKET_DIR`       | all            | The connector's socket directory, default `/tmp/cloudsql` |
+
+## Cloud SQL
+
+The stack connects to Postgres with plain URLs. On Cloud Run, setting
+`DRAFT_LOOP_CLOUD_SQL_INSTANCE` starts Google's Cloud SQL connector in each
+process before it opens the database. The connector opens a TLS tunnel to the
+instance's private IP and listens on a Unix socket in
+`DRAFT_LOOP_CLOUD_SQL_SOCKET_DIR`, so the database URL names that directory as
+its host, for example `postgres://<user>@/postgres?host=/tmp/cloudsql`.
+
+- **The API and the worker** sign in with IAM database authentication as their
+  service identities, so their URLs carry no password.
+- **The migration job** signs in as a built-in schema-owner user with a
+  password. It creates the runtime role without login when it is missing and
+  makes the users in `DRAFT_LOOP_RUNTIME_MEMBERS` its members, so the services
+  get table access only.
 
 ## Model routes
 
