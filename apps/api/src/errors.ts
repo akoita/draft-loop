@@ -6,6 +6,7 @@ import {
   opportunityBriefVersionStaleErrorMessage,
   RunActionError,
   type RunActionErrorCode,
+  WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
@@ -124,6 +125,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error instanceof RunActionError) {
     void reply.code(runActionStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  // A workspace not created yet; its message names a storage path, so a fixed one replaces it.
+  if (error instanceof WorkspaceNotFoundError) {
+    void reply.code(404).send(apiError("not_found", "No such workspace."));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals.

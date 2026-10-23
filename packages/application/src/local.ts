@@ -53,7 +53,7 @@ import {
 } from "./candidate-profile-extraction-identity.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
-import { CliUserError } from "./cli-user-error.js";
+import { CliUserError, WorkspaceNotFoundError } from "./cli-user-error.js";
 import { type ExportRunOptions, exportApprovedRun } from "./export-run.js";
 import {
   environmentCredentialResolver,
@@ -293,7 +293,7 @@ function safeSourceBasename(sourcePath: string): string {
   return name.length > 0 ? name.slice(0, 120) : "selected source";
 }
 
-export { CliUserError };
+export { CliUserError, WorkspaceNotFoundError };
 
 export class SourceIngestionUserError extends CliUserError {
   constructor(sourcePath: string) {
@@ -689,9 +689,7 @@ export async function readWorkspace(rootInput: string): Promise<WorkspaceConfig>
   const content = await workspaceSettings()
     .read(root, configFilename)
     .catch(() => undefined);
-  if (content === undefined) {
-    throw new CliUserError(`No DraftLoop workspace found at ${root}. Run draft-loop init first.`);
-  }
+  if (content === undefined) throw new WorkspaceNotFoundError(root);
   try {
     return parseConfig(JSON.parse(content));
   } catch (error) {
