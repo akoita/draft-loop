@@ -93,8 +93,8 @@ function typeOf(schema: JsonSchema, refs: Set<string>, indent: string): string {
       return `{\n${lines.join("\n")}\n${indent}}`;
     }
     default:
-      // A schema with no type is the download route's document bytes.
-      return "Blob";
+      // Zod writes a transformed value with no type; the API alone knows its shape.
+      return "unknown";
   }
 }
 
@@ -141,10 +141,17 @@ function operationType(operation: Operation, refs: Set<string>): string {
     .sort()
     .map((status) => operation.responses[status]?.content?.["application/json"]?.schema)
     .filter((schema): schema is JsonSchema => schema !== undefined);
+  // A success schema that names no type at all is a document's bytes, as the download route sends.
+  const isBytes = (schema: JsonSchema) =>
+    Object.keys(schema).every((keyword) => keyword === "description");
   const response =
     success.length === 0
       ? "void"
-      : [...new Set(success.map((schema) => typeOf(schema, refs, "    ")))].join(" | ");
+      : [
+          ...new Set(
+            success.map((schema) => (isBytes(schema) ? "Blob" : typeOf(schema, refs, "    "))),
+          ),
+        ].join(" | ");
   members.push(`    readonly response: ${response};`);
   return `{\n${members.join("\n")}\n  }`;
 }

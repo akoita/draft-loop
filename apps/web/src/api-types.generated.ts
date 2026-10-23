@@ -85,22 +85,22 @@ export interface ApiSchemas {
           readonly originalUrl: string;
           readonly finalUrl?: string;
           readonly capturedAt: string;
-          readonly contentChecksum: Blob | null;
+          readonly contentChecksum: unknown | null;
           readonly textOrigin?: "job-posting-json-ld";
         } | {
           readonly kind: "local-file";
           readonly displayName: string;
           readonly capturedAt: string;
-          readonly checksum: Blob | null;
+          readonly checksum: unknown | null;
           readonly textOrigin?: "job-posting-json-ld";
         } | {
           readonly kind: "pasted-content";
           readonly capturedAt: string;
-          readonly checksum: Blob | null;
+          readonly checksum: unknown | null;
         } | {
           readonly kind: "candidate-input";
           readonly capturedAt: string;
-          readonly checksum: Blob | null;
+          readonly checksum: unknown | null;
         };
       })[];
       readonly role: {
