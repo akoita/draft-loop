@@ -458,7 +458,9 @@ describe("opportunity persistence service", () => {
         expectedVersion: 1,
         reviewedAt,
       }),
-    ).rejects.toThrow(/reviewed opportunity briefs require/iu);
+    ).rejects.toThrow(
+      "This job brief cannot be marked reviewed yet. It needs a role, at least one requirement.",
+    );
     expect(storage.saveOpportunityBrief).toHaveBeenCalledOnce();
   });
 

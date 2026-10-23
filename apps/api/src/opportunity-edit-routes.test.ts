@@ -4,6 +4,7 @@ import {
   type EditOpportunityCommand,
   opportunityBriefNotFoundErrorMessage,
   opportunityBriefVersionStaleErrorMessage,
+  reviewOpportunityDraft,
 } from "@draft-loop/application";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import type { FastifyInstance } from "fastify";
@@ -146,6 +147,47 @@ describe("job brief edits", () => {
     });
 
     expect(response.statusCode).toBe(409);
+  });
+
+  it("refuses with 422 to review a brief without requirements, and saves nothing", async () => {
+    const draft = await createOpportunityDraft(
+      {
+        id: "brief-1",
+        createdAt: at,
+        sources: [
+          {
+            id: "posting",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "We are hiring. Join us.",
+          },
+        ],
+      },
+      { now: () => at },
+    );
+    expect(draft.requirements).toEqual([]);
+    const save = vi.fn();
+    await build({
+      reviewOpportunity: async () => {
+        const reviewed = reviewOpportunityDraft(draft, at);
+        save(reviewed);
+        return { workspaceId: "workspace-1", checksum: "a".repeat(64), brief: reviewed };
+      },
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: `${briefUrl}/review`,
+      headers: { authorization },
+      payload: { expectedVersion: 1 },
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error).toEqual({
+      code: "rejected",
+      message: expect.stringContaining("at least one requirement"),
+    });
+    expect(save).not.toHaveBeenCalled();
   });
 
   it("answers 404 for a brief that does not exist", async () => {
