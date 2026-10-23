@@ -1,0 +1,21 @@
+{
+  "name": "@draft-loop/web",
+  "version": "0.8.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json",
+    "api-types": "tsx src/write-api-types.ts"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "tsx": "4.23.12",
+    "vite": "8.2.2"
+  }
+}
