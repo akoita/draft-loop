@@ -33,14 +33,17 @@ export class RoutePolicyError extends Error {
 }
 
 /**
- * The listed causes for leaving the primary route. A 404 means the model is not offered there; a
- * timeout, a rate limit or a server error that survived the adapter's retries means the route is
- * unavailable. Every other error, including content and policy errors, stays on the primary.
+ * The listed causes for leaving the primary route. A 404 means the model is not offered there, and
+ * a 403 that this deployment may not use it there, as when Claude is not enabled for the project
+ * or its billing account cannot buy partner models on Vertex AI. A timeout, a rate limit or a
+ * server error that survived the adapter's retries means the route is unavailable. Every other
+ * error, including content, policy and authentication errors, stays on the primary.
  */
 export function routeFallbackCause(error: unknown): RouteFallbackCause | undefined {
   const normalized = normalizeProviderError("anthropic", error);
   if (
     normalized.status === 404 ||
+    normalized.status === 403 ||
     normalized.diagnostics.some(({ code }) => code === "vertex_model_not_offered")
   ) {
     return "model-not-offered";

@@ -32,6 +32,12 @@ The hosted run reaches Claude on Vertex AI in the EU and OpenAI's EU endpoint;
 the local run uses the direct APIs. The route is the one difference the
 comparison allows.
 
+Until the staging billing account can use Claude on Vertex AI, its Claude
+calls take the direct Claude API fallback with the owner's agreement
+([#1555](https://github.com/akoita/draft-loop/issues/1555)); run history
+records each one. Moving back to Vertex AI is
+[#1564](https://github.com/akoita/draft-loop/issues/1564).
+
 ## Pass
 
 The hosted draft is scored as in manual parity, against the local draft of the
