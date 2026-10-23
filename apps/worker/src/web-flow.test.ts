@@ -38,11 +38,10 @@ import {
   startRunBody,
   workspaceRequestBody,
 } from "@draft-loop/web";
-import type { FastifyInstance } from "fastify";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
+import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
 import { createRunJobHandler } from "./run-job-handler.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -53,32 +52,6 @@ const tenantId = "tenant-web";
 const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
 const career =
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n";
-
-/** `fetch` over the API in process, so the web client sends exactly what a browser would. */
-function injectFetch(api: FastifyInstance): typeof fetch {
-  return async (input, init = {}) => {
-    const url = new URL(String(input), "http://api.test");
-    const body = init.body;
-    const response = await api.inject({
-      method: (init.method ?? "GET") as "GET",
-      url: `${url.pathname}${url.search}`,
-      headers: init.headers as Record<string, string>,
-      ...(body === undefined || body === null
-        ? {}
-        : {
-            payload:
-              body instanceof Blob ? Buffer.from(await body.arrayBuffer()) : (body as string),
-          }),
-    });
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(response.headers))
-      if (value !== undefined) headers.set(name, String(value));
-    return new Response(new Uint8Array(response.rawPayload), {
-      status: response.statusCode,
-      headers,
-    });
-  };
-}
 
 describe.runIf(connectionString !== undefined)("web screen flow on Postgres", () => {
   const url = connectionString ?? "";

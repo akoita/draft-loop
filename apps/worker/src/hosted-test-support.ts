@@ -1,5 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { BlobStoragePort } from "@draft-loop/storage";
+import type { FastifyInstance } from "fastify";
 
 /** The runtime role the Postgres flow tests connect as, with no superuser rights. */
 export const runtimeRole = "draft_loop_test_app";
@@ -25,5 +26,31 @@ export function tenantKeyBlobs(root: string, blobs: BlobStoragePort): BlobStorag
     get: (reference) => blobs.get({ ...reference, location: path(reference.location) }),
     exists: (reference) => blobs.exists({ ...reference, location: path(reference.location) }),
     delete: (reference) => blobs.delete({ ...reference, location: path(reference.location) }),
+  };
+}
+
+/** `fetch` over the API in process, so the web client sends exactly what a browser would. */
+export function injectFetch(api: FastifyInstance): typeof fetch {
+  return async (input, init = {}) => {
+    const url = new URL(String(input), "http://api.test");
+    const body = init.body;
+    const response = await api.inject({
+      method: (init.method ?? "GET") as "GET",
+      url: `${url.pathname}${url.search}`,
+      headers: init.headers as Record<string, string>,
+      ...(body === undefined || body === null
+        ? {}
+        : {
+            payload:
+              body instanceof Blob ? Buffer.from(await body.arrayBuffer()) : (body as string),
+          }),
+    });
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(response.headers))
+      if (value !== undefined) headers.set(name, String(value));
+    return new Response(new Uint8Array(response.rawPayload), {
+      status: response.statusCode,
+      headers,
+    });
   };
 }

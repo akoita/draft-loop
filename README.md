@@ -124,6 +124,8 @@ an end-to-end smoke against it.
 The API serves the owner's web screen at `/`, where you set up a workspace and
 its writing policy, upload sources and mark private sections, paste a job,
 run, review with evidence, approve and download the CV. See the [local server stack](docs/operations/local-server-stack.md).
+Its first phase ends with a run on the hosted service that matches the local
+draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 
 ### Local semantic retrieval model (optional)
 
