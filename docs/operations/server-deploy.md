@@ -7,11 +7,13 @@ project id, service account, pool id or bucket name belongs here.
 
 ## Releasing a server version
 
-1. **Tag.** Tag a commit of `main` whose CI gate passed with `server-vX.Y.Z`.
-   Server tags are independent of the desktop's `v*` tags, and
+1. **Tag.** Tag a commit of `main` whose CI gate passed with `server-vX.Y.Z`:
+   CI on the commit, and the desktop acceptance gates on the pull request that
+   produced it. Server tags are independent of the desktop's `v*` tags, and
    `pnpm release:preflight` stays the rule for desktop releases only.
-2. **Staging.** The deploy workflow in the infrastructure repository checks
-   out the tag, builds the API and worker images from their Dockerfiles, pushes
+2. **Staging.** The owner starts the deploy workflow in the infrastructure
+   repository for the tag; pushing a tag starts nothing. The workflow checks
+   the gate, builds the API and worker images from their Dockerfiles, pushes
    them by digest, runs the migration job and deploys staging.
 3. **Smoke.** The workflow runs the synthetic smoke
    (`pnpm test:server-smoke`, the same one as on the local stack) against
