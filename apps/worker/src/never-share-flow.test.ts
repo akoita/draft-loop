@@ -43,7 +43,8 @@ const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const tenantId = "tenant-never-share";
 const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
-const neverShareText = "Synthetic private note 7f3a: expected salary band.";
+// Not hexadecimal, so no id or checksum in a request can contain it by chance.
+const neverShareText = "Synthetic private note quokka-marigold: expected salary band.";
 const policyText = "Synthetic policy 9c2e: keep every bullet under two lines.";
 const career = [
   "# Experience",
@@ -226,7 +227,7 @@ describe.runIf(connectionString !== undefined)("never-share material on Postgres
       const sent = gateway.requestBodies.join("\n");
       expect(sent).toContain("Built TypeScript services with deterministic testing.");
       expect(sent).toContain("Synthetic policy 9c2e");
-      expect(sent).not.toContain("7f3a");
+      expect(sent).not.toContain("quokka-marigold");
       expect(sent).not.toContain("expected salary band");
     } finally {
       await api.close();
