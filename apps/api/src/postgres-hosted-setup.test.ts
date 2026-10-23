@@ -164,5 +164,16 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
     expect(queued).toEqual([{ workspaceId: "setup-1", runId: run.body.runId }]);
     const read = await call("GET", `/v1/workspaces/setup-1/runs/${run.body.runId}`);
     expect(read.status).toBe(200);
+
+    // The default application lists the brief and the run from Postgres, not a local file.
+    const applications = await call("GET", "/v1/workspaces/setup-1/applications");
+    expect(applications.status).toBe(200);
+    const [defaultApplication] = applications.body.applications;
+    expect(defaultApplication.briefs.map((brief: { briefId: string }) => brief.briefId)).toEqual([
+      briefId,
+    ]);
+    expect(defaultApplication.runs.map((item: { id: string }) => item.id)).toEqual([
+      run.body.runId,
+    ]);
   });
 });

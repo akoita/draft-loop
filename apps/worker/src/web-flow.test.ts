@@ -223,10 +223,9 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       });
       expect(shouldPoll(begun)).toBe(true);
       await drainQueue();
-      // The hosted service does not list the application's runs yet (#1538); the screen falls
-      // back to the run it remembers.
+      // The default application lists the run, so a browser that remembers nothing finds it.
       const application = await readDefaultApplication(client);
-      expect(currentRunId(application, { runId: begun.runId })).toBe(begun.runId);
+      expect(currentRunId(application, {})).toBe(begun.runId);
       const runPath = { ...workspace, runId: begun.runId };
       const drafted = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
         path: runPath,
