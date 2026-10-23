@@ -298,6 +298,14 @@ Build on what the local version already records:
   package where they are not Electron-specific: Home, application steps,
   review, run comparison and Run details. The web app uses them over the
   HTTP API.
+- **Phase 1 screen (amended 2026-10-23).** Phase 1 ships a small,
+  purpose-built `apps/web` for the owner's own use instead. The API serves
+  it on the same origin, and its types are generated from the committed
+  OpenAPI document. The shared UI package moves to phase 2, when the web
+  becomes the main interface for other users.
+  - *Why:* the desktop review screen is one large file wired to the Electron
+    bridge. Extracting it first would take several sprints and put the
+    local-first app at risk before the phase 1 gate.
 - **The desktop app** stays the local-first product and keeps evolving in
   parallel (D15). Making it a thin client of the service is a later,
   separate decision.

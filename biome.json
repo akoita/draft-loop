@@ -34,7 +34,8 @@
       "!**/dist",
       "!coverage",
       "!pnpm-lock.yaml",
-      "!apps/api/openapi.json"
+      "!apps/api/openapi.json",
+      "!apps/web/src/api-types.generated.ts"
     ]
   }
 }
