@@ -27,9 +27,11 @@ The API serves the owner's web screen (`apps/web`) at
 `local-stack-owner-token-not-a-secret`, then go through its steps:
 
 1. **Workspace:** create the `owner` workspace. Tick fixture mode on the local
-   stack, since it makes no provider calls.
+   stack, since it makes no provider calls. Optionally paste your writing
+   policy; each save is a new version that the next runs follow.
 2. **Sources:** create a knowledge base, upload PDF, DOCX, Markdown or text
-   files, and tick the bases runs use.
+   files, and tick the bases runs use. Under each base, mark private Markdown
+   sections by heading as never-share or sensitive.
 3. **Job brief:** paste a job post, check and edit what was read, and mark the
    version reviewed.
 4. **Run:** start a run and follow it; the worker drafts it to your review.

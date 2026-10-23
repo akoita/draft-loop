@@ -1,6 +1,14 @@
-import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
+import { SensitivityRulesStep } from "./sensitivity.js";
 import {
   acceptedSourceFiles,
   activeBases,
@@ -143,6 +151,9 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
       }
       onApproveCombination={setCombinationApproved}
       onSaveSelection={() => void saveSelection()}
+      baseDetails={(knowledgeBaseId) => (
+        <SensitivityRulesStep client={client} knowledgeBaseId={knowledgeBaseId} />
+      )}
     />
   );
 }
@@ -172,6 +183,8 @@ export interface SourcesPanelProps {
   readonly onToggle: (knowledgeBaseId: string, selected: boolean) => void;
   readonly onApproveCombination: (approved: boolean) => void;
   readonly onSaveSelection: () => void;
+  /** What else to show under a knowledge base, such as its sensitivity rules. */
+  readonly baseDetails?: (knowledgeBaseId: string) => ReactNode;
 }
 
 export function SourcesPanel(props: SourcesPanelProps) {
@@ -225,6 +238,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
               if (files.length > 0) props.onUpload(base.id, files);
             }}
           />
+          {props.baseDetails?.(base.id)}
         </article>
       ))}
       {selected.length > 1 ? (
