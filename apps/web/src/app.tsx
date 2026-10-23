@@ -147,7 +147,14 @@ export function Shell({ client, onSignOut }: ShellProps) {
             onReview={() => setStep("review")}
           />
         ) : step === "review" ? (
-          <ReviewStep client={client} run={run} />
+          <ReviewStep
+            client={client}
+            run={run}
+            onFollowRun={(next) => {
+              setRun(next);
+              setStep("run");
+            }}
+          />
         ) : null}
       </main>
     </div>
