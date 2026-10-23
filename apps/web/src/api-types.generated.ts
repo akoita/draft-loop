@@ -569,6 +569,16 @@ export interface ApiOperations {
         readonly briefId: string;
         readonly version: number;
       };
+      readonly modelProfiles?: {
+        readonly author: {
+          readonly id: string;
+          readonly version: number;
+        };
+        readonly critic: {
+          readonly id: string;
+          readonly version: number;
+        };
+      };
     };
     readonly response: ApiSchemas["Run"];
   };

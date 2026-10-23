@@ -5510,6 +5510,55 @@
                       "version"
                     ],
                     "additionalProperties": false
+                  },
+                  "modelProfiles": {
+                    "description": "Exact author and critic profile versions bound to this run, such as a preset's pair; their models replace the workspace's for this run. Without them the run uses provider-default runtime controls and unknown context windows.",
+                    "type": "object",
+                    "properties": {
+                      "author": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "critic": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "author",
+                      "critic"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false

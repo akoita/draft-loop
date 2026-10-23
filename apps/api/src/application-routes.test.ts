@@ -3,6 +3,7 @@ import {
   type ApplicationView,
   CliUserError,
   createOpportunityDraft,
+  RunModelProfileError,
   type WorkspaceDescriptor,
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
@@ -375,6 +376,33 @@ describe("runs", () => {
       ["workspace-1", "run-1"],
       ["workspace-1", "run-1"],
     ]);
+  });
+
+  it("begins a run with exact model profiles and refuses a pair the service refuses", async () => {
+    const modelProfiles = {
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+    const begin = vi.fn(async (command: { readonly modelProfiles?: typeof modelProfiles }) => {
+      if (command.modelProfiles?.critic.version !== 2) throw new RunModelProfileError();
+      return snapshot;
+    });
+    await build({ readWorkspace: async () => descriptor, begin }, async () => undefined);
+
+    const begun = await app.inject(beginRequest("key-00000005", { modelProfiles }));
+    const refused = await app.inject(
+      beginRequest("key-00000006", {
+        modelProfiles: { ...modelProfiles, critic: { id: "standard-openai-critic", version: 9 } },
+      }),
+    );
+
+    expect(begun.statusCode).toBe(201);
+    expect(begin).toHaveBeenNthCalledWith(1, {
+      root: "/tenants/owner/workspaces/workspace-1",
+      modelProfiles,
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toMatchObject({ error: { code: "rejected" } });
   });
 
   it("answers 503 when the queue fails, and a retry queues the saved run", async () => {

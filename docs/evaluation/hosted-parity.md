@@ -24,7 +24,9 @@ Both sides run the same application:
 - **Same commit.** The hosted images and the local build come from the same
   commit of `main`.
 - **Same pair.** The standard pair (Claude Opus 5.5 author, GPT-6.1 Sol critic)
-  with the same profile versions and round limit.
+  with the same profile versions and round limit. The hosted run passes them
+  as `modelProfiles` when it begins; without them it runs on provider defaults
+  and falls back to retrieval.
 - **Same input.** Full-source mode with the whole career source, the same
   sensitivity rules and the same writing policy text.
 
