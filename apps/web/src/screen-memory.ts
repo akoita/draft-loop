@@ -55,7 +55,7 @@ export const screenMemory = createScreenMemory(() => globalThis.localStorage);
 
 /**
  * The brief the screen opens: the application's newest, or the one this browser last worked on.
- * The hosted service does not list an application's briefs yet (#1538), so the memory fills in.
+ * The application lists its briefs and runs; the memory only fills in when it lists none.
  */
 export function currentBriefId(
   application: Application | undefined,

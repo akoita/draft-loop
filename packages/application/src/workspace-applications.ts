@@ -51,7 +51,6 @@ import {
 } from "./workspace-application-import.js";
 
 const historyDirectory = ".draft-loop";
-const historyFilename = "history.sqlite";
 const maximumPastedJobCharacters = 200_000;
 const epoch = "1970-01-01T00:00:00.000Z";
 
@@ -178,16 +177,9 @@ interface WorkspaceIdentity {
   readonly jobDescriptionPath: string;
 }
 
-function historyPath(root: string): string {
-  return join(root, historyDirectory, historyFilename);
-}
-
+/** A hosted history always exists; a local one only once its file has been written. */
 async function historyExists(root: string): Promise<boolean> {
-  try {
-    return (await stat(historyPath(root))).isFile();
-  } catch {
-    return false;
-  }
+  return (await storageFactory().hasHistory?.(root)) ?? true;
 }
 
 /** The parts of a workspace's history that its applications read and write. */

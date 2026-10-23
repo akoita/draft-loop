@@ -206,6 +206,23 @@ describe("hosted application driver", () => {
     await expect(access("/tenants")).rejects.toThrow();
   }, 120_000);
 
+  it("lists the default application's briefs and runs from the hosted history", async () => {
+    const { service, begun } = await begunRun();
+
+    const [defaultApplication, ...others] = await service.listApplications({ root: workspace });
+
+    expect(others).toEqual([]);
+    expect(defaultApplication?.isDefault).toBe(true);
+    expect(defaultApplication?.briefs).toEqual([
+      expect.objectContaining({ latestVersion: 3, status: "reviewed" }),
+    ]);
+    expect(defaultApplication?.runs.map((run) => run.id)).toEqual([begun.runId]);
+    await expect(
+      service.getApplication({ root: workspace, applicationId: "default" }),
+    ).resolves.toEqual(defaultApplication);
+    await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
   it("reads a run's review: the draft, its findings and the recorded independence", async () => {
     const { service, resumed } = await awaitingApprovalRun();
 

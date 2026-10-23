@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
@@ -21,6 +21,11 @@ export interface StorageFactory {
   readonly open: (root: string) => Promise<WorkspaceHistoryStorage>;
   /** Where exported documents are written; locally, files at their export paths. */
   readonly exportBlobs: BlobStoragePort;
+  /**
+   * Whether the workspace already has a history, so a read can skip opening one. Locally that is
+   * the history file; a factory without it, such as the hosted one, always has a history to read.
+   */
+  readonly hasHistory?: (root: string) => Promise<boolean>;
 }
 
 const historyDirectory = ".draft-loop";
@@ -48,6 +53,13 @@ export const localStorageFactory: StorageFactory = {
     return openLocalHistory(path);
   },
   exportBlobs: createFilesystemBlobStorage(),
+  hasHistory: async (root) => {
+    try {
+      return (await stat(localHistoryPath(root))).isFile();
+    } catch {
+      return false;
+    }
+  },
 };
 
 const activeFactory = new AsyncLocalStorage<StorageFactory>();
