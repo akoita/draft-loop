@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
+import { readDefaultApplication } from "./applications.js";
 import {
   type Brief,
   type BriefEdit,
@@ -50,10 +51,7 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
 
   const load = useCallback(async () => {
     try {
-      const { applications } = await client.call("GET /v1/workspaces/{workspaceId}/applications", {
-        path: { workspaceId: ownerWorkspaceId },
-      });
-      const application = applications.find((item) => item.isDefault) ?? applications[0];
+      const application = await readDefaultApplication(client);
       const latest = application === undefined ? undefined : latestBrief(application);
       if (latest === undefined) {
         setState({ kind: "paste" });

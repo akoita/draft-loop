@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { BriefStep } from "./brief.js";
 import type { Brief } from "./brief-model.js";
+import { ReviewStep } from "./review.js";
 import { RunStep } from "./run.js";
 import type { Run } from "./run-model.js";
 import type { TokenStore } from "./session.js";
@@ -76,6 +77,7 @@ export const steps = [
   { id: "sources", label: "Sources" },
   { id: "brief", label: "Job brief" },
   { id: "run", label: "Run" },
+  { id: "review", label: "Review" },
 ] as const;
 
 export type StepId = (typeof steps)[number]["id"];
@@ -85,7 +87,7 @@ export function Shell({ client, onSignOut }: ShellProps) {
   const [step, setStep] = useState<StepId>("workspace");
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
   const [brief, setBrief] = useState<Brief | undefined>(undefined);
-  const [, setRun] = useState<Run | undefined>(undefined);
+  const [run, setRun] = useState<Run | undefined>(undefined);
   const onWorkspace = useCallback((workspace: ApiSchemas["Workspace"]) => {
     setWorkspace(workspace);
   }, []);
@@ -138,7 +140,14 @@ export function Shell({ client, onSignOut }: ShellProps) {
         ) : step === "brief" ? (
           <BriefStep client={client} onBrief={setBrief} />
         ) : step === "run" ? (
-          <RunStep client={client} brief={brief} onRun={setRun} onReview={() => setStep("run")} />
+          <RunStep
+            client={client}
+            brief={brief}
+            onRun={setRun}
+            onReview={() => setStep("review")}
+          />
+        ) : step === "review" ? (
+          <ReviewStep client={client} run={run} />
         ) : null}
       </main>
     </div>
