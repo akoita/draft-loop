@@ -1,4 +1,5 @@
 import type { Brief } from "./brief-model.js";
+import type { Run } from "./run-model.js";
 
 /** Fictional records for the screen's tests; no real candidate or employer. */
 export const syntheticBrief: Brief = {
@@ -37,4 +38,23 @@ export const syntheticBrief: Brief = {
     focusAreas: [],
   },
   issues: [],
+};
+
+export const syntheticRun: Run = {
+  runId: "run-1",
+  workspaceId: "owner",
+  state: "reviewing",
+  round: 1,
+  currentStep: "critic",
+  approval: "pending",
+  totalCostUsd: 0.0421,
+  routes: [
+    { step: "author", route: "vertex-ai" },
+    { step: "critic", route: "openai-api" },
+  ],
+  findingCount: 0,
+  hasDraft: true,
+  startedAt: "2026-10-23T01:00:00.000Z",
+  updatedAt: "2026-10-23T01:01:00.000Z",
+  lastError: null,
 };

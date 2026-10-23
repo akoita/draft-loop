@@ -1,0 +1,266 @@
+import { useCallback, useEffect, useState } from "react";
+
+import { type ApiClient, describeError } from "./api-client.js";
+import { type Brief, latestBrief } from "./brief-model.js";
+import {
+  formatUsd,
+  latestRunId,
+  type Run,
+  runControls,
+  runError,
+  runPollIntervalMs,
+  runStatus,
+  shouldPoll,
+  startProblem,
+  startRunBody,
+  usageLimitWait,
+} from "./run-model.js";
+import { ownerWorkspaceId } from "./workspace-model.js";
+
+export interface RunStepProps {
+  readonly client: ApiClient;
+  readonly brief: Brief | undefined;
+  /** Called with the run followed, so the review step can open it. */
+  readonly onRun: (run: Run | undefined) => void;
+  /** Opens the review once the run waits for it. */
+  readonly onReview: () => void;
+}
+
+type Control = "pause" | "resume" | "stop";
+
+/** Starts a run from the reviewed brief and follows it until it waits for review. */
+export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepProps) {
+  const [run, setRun] = useState<Run | undefined>(undefined);
+  // The Job brief step may not have been opened since the page loaded; read the brief then.
+  const [readBrief, setReadBrief] = useState<Brief | undefined>(undefined);
+  const brief = shownBrief ?? readBrief;
+  const [loaded, setLoaded] = useState(false);
+  const [messages, setMessages] = useState<readonly string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const follow = useCallback(
+    (next: Run | undefined) => {
+      setRun(next);
+      onRun(next);
+    },
+    [onRun],
+  );
+
+  useEffect(() => {
+    let current = true;
+    (async () => {
+      try {
+        const { applications } = await client.call(
+          "GET /v1/workspaces/{workspaceId}/applications",
+          { path: { workspaceId: ownerWorkspaceId } },
+        );
+        const application = applications.find((item) => item.isDefault) ?? applications[0];
+        const runId = application === undefined ? undefined : latestRunId(application);
+        const briefEntry = application === undefined ? undefined : latestBrief(application);
+        if (briefEntry !== undefined) {
+          const opportunity = await client.call(
+            "GET /v1/workspaces/{workspaceId}/opportunities/{briefId}",
+            { path: { workspaceId: ownerWorkspaceId, briefId: briefEntry.briefId } },
+          );
+          if (current) setReadBrief(opportunity.brief);
+        }
+        const latest =
+          runId === undefined
+            ? undefined
+            : await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
+                path: { workspaceId: ownerWorkspaceId, runId },
+              });
+        if (current) follow(latest);
+      } catch (error) {
+        if (current) setMessages([describeError(error)]);
+      } finally {
+        if (current) setLoaded(true);
+      }
+    })();
+    return () => {
+      current = false;
+    };
+  }, [client, follow]);
+
+  // Read an active run every few seconds; stop once it waits for review or ends.
+  useEffect(() => {
+    if (run === undefined || !shouldPoll(run)) return;
+    const timer = setTimeout(() => {
+      client
+        .call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
+          path: { workspaceId: ownerWorkspaceId, runId: run.runId },
+        })
+        .then(follow, (error: unknown) => setMessages([describeError(error)]));
+    }, runPollIntervalMs);
+    return () => clearTimeout(timer);
+  }, [client, run, follow]);
+
+  async function act(action: () => Promise<Run>) {
+    setBusy(true);
+    try {
+      follow(await action());
+      setMessages([]);
+    } catch (error) {
+      setMessages([describeError(error)]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const start = () => {
+    const problem = startProblem(brief);
+    if (problem !== undefined || brief === undefined) {
+      setMessages([problem ?? ""]);
+      return;
+    }
+    void act(() =>
+      client.call("POST /v1/workspaces/{workspaceId}/runs", {
+        path: { workspaceId: ownerWorkspaceId },
+        header: { "idempotency-key": crypto.randomUUID() },
+        body: startRunBody(brief),
+      }),
+    );
+  };
+
+  const control = (which: Control) => {
+    if (run === undefined) return;
+    const path = { workspaceId: ownerWorkspaceId, runId: run.runId };
+    void act(() => {
+      switch (which) {
+        case "pause":
+          return client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/pause", { path });
+        case "stop":
+          return client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/stop", { path });
+        case "resume":
+          return client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/resume", {
+            path,
+            header: { "idempotency-key": crypto.randomUUID() },
+          });
+      }
+    });
+  };
+
+  if (!loaded) return <p role="status">Reading your runs…</p>;
+  return (
+    <RunPanel
+      run={run}
+      startProblem={startProblem(brief)}
+      messages={messages}
+      busy={busy}
+      onStart={start}
+      onControl={control}
+      onReview={onReview}
+    />
+  );
+}
+
+export interface RunPanelProps {
+  readonly run: Run | undefined;
+  /** Why a new run cannot start yet, if it cannot. */
+  readonly startProblem: string | undefined;
+  readonly messages: readonly string[];
+  readonly busy: boolean;
+  readonly onStart: () => void;
+  readonly onControl: (control: Control) => void;
+  readonly onReview: () => void;
+}
+
+export function RunPanel({
+  run,
+  startProblem: problem,
+  messages,
+  busy,
+  onStart,
+  onControl,
+  onReview,
+}: RunPanelProps) {
+  const controls = run === undefined ? undefined : runControls(run);
+  const canStartAnother = run === undefined || !shouldPoll(run);
+  const wait = run === undefined ? undefined : usageLimitWait(run);
+  const error = run === undefined ? undefined : runError(run);
+
+  return (
+    <section className="panel">
+      <h2>Run</h2>
+      {run === undefined ? (
+        <p>No run yet. A run drafts your CV for the reviewed brief, then the critic reviews it.</p>
+      ) : (
+        <>
+          <p className="run-status" role="status">
+            {runStatus(run)}
+          </p>
+          <dl className="facts">
+            <dt>Round</dt>
+            <dd>{run.round}</dd>
+            <dt>Findings</dt>
+            <dd>{run.findingCount}</dd>
+            <dt>Estimated cost</dt>
+            <dd>{formatUsd(run.totalCostUsd)}</dd>
+            <dt>Model routes</dt>
+            <dd>
+              {run.routes.length === 0
+                ? "No model call yet"
+                : run.routes
+                    .map((item) =>
+                      item.fallback === undefined
+                        ? `${item.step}: ${item.route}`
+                        : `${item.step}: ${item.route} (fallback from ${item.fallback.from})`,
+                    )
+                    .join(", ")}
+            </dd>
+          </dl>
+          {wait === undefined ? null : <p className="notice">{wait}</p>}
+          {error === undefined ? null : <p className="problem">{error}</p>}
+        </>
+      )}
+      {messages.map((message) => (
+        <p key={message} className="problem" role="alert">
+          {message}
+        </p>
+      ))}
+      <div className="actions">
+        {run?.state === "awaiting-approval" ? (
+          <button type="button" onClick={onReview}>
+            Review the draft
+          </button>
+        ) : null}
+        {controls?.pause ? (
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => onControl("pause")}
+          >
+            Pause
+          </button>
+        ) : null}
+        {controls?.resume ? (
+          <button type="button" disabled={busy} onClick={() => onControl("resume")}>
+            Resume
+          </button>
+        ) : null}
+        {controls?.stop ? (
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => onControl("stop")}
+          >
+            Stop for good
+          </button>
+        ) : null}
+        {canStartAnother ? (
+          <button
+            type="button"
+            className={run === undefined ? undefined : "secondary"}
+            disabled={busy || problem !== undefined}
+            onClick={onStart}
+          >
+            {run === undefined ? "Start a run" : "Start another run"}
+          </button>
+        ) : null}
+      </div>
+      {canStartAnother && problem !== undefined ? <p className="muted">{problem}</p> : null}
+    </section>
+  );
+}

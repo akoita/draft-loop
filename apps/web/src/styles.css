@@ -287,3 +287,7 @@ form button[type="submit"] {
     grid-template-columns: 1fr;
   }
 }
+
+.run-status {
+  font-weight: 600;
+}
