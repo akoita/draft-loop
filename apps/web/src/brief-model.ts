@@ -81,6 +81,11 @@ export function briefEditProblems(edit: BriefEdit): string[] {
   return problems;
 }
 
+/** A reviewed brief needs a requirement to draft against; the API refuses one without. */
+export function canReview(brief: Brief): boolean {
+  return brief.status === "draft" && brief.requirements.length > 0;
+}
+
 /** The patch for an edit, sent against the version the owner saw. */
 export function briefPatchBody(brief: Brief, edit: BriefEdit): PatchBody {
   const sourceIds = editSourceIds(brief);

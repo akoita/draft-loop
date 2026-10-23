@@ -7,6 +7,7 @@ import {
   briefEdit,
   briefEditProblems,
   briefPatchBody,
+  canReview,
   createBriefBody,
   isStaleVersion,
   jobTextProblem,
@@ -248,7 +249,9 @@ export function BriefPanel(props: BriefPanelProps) {
       </dl>
       <h3>Requirements</h3>
       {brief.requirements.length === 0 ? (
-        <p className="notice">No requirements were found. Edit the brief to add them.</p>
+        <p className="notice">
+          No requirements were found. Add at least one with Edit before marking the brief reviewed.
+        </p>
       ) : (
         <ul className="requirements">
           {brief.requirements.map((requirement) => (
@@ -286,7 +289,11 @@ export function BriefPanel(props: BriefPanelProps) {
           </button>
         ) : null}
         {brief.status === "draft" ? (
-          <button type="button" disabled={busy || props.stale} onClick={props.onReview}>
+          <button
+            type="button"
+            disabled={busy || props.stale || !canReview(brief)}
+            onClick={props.onReview}
+          >
             Mark version {brief.version} reviewed
           </button>
         ) : null}

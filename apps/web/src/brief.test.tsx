@@ -36,6 +36,15 @@ describe("job brief screen", () => {
     expect(html).toContain("Mark version 2 reviewed");
   });
 
+  it("holds review until the brief has a requirement", () => {
+    const html = renderToStaticMarkup(
+      <BriefPanel {...props} brief={{ ...syntheticBrief, requirements: [] }} />,
+    );
+
+    expect(html).toContain("Add at least one with Edit before marking the brief");
+    expect(html).toContain('<button type="button" disabled="">Mark version 2 reviewed</button>');
+  });
+
   it("offers no review once reviewed", () => {
     const html = renderToStaticMarkup(
       <BriefPanel {...props} brief={{ ...syntheticBrief, status: "reviewed" }} />,

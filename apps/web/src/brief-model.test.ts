@@ -5,6 +5,7 @@ import {
   briefEdit,
   briefEditProblems,
   briefPatchBody,
+  canReview,
   createBriefBody,
   isStaleVersion,
   jobTextProblem,
@@ -98,6 +99,12 @@ describe("brief edits", () => {
     expect(briefEditProblems({ ...edit, requirements: [] })).toEqual([
       "Keep at least one requirement.",
     ]);
+  });
+
+  it("reviews only a draft with a requirement", () => {
+    expect(canReview(syntheticBrief)).toBe(true);
+    expect(canReview({ ...syntheticBrief, requirements: [] })).toBe(false);
+    expect(canReview({ ...syntheticBrief, status: "reviewed" })).toBe(false);
   });
 
   it("recognizes a stale version", () => {
