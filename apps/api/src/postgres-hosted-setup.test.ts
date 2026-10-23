@@ -117,6 +117,39 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
     const sources = await call("GET", `/v1/knowledge-bases/${base.body.id}/sources`);
     expect(sources.body.sources).toHaveLength(1);
 
+    // Sensitivity rules are versioned in Postgres; each change saves a new list.
+    const rulesPath = `/v1/knowledge-bases/${base.body.id}/sensitivity-rules`;
+    expect((await call("GET", rulesPath)).body).toMatchObject({ version: 0, rules: [] });
+    const privateNotes = { kind: "heading-contains", text: "Private notes" };
+    const added = await call("POST", rulesPath, {
+      id: "private-notes",
+      tier: "never-share",
+      match: privateNotes,
+    });
+    expect(added.status).toBe(201);
+    const second = await call("POST", rulesPath, {
+      tier: "sensitive",
+      match: { kind: "heading-path", path: ["Experience", "Salary"] },
+    });
+    expect(second.body.version).toBe(2);
+    const duplicate = await call("POST", rulesPath, { tier: "never-share", match: privateNotes });
+    expect(duplicate.status).toBe(422);
+    const secondId = second.body.rules[1].id;
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `${rulesPath}/${secondId}`,
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(await call("GET", rulesPath)).toMatchObject({
+      status: 200,
+      body: {
+        version: 3,
+        rules: [{ id: "private-notes", tier: "never-share", match: privateNotes }],
+      },
+    });
+    expect((await call("GET", "/v1/knowledge-bases/missing/sensitivity-rules")).status).toBe(404);
+
     const selected = await call("PUT", "/v1/workspaces/setup-1/knowledge-selection", {
       knowledgeBaseIds: [base.body.id],
     });

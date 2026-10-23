@@ -1,6 +1,7 @@
 import type {
   ApplicationService,
   HostedKnowledgeIntake,
+  HostedSensitivityRules,
   RunBudgetCeiling,
   UsageLine,
 } from "@draft-loop/application";
@@ -24,6 +25,7 @@ import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempoten
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 import { registerReviewRoutes } from "./review-routes.js";
+import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, isPublicRequest, registerWebScreen } from "./web-screen.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
@@ -47,6 +49,8 @@ export interface ApiOptions {
     readonly knowledgeIntake?: HostedKnowledgeIntake;
     /** The tenant's one knowledge store, as workspaces select from it; set with the intake. */
     readonly knowledgeStore?: KnowledgeStoreAddress;
+    /** The tenant's knowledge bases' sensitivity rules; without them those routes are not served. */
+    readonly sensitivityRules?: HostedSensitivityRules;
   };
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
@@ -174,6 +178,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     });
     if (options.application.knowledgeIntake !== undefined) {
       registerKnowledgeRoutes(app, { intake: options.application.knowledgeIntake });
+    }
+    if (options.application.sensitivityRules !== undefined) {
+      registerSensitivityRulesRoutes(app, { rules: options.application.sensitivityRules });
     }
   }
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);

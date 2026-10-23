@@ -285,6 +285,31 @@ export interface ApiSchemas {
     readonly runId: string;
     readonly workspaceId: string;
   };
+  "SensitivityRule": {
+    readonly id: string;
+    readonly tier: "normal" | "sensitive" | "never-share";
+    readonly match: ApiSchemas["SensitivityRuleMatch"];
+  };
+  "SensitivityRuleMatch": {
+    readonly kind: "heading-contains";
+    readonly text: string;
+  } | {
+    readonly kind: "heading-path";
+    readonly path: readonly (string)[];
+  };
+  "SensitivityRuleMatchInput": {
+    readonly kind: "heading-contains";
+    readonly text: string;
+  } | {
+    readonly kind: "heading-path";
+    readonly path: readonly (string)[];
+  };
+  "SensitivityRules": {
+    readonly knowledgeBaseId: string;
+    readonly version: number;
+    readonly createdAt: string | null;
+    readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
+  };
   "UsageLine": {
     readonly company: string;
     readonly model: string;
@@ -703,5 +728,29 @@ export interface ApiOperations {
     readonly body: Blob;
     readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain";
     readonly response: ApiSchemas["KnowledgeSource"];
+  };
+  "GET /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules": {
+    readonly path: {
+      readonly knowledgeBaseId: string;
+    };
+    readonly response: ApiSchemas["SensitivityRules"];
+  };
+  "POST /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules": {
+    readonly path: {
+      readonly knowledgeBaseId: string;
+    };
+    readonly body: {
+      readonly tier: "normal" | "sensitive" | "never-share";
+      readonly match: ApiSchemas["SensitivityRuleMatchInput"];
+      readonly id?: string;
+    };
+    readonly response: ApiSchemas["SensitivityRules"];
+  };
+  "DELETE /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules/{ruleId}": {
+    readonly path: {
+      readonly knowledgeBaseId: string;
+      readonly ruleId: string;
+    };
+    readonly response: ApiSchemas["SensitivityRules"];
   };
 }

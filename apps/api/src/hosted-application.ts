@@ -2,6 +2,7 @@ import {
   createApplicationService,
   createHostedApplicationDriver,
   createHostedKnowledgeIntake,
+  createHostedSensitivityRules,
   type RunBudgetCeiling,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
@@ -73,6 +74,10 @@ export function composeHostedApplication(
       storeId: hostedKnowledgeStoreId,
       locate: parts.knowledgeLocation,
       ...(parts.maxSourceBytes === undefined ? {} : { maxSourceBytes: parts.maxSourceBytes }),
+    }),
+    sensitivityRules: createHostedSensitivityRules({
+      records: storage,
+      storeId: hostedKnowledgeStoreId,
     }),
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
