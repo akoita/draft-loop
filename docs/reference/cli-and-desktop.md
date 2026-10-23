@@ -1582,10 +1582,12 @@ quality entries are unvalidated and availability has not been checked; the
 review date documents metadata review, not a live provider probe. Local
 endpoints remain free-text because there are no local server profile IDs.
 
-Catalog price metadata covers the standard, uncached text API at up to 200,000
-input tokens, or 100,000 for Claude Haiku 5.5, whose higher rate for longer
-prompts is not modeled; larger prompts leave the estimate unknown. It excludes
-cache, tool, batch, regional, and subscription pricing. Haiku 5.5 sends no
+Catalog price metadata covers the standard text API at up to 200,000 input
+tokens, 100,000 for Claude Haiku 5.5, or 272,000 for the OpenAI critics. Higher
+rates for longer prompts are not modeled, so larger prompts leave the estimate
+unknown. The Claude authors and the OpenAI critics also carry cache-read and
+cache-write rates, since both providers report cache writes. Tool, batch,
+regional, and subscription pricing are excluded. Haiku 5.5 sends no
 sampling parameters, thinking budget, or assistant prefill, which the model
 rejects, and the Claude session route reports an unrecognized model with a
 prompt to update the installed `claude` CLI. Sources are the official

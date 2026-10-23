@@ -25,15 +25,17 @@ describe("model profile catalog", () => {
       "dev-google-gemini-author@2",
       "dev-mistral-author@1",
     ]);
+    const inputCaps: Record<string, number> = {
+      "economy-anthropic-author@2": 100000,
+      "economy-openai-critic@1": 272000,
+      "standard-openai-critic@2": 272000,
+    };
     for (const entry of catalog) {
       expect(entry).toMatchObject({
         qualityStatus: "unvalidated",
         availabilityStatus: "not-checked",
         apiPricing: {
-          maxInputTokens:
-            `${entry.profile.id}@${entry.profile.version}` === "economy-anthropic-author@2"
-              ? 100000
-              : 200000,
+          maxInputTokens: inputCaps[`${entry.profile.id}@${entry.profile.version}`] ?? 200000,
           scope: "standard-uncached-text-api",
         },
       });
@@ -45,7 +47,9 @@ describe("model profile catalog", () => {
         "dev-mistral-author@1": "2026-10-08",
         "economy-anthropic-author@1": "2026-10-23",
         "economy-anthropic-author@2": "2026-10-23",
+        "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@1": "2026-10-23",
+        "standard-openai-critic@2": "2026-10-23",
       };
       expect(entry.reviewedAt).toBe(
         reviewDates[`${entry.profile.id}@${entry.profile.version}`] ?? "2026-09-30",
@@ -80,7 +84,8 @@ describe("model profile catalog", () => {
       "economy-anthropic-author@2": [0.01, 0.2],
       "economy-anthropic-author@1": [0.2, 4],
       "standard-anthropic-author@1": [0.2, 8],
-      "standard-openai-critic@2": [undefined, undefined],
+      "economy-openai-critic@1": [0.01, 0.125],
+      "standard-openai-critic@2": [0.1, 2.5],
     });
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
