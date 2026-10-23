@@ -6,9 +6,13 @@ function adapterPricing({ apiPricing }: ModelProfileCatalogEntry): ModelPricing 
   return {
     inputUsdPerMillionTokens: apiPricing.inputUsdPerMillion,
     outputUsdPerMillionTokens: apiPricing.outputUsdPerMillion,
-    // The catalog records standard rates only. A cached read never costs more than standard
-    // input, so billing it at that rate keeps the estimate an upper bound rather than unknown.
-    cachedInputUsdPerMillionTokens: apiPricing.inputUsdPerMillion,
+    // Without a recorded cache-read rate, a cached read is billed as standard input: it never
+    // costs more, so the estimate stays an upper bound rather than unknown.
+    cachedInputUsdPerMillionTokens:
+      apiPricing.cacheReadUsdPerMillion ?? apiPricing.inputUsdPerMillion,
+    ...(apiPricing.cacheWriteUsdPerMillion === undefined
+      ? {}
+      : { cacheWriteInputUsdPerMillionTokens: apiPricing.cacheWriteUsdPerMillion }),
     maxInputTokens: apiPricing.maxInputTokens,
   };
 }

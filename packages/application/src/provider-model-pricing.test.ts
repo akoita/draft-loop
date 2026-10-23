@@ -29,6 +29,19 @@ describe("catalog model pricing", () => {
     ).toMatchObject({ inputUsdPerMillionTokens: 0.1, maxInputTokens: 100000 });
   });
 
+  it("prices Claude prompt-cache reads and one-hour writes from the catalog", () => {
+    const profile = defaultModelProfileRegistry.resolve("standard-anthropic-author", 1, "author");
+    expect(
+      catalogModelPricing({ ...selection(profile.provider, profile.modelId), profile }),
+    ).toEqual({
+      inputUsdPerMillionTokens: 4,
+      outputUsdPerMillionTokens: 20,
+      cachedInputUsdPerMillionTokens: 0.2,
+      cacheWriteInputUsdPerMillionTokens: 8,
+      maxInputTokens: 200000,
+    });
+  });
+
   it("leaves a model unpriced when the catalog does not know it or disagrees on its price", () => {
     expect(catalogModelPricing(selection("openai", "gpt-unknown"))).toBeUndefined();
     const [entry] = listModelProfileCatalog() as [ModelProfileCatalogEntry];

@@ -4,6 +4,10 @@ import { defaultModelProfileRegistry } from "./model-profiles.js";
 export interface ModelProfileCatalogPricing {
   readonly inputUsdPerMillion: number;
   readonly outputUsdPerMillion: number;
+  /** A prompt-cache read, where the provider prices it. */
+  readonly cacheReadUsdPerMillion?: number;
+  /** A one-hour prompt-cache write, the only lifetime DraftLoop asks for. */
+  readonly cacheWriteUsdPerMillion?: number;
   readonly maxInputTokens: number;
   readonly scope: "standard-uncached-text-api";
 }
@@ -55,6 +59,7 @@ interface CatalogMetadata {
 }
 
 const anthropicOverview = "https://platform.claude.com/docs/en/models/overview";
+const anthropicPricing = "https://platform.claude.com/docs/en/about-claude/pricing";
 const anthropicModelsOverview = "https://platform.claude.com/docs/en/about-claude/models/overview";
 const anthropicSonnet55Overview = "https://platform.claude.com/docs/en/models/sonnet-5-5/overview";
 const deepInfraGlmModelApi = "https://deepinfra.com/zai-org/GLM-5.3-Flash/api";
@@ -72,23 +77,40 @@ function openAIModelPage(modelId: string): string {
 /** Metadata is pinned to exact profile versions; model IDs are not catalog keys. */
 const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   "standard-anthropic-author@1": {
-    sources: [anthropicOverview],
-    apiPricing: { inputUsdPerMillion: 4, outputUsdPerMillion: 20 },
+    sources: [anthropicOverview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 4,
+      outputUsdPerMillion: 20,
+      cacheReadUsdPerMillion: 0.2,
+      cacheWriteUsdPerMillion: 8,
+    },
+    reviewedAt: "2026-10-23",
   },
   "economy-openai-critic@1": {
     sources: [openAIModelPage("gpt-6-luna")],
     apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 },
   },
   "economy-anthropic-author@1": {
-    sources: [anthropicSonnet55Overview],
-    apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
+    sources: [anthropicSonnet55Overview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 2,
+      outputUsdPerMillion: 10,
+      cacheReadUsdPerMillion: 0.2,
+      cacheWriteUsdPerMillion: 4,
+    },
+    reviewedAt: "2026-10-23",
   },
   "economy-anthropic-author@2": {
-    sources: [anthropicModelsOverview],
-    apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 },
+    sources: [anthropicModelsOverview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 0.1,
+      outputUsdPerMillion: 0.5,
+      cacheReadUsdPerMillion: 0.01,
+      cacheWriteUsdPerMillion: 0.2,
+    },
     // Haiku 5.5 bills prompts above 100K tokens at a higher rate card that is not modeled.
     maxInputTokens: 100000,
-    reviewedAt: "2026-10-07",
+    reviewedAt: "2026-10-23",
   },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],
