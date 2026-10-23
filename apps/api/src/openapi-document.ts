@@ -1,4 +1,8 @@
-import type { ApplicationService, HostedKnowledgeIntake } from "@draft-loop/application";
+import type {
+  ApplicationService,
+  HostedKnowledgeIntake,
+  HostedSensitivityRules,
+} from "@draft-loop/application";
 
 import { buildApi } from "./app.js";
 
@@ -20,6 +24,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       monthUsage: async () => [],
       knowledgeIntake: {} as HostedKnowledgeIntake,
       knowledgeStore: { id: "knowledge", reference: "/knowledge" },
+      sensitivityRules: {} as HostedSensitivityRules,
     },
   });
   try {

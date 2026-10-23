@@ -324,6 +324,11 @@ storage location:
   Another type answers 415, a file over the limit 413
   (`DRAFT_LOOP_MAX_SOURCE_BYTES`), and the same bytes again 200 with the
   existing source, so a retry is safe. Every other route keeps parsing JSON.
+- `GET /v1/knowledge-bases/:id/sensitivity-rules` lists a base's sensitivity
+  rules, `POST` adds one and `DELETE .../:ruleId` removes one. A rule marks the
+  Markdown sections under a heading as `sensitive` or `never-share`; each
+  change saves a new version of the list, and runs withhold the marked
+  sections as they do locally. A duplicate rule answers 422.
 - `PUT /v1/workspaces/:id/knowledge-selection` selects the knowledge bases a
   workspace's runs use, by id. The API names the tenant's store itself, an
   unknown base answers 404, and several bases need `combinationApproved`. The
