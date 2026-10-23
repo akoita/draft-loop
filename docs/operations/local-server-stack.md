@@ -20,6 +20,27 @@ pnpm server:down   # stop the services and keep their data
 
 To also delete the stored data, run `docker compose down --volumes`.
 
+## Web screen
+
+The API serves the owner's web screen (`apps/web`) at
+`http://127.0.0.1:58080/`. Sign in with the local owner token,
+`local-stack-owner-token-not-a-secret`, then go through its steps:
+
+1. **Workspace:** create the `owner` workspace. Tick fixture mode on the local
+   stack, since it makes no provider calls.
+2. **Sources:** create a knowledge base, upload PDF, DOCX, Markdown or text
+   files, and tick the bases runs use.
+3. **Job brief:** paste a job post, check and edit what was read, and mark the
+   version reviewed.
+4. **Run:** start a run and follow it; the worker drafts it to your review.
+5. **Review:** decide the findings with their evidence, edit blocks, then
+   approve or ask for another round, and export and download the CV.
+
+To work on the screen itself, run `pnpm --filter @draft-loop/web dev`. Vite
+serves it with hot reload and forwards `/v1` to the API at
+`DRAFT_LOOP_WEB_API_URL`, `http://127.0.0.1:8080` by default; point it at
+`http://127.0.0.1:58080` to use the local stack.
+
 ## Services
 
 | Service    | What it is                                    | Local address                                           |
@@ -41,8 +62,7 @@ To also delete the stored data, run `docker compose down --volumes`.
 - The API and the worker connect as `draft_loop_app`, serve one tenant,
   `local`, and keep blobs in the emulator. Every credential in `compose.yaml`
   is a fixed local-only value; the API's owner token is
-  `local-stack-owner-token-not-a-secret`, which also signs you in to the web
-  screen at `http://127.0.0.1:58080/`.
+  `local-stack-owner-token-not-a-secret`.
 - Data lives in the named volumes `postgres-data` and `gcs-data`.
 
 ## Images
@@ -189,7 +209,9 @@ same review, approval and export.
 `pnpm test:postgres` drives the same flow in-process against Postgres, without
 the containers, so the CI `Server storage` job covers it too. That test runs
 the API's routes and the worker's job handler over one database, with exports
-in a local folder in place of the bucket.
+in a local folder in place of the bucket. A second in-process test takes the
+same flow through the web screen's typed client, so a screen call that drifts
+from the API fails there.
 
 To run one suite, set its variables yourself. CI does not use this file: its
 `Server storage` job starts the Postgres and emulator images as its own

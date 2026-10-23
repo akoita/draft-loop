@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
-import { type Brief, latestBrief } from "./brief-model.js";
+import type { Brief } from "./brief-model.js";
 import {
   formatUsd,
-  latestRunId,
   type Run,
   runControls,
   runError,
@@ -16,6 +15,7 @@ import {
   startRunBody,
   usageLimitWait,
 } from "./run-model.js";
+import { currentBriefId, currentRunId, screenMemory } from "./screen-memory.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 export interface RunStepProps {
@@ -41,6 +41,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
 
   const follow = useCallback(
     (next: Run | undefined) => {
+      if (next !== undefined) screenMemory.rememberRun(next.runId);
       setRun(next);
       onRun(next);
     },
@@ -52,12 +53,13 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     (async () => {
       try {
         const application = await readDefaultApplication(client);
-        const runId = application === undefined ? undefined : latestRunId(application);
-        const briefEntry = application === undefined ? undefined : latestBrief(application);
-        if (briefEntry !== undefined) {
+        const remembered = screenMemory.read();
+        const runId = currentRunId(application, remembered);
+        const briefId = currentBriefId(application, remembered);
+        if (briefId !== undefined) {
           const opportunity = await client.call(
             "GET /v1/workspaces/{workspaceId}/opportunities/{briefId}",
-            { path: { workspaceId: ownerWorkspaceId, briefId: briefEntry.briefId } },
+            { path: { workspaceId: ownerWorkspaceId, briefId } },
           );
           if (current) setReadBrief(opportunity.brief);
         }

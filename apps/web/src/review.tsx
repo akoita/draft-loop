@@ -24,7 +24,8 @@ import {
   reviewOpen,
   reviewSections,
 } from "./review-model.js";
-import { latestRunId, type Run } from "./run-model.js";
+import type { Run } from "./run-model.js";
+import { currentRunId, screenMemory } from "./screen-memory.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 export interface ReviewStepProps {
@@ -48,7 +49,7 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
       const runId =
         run?.runId ??
         (await readDefaultApplication(client).then((application) =>
-          application === undefined ? undefined : latestRunId(application),
+          currentRunId(application, screenMemory.read()),
         ));
       if (runId === undefined) return;
       const path = { workspaceId: ownerWorkspaceId, runId };
