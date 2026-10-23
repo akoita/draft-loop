@@ -843,7 +843,13 @@ export function editOpportunityDraft(
   });
 }
 
-/** Review a draft by creating a new immutable reviewed version. */
+export const opportunityBriefNotReviewableErrorMessage =
+  "This job brief cannot be marked reviewed yet.";
+
+/**
+ * Review a draft by creating a new immutable reviewed version. A draft missing what a reviewed
+ * brief needs is refused as a user error, so clients can say what to add.
+ */
 export function reviewOpportunityDraft(
   currentDraft: OpportunityBrief,
   reviewedAt: string,
@@ -851,6 +857,16 @@ export function reviewOpportunityDraft(
   const base = buildOpportunityBrief(currentDraft);
   if (base.status !== "draft") {
     throw new Error("Only a draft opportunity brief can be reviewed.");
+  }
+  const missing = [
+    ...(base.role === null ? ["a role"] : []),
+    ...(base.requirements.length === 0 ? ["at least one requirement"] : []),
+    ...(base.issues.some((issue) => issue.status === "open") ? ["no open issues"] : []),
+  ];
+  if (missing.length > 0) {
+    throw new CliUserError(
+      `${opportunityBriefNotReviewableErrorMessage} It needs ${missing.join(", ")}.`,
+    );
   }
   assertTimestampNotBefore(reviewedAt, base.createdAt);
   return buildOpportunityBrief({
