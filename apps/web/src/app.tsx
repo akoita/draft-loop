@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { type ApiClient, ApiRequestError } from "./api-client.js";
+import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import type { TokenStore } from "./session.js";
 import { SignIn } from "./sign-in.js";
+import { WorkspaceStep } from "./workspace.js";
 
 export interface AppProps {
   readonly tokens: TokenStore;
@@ -64,8 +65,18 @@ export interface ShellProps {
   readonly onSignOut: () => void;
 }
 
+/** The screen's steps, in the order a run needs them. */
+export const steps = [{ id: "workspace", label: "Workspace" }] as const;
+
+export type StepId = (typeof steps)[number]["id"];
+
 export function Shell({ client, onSignOut }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
+  const [step, setStep] = useState<StepId>("workspace");
+  const [, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
+  const onWorkspace = useCallback((workspace: ApiSchemas["Workspace"]) => {
+    setWorkspace(workspace);
+  }, []);
 
   useEffect(() => {
     let current = true;
@@ -93,6 +104,22 @@ export function Shell({ client, onSignOut }: ShellProps) {
           Sign out
         </button>
       </header>
+      <nav className="steps" aria-label="Steps">
+        {steps.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={item.id === step ? "step current" : "step"}
+            aria-current={item.id === step ? "step" : undefined}
+            onClick={() => setStep(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      <main>
+        {step === "workspace" ? <WorkspaceStep client={client} onWorkspace={onWorkspace} /> : null}
+      </main>
     </div>
   );
 }
