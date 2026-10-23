@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
+import { FinishPanel } from "./finish.js";
+import {
+  approveRequest,
+  canExport,
+  type ExportFormat,
+  exportFileName,
+  exportRequestBody,
+  type RunExport,
+} from "./finish-model.js";
 import {
   type BlockView,
   blockEditProblem,
@@ -22,11 +31,14 @@ export interface ReviewStepProps {
   readonly client: ApiClient;
   /** The run the Run step follows; the newest run when the page has not opened one. */
   readonly run: Run | undefined;
+  /** Follows a run in the Run step, after asking for another round. */
+  readonly onFollowRun: (run: Run) => void;
 }
 
 /** The draft with its evidence, the critic's findings and their decisions, and block edits. */
-export function ReviewStep({ client, run }: ReviewStepProps) {
+export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
   const [review, setReview] = useState<RunReview | undefined>(undefined);
+  const [exports, setExports] = useState<readonly RunExport[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [messages, setMessages] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -38,11 +50,16 @@ export function ReviewStep({ client, run }: ReviewStepProps) {
         (await readDefaultApplication(client).then((application) =>
           application === undefined ? undefined : latestRunId(application),
         ));
-      if (runId !== undefined)
-        setReview(
-          await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
-            path: { workspaceId: ownerWorkspaceId, runId },
-          }),
+      if (runId === undefined) return;
+      const path = { workspaceId: ownerWorkspaceId, runId };
+      const read = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
+        path,
+      });
+      setReview(read);
+      if (canExport(read))
+        setExports(
+          (await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/exports", { path }))
+            .exports,
         );
     } catch (error) {
       setMessages([describeError(error)]);
@@ -80,39 +97,121 @@ export function ReviewStep({ client, run }: ReviewStepProps) {
     );
 
   const path = { workspaceId: ownerWorkspaceId, runId: review.run.runId };
+
+  async function attempt(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+      setMessages([]);
+    } catch (error) {
+      setMessages([describeError(error)]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const approve = (rationale: string) => {
+    if (review === undefined) return;
+    const request = approveRequest(review, rationale);
+    if ("problem" in request) {
+      setMessages([request.problem]);
+      return;
+    }
+    void attempt(async () => {
+      await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/approve", {
+        path,
+        body: request.body,
+      });
+      await load();
+    });
+  };
+
+  const revise = (direction: string) =>
+    void attempt(async () => {
+      const trimmed = direction.trim();
+      onFollowRun(
+        await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/revision", {
+          path,
+          header: { "idempotency-key": crypto.randomUUID() },
+          body: trimmed === "" ? {} : { candidateDirection: trimmed },
+        }),
+      );
+    });
+
+  const exportDraft = (format: ExportFormat, templateId: string) =>
+    void attempt(async () => {
+      const exported = await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/exports", {
+        path,
+        header: { "idempotency-key": crypto.randomUUID() },
+        body: exportRequestBody(format, templateId),
+      });
+      await load();
+      download(exported);
+    });
+
+  const download = (exported: RunExport) =>
+    void attempt(async () => {
+      const bytes = await client.call(
+        "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content",
+        { path: { ...path, exportId: exported.id } },
+      );
+      saveFile(bytes, exportFileName(exported));
+    });
+
   return (
-    <ReviewPanel
-      review={review}
-      busy={busy}
-      messages={messages}
-      onDecide={(findingId, decision, rationale) => {
-        const request = decisionRequest(decision, rationale);
-        if ("problem" in request) {
-          setMessages([request.problem]);
-          return Promise.resolve(false);
-        }
-        return act(() =>
-          client.call(
-            "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
-            { path: { ...path, findingId }, body: request.body },
-          ),
-        );
-      }}
-      onEdit={(blockId, text) => {
-        const problem = blockEditProblem(text);
-        if (problem !== undefined) {
-          setMessages([problem]);
-          return Promise.resolve(false);
-        }
-        return act(() =>
-          client.call("PUT /v1/workspaces/{workspaceId}/runs/{runId}/edits/{blockId}", {
-            path: { ...path, blockId },
-            body: { text },
-          }),
-        );
-      }}
-    />
+    <>
+      <ReviewPanel
+        review={review}
+        busy={busy}
+        messages={messages}
+        onDecide={(findingId, decision, rationale) => {
+          const request = decisionRequest(decision, rationale);
+          if ("problem" in request) {
+            setMessages([request.problem]);
+            return Promise.resolve(false);
+          }
+          return act(() =>
+            client.call(
+              "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
+              { path: { ...path, findingId }, body: request.body },
+            ),
+          );
+        }}
+        onEdit={(blockId, text) => {
+          const problem = blockEditProblem(text);
+          if (problem !== undefined) {
+            setMessages([problem]);
+            return Promise.resolve(false);
+          }
+          return act(() =>
+            client.call("PUT /v1/workspaces/{workspaceId}/runs/{runId}/edits/{blockId}", {
+              path: { ...path, blockId },
+              body: { text },
+            }),
+          );
+        }}
+      />
+      <FinishPanel
+        review={review}
+        exports={exports}
+        busy={busy}
+        onApprove={approve}
+        onRevise={revise}
+        onExport={exportDraft}
+        onDownload={download}
+      />
+    </>
   );
+}
+
+/** Hands a downloaded document to the browser as a file to save. */
+function saveFile(bytes: Blob, fileName: string) {
+  const url = URL.createObjectURL(bytes);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function Messages({ messages }: { readonly messages: readonly string[] }) {
