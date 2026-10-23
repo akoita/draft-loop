@@ -22,6 +22,7 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
+import { runStableInputMembers } from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import {
   evidenceReferenceTableInstructions,
@@ -30,9 +31,6 @@ import {
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
-
-/** The leading author input members that every call of a round repeats: context to output budget. */
-const runStableInputMembers = 5;
 
 /** What one author step was given, handed to the optional recorder before the provider call. */
 export interface AuthorInputRecord {

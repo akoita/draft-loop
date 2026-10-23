@@ -26,6 +26,7 @@ import {
 } from "./application-plan-prompts.js";
 import { authorPromptSupportsApplicationPlan } from "./author-adjudication.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
+import { authorRunPrefix, runStableInputMembers } from "./author-run-prefix.js";
 import { responseExecution } from "./response-execution.js";
 
 /**
@@ -94,21 +95,32 @@ export function createProviderApplicationPlanner(
     const aliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
     const adapter = await deps.createAdapter(identity.company, identity.modelId, role);
     const model = request.context.modelConfiguration[role];
+    const callInput = { runId: request.runId, executionId: request.executionId, ...extraInput };
+    const toModel = (input: object) =>
+      aliases.toModel(JSON.parse(JSON.stringify(input)) as JsonObject);
+    const prefix =
+      role === "author"
+        ? authorRunPrefix(request.context, deps.promptContext, retrievedEvidence)
+        : undefined;
     const modelRequest: ModelRequest<JsonObject> = {
       contextSnapshotId: request.context.id,
       model,
-      systemPrompt,
-      input: aliases.toModel(
-        JSON.parse(
-          JSON.stringify({
-            context: deps.promptContext,
-            retrievedEvidence,
-            runId: request.runId,
-            executionId: request.executionId,
-            ...extraInput,
+      // The author's plan calls lead with the drafting calls' run prefix and put their own
+      // instructions after it, so every author call of the run shares one cached prefix.
+      ...(prefix === undefined
+        ? {
+            systemPrompt,
+            input: toModel({ context: deps.promptContext, retrievedEvidence, ...callInput }),
+          }
+        : {
+            systemPrompt: `${prefix.systemPrompt}\n\n${systemPrompt}`,
+            promptCache: {
+              systemPrompt: prefix.systemPrompt,
+              callInstructions: systemPrompt,
+              stableInputMembers: runStableInputMembers,
+            },
+            input: toModel({ ...prefix.input, ...callInput }),
           }),
-        ) as JsonObject,
-      ),
       outputSchema: outputSchema(aliases.aliases),
       outputName,
       maxOutputTokens: model.profile?.runtime.maxOutputTokens ?? planOutputTokens,
