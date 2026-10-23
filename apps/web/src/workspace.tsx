@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { WritingPolicyStep } from "./policy.js";
 import {
   type Company,
   defaultWorkspaceForm,
@@ -84,7 +85,12 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
         </p>
       );
     case "ready":
-      return <WorkspaceSummary workspace={state.workspace} />;
+      return (
+        <>
+          <WorkspaceSummary workspace={state.workspace} />
+          <WritingPolicyStep client={client} />
+        </>
+      );
     case "missing":
       return (
         <WorkspaceSetupForm

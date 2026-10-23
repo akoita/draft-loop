@@ -236,6 +236,19 @@ form button[type="submit"] {
   padding-left: 1.25rem;
 }
 
+.rules {
+  margin-top: 0.75rem;
+}
+
+.rules h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.rules select {
+  margin-right: 0.5rem;
+}
+
 .muted {
   color: var(--text-2);
 }
