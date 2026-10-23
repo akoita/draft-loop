@@ -59,6 +59,16 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
   let brief: { briefId: string; version: number } | undefined;
   let firstRunId = "";
 
+  it("serves the web screen and its script without a token", async () => {
+    const page = await fetch(`${apiUrl}/`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-security-policy")).toContain("script-src 'self'");
+    const html = await page.text();
+    const script = /<script type="module" crossorigin src="([^"]+)"/.exec(html)?.[1];
+    expect(script).toMatch(/^\/assets\//);
+    expect((await fetch(`${apiUrl}${script}`)).status).toBe(200);
+  });
+
   it("sets up a workspace through the API and reads its run back once the worker has drafted it", async () => {
     expect(await send("PUT", workspacePath, { fixtureMode: true })).toMatchObject({ status: 201 });
 

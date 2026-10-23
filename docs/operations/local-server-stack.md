@@ -26,7 +26,7 @@ To also delete the stored data, run `docker compose down --volumes`.
 | ---------- | --------------------------------------------- | ------------------------------------------------------- |
 | `postgres` | `pgvector/pgvector:0.8.0-pg16`                | `postgres://postgres:postgres@127.0.0.1:55432/postgres` |
 | `gcs`      | `fsouza/fake-gcs-server:1.56.1`               | `http://127.0.0.1:4443`                                 |
-| `api`      | `apps/api/Dockerfile`, the `/v1` HTTP API     | `http://127.0.0.1:58080`                                |
+| `api`      | `apps/api/Dockerfile`, the `/v1` HTTP API and the web screen at `/` | `http://127.0.0.1:58080`                                |
 | `worker`   | `apps/worker/Dockerfile`, executes queued runs | none                                                    |
 
 - Every published port listens on `127.0.0.1` only. The Postgres port is
@@ -41,7 +41,8 @@ To also delete the stored data, run `docker compose down --volumes`.
 - The API and the worker connect as `draft_loop_app`, serve one tenant,
   `local`, and keep blobs in the emulator. Every credential in `compose.yaml`
   is a fixed local-only value; the API's owner token is
-  `local-stack-owner-token-not-a-secret`.
+  `local-stack-owner-token-not-a-secret`, which also signs you in to the web
+  screen at `http://127.0.0.1:58080/`.
 - Data lives in the named volumes `postgres-data` and `gcs-data`.
 
 ## Images
@@ -49,7 +50,9 @@ To also delete the stored data, run `docker compose down --volumes`.
 Both images are built from the repository root on `node:24.22.1-bookworm-slim`.
 Each installs only its app's production dependency graph from the lockfile and
 runs the TypeScript sources with `tsx`, so there is no separate build step. The
-worker image also runs the migration job (`src/migrate.ts`).
+API image is the exception for its web screen: a separate stage builds
+`apps/web` with Vite and copies only the built files in. The worker image also
+runs the migration job (`src/migrate.ts`).
 
 The install happens in a separate build stage, so pnpm and its store stay out
 of the images. The embedding runtime (`onnxruntime-node`) ships native binaries
@@ -82,6 +85,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters                |
 | `PORT`                                  | API            | Listening port, default 8080                                    |
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`           | API            | Largest candidate source upload, default 10485760 (10 MiB), at most 30 MiB |
+| `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |

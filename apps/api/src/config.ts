@@ -1,3 +1,5 @@
+import { isAbsolute } from "node:path";
+
 import { ownerTokenMinimumLength } from "./owner-access.js";
 import { isCloudRunJobName } from "./worker-wake.js";
 
@@ -7,6 +9,8 @@ export interface ApiConfig {
   readonly ownerToken: string;
   /** The worker's Cloud Run job, started after each queued run; unset on the local stack. */
   readonly workerJob?: string;
+  /** The built web screen's directory, served at `/`; the image sets it. */
+  readonly webRoot?: string;
 }
 
 export class ApiConfigError extends Error {
@@ -35,11 +39,16 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
       "DRAFT_LOOP_WORKER_JOB must be a Cloud Run job name, projects/<project>/locations/<region>/jobs/<job>.",
     );
   }
+  const webRoot = env.DRAFT_LOOP_WEB_ROOT ?? "";
+  if (webRoot !== "" && !isAbsolute(webRoot)) {
+    throw new ApiConfigError("DRAFT_LOOP_WEB_ROOT must be an absolute directory path.");
+  }
   return {
     host: env.DRAFT_LOOP_API_HOST ?? "0.0.0.0",
     port,
     ownerToken,
     ...(workerJob === "" ? {} : { workerJob }),
+    ...(webRoot === "" ? {} : { webRoot }),
   };
 }
 

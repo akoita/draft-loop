@@ -33,6 +33,7 @@ const app = await buildApi({
   ownerToken: config.ownerToken,
   logger: cloudLoggingOptions(),
   application: hosted.application,
+  ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
 });
 
 // Cloud Run sends SIGTERM before stopping an instance; finish in-flight requests, then exit.

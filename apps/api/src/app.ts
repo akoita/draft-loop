@@ -25,6 +25,7 @@ import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { isOwnerAuthorization } from "./owner-access.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
+import { contentSecurityPolicy, isPublicRequest, registerWebScreen } from "./web-screen.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 
 export interface ApiOptions {
@@ -46,12 +47,12 @@ export interface ApiOptions {
     /** The tenant's one knowledge store, as workspaces select from it; set with the intake. */
     readonly knowledgeStore?: KnowledgeStoreAddress;
   };
+  /** The built web screen's directory, served at `/`; without it no page is served. */
+  readonly webRoot?: string;
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
 export const apiBodyLimitBytes = 1_048_576;
-
-const publicRoutes = new Set(["/v1/health"]);
 
 const healthSchema = z.object({ status: z.literal("ok") }).meta({ id: "Health" });
 
@@ -84,7 +85,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   app.setErrorHandler(sendError);
   app.setNotFoundHandler(sendNotFound);
 
-  await app.register(helmet);
+  await app.register(helmet, { contentSecurityPolicy });
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
@@ -99,8 +100,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   });
 
   app.addHook("onRequest", async (request, reply) => {
-    if (request.routeOptions.url !== undefined && publicRoutes.has(request.routeOptions.url))
-      return;
+    if (isPublicRequest(request.routeOptions.url, request.url)) return;
     if (!isOwnerAuthorization(request.headers.authorization, options.ownerToken)) {
       await reply
         .code(401)
@@ -171,6 +171,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       registerKnowledgeRoutes(app, { intake: options.application.knowledgeIntake });
     }
   }
+  if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 
   return app;
 }
