@@ -288,8 +288,12 @@ instructions, then the run-stable input members as one block with the
 request's only cache breakpoint, on a one-hour lifetime. The call's own
 instructions (adjudication, retry, revision, or patch) and per-call members
 follow it. The words are the ones other providers receive in one system prompt
-and one input; only their order differs. Other calls, such as the application
-plan, are sent unchanged.
+and one input; only their order differs.
+
+The author's application plan calls send the same prefix as its drafts, with the
+plan instructions after it, so the first plan call writes the cache and the plan
+revision and every draft of the run read it. The critic's calls, including its
+plan review, are sent unchanged.
 
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
