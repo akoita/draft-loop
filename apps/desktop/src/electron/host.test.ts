@@ -8992,6 +8992,7 @@ describe("writing policy editing", () => {
     let importedText: string | undefined;
     let importedPath: string | undefined;
     fixture.service.configureWritingPolicy.mockImplementation(async (command) => {
+      if (command.sourcePath === undefined) throw new Error("expected a file path");
       importedPath = command.sourcePath;
       importedText = await readFile(command.sourcePath, "utf8");
       expect(command.activate).toBe(true);

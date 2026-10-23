@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, stat, writeFile } from "node:fs/promises";
-import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import {
   type ContextSnapshot,
   createContextSnapshot,
@@ -148,7 +148,7 @@ import {
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
 import { workspaceSettings } from "./workspace-settings.js";
-import { managedWritingPolicy, writingPolicyFromPath } from "./writing-policy-file.js";
+import { managedWritingPolicy, writingPolicyFromCommand } from "./writing-policy-file.js";
 
 export type {
   AnthropicClient,
@@ -876,12 +876,7 @@ export async function configureWorkspaceWritingPolicy(
   io: CliIo = defaultIo,
 ): Promise<WorkspaceConfig> {
   const root = resolve(command.root);
-  const sourcePath = resolve(command.sourcePath);
-  const extension = extname(sourcePath).toLowerCase();
-  if (![".md", ".markdown", ".txt", ".text"].includes(extension)) {
-    throw new CliUserError("The writing policy must be a Markdown or text file.");
-  }
-  const policy = await writingPolicyFromPath(sourcePath);
+  const policy = await writingPolicyFromCommand(command);
   const current = await readWorkspace(root);
   const storage = await openStorage(root);
   try {
@@ -1898,11 +1893,7 @@ async function activeWritingPolicyMetadata(
   config: WorkspaceConfig,
 ): Promise<WritingPolicyVersionMetadata | undefined> {
   if (config.writingPolicyChecksum === undefined) return undefined;
-  try {
-    await stat(databasePath(root));
-  } catch {
-    return undefined;
-  }
+  if (!((await storageFactory().hasHistory?.(root)) ?? true)) return undefined;
   const storage = await openStorage(root);
   try {
     const record = await storage.getWritingPolicyVersion(config.id, config.writingPolicyChecksum);

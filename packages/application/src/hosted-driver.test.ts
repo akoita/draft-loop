@@ -16,7 +16,7 @@ import {
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createHostedApplicationDriver } from "./hosted-driver.js";
-import { createApplicationService } from "./index.js";
+import { type ApplicationService, createApplicationService } from "./index.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import type { StorageFactory } from "./local-storage-factory.js";
 import type { WorkspaceSettingName, WorkspaceSettingsPort } from "./workspace-settings.js";
@@ -119,7 +119,7 @@ async function approvedRun() {
 }
 
 /** A hosted service with one fixture run begun and not yet executed, as the API leaves it. */
-async function begunRun() {
+async function begunRun(prepare?: (service: ApplicationService) => Promise<void>) {
   const directory = await mkdtemp(join(tmpdir(), "draft-loop-hosted-"));
   scratch.push(directory);
   await mkdir(join(directory, "history"));
@@ -151,6 +151,7 @@ async function begunRun() {
     },
     silent,
   );
+  await prepare?.(service);
   const brief = await service.createOpportunity({
     root: workspace,
     sources: [
@@ -221,6 +222,36 @@ describe("hosted application driver", () => {
       service.getApplication({ root: workspace, applicationId: "default" }),
     ).resolves.toEqual(defaultApplication);
     await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
+  it("activates a writing policy given as text, and a run records its version", async () => {
+    const policyText = "# Writing policy\n\nKeep each bullet to one sentence.";
+    const { service, begun } = await begunRun(async (hosted) => {
+      await hosted.configureWritingPolicy({ root: workspace, content: policyText }, silent);
+    });
+
+    const active = await service.getWritingPolicy?.({ root: workspace, includeContent: true });
+    const versions = await service.listWritingPolicyVersions?.({ root: workspace });
+    const recorded = await service.readRunWritingPolicy?.({
+      root: workspace,
+      runId: begun.runId,
+    });
+
+    expect(active?.policy?.content).toBe(policyText);
+    expect(versions?.map((version) => version.checksum)).toEqual([active?.checksum]);
+    expect(recorded?.effective.checksum).toBe(active?.checksum);
+    await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
+  it("refuses a hosted writing policy named by a file path", async () => {
+    const { service } = await begunRun();
+
+    await expect(
+      service.configureWritingPolicy({ root: workspace, sourcePath: "/etc/hostname" }, silent),
+    ).rejects.toThrow("A hosted writing policy comes as text, never a file path.");
+    await expect(
+      service.configureWritingPolicy({ root: workspace, content: "   " }, silent),
+    ).rejects.toThrow("The writing policy is empty.");
   }, 120_000);
 
   it("reads a run's review: the draft, its findings and the recorded independence", async () => {

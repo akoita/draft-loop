@@ -27,6 +27,7 @@ import { registerReviewRoutes } from "./review-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, isPublicRequest, registerWebScreen } from "./web-screen.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
+import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 
 export interface ApiOptions {
   readonly ownerToken: string;
@@ -143,6 +144,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(knowledgeIntake === undefined || knowledgeStore === undefined
         ? {}
         : { knowledge: { intake: knowledgeIntake, store: knowledgeStore } }),
+    });
+    registerWritingPolicyRoutes(app, {
+      service: options.application.service,
+      workspaceRoot: options.application.workspaceRoot,
     });
     registerApplicationRoutes(app, {
       service: options.application.service,
