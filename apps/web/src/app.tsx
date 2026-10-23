@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import type { TokenStore } from "./session.js";
 import { SignIn } from "./sign-in.js";
+import { SourcesStep } from "./sources.js";
 import { WorkspaceStep } from "./workspace.js";
 
 export interface AppProps {
@@ -66,14 +67,17 @@ export interface ShellProps {
 }
 
 /** The screen's steps, in the order a run needs them. */
-export const steps = [{ id: "workspace", label: "Workspace" }] as const;
+export const steps = [
+  { id: "workspace", label: "Workspace" },
+  { id: "sources", label: "Sources" },
+] as const;
 
 export type StepId = (typeof steps)[number]["id"];
 
 export function Shell({ client, onSignOut }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
   const [step, setStep] = useState<StepId>("workspace");
-  const [, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
+  const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
   const onWorkspace = useCallback((workspace: ApiSchemas["Workspace"]) => {
     setWorkspace(workspace);
   }, []);
@@ -111,6 +115,7 @@ export function Shell({ client, onSignOut }: ShellProps) {
             type="button"
             className={item.id === step ? "step current" : "step"}
             aria-current={item.id === step ? "step" : undefined}
+            disabled={item.id !== "workspace" && workspace === undefined}
             onClick={() => setStep(item.id)}
           >
             {item.label}
@@ -118,7 +123,11 @@ export function Shell({ client, onSignOut }: ShellProps) {
         ))}
       </nav>
       <main>
-        {step === "workspace" ? <WorkspaceStep client={client} onWorkspace={onWorkspace} /> : null}
+        {step === "workspace" || workspace === undefined ? (
+          <WorkspaceStep client={client} onWorkspace={onWorkspace} />
+        ) : step === "sources" ? (
+          <SourcesStep client={client} workspace={workspace} onWorkspace={onWorkspace} />
+        ) : null}
       </main>
     </div>
   );

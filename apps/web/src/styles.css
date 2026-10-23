@@ -225,3 +225,22 @@ textarea.short {
 form button[type="submit"] {
   margin-top: 1rem;
 }
+
+.base {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 0;
+}
+
+.sources {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.inline-form {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
