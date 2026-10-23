@@ -153,6 +153,7 @@ from the deployment's configuration, never from this repository.
 | `DRAFT_LOOP_VERTEX_LOCATION`      | `eu` (the default) or a `europe-*` region; any other location is refused         |
 | `DRAFT_LOOP_VERTEX_PRICE_FACTOR`  | The location's price factor over first-party rates, at least 1                   |
 | `DRAFT_LOOP_OPENAI_KEY_SECRET`    | The Secret Manager version holding the critic's OpenAI EU project key            |
+| `DRAFT_LOOP_OPENAI_ENDPOINT`      | `eu` (the default) or `global`, OpenAI's endpoint outside the EU                 |
 | `DRAFT_LOOP_ANTHROPIC_FALLBACK`   | `true` allows the direct Claude API as a recorded fallback; default `false`      |
 | `DRAFT_LOOP_ANTHROPIC_KEY_SECRET` | The Secret Manager version holding the Claude API key; only with the fallback on |
 
@@ -161,7 +162,10 @@ from the deployment's configuration, never from this repository.
   processes material outside the EU, which is why the fallback is off by
   default.
 - The critic calls OpenAI's EU endpoint, `https://eu.api.openai.com/v1`, with
-  a key from a project created with EU data residency.
+  a key from a project created with EU data residency. A deployment whose
+  OpenAI organization cannot create such a project may set `global` instead,
+  which processes material outside the EU; the worker logs its routes at
+  every start.
 - Keys are read from Secret Manager at call time and kept in memory for five
   minutes.
 

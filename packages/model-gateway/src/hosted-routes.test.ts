@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createHostedAnthropicRoute,
+  createOpenAiClient,
   createOpenAiEuClient,
   openAiEuBaseUrl,
+  openAiGlobalBaseUrl,
 } from "./hosted-routes.js";
 import { auth, model, request, scriptedVertex } from "./vertex-test-support.js";
 
@@ -108,8 +110,13 @@ describe("hosted Anthropic route", () => {
   });
 });
 
-describe("OpenAI EU client", () => {
+describe("OpenAI client", () => {
   it("targets the European data-residency endpoint", () => {
     expect(createOpenAiEuClient("synthetic-openai-key").baseURL).toBe(openAiEuBaseUrl);
+  });
+
+  it("targets the global endpoint only when asked", () => {
+    expect(createOpenAiClient("synthetic-openai-key", "eu").baseURL).toBe(openAiEuBaseUrl);
+    expect(createOpenAiClient("synthetic-openai-key", "global").baseURL).toBe(openAiGlobalBaseUrl);
   });
 });

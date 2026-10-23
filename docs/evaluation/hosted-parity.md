@@ -38,6 +38,11 @@ calls take the direct Claude API fallback with the owner's agreement
 records each one. Moving back to Vertex AI is
 [#1564](https://github.com/akoita/draft-loop/issues/1564).
 
+Staging's critic likewise calls OpenAI's global endpoint, with the owner's
+agreement, until OpenAI enables EU data residency for the owner's
+organization; the worker logs that route at every start. Both choices are
+staging-only and process the owner's own material outside the EU.
+
 ## Pass
 
 The hosted draft is scored as in manual parity, against the local draft of the

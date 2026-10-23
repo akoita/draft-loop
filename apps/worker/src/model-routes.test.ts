@@ -46,6 +46,7 @@ describe("readModelGatewayConfig", () => {
       vertexLocation: "europe-west1",
       vertexPriceFactor: 1.1,
       openAiKeySecret: env.DRAFT_LOOP_OPENAI_KEY_SECRET,
+      openAiEndpoint: "eu",
     });
     expect(
       readModelGatewayConfig({
@@ -62,6 +63,7 @@ describe("readModelGatewayConfig", () => {
     ["no price factor", { DRAFT_LOOP_VERTEX_PRICE_FACTOR: undefined }],
     ["a price factor below 1", { DRAFT_LOOP_VERTEX_PRICE_FACTOR: "0.9" }],
     ["no OpenAI key secret", { DRAFT_LOOP_OPENAI_KEY_SECRET: "" }],
+    ["an unknown OpenAI endpoint", { DRAFT_LOOP_OPENAI_ENDPOINT: "us" }],
     ["an unclear fallback setting", { DRAFT_LOOP_ANTHROPIC_FALLBACK: "yes" }],
     ["the fallback on without its key", { DRAFT_LOOP_ANTHROPIC_FALLBACK: "true" }],
     [
@@ -94,6 +96,17 @@ describe("workerProviderOptions", () => {
     await expect(options.resolveCredential?.("anthropic")).resolves.toBeUndefined();
     expect(options.providerClientFactories?.openai?.("synthetic-openai-key")).toMatchObject({
       baseURL: "https://eu.api.openai.com/v1",
+    });
+  });
+
+  it("sends the critic to OpenAI's global endpoint only where the deployment chose it", () => {
+    const config = readModelGatewayConfig({ ...env, DRAFT_LOOP_OPENAI_ENDPOINT: "global" });
+
+    const options = workerProviderOptions(config, { secrets: secrets({}), vertex });
+
+    expect(config).toMatchObject({ openAiEndpoint: "global" });
+    expect(options.providerClientFactories?.openai?.("synthetic-openai-key")).toMatchObject({
+      baseURL: "https://api.openai.com/v1",
     });
   });
 });
