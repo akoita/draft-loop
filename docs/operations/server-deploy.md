@@ -60,6 +60,19 @@ sets them from its infrastructure. Unlike the local stack, it:
   and resumed runs, and the API's identity needs permission to run that job;
 - sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker.
 
+## Before a provider run on staging
+
+The synthetic smoke runs in fixture mode and calls no model. A run with real
+models, such as the [hosted parity](../evaluation/hosted-parity.md) run, needs
+two things the code cannot set up:
+
+- the critic's OpenAI EU key, added by the owner as a value of its secret;
+- Claude enabled in the Vertex AI Model Garden for the project, with quota in
+  the EU multi-region for the author's model.
+
+Real reference material goes on staging only with the owner's recorded
+consent; otherwise use synthetic material.
+
 ## Logs
 
 The API and the worker write one JSON object per line to standard output, with

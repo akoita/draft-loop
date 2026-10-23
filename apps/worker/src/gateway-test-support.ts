@@ -123,10 +123,11 @@ function vertexStream(modelId: string, output: unknown): string {
 }
 
 /** The author's calls on Vertex AI: the application plan, then the draft. */
-function scriptedVertexFetch(urls: string[]): typeof fetch {
+function scriptedVertexFetch(urls: string[], bodies: string[]): typeof fetch {
   return (async (input: string | URL | Request, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     urls.push(url);
+    bodies.push(String(init?.body));
     const body = JSON.parse(String(init?.body)) as {
       readonly messages: readonly {
         readonly content: string | readonly { readonly text: string }[];
@@ -150,10 +151,11 @@ function scriptedVertexFetch(urls: string[]): typeof fetch {
 type ResponseParams = Parameters<OpenAIClient["responses"]["create"]>[0];
 
 /** The critic's calls on OpenAI's EU endpoint: the plan review, then the critique. */
-function scriptedOpenAiClient(names: string[]): OpenAIClient {
+function scriptedOpenAiClient(names: string[], bodies: string[]): OpenAIClient {
   return {
     responses: {
       create: async (params: ResponseParams) => {
+        bodies.push(JSON.stringify(params));
         const format = (params as { readonly text?: { readonly format?: unknown } }).text?.format;
         const { name, schema } = format as { readonly name: string; readonly schema: unknown };
         names.push(name);
@@ -187,6 +189,8 @@ function scriptedOpenAiClient(names: string[]): OpenAIClient {
 /** Route dependencies whose Vertex AI, OpenAI and Secret Manager are all scripted. */
 export function scriptedGateway(openAiKeySecret: string) {
   const vertexUrls: string[] = [];
+  /** Every request body the run sent, so a test can check what reached a provider. */
+  const requestBodies: string[] = [];
   const openAiOutputs: string[] = [];
   const openAiKeys: string[] = [];
   const dependencies: ModelRouteDependencies = {
@@ -202,12 +206,12 @@ export function scriptedGateway(openAiKeySecret: string) {
           getRequestHeaders: async () => new Headers({ authorization: "Bearer synthetic-token" }),
         },
       } as never,
-      fetch: scriptedVertexFetch(vertexUrls),
+      fetch: scriptedVertexFetch(vertexUrls, requestBodies),
     },
     openAiClient: (apiKey) => {
       openAiKeys.push(apiKey);
-      return scriptedOpenAiClient(openAiOutputs) as never;
+      return scriptedOpenAiClient(openAiOutputs, requestBodies) as never;
     },
   };
-  return { dependencies, vertexUrls, openAiOutputs, openAiKeys };
+  return { dependencies, vertexUrls, requestBodies, openAiOutputs, openAiKeys };
 }
