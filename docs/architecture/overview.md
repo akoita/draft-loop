@@ -192,6 +192,11 @@ The hosted service starts runs through a queue rather than in the request
   provider call, then queues its ids in `packages/run-queue`. A request that
   saved the run but could not queue it answers 503, and a retry with the same
   `Idempotency-Key` queues the saved run.
+- Its optional `modelProfiles` binds exact author and critic profile versions
+  to that run, such as a preset's pair, as the CLI and the desktop do. Without
+  them the run uses provider-default runtime controls and unknown context
+  windows, so a full-source request over the default budget falls back to
+  retrieval. A pair the registry refuses answers 422.
 - Idempotency keys live in Postgres (`idempotency_keys`, under row-level
   security), so every API instance replays a key's first result for a day. A
   retry that arrives while the first request still runs waits up to five

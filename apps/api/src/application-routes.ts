@@ -138,11 +138,22 @@ function definedFields<Value extends object>(
 
 const versionQuery = z.strictObject({ version: z.coerce.number().int().positive().optional() });
 
+const modelProfileReference = z.strictObject({
+  id: identifierSchema,
+  version: z.number().int().positive(),
+});
+
 const beginRunBody = z.strictObject({
   applicationId: applicationIdSchema.optional(),
   opportunityBrief: z
     .strictObject({ briefId: identifierSchema, version: z.number().int().positive() })
     .optional(),
+  modelProfiles: z
+    .strictObject({ author: modelProfileReference, critic: modelProfileReference })
+    .optional()
+    .describe(
+      "Exact author and critic profile versions bound to this run, such as a preset's pair; their models replace the workspace's for this run. Without them the run uses provider-default runtime controls and unknown context windows.",
+    ),
 });
 
 const idempotencyHeaders = z.object({
@@ -366,6 +377,14 @@ export function registerApplicationRoutes(
         ...(request.body.opportunityBrief === undefined
           ? {}
           : { opportunityBrief: { ...request.body.opportunityBrief } }),
+        ...(request.body.modelProfiles === undefined
+          ? {}
+          : {
+              modelProfiles: {
+                author: { ...request.body.modelProfiles.author },
+                critic: { ...request.body.modelProfiles.critic },
+              },
+            }),
       };
       const snapshot = await idempotency.once(
         `runs:${workspaceId}`,

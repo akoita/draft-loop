@@ -926,6 +926,7 @@ export {
   type RunProfileInput,
   readRunInputs,
 } from "./run-inputs-read.js";
+export { RunModelProfileError } from "./run-model-profiles.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export { type ReleasePauseCommand, releaseRunPause } from "./run-pause-release.js";

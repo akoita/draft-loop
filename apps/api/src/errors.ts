@@ -6,6 +6,7 @@ import {
   opportunityBriefVersionStaleErrorMessage,
   RunActionError,
   type RunActionErrorCode,
+  RunModelProfileError,
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
@@ -132,8 +133,9 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     void reply.code(404).send(apiError("not_found", "No such workspace."));
     return;
   }
-  // The application service's user errors are its stable, user-facing refusals.
-  if (error instanceof CliUserError) {
+  // The application service's user errors are its stable, user-facing refusals, as is a run's
+  // model profile pair that the registry or the workspace's models refuse.
+  if (error instanceof CliUserError || error instanceof RunModelProfileError) {
     void reply.code(422).send(apiError("rejected", error.message));
     return;
   }
