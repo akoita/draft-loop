@@ -1729,6 +1729,75 @@
           "month"
         ]
       },
+      "WritingPolicyVersionInput": {
+        "type": "object",
+        "properties": {
+          "checksum": {
+            "type": "string",
+            "description": "The SHA-256 of the policy text, which names the version."
+          },
+          "version": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "priorChecksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version this one replaced, if any."
+          }
+        },
+        "required": [
+          "checksum",
+          "version",
+          "createdAt",
+          "priorChecksum"
+        ]
+      },
+      "WritingPolicyInput": {
+        "type": "object",
+        "properties": {
+          "checksum": {
+            "type": "string",
+            "description": "The SHA-256 of the policy text, which names the version."
+          },
+          "version": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "priorChecksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version this one replaced, if any."
+          },
+          "content": {
+            "type": "string",
+            "description": "The policy's Markdown text."
+          }
+        },
+        "required": [
+          "checksum",
+          "version",
+          "createdAt",
+          "priorChecksum",
+          "content"
+        ]
+      },
       "HealthInput": {
         "type": "object",
         "properties": {
@@ -3494,6 +3563,77 @@
         ],
         "additionalProperties": false
       },
+      "WritingPolicyVersion": {
+        "type": "object",
+        "properties": {
+          "checksum": {
+            "type": "string",
+            "description": "The SHA-256 of the policy text, which names the version."
+          },
+          "version": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "priorChecksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version this one replaced, if any."
+          }
+        },
+        "required": [
+          "checksum",
+          "version",
+          "createdAt",
+          "priorChecksum"
+        ],
+        "additionalProperties": false
+      },
+      "WritingPolicy": {
+        "type": "object",
+        "properties": {
+          "checksum": {
+            "type": "string",
+            "description": "The SHA-256 of the policy text, which names the version."
+          },
+          "version": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "priorChecksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version this one replaced, if any."
+          },
+          "content": {
+            "type": "string",
+            "description": "The policy's Markdown text."
+          }
+        },
+        "required": [
+          "checksum",
+          "version",
+          "createdAt",
+          "priorChecksum",
+          "content"
+        ],
+        "additionalProperties": false
+      },
       "Health": {
         "type": "object",
         "properties": {
@@ -3844,6 +3984,193 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/writing-policy": {
+      "put": {
+        "summary": "Set a workspace's writing policy",
+        "description": "Saves the text as a new version and makes it the policy the workspace's next runs follow. Setting the same text again keeps its version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536,
+                    "description": "The policy as Markdown; at most 64 KiB once encoded as UTF-8."
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Read a workspace's active writing policy",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/writing-policy/versions": {
+      "get": {
+        "summary": "List a workspace's writing policy versions, without their text",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "versions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WritingPolicyVersion"
+                      }
+                    }
+                  },
+                  "required": [
+                    "versions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

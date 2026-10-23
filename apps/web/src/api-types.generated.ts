@@ -311,6 +311,19 @@ export interface ApiSchemas {
     readonly fixtureMode: boolean;
     readonly knowledgeBaseIds: readonly (string)[];
   };
+  "WritingPolicy": {
+    readonly checksum: string;
+    readonly version: string;
+    readonly createdAt: string;
+    readonly priorChecksum: string | null;
+    readonly content: string;
+  };
+  "WritingPolicyVersion": {
+    readonly checksum: string;
+    readonly version: string;
+    readonly createdAt: string;
+    readonly priorChecksum: string | null;
+  };
 }
 
 export interface ApiOperations {
@@ -359,6 +372,29 @@ export interface ApiOperations {
       readonly combinationApproved?: boolean;
     };
     readonly response: ApiSchemas["Workspace"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/writing-policy": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly content: string;
+    };
+    readonly response: ApiSchemas["WritingPolicy"];
+  };
+  "GET /v1/workspaces/{workspaceId}/writing-policy": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["WritingPolicy"];
+  };
+  "GET /v1/workspaces/{workspaceId}/writing-policy/versions": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly versions: readonly (ApiSchemas["WritingPolicyVersion"])[];
+    };
   };
   "POST /v1/workspaces/{workspaceId}/opportunities": {
     readonly path: {

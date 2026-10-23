@@ -288,6 +288,11 @@ The owner sets up a hosted workspace through the API before any run:
   budget above the deployment's ceiling answers 422 before anything is saved.
   The request names no file or folder, and an existing workspace answers 409
   instead of being overwritten.
+- `PUT /v1/workspaces/:id/writing-policy` sets the candidate's writing policy
+  from its Markdown text, at most 64 KiB, as a new immutable version that the
+  next runs follow and record. `GET` reads the active policy, and
+  `GET .../versions` lists the versions without their text. The server never
+  reads a policy file a client names.
 - `PATCH /v1/workspaces/:id/opportunities/:briefId` saves an edit of a job
   brief as a new draft version, from a patch of its editable fields in their
   brief shape. Its `expectedVersion` must be the latest, or the edit answers

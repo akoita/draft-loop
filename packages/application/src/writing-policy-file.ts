@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 import {
   type ContextSnapshot,
   defaultAntiFormulaicTerms,
@@ -256,6 +257,30 @@ export async function writingPolicyFromPath(
   await ensureFile(path, "Writing policy");
   if ((await stat(path)).size > maximumWritingPolicyBytes) throw writingPolicyTooLarge();
   return writingPolicyFromText(await readFile(path, "utf8"));
+}
+
+/**
+ * The policy a configure command names: a local Markdown or text file, or its text as the hosted
+ * service receives it. Exactly one of the two; both pass the same size and content checks.
+ */
+export async function writingPolicyFromCommand(command: {
+  readonly sourcePath?: string;
+  readonly content?: string;
+}): Promise<NonNullable<ContextSnapshot["writingPolicy"]>> {
+  if ((command.sourcePath === undefined) === (command.content === undefined)) {
+    throw new CliUserError("Give the writing policy as a file or as text, not both.");
+  }
+  if (command.content !== undefined) {
+    if (Buffer.byteLength(command.content, "utf8") > maximumWritingPolicyBytes) {
+      throw writingPolicyTooLarge();
+    }
+    return writingPolicyFromText(command.content);
+  }
+  const sourcePath = resolve(command.sourcePath as string);
+  if (![".md", ".markdown", ".txt", ".text"].includes(extname(sourcePath).toLowerCase())) {
+    throw new CliUserError("The writing policy must be a Markdown or text file.");
+  }
+  return writingPolicyFromPath(sourcePath);
 }
 
 const writingPolicyTooLarge = () =>

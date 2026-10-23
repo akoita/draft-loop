@@ -48,7 +48,9 @@ interface HandedPolicyFile {
  */
 function recordingConfigure(handed: HandedPolicyFile[]) {
   return async (command: ConfigureWritingPolicyCommand, io?: ApplicationIo) => {
-    handed.push({ path: command.sourcePath, content: await readFile(command.sourcePath, "utf8") });
+    const path = command.sourcePath;
+    if (path === undefined) throw new Error("The default policy is handed over as a file.");
+    handed.push({ path, content: await readFile(path, "utf8") });
     return configureWorkspaceWritingPolicy(command, io);
   };
 }

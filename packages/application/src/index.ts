@@ -137,7 +137,9 @@ export interface ConfigureAutopilotCommand {
 export interface ConfigureWritingPolicyCommand {
   readonly root: string;
   /** Local Markdown or text file deliberately selected by the candidate. */
-  readonly sourcePath: string;
+  readonly sourcePath?: string;
+  /** The policy's Markdown text, as the hosted service receives it; never with `sourcePath`. */
+  readonly content?: string;
   /** Import without changing the managed file or active workspace policy. */
   readonly activate?: boolean;
 }
@@ -955,3 +957,4 @@ export * from "./workspace-model-profile-selection.js";
 export * from "./workspace-model-profile-selection-service.js";
 export * from "./workspace-retrieval-mode.js";
 export * from "./workspace-retrieval-mode-service.js";
+export { maximumWritingPolicyBytes } from "./writing-policy-file.js";

@@ -39,6 +39,7 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
   let storage: PostgresStorage;
   let blobRoot: string;
   let app: FastifyInstance;
+  let hosted: ReturnType<typeof composeHostedApplication>;
 
   const call = async (method: "GET" | "POST" | "PUT" | "PATCH", path: string, payload?: object) => {
     const response = await app.inject({
@@ -65,19 +66,17 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
       tenantId: "owner",
     });
     blobRoot = await mkdtemp(join(tmpdir(), "draft-loop-setup-"));
-    app = await buildApi({
-      ownerToken,
-      application: composeHostedApplication({
-        storage,
-        blobs: createFilesystemBlobStorage(),
-        tenantId: "owner",
-        budgetCeiling: { maxRounds: 3, maxCostUsd: 3, maxDurationMs: 1_800_000 },
-        enqueueRun: async (workspaceId, runId) => {
-          queued.push({ workspaceId, runId });
-        },
-        knowledgeLocation: (versionId) => join(blobRoot, "knowledge", versionId),
-      }),
+    hosted = composeHostedApplication({
+      storage,
+      blobs: createFilesystemBlobStorage(),
+      tenantId: "owner",
+      budgetCeiling: { maxRounds: 3, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+      enqueueRun: async (workspaceId, runId) => {
+        queued.push({ workspaceId, runId });
+      },
+      knowledgeLocation: (versionId) => join(blobRoot, "knowledge", versionId),
     });
+    app = await buildApi({ ownerToken, application: hosted });
   });
 
   afterAll(async () => {
@@ -94,6 +93,17 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
     expect(await call("PUT", "/v1/workspaces/setup-1", { fixtureMode: true })).toMatchObject({
       status: 409,
     });
+
+    const policyText = "# Writing policy\n\nKeep each bullet to one sentence.";
+    const policy = await call("PUT", "/v1/workspaces/setup-1/writing-policy", {
+      content: policyText,
+    });
+    expect(policy.status).toBe(200);
+    expect(policy.body.content).toBe(policyText);
+    const policyVersions = await call("GET", "/v1/workspaces/setup-1/writing-policy/versions");
+    expect(policyVersions.body.versions.map((item: { checksum: string }) => item.checksum)).toEqual(
+      [policy.body.checksum],
+    );
 
     const base = await call("POST", "/v1/knowledge-bases", { displayName: "Career" });
     expect(base.status).toBe(201);
@@ -164,6 +174,11 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
     expect(queued).toEqual([{ workspaceId: "setup-1", runId: run.body.runId }]);
     const read = await call("GET", `/v1/workspaces/setup-1/runs/${run.body.runId}`);
     expect(read.status).toBe(200);
+    const runPolicy = await hosted.service.readRunWritingPolicy?.({
+      root: hosted.workspaceRoot("setup-1"),
+      runId: run.body.runId,
+    });
+    expect(runPolicy?.effective.checksum).toBe(policy.body.checksum);
 
     // The default application lists the brief and the run from Postgres, not a local file.
     const applications = await call("GET", "/v1/workspaces/setup-1/applications");

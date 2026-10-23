@@ -32,6 +32,9 @@ export interface HostedApplicationDriverOptions {
 export const hostedDriverMethods = [
   "initialize",
   "readWorkspace",
+  "configureWritingPolicy",
+  "getWritingPolicy",
+  "listWritingPolicyVersions",
   "configureKnowledgeSelection",
   "createOpportunity",
   "getOpportunity",
@@ -46,6 +49,7 @@ export const hostedDriverMethods = [
   "resume",
   "status",
   "readIndependentReview",
+  "readRunWritingPolicy",
   "recordReviewDecision",
   "lifecycle",
   "export",
@@ -101,6 +105,13 @@ export function createHostedApplicationDriver(
         return local.lifecycle(command, io);
       }),
     releasePause: (command) => inHostedContext(() => releaseRunPause(command)),
+    // A hosted policy arrives as text: the server never reads a file the client names.
+    configureWritingPolicy: (command, io) =>
+      inHostedContext(async () => {
+        if (command.sourcePath !== undefined)
+          throw new CliUserError("A hosted writing policy comes as text, never a file path.");
+        return local.configureWritingPolicy(command, io);
+      }),
     // The service picks every export's path: a new one under the workspace, never the client's.
     // PDFs come from the built-in writer, since a server image carries no browser engine.
     export: (command, io) =>
