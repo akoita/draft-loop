@@ -22,6 +22,21 @@ describe("catalog model pricing", () => {
     });
   });
 
+  it("prices the cache writes OpenAI reports for every OpenAI critic", () => {
+    const critics = listModelProfileCatalog().filter(
+      ({ profile }) => profile.provider === "openai" && profile.roles.includes("critic"),
+    );
+    expect(critics.length).toBeGreaterThan(0);
+    for (const { profile } of critics) {
+      expect(
+        catalogModelPricing({ ...selection(profile.provider, profile.modelId), profile }),
+      ).toMatchObject({
+        cachedInputUsdPerMillionTokens: expect.any(Number),
+        cacheWriteInputUsdPerMillionTokens: expect.any(Number),
+      });
+    }
+  });
+
   it("uses the selected profile's rate card, including its input cap", () => {
     const profile = defaultModelProfileRegistry.resolve("economy-anthropic-author", 2, "author");
     expect(

@@ -86,9 +86,19 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     },
     reviewedAt: "2026-10-23",
   },
+  // OpenAI reports cache writes on every call that fills its prompt cache, so a critic without a
+  // cache-write rate leaves those calls unpriced, which stops a run with a cost limit.
   "economy-openai-critic@1": {
     sources: [openAIModelPage("gpt-6-luna")],
-    apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 },
+    apiPricing: {
+      inputUsdPerMillion: 0.1,
+      outputUsdPerMillion: 0.5,
+      cacheReadUsdPerMillion: 0.01,
+      cacheWriteUsdPerMillion: 0.125,
+    },
+    // Prompts above 272K tokens bill the whole request at a long-context rate card not modeled.
+    maxInputTokens: 272000,
+    reviewedAt: "2026-10-23",
   },
   "economy-anthropic-author@1": {
     sources: [anthropicSonnet55Overview, anthropicPricing],
@@ -114,7 +124,14 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],
-    apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
+    apiPricing: {
+      inputUsdPerMillion: 2,
+      outputUsdPerMillion: 10,
+      cacheReadUsdPerMillion: 0.1,
+      cacheWriteUsdPerMillion: 2.5,
+    },
+    maxInputTokens: 272000,
+    reviewedAt: "2026-10-23",
   },
   "dev-deepinfra-glm-author@1": {
     sources: [deepInfraGlmModelApi, deepInfraGlmOverview],
