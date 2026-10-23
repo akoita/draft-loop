@@ -28,7 +28,7 @@ no long-lived service account key exists.
 
 | Part       | Runs as                                     | Notes                                                                          |
 | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------ |
-| API        | Cloud Run service                           | Scales to zero; serves its Cloud Run address behind the owner token in phase 1 |
+| API        | Cloud Run service                           | Scales to zero; serves its Cloud Run address behind the owner token in phase 1, and the web screen at `/` |
 | Worker     | Cloud Run job                               | Drains the queue, then exits (D4)                                              |
 | Migrations | Cloud Run job, from the worker image        | Runs before each deploy as the schema owner                                    |
 | Database   | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only, backups and point-in-time recovery                            |

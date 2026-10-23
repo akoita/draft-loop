@@ -1,5 +1,6 @@
 # The hosted api image, built from the repository root: `docker build -f apps/api/Dockerfile .`.
-# It runs the workspace's TypeScript sources with tsx, so the image needs no separate build step.
+# It runs the workspace's TypeScript sources with tsx, and serves the web screen (`apps/web`),
+# which a separate stage builds so its build tools stay out of the image.
 # Cloud project identifiers, credentials and bucket names come from the runtime, never from here.
 
 # Install stage: pnpm and its store stay here, out of the image.
@@ -18,10 +19,24 @@ COPY . .
 RUN pnpm install --frozen-lockfile --prod --filter "@draft-loop/api..." \
     && rm -rf node_modules/onnxruntime-node
 
+# Web stage: the screen's static files, built with its development dependencies.
+FROM node:24.22.1-bookworm-slim AS web
+
+ENV CI=true \
+    ELECTRON_SKIP_BINARY_DOWNLOAD=1
+RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
+
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile --filter "@draft-loop/web..." \
+    && pnpm --filter @draft-loop/web build
+
 FROM node:24.22.1-bookworm-slim
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    DRAFT_LOOP_WEB_ROOT=/app/apps/web/dist
 COPY --from=dependencies /app /app
+COPY --from=web /app/apps/web/dist /app/apps/web/dist
 
 USER node
 WORKDIR /app/apps/api

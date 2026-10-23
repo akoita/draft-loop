@@ -38,6 +38,17 @@ describe("readApiConfig", () => {
     ).toThrow(ApiConfigError);
   });
 
+  it("reads the web screen's directory, and refuses a relative path", () => {
+    expect(
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken, DRAFT_LOOP_WEB_ROOT: "/app/web" })
+        .webRoot,
+    ).toBe("/app/web");
+    expect(readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken }).webRoot).toBeUndefined();
+    expect(() =>
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken, DRAFT_LOOP_WEB_ROOT: "web/dist" }),
+    ).toThrow(ApiConfigError);
+  });
+
   it.each(["0", "65536", "80a", ""])("refuses port %j", (port) => {
     expect(() => readApiConfig({ PORT: port, DRAFT_LOOP_API_OWNER_TOKEN: ownerToken })).toThrow(
       ApiConfigError,
