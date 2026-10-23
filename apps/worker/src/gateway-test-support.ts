@@ -128,10 +128,15 @@ function scriptedVertexFetch(urls: string[]): typeof fetch {
     const url = input instanceof Request ? input.url : String(input);
     urls.push(url);
     const body = JSON.parse(String(init?.body)) as {
-      readonly messages: readonly { readonly content: string }[];
+      readonly messages: readonly {
+        readonly content: string | readonly { readonly text: string }[];
+      }[];
       readonly output_config?: unknown;
     };
-    const request = JSON.parse(body.messages[0]?.content ?? "{}") as ScriptedInput;
+    // A cached draft request leads with the run-stable input, which holds the evidence.
+    const content = body.messages[0]?.content;
+    const text = typeof content === "string" ? content : content?.[0]?.text;
+    const request = JSON.parse(text ?? "{}") as ScriptedInput;
     const plans = JSON.stringify(body.output_config).includes('"themes"');
     const output = plans ? applicationPlan(evidenceId(request)) : draft(evidenceId(request));
     const modelId = /models\/([^:]+):/u.exec(url)?.[1] ?? "unknown";

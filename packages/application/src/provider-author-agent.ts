@@ -31,6 +31,9 @@ import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
 
+/** The leading author input members that every call of a round repeats: context to output budget. */
+const runStableInputMembers = 5;
+
 /** What one author step was given, handed to the optional recorder before the provider call. */
 export interface AuthorInputRecord {
   readonly runId: string;
@@ -124,10 +127,22 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
           groundingGuide: promptGuide,
           ...turnInput
         } = authorPrompt.providerInput;
+        const { systemPrompt, callInstructions } = authorPrompt;
+        const runInstructions = systemPrompt.slice(
+          0,
+          systemPrompt.length - callInstructions.length,
+        );
         const request: ModelRequest<JsonObject> = {
           contextSnapshotId: context.id,
           model: context.modelConfiguration.author,
-          systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+          systemPrompt: `${systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+          // A provider with an explicit prompt cache sends the call's own instructions after
+          // the run-stable input, so every author call of the run shares one cached prefix.
+          promptCache: {
+            systemPrompt: `${runInstructions}\n\n${evidenceReferenceTableInstructions}`,
+            callInstructions,
+            stableInputMembers: runStableInputMembers,
+          },
           // Members that stay the same for every round of a run come first, so a
           // provider's prompt-prefix cache can reuse them; per-call members follow.
           input: evidenceAliases.toModel(

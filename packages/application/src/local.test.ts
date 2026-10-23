@@ -164,8 +164,12 @@ function anthropicAuthorClient(): AnthropicClient {
   return {
     messages: {
       create: (input) => {
-        const content = (input as { readonly messages?: readonly { readonly content?: unknown }[] })
+        const message = (input as { readonly messages?: readonly { readonly content?: unknown }[] })
           .messages?.[0]?.content;
+        // A cached author request leads with the run-stable input, which holds the evidence.
+        const content = Array.isArray(message)
+          ? (message[0] as { readonly text?: unknown } | undefined)?.text
+          : message;
         if (typeof content !== "string") throw new Error("missing Anthropic author input");
         const response = {
           id: "anthropic-author-1",

@@ -45,11 +45,16 @@ function evidenceChunkId(input: SerializedModelInput): string {
 }
 
 function anthropicInput(parameters: AnthropicParameters): SerializedModelInput {
-  const firstMessage = parameters.messages[0];
-  if (firstMessage === undefined || typeof firstMessage.content !== "string") {
+  const content = parameters.messages[0]?.content;
+  if (typeof content === "string") return parseSerializedInput(content);
+  // A cached author request splits its input into JSON blocks around the call's instructions.
+  const blocks = (content ?? []).flatMap((block) =>
+    block.type === "text" && block.text.startsWith("{") ? [parseSerializedInput(block.text)] : [],
+  );
+  if (blocks.length === 0) {
     throw new Error("The fake author transport received no serialized user message.");
   }
-  return parseSerializedInput(firstMessage.content);
+  return Object.assign({}, ...blocks) as SerializedModelInput;
 }
 
 function openAiInput(parameters: OpenAIParameters): SerializedModelInput {

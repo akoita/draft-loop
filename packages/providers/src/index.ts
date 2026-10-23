@@ -7,6 +7,7 @@ import {
   classifyAnthropicBillingError,
 } from "./anthropic-billing-error.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
+import { anthropicPromptLayout } from "./anthropic-prompt-cache.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
@@ -66,11 +67,25 @@ export interface StreamingProgressEvent {
 
 export type StreamingProgressCallback = (event: StreamingProgressEvent) => void;
 
+/**
+ * How a request splits into the part every call of a run repeats and the part only this call
+ * carries, for a provider with an explicit prompt cache. Others ignore it.
+ */
+export interface PromptCacheLayout {
+  /** The system instructions every call of the run repeats. */
+  readonly systemPrompt: string;
+  /** The instructions only this call carries; with `systemPrompt`, the request's whole prompt. */
+  readonly callInstructions: string;
+  /** How many leading members of the object `input` every call of the run repeats. */
+  readonly stableInputMembers: number;
+}
+
 export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly contextSnapshotId: string;
   readonly model: ModelSelection;
   readonly systemPrompt: string;
   readonly input: Input;
+  readonly promptCache?: PromptCacheLayout;
   readonly outputSchema: JsonSchema;
   readonly outputName: string;
   /** Maximum output tokens for each provider generation; SDK usage may accumulate across steps. */
@@ -726,8 +741,7 @@ export class AnthropicAdapter<
     const parameters: MessageCreateParamsNonStreaming = {
       model: request.model.modelId,
       max_tokens: maxOutputTokens,
-      system: request.systemPrompt,
-      messages: [{ role: "user", content: serializeJson(request.input) }],
+      ...anthropicPromptLayout(request, serializeJson),
       ...(profileControls?.provider === "anthropic" && profileControls.thinking !== undefined
         ? { thinking: profileControls.thinking }
         : {}),

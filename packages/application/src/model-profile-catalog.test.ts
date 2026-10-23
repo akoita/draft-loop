@@ -43,7 +43,9 @@ describe("model profile catalog", () => {
         "dev-deepinfra-glm-author@1": "2026-10-02",
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
-        "economy-anthropic-author@2": "2026-10-07",
+        "economy-anthropic-author@1": "2026-10-23",
+        "economy-anthropic-author@2": "2026-10-23",
+        "standard-anthropic-author@1": "2026-10-23",
       };
       expect(entry.reviewedAt).toBe(
         reviewDates[`${entry.profile.id}@${entry.profile.version}`] ?? "2026-09-30",
@@ -67,12 +69,29 @@ describe("model profile catalog", () => {
       "dev-google-gemini-author@2": [0.75, 3.75],
       "dev-mistral-author@1": [1.36, 4.18],
     });
+    expect(
+      Object.fromEntries(
+        catalog.map(({ profile, apiPricing }) => [
+          `${profile.id}@${profile.version}`,
+          [apiPricing.cacheReadUsdPerMillion, apiPricing.cacheWriteUsdPerMillion],
+        ]),
+      ),
+    ).toMatchObject({
+      "economy-anthropic-author@2": [0.01, 0.2],
+      "economy-anthropic-author@1": [0.2, 4],
+      "standard-anthropic-author@1": [0.2, 8],
+      "standard-openai-critic@2": [undefined, undefined],
+    });
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
+      "https://platform.claude.com/docs/en/about-claude/pricing",
     ]);
     expect(byId.get("economy-anthropic-author@1")).toMatchObject({
       profile: { provider: "anthropic", modelId: "claude-sonnet-5-5", roles: ["author"] },
-      sources: ["https://platform.claude.com/docs/en/models/sonnet-5-5/overview"],
+      sources: [
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+        "https://platform.claude.com/docs/en/about-claude/pricing",
+      ],
       apiPricing: { maxInputTokens: 200000 },
     });
     expect(
@@ -80,6 +99,7 @@ describe("model profile catalog", () => {
     ).toBe("claude-sonnet-5-5");
     expect(byId.get("standard-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/overview",
+      "https://platform.claude.com/docs/en/about-claude/pricing",
     ]);
     expect(byId.get("standard-openai-critic@2")?.sources).toEqual([
       "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
@@ -148,7 +168,10 @@ describe("model profile catalog", () => {
         modelId: "claude-haiku-5-5",
         runtime: { thinking: { mode: "provider-default" } },
       },
-      sources: ["https://platform.claude.com/docs/en/about-claude/models/overview"],
+      sources: [
+        "https://platform.claude.com/docs/en/about-claude/models/overview",
+        "https://platform.claude.com/docs/en/about-claude/pricing",
+      ],
       apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5, maxInputTokens: 100000 },
     });
     expect(

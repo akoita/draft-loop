@@ -240,6 +240,26 @@ describe("provider author agent revision", () => {
     expect(second?.startsWith(sharedPrefix ?? "-")).toBe(true);
   });
 
+  it("gives every call one cached layout, with only the call's own instructions apart", async () => {
+    const { author, requests } = agent([proposal(rejectedText), proposal(acceptedText)]);
+    await expect(author.execute(request("run-layout"))).rejects.toThrow();
+    await author.execute(request("run-layout", { retryFeedback }));
+
+    const [first, retry] = requests;
+    expect(first?.promptCache?.stableInputMembers).toBe(5);
+    expect(retry?.promptCache?.systemPrompt).toBe(first?.promptCache?.systemPrompt);
+    expect(retry?.promptCache?.systemPrompt).not.toContain(authorRevisionInstructions);
+    expect(retry?.promptCache?.callInstructions).toContain(authorRevisionInstructions);
+    for (const sent of requests) {
+      const layout = sent.promptCache;
+      const tail = `\n\n${evidenceReferenceTableInstructions}`;
+      expect(layout?.systemPrompt.endsWith(tail)).toBe(true);
+      expect(
+        `${layout?.systemPrompt.slice(0, -tail.length)}${layout?.callInstructions}${tail}`,
+      ).toBe(sent.systemPrompt);
+    }
+  });
+
   it("sends a prior artifact with its reference table and resolution instruction", async () => {
     const { author, requests } = agent([proposal(acceptedText)]);
     await author.execute(request("run-reference-table", { currentArtifact: previousArtifact() }));

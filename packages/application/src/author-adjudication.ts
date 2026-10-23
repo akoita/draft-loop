@@ -250,6 +250,8 @@ type PendingAdjudication = NonNullable<AuthorRequest["pendingAdjudication"]>;
 
 export interface AuthorAdjudicationPrompt {
   readonly systemPrompt: string;
+  /** The end of `systemPrompt` that only this call carries; what comes before it repeats. */
+  readonly callInstructions: string;
   readonly providerInput: Readonly<{
     readonly outputBudget: AuthorOutputBudget;
     readonly groundingGuide: readonly AuthorGroundingGuideEntry[];
@@ -337,12 +339,14 @@ export function createAuthorAdjudicationPrompt(
   if (pendingAdjudication === undefined) {
     return {
       systemPrompt: `${shared}${retry}`,
+      callInstructions: retry,
       providerInput: { outputBudget, groundingGuide, ...retryInput },
     };
   }
 
   return {
     systemPrompt: `${shared}${adjudicatedRevisionInstructions}${retry}`,
+    callInstructions: `${adjudicatedRevisionInstructions}${retry}`,
     providerInput: { outputBudget, groundingGuide, pendingAdjudication, ...retryInput },
   };
 }

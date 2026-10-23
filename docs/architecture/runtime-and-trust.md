@@ -280,11 +280,22 @@ output budget), then the per-call members (run, round, execution, artifact, and
 findings). Providers with automatic prefix caching (OpenAI, Mistral, Gemini,
 DeepInfra, and Claude Code's own caching) can then reuse that shared prefix.
 Mistral requests carry an opaque prompt-cache key hashed from the context
-snapshot ID. The Anthropic API adapter does not mark cache breakpoints yet.
+snapshot ID.
+
+Claude has no automatic prefix cache, so the Anthropic adapter, on the Claude
+API and on Vertex AI, marks one. An author call sends the run's system
+instructions, then the run-stable input members as one block with the
+request's only cache breakpoint, on a one-hour lifetime. The call's own
+instructions (adjudication, retry, revision, or patch) and per-call members
+follow it. The words are the ones other providers receive in one system prompt
+and one input; only their order differs. Other calls, such as the application
+plan, are sent unchanged.
 
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
-cached and cache-write counts; run history persists only the totals.
+cached and cache-write counts, and the estimated cost prices each at its own
+rate: the catalog records Claude's cache-read and one-hour cache-write rates.
+Run history persists only the totals.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not
