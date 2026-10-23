@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
+import { readDefaultApplication } from "./applications.js";
 import { type Brief, latestBrief } from "./brief-model.js";
 import {
   formatUsd,
@@ -50,11 +51,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     let current = true;
     (async () => {
       try {
-        const { applications } = await client.call(
-          "GET /v1/workspaces/{workspaceId}/applications",
-          { path: { workspaceId: ownerWorkspaceId } },
-        );
-        const application = applications.find((item) => item.isDefault) ?? applications[0];
+        const application = await readDefaultApplication(client);
         const runId = application === undefined ? undefined : latestRunId(application);
         const briefEntry = application === undefined ? undefined : latestBrief(application);
         if (briefEntry !== undefined) {
