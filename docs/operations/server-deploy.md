@@ -35,6 +35,10 @@ no long-lived service account key exists.
 | Objects    | One Cloud Storage bucket per environment    | Encrypted with a customer-managed key                                          |
 | Secrets    | Secret Manager in `europe-west1`            | Owner token, the critic's OpenAI EU key, migration login                       |
 
+The owner opens the web screen at the API's address and signs in with the
+owner token from Secret Manager. The screen keeps the token in the browser tab
+until it closes; sign-in through the identity provider replaces it in phase 2.
+
 Each part has its own service account with only the access it needs. The
 worker may reach Google APIs and the OpenAI EU endpoint and nothing else; the
 API has no internet egress.

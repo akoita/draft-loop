@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { buildApi, composeHostedApplication } from "@draft-loop/api";
 import {
   type ApplicationService,
@@ -9,7 +9,6 @@ import {
   createHostedApplicationDriver,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
-import type { BlobStoragePort } from "@draft-loop/storage";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   grantPostgresStorageAccess,
@@ -24,13 +23,13 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { scriptedGateway, scriptedUsage } from "./gateway-test-support.js";
+import { runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
 import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
 import { createRunJobHandler, type RunJobOutcome } from "./run-job-handler.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
 
-const runtimeRole = "draft_loop_test_app";
 const createdAt = "2026-10-21T10:00:00.000Z";
 const silent = { write: () => undefined };
 const tenantId = "tenant-a";
@@ -40,30 +39,6 @@ const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
 const career = new TextEncoder().encode(
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n",
 );
-
-function runtimeUrl(url: string): string {
-  const parsed = new URL(url);
-  parsed.username = runtimeRole;
-  parsed.password = runtimeRole;
-  return parsed.toString();
-}
-
-/**
- * Filesystem blobs that also take the tenant's relative keys, as Cloud Storage does, by placing
- * them under `root`; references keep the key the caller gave.
- */
-function tenantKeyBlobs(root: string, blobs: BlobStoragePort): BlobStoragePort {
-  const path = (location: string) => (isAbsolute(location) ? location : join(root, location));
-  return {
-    put: async (location, content) => ({
-      ...(await blobs.put(path(location), content)),
-      location,
-    }),
-    get: (reference) => blobs.get({ ...reference, location: path(reference.location) }),
-    exists: (reference) => blobs.exists({ ...reference, location: path(reference.location) }),
-    delete: (reference) => blobs.delete({ ...reference, location: path(reference.location) }),
-  };
-}
 
 /** Selects the synthetic knowledge base, reviews a one-requirement brief and begins its run. */
 async function beginRun(service: ApplicationService, root: string) {

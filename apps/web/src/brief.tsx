@@ -12,12 +12,12 @@ import {
   createBriefBody,
   isStaleVersion,
   jobTextProblem,
-  latestBrief,
   newRequirement,
   type Priority,
   priorities,
   staleVersionMessage,
 } from "./brief-model.js";
+import { currentBriefId, screenMemory } from "./screen-memory.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 type Opportunity = ApiSchemas["Opportunity"];
@@ -44,6 +44,7 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
   const show = useCallback(
     (opportunity: Opportunity) => {
       setState({ kind: "brief", opportunity });
+      screenMemory.rememberBrief(opportunity.brief.id);
       onBrief(opportunity.brief);
     },
     [onBrief],
@@ -52,15 +53,15 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
   const load = useCallback(async () => {
     try {
       const application = await readDefaultApplication(client);
-      const latest = application === undefined ? undefined : latestBrief(application);
-      if (latest === undefined) {
+      const briefId = currentBriefId(application, screenMemory.read());
+      if (briefId === undefined) {
         setState({ kind: "paste" });
         onBrief(undefined);
         return;
       }
       show(
         await client.call("GET /v1/workspaces/{workspaceId}/opportunities/{briefId}", {
-          path: { workspaceId: ownerWorkspaceId, briefId: latest.briefId },
+          path: { workspaceId: ownerWorkspaceId, briefId },
         }),
       );
       setStale(false);

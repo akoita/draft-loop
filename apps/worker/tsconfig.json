@@ -11,6 +11,9 @@
       "path": "../api"
     },
     {
+      "path": "../web"
+    },
+    {
       "path": "../../packages/application"
     },
     {
