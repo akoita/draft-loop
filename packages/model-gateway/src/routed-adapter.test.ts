@@ -82,6 +82,7 @@ describe("createRoutedAdapter", () => {
 
   it.each([
     ["model-not-offered", failure(404)],
+    ["model-not-offered", failure(403)],
     [
       "model-not-offered",
       new ProviderAdapterError("anthropic", "invalid-request", "refused", {

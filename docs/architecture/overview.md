@@ -233,8 +233,10 @@ Vertex AI:
 `createRoutedAdapter` applies the deployment's route policy. The direct Claude
 API is an optional fallback, off unless the deployment turns it on, because it
 processes material outside the EU. A call falls back only when its model is
-not offered on the primary route (`model-not-offered`) or the route still
-refuses after the adapter's retries (`route-unavailable`). It never falls back
+not offered on the primary route or the deployment may not use it there, such
+as a project whose billing account cannot buy Claude on Vertex AI
+(`model-not-offered`), or the route still refuses after the adapter's retries
+(`route-unavailable`). It never falls back
 on content, policy, authentication or budget errors. A fallback keeps the
 company and the model, and run history records the route it left and why.
 
