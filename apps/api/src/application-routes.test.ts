@@ -4,6 +4,7 @@ import {
   CliUserError,
   createOpportunityDraft,
   type WorkspaceDescriptor,
+  WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
@@ -161,10 +162,27 @@ describe("workspaces", () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it("answers a workspace not created yet as not found, without its storage path", async () => {
+    await build({
+      readWorkspace: async () => {
+        throw new WorkspaceNotFoundError("/tenants/local/workspaces/workspace-1");
+      },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toEqual({ code: "not_found", message: "No such workspace." });
+  });
+
   it("answers the service's user errors as refusals", async () => {
     await build({
       readWorkspace: async () => {
-        throw new CliUserError("No DraftLoop workspace found. Run draft-loop init first.");
+        throw new CliUserError("The workspace configuration is not valid JSON.");
       },
     });
 

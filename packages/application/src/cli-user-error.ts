@@ -5,3 +5,11 @@ export class CliUserError extends Error {
     this.name = "CliUserError";
   }
 }
+
+/** No workspace at the root: the CLI asks for `draft-loop init`, the API answers 404. */
+export class WorkspaceNotFoundError extends CliUserError {
+  constructor(root: string) {
+    super(`No DraftLoop workspace found at ${root}. Run draft-loop init first.`);
+    this.name = "WorkspaceNotFoundError";
+  }
+}

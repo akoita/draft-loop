@@ -5,6 +5,7 @@ import {
   type HostedKnowledgeIntake,
   type InitializeWorkspaceCommand,
   type WorkspaceDescriptor,
+  WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -32,7 +33,7 @@ const descriptor = {
 } as WorkspaceDescriptor;
 
 const missing = async (): Promise<WorkspaceDescriptor> => {
-  throw new CliUserError("No DraftLoop workspace found. Run draft-loop init first.");
+  throw new WorkspaceNotFoundError("/tenants/local/workspaces/owner");
 };
 
 let app: FastifyInstance;

@@ -97,3 +97,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     },
   };
 }
+
+/** What to tell the owner about a failed call; the API's messages are written for them. */
+export function describeError(error: unknown): string {
+  if (error instanceof ApiRequestError) return error.message;
+  return "The service could not be reached. Check your connection and try again.";
+}
