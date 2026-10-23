@@ -18,6 +18,15 @@ import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 // The worker's entry point: one tenant's storage, bucket and queue, composed at startup.
 const config = readWorkerConfig(process.env);
 const { tenantId } = config;
+if (config.modelGateway !== undefined) {
+  // Routes that process material outside the EU are deployment choices, so each start names them.
+  console.info(
+    logLine("INFO", "model routes", {
+      openAiEndpoint: config.modelGateway.openAiEndpoint,
+      anthropicFallback: config.modelGateway.anthropicKeySecret !== undefined,
+    }),
+  );
+}
 // On Cloud Run, the database URL names the connector's socket and the worker signs in as its
 // service identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
@@ -38,7 +47,8 @@ const service = createApplicationService(
       tenantId,
       blobs: createGcsBlobStorage({ bucket, tenantId }),
     }),
-    // Claude on Vertex AI and OpenAI's EU endpoint, keys from Secret Manager; none on the stack.
+    // Claude on Vertex AI and OpenAI's EU endpoint unless the deployment chose otherwise, keys
+    // from Secret Manager; none on the stack.
     local: workerProviderOptions(config.modelGateway),
   }),
 );

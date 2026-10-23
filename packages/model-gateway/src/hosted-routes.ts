@@ -22,9 +22,25 @@ import {
 /** OpenAI's European data-residency endpoint, for a project created with EU residency. */
 export const openAiEuBaseUrl = "https://eu.api.openai.com/v1";
 
+/** OpenAI's global endpoint, which processes material outside the EU. */
+export const openAiGlobalBaseUrl = "https://api.openai.com/v1";
+
+/**
+ * Which OpenAI endpoint the critic calls. `eu` is the default; `global` exists only for a
+ * deployment whose OpenAI organization cannot create EU-residency projects, and the deployment
+ * turns it on explicitly.
+ */
+export type OpenAiEndpoint = "eu" | "global";
+
 /** The critic's OpenAI client on the EU endpoint; retries stay with the adapter. */
 export function createOpenAiEuClient(apiKey: string): OpenAI {
-  return new OpenAI({ apiKey, baseURL: openAiEuBaseUrl, maxRetries: 0 });
+  return createOpenAiClient(apiKey, "eu");
+}
+
+/** The critic's OpenAI client on the chosen endpoint; retries stay with the adapter. */
+export function createOpenAiClient(apiKey: string, endpoint: OpenAiEndpoint): OpenAI {
+  const baseURL = endpoint === "eu" ? openAiEuBaseUrl : openAiGlobalBaseUrl;
+  return new OpenAI({ apiKey, baseURL, maxRetries: 0 });
 }
 
 /** A direct Claude API client, used only for the opt-in fallback route. */

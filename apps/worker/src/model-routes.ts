@@ -3,9 +3,10 @@ import {
   assertLocationPriceFactor,
   type CredentialResolver,
   createHostedAnthropicRoute,
-  createOpenAiEuClient,
+  createOpenAiClient,
   createSecretManagerCredentialResolver,
   type HostedAnthropicRouteOptions,
+  type OpenAiEndpoint,
   type SecretVersionReader,
   vertexEuLocation,
 } from "@draft-loop/model-gateway";
@@ -21,8 +22,13 @@ export interface ModelGatewayConfig {
   readonly vertexLocation: string;
   /** The location's price factor over first-party rates, from Google's price list. */
   readonly vertexPriceFactor: number;
-  /** The Secret Manager version that holds the critic's OpenAI EU project key. */
+  /** The Secret Manager version that holds the critic's OpenAI project key. */
   readonly openAiKeySecret: string;
+  /**
+   * The critic's OpenAI endpoint: `eu` unless the deployment chose `global`, which processes
+   * material outside the EU (ADR 0011) and needs no EU-residency project.
+   */
+  readonly openAiEndpoint: OpenAiEndpoint;
   /** Present only when the deployment allows the direct Claude API as a fallback. */
   readonly anthropicKeySecret?: string;
 }
@@ -43,6 +49,7 @@ export function readModelGatewayConfig(env: NodeJS.ProcessEnv): ModelGatewayConf
   const vertexLocation = env.DRAFT_LOOP_VERTEX_LOCATION ?? "eu";
   const vertexPriceFactor = Number(env.DRAFT_LOOP_VERTEX_PRICE_FACTOR ?? "");
   const openAiKeySecret = optional(env, "DRAFT_LOOP_OPENAI_KEY_SECRET");
+  const openAiEndpoint = env.DRAFT_LOOP_OPENAI_ENDPOINT ?? "eu";
   const fallback = env.DRAFT_LOOP_ANTHROPIC_FALLBACK ?? "false";
   const anthropicKeySecret = optional(env, "DRAFT_LOOP_ANTHROPIC_KEY_SECRET");
   try {
@@ -56,6 +63,9 @@ export function readModelGatewayConfig(env: NodeJS.ProcessEnv): ModelGatewayConf
   }
   if (openAiKeySecret === undefined) {
     throw new WorkerConfigError("DRAFT_LOOP_OPENAI_KEY_SECRET is required with a Vertex project.");
+  }
+  if (openAiEndpoint !== "eu" && openAiEndpoint !== "global") {
+    throw new WorkerConfigError("DRAFT_LOOP_OPENAI_ENDPOINT must be eu or global.");
   }
   if (fallback !== "true" && fallback !== "false") {
     throw new WorkerConfigError("DRAFT_LOOP_ANTHROPIC_FALLBACK must be true or false.");
@@ -75,6 +85,7 @@ export function readModelGatewayConfig(env: NodeJS.ProcessEnv): ModelGatewayConf
     vertexLocation,
     vertexPriceFactor,
     openAiKeySecret,
+    openAiEndpoint,
     ...(anthropicKeySecret === undefined ? {} : { anthropicKeySecret }),
   };
 }
@@ -88,12 +99,13 @@ export interface ModelRouteDependencies {
   /** Scripted Vertex authentication and transport, for tests. */
   readonly vertex?: Pick<HostedAnthropicRouteOptions["vertex"], "auth" | "fetch">;
   readonly anthropicApiClient?: HostedAnthropicRouteOptions["anthropicApiClient"];
-  readonly openAiClient?: (apiKey: string) => ReturnType<typeof createOpenAiEuClient>;
+  readonly openAiClient?: (apiKey: string) => ReturnType<typeof createOpenAiClient>;
 }
 
 /**
  * The provider wiring the hosted driver runs with: Claude on Vertex AI for the author, OpenAI's
- * EU endpoint for the critic, and keys from Secret Manager.
+ * EU endpoint (or the global one, where the deployment chose it) for the critic, and keys from
+ * Secret Manager.
  */
 export function workerProviderOptions(
   config: ModelGatewayConfig | undefined,
@@ -124,7 +136,9 @@ export function workerProviderOptions(
     resolveCredential,
     providerClientFactories: {
       anthropicRoute,
-      openai: dependencies.openAiClient ?? createOpenAiEuClient,
+      openai:
+        dependencies.openAiClient ??
+        ((apiKey: string) => createOpenAiClient(apiKey, config.openAiEndpoint)),
     },
   };
 }
