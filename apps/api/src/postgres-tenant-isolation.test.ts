@@ -153,6 +153,21 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     ).toBe(200);
     expect((await asB("GET", "/v1/workspaces/shared/writing-policy")).status).toBe(404);
 
+    // Consent is recorded before any material, and each tenant's ledger is its own.
+    const consent = await asA("POST", "/v1/workspaces/shared/consents", {
+      kind: "provider-transmission",
+      action: "granted",
+      basis: "candidate-consent",
+      providers: ["anthropic", "openai"],
+    });
+    expect(consent.status).toBe(201);
+    expect(consent.body.recordedBy).toMatchObject({ kind: "member" });
+    expect((await asA("GET", "/v1/workspaces/shared/consents")).body.history).toEqual([
+      consent.body,
+    ]);
+    expect((await asB("GET", "/v1/workspaces/shared/consents")).body.history).toEqual([]);
+    expect((await asB("GET", "/v1/workspaces/a-only/consents")).status).toBe(404);
+
     // Knowledge bases, their sources and their rules.
     const base = await asA("POST", "/v1/knowledge-bases", { displayName: "Career" });
     expect(base.status).toBe(201);

@@ -1234,6 +1234,137 @@
           }
         ]
       },
+      "ConsentEntryInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material-storage",
+              "provider-transmission"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "withdrawn"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "candidate-consent",
+              "contract",
+              "legitimate-interest"
+            ]
+          },
+          "recordedBy": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "owner"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "member"
+                  },
+                  "memberId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "memberId"
+                ]
+              }
+            ],
+            "description": "Who recorded the entry: the owner token or a signed-in member."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The providers a transmission grant names."
+          },
+          "note": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "action",
+          "basis",
+          "recordedBy",
+          "providers",
+          "recordedAt"
+        ]
+      },
+      "ConsentsInput": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object",
+            "properties": {
+              "material-storage": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntryInput"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provider-transmission": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntryInput"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "material-storage",
+              "provider-transmission"
+            ],
+            "description": "Each kind's latest entry, or null when none was recorded."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentEntryInput"
+            },
+            "description": "Every entry, oldest first."
+          }
+        },
+        "required": [
+          "current",
+          "history"
+        ]
+      },
       "RunExportInput": {
         "type": "object",
         "properties": {
@@ -3437,6 +3568,142 @@
             "description": "Sign in through the identity provider, with the authorization code and PKCE."
           }
         ]
+      },
+      "ConsentEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material-storage",
+              "provider-transmission"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "withdrawn"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "candidate-consent",
+              "contract",
+              "legitimate-interest"
+            ]
+          },
+          "recordedBy": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "owner"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "member"
+                  },
+                  "memberId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "memberId"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Who recorded the entry: the owner token or a signed-in member."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The providers a transmission grant names."
+          },
+          "note": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "action",
+          "basis",
+          "recordedBy",
+          "providers",
+          "recordedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Consents": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object",
+            "properties": {
+              "material-storage": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntry"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provider-transmission": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntry"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "material-storage",
+              "provider-transmission"
+            ],
+            "additionalProperties": false,
+            "description": "Each kind's latest entry, or null when none was recorded."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentEntry"
+            },
+            "description": "Every entry, oldest first."
+          }
+        },
+        "required": [
+          "current",
+          "history"
+        ],
+        "additionalProperties": false
       },
       "RunExport": {
         "type": "object",
@@ -7889,6 +8156,168 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/consents": {
+      "get": {
+        "summary": "Read a candidate record's consents: the current state and the history",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Consents"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Record a consent grant or withdrawal for a candidate record",
+        "description": "Entries are append-only: a withdrawal is a new entry. The recording member is the caller.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "material-storage",
+                      "provider-transmission"
+                    ]
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "granted",
+                      "withdrawn"
+                    ]
+                  },
+                  "basis": {
+                    "type": "string",
+                    "enum": [
+                      "candidate-consent",
+                      "contract",
+                      "legitimate-interest"
+                    ],
+                    "description": "Material storage takes any basis; provider transmission only the candidate's consent."
+                  },
+                  "providers": {
+                    "description": "Required on a provider transmission grant, and only there.",
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "anthropic",
+                        "openai"
+                      ]
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "kind",
+                  "action",
+                  "basis"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -59,6 +59,10 @@
       "types": "./src/candidate-records.ts",
       "import": "./src/candidate-records.ts"
     },
+    "./consent-ledger": {
+      "types": "./src/consent-ledger.ts",
+      "import": "./src/consent-ledger.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"

@@ -41,6 +41,28 @@ export interface ApiSchemas {
     readonly issuer: string;
     readonly clientId: string;
   };
+  "ConsentEntry": {
+    readonly id: string;
+    readonly kind: "material-storage" | "provider-transmission";
+    readonly action: "granted" | "withdrawn";
+    readonly basis: "candidate-consent" | "contract" | "legitimate-interest";
+    readonly recordedBy: {
+      readonly kind: "owner";
+    } | {
+      readonly kind: "member";
+      readonly memberId: string;
+    };
+    readonly providers: readonly (string)[];
+    readonly note?: string;
+    readonly recordedAt: string;
+  };
+  "Consents": {
+    readonly current: {
+      readonly "material-storage": ApiSchemas["ConsentEntry"] | null;
+      readonly "provider-transmission": ApiSchemas["ConsentEntry"] | null;
+    };
+    readonly history: readonly (ApiSchemas["ConsentEntry"])[];
+  };
   "CreatedOrganisation": {
     readonly organisation: {
       readonly organisationId: string;
@@ -812,6 +834,25 @@ export interface ApiOperations {
       readonly ruleId: string;
     };
     readonly response: ApiSchemas["SensitivityRules"];
+  };
+  "GET /v1/workspaces/{workspaceId}/consents": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["Consents"];
+  };
+  "POST /v1/workspaces/{workspaceId}/consents": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly kind: "material-storage" | "provider-transmission";
+      readonly action: "granted" | "withdrawn";
+      readonly basis: "candidate-consent" | "contract" | "legitimate-interest";
+      readonly providers?: readonly ("anthropic" | "openai")[];
+      readonly note?: string;
+    };
+    readonly response: ApiSchemas["ConsentEntry"];
   };
   "GET /v1/me": {
     readonly response: ApiSchemas["Me"];

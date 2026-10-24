@@ -9,6 +9,7 @@ export {
   startCloudSqlProxy,
   startConfiguredCloudSqlProxy,
 } from "./cloud-sql.js";
+export { createConsentLedger } from "./consent-ledger.js";
 export {
   type HostedApplicationPorts,
   type HostedApplicationPortsOptions,

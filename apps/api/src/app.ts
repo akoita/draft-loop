@@ -5,6 +5,7 @@ import type {
   RunBudgetCeiling,
   UsageLine,
 } from "@draft-loop/application";
+import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
@@ -21,6 +22,7 @@ import { type ZodType, z } from "zod";
 
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
+import { registerConsentRoutes } from "./consent-routes.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -61,6 +63,8 @@ export interface ApiOptions {
     readonly knowledgeStore?: KnowledgeStoreAddress;
     /** The tenant's knowledge bases' sensitivity rules; without them those routes are not served. */
     readonly sensitivityRules?: HostedSensitivityRules;
+    /** Each candidate record's consent ledger; without it the consent routes are not served. */
+    readonly consents?: ConsentLedger;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -206,6 +210,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     }
     if (application.sensitivityRules !== undefined) {
       registerSensitivityRulesRoutes(app, { rules: application.sensitivityRules });
+    }
+    if (application.consents !== undefined) {
+      registerConsentRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        consents: application.consents,
+      });
     }
   }
   if (options.directory !== undefined) {

@@ -10,6 +10,7 @@ import {
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
+import { ConsentLedgerError } from "@draft-loop/storage/consent-ledger";
 import {
   TenantDirectoryError,
   type TenantDirectoryErrorCode,
@@ -132,6 +133,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // The directory's messages are fixed and never quote an email, so they are safe to answer with.
   if (error instanceof TenantDirectoryError) {
     void reply.code(tenantDirectoryStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  // The ledger's messages are fixed and never quote a note, so they are safe to answer with.
+  if (error instanceof ConsentLedgerError) {
+    void reply.code(400).send(apiError(error.code, error.message));
     return;
   }
   if (error instanceof HostedKnowledgeIntakeError) {
