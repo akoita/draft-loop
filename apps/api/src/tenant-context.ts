@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import type { KnowledgeOwnersFor } from "./knowledge-access.js";
 import type { RecordAccessFor } from "./record-access.js";
 import type { Caller } from "./request-auth.js";
 
@@ -35,6 +36,8 @@ export interface TenantApplications {
    * workspaces; it also serves `GET /v1/workspaces` in both modes.
    */
   readonly recordAccessFor?: RecordAccessFor;
+  /** Which candidate record owns each of a tenant's knowledge bases; sign-in mode needs it. */
+  readonly knowledgeOwnersFor?: KnowledgeOwnersFor;
 }
 
 export const defaultTenantCacheSize = 100;

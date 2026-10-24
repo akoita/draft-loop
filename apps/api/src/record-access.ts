@@ -29,7 +29,7 @@ const workspaceListSchema = z
   .meta({ id: "WorkspaceList" });
 
 /** Owners and admins reach every record of their organisation; a member only their own. */
-function reachesEveryRecord(caller: Caller): boolean {
+export function reachesEveryRecord(caller: Caller): boolean {
   return caller.kind === "owner" || caller.role === "owner" || caller.role === "admin";
 }
 

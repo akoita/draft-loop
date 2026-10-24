@@ -26,6 +26,7 @@ import { registerConsentRoutes } from "./consent-routes.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
@@ -194,6 +195,25 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       });
     }
   }
+  const knowledgeOwnersFor = options.tenants?.knowledgeOwnersFor;
+  if (application !== undefined && auth.mode === "oidc" && knowledgeOwnersFor === undefined) {
+    throw new Error("Sign-in mode serves knowledge bases only with their owning records.");
+  }
+  let knowledgeOwnership: KnowledgeOwnership | undefined;
+  if (
+    application !== undefined &&
+    auth.mode === "oidc" &&
+    recordAccessFor !== undefined &&
+    knowledgeOwnersFor !== undefined
+  ) {
+    // After record access, so a selection's workspace is checked before its bases.
+    knowledgeOwnership = registerKnowledgeAccess(app, {
+      knowledgeOwnersFor,
+      recordAccessFor,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+    });
+  }
   if (application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
@@ -234,7 +254,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       monthUsage: application.monthUsage,
     });
     if (application.knowledgeIntake !== undefined) {
-      registerKnowledgeRoutes(app, { intake: application.knowledgeIntake });
+      registerKnowledgeRoutes(app, {
+        intake: application.knowledgeIntake,
+        ...(knowledgeOwnership === undefined ? {} : { ownership: knowledgeOwnership }),
+      });
     }
     if (application.sensitivityRules !== undefined) {
       registerSensitivityRulesRoutes(app, { rules: application.sensitivityRules });

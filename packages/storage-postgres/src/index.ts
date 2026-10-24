@@ -25,6 +25,7 @@ export type {
   IdempotencyKeyRef,
   PostgresIdempotencyKeys,
 } from "./idempotency-keys.js";
+export { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 export type {
   CandidateKnowledgeRunRecords,
   ManagedCandidateKnowledgeSourceVersionInput,

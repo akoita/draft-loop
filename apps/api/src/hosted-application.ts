@@ -127,6 +127,7 @@ export async function openHostedTenants(
         ...(config.tenantId === undefined ? {} : { ownerTenantId: config.tenantId }),
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
+        knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),

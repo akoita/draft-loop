@@ -63,6 +63,10 @@
       "types": "./src/consent-ledger.ts",
       "import": "./src/consent-ledger.ts"
     },
+    "./knowledge-base-owners": {
+      "types": "./src/knowledge-base-owners.ts",
+      "import": "./src/knowledge-base-owners.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"

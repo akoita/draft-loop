@@ -115,6 +115,7 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
     tenants = {
       budgetCeiling,
       recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
+      knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
       applicationFor: (id) =>
         composeHostedApplication({
           storage: tenancy.forTenant(id),
