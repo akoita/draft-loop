@@ -14,16 +14,22 @@ import {
 } from "@draft-loop/storage-postgres";
 import {
   type ApiClient,
+  ApiRequestError,
+  archiveRequest,
   assignableMembers,
   assignMemberRequest,
+  canExportAndDelete,
   canManageMembers,
   createApiClient,
   createRecordMemory,
   currentRecordId,
   defaultWorkspaceForm,
+  deleteRecordRequest,
+  deleteRefusal,
   newRecordIdProblem,
   recordIds,
   unassignMemberRequest,
+  withoutRecord,
   workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
@@ -31,7 +37,13 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
+import {
+  filesystemBlobErasure,
+  injectFetch,
+  runtimeRole,
+  runtimeUrl,
+  tenantKeyBlobs,
+} from "./hosted-test-support.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -108,6 +120,12 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        erasureFor: (tenantId) => ({
+          records: tenancy.forTenant(tenantId).recordErasure,
+          blobs: filesystemBlobErasure(blobRoot, tenantId),
+          organisation: tenancy.forTenant(tenantId).organisationErasure,
+          objectPrefix: `tenants/${tenantId}/`,
+        }),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -219,5 +237,51 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
     );
     expect(await listed("member")).toEqual(["candidate-cy"]);
     expect(await listed("owner")).toEqual(["candidate-ana", "candidate-ben", "candidate-cy"]);
+  }, 60_000);
+
+  it("lets an owner export and delete a record, which a member can do neither of", async () => {
+    // The first test left three records in the organisation; the member is assigned to none.
+    const owner = clientFor("owner");
+    const member = clientFor("member");
+    expect(canExportAndDelete(await owner.call("GET /v1/me", {}))).toBe(true);
+    expect(canExportAndDelete(await member.call("GET /v1/me", {}))).toBe(false);
+
+    // Export everything: the archive is a zip, and only owners and admins download one.
+    const archive = await owner.call(
+      "GET /v1/workspaces/{workspaceId}/archive",
+      archiveRequest("candidate-ana"),
+    );
+    expect(new TextDecoder().decode((await archive.arrayBuffer()).slice(0, 2))).toBe("PK");
+    expect(
+      await refusal(
+        member.call("GET /v1/workspaces/{workspaceId}/archive", archiveRequest("candidate-cy")),
+      ),
+    ).toBe(403);
+
+    // Delete record: a mistyped id never reaches the API; a member is refused.
+    expect(deleteRecordRequest("candidate-ana", "candidate-ben")).toHaveProperty("problem");
+    const confirmed = (recordId: string) => {
+      const found = deleteRecordRequest(recordId, recordId);
+      if ("problem" in found) throw new Error(found.problem);
+      return found.request;
+    };
+    const refused = await member
+      .call("DELETE /v1/workspaces/{workspaceId}", confirmed("candidate-cy"))
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+    expect(refused).toBeInstanceOf(ApiRequestError);
+    expect(deleteRefusal(refused)).toContain("owners and admins");
+
+    // The owner deletes it; the screen returns to the remaining records.
+    const before = await listed("owner");
+    await owner.call("DELETE /v1/workspaces/{workspaceId}", confirmed("candidate-ana"));
+    expect(await listed("owner")).toEqual(withoutRecord(before, "candidate-ana"));
+    expect(
+      await refusal(
+        owner.call("GET /v1/workspaces/{workspaceId}", { path: { workspaceId: "candidate-ana" } }),
+      ),
+    ).toBe(404);
   }, 60_000);
 });

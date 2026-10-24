@@ -1,6 +1,8 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { RecordActions } from "./record-actions.js";
+import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
   assignableMembers,
   assignMemberRequest,
@@ -40,6 +42,7 @@ export interface RecordsProps {
 export function Records({ client, memory, onSwitch, children }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
+  const [deleted, setDeleted] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let current = true;
@@ -79,7 +82,18 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
     if (recordId === chosen) return;
     memory.remember(recordId);
     onSwitch?.();
+    setDeleted(undefined);
     setChosen(recordId);
+  };
+  // Back to the record list: the first record left, or none.
+  const onDeleted = (recordId: string) => {
+    const ids = withoutRecord(state.ids, recordId);
+    const next = currentRecordId(ids, undefined);
+    if (next !== undefined) memory.remember(next);
+    onSwitch?.();
+    setState({ ...state, ids });
+    setDeleted(recordId);
+    setChosen(next);
   };
   const exists = chosen !== undefined && state.ids.includes(chosen);
 
@@ -91,6 +105,11 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
         notice={noRecordNotice(state.me)}
         onChoose={choose}
       />
+      {deleted === undefined ? null : (
+        <p className="notice" role="status">
+          The record {deleted} and everything stored for it were deleted.
+        </p>
+      )}
       {chosen === undefined ? null : (
         <MembersPanel
           key={`${chosen}:${exists}`}
@@ -100,6 +119,9 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
           manage={canManageMembers(state.me)}
         />
       )}
+      {exists && canExportAndDelete(state.me) ? (
+        <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
+      ) : null}
       {chosen === undefined ? null : children(chosen, onSaved)}
     </>
   );
