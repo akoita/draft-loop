@@ -38,6 +38,17 @@ The API serves the owner's web screen (`apps/web`) at
 5. **Review:** decide the findings with their evidence, edit blocks, then
    approve or ask for another round, and export and download the CV.
 
+The screen asks the API's public `GET /v1/auth/config` how to sign in. In
+`oidc` mode (`DRAFT_LOOP_AUTH_MODE=oidc`) it has no token field: **Sign in**
+goes to the identity provider with the authorization code and PKCE, as the
+public client `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`, and returns to the screen's
+address, `/`, which the provider must accept as a redirect and post-logout
+address. Its tokens stay in the tab's session storage and are refreshed before
+they expire. An account that belongs to no organisation is told so and signed
+out at the provider. The fictional local values are the issuer
+`http://127.0.0.1:58081/realms/draft-loop-local`, the web client
+`draft-loop-web` and the audience `draft-loop-api`.
+
 To work on the screen itself, run `pnpm --filter @draft-loop/web dev`. Vite
 serves it with hot reload and forwards `/v1` to the API at
 `DRAFT_LOOP_WEB_API_URL`, `http://127.0.0.1:8080` by default; point it at

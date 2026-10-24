@@ -1097,6 +1097,46 @@
           "versions"
         ]
       },
+      "AuthConfigInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "owner"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "description": "Sign in with the deployment's owner token."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "oidc"
+              },
+              "issuer": {
+                "type": "string",
+                "description": "The identity provider's issuer."
+              },
+              "clientId": {
+                "type": "string",
+                "description": "The web screen's public client id at that provider."
+              }
+            },
+            "required": [
+              "mode",
+              "issuer",
+              "clientId"
+            ],
+            "description": "Sign in through the identity provider, with the authorization code and PKCE."
+          }
+        ]
+      },
       "RunExportInput": {
         "type": "object",
         "properties": {
@@ -3161,6 +3201,48 @@
         ],
         "additionalProperties": false
       },
+      "AuthConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "owner"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false,
+            "description": "Sign in with the deployment's owner token."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "oidc"
+              },
+              "issuer": {
+                "type": "string",
+                "description": "The identity provider's issuer."
+              },
+              "clientId": {
+                "type": "string",
+                "description": "The web screen's public client id at that provider."
+              }
+            },
+            "required": [
+              "mode",
+              "issuer",
+              "clientId"
+            ],
+            "additionalProperties": false,
+            "description": "Sign in through the identity provider, with the authorization code and PKCE."
+          }
+        ]
+      },
       "RunExport": {
         "type": "object",
         "properties": {
@@ -4181,6 +4263,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/config": {
+      "get": {
+        "summary": "How the web screen signs people in",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
                 }
               }
             }

@@ -3,7 +3,7 @@ export const ownerTokenMinimumLength = 32;
 
 const storageKey = "draft-loop.owner-token";
 
-/** Where the screen keeps the owner token for the tab's lifetime. */
+/** Where the screen keeps a credential for the tab's lifetime. */
 export interface TokenStore {
   read(): string | null;
   write(token: string): void;
@@ -13,13 +13,17 @@ export interface TokenStore {
 /**
  * Keeps the token in the tab's session storage, so it is gone when the tab closes. Storage can be
  * missing or refuse access in a private window; the screen then keeps the token in memory only.
+ * `key` names the entry; the owner token's is the default.
  */
-export function createTokenStore(storage: () => Storage | undefined): TokenStore {
+export function createTokenStore(
+  storage: () => Storage | undefined,
+  key: string = storageKey,
+): TokenStore {
   let memory: string | null = null;
   return {
     read() {
       try {
-        return storage()?.getItem(storageKey) ?? memory;
+        return storage()?.getItem(key) ?? memory;
       } catch {
         return memory;
       }
@@ -27,7 +31,7 @@ export function createTokenStore(storage: () => Storage | undefined): TokenStore
     write(token) {
       memory = token;
       try {
-        storage()?.setItem(storageKey, token);
+        storage()?.setItem(key, token);
       } catch {
         // Memory still holds it.
       }
@@ -35,7 +39,7 @@ export function createTokenStore(storage: () => Storage | undefined): TokenStore
     clear() {
       memory = null;
       try {
-        storage()?.removeItem(storageKey);
+        storage()?.removeItem(key);
       } catch {
         // Nothing stored.
       }

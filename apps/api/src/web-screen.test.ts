@@ -78,6 +78,7 @@ describe("web screen", () => {
 describe("public requests", () => {
   it.each([
     ["/v1/health", "/v1/health", true],
+    ["/v1/auth/config", "/v1/auth/config", true],
     ["/*", "/assets/index-abc.js", true],
     ["/", "/", true],
     ["/*", "/v1/unknown", false],

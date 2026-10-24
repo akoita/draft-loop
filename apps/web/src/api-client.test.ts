@@ -103,6 +103,14 @@ describe("API client", () => {
     expect(stub.calls[0]?.init.headers).toEqual({ authorization: `Bearer ${token}` });
   });
 
+  it("sends no credential to a public route when it has no token", async () => {
+    const stub = stubFetch(json(200, { mode: "owner" }));
+    const client = createApiClient({ fetch: stub.fetch });
+
+    expect(await client.call("GET /v1/auth/config", {})).toEqual({ mode: "owner" });
+    expect(stub.calls[0]?.init.headers).toEqual({});
+  });
+
   it("returns a document's bytes as a blob", async () => {
     const stub = stubFetch(
       new Response("# Draft", { status: 200, headers: { "content-type": "text/markdown" } }),
