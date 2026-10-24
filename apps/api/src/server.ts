@@ -4,12 +4,18 @@ import { readRunBudgetCeiling } from "@draft-loop/application";
 import { startConfiguredCloudSqlProxy } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
-import { readApiConfig, readHostedStorageConfig } from "./config.js";
+import { ApiConfigError, readApiConfig, readHostedStorageConfig } from "./config.js";
 import { openHostedApplication } from "./hosted-application.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
+if (config.auth.mode === "oidc") {
+  // Sign-in needs the tenant directory to resolve members, which the hosted wiring lacks so far.
+  throw new ApiConfigError(
+    "DRAFT_LOOP_AUTH_MODE=oidc is not served yet: this build cannot resolve organisation members. Use owner mode.",
+  );
+}
 // On Cloud Run, the database URL names the connector's socket and the API signs in as its service
 // identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");

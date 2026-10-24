@@ -19,20 +19,23 @@ import {
 import { type ZodType, z } from "zod";
 
 import { registerApplicationRoutes } from "./application-routes.js";
-import { apiError, sendError, sendNotFound } from "./errors.js";
+import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
-import { isOwnerAuthorization } from "./owner-access.js";
+import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerUsageRoutes } from "./usage-routes.js";
-import { contentSecurityPolicy, isPublicRequest, registerWebScreen } from "./web-screen.js";
+import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 
 export interface ApiOptions {
+  /** The owner's token: the only credential in owner mode, the operator's in sign-in mode. */
   readonly ownerToken: string;
+  /** How requests are authenticated; owner mode when unset. */
+  readonly auth?: ApiAuthOptions;
   readonly logger?: FastifyServerOptions["logger"];
   /** The application service and how to address its workspaces; without it only health is served. */
   readonly application?: {
@@ -96,7 +99,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       openapi: "3.1.0",
       info: { title: "DraftLoop API", version: "1" },
       components: {
-        securitySchemes: { ownerToken: { type: "http", scheme: "bearer" } },
+        securitySchemes: {
+          ownerToken: {
+            type: "http",
+            scheme: "bearer",
+            description:
+              "The owner's token, or in sign-in mode an access token from the identity provider.",
+          },
+        },
       },
       security: [{ ownerToken: [] }],
     },
@@ -104,15 +114,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     transformObject: jsonSchemaTransformObject,
   });
 
-  app.addHook("onRequest", async (request, reply) => {
-    if (isPublicRequest(request.routeOptions.url, request.url)) return;
-    if (!isOwnerAuthorization(request.headers.authorization, options.ownerToken)) {
-      await reply
-        .code(401)
-        .header("www-authenticate", "Bearer")
-        .send(apiError("unauthorized", "A valid owner token is required."));
-    }
-  });
+  registerRequestAuthentication(app, options.ownerToken, options.auth);
 
   app.get(
     "/v1/health",

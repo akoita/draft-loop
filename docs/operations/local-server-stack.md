@@ -106,6 +106,12 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters                |
 | `PORT`                                  | API            | Listening port, default 8080                                    |
+| `DRAFT_LOOP_AUTH_MODE`                  | API            | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens and keeps the owner token for operators; the server refuses `oidc` until it can resolve organisation members |
+| `DRAFT_LOOP_OIDC_ISSUER`                | API            | In `oidc` mode, the provider's issuer, an https URL matched exactly |
+| `DRAFT_LOOP_OIDC_AUDIENCE`              | API            | In `oidc` mode, the audience the API's tokens carry             |
+| `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`         | API            | In `oidc` mode, the web screen's public client id               |
+| `DRAFT_LOOP_OIDC_JWKS_URL`              | API            | The provider's key set; discovered from the issuer when unset   |
+| `DRAFT_LOOP_OIDC_ALLOW_HTTP`            | API            | `1` accepts plain-http provider addresses, for the local stack only |
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`           | API            | Largest candidate source upload, default 10485760 (10 MiB), at most 30 MiB |
 | `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |

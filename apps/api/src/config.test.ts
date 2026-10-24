@@ -9,6 +9,7 @@ describe("readApiConfig", () => {
       host: "0.0.0.0",
       port: 9000,
       ownerToken,
+      auth: { mode: "owner" },
     });
   });
 
@@ -53,6 +54,68 @@ describe("readApiConfig", () => {
     expect(() => readApiConfig({ PORT: port, DRAFT_LOOP_API_OWNER_TOKEN: ownerToken })).toThrow(
       ApiConfigError,
     );
+  });
+});
+
+describe("readApiConfig's sign-in settings", () => {
+  const oidc = {
+    DRAFT_LOOP_API_OWNER_TOKEN: ownerToken,
+    DRAFT_LOOP_AUTH_MODE: "oidc",
+    DRAFT_LOOP_OIDC_ISSUER: "https://id.example.test/realms/draft-loop",
+    DRAFT_LOOP_OIDC_AUDIENCE: "draft-loop-api",
+    DRAFT_LOOP_OIDC_WEB_CLIENT_ID: "draft-loop-web",
+  };
+
+  it("defaults to owner mode, ignoring sign-in settings", () => {
+    expect(readApiConfig({ ...oidc, DRAFT_LOOP_AUTH_MODE: "owner" }).auth).toEqual({
+      mode: "owner",
+    });
+    expect(readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken }).auth).toEqual({
+      mode: "owner",
+    });
+  });
+
+  it("reads the identity provider, discovering its keys unless named", () => {
+    expect(readApiConfig(oidc).auth).toEqual({
+      mode: "oidc",
+      issuer: "https://id.example.test/realms/draft-loop",
+      audience: "draft-loop-api",
+      webClientId: "draft-loop-web",
+      allowHttp: false,
+    });
+    const jwksUrl = "https://id.example.test/realms/draft-loop/protocol/openid-connect/certs";
+    expect(readApiConfig({ ...oidc, DRAFT_LOOP_OIDC_JWKS_URL: jwksUrl }).auth).toMatchObject({
+      jwksUrl,
+    });
+  });
+
+  it("still requires the owner token, the operator's credential", () => {
+    expect(() => readApiConfig({ ...oidc, DRAFT_LOOP_API_OWNER_TOKEN: "" })).toThrow(
+      ApiConfigError,
+    );
+  });
+
+  it("accepts a plain-http provider only when the local stack allows it", () => {
+    const local = { ...oidc, DRAFT_LOOP_OIDC_ISSUER: "http://keycloak:8080/realms/draft-loop" };
+    expect(() => readApiConfig(local)).toThrow(ApiConfigError);
+    expect(readApiConfig({ ...local, DRAFT_LOOP_OIDC_ALLOW_HTTP: "1" }).auth).toMatchObject({
+      issuer: "http://keycloak:8080/realms/draft-loop",
+      allowHttp: true,
+    });
+  });
+
+  it.each([
+    ["an unknown mode", { DRAFT_LOOP_AUTH_MODE: "password" }],
+    ["no issuer", { DRAFT_LOOP_OIDC_ISSUER: "" }],
+    ["an issuer that is not a URL", { DRAFT_LOOP_OIDC_ISSUER: "keycloak" }],
+    ["an issuer with a query", { DRAFT_LOOP_OIDC_ISSUER: "https://id.example.test/?realm=a" }],
+    ["no audience", { DRAFT_LOOP_OIDC_AUDIENCE: "" }],
+    ["an audience with whitespace", { DRAFT_LOOP_OIDC_AUDIENCE: "draft loop" }],
+    ["no web client id", { DRAFT_LOOP_OIDC_WEB_CLIENT_ID: "" }],
+    ["a plain-http key address", { DRAFT_LOOP_OIDC_JWKS_URL: "http://id.example.test/certs" }],
+    ["an unclear http switch", { DRAFT_LOOP_OIDC_ALLOW_HTTP: "yes" }],
+  ])("refuses %s", (_label, override) => {
+    expect(() => readApiConfig({ ...oidc, ...override })).toThrow(ApiConfigError);
   });
 });
 
