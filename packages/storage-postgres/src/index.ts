@@ -47,6 +47,10 @@ export {
   type PostgresTenancy,
   type PostgresTenantStorage,
 } from "./postgres-storage.js";
+export {
+  openPostgresRecordArchives,
+  type PostgresRecordArchivesOptions,
+} from "./record-archive.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
   createSqlClient,
