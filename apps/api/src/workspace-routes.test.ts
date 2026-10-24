@@ -112,7 +112,7 @@ describe("workspace setup", () => {
     expect(response.body).not.toContain("/tenants/");
   });
 
-  it("creates a workspace with the driver's defaults from an empty body", async () => {
+  it("creates a workspace with two rounds and the driver's other defaults from an empty body", async () => {
     const initialize = vi.fn(async (_command: InitializeWorkspaceCommand) => descriptor);
     await build({ readWorkspace: missing, initialize });
 
@@ -123,6 +123,7 @@ describe("workspace setup", () => {
       root,
       jobDescription: "job.md",
       sources: "sources",
+      maxRounds: 2,
     });
   });
 

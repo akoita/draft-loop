@@ -21,7 +21,7 @@ export interface WorkspaceForm {
 export const defaultWorkspaceForm: WorkspaceForm = {
   language: "en",
   requiredSections: "",
-  maxRounds: "3",
+  maxRounds: "2",
   authorCompany: "anthropic",
   authorModel: "",
   criticCompany: "openai",
