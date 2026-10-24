@@ -97,6 +97,11 @@ describe("the worker's logs", () => {
       quarantined: [
         { kind: "job-source", resultId: "result-1", signals: ["instruction-override"] },
       ],
+      screening: {
+        tenantId: job.tenantId,
+        resultIds: ["result-1"],
+        signals: ["instruction-override"],
+      },
     });
     expect(line).not.toContain(marker);
   });

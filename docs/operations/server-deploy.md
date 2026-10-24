@@ -121,9 +121,6 @@ The lines are content-free (ADR 0011, D16):
   workspace and run ids, the job's outcome, the run's state, and its usage so
   far: calls, tokens and estimated cost, in total and by company, model and
   route.
-- **A run paused for quarantined material** first logs a `WARNING` with the
-  ids and, for each piece, its kind, the result id a release names and the
-  signal codes, never the text.
 - **Each failed provider call** logs one `provider call failed` line before
   it: the run id, step, role and attempt; the company, model and route; the
   HTTP status and the normalized code; the provider's own error `type` and
@@ -133,5 +130,43 @@ The lines are content-free (ADR 0011, D16):
 
 The run's failure keeps the same fields, and the API returns them as the
 run's `lastError.failedCall`, so the web screen can name the call that failed.
+
+### Alert lines
+
+Four `WARNING` lines are the owner's alerts on injection screening and on
+refused access. The infrastructure matches each on its exact `message`. They
+carry ids and closed codes only, never candidate text, file names, titles,
+email addresses or the reason a member types for a release.
+
+- **`access refused`** (API) is written when a record or knowledge base is
+  refused to a member. Field `accessRefusal`: `resource`, `reason`, `tenantId`,
+  `memberId`, `resourceId`.
+- **`material quarantined`** (API) is written at intake when a result is
+  `flagged` or `unscreened`. Field `screening`: `tenantId`, `resultId`,
+  `subjectKind`, `verdict`, `signals`.
+- **`quarantined material released`** (API) is written when an owner or admin
+  releases a result. Fields `screening` (`tenantId`, `resultId`, `subjectKind`,
+  `signals`) and `audit`.
+- **`run paused for quarantined material`** (worker) is written when a claimed
+  job pauses its run. Fields `screening` (`tenantId`, `resultIds`, `signals`),
+  the job's `tenantId`, `workspaceId` and `runId`, and `quarantined`, each
+  piece's kind, result id and signals.
+
+The fields of `accessRefusal`:
+
+- **`resource`** is `record` or `knowledge-base`. `run` is reserved: a run the
+  tenant does not have is indistinguishable from a missing one.
+- **`reason`** is `unassigned` when the record, or the record that owns the
+  knowledge base, exists and the member is not assigned to it, and `role` when
+  a member tries an action only owners and admins may take. `other-tenant` is
+  reserved for a refusal the API can prove crosses tenants; row-level security
+  hides another tenant's rows, so today none is written.
+- **The answer is unchanged:** 404 for an unreachable record or base, 403 for a
+  role.
+- **Not logged:** a 404 for an id that does not exist, and a row hidden by
+  row-level security. The owner token is never refused.
+
+`subjectKind` is `job-source` or `knowledge-source-version`, and `signals` are
+the closed screening codes.
 
 The infrastructure builds its log-based metrics and alerts on these fields.

@@ -24,6 +24,7 @@ import type { ScreeningConfig, ScreeningMode } from "./content-screening-config.
 /** The log lines screening writes: content-free, so they carry ids, counts and cost only. */
 export interface ScreeningLog {
   info(fields: object, message: string): void;
+  warn(fields: object, message: string): void;
 }
 
 /** Builds the model screener for one call, with the data policy that call's material allows. */
@@ -165,9 +166,36 @@ export function createHostedContentScreening(
         input.text === undefined
           ? await screenWith(screeners.map(unavailable), { text: "", kind: input.kind }, setup.now)
           : await screenWith(screeners, { text: input.text, kind: input.kind }, setup.now);
-      return store.recordResult(input.subject, result);
+      const stored = await store.recordResult(input.subject, result);
+      logQuarantine(input.log, tenantId, stored);
+      return stored;
     },
   };
+}
+
+/**
+ * One `WARNING` for a result that quarantines its text, flagged or unscreened (ADR 0011, D16), so
+ * the owner can be alerted: ids and closed codes only, never the text, a file name or a title.
+ */
+function logQuarantine(
+  log: ScreeningLog,
+  tenantId: string,
+  stored: StoredContentScreeningResult,
+): void {
+  const { verdict, signals } = stored.result;
+  if (verdict === "clear") return;
+  log.warn(
+    {
+      screening: {
+        tenantId,
+        resultId: stored.id,
+        subjectKind: stored.subject.kind,
+        verdict,
+        signals: [...signals],
+      },
+    },
+    "material quarantined",
+  );
 }
 
 /** One content-free line per answered model call: the tenant, the model and the cost. */

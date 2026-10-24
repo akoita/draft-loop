@@ -20,6 +20,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { consentRecordId } from "./consent-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
 import {
@@ -311,10 +312,11 @@ export function registerContentScreening(
     },
     async (request, reply) => {
       const { caller } = request;
+      const { workspaceId, resultId } = request.params;
       if (caller === undefined || !reachesEveryRecord(caller)) {
+        logAccessRefusal(request, { resource: "record", reason: "role", resourceId: workspaceId });
         return reply.code(403).send(ownersAndAdminsOnly);
       }
-      const { workspaceId, resultId } = request.params;
       // The history id is the record's own, as the brief tables and the audit chain address it.
       const historyId = (await service.readWorkspace(workspaceRoot(workspaceId))).id;
       const found = await screening.store.resultById(resultId);
@@ -331,9 +333,19 @@ export function registerContentScreening(
         reason: request.body.reason,
         historyId,
       });
-      // Content-free: ids only. The store has appended its own audit event to the record's chain.
-      request.log.info(
-        { audit: { action: "content_screening_released", workspaceId, resultId, memberId } },
+      // Content-free: ids and codes only, never the member's reason. The store has appended its
+      // own audit event to the record's chain. A release is an owner's decision to let flagged
+      // text through, so it is a WARNING the owner can alert on.
+      request.log.warn(
+        {
+          audit: { action: "content_screening_released", workspaceId, resultId, memberId },
+          screening: {
+            tenantId: tenantIdOf(caller, options.ownerTenantId),
+            resultId,
+            subjectKind: found.subject.kind,
+            signals: [...found.result.signals],
+          },
+        },
         "quarantined material released",
       );
       return screeningReleaseView(release);

@@ -6,7 +6,7 @@ import type {
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { reachesEveryRecord } from "./record-access.js";
 import { TenantContextMissingError, tenantIdOf } from "./tenant-context.js";
@@ -91,14 +91,15 @@ export function registerRecordErasureRoutes(
     },
     async (request, reply) => {
       const { caller } = request;
+      const { workspaceId } = request.params;
       if (caller === undefined || !reachesEveryRecord(caller)) {
+        logAccessRefusal(request, { resource: "record", reason: "role", resourceId: workspaceId });
         return reply
           .code(403)
           .send(apiError("forbidden", "Only an organisation's owners and admins erase a record."));
       }
       const tenantId = tenantIdOf(caller, ownerTenantId);
       if (tenantId === undefined) throw new TenantContextMissingError();
-      const { workspaceId } = request.params;
       if (request.body.confirm !== workspaceId) {
         return reply
           .code(400)

@@ -627,6 +627,13 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   mode), else 404. A result that a newer one replaced answers 409
   `result_superseded`, and a clear one 409 `not_releasable`. A later flagged or
   unscreened result quarantines the text again.
+- **Alerts.** Four content-free `WARNING` lines let the owner alert on screening
+  and on refused access (ADR 0011, D16): `material quarantined` at intake,
+  `quarantined material released`, `run paused for quarantined material` in the
+  worker, and `access refused` when the API refuses a record, run or knowledge
+  base. Ids and closed codes only, never the text, a file name or a release
+  reason. [Server deploy](../operations/server-deploy.md#logs) lists their
+  fields.
 
 ## Data and quality contracts
 

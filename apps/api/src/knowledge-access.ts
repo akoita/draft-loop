@@ -2,6 +2,7 @@ import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/app
 import type { KnowledgeBaseOwners } from "@draft-loop/storage/knowledge-base-owners";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { type ApiError, apiError } from "./errors.js";
 import { type RecordAccessFor, reachesEveryRecord } from "./record-access.js";
 import type { Caller } from "./request-auth.js";
@@ -108,6 +109,25 @@ export function registerKnowledgeAccess(
     return owner !== undefined && (await assignedRecords(member)).includes(owner);
   };
 
+  /**
+   * Logs a refusal of a base that exists and belongs to a record the member is not assigned to; a
+   * base with no owner or no row is a plain 404.
+   */
+  const logForeignBase = async (
+    request: FastifyRequest,
+    member: Member,
+    knowledgeBaseId: string,
+  ): Promise<void> => {
+    if (reachesEveryRecord(member)) return;
+    const owner = await knowledgeOwnersFor(member.tenantId).ownerOf(knowledgeBaseId);
+    if (owner === undefined || (await assignedRecords(member)).includes(owner)) return;
+    logAccessRefusal(request, {
+      resource: "knowledge-base",
+      reason: "unassigned",
+      resourceId: knowledgeBaseId,
+    });
+  };
+
   app.addHook("preHandler", async (request, reply) => {
     if (request.caller?.kind !== "member") return;
     const member = request.caller;
@@ -115,7 +135,10 @@ export function registerKnowledgeAccess(
 
     const knowledgeBaseId = stringField(request.params, "knowledgeBaseId");
     if (knowledgeBaseId !== undefined && route?.startsWith(`${createRoute}/`) === true) {
-      if (!(await reachesBase(member, knowledgeBaseId))) return refuse(reply, 404, unknownBase);
+      if (!(await reachesBase(member, knowledgeBaseId))) {
+        await logForeignBase(request, member, knowledgeBaseId);
+        return refuse(reply, 404, unknownBase);
+      }
       return;
     }
 
@@ -124,7 +147,17 @@ export function registerKnowledgeAccess(
       if (workspaceId === undefined) return refuse(reply, 400, workspaceRequired);
       const reaches =
         reachesEveryRecord(member) || (await assignedRecords(member)).includes(workspaceId);
-      if (!reaches || !(await exists(workspaceId))) return refuse(reply, 404, unknownWorkspace);
+      if (!reaches) {
+        if (await exists(workspaceId)) {
+          logAccessRefusal(request, {
+            resource: "record",
+            reason: "unassigned",
+            resourceId: workspaceId,
+          });
+        }
+        return refuse(reply, 404, unknownWorkspace);
+      }
+      if (!(await exists(workspaceId))) return refuse(reply, 404, unknownWorkspace);
       return;
     }
 
@@ -135,7 +168,11 @@ export function registerKnowledgeAccess(
         ?.knowledgeBaseIds;
       if (workspaceId === undefined || !Array.isArray(selected)) return;
       const owned = new Set(await knowledgeOwnersFor(member.tenantId).basesOwnedBy([workspaceId]));
-      if (selected.some((id) => typeof id !== "string" || !owned.has(id))) {
+      const refused = selected.filter((id) => typeof id !== "string" || !owned.has(id));
+      if (refused.length > 0) {
+        for (const id of refused) {
+          if (typeof id === "string") await logForeignBase(request, member, id);
+        }
         return refuse(reply, 404, unknownBase);
       }
     }
