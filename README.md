@@ -130,8 +130,9 @@ identity provider, and each organisation is its own tenant: its members see
 only its workspaces, sources and runs. Within an organisation, each workspace
 is a candidate record: members reach only the records they are assigned to,
 and material is stored or sent to a provider only after the candidate's
-consents are recorded. The stack runs both modes, with fictional users for
-sign-in.
+consents are recorded. Owners and admins export a record's archive and delete
+a record for good, and an owner can delete the whole organisation. The stack
+runs both modes, with fictional users for sign-in.
 Its first phase ends with a run on the hosted service that matches the local
 draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 

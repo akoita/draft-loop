@@ -1,5 +1,6 @@
 import { readdir, rm, stat } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
+import { inflateRawSync } from "node:zlib";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import type { BlobErasure } from "@draft-loop/storage/record-erasure";
 import type { FastifyInstance } from "fastify";
@@ -98,4 +99,30 @@ export function injectFetch(api: FastifyInstance): typeof fetch {
       headers,
     });
   };
+}
+
+/**
+ * Every entry of a whole zip by path, read through its central directory, stored or deflated:
+ * enough for a test to look inside a downloaded record archive.
+ */
+export function readZipEntries(archive: Buffer): Map<string, Buffer> {
+  const end = archive.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (end < 0) throw new Error("No end of central directory.");
+  const entries = new Map<string, Buffer>();
+  let cursor = archive.readUInt32LE(end + 16);
+  for (let index = archive.readUInt16LE(end + 10); index > 0; index -= 1) {
+    if (archive.readUInt32LE(cursor) !== 0x02014b50) throw new Error("Bad central entry.");
+    const method = archive.readUInt16LE(cursor + 10);
+    const compressedSize = archive.readUInt32LE(cursor + 20);
+    const nameLength = archive.readUInt16LE(cursor + 28);
+    const local = archive.readUInt32LE(cursor + 42);
+    const path = archive.toString("utf8", cursor + 46, cursor + 46 + nameLength);
+    cursor +=
+      46 + nameLength + archive.readUInt16LE(cursor + 30) + archive.readUInt16LE(cursor + 32);
+    const start = local + 30 + archive.readUInt16LE(local + 26) + archive.readUInt16LE(local + 28);
+    const data = archive.subarray(start, start + compressedSize);
+    if (method !== 0 && method !== 8) throw new Error(`Unexpected method ${method}.`);
+    entries.set(path, method === 8 ? inflateRawSync(data) : Buffer.from(data));
+  }
+  return entries;
 }
