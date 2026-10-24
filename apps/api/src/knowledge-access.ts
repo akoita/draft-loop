@@ -28,7 +28,10 @@ export interface KnowledgeOwnership {
     request: FastifyRequest,
     workspaceId: string | undefined,
   ) => Promise<ReadonlySet<string> | undefined>;
-  /** Records a new base's owning record, which this module checked the caller reaches. */
+  /**
+   * Records a new base's owning record, which this module checked the caller reaches. When
+   * recording fails, the base is removed, so none is left that no member can reach.
+   */
   readonly setOwner: (
     request: FastifyRequest,
     knowledgeBaseId: string,
@@ -155,7 +158,14 @@ export function registerKnowledgeAccess(
     },
     setOwner: async (request, knowledgeBaseId, workspaceId) => {
       const member = memberOf(request);
-      await knowledgeOwnersFor(member.tenantId).setOwner({ knowledgeBaseId, workspaceId });
+      const owners = knowledgeOwnersFor(member.tenantId);
+      try {
+        await owners.setOwner({ knowledgeBaseId, workspaceId });
+      } catch (error) {
+        // Best effort: the failure to report is the owner write's, not the cleanup's.
+        await owners.removeUnowned(knowledgeBaseId).catch(() => false);
+        throw error;
+      }
     },
   };
 }

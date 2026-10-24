@@ -285,6 +285,37 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
     }
   });
 
+  it("removes a base whose owning record could not be recorded", async () => {
+    const failing = new Error("owner write failed");
+    const failingApp = await buildApi({
+      ownerToken,
+      auth: signIn,
+      tenants: {
+        ...tenants,
+        knowledgeOwnersFor: (id) => ({
+          ...tenancy.forTenant(id).knowledgeBaseOwners,
+          setOwner: async () => {
+            throw failing;
+          },
+        }),
+      },
+    });
+    try {
+      const before = await listed("owner");
+      const refused = await failingApp.inject({
+        method: "POST",
+        url: "/v1/knowledge-bases",
+        headers: { authorization: `Bearer ${tokens["coach-1"]}` },
+        payload: { displayName: "Career material", workspaceId: "r1" },
+      });
+      expect(refused.statusCode).toBe(500);
+      // No base is left that no member can reach.
+      expect(await listed("owner")).toEqual(before);
+    } finally {
+      await failingApp.close();
+    }
+  });
+
   it("refuses to serve sign-in mode without knowledge base owners", async () => {
     const { knowledgeOwnersFor: _omitted, ...withoutOwners } = tenants;
     await expect(buildApi({ ownerToken, auth: signIn, tenants: withoutOwners })).rejects.toThrow(
