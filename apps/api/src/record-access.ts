@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { apiError } from "./errors.js";
 import type { Caller } from "./request-auth.js";
 import { TenantContextMissingError, tenantIdOf } from "./tenant-context.js";
@@ -79,8 +80,11 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
     const access = recordAccessFor(caller.tenantId);
     const everyRecord = reachesEveryRecord(caller);
     const assigned = async () => isAssigned(access, caller.memberId, workspaceId);
+    // Whether the record is known to exist, so the 404 is a refusal and not a missing id.
+    let refusesExistingRecord = true;
     if (request.method !== "PUT" || request.routeOptions.url !== createRoute) {
       if (everyRecord || (await assigned())) return;
+      refusesExistingRecord = await exists(workspaceId);
     } else {
       if (!everyRecord && (await assigned())) return;
       if (await exists(workspaceId)) {
@@ -99,6 +103,13 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
           return reply;
         }
       }
+    }
+    if (refusesExistingRecord) {
+      logAccessRefusal(request, {
+        resource: "record",
+        reason: "unassigned",
+        resourceId: workspaceId,
+      });
     }
     await reply.code(404).send(apiError("not_found", "No such workspace."));
     return reply;

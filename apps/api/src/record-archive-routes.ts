@@ -6,7 +6,7 @@ import type {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { reachesEveryRecord } from "./record-access.js";
 import { zipStream } from "./zip-stream.js";
@@ -67,10 +67,11 @@ export function registerRecordArchiveRoutes(
     },
     async (request, reply) => {
       const { caller } = request;
+      const { workspaceId } = request.params;
       if (caller === undefined || !reachesEveryRecord(caller)) {
+        logAccessRefusal(request, { resource: "record", reason: "role", resourceId: workspaceId });
         return reply.code(403).send(ownersAndAdminsOnly);
       }
-      const { workspaceId } = request.params;
       const historyId = (await service.readWorkspace(workspaceRoot(workspaceId))).id;
       const archive = await archives.prepare({ workspaceId, historyId, knowledgeScope });
       // Content-free: ids and counts only. The tenant id comes with the request's logger.

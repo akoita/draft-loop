@@ -10,6 +10,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { logAccessRefusal } from "./access-refusal-log.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { RecordAccessFor } from "./record-access.js";
 import { TenantContextMissingError, tenantIdOf } from "./tenant-context.js";
@@ -119,6 +120,7 @@ export function registerRecordMemberRoutes(
   ): Promise<string | undefined> => {
     const caller = request.caller;
     if (caller?.kind === "member" && caller.role !== "owner" && caller.role !== "admin") {
+      logAccessRefusal(request, { resource: "record", reason: "role", resourceId: workspaceId });
       await reply.code(403).send(managersOnly);
       return undefined;
     }
