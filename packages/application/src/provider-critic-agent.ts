@@ -7,6 +7,7 @@ import * as criticPrompt from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
 import {
   criticCoverageJudgementParts,
+  critiqueOutputSchemaWithCoverageJudgements,
   invalidCritiqueError,
   parseCritique,
 } from "./critic-critique-contract.js";
@@ -33,6 +34,9 @@ export interface ProviderCriticAgentDependencies {
   readonly userError: (message: string) => Error;
 }
 
+/** The leading critic input members every critique of a run repeats: context to achievement plan. */
+const criticStableInputMembers = 3;
+
 /** The provider-backed critic: independent review of one draft against the retrieved evidence. */
 export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies): CriticAgent {
   const { context } = deps;
@@ -50,14 +54,18 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       retrievedEvidence = [],
       signal,
     }) => {
-      const judgement = withApplicationPlan(
-        withCandidateDirection(
-          criticCoverageJudgementParts(coverageJudgementRequests, context, artifact),
-          candidateDirection,
-        ),
-        applicationPlan,
-        promptVersion,
-      );
+      const judgementFor = (requests: typeof coverageJudgementRequests) =>
+        withApplicationPlan(
+          withCandidateDirection(
+            criticCoverageJudgementParts(requests, context, artifact),
+            candidateDirection,
+          ),
+          applicationPlan,
+          promptVersion,
+        );
+      const judgement = judgementFor(coverageJudgementRequests);
+      const judgesCoverage = judgement.instructionsVersion !== undefined;
+      const basePrompt = criticPrompt.create(promptVersion);
       const achievementPlan = createRequirementAchievementPlan(
         context.requirements,
         retrievedEvidence,
@@ -68,7 +76,15 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
-        systemPrompt: judgement.systemPrompt(criticPrompt.create(promptVersion)),
+        systemPrompt: judgement.systemPrompt(basePrompt),
+        // Every critique of a run sends the same instructions, output format and leading input,
+        // so a provider's prompt cache written by the first critique is read by the later ones.
+        // Coverage-judgement instructions vary by round, so they follow the cached prefix.
+        promptCache: {
+          systemPrompt: judgementFor(undefined).systemPrompt(basePrompt),
+          callInstructions: judgesCoverage ? criticPrompt.coverageJudgementInstructions : "",
+          stableInputMembers: criticStableInputMembers,
+        },
         input: JSON.parse(
           JSON.stringify({
             context: deps.promptContext,
@@ -82,7 +98,7 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
             ...judgement.input,
           }),
         ) as JsonObject,
-        outputSchema: judgement.outputSchema,
+        outputSchema: critiqueOutputSchemaWithCoverageJudgements,
         outputName: "draft_critique",
         maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
         dataPolicy: deps.dataPolicy(deps.criticCompany),
@@ -91,10 +107,10 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       const adapter = await deps.createAdapter(deps.criticCompany, deps.criticModel, "critic");
       const response = await adapter.execute(request);
       try {
-        return responseExecution(
-          response,
-          parseCritique(response.output, judgement.instructionsVersion),
-        );
+        // A critique that judged no coverage still returns the shared format's empty list.
+        const { coverageJudgements: _unrequested, ...findingsOnly } = response.output;
+        const output = judgesCoverage ? response.output : findingsOnly;
+        return responseExecution(response, parseCritique(output, judgement.instructionsVersion));
       } catch {
         throw invalidCritiqueError(response);
       }

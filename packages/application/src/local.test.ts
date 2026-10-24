@@ -995,8 +995,12 @@ describe("local application driver", () => {
           const content = (
             input as { readonly messages?: readonly { readonly content?: unknown }[] }
           ).messages?.[0]?.content;
-          if (typeof content !== "string") throw new Error("missing critic input");
-          criticInputs.push(content);
+          // A critique leads with its run-stable input, which holds the context, as a cached block.
+          const leading = Array.isArray(content)
+            ? (content as readonly { readonly text?: unknown }[])[0]?.text
+            : content;
+          if (typeof leading !== "string") throw new Error("missing critic input");
+          criticInputs.push(leading);
           const response = {
             id: "anthropic-policy-critic",
             content: [{ type: "text", text: JSON.stringify({ findings: [] }) }],
