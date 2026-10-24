@@ -155,7 +155,7 @@ sessions, first complete `claude auth login` and `codex login`, then run:
 
 ```text
 DRAFT_LOOP_PROVIDER_AUTH_MODE=user-session \
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-5-5 \
 DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
 pnpm test:e2e:live
 ```
@@ -172,7 +172,7 @@ explicitly. For example, Anthropic API billing with an OpenAI subscription:
 ```text
 DRAFT_LOOP_ANTHROPIC_AUTH_MODE=api-key \
 DRAFT_LOOP_OPENAI_AUTH_MODE=user-session \
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-5-5 \
 DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
 pnpm test:e2e:live
 ```
@@ -195,14 +195,19 @@ author-critic flow belongs in fixture mode, which spends nothing — see
 iteration is what exhausts the provider budget this release validation depends
 on.
 
-Direct `pnpm test:e2e:live` runs default to `claude-haiku-4-5` as author and
-`gpt-5.6-luna` as critic. `pnpm release:preflight` deliberately uses
-`gpt-6-luna` as critic for its required local mixed-auth release gate. These
-pairs exercise provider paths at bounded cost; they do not measure output
-quality. Override either side for a direct run without editing code:
+Direct `pnpm test:e2e:live` runs default to `claude-sonnet-5-5` as author and
+`gpt-5.6-luna` as critic. `pnpm release:preflight` uses the same author and
+deliberately uses `gpt-6-luna` as critic for its required local mixed-auth
+release gate. These pairs exercise provider paths at bounded cost; they do not
+measure output quality.
+
+The author is Sonnet rather than an economy Haiku model because Haiku authors
+failed the synthetic gate in the alpha.2, alpha.3 and alpha.4 preflights
+(a missing Summary section, then structured-output retries). Override either
+side for a direct run without editing code:
 
 ```text
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-4-5 pnpm test:e2e:live
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-5-5 pnpm test:e2e:live
 DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5 pnpm test:e2e:live
 ```
 

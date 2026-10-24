@@ -15,7 +15,7 @@ describe("local release preflight", () => {
     assert.deepEqual(resolveReleasePreflightEnvironment({}), {
       DRAFT_LOOP_ANTHROPIC_AUTH_MODE: "api-key",
       DRAFT_LOOP_OPENAI_AUTH_MODE: "user-session",
-      DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-haiku-4-5",
+      DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-sonnet-5-5",
       DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-6-luna",
     });
   });
@@ -38,7 +38,7 @@ describe("local release preflight", () => {
         DRAFT_LOOP_PROVIDER_AUTH_MODE: "user-session",
         DRAFT_LOOP_ANTHROPIC_AUTH_MODE: "api-key",
         DRAFT_LOOP_OPENAI_AUTH_MODE: "user-session",
-        DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-haiku-4-5",
+        DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-sonnet-5-5",
         DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-6-luna",
         [preserveWorkspaceVariable]: "1",
       }),
