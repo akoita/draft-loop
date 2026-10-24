@@ -9,6 +9,7 @@ import {
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { anthropicPromptLayout, anthropicSharedOutput } from "./anthropic-prompt-cache.js";
 import { anthropicUsage } from "./anthropic-usage.js";
+import { openAIPromptLayout } from "./openai-prompt-cache.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 import type { AnthropicRoute, ProviderRoute, RouteFallback } from "./provider-route.js";
@@ -882,13 +883,7 @@ export class OpenAIAdapter<
     const parameters: ResponseCreateParamsNonStreaming = {
       model: request.model.modelId,
       max_output_tokens: maxOutputTokens,
-      instructions: request.systemPrompt,
-      input: [
-        {
-          role: "user",
-          content: [{ type: "input_text", text: serializeJson(request.input) }],
-        },
-      ],
+      ...openAIPromptLayout(request, serializeJson),
       store: false,
       ...(profileControls?.provider === "openai" && profileControls.reasoning !== undefined
         ? { reasoning: profileControls.reasoning }

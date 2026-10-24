@@ -70,16 +70,20 @@ function openAiInput(parameters: OpenAIParameters): SerializedModelInput {
   ) {
     throw new Error("The fake critic transport received no structured user input.");
   }
-  const firstContent = firstInput.content[0];
-  if (
-    typeof firstContent !== "object" ||
-    firstContent === null ||
-    !("text" in firstContent) ||
-    typeof firstContent.text !== "string"
-  ) {
+  // A cached critique splits its input into JSON parts around call instructions; merge the parts.
+  const parts = (firstInput.content as readonly unknown[]).flatMap((part) =>
+    typeof part === "object" &&
+    part !== null &&
+    "text" in part &&
+    typeof part.text === "string" &&
+    part.text.startsWith("{")
+      ? [parseSerializedInput(part.text)]
+      : [],
+  );
+  if (parts.length === 0) {
     throw new Error("The fake critic transport received no serialized user text.");
   }
-  return parseSerializedInput(firstContent.text);
+  return Object.assign({}, ...parts) as SerializedModelInput;
 }
 
 function authorProposal(version: number, chunkId: string): JsonRecord {

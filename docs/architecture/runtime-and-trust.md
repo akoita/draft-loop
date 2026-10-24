@@ -277,8 +277,8 @@ full input, and no provider-side conversation or session is reused. Author and
 critic inputs list the members that stay fixed for a run first (context,
 retrieved evidence, achievement plan, and the author's grounding guide and
 output budget), then the per-call members (run, round, execution, artifact, and
-findings). Providers with automatic prefix caching (OpenAI, Mistral, Gemini,
-DeepInfra, and Claude Code's own caching) can then reuse that shared prefix.
+findings). Providers with automatic prefix caching (Mistral, Gemini, DeepInfra,
+and Claude Code's own caching) can then reuse that shared prefix.
 Mistral requests carry an opaque prompt-cache key hashed from the context
 snapshot ID.
 
@@ -292,13 +292,26 @@ and one input; only their order differs.
 
 The author's application plan calls send the same prefix as its drafts, with the
 plan instructions after it, so the first plan call writes the cache and the plan
-revision and every draft of the run read it. The critic's calls, including its
-plan review, are sent unchanged.
+revision and every draft of the run read it.
 
 Claude's cache also keys on the output format, so every author call of a run
 asks for the same one: an object with one member per author output (plan, draft,
 and revision patch). Each call's instructions name the member it returns, and
 the adapter hands back only that member.
+
+OpenAI's implicit cache writes the whole prompt of every call, at a price above
+uncached input, and a later call reads it only if it repeats that whole prompt.
+The OpenAI adapter therefore turns it off and caches only through an explicit
+breakpoint, keyed on the context snapshot.
+
+- **Critiques** carry that breakpoint, or the Claude layout on a Claude critic. Every
+  critique of a run sends the same system instructions, output format and
+  leading input members (context, retrieved evidence and achievement plan), so
+  the first critique writes the prefix and later rounds read it.
+- **Coverage-judgement instructions** vary by round, so they follow the
+  breakpoint. Every critique asks for the format with coverage judgements, and
+  the empty list of a critique that judged none is dropped.
+- **The plan review** caches nothing.
 
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
