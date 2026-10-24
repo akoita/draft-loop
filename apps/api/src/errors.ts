@@ -10,6 +10,10 @@ import {
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
+import {
+  TenantDirectoryError,
+  type TenantDirectoryErrorCode,
+} from "@draft-loop/storage/tenant-directory";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -67,6 +71,16 @@ const runActionStatus: Readonly<Record<RunActionErrorCode, number>> = {
   export_integrity: 409,
 };
 
+/** The tenant directory's refusals by HTTP status; the codes are the API's error codes too. */
+const tenantDirectoryStatus: Readonly<Record<TenantDirectoryErrorCode, number>> = {
+  invalid_input: 400,
+  organisation_exists: 409,
+  organisation_not_found: 404,
+  member_exists: 409,
+  member_not_found: 404,
+  last_owner: 409,
+};
+
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.code(404).send(apiError("not_found", "No such route."));
 }
@@ -113,6 +127,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error.message === opportunityBriefNotFoundErrorMessage) {
     void reply.code(404).send(apiError("not_found", "No such job brief."));
+    return;
+  }
+  // The directory's messages are fixed and never quote an email, so they are safe to answer with.
+  if (error instanceof TenantDirectoryError) {
+    void reply.code(tenantDirectoryStatus[error.code]).send(apiError(error.code, error.message));
     return;
   }
   if (error instanceof HostedKnowledgeIntakeError) {

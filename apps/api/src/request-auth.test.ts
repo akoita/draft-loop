@@ -12,6 +12,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import type { ResolveSignIn, SignInIdentity } from "./oidc-sign-in.js";
+import { isOperatorRequest } from "./request-auth.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const issuer = "https://id.example.test/realms/draft-loop";
@@ -194,5 +195,39 @@ describe("owner mode", () => {
     app.get("/v1/test-caller", async (request) => ({ caller: request.caller ?? null }));
 
     expect((await callerOf(app, `Bearer ${await token()}`)).statusCode).toBe(401);
+  });
+});
+
+describe("operator routes", () => {
+  it("are recognised by the matched route or the raw path", () => {
+    expect(isOperatorRequest("/v1/operator/organisations", "/v1/operator/organisations")).toBe(
+      true,
+    );
+    expect(isOperatorRequest("/v1/operator/organisations", "/v1/%6Fperator/organisations")).toBe(
+      true,
+    );
+    expect(isOperatorRequest(undefined, "/v1/operator/unknown?x=1")).toBe(true);
+    expect(isOperatorRequest("/v1/me", "/v1/me")).toBe(false);
+    expect(isOperatorRequest(undefined, "/v1/operators")).toBe(false);
+  });
+
+  it("take the owner token in sign-in mode and refuse a member's sign-in", async () => {
+    const api = await signInApi(async () => member);
+    api.get("/v1/operator/test-caller", async (request) => ({ caller: request.caller ?? null }));
+
+    const operator = await api.inject({
+      method: "GET",
+      url: "/v1/operator/test-caller",
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const signedIn = await api.inject({
+      method: "GET",
+      url: "/v1/operator/test-caller",
+      headers: { authorization: `Bearer ${await token()}` },
+    });
+
+    expect(operator.json()).toEqual({ caller: { kind: "owner" } });
+    expect(signedIn.statusCode).toBe(401);
+    expect(signedIn.json().error.message).toBe("The operator's token is required.");
   });
 });

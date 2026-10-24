@@ -3,6 +3,7 @@ import type {
   HostedKnowledgeIntake,
   HostedSensitivityRules,
 } from "@draft-loop/application";
+import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
 import { buildApi } from "./app.js";
 
@@ -26,6 +27,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       knowledgeStore: { id: "knowledge", reference: "/knowledge" },
       sensitivityRules: {} as HostedSensitivityRules,
     },
+    directory: {} as TenantDirectory,
   });
   try {
     await app.ready();

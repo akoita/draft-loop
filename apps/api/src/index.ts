@@ -27,12 +27,21 @@ export {
   signInTokenVerifier,
   type VerifySignInToken,
 } from "./oidc-sign-in.js";
+export {
+  type OrganisationRoutesOptions,
+  registerOrganisationRoutes,
+} from "./organisation-routes.js";
 export { isOwnerAuthorization, ownerTokenMinimumLength } from "./owner-access.js";
 export {
   createPostgresIdempotencyStore,
   type PostgresIdempotencyStoreOptions,
 } from "./postgres-idempotency.js";
-export { type ApiAuthOptions, type Caller, registerRequestAuthentication } from "./request-auth.js";
+export {
+  type ApiAuthOptions,
+  type Caller,
+  isOperatorRequest,
+  registerRequestAuthentication,
+} from "./request-auth.js";
 export {
   type ApiApplication,
   defaultTenantCacheSize,

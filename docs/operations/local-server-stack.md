@@ -106,7 +106,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_TENANT_ID`                  | API            | The tenant the owner token acts in: required in `owner` mode, optional in `oidc` mode; the worker takes each job's own |
 | `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket                                        |
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
-| `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters                |
+| `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters; also the operator's credential, the only one `/v1/operator/*` routes accept in either mode |
 | `PORT`                                  | API            | Listening port, default 8080                                    |
 | `DRAFT_LOOP_AUTH_MODE`                  | API            | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens, resolves each to an organisation member through the tenant directory, and keeps the owner token for operators |
 | `DRAFT_LOOP_OIDC_ISSUER`                | API            | In `oidc` mode, the provider's issuer, an https URL matched exactly |

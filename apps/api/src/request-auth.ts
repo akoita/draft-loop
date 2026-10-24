@@ -88,16 +88,30 @@ function authenticatorFor(ownerToken: string, auth: ApiAuthOptions): Authenticat
   );
 }
 
-const unauthorizedMessage: Readonly<Record<ApiAuthOptions["mode"], string>> = {
+const unauthorizedMessage: Readonly<Record<ApiAuthOptions["mode"] | "operator", string>> = {
   owner: "A valid owner token is required.",
   oidc: "A valid sign-in token is required.",
+  operator: "The operator's token is required.",
 };
 
-async function refuse(reply: FastifyReply, mode: ApiAuthOptions["mode"]): Promise<void> {
+async function refuse(
+  reply: FastifyReply,
+  credential: ApiAuthOptions["mode"] | "operator",
+): Promise<void> {
   await reply
     .code(401)
     .header("www-authenticate", "Bearer")
-    .send(apiError("unauthorized", unauthorizedMessage[mode]));
+    .send(apiError("unauthorized", unauthorizedMessage[credential]));
+}
+
+/**
+ * Operator routes, such as creating an organisation, take only the operator's credential: the
+ * deployment's owner token, in both modes, never a member's sign-in. Both the matched route and
+ * the raw path are checked, so no spelling of the path reaches them with a sign-in token.
+ */
+export function isOperatorRequest(routeUrl: string | undefined, path: string): boolean {
+  const operator = (url: string) => url === "/v1/operator" || url.startsWith("/v1/operator/");
+  return (routeUrl !== undefined && operator(routeUrl)) || operator(path);
 }
 
 /**
@@ -110,12 +124,16 @@ export function registerRequestAuthentication(
   auth: ApiAuthOptions = { mode: "owner" },
 ): void {
   const authenticate = authenticatorFor(ownerToken, auth);
+  const authenticateOperator = ownerAuthenticator(ownerToken);
   app.decorateRequest("caller", undefined);
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     if (isPublicRequest(request.routeOptions.url, request.url)) return;
+    const operator = isOperatorRequest(request.routeOptions.url, request.url);
     let authentication: Authentication;
     try {
-      authentication = await authenticate(request.headers.authorization);
+      authentication = await (operator ? authenticateOperator : authenticate)(
+        request.headers.authorization,
+      );
     } catch (error) {
       if (!(error instanceof IdentityProviderUnavailableError)) throw error;
       request.log.warn({ err: error.cause ?? error }, "identity provider unavailable");
@@ -137,6 +155,6 @@ export function registerRequestAuthentication(
     if (authentication.reason !== undefined) {
       request.log.info({ reason: authentication.reason }, "sign-in token refused");
     }
-    await refuse(reply, auth.mode);
+    await refuse(reply, operator ? "operator" : auth.mode);
   });
 }
