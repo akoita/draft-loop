@@ -299,7 +299,19 @@ describe("full real-mode native host draft workflow", () => {
           const proposal = authorProposal(version, chunkId);
           const schema = (parameters.output_config?.format as { schema?: JsonRecord } | undefined)
             ?.schema;
-          if ((schema?.properties as JsonRecord | undefined)?.edits !== undefined) {
+          // A cached author call asks for the run's shared format and names its own member.
+          const member = /Return only the \\?"([a-z_]+)\\?" member/u.exec(
+            JSON.stringify(parameters.messages),
+          )?.[1];
+          const respond = (output: JsonRecord) =>
+            anthropicResponse(
+              member === undefined ? output : { output: { [member]: output } },
+              `anthropic-e2e-${version}`,
+            );
+          if (
+            member === "author_revision_patch" ||
+            (schema?.properties as JsonRecord | undefined)?.edits !== undefined
+          ) {
             // The revision asks for a targeted patch: replace every block with the revised one.
             const current = input.currentArtifact as {
               sections: { blocks: { id: string }[] }[];
@@ -315,9 +327,9 @@ describe("full real-mode native host draft workflow", () => {
                 findingIds: [],
               })),
             );
-            return anthropicResponse({ edits }, `anthropic-e2e-${version}`);
+            return respond({ edits });
           }
-          return anthropicResponse(proposal, `anthropic-e2e-${version}`);
+          return respond(proposal);
         },
       },
     };

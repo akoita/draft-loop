@@ -112,6 +112,13 @@ describe("author run prefix", () => {
     );
     expect(cachedPrefix(plan)).toEqual(cachedPrefix(draftRequests[0]));
     expect(cachedPrefix(plan).stable).toContain('"retrievedEvidence"');
+
+    // Claude's cache keys on the output format too, so both calls list the same outputs.
+    const [draft] = draftRequests;
+    expect(plan?.promptCache?.outputSchemas).toEqual(draft?.promptCache?.outputSchemas);
+    for (const sent of [plan, draft]) {
+      expect(sent?.promptCache?.outputSchemas?.[sent.outputName]).toEqual(sent?.outputSchema);
+    }
   });
 
   it("leaves the critic's plan review without the author's prefix", async () => {

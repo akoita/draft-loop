@@ -171,12 +171,19 @@ function anthropicAuthorClient(): AnthropicClient {
           ? (message[0] as { readonly text?: unknown } | undefined)?.text
           : message;
         if (typeof content !== "string") throw new Error("missing Anthropic author input");
+        const proposal = authorProposal(evidenceChunkId(content));
+        // A cached author request asks for the run's shared output format, one member per output.
+        const shared = (input as { readonly output_config?: { readonly format?: unknown } })
+          .output_config?.format;
+        const sharedFormat = JSON.stringify(shared).includes('"anyOf"');
         const response = {
           id: "anthropic-author-1",
           content: [
             {
               type: "text",
-              text: JSON.stringify(authorProposal(evidenceChunkId(content))),
+              text: JSON.stringify(
+                sharedFormat ? { output: { author_artifact_proposal: proposal } } : proposal,
+              ),
             },
           ],
           model: "claude-haiku-4-5",

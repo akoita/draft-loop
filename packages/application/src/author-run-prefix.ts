@@ -1,4 +1,13 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type { JsonObject } from "@draft-loop/providers";
+import {
+  authorArtifactProposalJsonSchemaForEvidence,
+  authorRevisionPatchJsonSchemaForEvidence,
+} from "@draft-loop/schemas";
+import {
+  applicationPlanJsonSchema,
+  applicationPlanJsonSchemaForReferences,
+} from "@draft-loop/schemas/application-plan";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
@@ -37,5 +46,26 @@ export function authorRunPrefix(
       groundingGuide,
       outputBudget: providerInput.outputBudget,
     },
+  };
+}
+
+/**
+ * Every output an author call of the run asks for, by output name, for the run's evidence
+ * aliases. All author calls send the whole set, so a provider whose prompt cache keys on the
+ * output format can give them one format and keep the run prefix cached across them.
+ */
+export function authorRunOutputSchemas(
+  context: Pick<ContextSnapshot, "requirements">,
+  evidenceAliases: readonly string[],
+): Readonly<Record<string, JsonObject>> {
+  return {
+    application_plan: applicationPlanJsonSchemaForReferences(applicationPlanJsonSchema, {
+      evidenceChunkIds: evidenceAliases,
+      requirementIds: context.requirements.map(({ id }) => id),
+    }) as JsonObject,
+    author_artifact_proposal: authorArtifactProposalJsonSchemaForEvidence(
+      evidenceAliases,
+    ) as JsonObject,
+    author_revision_patch: authorRevisionPatchJsonSchemaForEvidence(evidenceAliases) as JsonObject,
   };
 }

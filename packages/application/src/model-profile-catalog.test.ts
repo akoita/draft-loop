@@ -26,6 +26,8 @@ describe("model profile catalog", () => {
       "dev-mistral-author@1",
     ]);
     const inputCaps: Record<string, number> = {
+      "standard-anthropic-author@1": 1000000,
+      "economy-anthropic-author@1": 1000000,
       "economy-anthropic-author@2": 100000,
       "economy-openai-critic@1": 272000,
       "standard-openai-critic@2": 272000,
@@ -97,7 +99,7 @@ describe("model profile catalog", () => {
         "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
         "https://platform.claude.com/docs/en/about-claude/pricing",
       ],
-      apiPricing: { maxInputTokens: 200000 },
+      apiPricing: { maxInputTokens: 1000000 },
     });
     expect(
       defaultModelProfileRegistry.resolve("economy-anthropic-author", 1, "author").modelId,

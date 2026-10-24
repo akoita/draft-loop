@@ -53,7 +53,7 @@ describe("catalog model pricing", () => {
       outputUsdPerMillionTokens: 20,
       cachedInputUsdPerMillionTokens: 0.2,
       cacheWriteInputUsdPerMillionTokens: 8,
-      maxInputTokens: 200000,
+      maxInputTokens: 1000000,
     });
   });
 

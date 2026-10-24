@@ -75,11 +75,11 @@ describe("model profile public API scenario estimates", () => {
     expect(
       estimateModelProfileApiScenario({
         ...boundary,
-        author: { inputTokens: 200_000, outputTokens: 32_768, calls: 1 },
+        author: { inputTokens: 967_232, outputTokens: 32_768, calls: 1 },
       }),
     ).toMatchObject({ status: "available" });
     for (const author of [
-      { inputTokens: 200_001, outputTokens: 0, calls: 1 },
+      { inputTokens: 1_000_001, outputTokens: 0, calls: 1 },
       { inputTokens: 0, outputTokens: 32_769, calls: 1 },
     ]) {
       expect(estimateModelProfileApiScenario({ ...boundary, author })).toEqual({
