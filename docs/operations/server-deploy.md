@@ -85,6 +85,31 @@ two things the code cannot set up:
 Real reference material goes on staging only with the owner's recorded
 consent; otherwise use synthetic material.
 
+## Assigning plans and granting credits
+
+Until a payment provider lands, the operator assigns each organisation's plan
+and grants credits with the owner token, the only credential the
+`/v1/operator/*` routes accept.
+
+- **Assign:** `PUT /v1/operator/organisations/{organisationId}/plan` with
+  `planId` (`individual`, `job-search-pass`, `pro`, `team`, `business` or
+  `internal`), optional `overrides`, `seats` (required for `team` and
+  `business`) and `periodStart` (a UTC date, today by default). It replaces
+  the current plan, keeps the earlier ones as history and answers the
+  entitlements the plan resolves to.
+- **Grant:** `POST /v1/operator/organisations/{organisationId}/credit-grants`
+  with `credits` (1 to 1,000,000) and a `reason` code such as `goodwill`,
+  never free text, and an `Idempotency-Key` header. Repeat the same key to
+  retry safely. Granted credits expire after 12 months and are spent after the
+  plan's allowance.
+- **Check:** `GET /v1/operator/organisations/{organisationId}/credits` answers
+  the plan, its entitlements and the balance.
+- **Errors:** 422 `invalid_plan_assignment` for an unknown plan or missing
+  seats, 404 `organisation_not_found`, 409 `idempotency_conflict` for a key
+  reused with another amount.
+- **Trail:** each write logs one `audit` line with ids, the plan id, numbers
+  and the reason code, and no free text.
+
 ## Erasing records and organisations
 
 Owners and admins delete a candidate record from the web screen or with

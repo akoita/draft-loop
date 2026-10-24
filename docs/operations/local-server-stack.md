@@ -90,6 +90,23 @@ curl -X POST http://127.0.0.1:58082/v1/operator/organisations \
   -d '{"organisationId":"org-a","name":"Org A","firstOwnerEmail":"ada@org-a.example"}'
 ```
 
+Assign the organisation a plan and grant it credits with the same token. A
+plan id is one of `individual`, `job-search-pass`, `pro`, `team`, `business` or
+`internal`; `team` and `business` also need `seats`. The grant needs an
+`Idempotency-Key`, and its `reason` is a short code, never free text:
+
+```sh
+curl -X PUT http://127.0.0.1:58082/v1/operator/organisations/org-a/plan \
+  -H 'authorization: Bearer local-stack-owner-token-not-a-secret' \
+  -H 'content-type: application/json' \
+  -d '{"planId":"pro"}'
+curl -X POST http://127.0.0.1:58082/v1/operator/organisations/org-a/credit-grants \
+  -H 'authorization: Bearer local-stack-owner-token-not-a-secret' \
+  -H 'idempotency-key: grant-org-a-0001' \
+  -H 'content-type: application/json' \
+  -d '{"credits":50,"reason":"goodwill"}'
+```
+
 The realm's clients are `draft-loop-web` (the screen, code flow with PKCE) and
 `draft-loop-local-smoke` (the password grant, for the smoke test only). Both
 put the audience `draft-loop-api` in their access tokens. Tokens name the

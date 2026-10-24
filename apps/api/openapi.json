@@ -2009,6 +2009,543 @@
           "createdAt"
         ]
       },
+      "PlanAssignmentInput": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "catalogVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "overrides": {
+            "type": "object",
+            "properties": {
+              "creditsPerPeriod": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creditPeriodMonths": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 36
+              },
+              "modelTiers": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                }
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "features": {
+                "type": "object",
+                "properties": {
+                  "provenanceReport": {
+                    "type": "boolean"
+                  },
+                  "runComparison": {
+                    "type": "boolean"
+                  },
+                  "byok": {
+                    "type": "boolean"
+                  },
+                  "sso": {
+                    "type": "boolean"
+                  },
+                  "retentionControls": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "seats": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seats held, or null for a plan not priced by seat."
+          },
+          "periodStart": {
+            "type": "string",
+            "description": "The UTC date the credit period starts, YYYY-MM-DD."
+          },
+          "assignedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "catalogVersion",
+          "overrides",
+          "seats",
+          "periodStart",
+          "assignedAt"
+        ]
+      },
+      "CreditBalanceInput": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periodEnd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exclusive."
+          },
+          "allowance": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "allowanceUsed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "grantsRemaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "remaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unlimited": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "periodStart",
+          "periodEnd",
+          "allowance",
+          "allowanceUsed",
+          "reserved",
+          "grantsRemaining",
+          "remaining",
+          "unlimited"
+        ]
+      },
+      "AssignedPlanInput": {
+        "type": "object",
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/PlanAssignmentInput"
+          },
+          "entitlements": {
+            "type": "object",
+            "properties": {
+              "creditsPerPeriod": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creditPeriodMonths": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 36
+              },
+              "modelTiers": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                }
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "features": {
+                "type": "object",
+                "properties": {
+                  "provenanceReport": {
+                    "type": "boolean"
+                  },
+                  "runComparison": {
+                    "type": "boolean"
+                  },
+                  "byok": {
+                    "type": "boolean"
+                  },
+                  "sso": {
+                    "type": "boolean"
+                  },
+                  "retentionControls": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "provenanceReport",
+                  "runComparison",
+                  "byok",
+                  "sso",
+                  "retentionControls"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "creditsPerPeriod",
+              "creditPeriodMonths",
+              "modelTiers",
+              "seats",
+              "candidateRecords",
+              "runsPerDay",
+              "concurrentRuns",
+              "features"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "assignment",
+          "entitlements"
+        ]
+      },
+      "GrantedCreditsInput": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "credits": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "reason": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sequence",
+              "credits",
+              "reason",
+              "expiresAt"
+            ]
+          },
+          "balance": {
+            "$ref": "#/components/schemas/CreditBalanceInput"
+          }
+        },
+        "required": [
+          "grant",
+          "balance"
+        ]
+      },
+      "OrganisationCreditsInput": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanAssignmentInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null while no plan is assigned."
+          },
+          "entitlements": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "creditsPerPeriod": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "creditPeriodMonths": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 36
+                  },
+                  "modelTiers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "premium",
+                        "standard",
+                        "economy"
+                      ]
+                    }
+                  },
+                  "seats": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "candidateRecords": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "runsPerDay": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "concurrentRuns": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "features": {
+                    "type": "object",
+                    "properties": {
+                      "provenanceReport": {
+                        "type": "boolean"
+                      },
+                      "runComparison": {
+                        "type": "boolean"
+                      },
+                      "byok": {
+                        "type": "boolean"
+                      },
+                      "sso": {
+                        "type": "boolean"
+                      },
+                      "retentionControls": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "provenanceReport",
+                      "runComparison",
+                      "byok",
+                      "sso",
+                      "retentionControls"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "creditsPerPeriod",
+                  "creditPeriodMonths",
+                  "modelTiers",
+                  "seats",
+                  "candidateRecords",
+                  "runsPerDay",
+                  "concurrentRuns",
+                  "features"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "balance": {
+            "$ref": "#/components/schemas/CreditBalanceInput"
+          }
+        },
+        "required": [
+          "organisationId",
+          "assignment",
+          "entitlements",
+          "balance"
+        ]
+      },
       "OrganisationMemberInput": {
         "type": "object",
         "properties": {
@@ -4970,6 +5507,549 @@
           "sizeBytes",
           "checksum",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "PlanAssignment": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string"
+          },
+          "catalogVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "overrides": {
+            "type": "object",
+            "properties": {
+              "creditsPerPeriod": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creditPeriodMonths": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 36
+              },
+              "modelTiers": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                }
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "features": {
+                "type": "object",
+                "properties": {
+                  "provenanceReport": {
+                    "type": "boolean"
+                  },
+                  "runComparison": {
+                    "type": "boolean"
+                  },
+                  "byok": {
+                    "type": "boolean"
+                  },
+                  "sso": {
+                    "type": "boolean"
+                  },
+                  "retentionControls": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "seats": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seats held, or null for a plan not priced by seat."
+          },
+          "periodStart": {
+            "type": "string",
+            "description": "The UTC date the credit period starts, YYYY-MM-DD."
+          },
+          "assignedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "catalogVersion",
+          "overrides",
+          "seats",
+          "periodStart",
+          "assignedAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreditBalance": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periodEnd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exclusive."
+          },
+          "allowance": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "allowanceUsed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "grantsRemaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "remaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unlimited": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "periodStart",
+          "periodEnd",
+          "allowance",
+          "allowanceUsed",
+          "reserved",
+          "grantsRemaining",
+          "remaining",
+          "unlimited"
+        ],
+        "additionalProperties": false
+      },
+      "AssignedPlan": {
+        "type": "object",
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/PlanAssignment"
+          },
+          "entitlements": {
+            "type": "object",
+            "properties": {
+              "creditsPerPeriod": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creditPeriodMonths": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 36
+              },
+              "modelTiers": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                }
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "features": {
+                "type": "object",
+                "properties": {
+                  "provenanceReport": {
+                    "type": "boolean"
+                  },
+                  "runComparison": {
+                    "type": "boolean"
+                  },
+                  "byok": {
+                    "type": "boolean"
+                  },
+                  "sso": {
+                    "type": "boolean"
+                  },
+                  "retentionControls": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "provenanceReport",
+                  "runComparison",
+                  "byok",
+                  "sso",
+                  "retentionControls"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "creditsPerPeriod",
+              "creditPeriodMonths",
+              "modelTiers",
+              "seats",
+              "candidateRecords",
+              "runsPerDay",
+              "concurrentRuns",
+              "features"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "assignment",
+          "entitlements"
+        ],
+        "additionalProperties": false
+      },
+      "GrantedCredits": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "credits": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "reason": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sequence",
+              "credits",
+              "reason",
+              "expiresAt"
+            ],
+            "additionalProperties": false
+          },
+          "balance": {
+            "$ref": "#/components/schemas/CreditBalance"
+          }
+        },
+        "required": [
+          "grant",
+          "balance"
+        ],
+        "additionalProperties": false
+      },
+      "OrganisationCredits": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanAssignment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null while no plan is assigned."
+          },
+          "entitlements": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "creditsPerPeriod": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "creditPeriodMonths": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 36
+                  },
+                  "modelTiers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "premium",
+                        "standard",
+                        "economy"
+                      ]
+                    }
+                  },
+                  "seats": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "candidateRecords": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "runsPerDay": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "concurrentRuns": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "features": {
+                    "type": "object",
+                    "properties": {
+                      "provenanceReport": {
+                        "type": "boolean"
+                      },
+                      "runComparison": {
+                        "type": "boolean"
+                      },
+                      "byok": {
+                        "type": "boolean"
+                      },
+                      "sso": {
+                        "type": "boolean"
+                      },
+                      "retentionControls": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "provenanceReport",
+                      "runComparison",
+                      "byok",
+                      "sso",
+                      "retentionControls"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "creditsPerPeriod",
+                  "creditPeriodMonths",
+                  "modelTiers",
+                  "seats",
+                  "candidateRecords",
+                  "runsPerDay",
+                  "concurrentRuns",
+                  "features"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "balance": {
+            "$ref": "#/components/schemas/CreditBalance"
+          }
+        },
+        "required": [
+          "organisationId",
+          "assignment",
+          "entitlements",
+          "balance"
         ],
         "additionalProperties": false
       },
@@ -10596,6 +11676,397 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/organisations/{organisationId}/plan": {
+      "put": {
+        "summary": "Assign an organisation's plan",
+        "description": "Operator only: takes the deployment's owner token in both authentication modes. Replaces the organisation's plan assignment and appends it to its history. An unknown plan id, a seat-priced plan without seats, an invalid date or entitlements the plan cannot resolve answer 422 `invalid_plan_assignment`; an unknown organisation answers 404 `organisation_not_found`. Answers the assignment and the entitlements it resolves to.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planId": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "The plan's id in catalog v1: individual, job-search-pass, pro, team, business, internal. Anything else answers 422."
+                  },
+                  "overrides": {
+                    "description": "Per-organisation entitlement overrides, merged over the plan.",
+                    "type": "object",
+                    "properties": {
+                      "creditsPerPeriod": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "creditPeriodMonths": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 36
+                      },
+                      "modelTiers": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "premium",
+                            "standard",
+                            "economy"
+                          ]
+                        }
+                      },
+                      "seats": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "candidateRecords": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "runsPerDay": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "concurrentRuns": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "features": {
+                        "type": "object",
+                        "properties": {
+                          "provenanceReport": {
+                            "type": "boolean"
+                          },
+                          "runComparison": {
+                            "type": "boolean"
+                          },
+                          "byok": {
+                            "type": "boolean"
+                          },
+                          "sso": {
+                            "type": "boolean"
+                          },
+                          "retentionControls": {
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "seats": {
+                    "description": "Seats held; required for a seat-priced plan (team, business), ignored otherwise.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "periodStart": {
+                    "description": "The UTC date the credit period starts; today's date when omitted.",
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  }
+                },
+                "required": [
+                  "planId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "organisationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignedPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/organisations/{organisationId}/credit-grants": {
+      "post": {
+        "summary": "Grant an organisation credits",
+        "description": "Operator only: takes the deployment's owner token in both authentication modes. Adds credits that expire 12 months later and are spent after the plan's allowance. The reason is a short code, never free text. A retry with the same Idempotency-Key answers the first grant and balance without granting again; a key reused with another request answers 409 `idempotency_conflict`. An unknown organisation answers 404 `organisation_not_found`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "credits": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000,
+                    "description": "Credits to add; they expire 12 months after the grant."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+                    "description": "A short content-free code such as `goodwill` or `support.2026-10`, never free text."
+                  }
+                },
+                "required": [
+                  "credits",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "organisationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantedCredits"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/organisations/{organisationId}/credits": {
+      "get": {
+        "summary": "Read an organisation's plan, entitlements and credit balance",
+        "description": "Operator only: takes the deployment's owner token in both authentication modes. The assignment and entitlements are null while no plan is assigned. An unknown organisation answers 404 `organisation_not_found`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "organisationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganisationCredits"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Default Response",
             "content": {
               "application/json": {

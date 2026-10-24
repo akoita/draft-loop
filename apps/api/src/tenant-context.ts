@@ -10,6 +10,7 @@ import type { ApiOptions } from "./app.js";
 import { noContentScreening } from "./content-screening-service.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
+import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import type { RecordAccessFor } from "./record-access.js";
 import type { TenantErasureFor } from "./record-erasure-routes.js";
 import type { Caller } from "./request-auth.js";
@@ -47,6 +48,11 @@ export interface TenantApplications {
    * `DELETE /v1/workspaces/:id` nor the organisation deletions are served.
    */
   readonly erasureFor?: TenantErasureFor;
+  /**
+   * Reaches any organisation's plan, credit ledger and idempotency keys for the operator's routes;
+   * without it those routes are not served.
+   */
+  readonly operatorFor?: OperatorTenantFor;
 }
 
 export const defaultTenantCacheSize = 100;

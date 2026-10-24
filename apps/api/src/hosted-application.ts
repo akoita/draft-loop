@@ -19,6 +19,7 @@ import {
   hostedWorkspaceReference,
   openPostgresRecordArchives,
   openPostgresTenancy,
+  type PostgresTenancy,
   type PostgresTenantStorage,
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
@@ -29,6 +30,7 @@ import {
   createHostedContentScreening,
   rulesScreeningSetup,
 } from "./content-screening-service.js";
+import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
 import type { TenantApplication, TenantApplications } from "./tenant-context.js";
@@ -110,6 +112,18 @@ export function hostedKnowledgeLocation(tenantId: string, versionId: string): st
   return `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`;
 }
 
+/** The operator's reach into any organisation: its plan, its credit ledger and its keys. */
+export function hostedOperatorFor(tenancy: PostgresTenancy): OperatorTenantFor {
+  return (organisationId) => {
+    const storage = tenancy.forTenant(organisationId);
+    return {
+      plans: storage.organisationPlans,
+      ledger: storage.creditLedger,
+      idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
+    };
+  };
+}
+
 /**
  * Opens what every tenant's application shares: one Postgres pool, one run queue and one Cloud
  * Storage bucket (ADR 0011, D3). Each tenant's application is composed on its first request over
@@ -153,6 +167,7 @@ export async function openHostedTenants(
           organisation: tenancy.forTenant(tenantId).organisationErasure,
           objectPrefix: gcsTenantPrefix(tenantId),
         }),
+        operatorFor: hostedOperatorFor(tenancy),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
