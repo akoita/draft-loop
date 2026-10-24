@@ -41,7 +41,7 @@ until it closes; sign-in through the identity provider replaces it in phase 2.
 
 Each part has its own service account with only the access it needs. The
 worker may reach Google APIs and the OpenAI EU endpoint and nothing else; the
-API has no internet egress.
+API has no internet egress unless the model screener is on (see Settings).
 
 ## Settings
 
@@ -61,7 +61,14 @@ sets them from its infrastructure. Unlike the local stack, it:
 - sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker, and,
   in sign-in mode, the same `DRAFT_LOOP_AUTH_MODE=oidc` as the API. The worker
   then always checks consent as it claims each job, and refuses to start if
-  `DRAFT_LOOP_REQUIRE_CONSENT=false` is also set.
+  `DRAFT_LOOP_REQUIRE_CONSENT=false` is also set;
+- leaves `DRAFT_LOOP_SCREENING` at its default, `rules`, or sets `rules+model`
+  on the API. The model screener calls Claude Haiku on the EU Vertex route with
+  the API's own identity, so the API needs the Vertex settings, permission to
+  call Vertex AI and egress to Google APIs, which the infrastructure
+  repository grants; without them every model screening fails closed to
+  `unscreened`. It also reads `DRAFT_LOOP_ALLOW_PROVIDER_DATA`, the ceiling
+  above consent for screening candidate sources with the model.
 
 ## Before a provider run on staging
 

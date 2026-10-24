@@ -25,6 +25,8 @@ import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
+import { registerContentScreening } from "./content-screening-routes.js";
+import type { HostedContentScreening } from "./content-screening-service.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -76,6 +78,12 @@ export interface ApiOptions {
     readonly consents?: ConsentLedger;
     /** Each candidate record's archive; without it the archive route is not served. */
     readonly recordArchives?: RecordArchives;
+    /**
+     * The tenant's injection screening (ADR 0011, phase 2d): intake screens job sources and
+     * uploads, a run refuses quarantined material and the release route is served. Without it
+     * none of that happens.
+     */
+    readonly contentScreening?: HostedContentScreening;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -260,6 +268,21 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
+    const screening =
+      application.contentScreening === undefined
+        ? undefined
+        : registerContentScreening(app, {
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            screening: application.contentScreening,
+            authMode: auth.mode,
+            ...(application.consents === undefined ? {} : { consents: application.consents }),
+            ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
+            ...(knowledgeOwnersFor === undefined ? {} : { knowledgeOwnersFor }),
+            ...(options.tenants?.ownerTenantId === undefined
+              ? {}
+              : { ownerTenantId: options.tenants.ownerTenantId }),
+          });
     registerWorkspaceRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
@@ -278,6 +301,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       idempotency,
       enqueueRun: application.enqueueRun,
       budgetCeiling: application.budgetCeiling,
+      ...(screening === undefined ? {} : { screening }),
     });
     registerReviewRoutes(app, {
       service: application.service,
@@ -299,6 +323,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       registerKnowledgeRoutes(app, {
         intake: application.knowledgeIntake,
         ...(knowledgeOwnership === undefined ? {} : { ownership: knowledgeOwnership }),
+        ...(screening === undefined ? {} : { screening }),
       });
     }
     if (application.sensitivityRules !== undefined) {

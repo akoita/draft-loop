@@ -11,6 +11,12 @@
       "path": "../../packages/application"
     },
     {
+      "path": "../../packages/ingestion"
+    },
+    {
+      "path": "../../packages/model-gateway"
+    },
+    {
       "path": "../../packages/orchestrator"
     },
     {

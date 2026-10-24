@@ -13,6 +13,251 @@
       }
     },
     "schemas": {
+      "ScreeningOutcomeInput": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "string",
+            "description": "The stored result; the id a release names."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ],
+            "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exfiltration-link",
+                "hidden-text",
+                "instruction-override",
+                "role-change",
+                "screener-unavailable"
+              ]
+            },
+            "description": "The closed codes the screeners reported."
+          }
+        },
+        "required": [
+          "resultId",
+          "verdict",
+          "signals"
+        ]
+      },
+      "OpportunityScreeningInput": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ],
+            "description": "The worst verdict among the brief's sources."
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exfiltration-link",
+                "hidden-text",
+                "instruction-override",
+                "role-change",
+                "screener-unavailable"
+              ]
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resultId": {
+                  "type": "string",
+                  "description": "The stored result; the id a release names."
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "clear",
+                    "flagged",
+                    "unscreened"
+                  ],
+                  "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+                },
+                "signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "exfiltration-link",
+                      "hidden-text",
+                      "instruction-override",
+                      "role-change",
+                      "screener-unavailable"
+                    ]
+                  },
+                  "description": "The closed codes the screeners reported."
+                },
+                "sourceId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "resultId",
+                "verdict",
+                "signals",
+                "sourceId"
+              ]
+            }
+          }
+        },
+        "required": [
+          "verdict",
+          "signals",
+          "sources"
+        ]
+      },
+      "ScreeningReleaseInput": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string",
+            "description": "The releasing member, or `owner-token` for the owner token."
+          },
+          "reason": {
+            "type": "string"
+          },
+          "releasedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resultId",
+          "memberId",
+          "reason",
+          "releasedAt"
+        ]
+      },
+      "QuarantinedMaterialInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "briefId",
+              "sourceId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId"
+            ]
+          }
+        ]
+      },
       "ApiErrorInput": {
         "type": "object",
         "properties": {
@@ -42,6 +287,13 @@
                     "path",
                     "message"
                   ]
+                }
+              },
+              "quarantined": {
+                "description": "With material_quarantined, the stored screening results that hold the request; each resultId is what a release names.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QuarantinedMaterialInput"
                 }
               }
             },
@@ -785,6 +1037,10 @@
               "issues"
             ],
             "additionalProperties": false
+          },
+          "screening": {
+            "description": "Injection screening of the brief's sources; present when it is created.",
+            "$ref": "#/components/schemas/OpportunityScreeningInput"
           }
         },
         "required": [
@@ -1365,6 +1621,28 @@
           "history"
         ]
       },
+      "WorkspaceListInput": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ]
+      },
       "RunExportInput": {
         "type": "object",
         "properties": {
@@ -1411,28 +1689,6 @@
           "sizeBytes"
         ],
         "description": "Where the document is stored is never shown."
-      },
-      "WorkspaceListInput": {
-        "type": "object",
-        "properties": {
-          "workspaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id"
-              ]
-            }
-          }
-        },
-        "required": [
-          "workspaces"
-        ]
       },
       "KnowledgeBaseInput": {
         "type": "object",
@@ -1505,6 +1761,10 @@
           "createdAt": {
             "type": "string",
             "description": "When this version of the source was added."
+          },
+          "screening": {
+            "description": "Injection screening of the uploaded file; present on upload when it is on.",
+            "$ref": "#/components/schemas/ScreeningOutcomeInput"
           }
         },
         "required": [
@@ -2457,6 +2717,257 @@
           "exports"
         ]
       },
+      "ScreeningOutcome": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "string",
+            "description": "The stored result; the id a release names."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ],
+            "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exfiltration-link",
+                "hidden-text",
+                "instruction-override",
+                "role-change",
+                "screener-unavailable"
+              ]
+            },
+            "description": "The closed codes the screeners reported."
+          }
+        },
+        "required": [
+          "resultId",
+          "verdict",
+          "signals"
+        ],
+        "additionalProperties": false
+      },
+      "OpportunityScreening": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ],
+            "description": "The worst verdict among the brief's sources."
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "exfiltration-link",
+                "hidden-text",
+                "instruction-override",
+                "role-change",
+                "screener-unavailable"
+              ]
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resultId": {
+                  "type": "string",
+                  "description": "The stored result; the id a release names."
+                },
+                "verdict": {
+                  "type": "string",
+                  "enum": [
+                    "clear",
+                    "flagged",
+                    "unscreened"
+                  ],
+                  "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+                },
+                "signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "exfiltration-link",
+                      "hidden-text",
+                      "instruction-override",
+                      "role-change",
+                      "screener-unavailable"
+                    ]
+                  },
+                  "description": "The closed codes the screeners reported."
+                },
+                "sourceId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "resultId",
+                "verdict",
+                "signals",
+                "sourceId"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "verdict",
+          "signals",
+          "sources"
+        ],
+        "additionalProperties": false
+      },
+      "ScreeningRelease": {
+        "type": "object",
+        "properties": {
+          "resultId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string",
+            "description": "The releasing member, or `owner-token` for the owner token."
+          },
+          "reason": {
+            "type": "string"
+          },
+          "releasedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resultId",
+          "memberId",
+          "reason",
+          "releasedAt"
+        ],
+        "additionalProperties": false
+      },
+      "QuarantinedMaterial": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "briefId",
+              "sourceId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "ApiError": {
         "type": "object",
         "properties": {
@@ -2487,6 +2998,13 @@
                     "message"
                   ],
                   "additionalProperties": false
+                }
+              },
+              "quarantined": {
+                "description": "With material_quarantined, the stored screening results that hold the request; each resultId is what a release names.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QuarantinedMaterial"
                 }
               }
             },
@@ -3223,6 +3741,10 @@
               "issues"
             ],
             "additionalProperties": false
+          },
+          "screening": {
+            "description": "Injection screening of the brief's sources; present when it is created.",
+            "$ref": "#/components/schemas/OpportunityScreening"
           }
         },
         "required": [
@@ -3821,6 +4343,30 @@
         ],
         "additionalProperties": false
       },
+      "WorkspaceList": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ],
+        "additionalProperties": false
+      },
       "RunExport": {
         "type": "object",
         "properties": {
@@ -3868,30 +4414,6 @@
         ],
         "additionalProperties": false,
         "description": "Where the document is stored is never shown."
-      },
-      "WorkspaceList": {
-        "type": "object",
-        "properties": {
-          "workspaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "workspaces"
-        ],
-        "additionalProperties": false
       },
       "KnowledgeBase": {
         "type": "object",
@@ -3965,6 +4487,10 @@
           "createdAt": {
             "type": "string",
             "description": "When this version of the source was added."
+          },
+          "screening": {
+            "description": "Injection screening of the uploaded file; present on upload when it is on.",
+            "$ref": "#/components/schemas/ScreeningOutcome"
           }
         },
         "required": [
@@ -5477,6 +6003,106 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/screening/{resultId}/release": {
+      "post": {
+        "summary": "Release quarantined material so a run may use it",
+        "description": "Lets one screening result's text through despite its verdict, with a reason of 1 to 500 characters that is never candidate material. Owners and admins only, or the owner token. Only a record's own results are released (404 otherwise); a result that a newer one replaced answers 409 result_superseded, and a clear one 409 not_releasable. Releasing a result again returns its release. The release covers that result only: a later flagged or unscreened result quarantines the text again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Why the text is let through: a short note, never candidate material."
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "resultId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreeningRelease"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/knowledge-selection": {
       "put": {
         "summary": "Select the knowledge bases a workspace's runs use",
@@ -5755,6 +6381,7 @@
     "/v1/workspaces/{workspaceId}/opportunities": {
       "post": {
         "summary": "Create a job brief from pasted sources",
+        "description": "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6827,7 +7454,7 @@
     "/v1/workspaces/{workspaceId}/runs": {
       "post": {
         "summary": "Begin a run; a worker executes it",
-        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
+        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release.",
         "requestBody": {
           "required": true,
           "content": {
@@ -8375,7 +9002,7 @@
       },
       "post": {
         "summary": "Upload a candidate source file",
-        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain. The type is checked against the file's signature; the file is stored, never parsed here. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.",
+        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.",
         "requestBody": {
           "required": true,
           "content": {

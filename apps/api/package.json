@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@draft-loop/application": "workspace:*",
+    "@draft-loop/ingestion": "workspace:*",
+    "@draft-loop/model-gateway": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
     "@draft-loop/run-queue": "workspace:*",
     "@draft-loop/schemas": "workspace:*",

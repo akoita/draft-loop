@@ -344,9 +344,11 @@ which the shared driver takes as `providerClientFactories.anthropicRoute`. The
 critic's OpenAI client targets the EU endpoint. Without these settings, as on
 the local stack, the worker knows no key, so only fixture runs work.
 
-`apps/api` never calls a model. Its driver resolves no key and refuses to build
-any provider client (`apiProviderOptions`), whatever its environment holds, so
-only the worker reaches a provider.
+`apps/api` never drafts or reviews with a model. Its driver resolves no key and
+refuses to build any provider client (`apiProviderOptions`), whatever its
+environment holds, so only the worker reaches a provider for a run. The one
+model call the API makes is the opt-in injection screener, described under
+[Intake screening](#intake-screening).
 
 Each hosted deployment sets a ceiling per run: rounds, cost and duration, all
 required. A workspace without a cost or duration limit gets the ceiling's
@@ -399,8 +401,9 @@ and the blob port:
   because knowledge bases belong to the tenant.
 - A source file is a PDF, DOCX, Markdown or plain text file of at most 10 MiB by
   default. Its type is checked by its signature only: the service never parses
-  an upload (ADR 0011, D11), and the run worker extracts the text from the
-  stored bytes.
+  an upload to store it (ADR 0011, D11), and the run worker extracts the text
+  from the stored bytes. The API reads an upload's text once more, only to
+  screen it (see [Intake screening](#intake-screening)).
 - The bytes go to the tenant's blob prefix first, then the source and its
   managed version are recorded, so a recorded version always has its bytes.
   The same bytes in the same knowledge base return the existing source.
@@ -415,7 +418,8 @@ storage location:
   file as the raw request body, with its media type as the `Content-Type`.
   Another type answers 415, a file over the limit 413
   (`DRAFT_LOOP_MAX_SOURCE_BYTES`), and the same bytes again 200 with the
-  existing source, so a retry is safe. Every other route keeps parsing JSON.
+  existing source, so a retry is safe. The answer carries the upload's
+  `screening`. Every other route keeps parsing JSON.
 - `GET /v1/knowledge-bases/:id/sensitivity-rules` lists a base's sensitivity
   rules, `POST` adds one and `DELETE .../:ruleId` removes one. A rule marks the
   Markdown sections under a heading as `sensitive` or `never-share`; each
@@ -569,6 +573,51 @@ directory (ADR 0011, D6):
   appends a content-free `content-screening.released` audit event with the
   result and member ids. Record and organisation erasure remove both tables, and
   the record archive includes them.
+
+### Intake screening
+
+The API screens untrusted text for prompt injection before any model reads it
+(ADR 0011, phase 2d), in `content-screening-*.ts`. `DRAFT_LOOP_SCREENING`
+chooses how, the same in both auth modes: `off`, `rules` (the default) or
+`rules+model`. Anything else stops the API at startup.
+
+- **What is screened.** Each source of `POST /v1/workspaces/:id/opportunities`
+  and each file of the knowledge source upload, after it is saved, so the
+  subject ids exist. The rule screener (`packages/ingestion`) always runs;
+  `rules+model` adds Claude Haiku 5.5 on the EU Vertex route
+  (`packages/model-gateway`), and `screenWith` merges the verdicts. An
+  upload's text comes from the same extraction the run uses; a file with no
+  readable text is left unscreened.
+- **What the answer shows.** A `screening` object with the verdict, the closed
+  signal codes and the stored result id, never a quote of the text. With
+  screening `off` nothing is screened or stored and the object is absent.
+- **Fail closed.** A screener that fails makes the result `unscreened`, which
+  is quarantined like `flagged`. The request itself still succeeds, and the
+  same bytes uploaded again are screened again while the result is unscreened
+  and unreleased.
+- **Consent.** A job post is third-party text, so `rules+model` always sends it
+  to the model. A candidate source (an upload, or a brief's candidate-input
+  source) reaches the model only when `DRAFT_LOOP_ALLOW_PROVIDER_DATA` is on
+  and the record's current `provider-transmission` consent names Anthropic;
+  otherwise only the rules run, and the result's `screeners` shows that. A base
+  that no record owns, as in owner-token mode, has no consent to read, so its
+  uploads get the rules only. The data policy is built from that consent, as a
+  run's is.
+- **Usage.** Each answered model call writes one content-free log line with the
+  tenant, model, token counts and estimated cost. There is no usage table yet;
+  per-tenant metering comes with entitlements.
+- **The run gate.** `POST /v1/workspaces/:id/runs` answers 409
+  `material_quarantined` when the brief's job sources, or the latest version of
+  any source in a selected knowledge base, are quarantined, and lists them with
+  their result ids in `error.quarantined`. The gate reads stored results, so it
+  holds in every mode, including `off`.
+- **Release.** `POST /v1/workspaces/:id/screening/:resultId/release` with a
+  `{ "reason" }` of 1 to 500 characters lets one result through. Owners and
+  admins, and the owner token, may release; members get 403. A result must
+  belong to the record (its job source, or a base the record owns in sign-in
+  mode), else 404. A result that a newer one replaced answers 409
+  `result_superseded`, and a clear one 409 `not_releasable`. A later flagged or
+  unscreened result quarantines the text again.
 
 ## Data and quality contracts
 

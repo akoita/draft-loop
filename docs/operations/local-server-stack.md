@@ -171,7 +171,8 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`           | API            | Largest candidate source upload, default 10485760 (10 MiB), at most 30 MiB |
 | `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |
-| `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
+| `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | API, worker    | `true` lets runs, and the API's model screener for candidate sources, send approved material to providers; default `false` |
+| `DRAFT_LOOP_SCREENING`                  | API            | Injection screening at intake: `off`, `rules` (the default) or `rules+model`; another value is a startup error. `rules+model` needs the Vertex settings under [Model routes](#model-routes) |
 | `DRAFT_LOOP_REQUIRE_CONSENT`            | worker         | In `owner` mode, `true` checks each job's candidate record's provider transmission consent before any provider call and pauses the run without it; default `false`. Under `DRAFT_LOOP_AUTH_MODE=oidc` the check is always on and `false` is a startup error. The stack's one worker also serves the owner-mode API, so it runs in `owner` mode with the check off |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
 | `DRAFT_LOOP_WORKER_MODE`                | worker         | `serve` (the default) keeps claiming jobs; `drain` exits once the queue stays empty, for a Cloud Run job |
@@ -231,6 +232,10 @@ from the deployment's configuration, never from this repository.
   every start.
 - Keys are read from Secret Manager at call time and kept in memory for five
   minutes.
+- The API reads `DRAFT_LOOP_VERTEX_PROJECT_ID`, `DRAFT_LOOP_VERTEX_LOCATION` and
+  `DRAFT_LOOP_VERTEX_PRICE_FACTOR` only with `DRAFT_LOOP_SCREENING=rules+model`,
+  for the injection screener's Claude Haiku calls. It uses its own service
+  identity and has no direct Claude API fallback.
 
 To check both routes by hand with synthetic data, set the same variables, sign
 in with an identity that may call Vertex AI and read the secrets, and run:
