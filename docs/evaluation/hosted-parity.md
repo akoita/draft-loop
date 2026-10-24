@@ -1,6 +1,6 @@
 # Hosted parity
 
-**Status:** First result 2026-10-23: quality matches, cost fails ([#1574](https://github.com/akoita/draft-loop/issues/1574))<br>
+**Status:** Second result 2026-10-24: quality matches with the prompt cache working, cost still fails ([#1357](https://github.com/akoita/draft-loop/issues/1357))<br>
 **Issue:** [#1554](https://github.com/akoita/draft-loop/issues/1554), part of
 [#1358](https://github.com/akoita/draft-loop/issues/1358); the run itself is
 [#1555](https://github.com/akoita/draft-loop/issues/1555)
@@ -79,10 +79,13 @@ reference in manual parity.
 | ---------- | --- | ------------------------- | ------- | ------------ | ----- | ---------------------------------- | --------------- |
 | 2026-10-23 | E   | Local, round 3 (approved) | 18 / 22 | 14 / 17      | 0     | Ten sections; 1,741 words          | Partly unpriced |
 | 2026-10-23 | E   | Hosted, round 1           | 18 / 22 | 13 / 17      | 0     | The same ten sections; 1,573 words | US$3.52         |
+| 2026-10-24 | E   | Hosted, round 2           | 18 / 22 | 14 / 17      | 0     | The same ten sections; 1,726 words | US$3.64         |
 
 Both runs used the standard pair (`standard-anthropic-author@1`,
 `standard-openai-critic@2`) in full-source mode. The scorer was Claude Opus
 5.5 with the same method and frozen lists for both drafts.
+
+### First result, 2026-10-23
 
 **Verdict: quality matches, cost fails.** Recall, coverage, leaks and format
 pass. One hosted round cost US$3.52 against the US$3 limit: Claude took $2.75
@@ -109,3 +112,36 @@ Deviations from the setup:
   the same way on both sides. No never-share rules exist for reference E, so
   the leak check rests on the scorer's reading and the flow test.
 - **Format.** The drafts were compared; only the local draft was exported.
+
+### Second result, 2026-10-24
+
+The hosted run used `server-v0.2.4` (`26eb67e`). That commit adds prompt caching
+across all author calls of a run (#1578, #1579) and prices Claude's whole
+1M-token window. The local side is the same local round 3 as above.
+
+**Verdict: quality matches, cost fails.**
+
+- **Quality.** Recall, coverage, leaks and format all equal the local draft.
+- **Cost.** Two hosted rounds cost US$3.64, with no unpriced call:
+  - Claude: $2.83 over 4 calls (800K input tokens). The same tokens uncached
+    would cost $3.95, so most of Claude's input was read from the cache.
+  - Critic: $0.81 over 2 calls (319K input tokens).
+
+A full 3-round run would likely cost US$4.5 to US$5. How to meet the US$3 limit
+is open in [#1357](https://github.com/akoita/draft-loop/issues/1357). Two
+related gaps:
+
+- The critic writes its prompt cache on every call but never reads it
+  ([#1580](https://github.com/akoita/draft-loop/issues/1580)).
+- The usage API still does not report the cache-read share
+  ([#1574](https://github.com/akoita/draft-loop/issues/1574)).
+
+Deviations from the setup:
+
+- **Rounds.** The run stopped in `provider-error` after round 2. OpenAI refused
+  the round-2 critique for exceeding the account's per-minute token limit.
+  Resuming after a rate limit is
+  [#1581](https://github.com/akoita/draft-loop/issues/1581). Hosted round 2
+  already equals local round 3 on every quality measure.
+- **Commits and routes.** As in the first result: local ran at `b07b052`, and
+  hosted calls took the direct Claude API fallback and OpenAI's global endpoint.
