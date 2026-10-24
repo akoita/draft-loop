@@ -304,16 +304,22 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.markdownReport).toContain("single-consented-case (1)");
     expect(report.markdownReport).not.toContain("pilot-case-1");
     expect(report.markdownReport).not.toContain(comparisonGate.declaredAt);
-    expect(report.markdownReport).not.toContain(
+    // The generation time can contain any digits (02:11:49.259Z holds "9.25"), so the private
+    // thresholds and measurements are looked for in the rest of the report.
+    const reportWithoutGenerationTime = report.markdownReport.replace(
+      /^- \*\*Generated At:\*\* .*$/mu,
+      "",
+    );
+    expect(reportWithoutGenerationTime).not.toContain(
       String(comparisonGate.thresholds.minimumRelevantAchievementRecall),
     );
-    expect(report.markdownReport).not.toContain(
+    expect(reportWithoutGenerationTime).not.toContain(
       String(comparisonGate.thresholds.minimumCriticalRequirementCoverage),
     );
-    expect(report.markdownReport).not.toContain(
+    expect(reportWithoutGenerationTime).not.toContain(
       String(comparisonGate.thresholds.maximumRevisedReviewMinutes),
     );
-    expect(report.markdownReport).not.toContain(
+    expect(reportWithoutGenerationTime).not.toContain(
       String(comparisonMeasurements.relevantAchievementRecall),
     );
     expect(report.markdownReport).not.toContain("minimumRelevantAchievementRecall");
