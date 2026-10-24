@@ -11,6 +11,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { PlanLimits } from "./plan-limits.js";
 import { workspaceView, workspaceViewSchema } from "./views.js";
 
 export interface WorkspaceRoutesOptions {
@@ -19,6 +20,8 @@ export interface WorkspaceRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   /** The deployment's limit per run; a new workspace's budget must fit inside it. */
   readonly budgetCeiling: RunBudgetCeiling;
+  /** Holds new candidate records to the plan; absent in owner-token mode, where nothing is limited. */
+  readonly planLimits?: PlanLimits;
   /** The tenant's knowledge; without it workspaces cannot select any. */
   readonly knowledge?: {
     readonly intake: HostedKnowledgeIntake;
@@ -127,12 +130,13 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Create a workspace",
         description:
-          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409.",
+          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         params: workspaceParams,
         body: createWorkspaceBody,
         response: {
           201: workspaceViewSchema,
           400: apiErrorSchema,
+          403: apiErrorSchema,
           409: apiErrorSchema,
           422: apiErrorSchema,
         },
@@ -160,6 +164,8 @@ export function registerWorkspaceRoutes(
           .code(409)
           .send(apiError("workspace_exists", "A workspace with this id already exists."));
       }
+      const { caller } = request;
+      if (caller?.kind === "member") await options.planLimits?.requireRecordRoom(caller.tenantId);
       const descriptor = await service.initialize(initializeCommand(root, body), silent);
       return reply.code(201).send(workspaceView(descriptor));
     },

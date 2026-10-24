@@ -547,6 +547,21 @@ directory (ADR 0011, D6):
   invite a person by email.
 - `PATCH` and `DELETE /v1/organisation/members/:memberId` change a role or
   remove a member.
+- In sign-in mode the plan's `seats` and `candidateRecords` limit growth
+  (`plan-limits.ts`, ADR 0011, D13):
+  - An invitation takes a seat, active and invited members alike, and removing
+    a member frees it. An email already invited answers 409 `member_exists` and
+    takes none. The directory counts under the organisation's row lock in the
+    same transaction as the insert, so racing invitations cannot pass the
+    limit.
+  - Creating a workspace takes a record slot. Records are counted as
+    `GET /v1/workspaces` lists them, so an erased or closing record takes none,
+    and an archived one still does. The count and the save are separate steps,
+    so racing creations can pass the limit by a record; these are
+    operator-scale actions, and the next creation is refused.
+  - Past a limit the answer is 409 `plan_limit_reached` with `limit` (`seats`
+    or `candidateRecords`) and `value`; an organisation with no plan gets 403
+    `plan_required`. Owner-token mode checks nothing.
 - Owners and admins may manage members; members get 403. Only an owner grants, takes away or
   removes the owner role, and the last owner answers 409 `last_owner`. The directory checks the
   acting role against the target's role inside the change, under the organisation's row lock, so

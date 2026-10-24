@@ -37,6 +37,7 @@ import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
+import { createPlanLimits } from "./plan-limits.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
@@ -274,6 +275,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     }
     entitlementGate = createEntitlementGate({ service: application.service, entitlementsFor });
   }
+  // Sign-in mode only: owner-token mode has no organisation to hold a plan.
+  const entitlementsFor = options.tenants?.entitlementsFor;
+  const planLimits =
+    auth.mode === "oidc" && entitlementsFor !== undefined
+      ? createPlanLimits({
+          entitlementsFor,
+          ...(recordAccessFor === undefined ? {} : { recordAccessFor }),
+        })
+      : undefined;
   if (application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
@@ -297,6 +307,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       budgetCeiling: application.budgetCeiling,
+      ...(planLimits === undefined ? {} : { planLimits }),
       ...(knowledgeIntake === undefined || knowledgeStore === undefined
         ? {}
         : { knowledge: { intake: knowledgeIntake, store: knowledgeStore } }),
@@ -357,7 +368,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     }
   }
   if (options.directory !== undefined) {
-    registerOrganisationRoutes(app, { directory: options.directory });
+    registerOrganisationRoutes(app, {
+      directory: options.directory,
+      ...(planLimits === undefined ? {} : { planLimits }),
+    });
   }
   if (erasureFor !== undefined) registerOrganisationErasureRoutes(app, { erasureFor });
   if (options.tenants?.operatorFor !== undefined) {

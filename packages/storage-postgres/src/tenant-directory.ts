@@ -144,6 +144,7 @@ export async function createPostgresTenantDirectory(
     executor: SqlExecutor,
     email: string,
     role: MemberRole,
+    maxMembers?: number,
   ): Promise<MemberRecord> => {
     const existing = await executor.query("SELECT 1 FROM organisation_members WHERE email = $1", [
       email,
@@ -153,6 +154,17 @@ export async function createPostgresTenantDirectory(
         "member_exists",
         "That email is already invited to, or a member of, the organisation.",
       );
+    }
+    if (maxMembers !== undefined) {
+      const [counted] = await executor.query(
+        "SELECT count(*) AS members FROM organisation_members",
+      );
+      if (Number(counted?.members ?? 0) >= maxMembers) {
+        throw new TenantDirectoryError(
+          "member_limit_reached",
+          "The organisation already has as many members as its plan allows.",
+        );
+      }
     }
     const [row] = await executor.query(
       `INSERT INTO organisation_members (id, email, role, status)
@@ -228,7 +240,7 @@ export async function createPostgresTenantDirectory(
       const role = requireMemberRole(input.role);
       try {
         return await withOrganisation(client, input.organisationId, (executor) =>
-          insertMember(executor, email, role),
+          insertMember(executor, email, role, input.maxMembers),
         );
       } catch (error) {
         if (!isUniqueViolation(error)) throw error;

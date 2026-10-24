@@ -70,6 +70,14 @@ describe.runIf(apiUrl !== undefined && issuerUrl !== undefined)(
         });
         // A stack that kept its data already has them.
         expect([201, 409]).toContain(created.status);
+        // Creating records and starting runs needs a plan; the internal plan is unlimited.
+        const planned = await call(
+          operatorToken,
+          "PUT",
+          `/v1/operator/organisations/${organisationId}/plan`,
+          { planId: "internal" },
+        );
+        expect(planned.status).toBe(200);
       }
       const ada = await signIn("ada", "local-stack-password-a");
       const refused = await call(ada, "POST", "/v1/operator/organisations", {

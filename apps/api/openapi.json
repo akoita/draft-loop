@@ -547,7 +547,24 @@
                 ]
               },
               "limit": {
-                "description": "With run_cap_reached, the plan's cap.",
+                "description": "With run_cap_reached, the plan's cap as a number. With plan_limit_reached, which limit is reached: seats or candidateRecords.",
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "seats",
+                      "candidateRecords"
+                    ]
+                  }
+                ]
+              },
+              "value": {
+                "description": "With plan_limit_reached, the plan's limit for the item named by limit.",
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
@@ -4070,7 +4087,24 @@
                 ]
               },
               "limit": {
-                "description": "With run_cap_reached, the plan's cap.",
+                "description": "With run_cap_reached, the plan's cap as a number. With plan_limit_reached, which limit is reached: seats or candidateRecords.",
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "seats",
+                      "candidateRecords"
+                    ]
+                  }
+                ]
+              },
+              "value": {
+                "description": "With plan_limit_reached, the plan's limit for the item named by limit.",
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
@@ -7404,7 +7438,7 @@
       },
       "put": {
         "summary": "Create a workspace",
-        "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409.",
+        "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7538,6 +7572,16 @@
             }
           },
           "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -11333,7 +11377,7 @@
       },
       "post": {
         "summary": "Invite a person to the caller's organisation by email",
-        "description": "They become active on their first sign-in with that verified email.",
+        "description": "They become active on their first sign-in with that verified email. Active members and pending invitations both take a seat: 409 plan_limit_reached (limit seats) when the plan has none left, 403 plan_required when the organisation has no plan. Inviting an email already invited or active answers 409 member_exists and takes no seat.",
         "requestBody": {
           "required": true,
           "content": {

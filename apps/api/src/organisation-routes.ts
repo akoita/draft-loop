@@ -9,10 +9,13 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { inviteWithinSeats, type PlanLimits } from "./plan-limits.js";
 
 export interface OrganisationRoutesOptions {
   /** The organisations and their members (ADR 0011, D6). */
   readonly directory: TenantDirectory;
+  /** Holds invitations to the plan's seats; absent in owner-token mode, where nothing is limited. */
+  readonly planLimits?: PlanLimits;
 }
 
 const identifierSchema = z
@@ -197,7 +200,8 @@ export function registerOrganisationRoutes(
     {
       schema: {
         summary: "Invite a person to the caller's organisation by email",
-        description: "They become active on their first sign-in with that verified email.",
+        description:
+          "They become active on their first sign-in with that verified email. Active members and pending invitations both take a seat: 409 plan_limit_reached (limit seats) when the plan has none left, 403 plan_required when the organisation has no plan. Inviting an email already invited or active answers 409 member_exists and takes no seat.",
         body: inviteBody,
         response: { 201: memberSchema, 400: apiErrorSchema, ...forbidden, 409: apiErrorSchema },
       },
@@ -209,7 +213,7 @@ export function registerOrganisationRoutes(
       if (role === "owner" && manager.role !== "owner") {
         return reply.code(403).send(ownersOnly);
       }
-      const member = await directory.inviteMember({
+      const member = await inviteWithinSeats(directory, options.planLimits, {
         organisationId: manager.organisationId,
         email,
         role,

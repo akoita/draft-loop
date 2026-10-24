@@ -42,6 +42,11 @@ export type EntitlementRefusal =
       readonly code: "credits_insufficient";
       readonly estimate: number;
       readonly remaining: number;
+    }
+  | {
+      readonly code: "plan_limit_reached";
+      readonly limit: "seats" | "candidateRecords";
+      readonly value: number;
     };
 
 /** The HTTP status each refusal answers with. */
@@ -51,6 +56,7 @@ export const entitlementRefusalStatus: Readonly<Record<EntitlementRefusal["code"
   model_tier_not_in_plan: 403,
   run_cap_reached: 429,
   credits_insufficient: 402,
+  plan_limit_reached: 409,
 };
 
 /** A run start the organisation's plan or credit balance does not allow. */
@@ -78,6 +84,10 @@ function refusalMessage(refusal: EntitlementRefusal): string {
         : `The organisation has started ${refusal.limit} runs today, the most its plan allows per day.`;
     case "credits_insufficient":
       return `The run needs up to ${refusal.estimate} credits and the organisation has ${refusal.remaining} left.`;
+    case "plan_limit_reached":
+      return refusal.limit === "seats"
+        ? `The organisation already has ${refusal.value} members, the most its plan allows.`
+        : `The organisation already has ${refusal.value} candidate records, the most its plan allows.`;
   }
 }
 

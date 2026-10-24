@@ -65,10 +65,16 @@ export interface TenantDirectory {
     firstOwnerEmail: string;
   }): Promise<CreatedOrganisation>;
   listMembers(organisationId: string): Promise<readonly MemberRecord[]>;
+  /**
+   * Invites an email. With `maxMembers`, the invitation is refused with `member_limit_reached`
+   * when the organisation already has that many members, active or invited. The count is taken
+   * under the same lock as the insert, so racing invitations cannot pass the limit together.
+   */
   inviteMember(input: {
     organisationId: string;
     email: string;
     role: MemberRole;
+    maxMembers?: number;
   }): Promise<MemberRecord>;
   /**
    * Gives a member a role. `actorRole` is the role of the member acting; the directory checks it
@@ -97,6 +103,8 @@ export type TenantDirectoryErrorCode =
   | "organisation_not_found"
   /** The email is already invited to, or a member of, the organisation. */
   | "member_exists"
+  /** Adding one more member would pass the limit the caller named (`maxMembers`). */
+  | "member_limit_reached"
   /** The organisation has no member with that id. */
   | "member_not_found"
   /** The change would leave the organisation without an owner. */

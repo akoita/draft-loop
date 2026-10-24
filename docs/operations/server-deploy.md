@@ -110,7 +110,8 @@ and grants credits with the owner token, the only credential the
 - **Effect:** a member's run start reads the plan and reserves its credits
   (see the [architecture overview](../architecture/overview.md)). An
   organisation with no plan is refused with 403 `plan_required` until the
-  operator assigns one.
+  operator assigns one. Inviting past the plan's seats or creating a record
+  past its record limit answers 409 `plan_limit_reached`.
 - **Trail:** each write logs one `audit` line with ids, the plan id, numbers
   and the reason code, and no free text.
 
