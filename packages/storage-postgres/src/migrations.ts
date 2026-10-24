@@ -4,6 +4,7 @@ import { contentScreeningMigration } from "./content-screening-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
 import { organisationClosingMigration } from "./organisation-closing-migration.js";
 import { organisationErasureMigration } from "./organisation-erasure-migration.js";
+import { organisationPlansMigration } from "./organisation-plans-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import type { SqlClient } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
@@ -777,6 +778,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   organisationErasureMigration,
   organisationClosingMigration,
   contentScreeningMigration,
+  organisationPlansMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

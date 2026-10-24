@@ -35,6 +35,14 @@ export type {
 export { migratePostgres, type PostgresMigration, postgresMigrations } from "./migrations.js";
 export { createOrganisationErasure } from "./organisation-erasure.js";
 export {
+  createOrganisationPlans,
+  type OrganisationPlans,
+  type PlanAssignment,
+  PlanAssignmentError,
+  type PlanAssignmentErrorCode,
+  type PlanAssignmentInput,
+} from "./organisation-plans.js";
+export {
   openPostgresCandidateKnowledgeStore,
   type PostgresCandidateKnowledgeStoreOptions,
 } from "./postgres-knowledge-store.js";
