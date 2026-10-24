@@ -1,11 +1,9 @@
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
-import { createApplicationService, createHostedApplicationDriver } from "@draft-loop/application";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
-  hostedApplicationPorts,
   hostedWorkspaceReference,
-  openPostgresStorage,
+  openPostgresTenancy,
   startConfiguredCloudSqlProxy,
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
@@ -13,11 +11,12 @@ import { Storage } from "@google-cloud/storage";
 import { readWorkerConfig } from "./config.js";
 import { errorFields, logLine, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
+import { tenantServices } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
-// The worker's entry point: one tenant's storage, bucket and queue, composed at startup.
+// The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
+// Each job names its tenant, and the application is composed over that tenant's view of them.
 const config = readWorkerConfig(process.env);
-const { tenantId } = config;
 if (config.modelGateway !== undefined) {
   // Routes that process material outside the EU are deployment choices, so each start names them.
   console.info(
@@ -30,28 +29,22 @@ if (config.modelGateway !== undefined) {
 // On Cloud Run, the database URL names the connector's socket and the worker signs in as its
 // service identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
-const storage = await openPostgresStorage({
+const tenancy = await openPostgresTenancy({
   connectionString: config.databaseUrl,
   schema: config.databaseSchema,
-  tenantId,
 });
 const bucket = new Storage(
   config.gcsEndpoint === undefined
     ? {}
     : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
 ).bucket(config.blobBucket);
-const service = createApplicationService(
-  createHostedApplicationDriver({
-    ...hostedApplicationPorts({
-      storage,
-      tenantId,
-      blobs: createGcsBlobStorage({ bucket, tenantId }),
-    }),
-    // Claude on Vertex AI and OpenAI's EU endpoint unless the deployment chose otherwise, keys
-    // from Secret Manager; none on the stack.
-    local: workerProviderOptions(config.modelGateway),
-  }),
-);
+const serviceFor = tenantServices({
+  tenancy,
+  blobsFor: (tenantId) => createGcsBlobStorage({ bucket, tenantId }),
+  // Claude on Vertex AI and OpenAI's EU endpoint unless the deployment chose otherwise, keys
+  // from Secret Manager; none on the stack.
+  local: workerProviderOptions(config.modelGateway),
+});
 
 const worker = await startWorker({
   queue: {
@@ -61,13 +54,8 @@ const worker = await startWorker({
       console.error(logLine("ERROR", "run queue error", { err: errorFields(error) })),
   },
   runs: {
-    service,
-    workspaceRoot: (job) => {
-      if (job.tenantId !== tenantId) {
-        throw new Error("This worker serves one tenant; the job names another.");
-      }
-      return hostedWorkspaceReference(job.tenantId, job.workspaceId);
-    },
+    serviceFor: (job) => serviceFor(job.tenantId),
+    workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
     allowProviderData: config.allowProviderData,
     budgetCeiling: config.budgetCeiling,
     onOutcome: (job, outcome, run) =>
@@ -83,7 +71,7 @@ const onStopped = (error?: unknown) => {
   if (error !== undefined) {
     console.error(logLine("ERROR", "worker stopped with an error", { err: errorFields(error) }));
   }
-  void storage
+  void tenancy
     .close()
     .finally(() => cloudSql.close())
     .finally(() => process.exit(error === undefined ? 0 : 1));

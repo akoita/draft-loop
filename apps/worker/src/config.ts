@@ -11,8 +11,6 @@ export interface WorkerConfig {
   readonly databaseUrl: string;
   readonly databaseSchema: string;
   readonly queueSchema: string;
-  /** Phase 1 serves one tenant per deployment (ADR 0011); a job for another tenant fails. */
-  readonly tenantId: string;
   readonly blobBucket: string;
   /** A Cloud Storage emulator, for the local stack only; unset in a deployment. */
   readonly gcsEndpoint?: string;
@@ -42,7 +40,6 @@ export interface MigrationConfig {
   readonly runtimeMembers: readonly string[];
 }
 
-const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const schemaPattern = /^[a-z_][a-z0-9_]{0,62}$/u;
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -64,13 +61,11 @@ function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
 
 /**
  * Reads the worker's settings. Connection strings come from the deployment's secrets and bucket
- * names from its infrastructure, never from this repository.
+ * names from its infrastructure, never from this repository. The worker serves every tenant, each
+ * job naming its own, so it reads no tenant: `DRAFT_LOOP_TENANT_ID`, which the API still takes, is
+ * ignored here.
  */
 export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
-  const tenantId = required(env, "DRAFT_LOOP_TENANT_ID");
-  if (!identifierPattern.test(tenantId)) {
-    throw new WorkerConfigError("DRAFT_LOOP_TENANT_ID must be a safe identifier.");
-  }
   const allow = env.DRAFT_LOOP_ALLOW_PROVIDER_DATA ?? "false";
   if (allow !== "true" && allow !== "false") {
     throw new WorkerConfigError("DRAFT_LOOP_ALLOW_PROVIDER_DATA must be true or false.");
@@ -82,7 +77,6 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
-    tenantId,
     blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
     ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
     allowProviderData: allow === "true",

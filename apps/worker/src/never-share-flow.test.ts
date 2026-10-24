@@ -117,13 +117,14 @@ describe.runIf(connectionString !== undefined)("never-share material on Postgres
     const ports = hostedApplicationPorts({ storage, tenantId, blobs });
     const outcomes: RunJobOutcome[] = [];
     const worker = createRunJobHandler({
-      service: createApplicationService(
-        createHostedApplicationDriver({
-          ...ports,
-          settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
-          local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
-        }),
-      ),
+      serviceFor: () =>
+        createApplicationService(
+          createHostedApplicationDriver({
+            ...ports,
+            settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+            local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
+          }),
+        ),
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: true,
       budgetCeiling,

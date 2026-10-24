@@ -4,7 +4,6 @@ import { readMigrationConfig, readWorkerConfig, WorkerConfigError } from "./conf
 
 const env = {
   DRAFT_LOOP_DATABASE_URL: "postgres://runtime@db.example.test/draft_loop",
-  DRAFT_LOOP_TENANT_ID: "owner",
   DRAFT_LOOP_BLOB_BUCKET: "draft-loop-local",
   DRAFT_LOOP_RUN_MAX_ROUNDS: "5",
   DRAFT_LOOP_RUN_MAX_COST_USD: "3",
@@ -12,12 +11,11 @@ const env = {
 };
 
 describe("readWorkerConfig", () => {
-  it("reads the database, tenant, bucket and run ceiling, with provider data off by default", () => {
+  it("reads the database, bucket and run ceiling, with provider data off by default", () => {
     expect(readWorkerConfig(env)).toEqual({
       databaseUrl: env.DRAFT_LOOP_DATABASE_URL,
       databaseSchema: "draft_loop",
       queueSchema: "draft_loop_queue",
-      tenantId: "owner",
       blobBucket: "draft-loop-local",
       allowProviderData: false,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
@@ -28,9 +26,17 @@ describe("readWorkerConfig", () => {
     ).toBe(true);
   });
 
+  it("serves every tenant, so a tenant id in the shared environment changes nothing", () => {
+    expect(readWorkerConfig({ ...env, DRAFT_LOOP_TENANT_ID: "owner" })).toEqual(
+      readWorkerConfig(env),
+    );
+    expect(readWorkerConfig({ ...env, DRAFT_LOOP_TENANT_ID: "a/b" })).not.toHaveProperty(
+      "tenantId",
+    );
+  });
+
   it.each([
     ["without a database", { DRAFT_LOOP_DATABASE_URL: "" }],
-    ["with an unsafe tenant", { DRAFT_LOOP_TENANT_ID: "a/b" }],
     ["with an unclear provider-data setting", { DRAFT_LOOP_ALLOW_PROVIDER_DATA: "yes" }],
     ["with an unknown mode", { DRAFT_LOOP_WORKER_MODE: "batch" }],
     [

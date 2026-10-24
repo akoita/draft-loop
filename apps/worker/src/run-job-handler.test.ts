@@ -45,7 +45,7 @@ async function handle(status: RunSnapshot | undefined, resumed?: RunSnapshot) {
   const requeue = vi.fn(async (_startAfter: Date) => undefined);
   const outcomes: RunJobOutcome[] = [];
   const handler = createRunJobHandler({
-    service,
+    serviceFor: () => service,
     workspaceRoot: (queued) => `/tenants/${queued.tenantId}/workspaces/${queued.workspaceId}`,
     allowProviderData: true,
     budgetCeiling,
@@ -223,7 +223,7 @@ describe("run job handler", () => {
       },
     };
     const handler = createRunJobHandler({
-      service,
+      serviceFor: () => service,
       workspaceRoot: () => root,
       allowProviderData: true,
       budgetCeiling,

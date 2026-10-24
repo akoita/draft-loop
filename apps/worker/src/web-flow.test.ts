@@ -102,12 +102,13 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
     });
     const ports = hostedApplicationPorts({ storage, tenantId, blobs });
     const worker = createRunJobHandler({
-      service: createApplicationService(
-        createHostedApplicationDriver({
-          ...ports,
-          settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
-        }),
-      ),
+      serviceFor: () =>
+        createApplicationService(
+          createHostedApplicationDriver({
+            ...ports,
+            settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+          }),
+        ),
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: false,
       budgetCeiling,

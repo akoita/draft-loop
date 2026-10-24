@@ -183,7 +183,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     const begun = await beginRun(service, workspace);
     const outcomes: RunJobOutcome[] = [];
     const handle = createRunJobHandler({
-      service,
+      serviceFor: () => service,
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: false,
       budgetCeiling,
@@ -239,7 +239,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     const begun = await beginRun(service, root);
     const outcomes: RunJobOutcome[] = [];
     const handle = createRunJobHandler({
-      service,
+      serviceFor: () => service,
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: true,
       budgetCeiling,
@@ -383,12 +383,13 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       blobs: tenantBlobs,
     });
     const worker = createRunJobHandler({
-      service: createApplicationService(
-        createHostedApplicationDriver({
-          ...ports,
-          settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
-        }),
-      ),
+      serviceFor: () =>
+        createApplicationService(
+          createHostedApplicationDriver({
+            ...ports,
+            settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+          }),
+        ),
       workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
       allowProviderData: false,
       budgetCeiling,

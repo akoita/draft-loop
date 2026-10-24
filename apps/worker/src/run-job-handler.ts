@@ -21,8 +21,12 @@ export type RunJobOutcome =
   /** The run advanced as far as it could without the person. */
   | "advanced";
 
+/** The application calls a job needs. */
+export type RunJobService = Pick<ApplicationService, "status" | "resume">;
+
 export interface RunJobHandlerOptions {
-  readonly service: Pick<ApplicationService, "status" | "resume">;
+  /** The application over the job's tenant: each job names its own (ADR 0011, D3). */
+  readonly serviceFor: (job: RunJob) => RunJobService;
   /** The driver's reference for the job's workspace, as the API resolves it. */
   readonly workspaceRoot: (job: RunJob) => string;
   /**
@@ -103,8 +107,9 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     requeue: (startAfter: Date) => Promise<void>,
     seen: (snapshot: RunSnapshot) => void,
   ): Promise<RunJobOutcome> => {
+    const service = options.serviceFor(job);
     const root = options.workspaceRoot(job);
-    const snapshot = await options.service.status({ root, runId: job.runId });
+    const snapshot = await service.status({ root, runId: job.runId });
     if (snapshot === undefined) return "missing";
     seen(snapshot);
     if (snapshot.state === "paused") {
@@ -121,7 +126,7 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     if (runBudgetCeilingViolation(snapshot.budget, options.budgetCeiling) !== undefined) {
       return "over-ceiling";
     }
-    const advanced = await options.service.resume({
+    const advanced = await service.resume({
       root,
       runId: job.runId,
       allowProviderData: options.allowProviderData,
