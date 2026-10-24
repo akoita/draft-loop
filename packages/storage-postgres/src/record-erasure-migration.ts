@@ -12,6 +12,9 @@ import type { PostgresMigration } from "./migrations.js";
  * - The immutability trigger now lets a delete through only while that function runs: as its
  *   owning role, with the transaction-local `draft_loop.erasure` the function sets. Any other
  *   role, or the owner outside the function, is still refused.
+ * - Each erasure function sets that flag in its body and restores it before returning, rather
+ *   than in a `SET` clause: Postgres refuses a function-level `SET` of a custom parameter to a
+ *   migrating role that is not a superuser, as on Cloud SQL.
  * - A record is the workspace's API id; its history rows carry the history id that its
  *   `workspace.json` setting holds, and its consent ledger is keyed by that history id.
  */
@@ -100,9 +103,10 @@ export const recordErasureMigration: PostgresMigration = {
       EXECUTE format($template$
         CREATE FUNCTION %1$I.erase_candidate_record(record_id TEXT) RETURNS jsonb
         LANGUAGE plpgsql SECURITY DEFINER
-        SET search_path = %1$I, pg_temp SET draft_loop.erasure = 'on'
+        SET search_path = %1$I, pg_temp
         AS $function$
         DECLARE
+          prior_erasure TEXT := current_setting('draft_loop.erasure', true);
           tenant TEXT := current_setting('draft_loop.tenant_id', true);
           history_id TEXT;
           bases TEXT[];
@@ -112,6 +116,7 @@ export const recordErasureMigration: PostgresMigration = {
           removed BIGINT := 0;
           affected BIGINT;
         BEGIN
+          PERFORM set_config('draft_loop.erasure', 'on', true);
           IF coalesce(tenant, '') = '' THEN
             RAISE EXCEPTION 'An erasure needs the transaction''s tenant';
           END IF;
@@ -183,6 +188,7 @@ export const recordErasureMigration: PostgresMigration = {
             GET DIAGNOSTICS affected = ROW_COUNT;
             removed := removed + affected;
           END LOOP;
+          PERFORM set_config('draft_loop.erasure', coalesce(prior_erasure, ''), true);
           RETURN jsonb_build_object('rowsRemoved', removed, 'blobLocations', to_jsonb(locations));
         END;
         $function$

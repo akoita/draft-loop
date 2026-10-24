@@ -112,9 +112,10 @@ export const contentScreeningMigration: PostgresMigration = {
       EXECUTE format($template$
         CREATE OR REPLACE FUNCTION %1$I.erase_candidate_record(record_id TEXT) RETURNS jsonb
         LANGUAGE plpgsql SECURITY DEFINER
-        SET search_path = %1$I, pg_temp SET draft_loop.erasure = 'on'
+        SET search_path = %1$I, pg_temp
         AS $function$
         DECLARE
+          prior_erasure TEXT := current_setting('draft_loop.erasure', true);
           tenant TEXT := current_setting('draft_loop.tenant_id', true);
           history_id TEXT;
           bases TEXT[];
@@ -124,6 +125,7 @@ export const contentScreeningMigration: PostgresMigration = {
           removed BIGINT := 0;
           affected BIGINT;
         BEGIN
+          PERFORM set_config('draft_loop.erasure', 'on', true);
           IF coalesce(tenant, '') = '' THEN
             RAISE EXCEPTION 'An erasure needs the transaction''s tenant';
           END IF;
@@ -199,6 +201,7 @@ export const contentScreeningMigration: PostgresMigration = {
             GET DIAGNOSTICS affected = ROW_COUNT;
             removed := removed + affected;
           END LOOP;
+          PERFORM set_config('draft_loop.erasure', coalesce(prior_erasure, ''), true);
           RETURN jsonb_build_object('rowsRemoved', removed, 'blobLocations', to_jsonb(locations));
         END;
         $function$
@@ -207,14 +210,16 @@ export const contentScreeningMigration: PostgresMigration = {
       EXECUTE format($template$
         CREATE OR REPLACE FUNCTION %1$I.erase_tenant_remainder() RETURNS BIGINT
         LANGUAGE plpgsql SECURITY DEFINER
-        SET search_path = %1$I, pg_temp SET draft_loop.erasure = 'on'
+        SET search_path = %1$I, pg_temp
         AS $function$
         DECLARE
+          prior_erasure TEXT := current_setting('draft_loop.erasure', true);
           tenant TEXT := current_setting('draft_loop.tenant_id', true);
           target TEXT;
           removed BIGINT := 0;
           affected BIGINT;
         BEGIN
+          PERFORM set_config('draft_loop.erasure', 'on', true);
           IF coalesce(tenant, '') = '' THEN
             RAISE EXCEPTION 'An erasure needs the transaction''s tenant';
           END IF;
@@ -268,6 +273,7 @@ export const contentScreeningMigration: PostgresMigration = {
           END LOOP;
           DELETE FROM %1$I.organisations WHERE id = tenant;
           GET DIAGNOSTICS affected = ROW_COUNT;
+          PERFORM set_config('draft_loop.erasure', coalesce(prior_erasure, ''), true);
           RETURN removed + affected;
         END;
         $function$
