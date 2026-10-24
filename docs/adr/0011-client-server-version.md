@@ -232,6 +232,21 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   has authorised for that record. The authorisation is recorded in the
   audit trail.
 
+**Built in phase 2a (sprint 1j, 2026-10-24):**
+
+- The API verifies the identity provider's tokens when
+  `DRAFT_LOOP_AUTH_MODE` is `oidc`; staging keeps the owner token until
+  Keycloak is hosted.
+- Organisations and members live in a tenant directory on Postgres. The
+  operator creates an organisation with its first owner, owners and admins
+  invite members by email, and an invitation becomes active on the first
+  sign-in with that verified email.
+- Each request is served from its caller's tenant, and one worker serves
+  every tenant from the job's tenant id.
+- Roles so far are owner, admin and member, scoped to the whole
+  organisation. Candidate records, assignment, the candidate and reviewer
+  roles, and consent come next.
+
 ### D7. Privacy and data protection
 
 - **Controller and processor.** For an individual plan, DraftLoop is the
