@@ -58,7 +58,7 @@ describe("run-progress line", () => {
       <ReviewWorkspace state={stateWith(authorOnSession)} onAction={() => undefined} />,
     );
     expect(html).toContain(
-      "author · anthropic/claude-opus-5-5 · attempt 1 · elapsed 54s · call limit 10 min · no run limit",
+      "author · anthropic/claude-opus-5-5 · attempt 1 · elapsed 54 s · call limit 10 min · no run limit",
     );
     expect(html).not.toContain("no timeout configured");
   });

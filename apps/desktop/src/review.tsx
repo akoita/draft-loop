@@ -37,6 +37,7 @@ import {
   isChosenEarlierRun,
 } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
+import { formatElapsedDuration } from "./elapsed-duration.js";
 import {
   defaultExportTemplate,
   type ExportTemplate,
@@ -2535,9 +2536,9 @@ export function ReviewWorkspace({
         />
         {startPending ? (
           <p className="pending-action-status" role="status" aria-live="polite">
-            Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
-            {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while the
-            review starts.
+            Starting review… Elapsed{" "}
+            {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}. Keep this window
+            open while the review starts.
           </p>
         ) : null}
       </>
@@ -3423,9 +3424,8 @@ export function ReviewWorkspace({
                     {pendingBulkFindingCount === null
                       ? "finding decision"
                       : `${pendingBulkFindingCount} finding decisions`}
-                    … Elapsed {pendingReviewAction.elapsedSeconds} second
-                    {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open
-                    while
+                    … Elapsed {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}.
+                    Keep this window open while
                     {pendingBulkFindingCount === null ? " the decision is" : " the decisions are"}{" "}
                     saved.
                   </p>

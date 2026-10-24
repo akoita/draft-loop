@@ -381,7 +381,7 @@ describe("ReviewFooter", () => {
         disabled: true,
         pathLabel: "Available now",
         again: false,
-        pendingSeconds: 1,
+        pendingSeconds: 276,
         format: "markdown",
         onFormatChange: noop,
         template: "classic",
@@ -391,7 +391,7 @@ describe("ReviewFooter", () => {
       },
     });
     expect(html).toContain("Exporting Markdown…</button>");
-    expect(html).toContain("Exporting Markdown… Elapsed 1 second.");
+    expect(html).toContain("Exporting Markdown… Elapsed 4 min 36 s.");
   });
 
   it("keeps the blocker and Details but hides every action on a read-only run", () => {
