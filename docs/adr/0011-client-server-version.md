@@ -244,8 +244,21 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
 - Each request is served from its caller's tenant, and one worker serves
   every tenant from the job's tenant id.
 - Roles so far are owner, admin and member, scoped to the whole
-  organisation. Candidate records, assignment, the candidate and reviewer
-  roles, and consent come next.
+  organisation.
+
+**Built in phase 2b (sprint 1k, 2026-10-24):**
+
+- A candidate record is a workspace in its organisation. In sign-in mode a
+  member reaches only the records assigned to them, owners and admins reach
+  every record, and a refused record answers 404 like an unknown one.
+- Owners and admins assign members to a record and remove them; creating a
+  record assigns its creator.
+- Each knowledge base belongs to one record in sign-in mode and follows its
+  access. Owner-token mode keeps one workspace and tenant-wide bases.
+- The web screen lists the caller's records, switches between them and
+  manages a record's members.
+- The candidate and reviewer roles, and approval by a member the candidate
+  authorised, come later.
 
 ### D7. Privacy and data protection
 
@@ -261,6 +274,15 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
     can see what is held about them and request deletion.
   - Each step is recorded: storing material, sending bounded excerpts to
     model providers, and every sharing with a reviewer.
+- **Built in phase 2b (sprint 1k, 2026-10-24):** each candidate record has
+  an append-only consent ledger with two kinds, the member's attestation of
+  the basis for storing material and the candidate's consent to send it to
+  the named providers. In sign-in mode the API refuses an upload or a run
+  without the matching current grant, and a worker with
+  `DRAFT_LOOP_REQUIRE_CONSENT=true` pauses a queued run, before any provider
+  call, once consent is withdrawn. The web screen records, shows and
+  withdraws both. The candidate's own confirmation and reviewer sharing come
+  with those roles.
 - **Sensitivity tiers are enforced on the server.** Never-share sections are
   stored for the candidate's own reference but are never sent to a provider
   or a reviewer. Sensitive sections need consent per run, as today.
