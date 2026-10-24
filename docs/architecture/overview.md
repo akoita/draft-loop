@@ -179,6 +179,12 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     `/v1/workspaces/{workspaceId}/members`, which an assigned member may only
     read; each change is a content-free audit log line
     (`registerRecordMemberRoutes`).
+  - In sign-in mode each knowledge base belongs to the candidate record named
+    when it is created, and reaching it follows that record's access. A member
+    whose records do not own a base gets the 404 of an unknown base on its
+    sources, rules and uploads; listing shows only reachable bases; and a
+    workspace selects only its own bases (`registerKnowledgeAccess`, over the
+    tenants' `knowledgeOwnersFor`). Owner-token mode keeps bases tenant-wide.
   - A flow test takes two organisations from creation through sign-in, setup,
     a run on the scripted model gateway, approval and export, and checks that
     neither organisation's material reaches the other's provider requests,
@@ -213,6 +219,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   `@draft-loop/storage/candidate-records` (ADR 0011, D6). A candidate record is
   a workspace in the tenant, named by its API id, which the API checks exists;
   assignments sit under row-level security and go when the member does.
+- Each tenant's `knowledgeBaseOwners` port records the one candidate record
+  that owns each knowledge base, behind `KnowledgeBaseOwners` from
+  `@draft-loop/storage/knowledge-base-owners`. An owner is set once, and goes
+  with its base.
 - `packages/storage-gcs` passes the `blobs` group, which the filesystem
   implementation also runs (ADR 0011, D3):
   - a blob's location is its full object key, and every operation refuses a

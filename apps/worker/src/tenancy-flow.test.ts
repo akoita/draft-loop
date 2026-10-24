@@ -146,6 +146,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       tenants: {
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
+        knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -189,7 +190,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       }),
     });
     const base = await client.call("POST /v1/knowledge-bases", {
-      body: { displayName: "Career material" },
+      body: { displayName: "Career material", workspaceId: ownerWorkspaceId },
     });
     await client.call("POST /v1/knowledge-bases/{knowledgeBaseId}/sources", {
       path: { knowledgeBaseId: base.id },

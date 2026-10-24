@@ -831,10 +831,14 @@ export interface ApiOperations {
     readonly body: {
       readonly displayName: string;
       readonly description?: string;
+      readonly workspaceId?: string;
     };
     readonly response: ApiSchemas["KnowledgeBase"];
   };
   "GET /v1/knowledge-bases": {
+    readonly query?: {
+      readonly workspaceId?: string;
+    };
     readonly response: {
       readonly knowledgeBases: readonly (ApiSchemas["KnowledgeBase"])[];
     };

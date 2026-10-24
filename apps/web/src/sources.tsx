@@ -41,7 +41,11 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
 
   const load = useCallback(async () => {
     try {
-      const listed = activeBases((await client.call("GET /v1/knowledge-bases", {})).knowledgeBases);
+      // In sign-in mode each base belongs to one record, and a workspace selects only its own.
+      const { knowledgeBases } = await client.call("GET /v1/knowledge-bases", {
+        query: { workspaceId: ownerWorkspaceId },
+      });
+      const listed = activeBases(knowledgeBases);
       const entries = await Promise.all(
         listed.map(
           async (base) =>
@@ -78,7 +82,9 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
   const createBase = (displayName: string) =>
     run(async () => {
       try {
-        await client.call("POST /v1/knowledge-bases", { body: { displayName } });
+        await client.call("POST /v1/knowledge-bases", {
+          body: { displayName, workspaceId: ownerWorkspaceId },
+        });
         await load();
         return undefined;
       } catch (error) {

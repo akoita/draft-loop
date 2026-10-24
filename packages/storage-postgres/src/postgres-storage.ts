@@ -5,6 +5,7 @@ import { createCandidateRecordAccess } from "./candidate-records.js";
 import { createConsentLedger } from "./consent-ledger.js";
 import { consentLedgerGrant } from "./consent-ledger-migration.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
+import { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
@@ -108,6 +109,7 @@ function tenantStorage(client: SqlSession) {
     applications: createApplications(client),
     candidateRecords: createCandidateRecordAccess(client),
     idempotencyKeys: createIdempotencyKeys(client),
+    knowledgeBaseOwners: createKnowledgeBaseOwners(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>

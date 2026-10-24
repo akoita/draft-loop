@@ -8,6 +8,7 @@ import {
   CandidateRecordAccessError,
   type CandidateRecordAssignment,
 } from "@draft-loop/storage/candidate-records";
+import type { KnowledgeBaseOwners } from "@draft-loop/storage/knowledge-base-owners";
 import type {
   MemberRecord,
   MemberRole,
@@ -146,6 +147,8 @@ async function api(mode: "owner" | "oidc" = "oidc"): Promise<FastifyInstance> {
       ...(mode === "owner" ? { ownerTenantId: tenantId } : {}),
       applicationFor: fakeApplication,
       recordAccessFor: () => access,
+      // Knowledge-base routes are registered but never called here.
+      knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
     },
   });
   return app;

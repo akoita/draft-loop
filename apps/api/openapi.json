@@ -1412,6 +1412,28 @@
         ],
         "description": "Where the document is stored is never shown."
       },
+      "WorkspaceListInput": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ]
+      },
       "KnowledgeBaseInput": {
         "type": "object",
         "properties": {
@@ -1633,28 +1655,6 @@
         "required": [
           "organisation",
           "firstOwner"
-        ]
-      },
-      "WorkspaceListInput": {
-        "type": "object",
-        "properties": {
-          "workspaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id"
-              ]
-            }
-          }
-        },
-        "required": [
-          "workspaces"
         ]
       },
       "RecordMemberInput": {
@@ -3869,6 +3869,30 @@
         "additionalProperties": false,
         "description": "Where the document is stored is never shown."
       },
+      "WorkspaceList": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ],
+        "additionalProperties": false
+      },
       "KnowledgeBase": {
         "type": "object",
         "properties": {
@@ -4097,30 +4121,6 @@
         "required": [
           "organisation",
           "firstOwner"
-        ],
-        "additionalProperties": false
-      },
-      "WorkspaceList": {
-        "type": "object",
-        "properties": {
-          "workspaces": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "workspaces"
         ],
         "additionalProperties": false
       },
@@ -8134,6 +8134,11 @@
                   "description": {
                     "type": "string",
                     "maxLength": 2000
+                  },
+                  "workspaceId": {
+                    "description": "The candidate record the base belongs to: required in sign-in mode, where only callers who reach the record reach the base. Owner-token mode keeps every base tenant-wide and ignores it.",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
                   }
                 },
                 "required": [
@@ -8164,11 +8169,34 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
       "get": {
-        "summary": "List the tenant's knowledge bases",
+        "summary": "List the knowledge bases the caller can reach",
+        "description": "Owner-token mode lists every base of the tenant. In sign-in mode, owners and admins see every base, and a member sees the bases their assigned candidate records own.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "query",
+            "name": "workspaceId",
+            "required": false,
+            "description": "In sign-in mode, only the bases this candidate record owns. Owner-token mode ignores it."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -8188,6 +8216,16 @@
                     "knowledgeBases"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

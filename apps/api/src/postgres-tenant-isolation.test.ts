@@ -125,6 +125,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
       tenants: {
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
+        knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -181,7 +182,10 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     expect((await asB("GET", "/v1/workspaces/a-only/consents")).status).toBe(404);
 
     // Knowledge bases, their sources and their rules.
-    const base = await asA("POST", "/v1/knowledge-bases", { displayName: "Career" });
+    const base = await asA("POST", "/v1/knowledge-bases", {
+      displayName: "Career",
+      workspaceId: "shared",
+    });
     expect(base.status).toBe(201);
     const upload = await app.inject({
       method: "POST",

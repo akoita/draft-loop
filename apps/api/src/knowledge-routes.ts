@@ -9,10 +9,13 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { KnowledgeOwnership } from "./knowledge-access.js";
 
 export interface KnowledgeRoutesOptions {
   /** The tenant's knowledge intake, bound to its one store and its blob prefix. */
   readonly intake: HostedKnowledgeIntake;
+  /** Each base's owning candidate record, in sign-in mode; without it bases are tenant-wide. */
+  readonly ownership?: KnowledgeOwnership;
 }
 
 const identifierSchema = z
@@ -34,9 +37,21 @@ const uploadQuery = z.strictObject({
     .describe("The file's name, shown in source lists and evidence references."),
 });
 
+const workspaceIdDescription =
+  "The candidate record the base belongs to: required in sign-in mode, where only callers who reach the record reach the base. Owner-token mode keeps every base tenant-wide and ignores it.";
+
 const createKnowledgeBaseBody = z.strictObject({
   displayName: z.string().trim().min(1).max(200),
   description: z.string().max(2_000).optional(),
+  workspaceId: identifierSchema.optional().describe(workspaceIdDescription),
+});
+
+const listKnowledgeBasesQuery = z.object({
+  workspaceId: identifierSchema
+    .optional()
+    .describe(
+      "In sign-in mode, only the bases this candidate record owns. Owner-token mode ignores it.",
+    ),
 });
 
 export const knowledgeBaseViewSchema = z
@@ -99,7 +114,7 @@ export function registerKnowledgeRoutes(
   options: KnowledgeRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { intake } = options;
+  const { intake, ownership } = options;
 
   app.post(
     "/v1/knowledge-bases",
@@ -107,15 +122,18 @@ export function registerKnowledgeRoutes(
       schema: {
         summary: "Create a knowledge base for candidate sources",
         body: createKnowledgeBaseBody,
-        response: { 201: knowledgeBaseViewSchema, 400: apiErrorSchema },
+        response: { 201: knowledgeBaseViewSchema, 400: apiErrorSchema, 404: apiErrorSchema },
       },
     },
     async (request, reply) => {
-      const { displayName, description } = request.body;
+      const { displayName, description, workspaceId } = request.body;
       const record = await intake.createKnowledgeBase({
         displayName,
         ...(description === undefined ? {} : { description }),
       });
+      if (ownership !== undefined && workspaceId !== undefined) {
+        await ownership.setOwner(request, record.id, workspaceId);
+      }
       return reply.code(201).send(knowledgeBaseView(record));
     },
   );
@@ -124,11 +142,25 @@ export function registerKnowledgeRoutes(
     "/v1/knowledge-bases",
     {
       schema: {
-        summary: "List the tenant's knowledge bases",
-        response: { 200: z.object({ knowledgeBases: z.array(knowledgeBaseViewSchema) }) },
+        summary: "List the knowledge bases the caller can reach",
+        description:
+          "Owner-token mode lists every base of the tenant. In sign-in mode, owners and admins see every base, and a member sees the bases their assigned candidate records own.",
+        querystring: listKnowledgeBasesQuery,
+        response: {
+          200: z.object({ knowledgeBases: z.array(knowledgeBaseViewSchema) }),
+          400: apiErrorSchema,
+        },
       },
     },
-    async () => ({ knowledgeBases: (await intake.listKnowledgeBases()).map(knowledgeBaseView) }),
+    async (request) => {
+      const listable = await ownership?.listable(request, request.query.workspaceId);
+      const bases = await intake.listKnowledgeBases();
+      return {
+        knowledgeBases: bases
+          .filter(({ id }) => listable === undefined || listable.has(id))
+          .map(knowledgeBaseView),
+      };
+    },
   );
 
   app.get(
