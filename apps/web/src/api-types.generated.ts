@@ -905,6 +905,12 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["ConsentEntry"];
   };
+  "GET /v1/workspaces/{workspaceId}/archive": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: Blob;
+  };
   "GET /v1/me": {
     readonly response: ApiSchemas["Me"];
   };

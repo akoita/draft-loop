@@ -15,6 +15,7 @@ import {
   type CandidateRecordAccessErrorCode,
 } from "@draft-loop/storage/candidate-records";
 import { ConsentLedgerError } from "@draft-loop/storage/consent-ledger";
+import { RecordArchiveError } from "@draft-loop/storage/record-archive";
 import {
   TenantDirectoryError,
   type TenantDirectoryErrorCode,
@@ -179,6 +180,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // The ledger's messages are fixed and never quote a note, so they are safe to answer with.
   if (error instanceof ConsentLedgerError) {
     void reply.code(400).send(apiError(error.code, error.message));
+    return;
+  }
+  // An archive whose stored object is missing or changed; the message names no location.
+  if (error instanceof RecordArchiveError) {
+    void reply.code(409).send(apiError("archive_integrity", error.message));
     return;
   }
   if (error instanceof HostedKnowledgeIntakeError) {

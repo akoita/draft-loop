@@ -169,5 +169,6 @@ export function registerTenantApplications(
     knowledgeStore: forwarding(() => current().knowledgeStore),
     sensitivityRules: forwarding(() => current().sensitivityRules),
     consents: forwarding(() => current().consents),
+    recordArchives: forwarding(() => current().recordArchives),
   };
 }

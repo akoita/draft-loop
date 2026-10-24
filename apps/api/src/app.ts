@@ -6,6 +6,7 @@ import type {
   UsageLine,
 } from "@draft-loop/application";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
@@ -31,6 +32,7 @@ import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-ac
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
+import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
@@ -69,6 +71,8 @@ export interface ApiOptions {
     readonly sensitivityRules?: HostedSensitivityRules;
     /** Each candidate record's consent ledger; without it the consent routes are not served. */
     readonly consents?: ConsentLedger;
+    /** Each candidate record's archive; without it the archive route is not served. */
+    readonly recordArchives?: RecordArchives;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -283,6 +287,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         consents: application.consents,
+      });
+    }
+    if (application.recordArchives !== undefined) {
+      registerRecordArchiveRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        archives: application.recordArchives,
+        knowledgeScope: auth.mode === "oidc" ? "owned" : "tenant",
       });
     }
   }

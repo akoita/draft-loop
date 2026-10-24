@@ -101,6 +101,7 @@ function fakeApplication(): TenantApplication {
     knowledgeStore: { id: "knowledge", reference: "knowledge" },
     sensitivityRules: {} as TenantApplication["sensitivityRules"],
     consents: {} as TenantApplication["consents"],
+    recordArchives: {} as TenantApplication["recordArchives"],
   };
 }
 

@@ -2,9 +2,10 @@
 
 A record archive holds everything the hosted service keeps about one candidate
 record, so an organisation can hand the candidate their data or keep a copy
-before deleting the record (ADR 0011, D7). The API serves it as a zip
-download. The format is defined by the Zod schemas in
-`@draft-loop/schemas/record-archive`.
+before deleting the record (ADR 0011, D7). Owners and admins download it as a
+zip from `GET /v1/workspaces/{workspaceId}/archive`, which carries the
+manifest's SHA-256 in `X-Archive-Manifest-SHA256`. The format is defined by
+the Zod schemas in `@draft-loop/schemas/record-archive`.
 
 ## Layout
 
@@ -50,8 +51,10 @@ once.
 ## Checks
 
 Each object's bytes are checked against the checksum and size its row recorded
-before they are written. An object that is missing or changed fails the
-archive; it is never written unchecked.
+before the download starts, and again as they are written. An object that is
+missing or changed fails the download with 409 `archive_integrity`, or ends a
+download already under way without a valid zip; it is never written
+unchecked.
 
 ## Relation to the portable backup
 
