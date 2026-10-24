@@ -5,6 +5,7 @@ import type {
   RunBudgetCeiling,
   UsageLine,
 } from "@draft-loop/application";
+import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
@@ -23,6 +24,7 @@ import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
@@ -61,6 +63,11 @@ export interface ApiOptions {
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
+  /**
+   * The organisations and their members; without it the `/v1/me`, organisation and operator
+   * routes are not served. The server opens it with per-request tenancy (#1591).
+   */
+  readonly directory?: TenantDirectory;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
 }
@@ -197,6 +204,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     if (application.sensitivityRules !== undefined) {
       registerSensitivityRulesRoutes(app, { rules: application.sensitivityRules });
     }
+  }
+  if (options.directory !== undefined) {
+    registerOrganisationRoutes(app, { directory: options.directory });
   }
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 

@@ -46,7 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role), serving each request from its caller's tenant, and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role), serving each request from its caller's tenant, organisation membership and operator routes over the tenant directory, and the error shape | Domain logic, storage engines, or provider calls |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage- or rate-limited run for when the limit allows, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 | `apps/web`                                       | The owner's browser screen over the `/v1` API, served by the API on the same origin: owner-token sign-in kept in the tab, and a client typed from the committed OpenAPI document | Domain logic, imports of `apps/api` or server packages, or provider calls |
 
@@ -429,6 +429,25 @@ run, let the worker draft it, decide the findings, approve, export and
 download. The local server stack's smoke and `pnpm test:postgres` both run
 that flow, one of them through a revision round
 ([local server stack](../operations/local-server-stack.md#tests-against-the-stack)).
+
+People manage their organisation through the API once it has a tenant
+directory (ADR 0011, D6):
+
+- `GET /v1/me` says who the caller is: a member's organisation, id, role and
+  email, or `{ "kind": "owner" }` for the owner token, which belongs to no
+  organisation.
+- `GET` and `POST /v1/organisation/members` list the caller's organisation and
+  invite a person by email.
+- `PATCH` and `DELETE /v1/organisation/members/:memberId` change a role or
+  remove a member.
+- Owners and admins may manage members; members get 403. Only an owner grants, takes away or
+  removes the owner role, and the last owner answers 409 `last_owner`.
+- `POST /v1/operator/organisations` creates an organisation and invites its
+  first owner. Operator routes take only the deployment's owner token, in
+  both authentication modes, never a member's sign-in.
+- Each change logs one content-free line with the action, the organisation,
+  the member and the role, never an email. The hash-chained audit trail is
+  per workspace, and membership belongs to none.
 
 ## Data and quality contracts
 

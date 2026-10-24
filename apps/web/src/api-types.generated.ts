@@ -34,6 +34,14 @@ export interface ApiSchemas {
     })[];
     readonly chosenRunId: string | null;
   };
+  "CreatedOrganisation": {
+    readonly organisation: {
+      readonly organisationId: string;
+      readonly name: string;
+      readonly createdAt: string;
+    };
+    readonly firstOwner: ApiSchemas["OrganisationMember"];
+  };
   "Health": {
     readonly status: "ok";
   };
@@ -55,6 +63,15 @@ export interface ApiSchemas {
     readonly sizeBytes: number;
     readonly checksum: string;
     readonly createdAt: string;
+  };
+  "Me": {
+    readonly kind: "owner";
+  } | {
+    readonly kind: "member";
+    readonly organisationId: string;
+    readonly memberId: string;
+    readonly role: "owner" | "admin" | "member";
+    readonly email?: string;
   };
   "MonthUsage": {
     readonly calls: number;
@@ -164,6 +181,18 @@ export interface ApiSchemas {
       readonly createdAt: string;
       readonly reviewedAt: string | null;
     })[];
+  };
+  "OrganisationMember": {
+    readonly memberId: string;
+    readonly email: string;
+    readonly role: "owner" | "admin" | "member";
+    readonly status: "invited" | "active";
+    readonly invitedAt: string;
+    readonly activatedAt?: string;
+  };
+  "OrganisationMembers": {
+    readonly organisationId: string;
+    readonly members: readonly (ApiSchemas["OrganisationMember"])[];
   };
   "ReviewDraft": {
     readonly id: string;
@@ -762,5 +791,41 @@ export interface ApiOperations {
       readonly ruleId: string;
     };
     readonly response: ApiSchemas["SensitivityRules"];
+  };
+  "GET /v1/me": {
+    readonly response: ApiSchemas["Me"];
+  };
+  "GET /v1/organisation/members": {
+    readonly response: ApiSchemas["OrganisationMembers"];
+  };
+  "POST /v1/organisation/members": {
+    readonly body: {
+      readonly email: string;
+      readonly role: "owner" | "admin" | "member";
+    };
+    readonly response: ApiSchemas["OrganisationMember"];
+  };
+  "PATCH /v1/organisation/members/{memberId}": {
+    readonly path: {
+      readonly memberId: string;
+    };
+    readonly body: {
+      readonly role: "owner" | "admin" | "member";
+    };
+    readonly response: ApiSchemas["OrganisationMember"];
+  };
+  "DELETE /v1/organisation/members/{memberId}": {
+    readonly path: {
+      readonly memberId: string;
+    };
+    readonly response: void;
+  };
+  "POST /v1/operator/organisations": {
+    readonly body: {
+      readonly organisationId: string;
+      readonly name: string;
+      readonly firstOwnerEmail: string;
+    };
+    readonly response: ApiSchemas["CreatedOrganisation"];
   };
 }

@@ -47,6 +47,7 @@ const app = await buildApi({
   auth,
   logger: cloudLoggingOptions(),
   tenants: hosted.tenants,
+  ...(directory === undefined ? {} : { directory }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
 });
 
