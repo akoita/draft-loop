@@ -9,6 +9,7 @@ import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
 import { buildApi } from "./app.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import type { OperatorTenant } from "./operator-plan-routes.js";
 import type { TenantErasure } from "./record-erasure-routes.js";
 
@@ -27,6 +28,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       recordAccessFor: () => ({}) as CandidateRecordAccess,
       erasureFor: () => ({}) as TenantErasure,
       operatorFor: () => ({}) as OperatorTenant,
+      entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,
         workspaceRoot: (workspaceId) => workspaceId,

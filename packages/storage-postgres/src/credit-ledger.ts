@@ -76,8 +76,20 @@ export type ReserveCreditsResult =
   | {
       readonly refused: null;
       readonly reservation: CreditReservation;
-      /** False when the run already had a reservation, which is returned unchanged. */
-      readonly created: boolean;
+      /** The run already had a reservation, which is returned unchanged. */
+      readonly created: false;
+    }
+  | {
+      readonly refused: null;
+      readonly reservation: CreditReservation;
+      readonly created: true;
+      /**
+       * The balance just before and just after this reservation, read under the same lock, so a
+       * caller comparing them sees every threshold crossing exactly once however many
+       * reservations race.
+       */
+      readonly balanceBefore: CreditBalance;
+      readonly balanceAfter: CreditBalance;
     }
   | { readonly refused: "insufficient"; readonly balance: CreditBalance }
   | {
@@ -662,6 +674,7 @@ export function createCreditLedger(client: SqlSession): CreditLedger {
             return { refused: "run_cap", cap: "per_day", limit: maxPerDay, count, balance };
           }
         }
+        const balanceBefore = await computeBalance(executor, rolled);
         if (rolled.entitlements?.creditsPerPeriod === null) {
           // Unlimited: always reserved and recorded, without a grant to draw on.
           await appendRow(executor, {
@@ -693,7 +706,17 @@ export function createCreditLedger(client: SqlSession): CreditLedger {
         }
         const stored = await loadReservation(executor, runId);
         if (stored === null) throw new Error("The credit reservation was not stored.");
-        return { refused: null, reservation: stored.reservation, created: true };
+        const balanceAfter = await computeBalance(executor, {
+          ...rolled,
+          states: await loadGrantStates(executor),
+        });
+        return {
+          refused: null,
+          reservation: stored.reservation,
+          created: true,
+          balanceBefore,
+          balanceAfter,
+        };
       });
     },
 

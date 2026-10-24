@@ -295,6 +295,37 @@ The hosted service starts runs through a queue rather than in the request
   queueing failure, since the run is saved. A process that dies between the
   reservation and the save leaves one open reservation, which the worker's
   reconciliation releases (next item).
+- `GET /v1/workspaces/:workspaceId/runs/estimate` (`credit-routes.ts`) says what
+  a run on the workspace's current settings would reserve: `credits`,
+  `estimateVersion`, the tiers and the round limit it assumed. It prices with
+  `priceRun` (`run-pricing.ts`), the function the gate itself uses, so a member
+  sees the number the gate reserves. `?applicationId=` prices an application's
+  own pair. It refuses nothing and works in both modes; a model whose tier is
+  unknown answers 422 `model_tier_unknown`. In sign-in mode a member also gets
+  `plan` (whether the plan allows the tiers, with the code the gate would
+  answer) and `balance` (whether `remaining` covers the estimate).
+- `GET /v1/organisation/credits` (sign-in mode, any role) answers the plan id,
+  the entitlements a member needs (`modelTiers`, `runsPerDay`,
+  `concurrentRuns`, `seats`, `candidateRecords`) and the period's `allowance`,
+  `used`, `reserved`, `grantsRemaining`, `remaining`, `periodStart`, `periodEnd`
+  and `unlimited`. An organisation with no plan gets 403 `plan_required`;
+  owner-token mode answers 404.
+  - **`used`** is the credits of the period's allowance that finished runs
+    settled plus the part of `reserved` taken from the allowance, so a started
+    run counts at once. Operator grants are not counted, and `reserved` is the
+    total held from both.
+  - **`warning`** is true once `used` is at least 80% of `allowance`. It is
+    never true on an unlimited plan or a zero allowance, which answer `null`
+    for `allowance` and `remaining`.
+- The gate logs two content-free `WARNING` lines when a new reservation crosses
+  a threshold: `credit allowance 80% used` and `credit balance exhausted`. The
+  ledger returns the balance just before and just after the reservation, read
+  under its lock, so racing starts cross a threshold once. A line carries
+  `organisationId`, `periodEnd`, `allowance`, `used` and `remaining`, and is
+  written once the run is saved: a start refused or refunded writes nothing.
+  Because the ledger holds no flag, a refund that brings the balance back under
+  a threshold followed by a new reservation can cross it again. Unlimited plans
+  and a zero allowance never log the 80% line.
 - The worker closes each reservation, in `run-credit-settlement.ts`, after a
   job leaves its run in a final state. The ledger acts once, so a retried or
   replayed job settles once.

@@ -131,6 +131,7 @@ export function hostedEntitlementsFor(tenancy: PostgresTenancy): TenantEntitleme
     const storage = tenancy.forTenant(tenantId);
     return {
       entitlements: storage.organisationPlans.currentEntitlements,
+      assignment: storage.organisationPlans.currentPlanAssignment,
       ledger: storage.creditLedger,
     };
   };

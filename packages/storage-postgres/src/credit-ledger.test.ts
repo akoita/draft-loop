@@ -732,6 +732,31 @@ describe.runIf(connectionString !== undefined)("Postgres credit ledger", () => {
     });
   });
 
+  it("reports the balance just before and after a new reservation, and none for an existing one", async () => {
+    await withLedger(async (context) => {
+      await assignPro(context);
+      const ledger = context.ledger();
+      const now = "2026-10-10T00:00:00.000Z";
+
+      const first = await ledger.reserve({ runId: "run-1", credits: 3, estimateVersion: 1, now });
+      if (first.refused !== null || !first.created) throw new Error("Expected a new reservation.");
+      expect(first.balanceBefore).toMatchObject({ allowance: 8, reserved: 0, remaining: 8 });
+      expect(first.balanceAfter).toMatchObject({ allowance: 8, reserved: 3, remaining: 5 });
+      // The same figures a later read reports, so the two never disagree.
+      await expect(ledger.balance(now)).resolves.toEqual(first.balanceAfter);
+
+      const second = await ledger.reserve({ runId: "run-2", credits: 2, estimateVersion: 1, now });
+      if (second.refused !== null || !second.created)
+        throw new Error("Expected a new reservation.");
+      expect(second.balanceBefore).toEqual(first.balanceAfter);
+      expect(second.balanceAfter).toMatchObject({ reserved: 5, remaining: 3 });
+
+      const again = await ledger.reserve({ runId: "run-2", credits: 2, estimateVersion: 1, now });
+      expect(again).toMatchObject({ refused: null, created: false });
+      expect(again).not.toHaveProperty("balanceBefore");
+    });
+  });
+
   it("rejects malformed requests without writing", async () => {
     await withLedger(async (context) => {
       await assignPro(context);

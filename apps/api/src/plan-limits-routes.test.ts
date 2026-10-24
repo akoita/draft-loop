@@ -175,7 +175,8 @@ async function api(mode: "owner" | "oidc" = "oidc"): Promise<FastifyInstance> {
       knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
       entitlementsFor: () => ({
         entitlements: entitlementsRead,
-        ledger: { reserve: vi.fn(), refund: vi.fn() },
+        assignment: vi.fn(),
+        ledger: { reserve: vi.fn(), refund: vi.fn(), balance: vi.fn() },
       }),
     },
   });

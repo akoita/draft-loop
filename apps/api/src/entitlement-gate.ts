@@ -4,13 +4,12 @@ import type {
   ModelProfileReferences,
   WorkspaceDescriptor,
 } from "@draft-loop/application";
-import {
-  estimateRunCredits,
-  resolveRunCreditTiers,
-} from "@draft-loop/application/run-credit-estimate";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { CreditLedger, OrganisationPlans } from "@draft-loop/storage-postgres";
 import type { FastifyBaseLogger } from "fastify";
+
+import { logCreditCrossings } from "./credit-usage.js";
+import { priceRun } from "./run-pricing.js";
 
 /**
  * What the run-start gate reaches in one organisation: the entitlements of its current plan and
@@ -18,7 +17,9 @@ import type { FastifyBaseLogger } from "fastify";
  */
 export interface TenantEntitlements {
   readonly entitlements: OrganisationPlans["currentEntitlements"];
-  readonly ledger: Pick<CreditLedger, "reserve" | "refund">;
+  /** The plan assignment, whose plan id a member's credit view names. */
+  readonly assignment: OrganisationPlans["currentPlanAssignment"];
+  readonly ledger: Pick<CreditLedger, "reserve" | "refund" | "balance">;
 }
 
 /** One organisation's entitlements and ledger, by organisation id. */
@@ -147,51 +148,26 @@ export function createEntitlementGate(options: EntitlementGateOptions): Entitlem
   const { service, entitlementsFor } = options;
   const now = options.now ?? (() => new Date());
 
-  /**
-   * The pair that prices the run. An application with its own pair (the default one has none) runs on it whatever
-   * the request names (the application layer replaces the pair the same way); then the request's
-   * pair; otherwise the workspace's configured models are matched against the registry.
-   */
-  const pairFor = async (request: RunStartRequest): Promise<ModelProfileReferences | undefined> => {
-    const { applicationId } = request;
-    if (applicationId !== undefined) {
-      const application = await service.getApplication({
-        root: request.root,
-        applicationId,
-      });
-      if (application?.modelProfiles != null) return application.modelProfiles;
-    }
-    return request.modelProfiles;
-  };
-
   return {
     begin: async (request, log, begin) => {
       const tenant = entitlementsFor(request.tenantId);
       const entitlements = await tenant.entitlements();
       if (entitlements === undefined) throw new EntitlementRefusedError({ code: "plan_required" });
 
-      const modelProfiles = await pairFor(request);
-      const tiers = resolveRunCreditTiers({
-        ...(modelProfiles === undefined ? {} : { modelProfiles }),
-        configured: { author: request.workspace.author, critic: request.workspace.critic },
-      });
-      if (tiers.status === "unknown") {
-        throw new EntitlementRefusedError({ code: "model_tier_unknown", role: tiers.role });
+      const pricing = await priceRun(service, request);
+      if (pricing.status === "tier_unknown") {
+        throw new EntitlementRefusedError({ code: "model_tier_unknown", role: pricing.role });
       }
       for (const [role, tier] of [
-        ["author", tiers.authorTier],
-        ["critic", tiers.criticTier],
+        ["author", pricing.authorTier],
+        ["critic", pricing.criticTier],
       ] as const) {
         if (!entitlements.modelTiers.includes(tier)) {
           throw new EntitlementRefusedError({ code: "model_tier_not_in_plan", role, tier });
         }
       }
 
-      const estimate = estimateRunCredits({
-        authorTier: tiers.authorTier,
-        criticTier: tiers.criticTier,
-        maxRounds: request.workspace.maxRounds,
-      });
+      const { estimate } = pricing;
       const runId = newRunId();
       const reserved = await tenant.ledger.reserve({
         runId,
@@ -215,9 +191,7 @@ export function createEntitlementGate(options: EntitlementGateOptions): Entitlem
         });
       }
 
-      try {
-        return await begin(runId);
-      } catch (error) {
+      const result = await begin(runId).catch(async (error: unknown) => {
         // The run was never saved, so nothing may keep its credits or its concurrency slot.
         try {
           await tenant.ledger.refund({ runId, now: now() });
@@ -228,7 +202,13 @@ export function createEntitlementGate(options: EntitlementGateOptions): Entitlem
           );
         }
         throw error;
+      });
+      // Once the run is saved, so a reservation refunded for a failed begin alerts on nothing. The
+      // ledger read both balances under its lock, so racing starts cross a threshold once.
+      if (reserved.created) {
+        logCreditCrossings(log, request.tenantId, reserved.balanceBefore, reserved.balanceAfter);
       }
+      return result;
     },
   };
 }
