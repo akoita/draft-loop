@@ -18,12 +18,16 @@ describe("readWorkerConfig", () => {
       queueSchema: "draft_loop_queue",
       blobBucket: "draft-loop-local",
       allowProviderData: false,
+      requireConsent: false,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       mode: { kind: "serve" },
     });
     expect(
       readWorkerConfig({ ...env, DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true" }).allowProviderData,
     ).toBe(true);
+    expect(readWorkerConfig({ ...env, DRAFT_LOOP_REQUIRE_CONSENT: "true" }).requireConsent).toBe(
+      true,
+    );
   });
 
   it("serves every tenant, so a tenant id in the shared environment changes nothing", () => {
@@ -38,6 +42,7 @@ describe("readWorkerConfig", () => {
   it.each([
     ["without a database", { DRAFT_LOOP_DATABASE_URL: "" }],
     ["with an unclear provider-data setting", { DRAFT_LOOP_ALLOW_PROVIDER_DATA: "yes" }],
+    ["with an unclear consent setting", { DRAFT_LOOP_REQUIRE_CONSENT: "1" }],
     ["with an unknown mode", { DRAFT_LOOP_WORKER_MODE: "batch" }],
     [
       "with too short an idle time",

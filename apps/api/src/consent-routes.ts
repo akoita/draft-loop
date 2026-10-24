@@ -86,6 +86,18 @@ const recordBody = z.strictObject({
   note: z.string().max(maximumConsentNoteLength).optional(),
 });
 
+/**
+ * The id the consent ledger keys a workspace's entries by: its record id, which the API never
+ * shows. An unknown workspace throws the service's not-found error.
+ */
+export async function consentRecordId(
+  service: Pick<ApplicationService, "readWorkspace">,
+  workspaceRoot: (workspaceId: string) => string,
+  workspaceId: string,
+): Promise<string> {
+  return (await service.readWorkspace(workspaceRoot(workspaceId))).id;
+}
+
 /** Copies only the schema's fields: the record id the ledger keys by stays internal. */
 function entryView(entry: ConsentEntry) {
   return {
@@ -139,8 +151,7 @@ export function registerConsentRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, consents } = options;
-  const recordId = async (workspaceId: string): Promise<string> =>
-    (await service.readWorkspace(workspaceRoot(workspaceId))).id;
+  const recordId = (workspaceId: string) => consentRecordId(service, workspaceRoot, workspaceId);
   const unauthorized = (reply: FastifyReply) =>
     reply.code(401).send(apiError("unauthorized", "A credential is required."));
 

@@ -4,6 +4,8 @@ import {
   type ConsentEntryInput,
   ConsentLedgerError,
   currentConsents,
+  permitsMaterialStorage,
+  permitsTransmission,
   requireConsentEntryInput,
 } from "./consent-ledger.js";
 
@@ -68,5 +70,38 @@ describe("consent ledger input rules", () => {
       "provider-transmission": history[1],
     });
     expect(currentConsents([])).toEqual({});
+  });
+
+  it("permits storage and transmission only on current grants that cover the models", () => {
+    const entry = (
+      kind: ConsentEntry["kind"],
+      action: ConsentEntry["action"],
+      providers: string[] = [],
+    ) => ({ ...grant, id: kind, kind, action, providers, recordedAt: kind }) as ConsentEntry;
+    const models = { author: { company: "anthropic" }, critic: { company: "openai" } };
+
+    expect(permitsMaterialStorage({})).toBe(false);
+    expect(
+      permitsMaterialStorage({ "material-storage": entry("material-storage", "granted") }),
+    ).toBe(true);
+    expect(
+      permitsMaterialStorage({ "material-storage": entry("material-storage", "withdrawn") }),
+    ).toBe(false);
+
+    const transmission = (action: ConsentEntry["action"], providers: string[]) => ({
+      "provider-transmission": entry("provider-transmission", action, providers),
+    });
+    expect(permitsTransmission({}, models)).toBe(false);
+    expect(permitsTransmission(transmission("granted", ["anthropic", "openai"]), models)).toBe(
+      true,
+    );
+    expect(permitsTransmission(transmission("granted", ["anthropic"]), models)).toBe(false);
+    expect(permitsTransmission(transmission("withdrawn", []), models)).toBe(false);
+    expect(
+      permitsTransmission(transmission("granted", ["openai"]), {
+        author: { company: "openai" },
+        critic: { company: "openai" },
+      }),
+    ).toBe(true);
   });
 });

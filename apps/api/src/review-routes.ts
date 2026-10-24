@@ -332,7 +332,7 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
       schema: {
         summary: "Ask for another round; a worker drafts it",
         description:
-          "Moves a run awaiting approval to revising, with the owner's optional direction for the author, then queues it. The API runs no model call. The round and budget limits apply (409 run_state_conflict). A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+          "Moves a run awaiting approval to revising, with the owner's optional direction for the author, then queues it. The API runs no model call. The round and budget limits apply (409 run_state_conflict). A retry with the same Idempotency-Key answers the same run and queues it again if needed. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         params: runParams,
         headers: idempotencyHeaders,
         body: revisionBody,
@@ -386,7 +386,7 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
       schema: {
         summary: "Resume a paused run; a worker continues it",
         description:
-          "Lifts the owner's pause without running a step, then queues the run so a worker continues from its current step. A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+          "Lifts the owner's pause without running a step, then queues the run so a worker continues from its current step. A retry with the same Idempotency-Key answers the same run and queues it again if needed. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         params: runParams,
         headers: idempotencyHeaders,
         response: queuedActionResponses,

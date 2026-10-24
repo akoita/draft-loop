@@ -6746,7 +6746,7 @@
     "/v1/workspaces/{workspaceId}/runs": {
       "post": {
         "summary": "Begin a run; a worker executes it",
-        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting.",
+        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7454,7 +7454,7 @@
     "/v1/workspaces/{workspaceId}/runs/{runId}/revision": {
       "post": {
         "summary": "Ask for another round; a worker drafts it",
-        "description": "Moves a run awaiting approval to revising, with the owner's optional direction for the author, then queues it. The API runs no model call. The round and budget limits apply (409 run_state_conflict). A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+        "description": "Moves a run awaiting approval to revising, with the owner's optional direction for the author, then queues it. The API runs no model call. The round and budget limits apply (409 run_state_conflict). A retry with the same Idempotency-Key answers the same run and queues it again if needed. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         "requestBody": {
           "required": true,
           "content": {
@@ -7648,7 +7648,7 @@
     "/v1/workspaces/{workspaceId}/runs/{runId}/resume": {
       "post": {
         "summary": "Resume a paused run; a worker continues it",
-        "description": "Lifts the owner's pause without running a step, then queues the run so a worker continues from its current step. A retry with the same Idempotency-Key answers the same run and queues it again if needed.",
+        "description": "Lifts the owner's pause without running a step, then queues the run so a worker continues from its current step. A retry with the same Idempotency-Key answers the same run and queues it again if needed. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         "parameters": [
           {
             "schema": {
@@ -8294,7 +8294,7 @@
       },
       "post": {
         "summary": "Upload a candidate source file",
-        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain. The type is checked against the file's signature; the file is stored, never parsed here. The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.",
+        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain. The type is checked against the file's signature; the file is stored, never parsed here. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.",
         "requestBody": {
           "required": true,
           "content": {
@@ -8378,6 +8378,16 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -175,8 +175,15 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     });
     expect(consent.status).toBe(201);
     expect(consent.body.recordedBy).toMatchObject({ kind: "member" });
+    const storage = await asA("POST", "/v1/workspaces/shared/consents", {
+      kind: "material-storage",
+      action: "granted",
+      basis: "contract",
+    });
+    expect(storage.status).toBe(201);
     expect((await asA("GET", "/v1/workspaces/shared/consents")).body.history).toEqual([
       consent.body,
+      storage.body,
     ]);
     expect((await asB("GET", "/v1/workspaces/shared/consents")).body.history).toEqual([]);
     expect((await asB("GET", "/v1/workspaces/a-only/consents")).status).toBe(404);

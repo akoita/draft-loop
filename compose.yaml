@@ -189,6 +189,9 @@ services:
     environment:
       <<: *hosted-environment
       DRAFT_LOOP_WORKER_READY_FILE: /tmp/draft-loop-worker.ready
+      # A sign-in deployment sets this to true. This worker also serves the owner-mode API, whose
+      # runs carry no consent, so it stays off; api-oidc still refuses runs without consent.
+      DRAFT_LOOP_REQUIRE_CONSENT: "false"
     # Cloud Run sends SIGTERM and waits 10 seconds; the worker gives its job 8.
     stop_grace_period: 10s
     healthcheck:

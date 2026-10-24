@@ -58,7 +58,8 @@ sets them from its infrastructure. Unlike the local stack, it:
   API `DRAFT_LOOP_WORKER_JOB`, so the API starts the worker job after each
   queued run; a Cloud Scheduler sweep starts it every 10 minutes for retries
   and resumed runs, and the API's identity needs permission to run that job;
-- sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker.
+- sets `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes on the worker, and,
+  in sign-in mode, `DRAFT_LOOP_REQUIRE_CONSENT=true`.
 
 ## Before a provider run on staging
 

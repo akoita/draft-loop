@@ -18,11 +18,18 @@ export type RunJobOutcome =
   | "rescheduled"
   /** The run's saved budget is above the deployment's ceiling, so it is not executed. */
   | "over-ceiling"
+  /**
+   * The record's current provider transmission consent does not cover the run's providers, as
+   * after a withdrawal: the run is paused without a provider call, and a resume after a new grant
+   * queues it again.
+   */
+  | "consent-required"
   /** The run advanced as far as it could without the person. */
   | "advanced";
 
-/** The application calls a job needs. */
-export type RunJobService = Pick<ApplicationService, "status" | "resume">;
+/** The application calls a job needs; `lifecycle` pauses a run held for consent. */
+export type RunJobService = Pick<ApplicationService, "status" | "resume"> &
+  Partial<Pick<ApplicationService, "lifecycle">>;
 
 export interface RunJobHandlerOptions {
   /** The application over the job's tenant: each job names its own (ADR 0011, D3). */
@@ -39,6 +46,13 @@ export interface RunJobHandlerOptions {
    * so the worker checks it again before executing.
    */
   readonly budgetCeiling: RunBudgetCeiling;
+  /**
+   * In sign-in deployments, whether the job's candidate record's current provider transmission
+   * consent covers its workspace's providers, checked again as each job is claimed so that a
+   * withdrawal stops queued work. Unset in owner-token deployments, where `allowProviderData`
+   * alone decides; it stays a ceiling above consent either way.
+   */
+  readonly consentFor?: (job: RunJob) => Promise<boolean>;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
@@ -130,6 +144,16 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     }
     if (runBudgetCeilingViolation(snapshot.budget, options.budgetCeiling) !== undefined) {
       return "over-ceiling";
+    }
+    if (options.consentFor !== undefined && !(await options.consentFor(job))) {
+      // An already paused run, or one awaiting a retry the person decides, stays as it is.
+      if (snapshot.state !== "paused" && snapshot.state !== "provider-error") {
+        if (service.lifecycle === undefined) {
+          throw new Error("Holding a run for consent needs the lifecycle call.");
+        }
+        seen(await service.lifecycle({ root, runId: job.runId, action: "pause" }));
+      }
+      return "consent-required";
     }
     const advanced = await service.resume({
       root,

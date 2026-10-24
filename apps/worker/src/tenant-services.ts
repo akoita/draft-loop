@@ -4,7 +4,9 @@ import {
   createHostedApplicationDriver,
   type LocalApplicationDriverOptions,
 } from "@draft-loop/application";
+import type { RunJob } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
+import { permitsTransmission } from "@draft-loop/storage/consent-ledger";
 import { hostedApplicationPorts, type PostgresTenancy } from "@draft-loop/storage-postgres";
 
 export interface TenantServicesOptions {
@@ -33,5 +35,26 @@ export function tenantServices(
         ...(options.local === undefined ? {} : { local: options.local }),
       }),
     );
+  };
+}
+
+export interface TenantConsentOptions {
+  readonly tenancy: Pick<PostgresTenancy, "forTenant">;
+  readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;
+  readonly workspaceRoot: (job: RunJob) => string;
+}
+
+/**
+ * Whether a job's candidate record's current provider transmission consent names every company
+ * its workspace's author and critic models call (ADR 0011, D7), read from the job's tenant's
+ * consent ledger, which keys by the workspace's record id as the API's consent routes do.
+ */
+export function tenantRunConsent(options: TenantConsentOptions): (job: RunJob) => Promise<boolean> {
+  return async (job) => {
+    const workspace = await options
+      .serviceFor(job.tenantId)
+      .readWorkspace(options.workspaceRoot(job));
+    const state = await options.tenancy.forTenant(job.tenantId).consentLedger.current(workspace.id);
+    return permitsTransmission(state, workspace);
   };
 }

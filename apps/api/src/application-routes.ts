@@ -346,7 +346,7 @@ export function registerApplicationRoutes(
       schema: {
         summary: "Begin a run; a worker executes it",
         description:
-          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting.",
+          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
         params: workspaceParams,
         headers: idempotencyHeaders,
         body: beginRunBody,

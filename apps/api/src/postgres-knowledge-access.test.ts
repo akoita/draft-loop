@@ -189,6 +189,18 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
     const baseA: string = created.body.id;
     const baseB: string = (await createBase("coach-2", "r2")).body.id;
     expect(await tenancy.forTenant(tenantId).knowledgeBaseOwners.ownerOf(baseA)).toBe("r1");
+    // Storing material needs each record's storage consent (#1622).
+    for (const [person, workspaceId] of [
+      ["coach-1", "r1"],
+      ["coach-2", "r2"],
+    ] as const) {
+      const consent = await call(person, "POST", `/v1/workspaces/${workspaceId}/consents`, {
+        kind: "material-storage",
+        action: "granted",
+        basis: "contract",
+      });
+      expect(consent.status).toBe(201);
+    }
     expect((await upload("coach-1", baseA)).status).toBe(201);
     expect((await upload("coach-2", baseB)).status).toBe(201);
 

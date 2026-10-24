@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildApi, composeHostedApplication, hostedKnowledgeLocation } from "@draft-loop/api";
+import type { RunJob } from "@draft-loop/run-queue";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   createPostgresTenantDirectory,
@@ -36,7 +37,7 @@ import { scriptedGateway } from "./gateway-test-support.js";
 import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
 import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
 import { createRunJobHandler, type RunJobOutcome } from "./run-job-handler.js";
-import { tenantServices } from "./tenant-services.js";
+import { tenantRunConsent, tenantServices } from "./tenant-services.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -177,8 +178,49 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
     return createApiClient({ token, fetch: injectFetch(api) });
   };
 
-  /** Setup through to a reviewed brief and a queued run, as each organisation's owner does it. */
-  const beginRun = async (side: Side) => {
+  const grantConsents = async (client: ApiClient) => {
+    const path = { workspaceId: ownerWorkspaceId };
+    await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+      path,
+      body: { kind: "material-storage", action: "granted", basis: "contract" },
+    });
+    await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+      path,
+      body: {
+        kind: "provider-transmission",
+        action: "granted",
+        basis: "candidate-consent",
+        providers: ["anthropic", "openai"],
+      },
+    });
+  };
+
+  /**
+   * The worker as a sign-in deployment runs it, through the scripted gateway, which records every
+   * request body so a test can check what each run sent; each job checks its record's consent.
+   */
+  const signInWorker = () => {
+    const gateway = scriptedGateway(gatewayEnv.DRAFT_LOOP_OPENAI_KEY_SECRET);
+    const serviceFor = tenantServices({
+      tenancy,
+      blobsFor: () => tenantKeyBlobs(blobRoot, createFilesystemBlobStorage()),
+      local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
+    });
+    const outcomes: RunJobOutcome[] = [];
+    const workspaceRoot = (job: RunJob) => hostedWorkspaceReference(job.tenantId, job.workspaceId);
+    const worker = createRunJobHandler({
+      serviceFor: (job) => serviceFor(job.tenantId),
+      workspaceRoot,
+      allowProviderData: true,
+      budgetCeiling,
+      consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }),
+      onOutcome: (_job, outcome) => outcomes.push(outcome),
+    });
+    return { gateway, worker, outcomes };
+  };
+
+  /** A fresh workspace with its consents and one uploaded, selected knowledge base. */
+  const setUpWorkspace = async (side: Side) => {
     const client = clientFor(side);
     const workspace = { workspaceId: ownerWorkspaceId };
     await client.call("PUT /v1/workspaces/{workspaceId}", {
@@ -189,6 +231,8 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
         criticModel: "gpt-6-luna",
       }),
     });
+    // The candidate record's consents come before any material is stored or sent (#1622).
+    await grantConsents(client);
     const base = await client.call("POST /v1/knowledge-bases", {
       body: { displayName: "Career material", workspaceId: ownerWorkspaceId },
     });
@@ -204,6 +248,13 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       path: workspace,
       body: selection.body,
     });
+    return base;
+  };
+
+  /** A reviewed brief and a queued run in a set-up workspace, as each organisation's owner does it. */
+  const beginRun = async (side: Side) => {
+    const client = clientFor(side);
+    const workspace = { workspaceId: ownerWorkspaceId };
     const pasted = await client.call("POST /v1/workspaces/{workspaceId}/opportunities", {
       path: workspace,
       body: createBriefBody(
@@ -236,7 +287,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       header: { "idempotency-key": randomUUID() },
       body: startRunBody(reviewed.brief),
     });
-    return { client, base, runPath: { ...workspace, runId: begun.runId } };
+    return { client, runPath: { ...workspace, runId: begun.runId } };
   };
 
   it("takes two organisations from sign-up to an exported CV with nothing crossing", async () => {
@@ -258,29 +309,17 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
     }
 
     // Both organisations use the same workspace id; each gets its own workspace and run.
+    await setUpWorkspace("a");
     const a = await beginRun("a");
+    const bBase = await setUpWorkspace("b");
     const b = await beginRun("b");
     expect(queued.map((job) => job.tenantId)).toEqual([
       organisations.a.organisationId,
       organisations.b.organisationId,
     ]);
 
-    // The worker runs each job in the tenant the job names, through the scripted gateway, which
-    // records every request body so the test can check what each run sent.
-    const gateway = scriptedGateway(gatewayEnv.DRAFT_LOOP_OPENAI_KEY_SECRET);
-    const serviceFor = tenantServices({
-      tenancy,
-      blobsFor: () => tenantKeyBlobs(blobRoot, createFilesystemBlobStorage()),
-      local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
-    });
-    const outcomes: RunJobOutcome[] = [];
-    const worker = createRunJobHandler({
-      serviceFor: (job) => serviceFor(job.tenantId),
-      workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
-      allowProviderData: true,
-      budgetCeiling,
-      onOutcome: (_job, outcome) => outcomes.push(outcome),
-    });
+    // The worker runs each job in the tenant the job names.
+    const { gateway, worker, outcomes } = signInWorker();
     const sentBy: Partial<Record<string, string>> = {};
     for (let job = queued.shift(); job !== undefined; job = queued.shift()) {
       const before = gateway.requestBodies.length;
@@ -342,12 +381,70 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
     expect([404, 422]).toContain(intrusion);
     await expect(
       clientFor("a").call("GET /v1/knowledge-bases/{knowledgeBaseId}/sources", {
-        path: { knowledgeBaseId: b.base.id },
+        path: { knowledgeBaseId: bBase.id },
       }),
     ).rejects.toMatchObject({ status: 404 });
     const { knowledgeBases } = await clientFor("b").call("GET /v1/knowledge-bases", {});
-    expect(knowledgeBases.map((base) => base.id)).toEqual([b.base.id]);
+    expect(knowledgeBases.map((base) => base.id)).toEqual([bBase.id]);
     const { members } = await clientFor("a").call("GET /v1/organisation/members", {});
     expect(members.map((member) => member.email)).toEqual([organisations.a.email]);
+  }, 180_000);
+
+  it("stops a queued run whose consent was withdrawn before any provider call", async () => {
+    // Organisation A, signed up by the first test, begins a second run, which is queued.
+    const own = await beginRun("a");
+    const job = queued.shift();
+    expect(job).toMatchObject({
+      tenantId: organisations.a.organisationId,
+      runId: own.runPath.runId,
+    });
+    if (job === undefined) throw new Error("The run was queued.");
+    const workspace = { workspaceId: ownerWorkspaceId };
+    const transmission = (action: "granted" | "withdrawn") =>
+      own.client.call("POST /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+        body:
+          action === "granted"
+            ? {
+                kind: "provider-transmission",
+                action,
+                basis: "candidate-consent",
+                providers: ["anthropic", "openai"],
+              }
+            : { kind: "provider-transmission", action, basis: "candidate-consent" },
+      });
+
+    // The candidate withdraws while the job waits: the worker pauses the run and calls no model.
+    await transmission("withdrawn");
+    const { gateway, worker, outcomes } = signInWorker();
+    await worker(job, { requeue: async () => undefined });
+    expect(outcomes).toEqual(["consent-required"]);
+    expect(gateway.requestBodies).toEqual([]);
+    const held = await own.client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
+      path: own.runPath,
+    });
+    expect(held.state).toBe("paused");
+
+    // The resume needs consent again; after a new grant the run continues through the models.
+    const resume = () =>
+      own.client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/resume", {
+        path: own.runPath,
+        header: { "idempotency-key": randomUUID() },
+      });
+    await expect(resume()).rejects.toMatchObject({
+      status: 409,
+      code: "transmission_consent_required",
+    });
+    expect(queued).toEqual([]);
+    await transmission("granted");
+    await resume();
+    const resumed = queued.shift();
+    if (resumed === undefined) throw new Error("The resumed run was queued.");
+    outcomes.length = 0;
+    while (outcomes.at(-1) !== "settled" && outcomes.length < 10) {
+      await worker(resumed, { requeue: async () => undefined });
+    }
+    expect(outcomes[0]).toBe("advanced");
+    expect(gateway.requestBodies.join("\n")).toContain(organisations.a.marker);
   }, 180_000);
 });

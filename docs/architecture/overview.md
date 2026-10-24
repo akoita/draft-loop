@@ -485,6 +485,14 @@ directory (ADR 0011, D6):
   `material-storage` or `provider-transmission` grant or withdrawal with its
   basis, recorded by the caller. The runtime role may only read and insert
   entries, and each one logs a content-free line without its note.
+- In sign-in mode the API enforces the ledger (`consent-enforcement.ts`). A
+  source upload needs a current `material-storage` grant on the base's record;
+  starting a run, a revision or a resume needs a `provider-transmission` grant
+  naming every company the workspace's author and critic use. Otherwise it
+  answers 409 `storage_consent_required` or `transmission_consent_required`.
+  With `DRAFT_LOOP_REQUIRE_CONSENT=true` the worker checks again as it claims
+  each job and pauses the run, without a provider call, when consent is gone.
+  `DRAFT_LOOP_ALLOW_PROVIDER_DATA` stays a ceiling above consent.
 
 ## Data and quality contracts
 

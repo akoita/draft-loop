@@ -196,7 +196,7 @@ export function registerKnowledgeRoutes(
         bodyLimit: intake.maxSourceBytes,
         schema: {
           summary: "Upload a candidate source file",
-          description: `Send the file itself as the request body, with its media type as the Content-Type: ${hostedKnowledgeSourceMediaTypes.join(", ")}. The type is checked against the file's signature; the file is stored, never parsed here. The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.`,
+          description: `Send the file itself as the request body, with its media type as the Content-Type: ${hostedKnowledgeSourceMediaTypes.join(", ")}. The type is checked against the file's signature; the file is stored, never parsed here. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.`,
           consumes: [...hostedKnowledgeSourceMediaTypes],
           params: knowledgeBaseParams,
           querystring: uploadQuery,
@@ -206,6 +206,7 @@ export function registerKnowledgeRoutes(
             201: knowledgeSourceViewSchema,
             400: apiErrorSchema,
             404: apiErrorSchema,
+            409: apiErrorSchema,
             413: apiErrorSchema,
             415: apiErrorSchema,
           },

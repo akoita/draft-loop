@@ -16,6 +16,12 @@ export interface WorkerConfig {
   readonly gcsEndpoint?: string;
   /** Whether runs may send approved material to providers; off unless the deployment says so. */
   readonly allowProviderData: boolean;
+  /**
+   * Whether each job needs its candidate record's current provider transmission consent, as in a
+   * sign-in deployment; `allowProviderData` stays a ceiling above it. Off unless the deployment
+   * says so.
+   */
+  readonly requireConsent: boolean;
   /** The deployment's limit per run, re-checked before each run executes. */
   readonly budgetCeiling: RunBudgetCeiling;
   /** The model routes; absent on the local stack, where runs use fixtures and call no provider. */
@@ -54,6 +60,14 @@ function schemaName(env: NodeJS.ProcessEnv, name: string, fallback: string): str
   return value;
 }
 
+function flag(env: NodeJS.ProcessEnv, name: string): boolean {
+  const value = env[name] ?? "false";
+  if (value !== "true" && value !== "false") {
+    throw new WorkerConfigError(`${name} must be true or false.`);
+  }
+  return value === "true";
+}
+
 function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
   const value = env[name] ?? "";
   return value === "" ? undefined : value;
@@ -66,10 +80,8 @@ function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
  * ignored here.
  */
 export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
-  const allow = env.DRAFT_LOOP_ALLOW_PROVIDER_DATA ?? "false";
-  if (allow !== "true" && allow !== "false") {
-    throw new WorkerConfigError("DRAFT_LOOP_ALLOW_PROVIDER_DATA must be true or false.");
-  }
+  const allow = flag(env, "DRAFT_LOOP_ALLOW_PROVIDER_DATA");
+  const requireConsent = flag(env, "DRAFT_LOOP_REQUIRE_CONSENT");
   const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
   const modelGateway = readModelGatewayConfig(env);
@@ -79,7 +91,8 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
     blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
     ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
-    allowProviderData: allow === "true",
+    allowProviderData: allow,
+    requireConsent,
     budgetCeiling: readRunBudgetCeiling(env),
     ...(modelGateway === undefined ? {} : { modelGateway }),
     ...(readyFile === undefined ? {} : { readyFile }),

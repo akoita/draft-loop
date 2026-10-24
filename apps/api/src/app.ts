@@ -22,6 +22,7 @@ import { type ZodType, z } from "zod";
 
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
+import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
@@ -212,6 +213,21 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       recordAccessFor,
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+    });
+  }
+  if (application !== undefined && auth.mode === "oidc" && knowledgeOwnersFor !== undefined) {
+    if (application.consents === undefined) {
+      throw new Error("Sign-in mode stores material and calls providers only with consent.");
+    }
+    // Before the routes it guards, whose registration attaches its checks.
+    registerConsentEnforcement(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      consents: application.consents,
+      knowledgeOwnersFor,
+      ...(application.knowledgeIntake === undefined
+        ? {}
+        : { knowledgeIntake: application.knowledgeIntake }),
     });
   }
   if (application !== undefined) {

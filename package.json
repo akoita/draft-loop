@@ -21,7 +21,7 @@
     "architecture:hotspots": "node scripts/architecture-hotspots.mjs",
     "typecheck": "tsc -b",
     "test": "vitest run && pnpm test:release",
-    "test:postgres": "node -e \"if (!process.env.DRAFT_LOOP_TEST_POSTGRES_URL) { console.error('Set DRAFT_LOOP_TEST_POSTGRES_URL to a Postgres server.'); process.exit(1); }\" && vitest run packages/storage-postgres packages/run-queue apps/worker apps/api/src/postgres-idempotency.test.ts apps/api/src/postgres-knowledge-intake.test.ts apps/api/src/postgres-hosted-setup.test.ts apps/api/src/postgres-tenant-isolation.test.ts apps/api/src/postgres-record-access.test.ts apps/api/src/postgres-knowledge-access.test.ts",
+    "test:postgres": "node -e \"if (!process.env.DRAFT_LOOP_TEST_POSTGRES_URL) { console.error('Set DRAFT_LOOP_TEST_POSTGRES_URL to a Postgres server.'); process.exit(1); }\" && vitest run packages/storage-postgres packages/run-queue apps/worker apps/api/src/postgres-idempotency.test.ts apps/api/src/postgres-knowledge-intake.test.ts apps/api/src/postgres-hosted-setup.test.ts apps/api/src/postgres-tenant-isolation.test.ts apps/api/src/postgres-record-access.test.ts apps/api/src/postgres-knowledge-access.test.ts apps/api/src/postgres-consent-enforcement.test.ts",
     "test:gcs": "node -e \"if (!process.env.DRAFT_LOOP_TEST_GCS_URL) { console.error('Set DRAFT_LOOP_TEST_GCS_URL to a Cloud Storage emulator.'); process.exit(1); }\" && vitest run packages/storage-gcs",
     "server:up": "docker compose up --detach --wait",
     "server:down": "docker compose down",
