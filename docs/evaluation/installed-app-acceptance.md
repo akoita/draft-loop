@@ -23,6 +23,13 @@ platform as an extra resource (`resources/onnxruntime-node`, staged by
 The second launch also runs a tiny embedded ONNX model through the packaged
 runtime and records the result as the `embeddingRuntime` check.
 
+Packaging stops at the Vite build when the main or preload bundle fails, and
+shows Vite's error. Without `apps/desktop/vite-build-guard.ts`, Forge's Vite
+plugin would report the target as built and fail later with "The main entry
+point to your app was not found". `pnpm validate` does not package the app, so
+check a change to the main-process bundle locally with
+`pnpm --filter @draft-loop/desktop package`.
+
 Each matrix job uploads a JSON artifact containing only the app version,
 packaged executable checksum, OS metadata, boolean workflow results, and
 limitations. It does not contain candidate text, the job URL, credentials, or
