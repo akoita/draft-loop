@@ -373,12 +373,25 @@ importers:
       '@draft-loop/providers':
         specifier: workspace:*
         version: link:../providers
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@google-cloud/secret-manager':
         specifier: 7.1.1
         version: 7.1.1
       openai:
         specifier: 7.23.0
         version: 7.23.0(undici@7.30.0)(ws@8.22.0)(zod@4.4.3)
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../application
+      '@draft-loop/ingestion':
+        specifier: workspace:*
+        version: link:../ingestion
 
   packages/orchestrator:
     dependencies:

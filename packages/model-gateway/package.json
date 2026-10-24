@@ -19,7 +19,13 @@
     "@anthropic-ai/vertex-sdk": "0.20.4",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/providers": "workspace:*",
+    "@draft-loop/schemas": "workspace:*",
     "@google-cloud/secret-manager": "7.1.1",
-    "openai": "7.23.0"
+    "openai": "7.23.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@draft-loop/application": "workspace:*",
+    "@draft-loop/ingestion": "workspace:*"
   }
 }
