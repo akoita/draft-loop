@@ -146,7 +146,8 @@ export function profileFromTemplate(template: RenderingTemplate): RenderingLayou
     },
     spacingPt: {
       titleSizePt: fonts.namePt,
-      titleLinePt: constants.titleLinePt,
+      // A name larger than the family's title line was tuned for (Modern's 20 pt) gets room to fit.
+      titleLinePt: Math.max(constants.titleLinePt, Math.ceil(fonts.namePt * 1.15)),
       headingBeforePt: spacing.headingBeforePt,
       headingAfterPt: spacing.headingAfterPt,
       blockAfterPt: spacing.blockAfterPt,

@@ -1,4 +1,5 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
+import type { RenderingTemplate } from "@draft-loop/schemas/rendering-template";
 
 import {
   blockLines,
@@ -238,6 +239,23 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
     y -= metrics.blockAfterPt;
   });
   return pages;
+}
+
+/**
+ * Whether the built-in PDF writer draws a template's own look. It draws the layout of the
+ * template's profile (centred name, grey-ruled headings as written, left-aligned text), so a
+ * template with another look, such as Modern, needs the desktop's printer for a matching PDF.
+ */
+export function builtInPdfDrawsTemplateLook(template: RenderingTemplate): boolean {
+  return (
+    template.name.align === "center" &&
+    template.headings.case === "as-written" &&
+    template.headings.rule &&
+    template.headings.ruleColor.toLowerCase() === "#94a3ad" &&
+    template.body.align === "left" &&
+    template.roles.contextStyle === "regular" &&
+    template.accentColor === null
+  );
 }
 
 export interface PdfRenderInput {

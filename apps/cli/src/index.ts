@@ -1849,7 +1849,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--format <format>", "output format: docx, pdf, or md (markdown)", "markdown")
     .option(
       "--template <id>",
-      "rendering template: classic, compact or modern (default: compact for a one-page run, else modern)",
+      "rendering template: classic, compact or modern (default: compact for a one-page run, else modern); the CLI's PDF draws modern in the classic layout, its DOCX has the full look",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       await service.export({
