@@ -109,6 +109,45 @@ describe("run job handler", () => {
     expect(service.resume).toHaveBeenCalledTimes(1);
   });
 
+  it("queues the run again after a rate limit, no earlier than the provider's retry time", async () => {
+    const rateLimit = (retryNotBefore?: string) => ({
+      code: "rate-limit",
+      retryable: true,
+      ...(retryNotBefore === undefined ? {} : { retryNotBefore }),
+    });
+    const oneMinute = new Date(now.getTime() + 60_000);
+    const short = await handle(
+      snapshot("reviewing"),
+      snapshot("provider-error", rateLimit("2026-10-21T12:00:05.000Z")),
+    );
+    const unnamed = await handle(snapshot("reviewing"), snapshot("provider-error", rateLimit()));
+    const later = await handle(
+      snapshot("reviewing"),
+      snapshot("provider-error", rateLimit("2026-10-21T12:03:00.000Z")),
+    );
+
+    expect(short.outcome).toBe("rescheduled");
+    expect(short.requeue).toHaveBeenCalledWith(oneMinute);
+    expect(unnamed.requeue).toHaveBeenCalledWith(oneMinute);
+    expect(later.requeue).toHaveBeenCalledWith(new Date("2026-10-21T12:03:00.000Z"));
+  });
+
+  it("leaves a run in provider-error once its step has no retries left, or for other errors", async () => {
+    const exhausted = await handle(
+      snapshot("reviewing"),
+      snapshot("provider-error", { code: "rate-limit", retryable: false }),
+    );
+    const timeout = await handle(
+      snapshot("reviewing"),
+      snapshot("provider-error", { code: "timeout", retryable: true }),
+    );
+
+    for (const { outcome, requeue } of [exhausted, timeout]) {
+      expect(outcome).toBe("advanced");
+      expect(requeue).not.toHaveBeenCalled();
+    }
+  });
+
   it.each(["awaiting-approval", "approved", "exported", "stopped", "budget-exhausted"])(
     "leaves a %s run alone",
     async (state) => {

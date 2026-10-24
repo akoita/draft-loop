@@ -14,7 +14,7 @@ export type RunJobOutcome =
   | "held"
   /** Nothing to execute: the run awaits the person, or is finished. */
   | "settled"
-  /** A usage limit stopped the run; it is queued again for the reset time. */
+  /** A usage or rate limit stopped the run; it is queued again for when the limit allows. */
   | "rescheduled"
   /** The run's saved budget is above the deployment's ceiling, so it is not executed. */
   | "over-ceiling"
@@ -37,6 +37,8 @@ export interface RunJobHandlerOptions {
   readonly budgetCeiling: RunBudgetCeiling;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
+  /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
+  readonly rateLimitRetryMs?: number;
   readonly now?: () => Date;
   /** Called after each job with what it did and the run as it last read it, if it exists. */
   readonly onOutcome?: (job: RunJob, outcome: RunJobOutcome, run?: RunSnapshot) => void;
@@ -53,9 +55,19 @@ const executableStates: ReadonlySet<RunState> = new Set([
 ]);
 
 const defaultUsageLimitRetryMs = 15 * 60 * 1000;
+const defaultRateLimitRetryMs = 60 * 1000;
 
 function pausedForUsageLimit(snapshot: RunSnapshot): boolean {
   return snapshot.state === "paused" && snapshot.lastError?.code === "usage-limit";
+}
+
+/** The orchestrator marks a rate limit retryable only while the step has attempts left. */
+function stoppedByRateLimit(snapshot: RunSnapshot): boolean {
+  return (
+    snapshot.state === "provider-error" &&
+    snapshot.lastError?.code === "rate-limit" &&
+    snapshot.lastError.retryable
+  );
 }
 
 /**
@@ -67,12 +79,23 @@ function pausedForUsageLimit(snapshot: RunSnapshot): boolean {
 export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandler {
   const now = options.now ?? (() => new Date());
   const retryMs = options.usageLimitRetryMs ?? defaultUsageLimitRetryMs;
+  const rateLimitRetryMs = options.rateLimitRetryMs ?? defaultRateLimitRetryMs;
 
   /** When the limit resets, or a fixed wait when it names no time or a time already past. */
   const resumeTime = (snapshot: RunSnapshot): Date => {
     const resetsAt = Date.parse(snapshot.lastError?.usageLimitResetsAt ?? "");
     const current = now().getTime();
     return new Date(Number.isNaN(resetsAt) || resetsAt <= current ? current + retryMs : resetsAt);
+  };
+
+  /**
+   * The later of the provider's retry time and a fixed wait: a per-minute token limit can refuse a
+   * retry the provider's short hint allows, and resume does nothing before the retry time.
+   */
+  const rateLimitResumeTime = (snapshot: RunSnapshot): Date => {
+    const notBefore = Date.parse(snapshot.lastError?.retryNotBefore ?? "");
+    const fixed = now().getTime() + rateLimitRetryMs;
+    return new Date(Number.isNaN(notBefore) ? fixed : Math.max(notBefore, fixed));
   };
 
   const run = async (
@@ -106,6 +129,10 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     seen(advanced);
     if (pausedForUsageLimit(advanced)) {
       await requeue(resumeTime(advanced));
+      return "rescheduled";
+    }
+    if (stoppedByRateLimit(advanced)) {
+      await requeue(rateLimitResumeTime(advanced));
       return "rescheduled";
     }
     return "advanced";
