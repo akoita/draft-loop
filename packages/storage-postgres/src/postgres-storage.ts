@@ -17,6 +17,7 @@ import {
   type SqlExecutor,
   type SqlSession,
 } from "./sql-client.js";
+import { tenantDirectoryGrant } from "./tenant-directory-migration.js";
 import { createUsageReads } from "./usage.js";
 import { createVectorIndex } from "./vector-index.js";
 import { createVersionedRecords } from "./versioned-records.js";
@@ -63,6 +64,7 @@ export async function grantPostgresStorageAccess(
         `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${schema} TO ${role}`,
       );
       await executor.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schema} TO ${role}`);
+      await executor.query(tenantDirectoryGrant(schema, role));
     });
   } finally {
     await client.close();

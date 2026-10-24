@@ -1,4 +1,5 @@
 import type { SqlClient } from "./sql-client.js";
+import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 
 /** One forward-only schema change. Versions are applied in order and never edited once released. */
 export interface PostgresMigration {
@@ -761,6 +762,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
         WITH CHECK (tenant_id = current_setting('draft_loop.tenant_id', true));
     `,
   },
+  tenantDirectoryMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

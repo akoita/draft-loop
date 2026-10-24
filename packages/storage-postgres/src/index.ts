@@ -57,4 +57,8 @@ export {
   type SqlSession,
   type SqlTransactionOptions,
 } from "./sql-client.js";
+export {
+  createPostgresTenantDirectory,
+  type PostgresTenantDirectory,
+} from "./tenant-directory.js";
 export type { MonthUsageRow } from "./usage.js";
