@@ -34,6 +34,10 @@
     "./record-archive": {
       "types": "./src/record-archive.ts",
       "import": "./src/record-archive.ts"
+    },
+    "./content-screening": {
+      "types": "./src/content-screening.ts",
+      "import": "./src/content-screening.ts"
     }
   },
   "files": [
