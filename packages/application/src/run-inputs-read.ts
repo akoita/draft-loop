@@ -1,10 +1,9 @@
-import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { authorPromptSupportsCandidateDirection } from "./author-adjudication.js";
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
-import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
+import { storageFactory } from "./local-storage-factory.js";
 import { readRunContext } from "./run-context-read.js";
 
 /** The reviewed requirements brief a run was bound to when it started. */
@@ -42,18 +41,16 @@ function supportsDirections(version: string): boolean {
 /**
  * The requirements brief and career profile version of the given run, or of the workspace's
  * latest run. Resolves to `undefined` when there is no run, no history, or no recorded context.
- * One run row and one context-snapshot row are read; the audit trail is never listed.
+ * One run row and one context-snapshot row are read; the audit trail is never listed. It reads
+ * through the active storage factory, so the hosted service's worker reads a run's brief with it.
  */
 export async function readRunInputs(command: StatusCommand): Promise<RunInputs | undefined> {
   const root = resolve(command.root);
-  try {
-    await stat(localHistoryPath(root));
-  } catch {
-    return undefined;
-  }
+  const factory = storageFactory();
+  if (factory.hasHistory !== undefined && !(await factory.hasHistory(root))) return undefined;
   const context = await readRunContext(root, command.runId, {
     readWorkspace,
-    openStorage: async (workspaceRoot) => openLocalHistory(localHistoryPath(workspaceRoot)),
+    openStorage: factory.open,
   });
   if (context === undefined) return undefined;
   const brief = context.opportunityBriefReference;

@@ -36,7 +36,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scriptedGateway } from "./gateway-test-support.js";
 import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
 import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
-import { createRunJobHandler, type RunJobOutcome } from "./run-job-handler.js";
+import {
+  createRunJobHandler,
+  type QuarantinedRunInput,
+  type RunJobOutcome,
+} from "./run-job-handler.js";
+import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import { tenantRunConsent, tenantServices } from "./tenant-services.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -197,7 +202,8 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
 
   /**
    * The worker as a sign-in deployment runs it, through the scripted gateway, which records every
-   * request body so a test can check what each run sent; each job checks its record's consent.
+   * request body so a test can check what each run sent; each job checks its record's consent and
+   * its run's material for quarantine.
    */
   const signInWorker = () => {
     const gateway = scriptedGateway(gatewayEnv.DRAFT_LOOP_OPENAI_KEY_SECRET);
@@ -207,6 +213,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), gateway.dependencies),
     });
     const outcomes: RunJobOutcome[] = [];
+    const quarantined: QuarantinedRunInput[] = [];
     const workspaceRoot = (job: RunJob) => hostedWorkspaceReference(job.tenantId, job.workspaceId);
     const worker = createRunJobHandler({
       serviceFor: (job) => serviceFor(job.tenantId),
@@ -214,9 +221,11 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       allowProviderData: true,
       budgetCeiling,
       consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }),
+      quarantinedFor: tenantRunQuarantine({ tenancy, serviceFor, workspaceRoot }),
+      onQuarantined: (_job, material) => quarantined.push(...material),
       onOutcome: (_job, outcome) => outcomes.push(outcome),
     });
-    return { gateway, worker, outcomes };
+    return { gateway, worker, outcomes, quarantined, serviceFor, workspaceRoot };
   };
 
   /** A fresh workspace with its consents and one uploaded, selected knowledge base. */
@@ -440,6 +449,105 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
     await resume();
     const resumed = queued.shift();
     if (resumed === undefined) throw new Error("The resumed run was queued.");
+    outcomes.length = 0;
+    while (outcomes.at(-1) !== "settled" && outcomes.length < 10) {
+      await worker(resumed, { requeue: async () => undefined });
+    }
+    expect(outcomes[0]).toBe("advanced");
+    expect(gateway.requestBodies.join("\n")).toContain(organisations.a.marker);
+  }, 180_000);
+
+  it("pauses a queued run whose material was quarantined after queueing, until it is released", async () => {
+    const own = await beginRun("a");
+    const job = queued.shift();
+    if (job === undefined) throw new Error("The run was queued.");
+    const { gateway, worker, outcomes, quarantined, serviceFor, workspaceRoot } = signInWorker();
+    const tenantId = organisations.a.organisationId;
+
+    // The run's job source and its knowledge source are flagged while the job waits.
+    const service = serviceFor(tenantId);
+    const root = workspaceRoot(job);
+    const inputs = await service.readRunInputs?.({ root, runId: job.runId });
+    if (inputs?.brief == null) throw new Error("The run recorded its brief.");
+    const record = await service.getOpportunity({ root, ...inputs.brief });
+    const postingId = record?.brief.sources[0]?.id;
+    if (record === undefined || postingId === undefined) throw new Error("The brief has a source.");
+    const { knowledgeBases } = await own.client.call("GET /v1/knowledge-bases", {});
+    const baseId = knowledgeBases[0]?.id;
+    if (baseId === undefined) throw new Error("The workspace has a knowledge base.");
+    const { sources } = await own.client.call("GET /v1/knowledge-bases/{knowledgeBaseId}/sources", {
+      path: { knowledgeBaseId: baseId },
+    });
+    const career = sources[0];
+    if (career === undefined) throw new Error("The base has a source.");
+    const flagged = {
+      verdict: "flagged" as const,
+      signals: ["instruction-override" as const],
+      screeners: [{ id: "rules", version: "1" }],
+      screenedAt: new Date().toISOString(),
+    };
+    const store = tenancy.forTenant(tenantId).contentScreening;
+    const posting = await store.recordResult(
+      {
+        kind: "job-source",
+        workspaceId: record.workspaceId,
+        briefId: record.brief.id,
+        sourceId: postingId,
+      },
+      flagged,
+    );
+    const upload = await store.recordResult(
+      {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: baseId,
+        sourceId: career.id,
+        sourceVersionId: career.versionId,
+      },
+      flagged,
+    );
+
+    // The worker pauses the run before any model call and reports ids and signal codes only.
+    await worker(job, { requeue: async () => undefined });
+    expect(outcomes).toEqual(["material-quarantined"]);
+    expect(gateway.requestBodies).toEqual([]);
+    expect(quarantined).toEqual([
+      { kind: "job-source", resultId: posting.id, signals: ["instruction-override"] },
+      { kind: "knowledge-source-version", resultId: upload.id, signals: ["instruction-override"] },
+    ]);
+    const runPath = own.runPath;
+    const state = async () =>
+      (await own.client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", { path: runPath }))
+        .state;
+    expect(await state()).toBe("paused");
+
+    const workspace = { workspaceId: ownerWorkspaceId };
+    const release = (resultId: string) =>
+      own.client.call("POST /v1/workspaces/{workspaceId}/screening/{resultId}/release", {
+        path: { ...workspace, resultId },
+        body: { reason: "Synthetic test: the owner checked the text." },
+      });
+    const resume = async () => {
+      await own.client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/resume", {
+        path: runPath,
+        header: { "idempotency-key": randomUUID() },
+      });
+      const resumed = queued.shift();
+      if (resumed === undefined) throw new Error("The resumed run was queued.");
+      return resumed;
+    };
+
+    // One release is not enough while the other source stays quarantined.
+    await release(posting.id);
+    outcomes.length = 0;
+    quarantined.length = 0;
+    await worker(await resume(), { requeue: async () => undefined });
+    expect(outcomes).toEqual(["material-quarantined"]);
+    expect(quarantined.map(({ resultId }) => resultId)).toEqual([upload.id]);
+    expect(gateway.requestBodies).toEqual([]);
+
+    // After the last release the resume goes through the models.
+    await release(upload.id);
+    const resumed = await resume();
     outcomes.length = 0;
     while (outcomes.at(-1) !== "settled" && outcomes.length < 10) {
       await worker(resumed, { requeue: async () => undefined });

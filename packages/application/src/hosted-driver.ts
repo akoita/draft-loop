@@ -49,6 +49,7 @@ export const hostedDriverMethods = [
   "resume",
   "status",
   "readIndependentReview",
+  "readRunInputs",
   "readRunWritingPolicy",
   "recordReviewDecision",
   "lifecycle",

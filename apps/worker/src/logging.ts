@@ -2,7 +2,7 @@ import { runUsage } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
 
-import type { RunJobOutcome } from "./run-job-handler.js";
+import type { QuarantinedRunInput, RunJobOutcome } from "./run-job-handler.js";
 
 /**
  * The worker's logs, as Cloud Logging reads them: one JSON object a line with a `severity` and a
@@ -73,5 +73,21 @@ export function runOutcomeFields(
         estimatedUsd: line.estimatedUsd,
       })),
     },
+  };
+}
+
+/**
+ * The line for a run paused over quarantined material: the job's ids and, for each piece, its kind,
+ * the result id a release names and the closed signal codes. Never the text or a source name.
+ */
+export function quarantineFields(
+  job: RunJob,
+  quarantined: readonly QuarantinedRunInput[],
+): Record<string, unknown> {
+  return {
+    tenantId: job.tenantId,
+    workspaceId: job.workspaceId,
+    runId: job.runId,
+    quarantined: quarantined.map(({ kind, resultId, signals }) => ({ kind, resultId, signals })),
   };
 }

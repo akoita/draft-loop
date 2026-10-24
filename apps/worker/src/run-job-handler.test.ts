@@ -253,6 +253,52 @@ describe("run job handler", () => {
     }
   });
 
+  it("pauses an active run whose material is quarantined, and calls no provider", async () => {
+    const quarantined = [
+      { kind: "job-source" as const, resultId: "result-1", signals: ["instruction-override"] },
+    ];
+    const quarantineCase = async (state: RunSnapshot, flagged: typeof quarantined) => {
+      const service = {
+        status: vi.fn<Service["status"]>(async () => state),
+        resume: vi.fn<Service["resume"]>(async () => snapshot("awaiting-approval")),
+        lifecycle: vi.fn<ApplicationService["lifecycle"]>(async () => snapshot("paused")),
+      };
+      const outcomes: RunJobOutcome[] = [];
+      const reported: unknown[] = [];
+      const handler = createRunJobHandler({
+        serviceFor: () => service,
+        workspaceRoot: () => root,
+        allowProviderData: true,
+        budgetCeiling,
+        quarantinedFor: async () => flagged,
+        onQuarantined: (_job, material) => reported.push(material),
+        now: () => now,
+        onOutcome: (_job, outcome) => outcomes.push(outcome),
+      });
+      await handler(job, { requeue: async () => undefined });
+      return { service, outcome: outcomes[0], reported };
+    };
+
+    const drafting = await quarantineCase(snapshot("drafting"), quarantined);
+    expect(drafting.outcome).toBe("material-quarantined");
+    expect(drafting.service.resume).not.toHaveBeenCalled();
+    expect(drafting.service.lifecycle).toHaveBeenCalledWith({
+      root,
+      runId: job.runId,
+      action: "pause",
+    });
+    expect(drafting.reported).toEqual([quarantined]);
+
+    // A failed step awaits the person and stays as it is; a release lets the next job resume.
+    const failed = await quarantineCase(snapshot("provider-error"), quarantined);
+    expect(failed.outcome).toBe("material-quarantined");
+    expect(failed.service.lifecycle).not.toHaveBeenCalled();
+    const released = await quarantineCase(snapshot("drafting"), []);
+    expect(released.outcome).toBe("advanced");
+    expect(released.service.resume).toHaveBeenCalledOnce();
+    expect(released.reported).toEqual([]);
+  });
+
   it("ends a job for an erased record quietly, before reading the run or calling a provider", async () => {
     const service = {
       status: vi.fn<Service["status"]>(async () => snapshot("drafting")),

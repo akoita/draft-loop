@@ -26,10 +26,26 @@ export type RunJobOutcome =
    * queues it again.
    */
   | "consent-required"
+  /**
+   * Material the run would send is quarantined by injection screening and not released, as when
+   * it was flagged after the run was queued: the run is paused without a provider call, and a
+   * resume after a release queues it again.
+   */
+  | "material-quarantined"
   /** The run advanced as far as it could without the person. */
   | "advanced";
 
-/** The application calls a job needs; `lifecycle` pauses a run held for consent. */
+/**
+ * One piece of a run's material that is quarantined, content-free: which kind of source, the
+ * stored result that a release names, and the closed signal codes. Never the text.
+ */
+export interface QuarantinedRunInput {
+  readonly kind: "job-source" | "knowledge-source-version";
+  readonly resultId: string;
+  readonly signals: readonly string[];
+}
+
+/** The application calls a job needs; `lifecycle` pauses a run held for consent or quarantine. */
 export type RunJobService = Pick<ApplicationService, "status" | "resume"> &
   Partial<Pick<ApplicationService, "lifecycle">>;
 
@@ -55,6 +71,14 @@ export interface RunJobHandlerOptions {
    * alone decides; it stays a ceiling above consent either way.
    */
   readonly consentFor?: (job: RunJob) => Promise<boolean>;
+  /**
+   * The run's material that injection screening quarantined and nobody released, checked again as
+   * each job is claimed so that material flagged after queueing never reaches a provider. Unset,
+   * the worker does not check. The run is paused, as for consent, until a release lets it resume.
+   */
+  readonly quarantinedFor?: (job: RunJob) => Promise<readonly QuarantinedRunInput[]>;
+  /** Called when a job paused its run for quarantined material, with what was quarantined. */
+  readonly onQuarantined?: (job: RunJob, quarantined: readonly QuarantinedRunInput[]) => void;
   /**
    * Whether the job's candidate record is erased or being erased, checked before anything else so
    * a job queued before the erasure ends quietly. Unset, the worker does not check.
@@ -155,15 +179,23 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     if (runBudgetCeilingViolation(snapshot.budget, options.budgetCeiling) !== undefined) {
       return "over-ceiling";
     }
-    if (options.consentFor !== undefined && !(await options.consentFor(job))) {
-      // An already paused run, or one awaiting a retry the person decides, stays as it is.
-      if (snapshot.state !== "paused" && snapshot.state !== "provider-error") {
-        if (service.lifecycle === undefined) {
-          throw new Error("Holding a run for consent needs the lifecycle call.");
-        }
-        seen(await service.lifecycle({ root, runId: job.runId, action: "pause" }));
+    /** Pauses an active run, so its resume is the person's; a run already waiting stays as it is. */
+    const hold = async (reason: string): Promise<void> => {
+      if (snapshot.state === "paused" || snapshot.state === "provider-error") return;
+      if (service.lifecycle === undefined) {
+        throw new Error(`Holding a run for ${reason} needs the lifecycle call.`);
       }
+      seen(await service.lifecycle({ root, runId: job.runId, action: "pause" }));
+    };
+    if (options.consentFor !== undefined && !(await options.consentFor(job))) {
+      await hold("consent");
       return "consent-required";
+    }
+    const quarantined = (await options.quarantinedFor?.(job)) ?? [];
+    if (quarantined.length > 0) {
+      await hold("quarantined material");
+      options.onQuarantined?.(job, quarantined);
+      return "material-quarantined";
     }
     const advanced = await service.resume({
       root,

@@ -929,6 +929,11 @@ export {
   type RunProfileInput,
   readRunInputs,
 } from "./run-inputs-read.js";
+export {
+  quarantinedRunMaterial,
+  type RunMaterial,
+  type RunMaterialQuarantineReaders,
+} from "./run-material-quarantine.js";
 export { RunModelProfileError } from "./run-model-profiles.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";

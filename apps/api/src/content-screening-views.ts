@@ -4,6 +4,7 @@ import {
 } from "@draft-loop/schemas/content-screening";
 import type {
   ContentScreeningRelease,
+  ContentScreeningStatus,
   StoredContentScreeningResult,
 } from "@draft-loop/storage/content-screening";
 import { z } from "zod";
@@ -101,6 +102,25 @@ export const quarantinedMaterialSchema = z
   .meta({ id: "QuarantinedMaterial" });
 
 export type QuarantinedMaterial = z.infer<typeof quarantinedMaterialSchema>;
+
+/** A quarantined subject's status as the run gate lists it. */
+export function quarantinedMaterial(status: ContentScreeningStatus): QuarantinedMaterial {
+  const { subject } = status;
+  return subject.kind === "job-source"
+    ? {
+        kind: "job-source",
+        briefId: subject.briefId,
+        sourceId: subject.sourceId,
+        ...screeningOutcome(status),
+      }
+    : {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: subject.knowledgeBaseId,
+        sourceId: subject.sourceId,
+        sourceVersionId: subject.sourceVersionId,
+        ...screeningOutcome(status),
+      };
+}
 
 /** A run refused because material it would use is quarantined and not released. */
 export class MaterialQuarantinedError extends Error {
