@@ -102,8 +102,7 @@ async function refuse(reply: FastifyReply, mode: ApiAuthOptions["mode"]): Promis
 
 /**
  * Authenticates every request but health and the web screen's files, and records its caller on
- * `request.caller`. Routes still serve the deployment's one application whoever the caller is:
- * choosing the tenant from the caller is a later step of D6.
+ * `request.caller`, from which `registerTenantApplications` picks the tenant the request acts in.
  */
 export function registerRequestAuthentication(
   app: FastifyInstance,

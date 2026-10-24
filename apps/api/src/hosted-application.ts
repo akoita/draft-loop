@@ -13,28 +13,28 @@ import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
-  openPostgresStorage,
-  type PostgresStorage,
+  openPostgresTenancy,
+  type PostgresTenantStorage,
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
 
-import type { ApiOptions } from "./app.js";
 import type { HostedStorageConfig } from "./config.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
+import type { TenantApplication, TenantApplications } from "./tenant-context.js";
 import { enqueueThenWake, noWake, type WakeWorker } from "./worker-wake.js";
 
 /** The tenant's one candidate knowledge store: knowledge bases belong to the tenant. */
 export const hostedKnowledgeStoreId = "knowledge";
 
-export interface HostedApplication {
-  readonly application: NonNullable<ApiOptions["application"]>;
+export interface HostedTenants {
+  readonly tenants: TenantApplications;
   readonly close: () => Promise<void>;
 }
 
 export interface HostedApplicationParts {
-  /** One tenant's open storage; the application borrows it. */
-  readonly storage: PostgresStorage;
+  /** One tenant's storage ports; the application borrows them. */
+  readonly storage: PostgresTenantStorage;
   readonly blobs: BlobStoragePort;
   readonly tenantId: string;
   readonly budgetCeiling: RunBudgetCeiling;
@@ -51,7 +51,7 @@ export interface HostedApplicationParts {
  */
 export function composeHostedApplication(
   parts: HostedApplicationParts,
-): NonNullable<ApiOptions["application"]> {
+): TenantApplication & { readonly budgetCeiling: RunBudgetCeiling } {
   const { storage, blobs, tenantId, budgetCeiling } = parts;
   const ports = hostedApplicationPorts({ storage, tenantId, blobs });
   const service = createApplicationService(
@@ -86,25 +86,29 @@ export function composeHostedApplication(
   };
 }
 
+/** Where a tenant's knowledge source version's bytes go in the shared bucket. */
+export function hostedKnowledgeLocation(tenantId: string, versionId: string): string {
+  return `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`;
+}
+
 /**
- * Composes the API's application over the tenant's Postgres storage, Cloud Storage bucket and run
- * queue. Credentials come from the runtime: the database URL from a secret and Cloud Storage from
- * the service account, or the emulator on the local stack. It holds no provider credential: only
- * the worker calls models.
+ * Opens what every tenant's application shares: one Postgres pool, one run queue and one Cloud
+ * Storage bucket (ADR 0011, D3). Each tenant's application is composed on its first request over
+ * the pool set to that tenant and the bucket under that tenant's prefix. Credentials come from the
+ * runtime: the database URL from a secret and Cloud Storage from the service account, or the
+ * emulator on the local stack. It holds no provider credential: only the worker calls models.
  */
-export async function openHostedApplication(
+export async function openHostedTenants(
   config: HostedStorageConfig,
   budgetCeiling: RunBudgetCeiling,
   worker: { readonly wake: WakeWorker; readonly onWakeError: (error: unknown) => void } = {
     wake: noWake,
     onWakeError: () => undefined,
   },
-): Promise<HostedApplication> {
-  const { tenantId } = config;
-  const storage = await openPostgresStorage({
+): Promise<HostedTenants> {
+  const tenancy = await openPostgresTenancy({
     connectionString: config.databaseUrl,
     schema: config.databaseSchema,
-    tenantId,
   });
   try {
     const queue = await openRunQueue({
@@ -116,29 +120,35 @@ export async function openHostedApplication(
         ? {}
         : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
     ).bucket(config.blobBucket);
-    const blobs = createGcsBlobStorage({ bucket, tenantId });
     return {
-      application: composeHostedApplication({
-        storage,
-        blobs,
-        tenantId,
+      tenants: {
         budgetCeiling,
-        enqueueRun: enqueueThenWake(
-          (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
-          worker.wake,
-          worker.onWakeError,
-        ),
-        knowledgeLocation: (versionId) =>
-          `tenants/${tenantId}/knowledge/${hostedKnowledgeStoreId}/${versionId}`,
+        ...(config.tenantId === undefined ? {} : { ownerTenantId: config.tenantId }),
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
-      }),
+        applicationFor: (tenantId) =>
+          composeHostedApplication({
+            storage: tenancy.forTenant(tenantId),
+            blobs: createGcsBlobStorage({ bucket, tenantId }),
+            tenantId,
+            budgetCeiling,
+            enqueueRun: enqueueThenWake(
+              (workspaceId, runId) => queue.enqueue({ tenantId, workspaceId, runId }),
+              worker.wake,
+              worker.onWakeError,
+            ),
+            knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
+            ...(config.maxSourceBytes === undefined
+              ? {}
+              : { maxSourceBytes: config.maxSourceBytes }),
+          }),
+      },
       close: async () => {
         await queue.close();
-        await storage.close();
+        await tenancy.close();
       },
     };
   } catch (error) {
-    await storage.close();
+    await tenancy.close();
     throw error;
   }
 }
