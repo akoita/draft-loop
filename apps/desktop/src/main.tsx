@@ -2668,6 +2668,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         : async (provider: CredentialProvider) => {
             await activePort.removeCredential?.(provider);
           },
+    onTestCredential: activePort.testCredential,
     onSetProviderAuthMode:
       activePort.setProviderAuthMode === undefined
         ? undefined

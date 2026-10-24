@@ -71,9 +71,10 @@ const maximumResponseCharacters = 1_048_576;
 /** How long a discovery call may take before it is abandoned. */
 export const defaultModelDiscoveryTimeoutMs = 10_000;
 
-const anthropicBaseUrl = "https://api.anthropic.com/v1";
-const openaiBaseUrl = "https://api.openai.com/v1";
-const anthropicVersion = "2023-06-01";
+/** The hosted API roots model listing reads, shared with the API key check. */
+export const anthropicApiBaseUrl = "https://api.anthropic.com/v1";
+export const openaiApiBaseUrl = "https://api.openai.com/v1";
+export const anthropicApiVersion = "2023-06-01";
 
 /** A model a provider reports as available to the credential that asked. */
 export interface DiscoveredModel {
@@ -273,8 +274,8 @@ export async function listAnthropicModels(
   const apiKey = requireApiKey(provider, client.apiKey);
   const body = await getJson(
     provider,
-    `${anthropicBaseUrl}/models?limit=${maximumDiscoveredModels}`,
-    { "x-api-key": apiKey, "anthropic-version": anthropicVersion },
+    `${anthropicApiBaseUrl}/models?limit=${maximumDiscoveredModels}`,
+    { "x-api-key": apiKey, "anthropic-version": anthropicApiVersion },
     client.fetch ?? globalThis.fetch,
     options,
   );
@@ -294,7 +295,7 @@ export async function listOpenAIModels(
   const apiKey = requireApiKey(provider, client.apiKey);
   const body = await getJson(
     provider,
-    `${openaiBaseUrl}/models`,
+    `${openaiApiBaseUrl}/models`,
     { authorization: `Bearer ${apiKey}` },
     client.fetch ?? globalThis.fetch,
     options,

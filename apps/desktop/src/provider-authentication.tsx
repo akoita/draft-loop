@@ -19,6 +19,13 @@ import {
 } from "./provider-authentication-actions.js";
 import type { ProviderAuthenticationSummary } from "./provider-authentication-summary.js";
 import {
+  type CredentialTestCallback,
+  CredentialTestLine,
+  type CredentialTestState,
+  isCredentialTestProvider,
+  useCredentialTests,
+} from "./provider-key-test.js";
+import {
   type CredentialMap,
   mapProviders,
   useProviderSignInReadiness,
@@ -62,6 +69,11 @@ interface CredentialRowProps {
   readonly onRemove: () => void;
   /** Optional one-sentence destination or terms notice shown under the header. */
   readonly note?: string;
+  /** Offers Test key for a configured key; absent for providers whose keys cannot be tested. */
+  readonly keyTest?: {
+    readonly state: CredentialTestState | undefined;
+    readonly onTest: () => void;
+  };
 }
 
 export function CredentialRow({
@@ -75,7 +87,13 @@ export function CredentialRow({
   onSave,
   onRemove,
   note,
+  keyTest,
 }: CredentialRowProps) {
+  // Test key checks the stored or environment key, so it waits while a new one is being typed.
+  const testable =
+    keyTest !== undefined &&
+    status.configured &&
+    (status.source === "app" || status.source === "env");
   return (
     <section className="credential-row" aria-label={title}>
       <div className="credential-row-header">
@@ -115,12 +133,25 @@ export function CredentialRow({
         >
           Save
         </button>
+        {testable ? (
+          <button
+            className="button button-outline"
+            type="button"
+            disabled={value.trim() !== "" || keyTest.state?.status === "testing"}
+            onClick={keyTest.onTest}
+          >
+            Test key
+          </button>
+        ) : null}
         {status.source === "app" ? (
           <button className="button button-danger" type="button" onClick={onRemove}>
             Remove
           </button>
         ) : null}
       </div>
+      {testable && keyTest.state !== undefined ? (
+        <CredentialTestLine state={keyTest.state} />
+      ) : null}
     </section>
   );
 }
@@ -243,6 +274,13 @@ export interface ProviderAuthenticationViewProps {
   readonly onReveal: (provider: CredentialProvider, next: boolean) => void;
   readonly onSave: (provider: CredentialProvider) => void;
   readonly onRemove: (provider: CredentialProvider) => void;
+  /** Absent when the host cannot test keys. */
+  readonly keyTests?:
+    | {
+        readonly states: Partial<Record<CredentialProvider, CredentialTestState>>;
+        readonly onTest: (provider: CredentialProvider) => void;
+      }
+    | undefined;
   /** Absent when the host cannot save the mode preference. */
   readonly onModeChange?: ((mode: ProviderAuthMode) => void) | undefined;
   readonly onClose: () => void;
@@ -262,6 +300,7 @@ export function ProviderAuthenticationView({
   onReveal,
   onSave,
   onRemove,
+  keyTests,
   onModeChange,
   onClose,
 }: ProviderAuthenticationViewProps) {
@@ -280,6 +319,14 @@ export function ProviderAuthenticationView({
       onChange={(value) => onInputChange(row.provider, value)}
       onSave={() => onSave(row.provider)}
       onRemove={() => onRemove(row.provider)}
+      {...(keyTests === undefined || !isCredentialTestProvider(row.provider)
+        ? {}
+        : {
+            keyTest: {
+              state: keyTests.states[row.provider],
+              onTest: () => keyTests.onTest(row.provider),
+            },
+          })}
     />
   );
   const [anthropic, openai, ...others] = credentialRows;
@@ -343,6 +390,8 @@ export interface ProviderAuthenticationProps extends ProviderAuthenticationCallb
   readonly criticCompany?: ModelCompany;
   /** Told the pair's readiness once the statuses are read, and `null` while they are unknown. */
   readonly onReadiness?: (readiness: ProviderAuthenticationSummary | null) => void;
+  /** Tests a saved Anthropic or OpenAI key; absent when the host cannot. */
+  readonly onTestCredential?: CredentialTestCallback | undefined;
 }
 
 /**
@@ -355,6 +404,7 @@ export function ProviderAuthentication({
   onSetCredential,
   onRemoveCredential,
   onSetProviderAuthMode,
+  onTestCredential,
   fixtureMode = false,
   authorCompany,
   criticCompany,
@@ -364,6 +414,7 @@ export function ProviderAuthentication({
   const [inputs, setInputs] = useState<CredentialMap<string>>(() => mapProviders(() => ""));
   const [revealed, setRevealed] = useState<CredentialMap<boolean>>(() => mapProviders(() => false));
   const [feedback, setFeedback] = useState<string | null>(null);
+  const keyTests = useCredentialTests(onTestCredential);
   const { readiness, statuses, openaiAuthMode, setOpenaiAuthMode, refresh } =
     useProviderSignInReadiness({
       getCredentialStatus,
@@ -383,6 +434,8 @@ export function ProviderAuthentication({
     const outcome = await saveProviderCredential({ onSetCredential }, provider, inputs[provider]);
     report(outcome);
     if (outcome?.ok) {
+      // A saved key is not tested automatically, and the old key's result no longer applies.
+      keyTests.clear(provider);
       setInputs((current) => ({ ...current, [provider]: "" }));
       refresh();
     }
@@ -391,7 +444,10 @@ export function ProviderAuthentication({
   const remove = async (provider: CredentialProvider) => {
     const outcome = await removeProviderCredential({ onRemoveCredential }, provider);
     report(outcome);
-    if (outcome?.ok) refresh();
+    if (outcome?.ok) {
+      keyTests.clear(provider);
+      refresh();
+    }
   };
 
   const changeMode = async (mode: ProviderAuthMode) => {
@@ -435,14 +491,25 @@ export function ProviderAuthentication({
               inputs={inputs}
               revealed={revealed}
               feedback={feedback}
-              onInputChange={(provider, value) =>
-                setInputs((current) => ({ ...current, [provider]: value }))
-              }
+              onInputChange={(provider, value) => {
+                keyTests.clear(provider);
+                setInputs((current) => ({ ...current, [provider]: value }));
+              }}
               onReveal={(provider, next) =>
                 setRevealed((current) => ({ ...current, [provider]: next }))
               }
               onSave={(provider) => void save(provider)}
               onRemove={(provider) => void remove(provider)}
+              keyTests={
+                onTestCredential === undefined
+                  ? undefined
+                  : {
+                      states: keyTests.states,
+                      onTest: (provider) => {
+                        if (isCredentialTestProvider(provider)) void keyTests.test(provider);
+                      },
+                    }
+              }
               onModeChange={
                 onSetProviderAuthMode === undefined ? undefined : (mode) => void changeMode(mode)
               }

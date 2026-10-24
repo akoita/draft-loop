@@ -14,6 +14,8 @@ import {
   type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
+  type CredentialTestProvider,
+  type CredentialTestResult,
   createCapabilityPort,
   type EmbeddingModelCancelResult,
   type EmbeddingModelPlanResult,
@@ -307,6 +309,8 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
       provider: "anthropic" | "openai",
       mode: ProviderAuthMode,
     ) => Promise<ProviderAuthModeResult>;
+    /** Tests the saved API key with a model lookup; the key itself never comes back. */
+    readonly testCredential?: (provider: CredentialTestProvider) => Promise<CredentialTestResult>;
     readonly listRecentWorkspaces?: () => Promise<readonly RecentWorkspaceSummary[]>;
     readonly openRecentWorkspace?: (id: string) => Promise<DesktopReviewState>;
     /** Forgets one recent workspace entry without touching its files. */
@@ -844,6 +848,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       });
       return unwrap(result);
     },
+    ...(capabilityPort.hasCapability("credential.test")
+      ? {
+          testCredential: async (provider: CredentialTestProvider) =>
+            unwrap(await capabilityPort.execute({ type: "credential.test", input: { provider } })),
+        }
+      : {}),
     ...(capabilityPort.hasCapability("provider-auth.status")
       ? {
           getProviderAuthModeStatus: async (provider: "anthropic" | "openai") =>

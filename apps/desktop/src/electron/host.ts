@@ -222,6 +222,7 @@ import {
   withApplicationBriefPreference,
 } from "./application-briefs.js";
 import { readApplicationJob } from "./application-job.js";
+import { testProviderCredential } from "./credential-test-host.js";
 import { ensureDefaultKnowledgeBase } from "./default-knowledge-base.js";
 import {
   earlierRunFor,
@@ -6397,6 +6398,24 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               protection: status.protection,
             },
           };
+        }
+        case "credential.test": {
+          const provider = command.input.provider;
+          if (providerAuthModeConfiguration[provider] === "user-session") {
+            return fail("capability-unavailable", "Test key checks API keys, not user sessions.");
+          }
+          // The key goes from the store to the provider request; the renderer never gets it.
+          const apiKey = await resolveCredential(credentials, provider);
+          if (apiKey === undefined) {
+            return fail("permission-denied", "No API key is configured for this provider.");
+          }
+          const value = await testProviderCredential(provider, apiKey, active?.descriptor, {
+            ...(options.modelDiscovery?.fetch === undefined
+              ? {}
+              : { fetch: options.modelDiscovery.fetch }),
+            now: discoveryNow,
+          });
+          return { ok: true, value };
         }
         case "provider-auth.status":
           return {
