@@ -54,6 +54,11 @@ address. Its tokens stay in the tab's session storage and are refreshed before
 they expire. An account that belongs to no organisation is told so and signed
 out at the provider.
 
+In `oidc` mode, owners and admins also see **Export or delete this record**
+above the steps; members do not. **Export everything** downloads the record's
+archive, and **Delete record** erases the record for good once its id is typed
+back. A record with a queued or running run asks you to stop the run first.
+
 ### Sign-in on the stack
 
 The stack also runs Keycloak and a second API, `api-oidc`, in `oidc` mode at

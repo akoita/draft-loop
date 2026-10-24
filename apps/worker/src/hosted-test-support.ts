@@ -1,5 +1,7 @@
+import { readdir, rm, stat } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import type { BlobStoragePort } from "@draft-loop/storage";
+import type { BlobErasure } from "@draft-loop/storage/record-erasure";
 import type { FastifyInstance } from "fastify";
 
 /** The runtime role the Postgres flow tests connect as, with no superuser rights. */
@@ -26,6 +28,47 @@ export function tenantKeyBlobs(root: string, blobs: BlobStoragePort): BlobStorag
     get: (reference) => blobs.get({ ...reference, location: path(reference.location) }),
     exists: (reference) => blobs.exists({ ...reference, location: path(reference.location) }),
     delete: (reference) => blobs.delete({ ...reference, location: path(reference.location) }),
+  };
+}
+
+/** Every file under a directory, as keys relative to `root`, sorted; none when it is missing. */
+export async function filesUnder(root: string, prefix = ""): Promise<string[]> {
+  const entries = await readdir(join(root, prefix), { recursive: true, withFileTypes: true }).catch(
+    () => [],
+  );
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name).slice(root.length + 1))
+    .sort();
+}
+
+/**
+ * Erasure over the files `tenantKeyBlobs` writes under `root`, as the Cloud Storage adapter does it
+ * in a bucket: by key, and every key under a prefix, refusing another tenant's keys.
+ */
+export function filesystemBlobErasure(root: string, tenantId: string): BlobErasure {
+  const own = (key: string) => {
+    if (!key.startsWith(`tenants/${tenantId}/`) || key.includes(".."))
+      throw new Error("The key is outside the tenant's prefix.");
+    return join(root, key);
+  };
+  return {
+    removeObject: async (key) => {
+      const path = own(key);
+      const found = await stat(path).then(
+        (entry) => entry.isFile(),
+        () => false,
+      );
+      if (found) await rm(path);
+      return found;
+    },
+    removePrefix: async (keyPrefix) => {
+      if (!keyPrefix.endsWith("/")) throw new Error("A prefix ends in `/`.");
+      own(keyPrefix);
+      const removed = await filesUnder(root, keyPrefix);
+      await rm(join(root, keyPrefix), { recursive: true, force: true });
+      return removed.length;
+    },
   };
 }
 

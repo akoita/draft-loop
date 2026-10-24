@@ -27,6 +27,7 @@ import {
   reviewSections,
 } from "./review-model.js";
 import type { Run } from "./run-model.js";
+import { saveFile } from "./save-file.js";
 import { currentRunId, screenMemory } from "./screen-memory.js";
 
 export interface ReviewStepProps {
@@ -205,16 +206,6 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
       />
     </>
   );
-}
-
-/** Hands a downloaded document to the browser as a file to save. */
-function saveFile(bytes: Blob, fileName: string) {
-  const url = URL.createObjectURL(bytes);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function Messages({ messages }: { readonly messages: readonly string[] }) {

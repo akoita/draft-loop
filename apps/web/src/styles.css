@@ -70,6 +70,12 @@ button.secondary {
   color: var(--teal);
 }
 
+button.danger {
+  background: var(--red-wash);
+  border-color: var(--red);
+  color: var(--red);
+}
+
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
