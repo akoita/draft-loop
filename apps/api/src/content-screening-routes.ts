@@ -1,6 +1,7 @@
 import {
   type ApplicationService,
   type HostedKnowledgeIntake,
+  HostedKnowledgeIntakeError,
   type OpportunitySourceInput,
   quarantinedRunMaterial,
   type WorkspaceDescriptor,
@@ -32,6 +33,8 @@ import {
   screeningOutcome,
   screeningReleaseSchema,
   screeningReleaseView,
+  screeningStatusListSchema,
+  screeningStatusView,
 } from "./content-screening-views.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
@@ -47,7 +50,7 @@ export interface ContentScreeningRoutesOptions {
   /** The candidate records' consent; without it a candidate source never reaches the model. */
   readonly consents?: ConsentLedger;
   /** The tenant's knowledge intake, for the latest version of each source a run would use. */
-  readonly knowledgeIntake?: Pick<HostedKnowledgeIntake, "listSources">;
+  readonly knowledgeIntake?: Pick<HostedKnowledgeIntake, "listSources" | "listKnowledgeBases">;
   /** Which record owns each knowledge base; without it every base is tenant-wide. */
   readonly knowledgeOwnersFor?: KnowledgeOwnersFor;
   /** The tenant the owner token acts in. */
@@ -95,6 +98,7 @@ const identifierSchema = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier");
 
+const statusParams = z.strictObject({ workspaceId: identifierSchema });
 const releaseParams = z.strictObject({ workspaceId: identifierSchema, resultId: identifierSchema });
 const releaseBody = z.strictObject({
   reason: z
@@ -281,6 +285,16 @@ export function registerContentScreening(
     }
   };
 
+  /** Whether the base is the record's: it owns it, or in owner-token mode the base is tenant-wide. */
+  const baseBelongsToRecord = async (
+    request: FastifyRequest,
+    record: { readonly workspaceId: string },
+    knowledgeBaseId: string,
+  ): Promise<boolean> => {
+    const owner = await baseOwner(request, knowledgeBaseId);
+    return owner === undefined ? options.authMode === "owner" : owner === record.workspaceId;
+  };
+
   /** Whether the result belongs to this record: its job source, or a base the record owns. */
   const belongsToRecord = async (
     request: FastifyRequest,
@@ -288,9 +302,85 @@ export function registerContentScreening(
     subject: ContentScreeningSubject,
   ): Promise<boolean> => {
     if (subject.kind === "job-source") return subject.workspaceId === record.historyId;
-    const owner = await baseOwner(request, subject.knowledgeBaseId);
-    return owner === undefined ? options.authMode === "owner" : owner === record.workspaceId;
+    return baseBelongsToRecord(request, record, subject.knowledgeBaseId);
   };
+
+  /**
+   * The ids of the knowledge bases whose screening the record shows: those it owns or selects,
+   * or in owner-token mode every base of the tenant.
+   */
+  const recordBases = async (
+    request: FastifyRequest,
+    record: { readonly workspaceId: string },
+    selected: readonly string[],
+  ): Promise<readonly string[]> => {
+    const tenantId = tenantIdOf(request.caller, options.ownerTenantId);
+    const owners =
+      tenantId === undefined || knowledgeOwnersFor === undefined
+        ? undefined
+        : knowledgeOwnersFor(tenantId);
+    const candidates = new Set(selected);
+    if (owners !== undefined) {
+      for (const id of await owners.basesOwnedBy([record.workspaceId])) candidates.add(id);
+    }
+    if (options.authMode === "owner") {
+      for (const { id } of (await knowledgeIntake?.listKnowledgeBases()) ?? []) candidates.add(id);
+    }
+    const bases: string[] = [];
+    for (const knowledgeBaseId of candidates) {
+      if (await baseBelongsToRecord(request, record, knowledgeBaseId)) bases.push(knowledgeBaseId);
+    }
+    return bases;
+  };
+
+  /** A base's statuses for the versions a run would read; older versions are not shown. */
+  const latestVersionStatuses = async (knowledgeBaseId: string) => {
+    let latest: ReadonlyMap<string, string> | undefined;
+    try {
+      const views = await knowledgeIntake?.listSources(knowledgeBaseId);
+      latest =
+        views && new Map(views.map(({ source, latestVersion }) => [source.id, latestVersion.id]));
+    } catch (error) {
+      if (error instanceof HostedKnowledgeIntakeError) return [];
+      throw error;
+    }
+    return (await screening.store.listForKnowledgeBase(knowledgeBaseId)).filter(
+      (status) =>
+        latest === undefined ||
+        (status.subject.kind === "knowledge-source-version" &&
+          latest.get(status.subject.sourceId) === status.subject.sourceVersionId),
+    );
+  };
+
+  app.get(
+    "/v1/workspaces/:workspaceId/screening",
+    {
+      schema: {
+        summary: "Read the record's injection screening status",
+        description:
+          "The latest screening status of each job source of the record's briefs and of each current knowledge source version in the bases the record owns or selects: verdict, closed signal codes, the result id a release names, whether it is quarantined and who released it. Content-free, never a quote. The release reason is member-written, so it is shown to owners and admins only. Empty when nothing was screened.",
+        params: statusParams,
+        response: { 200: screeningStatusListSchema, 400: apiErrorSchema, 404: apiErrorSchema },
+      },
+    },
+    async (request) => {
+      const { caller } = request;
+      const { workspaceId } = request.params;
+      const workspace = await service.readWorkspace(workspaceRoot(workspaceId));
+      const record = { workspaceId, historyId: workspace.id };
+      const bases = await recordBases(
+        request,
+        record,
+        (workspace.candidateKnowledgeSelection ?? []).map((entry) => entry.knowledgeBaseId),
+      );
+      const statuses = [
+        ...(await screening.store.listForRecord(workspace.id)),
+        ...(await Promise.all(bases.map(latestVersionStatuses))).flat(),
+      ];
+      const includeReason = caller !== undefined && reachesEveryRecord(caller);
+      return { statuses: statuses.map((status) => screeningStatusView(status, { includeReason })) };
+    },
+  );
 
   app.post(
     "/v1/workspaces/:workspaceId/screening/:resultId/release",

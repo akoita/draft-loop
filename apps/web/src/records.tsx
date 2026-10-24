@@ -16,6 +16,8 @@ import {
   unassignMemberRequest,
   withRecord,
 } from "./records-model.js";
+import { ReleaseAccess } from "./screening-access.js";
+import { canReleaseScreening } from "./screening-model.js";
 
 type Me = ApiSchemas["Me"];
 type OrganisationMember = ApiSchemas["OrganisationMember"];
@@ -122,7 +124,11 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
       {exists && canExportAndDelete(state.me) ? (
         <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
       ) : null}
-      {chosen === undefined ? null : children(chosen, onSaved)}
+      {chosen === undefined ? null : (
+        <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
+          {children(chosen, onSaved)}
+        </ReleaseAccess.Provider>
+      )}
     </>
   );
 }

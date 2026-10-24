@@ -860,6 +860,137 @@ describe("releasing quarantined material", () => {
   });
 });
 
+describe("reading the record's screening status", () => {
+  async function status(r: Rig, person = "owner-token", workspace = "r1") {
+    const response = await r.server.inject({
+      method: "GET",
+      url: `/v1/workspaces/${workspace}/screening`,
+      headers: { authorization: await as(person) },
+    });
+    return { response, body: response.json() };
+  }
+
+  it("lists a job source's and an upload's latest status with codes and no text", async () => {
+    const r = await rig();
+    await createBrief(r, flaggedText);
+    await upload(r, cleanText);
+
+    const { response, body } = await status(r);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.statuses).toEqual([
+      {
+        kind: "job-source",
+        briefId: "brief-1",
+        sourceId: "posting",
+        resultId: "screening-1",
+        verdict: "flagged",
+        signals: ["instruction-override"],
+        quarantined: true,
+      },
+      {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: "base-1",
+        sourceId: "source-1",
+        sourceVersionId: "version-1",
+        resultId: "screening-2",
+        verdict: "clear",
+        signals: [],
+        quarantined: false,
+      },
+    ]);
+    expect(response.body).not.toContain("FLAG-ME");
+  });
+
+  it("is empty when nothing was screened", async () => {
+    const r = await rig();
+
+    expect((await status(r)).body).toEqual({ statuses: [] });
+  });
+
+  it("shows a release, and the reason to the owner token and admins only", async () => {
+    const r = await rig({ auth: "oidc" });
+    await createBrief(r, flaggedText, "admin-1");
+    await release(r, "screening-1", "admin-1");
+
+    const admin = await status(r, "admin-1");
+    const member = await status(r, "coach-1");
+
+    expect(admin.body.statuses[0]).toMatchObject({
+      quarantined: false,
+      release: { memberId: "admin-1", releasedAt: at, reason: "Read it; the posting is ordinary." },
+    });
+    expect(member.response.statusCode).toBe(200);
+    expect(member.body.statuses[0]).toMatchObject({
+      quarantined: false,
+      release: { memberId: "admin-1", releasedAt: at },
+    });
+    expect(member.response.body).not.toContain("the posting is ordinary");
+  });
+
+  it("shows only the version a run would read, and a newer result for a source", async () => {
+    const r = await rig();
+    await upload(r, flaggedText);
+    await r.store.recordResult(
+      {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: "base-1",
+        sourceId: "source-1",
+        sourceVersionId: "version-0",
+      },
+      {
+        verdict: "flagged",
+        signals: ["role-change"],
+        screeners: [{ id: "rules", version: "1" }],
+        screenedAt: at,
+      },
+    );
+    await r.store.recordResult(
+      {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: "base-1",
+        sourceId: "source-1",
+        sourceVersionId: "version-1",
+      },
+      {
+        verdict: "clear",
+        signals: [],
+        screeners: [{ id: "rules", version: "1" }],
+        screenedAt: at,
+      },
+    );
+
+    const { body } = await status(r);
+
+    expect(body.statuses).toHaveLength(1);
+    expect(body.statuses[0]).toMatchObject({ sourceVersionId: "version-1", verdict: "clear" });
+  });
+
+  it("shows another record neither the job sources nor the uploads of this one", async () => {
+    const r = await rig({ auth: "oidc", baseOwner: "r1" });
+    await createBrief(r, flaggedText, "admin-1");
+    await upload(r, flaggedText, "admin-1");
+
+    expect((await status(r, "admin-1", "r1")).body.statuses).toHaveLength(2);
+    expect((await status(r, "admin-1", "r2")).body).toEqual({ statuses: [] });
+  });
+
+  it("answers 404 for a record that does not exist or a member is not assigned to", async () => {
+    const r = await rig({ auth: "oidc" });
+
+    expect((await status(r, "admin-1", "missing")).response.statusCode).toBe(404);
+    expect((await status(r, "coach-1", "r2")).response.statusCode).toBe(404);
+  });
+
+  it("answers 401 without a credential", async () => {
+    const r = await rig();
+
+    const response = await r.server.inject({ method: "GET", url: "/v1/workspaces/r1/screening" });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
 describe("the model screener", () => {
   it("always reads a job post, with no candidate material in its policy", async () => {
     const r = await rig({ mode: "rules+model" });

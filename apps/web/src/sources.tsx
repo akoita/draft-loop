@@ -9,6 +9,8 @@ import {
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
 import { ConsentStep } from "./consent.js";
+import { ScreeningNote, useScreening } from "./screening.js";
+import { sourceStatus } from "./screening-model.js";
 import { SensitivityRulesStep } from "./sensitivity.js";
 import {
   acceptedSourceFiles,
@@ -38,6 +40,8 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
   const [combinationApproved, setCombinationApproved] = useState(false);
   const [messages, setMessages] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
+  const screening = useScreening(client);
+  const reloadScreening = screening.reload;
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +118,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
         }
       }
       await load();
+      await reloadScreening();
       return problems;
     });
 
@@ -158,6 +163,17 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
       onApproveCombination={setCombinationApproved}
       onSaveSelection={() => void saveSelection()}
       consent={<ConsentStep client={client} kind="material-storage" workspace={workspace} />}
+      screeningProblem={screening.problem}
+      sourceDetails={(source) =>
+        screening.statuses === undefined ? null : (
+          <ScreeningNote
+            client={client}
+            status={sourceStatus(screening.statuses, source)}
+            subject={source.displayName}
+            onReleased={() => void reloadScreening()}
+          />
+        )
+      }
       baseDetails={(knowledgeBaseId) => (
         <SensitivityRulesStep client={client} knowledgeBaseId={knowledgeBaseId} />
       )}
@@ -192,6 +208,10 @@ export interface SourcesPanelProps {
   readonly onSaveSelection: () => void;
   /** The storage consent, asked before the first upload. */
   readonly consent?: ReactNode;
+  /** Why the screening status could not be read, shown once above the bases. */
+  readonly screeningProblem?: string | undefined;
+  /** What to show beside a file, such as its injection screening status. */
+  readonly sourceDetails?: (source: KnowledgeSource) => ReactNode;
   /** What else to show under a knowledge base, such as its sensitivity rules. */
   readonly baseDetails?: (knowledgeBaseId: string) => ReactNode;
 }
@@ -219,6 +239,9 @@ export function SourcesPanel(props: SourcesPanelProps) {
       </p>
       {props.consent}
       <Problems messages={props.messages} />
+      {props.screeningProblem === undefined ? null : (
+        <p className="muted">{props.screeningProblem}</p>
+      )}
       {bases.length === 0 ? <p>No knowledge base yet. Create one for your sources.</p> : null}
       {bases.map((base) => (
         <article key={base.id} className="base">
@@ -234,7 +257,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
               </span>
             </label>
           </header>
-          <SourceList sources={sources[base.id] ?? []} />
+          <SourceList sources={sources[base.id] ?? []} details={props.sourceDetails} />
           <label htmlFor={`upload-${base.id}`}>Add files</label>
           <input
             id={`upload-${base.id}`}
@@ -282,13 +305,20 @@ export function SourcesPanel(props: SourcesPanelProps) {
   );
 }
 
-function SourceList({ sources }: { readonly sources: readonly KnowledgeSource[] }) {
+function SourceList({
+  sources,
+  details,
+}: {
+  readonly sources: readonly KnowledgeSource[];
+  readonly details: SourcesPanelProps["sourceDetails"];
+}) {
   if (sources.length === 0) return <p className="muted">No files yet.</p>;
   return (
     <ul className="sources">
       {sources.map((source) => (
         <li key={source.id}>
           {source.displayName} <span className="muted">{formatBytes(source.sizeBytes)}</span>
+          {details === undefined ? null : <> {details(source)}</>}
         </li>
       ))}
     </ul>

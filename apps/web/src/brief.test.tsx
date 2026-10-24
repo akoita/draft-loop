@@ -80,4 +80,13 @@ describe("job brief screen", () => {
     expect(html).toContain('aria-label="Requirement 1" value="TypeScript services"');
     expect(html).toContain("Saving makes version 3");
   });
+
+  it("shows the screening status under the heading", () => {
+    const html = renderToStaticMarkup(
+      <BriefPanel {...props} screening={<p>Quarantined: flagged</p>} />,
+    );
+
+    expect(html.indexOf("Quarantined: flagged")).toBeGreaterThan(html.indexOf("<h2>Job brief"));
+    expect(html.indexOf("Quarantined: flagged")).toBeLessThan(html.indexOf("<dt>Role</dt>"));
+  });
 });

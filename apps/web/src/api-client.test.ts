@@ -137,6 +137,31 @@ describe("API client", () => {
     await expect(refused).rejects.toMatchObject({ status: 409, code: "stale-version" });
   });
 
+  it("keeps the quarantined material a refused run names", async () => {
+    const quarantined = [
+      {
+        kind: "job-source",
+        briefId: "brief-1",
+        sourceId: "job-posting",
+        resultId: "result-1",
+        verdict: "flagged",
+        signals: ["hidden-text"],
+      },
+    ];
+    const stub = stubFetch(
+      json(409, { error: { code: "material_quarantined", message: "Quarantined.", quarantined } }),
+    );
+    const client = createApiClient({ token, fetch: stub.fetch });
+
+    await expect(
+      client.call("POST /v1/workspaces/{workspaceId}/runs", {
+        path: { workspaceId: "owner" },
+        header: { "idempotency-key": "key-00000001" },
+        body: {},
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "material_quarantined", quarantined });
+  });
+
   it("still reports a refusal whose body is not the error shape", async () => {
     const stub = stubFetch(new Response("<html>", { status: 502 }));
     const client = createApiClient({ token, fetch: stub.fetch });

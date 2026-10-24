@@ -45,6 +45,15 @@ Each consent panel shows the current state and its history, and withdraws a
 grant. A refused upload or run that lacks a consent points to the step that
 records it.
 
+Injection screening shows as a text badge beside each uploaded file and under
+the job brief's heading: screened clear, quarantined (flagged, with the signals
+found in words, or not screened because a screener failed), released, or not
+screened when nothing was stored. A run that screening refuses (409
+`material_quarantined`) lists what is quarantined in the Run step. Owners and
+admins, and the owner token, get a **Release** button for each piece; it opens
+a dialog that requires a reason of up to 500 characters. Members see the
+status and are told to ask an owner or admin.
+
 The screen asks the API's public `GET /v1/auth/config` how to sign in. In
 `oidc` mode (`DRAFT_LOOP_AUTH_MODE=oidc`) it has no token field: **Sign in**
 goes to the identity provider with the authorization code and PKCE, as the

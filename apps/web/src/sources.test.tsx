@@ -77,4 +77,17 @@ describe("sources screen", () => {
     expect(html).toContain("No knowledge base yet.");
     expect(html).toContain('<label for="new-base">New knowledge base</label>');
   });
+
+  it("shows each file's screening beside it, and why the statuses could not be read", () => {
+    const html = renderToStaticMarkup(
+      <SourcesPanel
+        {...props}
+        screeningProblem="The screening status could not be read."
+        sourceDetails={(source) => <b>screened {source.displayName}</b>}
+      />,
+    );
+
+    expect(html).toContain("<b>screened career.md</b>");
+    expect(html).toContain('<p class="muted">The screening status could not be read.</p>');
+  });
 });

@@ -258,6 +258,181 @@
           }
         ]
       },
+      "ScreeningStatusInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "quarantined": {
+                "type": "boolean",
+                "description": "Flagged or unscreened and not released: a run that would use it is refused."
+              },
+              "release": {
+                "description": "The release that covers this result, if any.",
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "description": "The releasing member, or `owner-token` for the owner token."
+                  },
+                  "releasedAt": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "The member-written reason; present only for the organisation's owners and admins.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "releasedAt"
+                ]
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "briefId",
+              "sourceId",
+              "quarantined"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              },
+              "quarantined": {
+                "type": "boolean",
+                "description": "Flagged or unscreened and not released: a run that would use it is refused."
+              },
+              "release": {
+                "description": "The release that covers this result, if any.",
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "description": "The releasing member, or `owner-token` for the owner token."
+                  },
+                  "releasedAt": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "The member-written reason; present only for the organisation's owners and admins.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "releasedAt"
+                ]
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId",
+              "quarantined"
+            ]
+          }
+        ]
+      },
+      "ScreeningStatusListInput": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScreeningStatusInput"
+            },
+            "description": "The latest status of each screened job source and knowledge source version."
+          }
+        },
+        "required": [
+          "statuses"
+        ]
+      },
       "ApiErrorInput": {
         "type": "object",
         "properties": {
@@ -2967,6 +3142,186 @@
             "additionalProperties": false
           }
         ]
+      },
+      "ScreeningStatus": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "quarantined": {
+                "type": "boolean",
+                "description": "Flagged or unscreened and not released: a run that would use it is refused."
+              },
+              "release": {
+                "description": "The release that covers this result, if any.",
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "description": "The releasing member, or `owner-token` for the owner token."
+                  },
+                  "releasedAt": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "The member-written reason; present only for the organisation's owners and admins.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "releasedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "briefId",
+              "sourceId",
+              "quarantined"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resultId": {
+                "type": "string",
+                "description": "The stored result; the id a release names."
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "clear",
+                  "flagged",
+                  "unscreened"
+                ],
+                "description": "clear lets the text through. flagged and unscreened quarantine it until a release."
+              },
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "exfiltration-link",
+                    "hidden-text",
+                    "instruction-override",
+                    "role-change",
+                    "screener-unavailable"
+                  ]
+                },
+                "description": "The closed codes the screeners reported."
+              },
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              },
+              "quarantined": {
+                "type": "boolean",
+                "description": "Flagged or unscreened and not released: a run that would use it is refused."
+              },
+              "release": {
+                "description": "The release that covers this result, if any.",
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "description": "The releasing member, or `owner-token` for the owner token."
+                  },
+                  "releasedAt": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "description": "The member-written reason; present only for the organisation's owners and admins.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "releasedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "resultId",
+              "verdict",
+              "signals",
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId",
+              "quarantined"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ScreeningStatusList": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScreeningStatus"
+            },
+            "description": "The latest status of each screened job source and knowledge source version."
+          }
+        },
+        "required": [
+          "statuses"
+        ],
+        "additionalProperties": false
       },
       "ApiError": {
         "type": "object",
@@ -5991,6 +6346,55 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/screening": {
+      "get": {
+        "summary": "Read the record's injection screening status",
+        "description": "The latest screening status of each job source of the record's briefs and of each current knowledge source version in the bases the record owns or selects: verdict, closed signal codes, the result id a release names, whether it is quarantined and who released it. Content-free, never a quote. The release reason is member-written, so it is shown to owners and admins only. Empty when nothing was screened.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreeningStatusList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
