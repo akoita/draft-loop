@@ -292,7 +292,10 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
             service: {
               ...service,
               readWorkspace: async (root) => {
-                if (root.endsWith("/raced") && (checks += 1) <= 2) await meet();
+                if (root.endsWith("/raced")) {
+                  checks += 1;
+                  if (checks <= 2) await meet();
+                }
                 return service.readWorkspace(root);
               },
             },
