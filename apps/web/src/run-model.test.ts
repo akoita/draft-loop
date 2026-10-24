@@ -49,6 +49,27 @@ describe("run progress", () => {
         lastError: { code: "provider-error", retryable: false, usageLimitResetsAt: null },
       }),
     ).toBe("The run stopped on an error (provider-error).");
+    expect(
+      runError({
+        ...syntheticRun,
+        lastError: {
+          code: "rate-limit",
+          retryable: true,
+          usageLimitResetsAt: null,
+          failedCall: {
+            role: "critic",
+            company: "openai",
+            model: "gpt-test-critic",
+            route: "openai-api",
+            status: 429,
+            providerErrorType: "tokens",
+            providerErrorCode: "rate_limit_exceeded",
+            rateLimit: "tokens",
+            retryAfterSeconds: 20,
+          },
+        },
+      }),
+    ).toBe("The last step failed (rate-limit, the critic's call to openai) and will be retried.");
   });
 
   it("allows only the controls the state permits", () => {

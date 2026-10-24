@@ -483,6 +483,16 @@ describe("runs", () => {
         maxAttempts: 3,
         retryable: true,
         usageLimitResetsAt: "2026-10-21T11:00:00.000Z",
+        failedCall: {
+          role: "author",
+          company: "anthropic",
+          model: "claude-haiku-5-5",
+          route: "vertex-ai",
+          status: 429,
+          providerErrorType: "rate_limit_error",
+          rateLimit: "output-tokens",
+          retryAfterSeconds: 30,
+        },
       },
     } as unknown as RunSnapshot;
     const status = vi.fn(async () => failed);
@@ -503,6 +513,17 @@ describe("runs", () => {
       code: "provider-usage-limit",
       retryable: true,
       usageLimitResetsAt: "2026-10-21T11:00:00.000Z",
+      failedCall: {
+        role: "author",
+        company: "anthropic",
+        model: "claude-haiku-5-5",
+        route: "vertex-ai",
+        status: 429,
+        providerErrorType: "rate_limit_error",
+        providerErrorCode: null,
+        rateLimit: "output-tokens",
+        retryAfterSeconds: 30,
+      },
     });
     expect(response.json().routes).toEqual([
       { step: "author", route: "vertex-ai" },

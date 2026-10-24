@@ -8,6 +8,8 @@ import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import { z } from "zod";
 
+import { failedCallView, failedCallViewSchema } from "./failed-call-view.js";
+
 /**
  * What the API returns: bounded projections of the application service's records. They leave out
  * driver references and file paths, and keep only what a client needs to show and act.
@@ -138,6 +140,7 @@ export const runViewSchema = z
         code: z.string(),
         retryable: z.boolean(),
         usageLimitResetsAt: z.string().nullable(),
+        failedCall: failedCallViewSchema.optional(),
       })
       .nullable()
       .describe("Content-free: the error's code, never its provider message."),
@@ -165,6 +168,7 @@ export function runView(snapshot: RunSnapshot): z.infer<typeof runViewSchema> {
             code: snapshot.lastError.code,
             retryable: snapshot.lastError.retryable,
             usageLimitResetsAt: snapshot.lastError.usageLimitResetsAt ?? null,
+            ...failedCallView(snapshot.lastError.failedCall),
           },
   };
 }

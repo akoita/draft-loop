@@ -44,8 +44,13 @@ export interface RunJobHandlerOptions {
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
   readonly rateLimitRetryMs?: number;
   readonly now?: () => Date;
-  /** Called after each job with what it did and the run as it last read it, if it exists. */
-  readonly onOutcome?: (job: RunJob, outcome: RunJobOutcome, run?: RunSnapshot) => void;
+  /** Called after each job with what it did and the run as it last and first read it, if it exists. */
+  readonly onOutcome?: (
+    job: RunJob,
+    outcome: RunJobOutcome,
+    run?: RunSnapshot,
+    before?: RunSnapshot,
+  ) => void;
 }
 
 /** States a resume can move forward without the person. */
@@ -144,10 +149,12 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
   };
 
   return async (job, control) => {
+    let first: RunSnapshot | undefined;
     let last: RunSnapshot | undefined;
     const outcome = await run(job, control.requeue, (snapshot) => {
+      first ??= snapshot;
       last = snapshot;
     });
-    options.onOutcome?.(job, outcome, last);
+    options.onOutcome?.(job, outcome, last, first);
   };
 }

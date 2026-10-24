@@ -87,5 +87,14 @@ The lines are content-free (ADR 0011, D16):
   workspace and run ids, the job's outcome, the run's state, and its usage so
   far: calls, tokens and estimated cost, in total and by company, model and
   route.
+- **Each failed provider call** logs one `provider call failed` line before
+  it: the run id, step, role and attempt; the company, model and route; the
+  HTTP status and the normalized code; the provider's own error `type` and
+  `code` when each is a short token; and, for a rate limit, which limit ran out
+  and the Retry-After seconds. A call the run retries is a `WARNING`, any other
+  an `ERROR`.
+
+The run's failure keeps the same fields, and the API returns them as the
+run's `lastError.failedCall`, so the web screen can name the call that failed.
 
 The infrastructure builds its log-based metrics and alerts on these fields.
