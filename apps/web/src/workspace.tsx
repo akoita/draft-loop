@@ -2,11 +2,11 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { WritingPolicyStep } from "./policy.js";
+import { useRecordId } from "./record-context.js";
 import {
   type Company,
   defaultWorkspaceForm,
   modelLabel,
-  ownerWorkspaceId,
   samePairWarning,
   type WorkspaceForm,
   workspaceFormProblems,
@@ -29,6 +29,7 @@ export interface WorkspaceStepProps {
 
 /** Reads the owner's workspace, and creates it on first use. */
 export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
+  const workspaceId = useRecordId();
   const [state, setState] = useState<WorkspaceState>({ kind: "loading" });
   const [form, setForm] = useState<WorkspaceForm>(defaultWorkspaceForm);
   const [problems, setProblems] = useState<string[]>([]);
@@ -36,25 +37,22 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
 
   useEffect(() => {
     let current = true;
-    client
-      .call("GET /v1/workspaces/{workspaceId}", { path: { workspaceId: ownerWorkspaceId } })
-      .then(
-        (workspace) => {
-          if (!current) return;
-          setState({ kind: "ready", workspace });
-          onWorkspace(workspace);
-        },
-        (error: unknown) => {
-          if (!current) return;
-          if (error instanceof ApiRequestError && error.status === 404)
-            setState({ kind: "missing" });
-          else setState({ kind: "failed", message: describeError(error) });
-        },
-      );
+    client.call("GET /v1/workspaces/{workspaceId}", { path: { workspaceId } }).then(
+      (workspace) => {
+        if (!current) return;
+        setState({ kind: "ready", workspace });
+        onWorkspace(workspace);
+      },
+      (error: unknown) => {
+        if (!current) return;
+        if (error instanceof ApiRequestError && error.status === 404) setState({ kind: "missing" });
+        else setState({ kind: "failed", message: describeError(error) });
+      },
+    );
     return () => {
       current = false;
     };
-  }, [client, onWorkspace]);
+  }, [client, onWorkspace, workspaceId]);
 
   async function create() {
     const found = workspaceFormProblems(form);
@@ -63,7 +61,7 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
     setBusy(true);
     try {
       const workspace = await client.call("PUT /v1/workspaces/{workspaceId}", {
-        path: { workspaceId: ownerWorkspaceId },
+        path: { workspaceId },
         body: workspaceRequestBody(form),
       });
       setState({ kind: "ready", workspace });

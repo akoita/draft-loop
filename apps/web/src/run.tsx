@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { type ApiClient, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
 import type { Brief } from "./brief-model.js";
+import { useRecordId } from "./record-context.js";
 import {
   formatUsd,
   type Run,
@@ -16,7 +17,6 @@ import {
   usageLimitWait,
 } from "./run-model.js";
 import { currentBriefId, currentRunId, screenMemory } from "./screen-memory.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
 
 export interface RunStepProps {
   readonly client: ApiClient;
@@ -31,6 +31,7 @@ type Control = "pause" | "resume" | "stop";
 
 /** Starts a run from the reviewed brief and follows it until it waits for review. */
 export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepProps) {
+  const workspaceId = useRecordId();
   const [run, setRun] = useState<Run | undefined>(undefined);
   // The Job brief step may not have been opened since the page loaded; read the brief then.
   const [readBrief, setReadBrief] = useState<Brief | undefined>(undefined);
@@ -52,14 +53,14 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     let current = true;
     (async () => {
       try {
-        const application = await readDefaultApplication(client);
+        const application = await readDefaultApplication(client, workspaceId);
         const remembered = screenMemory.read();
         const runId = currentRunId(application, remembered);
         const briefId = currentBriefId(application, remembered);
         if (briefId !== undefined) {
           const opportunity = await client.call(
             "GET /v1/workspaces/{workspaceId}/opportunities/{briefId}",
-            { path: { workspaceId: ownerWorkspaceId, briefId } },
+            { path: { workspaceId, briefId } },
           );
           if (current) setReadBrief(opportunity.brief);
         }
@@ -67,7 +68,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
           runId === undefined
             ? undefined
             : await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
-                path: { workspaceId: ownerWorkspaceId, runId },
+                path: { workspaceId, runId },
               });
         if (current) follow(latest);
       } catch (error) {
@@ -79,7 +80,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     return () => {
       current = false;
     };
-  }, [client, follow]);
+  }, [client, follow, workspaceId]);
 
   // Read an active run every few seconds; stop once it waits for review or ends.
   useEffect(() => {
@@ -87,12 +88,12 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     const timer = setTimeout(() => {
       client
         .call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
-          path: { workspaceId: ownerWorkspaceId, runId: run.runId },
+          path: { workspaceId, runId: run.runId },
         })
         .then(follow, (error: unknown) => setMessages([describeError(error)]));
     }, runPollIntervalMs);
     return () => clearTimeout(timer);
-  }, [client, run, follow]);
+  }, [client, run, follow, workspaceId]);
 
   async function act(action: () => Promise<Run>) {
     setBusy(true);
@@ -114,7 +115,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
     }
     void act(() =>
       client.call("POST /v1/workspaces/{workspaceId}/runs", {
-        path: { workspaceId: ownerWorkspaceId },
+        path: { workspaceId },
         header: { "idempotency-key": crypto.randomUUID() },
         body: startRunBody(brief),
       }),
@@ -123,7 +124,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
 
   const control = (which: Control) => {
     if (run === undefined) return;
-    const path = { workspaceId: ownerWorkspaceId, runId: run.runId };
+    const path = { workspaceId, runId: run.runId };
     void act(() => {
       switch (which) {
         case "pause":

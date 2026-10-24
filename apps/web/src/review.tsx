@@ -11,6 +11,7 @@ import {
   exportRequestBody,
   type RunExport,
 } from "./finish-model.js";
+import { useRecordId } from "./record-context.js";
 import {
   type BlockView,
   blockEditProblem,
@@ -26,7 +27,6 @@ import {
 } from "./review-model.js";
 import type { Run } from "./run-model.js";
 import { currentRunId, screenMemory } from "./screen-memory.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
 
 export interface ReviewStepProps {
   readonly client: ApiClient;
@@ -38,6 +38,7 @@ export interface ReviewStepProps {
 
 /** The draft with its evidence, the critic's findings and their decisions, and block edits. */
 export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
+  const workspaceId = useRecordId();
   const [review, setReview] = useState<RunReview | undefined>(undefined);
   const [exports, setExports] = useState<readonly RunExport[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -48,11 +49,11 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
     try {
       const runId =
         run?.runId ??
-        (await readDefaultApplication(client).then((application) =>
+        (await readDefaultApplication(client, workspaceId).then((application) =>
           currentRunId(application, screenMemory.read()),
         ));
       if (runId === undefined) return;
-      const path = { workspaceId: ownerWorkspaceId, runId };
+      const path = { workspaceId, runId };
       const read = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
         path,
       });
@@ -67,7 +68,7 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
     } finally {
       setLoaded(true);
     }
-  }, [client, run?.runId]);
+  }, [client, run?.runId, workspaceId]);
 
   useEffect(() => {
     void load();
@@ -97,7 +98,7 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
       </section>
     );
 
-  const path = { workspaceId: ownerWorkspaceId, runId: review.run.runId };
+  const path = { workspaceId, runId: review.run.runId };
 
   async function attempt(action: () => Promise<void>) {
     setBusy(true);

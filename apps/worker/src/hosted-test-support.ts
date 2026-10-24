@@ -48,7 +48,9 @@ export function injectFetch(api: FastifyInstance): typeof fetch {
     const headers = new Headers();
     for (const [name, value] of Object.entries(response.headers))
       if (value !== undefined) headers.set(name, String(value));
-    return new Response(new Uint8Array(response.rawPayload), {
+    // A 204 or 304 answer carries no body, and Response refuses one, even when empty.
+    const empty = response.statusCode === 204 || response.statusCode === 304;
+    return new Response(empty ? null : new Uint8Array(response.rawPayload), {
       status: response.statusCode,
       headers,
     });
