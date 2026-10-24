@@ -79,6 +79,7 @@ export function composeHostedApplication(
       records: storage,
       storeId: hostedKnowledgeStoreId,
     }),
+    consents: storage.consentLedger,
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
       reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),

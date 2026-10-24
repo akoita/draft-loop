@@ -457,6 +457,13 @@ directory (ADR 0011, D6):
 - Each change logs one content-free line with the action, the organisation,
   the member and the role, never an email. The hash-chained audit trail is
   per workspace, and membership belongs to none.
+- Each candidate record keeps an append-only consent ledger (ADR 0011, D7),
+  the `ConsentLedger` port from `@draft-loop/storage/consent-ledger` over the
+  `consent_events` table. `GET /v1/workspaces/:workspaceId/consents` returns
+  each kind's latest entry and the history, and `POST` records a
+  `material-storage` or `provider-transmission` grant or withdrawal with its
+  basis, recorded by the caller. The runtime role may only read and insert
+  entries, and each one logs a content-free line without its note.
 
 ## Data and quality contracts
 

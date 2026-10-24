@@ -2,6 +2,8 @@ import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { createCandidateRecordAccess } from "./candidate-records.js";
+import { createConsentLedger } from "./consent-ledger.js";
+import { consentLedgerGrant } from "./consent-ledger-migration.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
@@ -66,6 +68,7 @@ export async function grantPostgresStorageAccess(
       );
       await executor.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schema} TO ${role}`);
       await executor.query(tenantDirectoryGrant(schema, role));
+      await executor.query(consentLedgerGrant(schema, role));
     });
   } finally {
     await client.close();
@@ -106,6 +109,7 @@ function tenantStorage(client: SqlSession) {
     candidateRecords: createCandidateRecordAccess(client),
     idempotencyKeys: createIdempotencyKeys(client),
     workspaceSettings: createWorkspaceSettings(client),
+    consentLedger: createConsentLedger(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

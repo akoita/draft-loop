@@ -3,6 +3,7 @@ import type {
   HostedKnowledgeIntake,
   HostedSensitivityRules,
 } from "@draft-loop/application";
+import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
 import { buildApi } from "./app.js";
@@ -26,6 +27,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       knowledgeIntake: {} as HostedKnowledgeIntake,
       knowledgeStore: { id: "knowledge", reference: "/knowledge" },
       sensitivityRules: {} as HostedSensitivityRules,
+      consents: {} as ConsentLedger,
     },
     directory: {} as TenantDirectory,
   });

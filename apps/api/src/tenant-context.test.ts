@@ -27,6 +27,7 @@ function fakeApplication(tenantId: string): TenantApplication {
     } as unknown as HostedKnowledgeIntake,
     knowledgeStore: { id: "knowledge", reference: `${tenantId}/knowledge` },
     sensitivityRules: {} as TenantApplication["sensitivityRules"],
+    consents: {} as TenantApplication["consents"],
   };
 }
 
