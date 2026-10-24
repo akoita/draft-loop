@@ -5,10 +5,20 @@ export type ApiResponse<K extends ApiOperation> = ApiOperations[K]["response"];
 export type ApiInput<K extends ApiOperation> = Omit<ApiOperations[K], "response">;
 export type { ApiSchemas };
 
+/** The numbers and names a refusal carries beside its code, such as a plan limit; never content. */
+export type ApiErrorDetails = Pick<
+  ApiSchemas["ApiError"]["error"],
+  "role" | "tier" | "cap" | "limit" | "value" | "estimate" | "remaining"
+>;
+
+const detailKeys = ["role", "tier", "cap", "limit", "value", "estimate", "remaining"] as const;
+
 /** An answer the API refused, with its content-free code and message (`ApiError`). */
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
+  /** With a plan refusal, what it names: the tier, the cap, the limit, the estimate. */
+  readonly details?: ApiErrorDetails;
   /** With `material_quarantined`, the stored screening results that hold the request. */
   readonly quarantined?: readonly ApiSchemas["QuarantinedMaterial"][];
 
@@ -17,12 +27,14 @@ export class ApiRequestError extends Error {
     code: string,
     message: string,
     quarantined?: readonly ApiSchemas["QuarantinedMaterial"][],
+    details?: ApiErrorDetails,
   ) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
     if (quarantined !== undefined) this.quarantined = quarantined;
+    if (details !== undefined && Object.keys(details).length > 0) this.details = details;
   }
 }
 
@@ -68,6 +80,11 @@ async function refusal(response: Response): Promise<ApiRequestError> {
       body.error.code,
       body.error.message,
       body.error.quarantined,
+      Object.fromEntries(
+        detailKeys
+          .filter((key) => body.error[key] !== undefined)
+          .map((key) => [key, body.error[key]]),
+      ),
     );
   } catch {
     return new ApiRequestError(

@@ -4,7 +4,8 @@ import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js"
 import { readDefaultApplication } from "./applications.js";
 import type { Brief } from "./brief-model.js";
 import { ConsentStep } from "./consent.js";
-import { describeActionError } from "./consent-model.js";
+import { CreditBalance, RunEstimateLine } from "./credits.js";
+import { describeStartError } from "./credits-model.js";
 import { useRecordId } from "./record-context.js";
 import {
   formatUsd,
@@ -46,6 +47,9 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
   const [messages, setMessages] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
   const [quarantine, setQuarantine] = useState<QuarantineRefusal | undefined>(undefined);
+  const [applicationId, setApplicationId] = useState<string | undefined>(undefined);
+  // Bumped when credits may have changed, so the balance and the estimate are read again.
+  const [creditsVersion, setCreditsVersion] = useState(0);
 
   const follow = useCallback(
     (next: Run | undefined) => {
@@ -61,6 +65,7 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
     (async () => {
       try {
         const application = await readDefaultApplication(client, workspaceId);
+        if (current) setApplicationId(application?.id);
         const remembered = screenMemory.read();
         const runId = currentRunId(application, remembered);
         const briefId = currentBriefId(application, remembered);
@@ -108,10 +113,11 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
       follow(await action());
       setMessages([]);
       setQuarantine(undefined);
+      setCreditsVersion((version) => version + 1);
     } catch (error) {
       const quarantined = quarantineRefusal(error);
       setQuarantine(quarantined);
-      setMessages(quarantined === undefined ? [describeActionError(error)] : []);
+      setMessages(quarantined === undefined ? [describeStartError(error)] : []);
     } finally {
       setBusy(false);
     }
@@ -166,6 +172,18 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
       onControl={control}
       onReview={onReview}
       consent={<ConsentStep client={client} kind="provider-transmission" workspace={workspace} />}
+      credits={<CreditBalance client={client} refresh={creditsVersion} />}
+      estimate={
+        <RunEstimateLine
+          client={client}
+          workspaceId={workspaceId}
+          applicationId={applicationId}
+          modelsKey={
+            workspace === undefined ? "" : `${workspace.author.model}|${workspace.critic.model}`
+          }
+          refresh={creditsVersion}
+        />
+      }
     />
   );
 }
@@ -183,6 +201,10 @@ export interface RunPanelProps {
   readonly onReview: () => void;
   /** The transmission consent, asked before the first run. */
   readonly consent?: ReactNode;
+  /** The organisation's credit balance, shown above the run. */
+  readonly credits?: ReactNode;
+  /** The credits this run would use, shown beside the start button. */
+  readonly estimate?: ReactNode;
 }
 
 export function RunPanel({
@@ -195,6 +217,8 @@ export function RunPanel({
   onControl,
   onReview,
   consent,
+  credits,
+  estimate,
 }: RunPanelProps) {
   const controls = run === undefined ? undefined : runControls(run);
   const canStartAnother = run === undefined || !shouldPoll(run);
@@ -204,6 +228,7 @@ export function RunPanel({
   return (
     <section className="panel">
       <h2>Run</h2>
+      {credits}
       {run === undefined ? (
         <p>No run yet. A run drafts your CV for the reviewed brief, then the critic reviews it.</p>
       ) : (
@@ -242,6 +267,7 @@ export function RunPanel({
         </p>
       ))}
       {quarantine}
+      {canStartAnother ? estimate : null}
       <div className="actions">
         {run?.state === "awaiting-approval" ? (
           <button type="button" onClick={onReview}>

@@ -1,3 +1,4 @@
+import type { ApiSchemas } from "./api-client.js";
 import type { Brief } from "./brief-model.js";
 import type { ConsentEntry, Consents } from "./consent-model.js";
 import type { RunReview } from "./review-model.js";
@@ -185,4 +186,36 @@ export const syntheticTransmissionGrant: ConsentEntry = {
 export const syntheticConsents: Consents = {
   current: { "material-storage": storageGrant, "provider-transmission": transmissionWithdrawal },
   history: [storageGrant, syntheticTransmissionGrant, transmissionWithdrawal],
+};
+
+export const syntheticCredits: ApiSchemas["MemberCredits"] = {
+  organisationId: "org-alder",
+  planId: "pro",
+  entitlements: {
+    modelTiers: ["economy", "standard"],
+    runsPerDay: 10,
+    concurrentRuns: 2,
+    seats: 3,
+    candidateRecords: 20,
+  },
+  periodStart: "2026-10-24T00:00:00.000Z",
+  periodEnd: "2026-11-24T00:00:00.000Z",
+  unlimited: false,
+  allowance: 50,
+  used: 12,
+  reserved: 0,
+  grantsRemaining: 0,
+  remaining: 38,
+  warning: false,
+};
+
+export const syntheticEstimate: ApiSchemas["RunEstimate"] = {
+  credits: 2,
+  estimateVersion: 1,
+  basis: { base: 1, premium: false, roundBlocks: 1 },
+  maxRounds: 4,
+  authorTier: "standard",
+  criticTier: "standard",
+  plan: { allowed: true, code: null },
+  balance: { unlimited: false, remaining: 38, sufficient: true },
 };
