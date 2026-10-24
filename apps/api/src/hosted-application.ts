@@ -8,7 +8,11 @@ import {
 } from "@draft-loop/application";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
-import { createGcsBlobErasure, createGcsBlobStorage } from "@draft-loop/storage-gcs";
+import {
+  createGcsBlobErasure,
+  createGcsBlobStorage,
+  gcsTenantPrefix,
+} from "@draft-loop/storage-gcs";
 import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
@@ -133,6 +137,8 @@ export async function openHostedTenants(
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
           blobs: createGcsBlobErasure({ bucket, tenantId }),
+          organisation: tenancy.forTenant(tenantId).organisationErasure,
+          objectPrefix: gcsTenantPrefix(tenantId),
         }),
         applicationFor: (tenantId) =>
           composeHostedApplication({

@@ -480,6 +480,16 @@ directory (ADR 0011, D6):
 - `POST /v1/operator/organisations` creates an organisation and invites its
   first owner. Operator routes take only the deployment's owner token, in
   both authentication modes, never a member's sign-in.
+- `DELETE /v1/organisation`, by an owner with the organisation id typed back
+  as `confirm`, and `DELETE /v1/operator/organisations/:organisationId`, by the
+  operator's token, delete an organisation. Each record is erased as
+  `DELETE /v1/workspaces/:workspaceId` does, then every object left under the
+  tenant's Cloud Storage prefix, then what the tenant still holds through
+  `erase_tenant_remainder`: tenant-wide knowledge bases, idempotency keys, and
+  the organisation with its members last. A queued or running run anywhere
+  answers 409 `run_active`, and an interrupted deletion finishes on the next
+  call. Accounts at the identity provider are not deleted; a person's sign-in
+  simply no longer resolves to an organisation.
 - Each change logs one content-free line with the action, the organisation,
   the member and the role, never an email. The hash-chained audit trail is
   per workspace, and membership belongs to none.

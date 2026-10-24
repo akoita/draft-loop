@@ -26,10 +26,12 @@ const issuer = "https://id.example.test/realms/draft-loop";
 const audience = "draft-loop-api";
 const budgetCeiling = { maxRounds: 3, maxCostUsd: 3, maxDurationMs: 1_800_000 };
 const tenantId = "org-erasure";
+const otherTenantId = "org-other";
 const career =
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n";
 
-const people = ["owner", "coach"] as const;
+/** Two people of the organisation, and the owner of another one. */
+const people = ["owner", "coach", "other-owner"] as const;
 type Person = (typeof people)[number];
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -64,7 +66,14 @@ function memoryBucket() {
     exists: async (reference) => objects.has(reference.location),
     delete: async (reference) => objects.delete(reference.location),
   };
-  const erasure: BlobErasure = { removeObject: async (key) => objects.delete(key) };
+  const erasure: BlobErasure = {
+    removeObject: async (key) => objects.delete(key),
+    removePrefix: async (keyPrefix) => {
+      const keys = [...objects.keys()].filter((key) => key.startsWith(keyPrefix));
+      for (const key of keys) objects.delete(key);
+      return keys.length;
+    },
+  };
   return { objects, blobs, erasure };
 }
 
@@ -79,6 +88,8 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
   let tenancy: PostgresTenancy;
   let directory: PostgresTenantDirectory;
   let app: FastifyInstance;
+  /** The kept record's run, still queued after the first test. */
+  let keptRun: string;
 
   const call = async (person: Person, method: Method, path: string, payload?: object) => {
     const response = await app.inject({
@@ -106,15 +117,37 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
     return rows;
   };
 
+  /** One tenant's rows in every table that names a tenant, as sorted JSON text per table. */
+  const tenantRows = async (tenant: string) => {
+    const tables = await admin.query(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = $1 AND (column_name = 'tenant_id'
+         OR (table_name = 'organisations' AND column_name = 'id'))
+       ORDER BY table_name`,
+      [schema],
+    );
+    const rows: Record<string, string[]> = {};
+    for (const { table_name: table, column_name: column } of tables) {
+      const found = await admin.query(
+        `SELECT to_jsonb(t)::text AS row FROM ${String(table)} t WHERE ${String(column)} = $1`,
+        [tenant],
+      );
+      if (found.length > 0) rows[String(table)] = found.map((row) => String(row.row)).sort();
+    }
+    return rows;
+  };
+  const objectsOf = (tenant: string) =>
+    [...bucket.objects.keys()].filter((key) => key.startsWith(`tenants/${tenant}/`)).sort();
+
   /** A record with an owned base, an uploaded source, consent and a begun run. */
-  const prepareRecord = async (id: string) => {
-    expect((await call("coach", "PUT", `/v1/workspaces/${id}`, { fixtureMode: true })).status).toBe(
+  const prepareRecord = async (id: string, person: Person = "coach") => {
+    expect((await call(person, "PUT", `/v1/workspaces/${id}`, { fixtureMode: true })).status).toBe(
       201,
     );
     const consent = async (kind: string, providers?: string[]) =>
       expect(
         (
-          await call("coach", "POST", `/v1/workspaces/${id}/consents`, {
+          await call(person, "POST", `/v1/workspaces/${id}/consents`, {
             kind,
             action: "granted",
             basis: kind === "material-storage" ? "contract" : "candidate-consent",
@@ -122,7 +155,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
           })
         ).status,
       ).toBe(201);
-    const base = await call("coach", "POST", "/v1/knowledge-bases", {
+    const base = await call(person, "POST", "/v1/knowledge-bases", {
       displayName: "Career material",
       workspaceId: id,
     });
@@ -131,18 +164,18 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
     const uploaded = await app.inject({
       method: "POST",
       url: `/v1/knowledge-bases/${base.body.id as string}/sources?name=career.md`,
-      headers: { authorization: `Bearer ${tokens.coach}`, "content-type": "text/markdown" },
+      headers: { authorization: `Bearer ${tokens[person]}`, "content-type": "text/markdown" },
       payload: `${career}\n${id}\n`,
     });
     expect(uploaded.statusCode).toBe(201);
     expect(
       (
-        await call("coach", "PUT", `/v1/workspaces/${id}/knowledge-selection`, {
+        await call(person, "PUT", `/v1/workspaces/${id}/knowledge-selection`, {
           knowledgeBaseIds: [base.body.id],
         })
       ).status,
     ).toBe(200);
-    const created = await call("coach", "POST", `/v1/workspaces/${id}/opportunities`, {
+    const created = await call(person, "POST", `/v1/workspaces/${id}/opportunities`, {
       sources: [
         {
           id: "posting",
@@ -153,7 +186,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
       ],
     });
     const briefPath = `/v1/workspaces/${id}/opportunities/${created.body.brief.id as string}`;
-    const edited = await call("coach", "PATCH", briefPath, {
+    const edited = await call(person, "PATCH", briefPath, {
       expectedVersion: created.body.brief.version,
       patch: {
         role: { value: "Platform Engineer", sourceIds: ["posting"] },
@@ -167,12 +200,12 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
         ],
       },
     });
-    const reviewed = await call("coach", "POST", `${briefPath}/review`, {
+    const reviewed = await call(person, "POST", `${briefPath}/review`, {
       expectedVersion: edited.body.brief.version,
     });
     expect(reviewed.status).toBe(200);
     await consent("provider-transmission", ["anthropic", "openai"]);
-    const begun = await call("coach", "POST", `/v1/workspaces/${id}/runs`, {
+    const begun = await call(person, "POST", `/v1/workspaces/${id}/runs`, {
       opportunityBrief: { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version },
     });
     expect(begun.status).toBe(201);
@@ -201,6 +234,11 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
       organisationId: tenantId,
       email: email("coach"),
       role: "member",
+    });
+    await directory.createOrganisation({
+      organisationId: otherTenantId,
+      name: "Example Other Coaching",
+      firstOwnerEmail: email("other-owner"),
     });
 
     const signingKey = await generateKeyPair("ES256");
@@ -245,6 +283,8 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
               },
             },
             blobs: bucket.erasure,
+            organisation: tenancy.forTenant(id).organisationErasure,
+            objectPrefix: `tenants/${id}/`,
           };
         },
         applicationFor: (id) =>
@@ -271,7 +311,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
   it("erases a stopped record's objects and rows, finishing an interrupted erasure", async () => {
     // Both people sign in, and another record exists, before the baseline.
     for (const person of people) expect((await call(person, "GET", "/v1/me")).status).toBe(200);
-    await prepareRecord("r-kept");
+    keptRun = await prepareRecord("r-kept");
     const before = await snapshot();
     const keptObjects = [...bucket.objects.keys()];
 
@@ -306,5 +346,47 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
     expect([...bucket.objects.keys()]).toEqual(keptObjects);
     expect(await erase("owner")).toMatchObject({ status: 404, code: "not_found" });
     expect((await call("owner", "GET", "/v1/workspaces/r-kept")).status).toBe(200);
+  }, 60_000);
+
+  it("deletes the owner's organisation, then the operator deletes another", async () => {
+    // The first test left a record in this organisation; the other one gets its own.
+    expect((await call("other-owner", "GET", "/v1/me")).status).toBe(200);
+    const otherRun = await prepareRecord("r-other", "other-owner");
+    expect((await call("other-owner", "POST", `${otherRun}/pause`, {})).status).toBe(200);
+    const otherRows = await tenantRows(otherTenantId);
+    const otherObjects = objectsOf(otherTenantId);
+    expect(otherObjects).toHaveLength(1);
+    // An object no row names, as an upload interrupted before its row, goes with the prefix.
+    await bucket.blobs.put(`tenants/${tenantId}/knowledge/knowledge/orphan`, new Uint8Array([1]));
+    expect(objectsOf(tenantId)).toHaveLength(2);
+
+    const deleteOwn = (person: Person, confirm = tenantId) =>
+      call(person, "DELETE", "/v1/organisation", { confirm });
+    expect((await deleteOwn("coach")).code).toBe("forbidden");
+    expect((await deleteOwn("owner", otherTenantId)).code).toBe("confirmation_mismatch");
+    // The kept record's run is still queued: nothing is deleted until it stops.
+    expect(await deleteOwn("owner")).toMatchObject({ status: 409, code: "run_active" });
+    expect((await call("owner", "GET", "/v1/workspaces/r-kept")).status).toBe(200);
+    expect((await call("coach", "POST", `${keptRun}/pause`, {})).status).toBe(200);
+    expect((await deleteOwn("owner")).status).toBe(204);
+
+    expect(await tenantRows(tenantId)).toEqual({});
+    expect(objectsOf(tenantId)).toEqual([]);
+    expect(await tenantRows(otherTenantId)).toEqual(otherRows);
+    expect(objectsOf(otherTenantId)).toEqual(otherObjects);
+    // The people's sign-ins no longer reach any organisation.
+    expect((await call("owner", "GET", "/v1/workspaces")).status).toBe(403);
+
+    const operator = (organisationId: string) =>
+      app.inject({
+        method: "DELETE",
+        url: `/v1/operator/organisations/${organisationId}`,
+        headers: { authorization: `Bearer ${ownerToken}` },
+        payload: { confirm: organisationId },
+      });
+    expect((await operator(otherTenantId)).statusCode).toBe(204);
+    expect(await tenantRows(otherTenantId)).toEqual({});
+    expect(bucket.objects.size).toBe(0);
+    expect((await operator(otherTenantId)).statusCode).toBe(404);
   }, 60_000);
 });

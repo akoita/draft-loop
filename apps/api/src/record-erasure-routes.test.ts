@@ -7,6 +7,7 @@ import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-record
 import type { KnowledgeBaseOwners } from "@draft-loop/storage/knowledge-base-owners";
 import {
   type CandidateRecordErasure,
+  type OrganisationErasure,
   RecordErasureError,
 } from "@draft-loop/storage/record-erasure";
 import type {
@@ -87,7 +88,14 @@ function memoryErasure() {
   };
   const erasure: TenantErasure = {
     records: port,
-    blobs: { removeObject: async (key) => objects.delete(key) },
+    blobs: {
+      removeObject: async (key) => objects.delete(key),
+      removePrefix: async () => {
+        throw new Error("a record's erasure removes objects by key");
+      },
+    },
+    organisation: {} as OrganisationErasure,
+    objectPrefix: "tenants/org-north/",
   };
   return { erasure, records, closed, objects, state };
 }

@@ -30,6 +30,7 @@ import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
@@ -312,6 +313,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (options.directory !== undefined) {
     registerOrganisationRoutes(app, { directory: options.directory });
   }
+  if (erasureFor !== undefined) registerOrganisationErasureRoutes(app, { erasureFor });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 
   return app;

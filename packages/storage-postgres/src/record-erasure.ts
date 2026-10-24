@@ -6,7 +6,13 @@ import {
 import type { SqlExecutor, SqlSession } from "./sql-client.js";
 
 /** Run states in which a run is queued or executing without the person. */
-const activeRunStates = ["collecting", "ingesting", "drafting", "reviewing", "revising"] as const;
+export const activeRunStates = [
+  "collecting",
+  "ingesting",
+  "drafting",
+  "reviewing",
+  "revising",
+] as const;
 
 /**
  * The object key a stored location names: an export's location is its workspace reference path,

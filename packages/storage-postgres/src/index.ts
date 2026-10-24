@@ -32,6 +32,7 @@ export type {
   ManagedCandidateKnowledgeSourceVersionLocation,
 } from "./knowledge-run-records.js";
 export { migratePostgres, type PostgresMigration, postgresMigrations } from "./migrations.js";
+export { createOrganisationErasure } from "./organisation-erasure.js";
 export {
   openPostgresCandidateKnowledgeStore,
   type PostgresCandidateKnowledgeStoreOptions,

@@ -39,7 +39,10 @@ export interface TenantApplications {
   readonly recordAccessFor?: RecordAccessFor;
   /** Which candidate record owns each of a tenant's knowledge bases; sign-in mode needs it. */
   readonly knowledgeOwnersFor?: KnowledgeOwnersFor;
-  /** Erases a tenant's candidate records; without it `DELETE /v1/workspaces/:id` is not served. */
+  /**
+   * Erases a tenant's candidate records and the tenant itself; without it neither
+   * `DELETE /v1/workspaces/:id` nor the organisation deletions are served.
+   */
   readonly erasureFor?: TenantErasureFor;
 }
 

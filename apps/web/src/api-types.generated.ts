@@ -956,4 +956,19 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["CreatedOrganisation"];
   };
+  "DELETE /v1/organisation": {
+    readonly body: {
+      readonly confirm: string;
+    };
+    readonly response: void;
+  };
+  "DELETE /v1/operator/organisations/{organisationId}": {
+    readonly path: {
+      readonly organisationId: string;
+    };
+    readonly body: {
+      readonly confirm: string;
+    };
+    readonly response: void;
+  };
 }

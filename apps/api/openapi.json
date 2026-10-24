@@ -9309,6 +9309,161 @@
           }
         }
       }
+    },
+    "/v1/organisation": {
+      "delete": {
+        "summary": "Delete the caller's organisation and everything it holds",
+        "description": "Owners only. Erases every candidate record as `DELETE /v1/workspaces/{workspaceId}` does, then every object left under the tenant's storage prefix, then the tenant-wide knowledge bases, idempotency keys and the organisation with its members. The organisation id is typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run anywhere in the organisation answers 409 `run_active`. Calling again finishes an interrupted deletion. Accounts at the identity provider are not touched: a person's sign-in simply no longer resolves to an organisation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "The organisation id again, typed back by the person."
+                  }
+                },
+                "required": [
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/organisations/{organisationId}": {
+      "delete": {
+        "summary": "Delete an organisation and everything it holds",
+        "description": "Operator only: takes the deployment's owner token in both authentication modes. Erases every candidate record as `DELETE /v1/workspaces/{workspaceId}` does, then every object left under the tenant's storage prefix, then the tenant-wide knowledge bases, idempotency keys and the organisation with its members. The organisation id is typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run anywhere in the organisation answers 409 `run_active`. Calling again finishes an interrupted deletion. Accounts at the identity provider are not touched: a person's sign-in simply no longer resolves to an organisation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "The organisation id again, typed back by the person."
+                  }
+                },
+                "required": [
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "organisationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "security": [
