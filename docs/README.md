@@ -14,6 +14,7 @@ contributors, maintainers, and operators to the current information they need.
 | Read drafting, review, and rendering boundaries | [Drafting and review architecture](architecture/drafting-and-review.md) |
 | Read workflow, provider, and trust boundaries | [Runtime and trust architecture](architecture/runtime-and-trust.md) |
 | Run CLI and desktop commands | [CLI and desktop reference](reference/cli-and-desktop.md) |
+| Read the hosted service's record export format | [Record archive v1](reference/record-archive.md) |
 | Understand privacy and security boundaries | [Privacy and evaluation](security/privacy-and-evaluation.md) · [Threat model](security/threat-model.md) |
 | Review release evidence | [Release evidence](releases/) |
 | Run or review acceptance protocols | [Evaluation protocols and results](evaluation/) |
@@ -41,7 +42,8 @@ contributors, maintainers, and operators to the current information they need.
   checkpoints; it is historical, not a statement of current readiness.
 - **Security:** `security/` contains privacy, retention, threat, and evaluation
   policy that governs the product.
-- **Reference:** `reference/` contains task-oriented CLI and desktop usage.
+- **Reference:** `reference/` contains task-oriented CLI and desktop usage
+  and the hosted service's record archive format.
 - **Operations:** `operations/` contains release, maintenance and local server procedures.
 - **Architecture decisions:** `adr/` records decisions that should remain
   durable even when implementation details change.
