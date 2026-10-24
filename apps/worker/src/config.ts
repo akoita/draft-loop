@@ -28,6 +28,13 @@ export interface WorkerConfig {
    * in owner mode, off unless `DRAFT_LOOP_REQUIRE_CONSENT` says so.
    */
   readonly requireConsent: boolean;
+  /**
+   * Whether a missing screening result counts against a job's material (#1677). The same
+   * `DRAFT_LOOP_SCREENING` the API reads: on unless it is `off`, so a job whose brief or knowledge
+   * source has no stored result is held, never run as clear. The mode only decides this; the
+   * worker screens nothing.
+   */
+  readonly requireScreening: boolean;
   /** The deployment's limit per run, re-checked before each run executes. */
   readonly budgetCeiling: RunBudgetCeiling;
   /** The model routes; absent on the local stack, where runs use fixtures and call no provider. */
@@ -101,6 +108,19 @@ function consentRequired(env: NodeJS.ProcessEnv): boolean {
   return true;
 }
 
+const screeningModes = ["off", "rules", "rules+model"];
+
+/** Screening is on unless `DRAFT_LOOP_SCREENING` is `off`; an unknown value is a startup error. */
+function screeningRequired(env: NodeJS.ProcessEnv): boolean {
+  const value = env.DRAFT_LOOP_SCREENING ?? "";
+  if (value !== "" && !screeningModes.includes(value)) {
+    throw new WorkerConfigError(
+      `DRAFT_LOOP_SCREENING must be one of ${screeningModes.join(", ")}.`,
+    );
+  }
+  return value !== "off";
+}
+
 function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
   const value = env[name] ?? "";
   return value === "" ? undefined : value;
@@ -126,6 +146,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
     allowProviderData: allow,
     requireConsent,
+    requireScreening: screeningRequired(env),
     budgetCeiling: readRunBudgetCeiling(env),
     ...(modelGateway === undefined ? {} : { modelGateway }),
     ...(readyFile === undefined ? {} : { readyFile }),

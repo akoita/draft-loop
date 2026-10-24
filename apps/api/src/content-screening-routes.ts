@@ -4,6 +4,7 @@ import {
   HostedKnowledgeIntakeError,
   type OpportunitySourceInput,
   quarantinedRunMaterial,
+  unscreenedRunMaterial,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { ingestBytes } from "@draft-loop/ingestion";
@@ -26,6 +27,7 @@ import { consentRecordId } from "./consent-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
 import {
   MaterialQuarantinedError,
+  MaterialUnscreenedError,
   type OpportunityScreening,
   opportunityScreening,
   quarantinedMaterial,
@@ -35,6 +37,7 @@ import {
   screeningReleaseView,
   screeningStatusListSchema,
   screeningStatusView,
+  unscreenedMaterial,
 } from "./content-screening-views.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
@@ -158,7 +161,8 @@ async function extractedText(upload: ScreenedUpload): Promise<string | undefined
  * Injection screening at intake, the run gate and the release (ADR 0011, phase 2d). Job sources
  * and candidate uploads are screened after they are saved, so their ids exist; a screener that
  * fails leaves the text unscreened, which is quarantined, and never fails the request. A run
- * refuses quarantined material whatever the mode, so `off` only stops new results. A candidate
+ * refuses quarantined material whatever the mode, so `off` only stops new results. With screening
+ * on, a run also refuses material with no stored result (409 `material_unscreened`). A candidate
  * source reaches the model screener only when its record's consent names Anthropic. Owners and
  * admins release a result, once, with a reason; the store audits it.
  */
@@ -271,17 +275,24 @@ export function registerContentScreening(
             briefId: opportunityBrief.briefId,
             version: opportunityBrief.version,
           });
-    const quarantined = await quarantinedRunMaterial(
-      { store: screening.store, listSources: knowledgeIntake?.listSources },
-      {
-        brief,
-        knowledgeBaseIds: (workspace.candidateKnowledgeSelection ?? []).map(
-          (entry) => entry.knowledgeBaseId,
-        ),
-      },
-    );
+    const material = {
+      brief,
+      knowledgeBaseIds: (workspace.candidateKnowledgeSelection ?? []).map(
+        (entry) => entry.knowledgeBaseId,
+      ),
+    };
+    const readers = { store: screening.store, listSources: knowledgeIntake?.listSources };
+    const quarantined = await quarantinedRunMaterial(readers, material);
     if (quarantined.length > 0) {
       throw new MaterialQuarantinedError(quarantined.map(quarantinedMaterial));
+    }
+    // With screening on, no stored result is never clear. The brief's text and the uploaded
+    // file's bytes are not at hand here, so the run is refused and the material is screened
+    // again by saving the brief or uploading the file anew.
+    if (screening.mode === "off") return;
+    const unscreened = await unscreenedRunMaterial(readers, material);
+    if (unscreened.length > 0) {
+      throw new MaterialUnscreenedError(unscreened.map(unscreenedMaterial));
     }
   };
 

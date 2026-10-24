@@ -67,8 +67,14 @@ const worker = await startWorker({
       ? { consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }) }
       : {}),
     budgetCeiling: config.budgetCeiling,
-    // Material flagged after a run was queued pauses the run before any provider call.
-    quarantinedFor: tenantRunQuarantine({ tenancy, serviceFor, workspaceRoot }),
+    // Material flagged after a run was queued, or with no result while screening is on, pauses the
+    // run before any provider call.
+    quarantinedFor: tenantRunQuarantine({
+      tenancy,
+      serviceFor,
+      workspaceRoot,
+      requireScreening: config.requireScreening,
+    }),
     onQuarantined: (job, quarantined) =>
       console.warn(
         logLine(

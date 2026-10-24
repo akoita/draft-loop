@@ -433,6 +433,54 @@
           "statuses"
         ]
       },
+      "UnscreenedMaterialInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "briefId",
+              "sourceId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId"
+            ]
+          }
+        ]
+      },
       "ApiErrorInput": {
         "type": "object",
         "properties": {
@@ -469,6 +517,13 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/QuarantinedMaterialInput"
+                }
+              },
+              "unscreened": {
+                "description": "With material_unscreened, the material that has no stored screening result, by ids only.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UnscreenedMaterialInput"
                 }
               }
             },
@@ -3323,6 +3378,56 @@
         ],
         "additionalProperties": false
       },
+      "UnscreenedMaterial": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "job-source"
+              },
+              "briefId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "briefId",
+              "sourceId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "knowledge-source-version"
+              },
+              "knowledgeBaseId": {
+                "type": "string"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceVersionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "knowledgeBaseId",
+              "sourceId",
+              "sourceVersionId"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "ApiError": {
         "type": "object",
         "properties": {
@@ -3360,6 +3465,13 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/QuarantinedMaterial"
+                }
+              },
+              "unscreened": {
+                "description": "With material_unscreened, the material that has no stored screening result, by ids only.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UnscreenedMaterial"
                 }
               }
             },
@@ -7858,7 +7970,7 @@
     "/v1/workspaces/{workspaceId}/runs": {
       "post": {
         "summary": "Begin a run; a worker executes it",
-        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release.",
+        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release. With screening on, a run on material that has no stored screening result, such as a brief saved while screening was off or whose result failed to save, answers 409 material_unscreened and lists the brief sources and knowledge source versions to screen by ids only; save the brief again or upload the file again to screen it.",
         "requestBody": {
           "required": true,
           "content": {

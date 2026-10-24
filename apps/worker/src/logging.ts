@@ -88,11 +88,15 @@ export function quarantineFields(
     tenantId: job.tenantId,
     workspaceId: job.workspaceId,
     runId: job.runId,
-    quarantined: quarantined.map(({ kind, resultId, signals }) => ({ kind, resultId, signals })),
+    quarantined: quarantined.map(({ kind, resultId, signals }) => ({
+      kind,
+      ...(resultId === undefined ? {} : { resultId }),
+      signals,
+    })),
     // The same shape as the API's quarantine lines, for the alert: every result id and signal code.
     screening: {
       tenantId: job.tenantId,
-      resultIds: quarantined.map(({ resultId }) => resultId),
+      resultIds: quarantined.flatMap(({ resultId }) => (resultId === undefined ? [] : [resultId])),
       signals: [...new Set(quarantined.flatMap(({ signals }) => signals))].sort(),
     },
   };

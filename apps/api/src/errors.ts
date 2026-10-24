@@ -28,7 +28,12 @@ import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { MaterialQuarantinedError, quarantinedMaterialSchema } from "./content-screening-views.js";
+import {
+  MaterialQuarantinedError,
+  MaterialUnscreenedError,
+  quarantinedMaterialSchema,
+  unscreenedMaterialSchema,
+} from "./content-screening-views.js";
 import { IdempotencyConflictError, IdempotencyInProgressError } from "./idempotency.js";
 
 /**
@@ -49,6 +54,12 @@ export const apiErrorSchema = z
         .optional()
         .describe(
           "With material_quarantined, the stored screening results that hold the request; each resultId is what a release names.",
+        ),
+      unscreened: z
+        .array(unscreenedMaterialSchema)
+        .optional()
+        .describe(
+          "With material_unscreened, the material that has no stored screening result, by ids only.",
         ),
     }),
   })
@@ -201,6 +212,16 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
         code: "material_quarantined",
         message: error.message,
         quarantined: [...error.quarantined],
+      },
+    } satisfies ApiError);
+    return;
+  }
+  if (error instanceof MaterialUnscreenedError) {
+    void reply.code(409).send({
+      error: {
+        code: "material_unscreened",
+        message: error.message,
+        unscreened: [...error.unscreened],
       },
     } satisfies ApiError);
     return;

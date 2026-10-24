@@ -352,6 +352,12 @@ grounding checks and the candidate's approval stay in place behind it.
   `material_quarantined`. The worker asks the same question as it claims each
   job, so material flagged after queueing pauses the run before any provider
   call.
+- **No result is not clear.** With screening on, the run gate and the worker
+  also treat material with no stored result as needing screening: a brief
+  source or knowledge source version that was saved while screening was `off`,
+  predates screening, or lost its result write. The API refuses the run with
+  409 `material_unscreened` and lists the subjects by ids; saving the brief or
+  uploading the file again screens it. The worker pauses the run the same way.
 - **Release with audit.** Only an owner or admin releases a result, once, with
   a written reason. The release covers that result only, so a later flag
   quarantines the text again. It appends a `content-screening.released` audit
@@ -367,10 +373,10 @@ grounding checks and the candidate's approval stay in place behind it.
 
 ### Remaining gaps
 
-- **Missing results (#1677).** Material saved without a stored result, because
-  the result write failed or screening was off or did not exist yet, is not
-  quarantined. The worker may also read slightly different text from an upload
-  than the API screened.
+- **The worker reads its own text.** The API screens the text it extracts from
+  an upload, and the worker may extract slightly different text from the same
+  file. The worker screens nothing; it only checks the stored results. Screening
+  the exact text the worker reads is a follow-up.
 - **Model screening is not deployed everywhere.** It runs only where Claude on
   Vertex AI in the EU is available to the API. Staging and production keep the
   rules mode until Claude works on Vertex there, so paraphrased or other-language

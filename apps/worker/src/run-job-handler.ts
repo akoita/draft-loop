@@ -37,11 +37,12 @@ export type RunJobOutcome =
 
 /**
  * One piece of a run's material that is quarantined, content-free: which kind of source, the
- * stored result that a release names, and the closed signal codes. Never the text.
+ * stored result that a release names, and the closed signal codes. Never the text. Material with
+ * no stored result while screening is on has no `resultId` and the signal `unscreened`.
  */
 export interface QuarantinedRunInput {
   readonly kind: "job-source" | "knowledge-source-version";
-  readonly resultId: string;
+  readonly resultId?: string;
   readonly signals: readonly string[];
 }
 

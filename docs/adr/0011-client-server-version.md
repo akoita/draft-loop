@@ -420,9 +420,12 @@ Build on what the local version already records:
   quarantined: the API refuses a run on it (409 `material_quarantined`), the
   worker pauses a run queued before the flag, and an owner or admin releases
   it with an audited reason. A red-team flow test over a synthetic corpus pins
-  this end to end. Still open: material with no stored result (#1677), model
-  screening on staging and production, re-screening of brief edits, and
-  author and critic prompt hardening, which waits for a D16 evaluation run. The
+  this end to end. With screening on, material with no stored result is never
+  clear (#1677): the API refuses a run on it (409 `material_unscreened`) and
+  the worker pauses a run queued before the gap. Still open: the worker does
+  not screen the exact text it reads from an upload, model screening on
+  staging and production, re-screening of brief edits, and author and critic
+  prompt hardening, which waits for a D16 evaluation run. The
   [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
   lists the controls and gaps.
 

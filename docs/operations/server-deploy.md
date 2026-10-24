@@ -62,6 +62,8 @@ sets them from its infrastructure. Unlike the local stack, it:
   in sign-in mode, the same `DRAFT_LOOP_AUTH_MODE=oidc` as the API. The worker
   then always checks consent as it claims each job, and refuses to start if
   `DRAFT_LOOP_REQUIRE_CONSENT=false` is also set;
+- gives the worker the same `DRAFT_LOOP_SCREENING` as the API, so a run on
+  material with no stored screening result is held there as the API refuses it;
 - leaves `DRAFT_LOOP_SCREENING` at its default, `rules`, or sets `rules+model`
   on the API. The model screener calls Claude Haiku on the EU Vertex route with
   the API's own identity, so the API needs the Vertex settings, permission to

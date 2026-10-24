@@ -204,6 +204,8 @@ interface Rig {
   readonly modelPolicies: Parameters<ModelScreenerFactory>[0]["dataPolicy"][];
   readonly begin: ReturnType<typeof vi.fn>;
   readonly logs: () => Record<string, unknown>[];
+  /** Switches the deployment's screening mode, as a redeploy with another setting would. */
+  setMode: (mode: ScreeningMode) => void;
   /** Replaces the consent state the fake ledger answers with. */
   setConsent: (providers: readonly string[] | undefined) => void;
 }
@@ -265,14 +267,17 @@ async function as(person: string): Promise<string> {
  * the routes and the quarantine rules are the real ones.
  */
 async function rig(options: RigOptions = {}): Promise<Rig> {
-  const { mode = "rules", auth = "owner", allowProviderData = false } = options;
+  const { auth = "owner", allowProviderData = false } = options;
+  let mode: ScreeningMode = options.mode ?? "rules";
   const baseOwner = "baseOwner" in options ? options.baseOwner : auth === "oidc" ? "r1" : undefined;
   const store = memoryScreeningStore();
   const rules = scriptedScreener("rules");
   const model = scriptedScreener("model", "anthropic");
   const modelPolicies: Rig["modelPolicies"] = [];
   const setup: ContentScreeningSetup = {
-    mode,
+    get mode() {
+      return mode;
+    },
     allowProviderData,
     rules,
     model: (modelOptions) => {
@@ -372,7 +377,14 @@ async function rig(options: RigOptions = {}): Promise<Rig> {
     sensitivityRules: {} as TenantApplication["sensitivityRules"],
     consents: { current: async () => consent } as unknown as ConsentLedger,
     recordArchives: {} as TenantApplication["recordArchives"],
-    contentScreening: createHostedContentScreening({ store, tenantId, setup }),
+    // Rebuilt on each use, so a mode switched mid-test (a redeploy) takes effect.
+    contentScreening: {
+      get mode() {
+        return mode;
+      },
+      store,
+      screen: (input) => createHostedContentScreening({ store, tenantId, setup }).screen(input),
+    },
   });
 
   const access: CandidateRecordAccess = {
@@ -415,6 +427,9 @@ async function rig(options: RigOptions = {}): Promise<Rig> {
     modelPolicies,
     begin,
     logs: () => logLines.map((line) => JSON.parse(line) as Record<string, unknown>),
+    setMode: (next) => {
+      mode = next;
+    },
     setConsent: (providers) => {
       consent = {
         "material-storage": { action: "granted" },
@@ -753,6 +768,98 @@ describe("refusing a run on quarantined material", () => {
     );
 
     expect((await beginRun(r)).response.statusCode).toBe(201);
+  });
+});
+
+describe("never treating a missing screening result as clear", () => {
+  const withBrief = { opportunityBrief: { briefId: "brief-1", version: 1 } };
+
+  it("refuses a run on a brief whose result failed to save, naming the source by ids", async () => {
+    const r = await rig();
+    vi.spyOn(r.store, "recordResult").mockRejectedValueOnce(new Error("database unavailable"));
+
+    const created = await createBrief(r, cleanText);
+    expect(created.response.statusCode).toBe(500);
+    expect(r.store.results).toEqual([]);
+
+    const refused = await beginRun(r, withBrief);
+
+    expect(refused.response.statusCode).toBe(409);
+    expect(refused.body.error).toMatchObject({
+      code: "material_unscreened",
+      unscreened: [{ kind: "job-source", briefId: "brief-1", sourceId: "posting" }],
+    });
+    expect(refused.response.body).not.toContain(cleanText);
+    expect(r.begin).not.toHaveBeenCalled();
+  });
+
+  it("refuses a run on a brief saved while screening was off, until it is saved and screened again", async () => {
+    const r = await rig({ mode: "off" });
+    await createBrief(r, cleanText);
+    expect(r.store.results).toEqual([]);
+
+    r.setMode("rules");
+    const refused = await beginRun(r, withBrief);
+
+    expect(refused.response.statusCode).toBe(409);
+    expect(refused.body.error).toMatchObject({
+      code: "material_unscreened",
+      unscreened: [{ kind: "job-source", briefId: "brief-1", sourceId: "posting" }],
+    });
+
+    // Saving the brief again screens its sources, and a run on that brief goes through.
+    expect((await createBrief(r, cleanText)).body.screening.verdict).toBe("clear");
+    const begun = await beginRun(r, { opportunityBrief: { briefId: "brief-2", version: 1 } });
+    expect(begun.response.statusCode).toBe(201);
+  });
+
+  it("refuses a run on a selected upload stored while screening was off, until it is uploaded again", async () => {
+    const r = await rig({ mode: "off" });
+    await createBrief(r, cleanText);
+    await upload(r, cleanText);
+    r.setMode("rules");
+    // The brief has no result either; screen it so the upload is the only gap.
+    await createBrief(r, cleanText);
+    const brief = { opportunityBrief: { briefId: "brief-2", version: 1 } };
+
+    const refused = await beginRun(r, brief);
+
+    expect(refused.response.statusCode).toBe(409);
+    expect(refused.body.error).toMatchObject({
+      code: "material_unscreened",
+      unscreened: [
+        {
+          kind: "knowledge-source-version",
+          knowledgeBaseId: "base-1",
+          sourceId: "source-1",
+          sourceVersionId: "version-1",
+        },
+      ],
+    });
+
+    // The same bytes again answer with the stored source and screen it.
+    expect((await upload(r, cleanText)).body.screening.verdict).toBe("clear");
+    expect((await beginRun(r, brief)).response.statusCode).toBe(201);
+  });
+
+  it("answers a quarantined result before a missing one", async () => {
+    const r = await rig();
+    await createBrief(r, flaggedText);
+    vi.spyOn(r.store, "recordResult").mockRejectedValueOnce(new Error("database unavailable"));
+    await upload(r, cleanText);
+
+    const refused = await beginRun(r, withBrief);
+
+    expect(refused.response.statusCode).toBe(409);
+    expect(refused.body.error.code).toBe("material_quarantined");
+  });
+
+  it("does not ask for a result when screening is off", async () => {
+    const r = await rig({ mode: "off" });
+    await createBrief(r, cleanText);
+    await upload(r, cleanText);
+
+    expect((await beginRun(r, withBrief)).response.statusCode).toBe(201);
   });
 });
 
