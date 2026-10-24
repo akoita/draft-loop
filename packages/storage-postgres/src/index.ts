@@ -51,6 +51,7 @@ export {
   openPostgresRecordArchives,
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";
+export { createCandidateRecordErasure, objectKeyOf } from "./record-erasure.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
   createSqlClient,

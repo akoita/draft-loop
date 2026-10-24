@@ -71,6 +71,10 @@
       "types": "./src/record-archive.ts",
       "import": "./src/record-archive.ts"
     },
+    "./record-erasure": {
+      "types": "./src/record-erasure.ts",
+      "import": "./src/record-erasure.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"

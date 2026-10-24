@@ -11,6 +11,8 @@ import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
 import { createRecordArchiveRows } from "./record-archive.js";
+import { createCandidateRecordErasure } from "./record-erasure.js";
+import { recordErasureGrants } from "./record-erasure-migration.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
 import {
@@ -71,6 +73,7 @@ export async function grantPostgresStorageAccess(
       await executor.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schema} TO ${role}`);
       await executor.query(tenantDirectoryGrant(schema, role));
       await executor.query(consentLedgerGrant(schema, role));
+      for (const grant of recordErasureGrants(schema, role)) await executor.query(grant);
     });
   } finally {
     await client.close();
@@ -112,6 +115,7 @@ function tenantStorage(client: SqlSession) {
     candidateRecords: createCandidateRecordAccess(client),
     idempotencyKeys: createIdempotencyKeys(client),
     knowledgeBaseOwners: createKnowledgeBaseOwners(client),
+    recordErasure: createCandidateRecordErasure(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
