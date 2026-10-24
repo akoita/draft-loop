@@ -13,6 +13,7 @@ import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
+  openPostgresRecordArchives,
   openPostgresTenancy,
   type PostgresTenantStorage,
 } from "@draft-loop/storage-postgres";
@@ -80,6 +81,7 @@ export function composeHostedApplication(
       storeId: hostedKnowledgeStoreId,
     }),
     consents: storage.consentLedger,
+    recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
       reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),

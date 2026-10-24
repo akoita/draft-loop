@@ -28,6 +28,7 @@ function fakeApplication(tenantId: string): TenantApplication {
     knowledgeStore: { id: "knowledge", reference: `${tenantId}/knowledge` },
     sensitivityRules: {} as TenantApplication["sensitivityRules"],
     consents: {} as TenantApplication["consents"],
+    recordArchives: {} as TenantApplication["recordArchives"],
   };
 }
 

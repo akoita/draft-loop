@@ -498,6 +498,16 @@ directory (ADR 0011, D6):
   With `DRAFT_LOOP_REQUIRE_CONSENT=true` the worker checks again as it claims
   each job and pauses the run, without a provider call, when consent is gone.
   `DRAFT_LOOP_ALLOW_PROVIDER_DATA` stays a ceiling above consent.
+- `GET /v1/workspaces/:workspaceId/archive` downloads everything held about
+  a candidate record as a zip in the [record archive v1](../reference/record-archive.md)
+  format, with the manifest's SHA-256 in `X-Archive-Manifest-SHA256`. Owners
+  and admins may export, and the owner token in owner-token mode; members get
+  403. The archive holds the bases the record owns in sign-in mode, and every
+  base of the tenant in owner-token mode, as the API's auth mode chooses.
+  `openPostgresRecordArchives` reads the record's rows from one snapshot and
+  checks every source and export object before the first byte is sent, so
+  a missing or changed object answers 409 `archive_integrity`. The zip streams
+  one file at a time, and each download logs one content-free line.
 
 ## Data and quality contracts
 

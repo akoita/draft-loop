@@ -5,6 +5,7 @@ import type {
 } from "@draft-loop/application";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
 import { buildApi } from "./app.js";
@@ -31,6 +32,7 @@ export async function generateOpenApiDocument(): Promise<string> {
         knowledgeStore: { id: "knowledge", reference: "/knowledge" },
         sensitivityRules: {} as HostedSensitivityRules,
         consents: {} as ConsentLedger,
+        recordArchives: {} as RecordArchives,
       }),
     },
     directory: {} as TenantDirectory,

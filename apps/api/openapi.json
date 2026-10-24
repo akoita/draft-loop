@@ -8799,6 +8799,75 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/archive": {
+      "get": {
+        "summary": "Download everything held about a candidate record as a zip",
+        "description": "Streams the record's archive (record archive v1): its manifest, its rows as JSON and the original bytes of its sources and exported documents. Owners and admins only. The manifest's SHA-256 is in X-Archive-Manifest-SHA256. A stored object that is missing or no longer matches its checksum answers 409 archive_integrity before anything is sent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The archive, as application/zip.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The archive, as application/zip."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me": {
       "get": {
         "summary": "Read who the caller is: the owner token or an organisation's member",
