@@ -79,8 +79,11 @@ const knowledgeSelectionBody = z
     "combining several knowledge bases needs combinationApproved",
   );
 
-/** The round limit `initialize` records when the request sets none. */
-const defaultMaxRounds = 3;
+/**
+ * The hosted round limit when the request sets none. Two rounds matched the local three-round
+ * draft in hosted parity at lower cost, so the hosted default is lower than the local one.
+ */
+const defaultMaxRounds = 2;
 
 /**
  * A hosted workspace has no job file or source folder: job briefs and knowledge come through the
@@ -92,6 +95,7 @@ function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeW
     root,
     jobDescription: "job.md",
     sources: "sources",
+    maxRounds: defaultMaxRounds,
     ...Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)),
     ...(author === undefined ? {} : { authorCompany: author.company, authorModel: author.model }),
     ...(critic === undefined ? {} : { criticCompany: critic.company, criticModel: critic.model }),

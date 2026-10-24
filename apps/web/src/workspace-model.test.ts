@@ -13,7 +13,7 @@ describe("workspace form", () => {
     expect(workspaceFormProblems(defaultWorkspaceForm)).toEqual([]);
     expect(workspaceRequestBody(defaultWorkspaceForm)).toEqual({
       language: "en",
-      maxRounds: 3,
+      maxRounds: 2,
       fixtureMode: false,
     });
   });
@@ -29,7 +29,7 @@ describe("workspace form", () => {
       }),
     ).toEqual({
       language: "en",
-      maxRounds: 3,
+      maxRounds: 2,
       fixtureMode: true,
       requiredSections: ["Summary", "Experience", "Skills"],
       author: { company: "anthropic", model: "synthetic-author-1" },
