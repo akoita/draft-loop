@@ -1,6 +1,6 @@
 # Hosted parity
 
-**Status:** Second result 2026-10-24: quality matches with the prompt cache working, cost still fails ([#1357](https://github.com/akoita/draft-loop/issues/1357))<br>
+**Status:** Quality matches (2026-10-23 and 2026-10-24); the cost check has no complete measurement yet ([#1357](https://github.com/akoita/draft-loop/issues/1357))<br>
 **Issue:** [#1554](https://github.com/akoita/draft-loop/issues/1554), part of
 [#1358](https://github.com/akoita/draft-loop/issues/1358); the run itself is
 [#1555](https://github.com/akoita/draft-loop/issues/1555)
@@ -145,3 +145,24 @@ Deviations from the setup:
   already equals local round 3 on every quality measure.
 - **Commits and routes.** As in the first result: local ran at `b07b052`, and
   hosted calls took the direct Claude API fallback and OpenAI's global endpoint.
+
+### Third attempt, 2026-10-24
+
+The hosted run used `server-v0.2.5` (`85d615f`). That commit adds three cost
+changes: two rounds by default (#1583), a requeue after a rate limit (#1581)
+and the critic's prompt cache (#1580).
+
+**Verdict: no result.** The run stopped in round 1 before any draft, so nothing
+was scored:
+
+- **What ran.** Only the first Claude call completed: 149K input tokens for
+  US$1.23, the price of writing the prompt into the cache.
+- **Why it stopped.** The next call was refused for a rate limit three times,
+  about a minute apart, and the run ended in `provider-error`. A limit that
+  lasts over two minutes points to a daily or account limit rather than a
+  burst. The run does not record which provider refused or why; naming them
+  is [#1568](https://github.com/akoita/draft-loop/issues/1568).
+
+The cost check moves to
+[#1597](https://github.com/akoita/draft-loop/issues/1597): name the refused
+call, check the OpenAI account's limits, then make one Standard run.
