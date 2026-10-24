@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildApi, composeHostedApplication, hostedKnowledgeLocation } from "@draft-loop/api";
+import {
+  buildApi,
+  composeHostedApplication,
+  hostedEntitlementsFor,
+  hostedKnowledgeLocation,
+} from "@draft-loop/api";
 import {
   type ContentScreeningCorpusCase,
   cleanContentScreeningCases,
@@ -38,7 +43,13 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { scriptedGateway } from "./gateway-test-support.js";
-import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
+import {
+  assignInternalPlan,
+  injectFetch,
+  runtimeRole,
+  runtimeUrl,
+  tenantKeyBlobs,
+} from "./hosted-test-support.js";
 import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
 import {
   createRunJobHandler,
@@ -152,6 +163,7 @@ describe.runIf(connectionString !== undefined)(
           budgetCeiling,
           recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
           knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
+          entitlementsFor: hostedEntitlementsFor(tenancy),
           applicationFor: (id) =>
             composeHostedApplication({
               storage: tenancy.forTenant(id),
@@ -174,6 +186,7 @@ describe.runIf(connectionString !== undefined)(
           firstOwnerEmail: organisation.email,
         },
       });
+      await assignInternalPlan(tenancy, organisation.organisationId);
       client = createApiClient({ token, fetch: injectFetch(api) });
       await client.call("GET /v1/me", {});
       await client.call("PUT /v1/workspaces/{workspaceId}", {

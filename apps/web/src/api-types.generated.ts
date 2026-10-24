@@ -11,6 +11,12 @@ export interface ApiSchemas {
       })[];
       readonly quarantined?: readonly (ApiSchemas["QuarantinedMaterial"])[];
       readonly unscreened?: readonly (ApiSchemas["UnscreenedMaterial"])[];
+      readonly role?: "author" | "critic";
+      readonly tier?: string;
+      readonly cap?: "concurrent" | "per_day";
+      readonly limit?: number;
+      readonly estimate?: number;
+      readonly remaining?: number;
     };
   };
   "Application": {

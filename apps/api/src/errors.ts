@@ -34,6 +34,7 @@ import {
   quarantinedMaterialSchema,
   unscreenedMaterialSchema,
 } from "./content-screening-views.js";
+import { EntitlementRefusedError, entitlementRefusalStatus } from "./entitlement-gate.js";
 import { IdempotencyConflictError, IdempotencyInProgressError } from "./idempotency.js";
 
 /**
@@ -61,6 +62,31 @@ export const apiErrorSchema = z
         .describe(
           "With material_unscreened, the material that has no stored screening result, by ids only.",
         ),
+      role: z
+        .enum(["author", "critic"])
+        .optional()
+        .describe(
+          "With model_tier_unknown and model_tier_not_in_plan, the model role the refusal is about.",
+        ),
+      tier: z
+        .string()
+        .optional()
+        .describe("With model_tier_not_in_plan, the tier the plan does not include."),
+      cap: z
+        .enum(["concurrent", "per_day"])
+        .optional()
+        .describe("With run_cap_reached, which of the plan's run caps is reached."),
+      limit: z.number().int().optional().describe("With run_cap_reached, the plan's cap."),
+      estimate: z
+        .number()
+        .int()
+        .optional()
+        .describe("With credits_insufficient, the most credits the run can need."),
+      remaining: z
+        .number()
+        .int()
+        .optional()
+        .describe("With credits_insufficient, the credits the organisation has left."),
     }),
   })
   .meta({ id: "ApiError" });
@@ -231,6 +257,14 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     void reply
       .code(contentScreeningStatus[error.code])
       .send(apiError(error.code === "result_not_found" ? "not_found" : error.code, error.message));
+    return;
+  }
+  // A refusal names a code, a role, a tier and numbers only, so the answer can carry them.
+  if (error instanceof EntitlementRefusedError) {
+    const { code, ...details } = error.refusal;
+    void reply
+      .code(entitlementRefusalStatus[code])
+      .send({ error: { code, message: error.message, ...details } } satisfies ApiError);
     return;
   }
   if (error instanceof ConsentRequiredError) {

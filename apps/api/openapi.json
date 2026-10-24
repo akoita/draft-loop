@@ -525,6 +525,44 @@
                 "items": {
                   "$ref": "#/components/schemas/UnscreenedMaterialInput"
                 }
+              },
+              "role": {
+                "description": "With model_tier_unknown and model_tier_not_in_plan, the model role the refusal is about.",
+                "type": "string",
+                "enum": [
+                  "author",
+                  "critic"
+                ]
+              },
+              "tier": {
+                "description": "With model_tier_not_in_plan, the tier the plan does not include.",
+                "type": "string"
+              },
+              "cap": {
+                "description": "With run_cap_reached, which of the plan's run caps is reached.",
+                "type": "string",
+                "enum": [
+                  "concurrent",
+                  "per_day"
+                ]
+              },
+              "limit": {
+                "description": "With run_cap_reached, the plan's cap.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "estimate": {
+                "description": "With credits_insufficient, the most credits the run can need.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "remaining": {
+                "description": "With credits_insufficient, the credits the organisation has left.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -4010,6 +4048,44 @@
                 "items": {
                   "$ref": "#/components/schemas/UnscreenedMaterial"
                 }
+              },
+              "role": {
+                "description": "With model_tier_unknown and model_tier_not_in_plan, the model role the refusal is about.",
+                "type": "string",
+                "enum": [
+                  "author",
+                  "critic"
+                ]
+              },
+              "tier": {
+                "description": "With model_tier_not_in_plan, the tier the plan does not include.",
+                "type": "string"
+              },
+              "cap": {
+                "description": "With run_cap_reached, which of the plan's run caps is reached.",
+                "type": "string",
+                "enum": [
+                  "concurrent",
+                  "per_day"
+                ]
+              },
+              "limit": {
+                "description": "With run_cap_reached, the plan's cap.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "estimate": {
+                "description": "With credits_insufficient, the most credits the run can need.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "remaining": {
+                "description": "With credits_insufficient, the credits the organisation has left.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -9050,7 +9126,7 @@
     "/v1/workspaces/{workspaceId}/runs": {
       "post": {
         "summary": "Begin a run; a worker executes it",
-        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release. With screening on, a run on material that has no stored screening result, such as a brief saved while screening was off or whose result failed to save, answers 409 material_unscreened and lists the brief sources and knowledge source versions to screen by ids only; save the brief again or upload the file again to screen it.",
+        "description": "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release. With screening on, a run on material that has no stored screening result, such as a brief saved while screening was off or whose result failed to save, answers 409 material_unscreened and lists the brief sources and knowledge source versions to screen by ids only; save the brief again or upload the file again to screen it. In sign-in mode the organisation's plan then has to allow the run: 403 plan_required without a plan, 422 model_tier_unknown when a model's tier cannot be determined, 403 model_tier_not_in_plan (with role and tier) for a tier the plan lacks, 429 run_cap_reached (with cap and limit) at the plan's concurrent or daily run cap, and 402 credits_insufficient (with estimate and remaining) when the balance does not cover the run's estimate. The estimate is reserved before the run is saved; a retry with the same Idempotency-Key reserves nothing more, and a run that cannot be saved gives its credits back.",
         "requestBody": {
           "required": true,
           "content": {
@@ -9177,6 +9253,26 @@
               }
             }
           },
+          "402": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Default Response",
             "content": {
@@ -9198,6 +9294,16 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Default Response",
             "content": {
               "application/json": {

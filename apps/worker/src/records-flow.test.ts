@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildApi, composeHostedApplication, hostedKnowledgeLocation } from "@draft-loop/api";
+import {
+  buildApi,
+  composeHostedApplication,
+  hostedEntitlementsFor,
+  hostedKnowledgeLocation,
+} from "@draft-loop/api";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   createPostgresTenantDirectory,
@@ -38,6 +43,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  assignInternalPlan,
   filesystemBlobErasure,
   injectFetch,
   runtimeRole,
@@ -120,6 +126,7 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
           blobs: filesystemBlobErasure(blobRoot, tenantId),
@@ -163,6 +170,7 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
     await operator.call("POST /v1/operator/organisations", {
       body: { organisationId, name: "Alder Coaching", firstOwnerEmail: people.owner.email },
     });
+    await assignInternalPlan(tenancy, organisationId);
     const owner = clientFor("owner");
     expect(canManageMembers(await owner.call("GET /v1/me", {}))).toBe(true);
     const invited = await owner.call("POST /v1/organisation/members", {

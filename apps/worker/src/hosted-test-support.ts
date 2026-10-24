@@ -3,6 +3,7 @@ import { isAbsolute, join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import type { BlobErasure } from "@draft-loop/storage/record-erasure";
+import type { PostgresTenancy } from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 
 /** The runtime role the Postgres flow tests connect as, with no superuser rights. */
@@ -125,4 +126,19 @@ export function readZipEntries(archive: Buffer): Map<string, Buffer> {
     entries.set(path, method === 8 ? inflateRawSync(data) : Buffer.from(data));
   }
   return entries;
+}
+
+/**
+ * Gives a test organisation the unlimited `internal` plan, so sign-in mode lets its runs start.
+ * For flows that are not about plans.
+ */
+export async function assignInternalPlan(
+  tenancy: PostgresTenancy,
+  organisationId: string,
+): Promise<void> {
+  await tenancy.forTenant(organisationId).organisationPlans.assignPlan({
+    planId: "internal",
+    periodStart: "2026-01-01",
+    assignedAt: "2026-01-01T00:00:00.000Z",
+  });
 }

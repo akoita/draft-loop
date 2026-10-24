@@ -1556,7 +1556,7 @@ async function createRun(
     io.write(
       `retrieval: status=${retrieval.status} indexedChunks=${retrieval.indexedChunkCount} selectedChunks=${retrieval.selectedChunkCount} selectedSources=${retrieval.selectedSourceCount}`,
     );
-    const runId = `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const runId = options.runId ?? `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
     await application.bind(storage, config.id, runId);
     const runBudget = budget(config);
     writeRunPreflight(config, io.write, runBudget, inputs.context);

@@ -15,7 +15,12 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { composeHostedApplication, hostedKnowledgeLocation } from "./hosted-application.js";
+import {
+  composeHostedApplication,
+  hostedEntitlementsFor,
+  hostedKnowledgeLocation,
+} from "./hosted-application.js";
+import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -35,9 +40,14 @@ const people = ["owner", "coach", "other-owner"] as const;
 type Person = (typeof people)[number];
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-/** The tenant's own rows, which outlive any one record. */
+/**
+ * The tenant's own rows, which outlive any one record. The credit ledger meters the organisation:
+ * its rows hold run ids and numbers, never a record's material.
+ */
 const tenantWideTables = new Set([
   "schema_migrations",
+  "credit_balances",
+  "credit_ledger",
   "organisations",
   "organisation_members",
   "candidate_knowledge_stores",
@@ -230,6 +240,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
       name: "Example Erasure Coaching",
       firstOwnerEmail: email("owner"),
     });
+    await assignInternalPlan(tenancy, tenantId);
     await directory.inviteMember({
       organisationId: tenantId,
       email: email("coach"),
@@ -240,6 +251,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
       name: "Example Other Coaching",
       firstOwnerEmail: email("other-owner"),
     });
+    await assignInternalPlan(tenancy, otherTenantId);
 
     const signingKey = await generateKeyPair("ES256");
     const publicJwk = { ...(await exportJWK(signingKey.publicKey)), kid: "key-1", alg: "ES256" };
@@ -268,6 +280,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
       tenants: {
         budgetCeiling,
         recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
         erasureFor: (id) => {
           const records = tenancy.forTenant(id).recordErasure;

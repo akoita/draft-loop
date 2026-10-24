@@ -237,6 +237,12 @@ export interface WorkspaceDescriptor {
 
 export interface StartRunCommand {
   readonly root: string;
+  /**
+   * The id the new run gets, for a caller that must know it before the run is saved, such as the
+   * hosted API reserving credits for it. Omitted means the service picks one; the caller
+   * keeps it unique, as a freshly generated id is.
+   */
+  readonly runId?: string;
   readonly allowProviderData?: boolean;
   /** Exact author and critic profile versions to bind to this run only. */
   readonly modelProfiles?: ModelProfileReferences;

@@ -107,6 +107,10 @@ and grants credits with the owner token, the only credential the
 - **Errors:** 422 `invalid_plan_assignment` for an unknown plan or missing
   seats, 404 `organisation_not_found`, 409 `idempotency_conflict` for a key
   reused with another amount.
+- **Effect:** a member's run start reads the plan and reserves its credits
+  (see the [architecture overview](../architecture/overview.md)). An
+  organisation with no plan is refused with 403 `plan_required` until the
+  operator assigns one.
 - **Trail:** each write logs one `audit` line with ids, the plan id, numbers
   and the reason code, and no free text.
 

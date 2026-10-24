@@ -18,6 +18,7 @@ export { type ApiError, apiErrorSchema } from "./errors.js";
 export {
   composeHostedApplication,
   type HostedApplicationParts,
+  hostedEntitlementsFor,
   hostedKnowledgeLocation,
   hostedKnowledgeStoreId,
 } from "./hosted-application.js";
