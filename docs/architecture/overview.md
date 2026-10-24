@@ -500,6 +500,18 @@ directory (ADR 0011, D6):
 - `POST /v1/operator/organisations` creates an organisation and invites its
   first owner. Operator routes take only the deployment's owner token, in
   both authentication modes, never a member's sign-in.
+- `PUT /v1/operator/organisations/:organisationId/plan`, `POST
+  /v1/operator/organisations/:organisationId/credit-grants` and `GET
+  /v1/operator/organisations/:organisationId/credits` let the operator assign an
+  organisation's plan, grant it credits and read its plan, entitlements and
+  balance (`operator-plan-routes.ts`). The plan body is `planId`, optional
+  `overrides`, `seats` and `periodStart` (today's UTC date by default); an unknown
+  plan, a seat-priced plan without seats or an impossible date answers 422
+  `invalid_plan_assignment`, and an unknown organisation 404
+  `organisation_not_found`. A grant is 1 to 1,000,000 credits with a reason
+  code, needs an `Idempotency-Key` so a retry is not doubled, and expires after
+  12 months. Each write logs one content-free `audit` line (ids, plan id, numbers,
+  reason code), since a plan belongs to no workspace's audit trail.
 - `DELETE /v1/organisation`, by an owner with the organisation id typed back
   as `confirm`, and `DELETE /v1/operator/organisations/:organisationId`, by the
   operator's token, delete an organisation. Each record is erased as

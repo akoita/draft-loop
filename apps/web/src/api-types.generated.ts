@@ -36,6 +36,25 @@ export interface ApiSchemas {
     })[];
     readonly chosenRunId: string | null;
   };
+  "AssignedPlan": {
+    readonly assignment: ApiSchemas["PlanAssignment"];
+    readonly entitlements: {
+      readonly creditsPerPeriod: number | null;
+      readonly creditPeriodMonths: number;
+      readonly modelTiers: readonly ("premium" | "standard" | "economy")[];
+      readonly seats: number | null;
+      readonly candidateRecords: number | null;
+      readonly runsPerDay: number | null;
+      readonly concurrentRuns: number | null;
+      readonly features: {
+        readonly provenanceReport: boolean;
+        readonly runComparison: boolean;
+        readonly byok: boolean;
+        readonly sso: boolean;
+        readonly retentionControls: boolean;
+      };
+    };
+  };
   "AuthConfig": {
     readonly mode: "owner";
   } | {
@@ -72,6 +91,25 @@ export interface ApiSchemas {
       readonly createdAt: string;
     };
     readonly firstOwner: ApiSchemas["OrganisationMember"];
+  };
+  "CreditBalance": {
+    readonly periodStart: string | null;
+    readonly periodEnd: string | null;
+    readonly allowance: number;
+    readonly allowanceUsed: number;
+    readonly reserved: number;
+    readonly grantsRemaining: number;
+    readonly remaining: number;
+    readonly unlimited: boolean;
+  };
+  "GrantedCredits": {
+    readonly grant: {
+      readonly sequence: number;
+      readonly credits: number;
+      readonly reason: string;
+      readonly expiresAt: string;
+    };
+    readonly balance: ApiSchemas["CreditBalance"];
   };
   "Health": {
     readonly status: "ok";
@@ -225,6 +263,27 @@ export interface ApiSchemas {
       readonly reviewedAt: string | null;
     })[];
   };
+  "OrganisationCredits": {
+    readonly organisationId: string;
+    readonly assignment: ApiSchemas["PlanAssignment"] | null;
+    readonly entitlements: {
+      readonly creditsPerPeriod: number | null;
+      readonly creditPeriodMonths: number;
+      readonly modelTiers: readonly ("premium" | "standard" | "economy")[];
+      readonly seats: number | null;
+      readonly candidateRecords: number | null;
+      readonly runsPerDay: number | null;
+      readonly concurrentRuns: number | null;
+      readonly features: {
+        readonly provenanceReport: boolean;
+        readonly runComparison: boolean;
+        readonly byok: boolean;
+        readonly sso: boolean;
+        readonly retentionControls: boolean;
+      };
+    } | null;
+    readonly balance: ApiSchemas["CreditBalance"];
+  };
   "OrganisationMember": {
     readonly memberId: string;
     readonly email: string;
@@ -236,6 +295,29 @@ export interface ApiSchemas {
   "OrganisationMembers": {
     readonly organisationId: string;
     readonly members: readonly (ApiSchemas["OrganisationMember"])[];
+  };
+  "PlanAssignment": {
+    readonly planId: string;
+    readonly catalogVersion: number;
+    readonly overrides: {
+      readonly creditsPerPeriod?: number | null;
+      readonly creditPeriodMonths?: number;
+      readonly modelTiers?: readonly ("premium" | "standard" | "economy")[];
+      readonly seats?: number | null;
+      readonly candidateRecords?: number | null;
+      readonly runsPerDay?: number | null;
+      readonly concurrentRuns?: number | null;
+      readonly features?: {
+        readonly provenanceReport?: boolean;
+        readonly runComparison?: boolean;
+        readonly byok?: boolean;
+        readonly sso?: boolean;
+        readonly retentionControls?: boolean;
+      };
+    };
+    readonly seats: number | null;
+    readonly periodStart: string;
+    readonly assignedAt: string;
   };
   "QuarantinedMaterial": {
     readonly resultId: string;
@@ -1068,5 +1150,51 @@ export interface ApiOperations {
       readonly confirm: string;
     };
     readonly response: void;
+  };
+  "PUT /v1/operator/organisations/{organisationId}/plan": {
+    readonly path: {
+      readonly organisationId: string;
+    };
+    readonly body: {
+      readonly planId: string;
+      readonly overrides?: {
+        readonly creditsPerPeriod?: number | null;
+        readonly creditPeriodMonths?: number;
+        readonly modelTiers?: readonly ("premium" | "standard" | "economy")[];
+        readonly seats?: number | null;
+        readonly candidateRecords?: number | null;
+        readonly runsPerDay?: number | null;
+        readonly concurrentRuns?: number | null;
+        readonly features?: {
+          readonly provenanceReport?: boolean;
+          readonly runComparison?: boolean;
+          readonly byok?: boolean;
+          readonly sso?: boolean;
+          readonly retentionControls?: boolean;
+        };
+      };
+      readonly seats?: number;
+      readonly periodStart?: string;
+    };
+    readonly response: ApiSchemas["AssignedPlan"];
+  };
+  "POST /v1/operator/organisations/{organisationId}/credit-grants": {
+    readonly path: {
+      readonly organisationId: string;
+    };
+    readonly header: {
+      readonly "idempotency-key": string;
+    };
+    readonly body: {
+      readonly credits: number;
+      readonly reason: string;
+    };
+    readonly response: ApiSchemas["GrantedCredits"];
+  };
+  "GET /v1/operator/organisations/{organisationId}/credits": {
+    readonly path: {
+      readonly organisationId: string;
+    };
+    readonly response: ApiSchemas["OrganisationCredits"];
   };
 }
