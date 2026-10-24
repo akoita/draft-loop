@@ -627,6 +627,21 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   mode), else 404. A result that a newer one replaced answers 409
   `result_superseded`, and a clear one 409 `not_releasable`. A later flagged or
   unscreened result quarantines the text again.
+- **Status.** `GET /v1/workspaces/:id/screening` reads the record's latest
+  status after a reload: each job source of its briefs, and each current source
+  version in the bases the record owns or selects (every base in owner-token
+  mode). Each item has the subject ids, verdict, signal codes, result id,
+  `quarantined` and, when released, `release` with the member and time. The
+  release reason is member-written, so only owners and admins get it. The
+  route needs the same sign-in and record access as other workspace routes and
+  answers an empty list when nothing was screened.
+- **Web screen.** `apps/web` reads that route to badge each uploaded file and
+  the job brief with text, not colour alone: clear, quarantined (flagged with
+  its signals in words, or not screened), released, or not screened. A 409
+  `material_quarantined` at the run start names what is quarantined from
+  `error.quarantined`. Owners and admins release each piece in a dialog that
+  requires a reason; other members see the status only, and the API enforces
+  the same rule.
 - **Alerts.** Four content-free `WARNING` lines let the owner alert on screening
   and on refused access (ADR 0011, D16): `material quarantined` at intake,
   `quarantined material released`, `run paused for quarantined material` in the

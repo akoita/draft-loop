@@ -9,12 +9,20 @@ export type { ApiSchemas };
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
+  /** With `material_quarantined`, the stored screening results that hold the request. */
+  readonly quarantined?: readonly ApiSchemas["QuarantinedMaterial"][];
 
-  constructor(status: number, code: string, message: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    quarantined?: readonly ApiSchemas["QuarantinedMaterial"][],
+  ) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
+    if (quarantined !== undefined) this.quarantined = quarantined;
   }
 }
 
@@ -55,7 +63,12 @@ export function operationUrl(path: string, input: CallInput): string {
 async function refusal(response: Response): Promise<ApiRequestError> {
   try {
     const body = (await response.json()) as ApiSchemas["ApiError"];
-    return new ApiRequestError(response.status, body.error.code, body.error.message);
+    return new ApiRequestError(
+      response.status,
+      body.error.code,
+      body.error.message,
+      body.error.quarantined,
+    );
   } catch {
     return new ApiRequestError(
       response.status,

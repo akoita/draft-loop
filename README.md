@@ -124,7 +124,8 @@ an end-to-end smoke against it.
 The API serves the owner's web screen at `/`, where you set up a workspace and
 its writing policy, record the candidate's consents, upload sources and mark
 private sections, paste a job, run, review with evidence, approve and download
-the CV. See the [local server stack](docs/operations/local-server-stack.md).
+the CV. It shows each source's and job brief's injection screening status and
+lets owners and admins release quarantined material with a reason. See the [local server stack](docs/operations/local-server-stack.md).
 In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
 identity provider, and each organisation is its own tenant: its members see
 only its workspaces, sources and runs. Within an organisation, each workspace

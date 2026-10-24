@@ -19,6 +19,8 @@ import {
   usageLimitWait,
 } from "./run-model.js";
 import { currentBriefId, currentRunId, screenMemory } from "./screen-memory.js";
+import { QuarantineRefusalPanel } from "./screening.js";
+import { type QuarantineRefusal, quarantineRefusal } from "./screening-model.js";
 
 export interface RunStepProps {
   readonly client: ApiClient;
@@ -43,6 +45,7 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
   const [loaded, setLoaded] = useState(false);
   const [messages, setMessages] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [quarantine, setQuarantine] = useState<QuarantineRefusal | undefined>(undefined);
 
   const follow = useCallback(
     (next: Run | undefined) => {
@@ -104,8 +107,11 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
     try {
       follow(await action());
       setMessages([]);
+      setQuarantine(undefined);
     } catch (error) {
-      setMessages([describeActionError(error)]);
+      const quarantined = quarantineRefusal(error);
+      setQuarantine(quarantined);
+      setMessages(quarantined === undefined ? [describeActionError(error)] : []);
     } finally {
       setBusy(false);
     }
@@ -150,6 +156,11 @@ export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview 
       run={run}
       startProblem={startProblem(brief)}
       messages={messages}
+      quarantine={
+        quarantine === undefined ? undefined : (
+          <QuarantineRefusalPanel client={client} refusal={quarantine} />
+        )
+      }
       busy={busy}
       onStart={start}
       onControl={control}
@@ -164,6 +175,8 @@ export interface RunPanelProps {
   /** Why a new run cannot start yet, if it cannot. */
   readonly startProblem: string | undefined;
   readonly messages: readonly string[];
+  /** Why the start was refused because screening quarantined material, with its releases. */
+  readonly quarantine?: ReactNode;
   readonly busy: boolean;
   readonly onStart: () => void;
   readonly onControl: (control: Control) => void;
@@ -176,6 +189,7 @@ export function RunPanel({
   run,
   startProblem: problem,
   messages,
+  quarantine,
   busy,
   onStart,
   onControl,
@@ -227,6 +241,7 @@ export function RunPanel({
           {message}
         </p>
       ))}
+      {quarantine}
       <div className="actions">
         {run?.state === "awaiting-approval" ? (
           <button type="button" onClick={onReview}>

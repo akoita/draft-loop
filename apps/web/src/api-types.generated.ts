@@ -413,6 +413,37 @@ export interface ApiSchemas {
     readonly reason: string;
     readonly releasedAt: string;
   };
+  "ScreeningStatus": {
+    readonly resultId: string;
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly kind: "job-source";
+    readonly briefId: string;
+    readonly sourceId: string;
+    readonly quarantined: boolean;
+    readonly release?: {
+      readonly memberId: string;
+      readonly releasedAt: string;
+      readonly reason?: string;
+    };
+  } | {
+    readonly resultId: string;
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly kind: "knowledge-source-version";
+    readonly knowledgeBaseId: string;
+    readonly sourceId: string;
+    readonly sourceVersionId: string;
+    readonly quarantined: boolean;
+    readonly release?: {
+      readonly memberId: string;
+      readonly releasedAt: string;
+      readonly reason?: string;
+    };
+  };
+  "ScreeningStatusList": {
+    readonly statuses: readonly (ApiSchemas["ScreeningStatus"])[];
+  };
   "SensitivityRule": {
     readonly id: string;
     readonly tier: "normal" | "sensitive" | "never-share";
@@ -555,6 +586,12 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: ApiSchemas["Workspace"];
+  };
+  "GET /v1/workspaces/{workspaceId}/screening": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["ScreeningStatusList"];
   };
   "POST /v1/workspaces/{workspaceId}/screening/{resultId}/release": {
     readonly path: {

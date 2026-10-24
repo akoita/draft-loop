@@ -89,4 +89,13 @@ describe("run screen", () => {
     expect(html.indexOf("Transmission consent")).toBeGreaterThan(-1);
     expect(html.indexOf("Transmission consent")).toBeLessThan(html.indexOf("Start a run"));
   });
+
+  it("shows why screening refused the start, above the actions", () => {
+    const html = renderToStaticMarkup(
+      <RunPanel {...props} run={undefined} quarantine={<p>The job brief is quarantined.</p>} />,
+    );
+
+    expect(html.indexOf("The job brief is quarantined.")).toBeGreaterThan(-1);
+    expect(html.indexOf("The job brief is quarantined.")).toBeLessThan(html.indexOf("Start a run"));
+  });
 });

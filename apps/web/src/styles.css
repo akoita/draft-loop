@@ -310,6 +310,73 @@ form button[type="submit"] {
   border-color: var(--amber);
 }
 
+.screening-note {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.screening-line {
+  margin: 0.5rem 0;
+}
+
+.screening {
+  display: inline-block;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.1rem 0.5rem;
+  color: var(--text-2);
+}
+
+.screening-label {
+  font-weight: 600;
+}
+
+.screening-clear,
+.screening-released {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+.screening-flagged {
+  color: var(--red);
+  background: var(--red-wash);
+  border: 2px solid var(--red);
+}
+
+.screening-unscreened {
+  color: var(--amber);
+  background: var(--amber-wash);
+  border: 2px solid var(--amber);
+}
+
+.quarantined {
+  padding-left: 1.25rem;
+}
+
+.quarantined li {
+  margin-bottom: 0.5rem;
+}
+
+.release-dialog {
+  max-width: 32rem;
+  width: calc(100% - 2rem);
+  background: var(--surface);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.release-dialog textarea {
+  min-height: 6rem;
+}
+
+.release-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .requirement-row {
   display: grid;
   grid-template-columns: 8rem 1fr auto;

@@ -84,21 +84,22 @@ export function screeningReleaseView(release: ContentScreeningRelease) {
   };
 }
 
+const jobSourceMaterialSchema = screeningOutcomeSchema.extend({
+  kind: z.literal("job-source"),
+  briefId: z.string(),
+  sourceId: z.string(),
+});
+
+const knowledgeSourceMaterialSchema = screeningOutcomeSchema.extend({
+  kind: z.literal("knowledge-source-version"),
+  knowledgeBaseId: z.string(),
+  sourceId: z.string(),
+  sourceVersionId: z.string(),
+});
+
 /** One piece of quarantined material a run would use. */
 export const quarantinedMaterialSchema = z
-  .discriminatedUnion("kind", [
-    screeningOutcomeSchema.extend({
-      kind: z.literal("job-source"),
-      briefId: z.string(),
-      sourceId: z.string(),
-    }),
-    screeningOutcomeSchema.extend({
-      kind: z.literal("knowledge-source-version"),
-      knowledgeBaseId: z.string(),
-      sourceId: z.string(),
-      sourceVersionId: z.string(),
-    }),
-  ])
+  .discriminatedUnion("kind", [jobSourceMaterialSchema, knowledgeSourceMaterialSchema])
   .meta({ id: "QuarantinedMaterial" });
 
 export type QuarantinedMaterial = z.infer<typeof quarantinedMaterialSchema>;
@@ -120,6 +121,67 @@ export function quarantinedMaterial(status: ContentScreeningStatus): Quarantined
         sourceVersionId: subject.sourceVersionId,
         ...screeningOutcome(status),
       };
+}
+
+const screeningStatusFields = {
+  quarantined: z
+    .boolean()
+    .describe("Flagged or unscreened and not released: a run that would use it is refused."),
+  release: z
+    .object({
+      memberId: z.string().describe("The releasing member, or `owner-token` for the owner token."),
+      releasedAt: z.string(),
+      reason: z
+        .string()
+        .optional()
+        .describe(
+          "The member-written reason; present only for the organisation's owners and admins.",
+        ),
+    })
+    .optional()
+    .describe("The release that covers this result, if any."),
+};
+
+/** A screened subject's latest result, as the record's screening status lists it. */
+export const screeningStatusSchema = z
+  .discriminatedUnion("kind", [
+    jobSourceMaterialSchema.extend(screeningStatusFields),
+    knowledgeSourceMaterialSchema.extend(screeningStatusFields),
+  ])
+  .meta({ id: "ScreeningStatus" });
+
+export type ScreeningStatusView = z.infer<typeof screeningStatusSchema>;
+
+export const screeningStatusListSchema = z
+  .object({
+    statuses: z
+      .array(screeningStatusSchema)
+      .describe("The latest status of each screened job source and knowledge source version."),
+  })
+  .meta({ id: "ScreeningStatusList" });
+
+/**
+ * A stored status as the API shows it. The release reason is member-written, so only a caller who
+ * may release sees it.
+ */
+export function screeningStatusView(
+  status: ContentScreeningStatus,
+  options: { readonly includeReason: boolean },
+): ScreeningStatusView {
+  const { release } = status;
+  return {
+    ...quarantinedMaterial(status),
+    quarantined: status.quarantined,
+    ...(release === undefined
+      ? {}
+      : {
+          release: {
+            memberId: release.memberId,
+            releasedAt: release.releasedAt,
+            ...(options.includeReason ? { reason: release.reason } : {}),
+          },
+        }),
+  };
 }
 
 /** A run refused because material it would use is quarantined and not released. */

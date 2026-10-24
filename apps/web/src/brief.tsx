@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
@@ -19,6 +19,8 @@ import {
 } from "./brief-model.js";
 import { useRecordId } from "./record-context.js";
 import { currentBriefId, screenMemory } from "./screen-memory.js";
+import { BriefScreening, useScreening } from "./screening.js";
+import { briefStatuses } from "./screening-model.js";
 
 type Opportunity = ApiSchemas["Opportunity"];
 
@@ -41,14 +43,17 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
   const [busy, setBusy] = useState(false);
   const workspaceId = useRecordId();
   const workspace = { workspaceId };
+  const screening = useScreening(client);
+  const reloadScreening = screening.reload;
 
   const show = useCallback(
     (opportunity: Opportunity) => {
       setState({ kind: "brief", opportunity });
       screenMemory.rememberBrief(opportunity.brief.id);
       onBrief(opportunity.brief);
+      void reloadScreening();
     },
-    [onBrief],
+    [onBrief, reloadScreening],
   );
 
   const load = useCallback(async () => {
@@ -126,6 +131,19 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
           busy={busy}
           stale={stale}
           messages={messages}
+          screening={
+            screening.statuses === undefined ? (
+              screening.problem === undefined ? undefined : (
+                <p className="muted">{screening.problem}</p>
+              )
+            ) : (
+              <BriefScreening
+                client={client}
+                statuses={briefStatuses(screening.statuses, brief.id)}
+                onReleased={() => void reloadScreening()}
+              />
+            )
+          }
           onReload={() => void load()}
           onPasteAnother={() => {
             setMessages([]);
@@ -209,6 +227,8 @@ export interface BriefPanelProps {
   readonly busy: boolean;
   readonly stale: boolean;
   readonly messages: readonly string[];
+  /** The job post's injection screening status, with its release button. */
+  readonly screening?: ReactNode;
   readonly onSave: (edit: BriefEdit) => Promise<boolean>;
   readonly onReview: () => void;
   readonly onReload: () => void;
@@ -241,6 +261,7 @@ export function BriefPanel(props: BriefPanelProps) {
           ? "reviewed, ready for a run"
           : "draft, review it before a run"}
       </p>
+      {props.screening}
       <dl className="facts">
         <dt>Role</dt>
         <dd>{brief.role?.value ?? "Not found in the post"}</dd>
