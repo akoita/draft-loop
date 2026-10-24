@@ -169,6 +169,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   - Idempotency keys belong to the tenant: Postgres keeps them under row-level
     security, and the memory store scopes them by tenant.
   - Request logs carry the tenant and member ids, never an email or token.
+  - A flow test takes two organisations from creation through sign-in, setup,
+    a run on the scripted model gateway, approval and export, and checks that
+    neither organisation's material reaches the other's provider requests,
+    export or listings (`apps/worker/src/tenancy-flow.test.ts`).
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;

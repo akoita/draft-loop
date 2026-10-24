@@ -32,7 +32,8 @@
   "devDependencies": {
     "@draft-loop/api": "workspace:*",
     "@draft-loop/web": "workspace:*",
-    "pg": "8.23.1",
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "jose": "6.2.12",
+    "pg": "8.23.1"
   }
 }

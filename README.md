@@ -117,13 +117,17 @@ pnpm test
 pnpm validate
 ```
 
-The client-server version (Postgres, a Cloud Storage emulator, the API with
-its web screen, and one worker) runs locally with Docker Compose:
+The client-server version (Postgres, a Cloud Storage emulator, Keycloak, the
+API with its web screen, and one worker) runs locally with Docker Compose:
 `pnpm server:up` starts it, and `pnpm server:test` runs the server suites and
 an end-to-end smoke against it.
 The API serves the owner's web screen at `/`, where you set up a workspace and
 its writing policy, upload sources and mark private sections, paste a job,
 run, review with evidence, approve and download the CV. See the [local server stack](docs/operations/local-server-stack.md).
+In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
+identity provider, and each organisation is its own tenant: its members see
+only its workspaces, sources and runs. The stack runs both modes, with
+fictional users for sign-in.
 Its first phase ends with a run on the hosted service that matches the local
 draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 
