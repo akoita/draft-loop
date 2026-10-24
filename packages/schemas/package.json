@@ -11,6 +11,10 @@
       "types": "./src/model-profile.ts",
       "import": "./src/model-profile.ts"
     },
+    "./entitlements": {
+      "types": "./src/entitlements.ts",
+      "import": "./src/entitlements.ts"
+    },
     "./source-sensitivity": {
       "types": "./src/source-sensitivity.ts",
       "import": "./src/source-sensitivity.ts"
