@@ -247,6 +247,9 @@ importers:
       '@draft-loop/api':
         specifier: workspace:*
         version: link:../api
+      '@draft-loop/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
       '@draft-loop/web':
         specifier: workspace:*
         version: link:../web

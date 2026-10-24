@@ -21,6 +21,11 @@ main process owns desktop credential persistence; OS-backed `safeStorage` is
 preferred, with a local AES-256-GCM fallback protected by file permissions.
 Neither protects against a process that controls the same user account.
 
+The hosted service of [ADR 0011](../adr/0011-client-server-version.md) is not
+covered by this baseline, except for [prompt injection through job posts and
+uploads](#hosted-service-prompt-injection-through-job-posts-and-uploads), which
+has its own section.
+
 Source files, fetched pages, model output, exports, backups, diagnostic data,
 and retrieval indexes are sensitive or untrusted. Models and source material
 may contain errors or indirect instructions. DraftLoop treats source content as
@@ -298,7 +303,7 @@ expanded.
 
 | ID    | Severity / confidence | Threat                                                                                                                                 | Current control                                                                                                                                                                        | Residual risk / follow-up                                                                                                        |
 | ----- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| T-001 | High / high           | A file or fetched page injects instructions that produce unsupported claims or disclosure.                                             | Delimited source data, structured model ports, deterministic validation, bounded context, no autonomous tools.                                                                         | Keep adversarial fixtures for every source type and review before enabling tools.                                                |
+| T-001 | High / high           | A file or fetched page injects instructions that produce unsupported claims or disclosure.                                             | Delimited source data, structured model ports, deterministic validation, bounded context, no autonomous tools.                                                                         | Keep adversarial fixtures for every source type and review before enabling tools. The hosted service adds screening and quarantine, below. |
 | T-002 | High / high           | Sensitive material reaches an unapproved provider, model, endpoint, or scope.                                                          | `DataExposurePolicy`, fingerprinted visible preflight, explicit acknowledgement, fresh host checks, corpus exclusion, fail-closed stale policy.                                        | Complete installed-app and cross-platform acceptance; keep provider-retention disclosures accurate.                              |
 | T-003 | High / medium         | Prompts, responses, sources, credentials, or confidential terms leak through logs, tests, diagnostics, or errors.                      | Allowlisted `contentRedacted` events, deterministic credential redaction, normalized errors, synthetic fixtures, safe-payload assertions.                                              | Route every diagnostic path through the allowlist and add explicit confidential-term rules.                                      |
 | T-004 | High / high           | A compromised renderer or local process steals or misuses a provider credential.                                                       | Narrow IPC, renderer isolation, explicit credential resolution, encrypted persistence, lifecycle controls, process-only canaries, no secret projection.                                | Add CSP and renderer-compromise regressions; rate-limit credential commands and never log payloads.                              |
@@ -320,6 +325,62 @@ expanded.
 | T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state; retrieval rebuilds exact-version indexes and source-version deletion invalidates derived rows. Confirmed deletion is separately limited to archived non-default CKBs. | Reactivation remains future work; same-user mutation races are bounded but cannot be eliminated. |
 | T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
 | T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, accepts a replaced store, continues after lifecycle drift, or leaks a local store root through history. | Bindings pin logical identities; new runs record canonical path-free snapshots, provider-capable operations revalidate complete entries, and retrieval binds every query to exact selected versions while storing content-free traces. | Cross-store validation is not atomic; same-user writes can race the final check. |
+
+## Hosted service: prompt injection through job posts and uploads
+
+A job post comes from a third party, and an upload may come from one. Either
+can carry text that tries to steer the author or critic: override earlier
+instructions, change the model's role, hide text from the reader, or plant a
+link that exfiltrates the draft. The hosted service (ADR 0011, phase 2d) stops
+such text before a model reads it. Screening is detection, not proof, so the
+grounding checks and the candidate's approval stay in place behind it.
+
+### Controls
+
+- **Rule screener.** A deterministic screener in `packages/ingestion` always
+  runs. It folds invisible characters, full-width forms, accents and Unicode
+  tag characters before matching English and French patterns, and reports
+  closed signal codes: instruction override, role change, hidden text and
+  exfiltration link. It makes no model call.
+- **Model screener.** With `DRAFT_LOOP_SCREENING=rules+model`, Claude Haiku 5.5
+  on the EU Vertex route also classifies the text. A job post always goes to
+  it. A candidate source goes only when the deployment allows provider data and
+  the record's consent names Anthropic.
+- **Fail closed.** A screener that fails, or an upload with no readable text,
+  leaves the result `unscreened`, which is quarantined like `flagged`.
+- **Quarantine.** The API refuses a run on quarantined material with 409
+  `material_quarantined`. The worker asks the same question as it claims each
+  job, so material flagged after queueing pauses the run before any provider
+  call.
+- **Release with audit.** Only an owner or admin releases a result, once, with
+  a written reason. The release covers that result only, so a later flag
+  quarantines the text again. It appends a `content-screening.released` audit
+  event that holds the result and member ids and no text.
+- **Content-free alerts.** Quarantine, release, a paused run and a refused
+  access each log one `WARNING` with ids and closed codes, never the text, a
+  file name or a release reason.
+- **Evidence.** A red-team flow test runs the synthetic corpus through the API:
+  every injected case, as a job post and as an upload, is quarantined by the
+  rule screener and no clean case is. A run on quarantined material is refused,
+  a queued run pauses with no author or critic call, and one release lets a run
+  finish with its audit event.
+
+### Remaining gaps
+
+- **Missing results (#1677).** Material saved without a stored result, because
+  the result write failed or screening was off or did not exist yet, is not
+  quarantined. The worker may also read slightly different text from an upload
+  than the API screened.
+- **Model screening is not deployed everywhere.** It runs only where Claude on
+  Vertex AI in the EU is available to the API. Staging and production keep the
+  rules mode until Claude works on Vertex there, so paraphrased or other-language
+  injection is not caught by a model.
+- **Brief edits are not re-screened.** Edits to a reviewed brief are typed by
+  a member and go to the author unscreened.
+- **Prompts are unchanged.** The author and critic prompts carry no extra
+  hardening until a D16 evaluation run shows that a change does not cost
+  quality. Delimited source data, schema-only outputs and grounding validation
+  remain the second line.
 
 ## Runtime and build-time controls
 
