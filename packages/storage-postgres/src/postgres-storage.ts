@@ -10,6 +10,7 @@ import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
+import { createRecordArchiveRows } from "./record-archive.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
 import {
@@ -105,6 +106,7 @@ function tenantStorage(client: SqlSession) {
     ...createRunState(client),
     ...createLexicalIndex(client),
     ...createUsageReads(client),
+    ...createRecordArchiveRows(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
     candidateRecords: createCandidateRecordAccess(client),

@@ -15,9 +15,11 @@ download. The format is defined by the Zod schemas in
 | `objects/<sha256>` | The original bytes of one source version or exported document, named by their SHA-256 |
 
 Table rows keep the service's column names and values. Text payloads keep their
-stored text, so the checksums recorded beside them still verify them. Rows never
-carry the tenant column. A table the record has no rows in is left out, and
-identical bytes are stored once.
+stored text, so the checksums recorded beside them still verify them. Times
+stored as timestamps are ISO 8601 text, and 64-bit integers such as sizes and
+sequence numbers are decimal strings. Rows never carry the tenant column. A
+table the record has no rows in is left out, and identical bytes are stored
+once.
 
 ## What it holds
 
@@ -28,15 +30,18 @@ identical bytes are stored once.
 - **Applications and runs:** applications and their bindings, runs with their
   snapshots, rounds, step executions, findings, decisions and exports, the
   orchestrator's run state, retrieval traces and the record's audit trail.
-- **Knowledge:** the knowledge bases the record owns, with their sources,
-  source versions and sensitivity rule versions.
+- **Knowledge:** knowledge bases with their sources, source versions and
+  sensitivity rule versions. In sign-in mode these are the bases the record
+  owns. In owner-token mode, which holds one workspace and organisation-wide
+  bases, they are every base the organisation holds.
 - **Objects:** the bytes of every source version of those bases and of every
   exported document.
 
 ## What it never holds
 
 - Credentials, keys or tokens.
-- Another record's data, or another organisation's.
+- Another record's data, or another organisation's. Organisation-wide
+  knowledge bases are included only in owner-token mode, which has one record.
 - The organisation's member directory, or which members a record is assigned
   to.
 - Provider request bodies, idempotency results, and search indexes derived

@@ -67,6 +67,10 @@
       "types": "./src/knowledge-base-owners.ts",
       "import": "./src/knowledge-base-owners.ts"
     },
+    "./record-archive": {
+      "types": "./src/record-archive.ts",
+      "import": "./src/record-archive.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"
