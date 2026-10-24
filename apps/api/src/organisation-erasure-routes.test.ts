@@ -7,6 +7,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { TenantErasure } from "./record-erasure-routes.js";
 import type { ApiAuthOptions } from "./request-auth.js";
@@ -168,6 +169,8 @@ async function api(): Promise<FastifyInstance> {
       applicationFor: fakeApplication,
       recordAccessFor: () => ({}) as CandidateRecordAccess,
       knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
+      // Never read: these tests start no run.
+      entitlementsFor: () => ({}) as TenantEntitlements,
       erasureFor: (tenantId) => {
         const tenant = tenants[tenantId] ?? { ...memoryTenant(tenantId), exists: false };
         tenants[tenantId] = tenant;

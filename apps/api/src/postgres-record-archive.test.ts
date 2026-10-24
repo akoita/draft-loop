@@ -21,7 +21,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { composeHostedApplication } from "./hosted-application.js";
+import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { TenantApplications } from "./tenant-context.js";
 import { readZip } from "./test-zip.js";
@@ -161,6 +161,7 @@ describe.runIf(connectionString !== undefined)("record archives through the API"
       budgetCeiling,
       ownerTenantId: tenantId,
       recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
+      entitlementsFor: hostedEntitlementsFor(tenancy),
       knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
       applicationFor: (id) =>
         composeHostedApplication({

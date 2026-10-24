@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildApi, composeHostedApplication, hostedKnowledgeLocation } from "@draft-loop/api";
+import {
+  buildApi,
+  composeHostedApplication,
+  hostedEntitlementsFor,
+  hostedKnowledgeLocation,
+} from "@draft-loop/api";
 import type { RunJob } from "@draft-loop/run-queue";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
@@ -37,6 +42,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { scriptedGateway } from "./gateway-test-support.js";
 import {
+  assignInternalPlan,
   filesUnder,
   filesystemBlobErasure,
   injectFetch,
@@ -144,6 +150,7 @@ describe.runIf(connectionString !== undefined)("record export and erasure", () =
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         // Filesystem objects stand in for the bucket, with the same key-by-key erasure.
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
@@ -358,6 +365,7 @@ describe.runIf(connectionString !== undefined)("record export and erasure", () =
         firstOwnerEmail: organisation.email,
       },
     });
+    await assignInternalPlan(tenancy, organisation.organisationId);
     expect(await client().call("GET /v1/me", {})).toMatchObject({ role: "owner" });
 
     // The kept record: material, consents, a run on the scripted gateway and an export.

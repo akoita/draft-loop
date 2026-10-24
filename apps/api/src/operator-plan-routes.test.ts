@@ -11,6 +11,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, type JWTVerifyGetKey, Si
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore } from "./idempotency.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { OperatorTenant } from "./operator-plan-routes.js";
@@ -167,6 +168,8 @@ async function api(mode: "owner" | "oidc" = "owner"): Promise<FastifyInstance> {
       recordAccessFor: () => ({}) as CandidateRecordAccess,
       knowledgeOwnersFor: () =>
         ({}) as ReturnType<NonNullable<TenantApplications["knowledgeOwnersFor"]>>,
+      // Never read: the operator's routes start no run.
+      entitlementsFor: () => ({}) as TenantEntitlements,
       // Never composed: the operator's routes read no tenant application.
       applicationFor: () => ({}) as TenantApplication,
       operatorFor: tenants.operatorFor,

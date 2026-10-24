@@ -38,6 +38,7 @@ import {
   type ModelScreenerFactory,
   rulesScreeningSetup,
 } from "./content-screening-service.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import type { TenantApplication } from "./tenant-context.js";
@@ -416,6 +417,8 @@ async function rig(options: RigOptions = {}): Promise<Rig> {
       applicationFor: tenantApplication,
       recordAccessFor: () => access,
       knowledgeOwnersFor: () => owners,
+      // Never read: these tests start no run.
+      entitlementsFor: () => ({}) as TenantEntitlements,
     },
   });
   app = server;

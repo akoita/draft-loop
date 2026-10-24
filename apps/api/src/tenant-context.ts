@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
 import { noContentScreening } from "./content-screening-service.js";
+import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
@@ -53,6 +54,12 @@ export interface TenantApplications {
    * without it those routes are not served.
    */
   readonly operatorFor?: OperatorTenantFor;
+  /**
+   * Reaches a tenant's plan entitlements and credit ledger, which a run start is checked against.
+   * Sign-in mode requires it; owner-token mode never reads it, since its tenant has no
+   * organisation to hold a plan or a ledger.
+   */
+  readonly entitlementsFor?: TenantEntitlementsFor;
 }
 
 export const defaultTenantCacheSize = 100;

@@ -17,8 +17,9 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { composeHostedApplication } from "./hosted-application.js";
+import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
 import type { TenantApplications } from "./tenant-context.js";
+import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -116,6 +117,7 @@ describe.runIf(connectionString !== undefined)("consent enforcement through the 
       name: "Example Consent Coaching",
       firstOwnerEmail: email("owner"),
     });
+    await assignInternalPlan(tenancy, tenantId);
     await directory.inviteMember({
       organisationId: tenantId,
       email: email("coach"),
@@ -138,6 +140,7 @@ describe.runIf(connectionString !== undefined)("consent enforcement through the 
     tenants = {
       budgetCeiling,
       recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
+      entitlementsFor: hostedEntitlementsFor(tenancy),
       knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
       applicationFor: (id) =>
         composeHostedApplication({

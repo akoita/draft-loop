@@ -268,6 +268,33 @@ The hosted service starts runs through a queue rather than in the request
   them the run uses provider-default runtime controls and unknown context
   windows, so a full-source request over the default budget falls back to
   retrieval. A pair the registry refuses answers 422.
+- In sign-in mode the run must also fit the organisation's plan and credits
+  (ADR 0011, D13), checked after the budget ceiling, screening and consent by
+  `entitlement-gate.ts`. Owner-token mode skips it: its tenant has no
+  organisation row to hold a plan or a ledger, so nothing there is refused or
+  metered. The refusals are, in order:
+  - 403 `plan_required`: the organisation has no plan yet.
+  - 422 `model_tier_unknown`: a model's tier cannot be determined (`role`).
+  - 403 `model_tier_not_in_plan`: the plan lacks a model's tier (`role`,
+    `tier`).
+  - 429 `run_cap_reached`: the plan's concurrent or daily run cap is reached
+    (`cap`, `limit`).
+  - 402 `credits_insufficient`: the balance does not cover the estimate
+    (`estimate`, `remaining`).
+
+  These answers carry codes, a role, a tier and numbers only. The tiers come
+  from the application's own pair, else the request's `modelProfiles`, else the
+  workspace's configured models, as `resolveRunCreditTiers` reads them, and the
+  estimate is `estimateRunCredits` at the workspace's round limit.
+- The gate reserves the estimate before the run is saved. It picks the run id,
+  reserves under the ledger's lock (credits and caps together, so concurrent
+  starts cannot overspend), then passes the id to `begin` (`runId` on the
+  begin command). A refusal therefore saves nothing, and a `begin` that fails
+  refunds the reservation. All of it runs inside the `Idempotency-Key`'s one
+  execution, so a replay reserves nothing more. A reservation stays after a
+  queueing failure, since the run is saved. A process that dies between the
+  reservation and the save leaves one open reservation that only a
+  reconciliation of open reservations without a saved run can release.
 - Idempotency keys live in Postgres (`idempotency_keys`, under row-level
   security), so every API instance replays a key's first result for a day. A
   retry that arrives while the first request still runs waits up to five

@@ -17,7 +17,8 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { composeHostedApplication } from "./hosted-application.js";
+import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
+import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -92,6 +93,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
         name: `Organisation ${organisationId}`,
         firstOwnerEmail: `${subject}@example.test`,
       });
+      await assignInternalPlan(tenancy, organisationId);
     }
     blobRoot = await mkdtemp(join(tmpdir(), "draft-loop-tenants-"));
 
@@ -125,6 +127,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
       tenants: {
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
         applicationFor: (tenantId) =>
           composeHostedApplication({

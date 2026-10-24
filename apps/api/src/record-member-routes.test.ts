@@ -20,6 +20,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import type { TenantApplication } from "./tenant-context.js";
@@ -151,6 +152,8 @@ async function api(mode: "owner" | "oidc" = "oidc"): Promise<FastifyInstance> {
       recordAccessFor: () => access,
       // Knowledge-base routes are registered but never called here.
       knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
+      // Never read: these tests start no run.
+      entitlementsFor: () => ({}) as TenantEntitlements,
     },
   });
   return app;

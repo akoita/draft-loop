@@ -30,6 +30,7 @@ import {
   createHostedContentScreening,
   rulesScreeningSetup,
 } from "./content-screening-service.js";
+import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
@@ -124,6 +125,17 @@ export function hostedOperatorFor(tenancy: PostgresTenancy): OperatorTenantFor {
   };
 }
 
+/** The organisation's plan entitlements and credit ledger, which a run start is checked against. */
+export function hostedEntitlementsFor(tenancy: PostgresTenancy): TenantEntitlementsFor {
+  return (tenantId) => {
+    const storage = tenancy.forTenant(tenantId);
+    return {
+      entitlements: storage.organisationPlans.currentEntitlements,
+      ledger: storage.creditLedger,
+    };
+  };
+}
+
 /**
  * Opens what every tenant's application shares: one Postgres pool, one run queue and one Cloud
  * Storage bucket (ADR 0011, D3). Each tenant's application is composed on its first request over
@@ -168,6 +180,7 @@ export async function openHostedTenants(
           objectPrefix: gcsTenantPrefix(tenantId),
         }),
         operatorFor: hostedOperatorFor(tenancy),
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),

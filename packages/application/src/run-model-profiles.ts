@@ -59,10 +59,7 @@ export interface RunOptions {
   readonly applicationPlan?: boolean;
 }
 
-export type BeginStartRunOptions = Omit<
-  RunOptions,
-  "runId" | "signal" | "writingPolicyOverrideChecksum"
->;
+export type BeginStartRunOptions = Omit<RunOptions, "signal" | "writingPolicyOverrideChecksum">;
 export type ResumeRunOptions = Omit<
   RunOptions,
   | "opportunityBrief"
@@ -77,6 +74,7 @@ export function projectStartRunOptions(
   command: StartRunCommand,
   providerOptions: Omit<
     BeginStartRunOptions,
+    | "runId"
     | "allowProviderData"
     | "opportunityBrief"
     | "candidateProfile"
@@ -86,6 +84,7 @@ export function projectStartRunOptions(
   >,
 ): BeginStartRunOptions {
   return {
+    ...(command.runId === undefined ? {} : { runId: command.runId }),
     ...(command.applicationId === undefined ? {} : { applicationId: command.applicationId }),
     ...(command.allowProviderData === undefined
       ? {}

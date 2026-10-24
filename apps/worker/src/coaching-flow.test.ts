@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildApi, composeHostedApplication, hostedKnowledgeLocation } from "@draft-loop/api";
+import {
+  buildApi,
+  composeHostedApplication,
+  hostedEntitlementsFor,
+  hostedKnowledgeLocation,
+} from "@draft-loop/api";
 import type { RunJob } from "@draft-loop/run-queue";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
@@ -34,7 +39,13 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { scriptedGateway } from "./gateway-test-support.js";
-import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
+import {
+  assignInternalPlan,
+  injectFetch,
+  runtimeRole,
+  runtimeUrl,
+  tenantKeyBlobs,
+} from "./hosted-test-support.js";
 import { readModelGatewayConfig, workerProviderOptions } from "./model-routes.js";
 import { createRunJobHandler, type RunJobOutcome } from "./run-job-handler.js";
 import { tenantRunConsent, tenantServices } from "./tenant-services.js";
@@ -144,6 +155,7 @@ describe.runIf(connectionString !== undefined)("a coaching firm's records and co
         budgetCeiling,
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        entitlementsFor: hostedEntitlementsFor(tenancy),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -266,6 +278,7 @@ describe.runIf(connectionString !== undefined)("a coaching firm's records and co
     await operator.call("POST /v1/operator/organisations", {
       body: { organisationId, name: "Cedar Coaching", firstOwnerEmail: people.owner.email },
     });
+    await assignInternalPlan(tenancy, organisationId);
     const owner = clientFor("owner");
     const memberIds: Partial<Record<Coach, string>> = {};
     for (const coach of ["dara", "eli"] as const) {

@@ -107,6 +107,12 @@ curl -X POST http://127.0.0.1:58082/v1/operator/organisations/org-a/credit-grant
   -d '{"credits":50,"reason":"goodwill"}'
 ```
 
+In sign-in mode a run starts only under a plan: without one the organisation's
+`POST /v1/workspaces/{id}/runs` answers 403 `plan_required`, and the plan's
+model tiers, run caps and credit balance decide the rest (402
+`credits_insufficient`, 429 `run_cap_reached`, 403 `model_tier_not_in_plan`).
+The owner-token API on port 58080 is not metered.
+
 The realm's clients are `draft-loop-web` (the screen, code flow with PKCE) and
 `draft-loop-local-smoke` (the password grant, for the smoke test only). Both
 put the audience `draft-loop-api` in their access tokens. Tokens name the

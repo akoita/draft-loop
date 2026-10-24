@@ -17,7 +17,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { composeHostedApplication } from "./hosted-application.js";
+import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import type { TenantApplications } from "./tenant-context.js";
 
@@ -137,6 +137,7 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
     tenants = {
       budgetCeiling,
       recordAccessFor: (id) => tenancy.forTenant(id).candidateRecords,
+      entitlementsFor: hostedEntitlementsFor(tenancy),
       knowledgeOwnersFor: (id) => tenancy.forTenant(id).knowledgeBaseOwners,
       applicationFor: (id) =>
         composeHostedApplication({

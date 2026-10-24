@@ -27,6 +27,7 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -265,6 +266,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         : { knowledgeIntake: application.knowledgeIntake }),
     });
   }
+  let entitlementGate: EntitlementGate | undefined;
+  if (application !== undefined && auth.mode === "oidc") {
+    const entitlementsFor = options.tenants?.entitlementsFor;
+    if (entitlementsFor === undefined) {
+      throw new Error("Sign-in mode starts runs only against the organisation's plan and credits.");
+    }
+    entitlementGate = createEntitlementGate({ service: application.service, entitlementsFor });
+  }
   if (application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
@@ -303,6 +312,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       enqueueRun: application.enqueueRun,
       budgetCeiling: application.budgetCeiling,
       ...(screening === undefined ? {} : { screening }),
+      ...(entitlementGate === undefined ? {} : { entitlementGate }),
     });
     registerReviewRoutes(app, {
       service: application.service,

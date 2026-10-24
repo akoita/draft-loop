@@ -21,6 +21,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { TenantEntitlements } from "./entitlement-gate.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { TenantErasure } from "./record-erasure-routes.js";
 import type { ApiAuthOptions } from "./request-auth.js";
@@ -181,6 +182,8 @@ async function api(erasure: TenantErasure, mode: "owner" | "oidc" = "oidc") {
       applicationFor: fakeApplication,
       recordAccessFor: () => access,
       knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
+      // Never read: these tests start no run.
+      entitlementsFor: () => ({}) as TenantEntitlements,
       erasureFor: (id) => {
         if (id !== tenantId) throw new Error("another tenant's erasure");
         return erasure;

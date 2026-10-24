@@ -12,6 +12,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
+import type { EntitlementGate } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 import {
@@ -39,6 +40,11 @@ export interface ApplicationRoutesOptions {
   readonly budgetCeiling: RunBudgetCeiling;
   /** Injection screening of a brief's sources, and the run gate on quarantined material. */
   readonly screening?: Pick<ContentScreeningHooks, "screenOpportunity" | "assertRunMaterialClear">;
+  /**
+   * Sign-in mode's plan and credit gate on starting a run; absent in owner-token mode, where
+   * nothing is refused or metered.
+   */
+  readonly entitlementGate?: EntitlementGate;
 }
 
 const identifierSchema = z
@@ -179,6 +185,7 @@ export function registerApplicationRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling, screening } = options;
+  const { entitlementGate } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -358,13 +365,16 @@ export function registerApplicationRoutes(
       schema: {
         summary: "Begin a run; a worker executes it",
         description:
-          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release. With screening on, a run on material that has no stored screening result, such as a brief saved while screening was off or whose result failed to save, answers 409 material_unscreened and lists the brief sources and knowledge source versions to screen by ids only; save the brief again or upload the file again to screen it.",
+          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release. With screening on, a run on material that has no stored screening result, such as a brief saved while screening was off or whose result failed to save, answers 409 material_unscreened and lists the brief sources and knowledge source versions to screen by ids only; save the brief again or upload the file again to screen it. In sign-in mode the organisation's plan then has to allow the run: 403 plan_required without a plan, 422 model_tier_unknown when a model's tier cannot be determined, 403 model_tier_not_in_plan (with role and tier) for a tier the plan lacks, 429 run_cap_reached (with cap and limit) at the plan's concurrent or daily run cap, and 402 credits_insufficient (with estimate and remaining) when the balance does not cover the run's estimate. The estimate is reserved before the run is saved; a retry with the same Idempotency-Key reserves nothing more, and a run that cannot be saved gives its credits back.",
         params: workspaceParams,
         headers: idempotencyHeaders,
         body: beginRunBody,
         response: {
           201: runViewSchema,
+          402: apiErrorSchema,
+          403: apiErrorSchema,
           409: apiErrorSchema,
+          429: apiErrorSchema,
           503: apiErrorSchema,
           ...errorResponses,
         },
@@ -407,7 +417,21 @@ export function registerApplicationRoutes(
         `runs:${workspaceId}`,
         request.headers["idempotency-key"],
         request.body,
-        () => service.begin(command),
+        () =>
+          request.caller?.kind === "member" && entitlementGate !== undefined
+            ? // Inside the key's one execution, so a replay never reserves again.
+              entitlementGate.begin(
+                {
+                  tenantId: request.caller.tenantId,
+                  root: command.root,
+                  workspace,
+                  applicationId: request.body.applicationId,
+                  modelProfiles: command.modelProfiles,
+                },
+                request.log,
+                (runId) => service.begin({ ...command, runId }),
+              )
+            : service.begin(command),
       );
       // Outside the replay cache on purpose: a run saved by a request whose queueing failed is
       // queued by the retry, and repeated queueing collapses in the queue.
