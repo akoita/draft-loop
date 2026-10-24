@@ -27,6 +27,7 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
@@ -316,6 +317,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
     });
+    registerRunEstimateRoute(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+    });
     registerApplicationRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
@@ -372,6 +378,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       directory: options.directory,
       ...(planLimits === undefined ? {} : { planLimits }),
     });
+  }
+  if (entitlementsFor !== undefined) {
+    registerMemberCreditsRoute(app, { entitlementsFor, signIn: auth.mode === "oidc" });
   }
   if (erasureFor !== undefined) registerOrganisationErasureRoutes(app, { erasureFor });
   if (options.tenants?.operatorFor !== undefined) {

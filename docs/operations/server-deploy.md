@@ -112,6 +112,9 @@ and grants credits with the owner token, the only credential the
   organisation with no plan is refused with 403 `plan_required` until the
   operator assigns one. Inviting past the plan's seats or creating a record
   past its record limit answers 409 `plan_limit_reached`.
+- **Members' view:** `GET /v1/organisation/credits` shows any signed-in member
+  the plan, its limits, the balance and an 80% `warning`; the 80% and
+  exhaustion thresholds also write alert lines (see [Alert lines](#alert-lines)).
 - **Trail:** each write logs one `audit` line with ids, the plan id, numbers
   and the reason code, and no free text.
 
@@ -189,10 +192,11 @@ and the error's type, code and stack frames, and the job is unaffected.
 
 ### Alert lines
 
-Four `WARNING` lines are the owner's alerts on injection screening and on
-refused access. The infrastructure matches each on its exact `message`. They
-carry ids and closed codes only, never candidate text, file names, titles,
-email addresses or the reason a member types for a release.
+Six `WARNING` lines are the owner's alerts on injection screening, on refused
+access and on credit use. The infrastructure matches each on its exact
+`message`. They carry ids, closed codes and numbers only, never candidate
+text, file names, titles, email addresses or the reason a member types for a
+release.
 
 - **`access refused`** (API) is written when a record or knowledge base is
   refused to a member. Field `accessRefusal`: `resource`, `reason`, `tenantId`,
@@ -207,6 +211,19 @@ email addresses or the reason a member types for a release.
   job pauses its run. Fields `screening` (`tenantId`, `resultIds`, `signals`),
   the job's `tenantId`, `workspaceId` and `runId`, and `quarantined`, each
   piece's kind, result id and signals.
+- **`credit allowance 80% used`** (API) is written when starting a run takes an
+  organisation's use of the period's allowance from under 80% to at least 80%.
+- **`credit balance exhausted`** (API) is written when starting a run takes the
+  organisation's `remaining` credits to 0.
+
+Both credit lines carry, at the top level of the entry, `organisationId`,
+`periodEnd` (the UTC date the period ends), `allowance`, `used` and
+`remaining`, besides the request's own `tenantId` and `memberId`. `used` counts the allowance's
+settled credits and the credits reserved from it, the figure
+`GET /v1/organisation/credits` reports. Each fires once per crossing, so once
+per period in practice. A refund that brings the balance back under a
+threshold, followed by a new reservation, crosses it again. Unlimited plans
+and a zero allowance never write the 80% line.
 
 The fields of `accessRefusal`:
 

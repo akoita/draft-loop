@@ -150,6 +150,26 @@ export interface ApiSchemas {
     readonly role: "owner" | "admin" | "member";
     readonly email?: string;
   };
+  "MemberCredits": {
+    readonly organisationId: string;
+    readonly planId: string;
+    readonly entitlements: {
+      readonly modelTiers: readonly ("premium" | "standard" | "economy")[];
+      readonly runsPerDay: number | null;
+      readonly concurrentRuns: number | null;
+      readonly seats: number | null;
+      readonly candidateRecords: number | null;
+    };
+    readonly periodStart: string | null;
+    readonly periodEnd: string | null;
+    readonly unlimited: boolean;
+    readonly allowance: number | null;
+    readonly used: number;
+    readonly reserved: number;
+    readonly grantsRemaining: number;
+    readonly remaining: number | null;
+    readonly warning: boolean;
+  };
   "MonthUsage": {
     readonly calls: number;
     readonly inputTokens: number;
@@ -439,6 +459,29 @@ export interface ApiSchemas {
         readonly retryAfterSeconds: number | null;
       };
     } | null;
+  };
+  "RunEstimate": {
+    readonly credits: number;
+    readonly estimateVersion: number;
+    readonly basis: {
+      readonly base: number;
+      readonly premium: boolean;
+      readonly roundBlocks: number;
+    };
+    readonly maxRounds: number;
+    readonly authorTier: "premium" | "standard" | "economy";
+    readonly criticTier: "premium" | "standard" | "economy";
+    readonly plan?: {
+      readonly allowed: boolean;
+      readonly code: "plan_required" | "model_tier_not_in_plan" | null;
+      readonly role?: "author" | "critic";
+      readonly tier?: "premium" | "standard" | "economy";
+    };
+    readonly balance?: {
+      readonly unlimited: boolean;
+      readonly remaining: number | null;
+      readonly sufficient: boolean;
+    };
   };
   "RunExport": {
     readonly id: string;
@@ -735,6 +778,15 @@ export interface ApiOperations {
     readonly response: {
       readonly versions: readonly (ApiSchemas["WritingPolicyVersion"])[];
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/runs/estimate": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query?: {
+      readonly applicationId?: string;
+    };
+    readonly response: ApiSchemas["RunEstimate"];
   };
   "POST /v1/workspaces/{workspaceId}/opportunities": {
     readonly path: {
@@ -1142,6 +1194,9 @@ export interface ApiOperations {
       readonly firstOwnerEmail: string;
     };
     readonly response: ApiSchemas["CreatedOrganisation"];
+  };
+  "GET /v1/organisation/credits": {
+    readonly response: ApiSchemas["MemberCredits"];
   };
   "DELETE /v1/organisation": {
     readonly body: {

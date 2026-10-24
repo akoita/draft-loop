@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
+import { cloudLoggingOptions } from "./logging.js";
 import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -40,6 +41,7 @@ const organisations = {
   "org-credits": "credits-owner",
   "org-caps": "caps-owner",
   "org-bare": "bare-owner",
+  "org-meter": "meter-owner",
 } as const;
 type OrganisationId = keyof typeof organisations;
 
@@ -56,6 +58,7 @@ describe.runIf(connectionString !== undefined)("the run-start gate through the A
   const admin = createSqlClient({ connectionString: url, maxConnections: 1 });
   const tokens = {} as Record<OrganisationId, string>;
   const queued: { tenantId: string; runId: string }[] = [];
+  const logLines: string[] = [];
   let blobRoot: string;
   let tenancy: PostgresTenancy;
   let directory: PostgresTenantDirectory;
@@ -209,6 +212,7 @@ describe.runIf(connectionString !== undefined)("the run-start gate through the A
     const blobs = createFilesystemBlobStorage();
     app = await buildApi({
       ownerToken,
+      logger: cloudLoggingOptions({ write: (line) => logLines.push(line) }),
       auth: {
         mode: "oidc",
         issuer,
@@ -319,5 +323,75 @@ describe.runIf(connectionString !== undefined)("the run-start gate through the A
     expect(refused.body.error.code).toBe("plan_required");
     expect(queued.filter((entry) => entry.tenantId === organisation)).toEqual([]);
     expect(await tenancy.forTenant(organisation).creditLedger.openReservationCount()).toBe(0);
+  });
+
+  it("estimates what the gate reserves, and warns once at 80% and once when exhausted", async () => {
+    const organisation = "org-meter";
+    const begin = await prepareRecord(organisation, "r4");
+    const estimate = await estimateFor(organisation, "r4");
+    // Five runs spend the allowance; the fourth takes it to exactly 80%.
+    await assign(organisation, {
+      creditsPerPeriod: 5 * estimate,
+      concurrentRuns: null,
+      runsPerDay: null,
+    });
+    const thresholds = () =>
+      logLines
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .filter(
+          (line) =>
+            line.organisationId === organisation &&
+            (line.message === "credit allowance 80% used" ||
+              line.message === "credit balance exhausted"),
+        );
+    const credits = async () => (await call(organisation, "GET", "/v1/organisation/credits")).body;
+
+    const priced = await call(organisation, "GET", "/v1/workspaces/r4/runs/estimate");
+    expect(priced.body).toMatchObject({
+      credits: estimate,
+      plan: { allowed: true, code: null },
+      balance: { unlimited: false, remaining: 5 * estimate, sufficient: true },
+    });
+
+    for (let started = 1; started <= 3; started += 1) {
+      expect((await call(organisation, "POST", "/v1/workspaces/r4/runs", begin)).status).toBe(201);
+    }
+    expect(thresholds()).toEqual([]);
+    expect(await credits()).toMatchObject({
+      planId: "pro",
+      allowance: 5 * estimate,
+      used: 3 * estimate,
+      reserved: 3 * estimate,
+      remaining: 2 * estimate,
+      warning: false,
+    });
+
+    expect((await call(organisation, "POST", "/v1/workspaces/r4/runs", begin)).status).toBe(201);
+    expect(thresholds()).toMatchObject([
+      {
+        severity: "WARNING",
+        message: "credit allowance 80% used",
+        allowance: 5 * estimate,
+        used: 4 * estimate,
+        remaining: estimate,
+      },
+    ]);
+    expect(thresholds()[0]?.periodEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+    expect(await credits()).toMatchObject({ used: 4 * estimate, warning: true });
+
+    expect((await call(organisation, "POST", "/v1/workspaces/r4/runs", begin)).status).toBe(201);
+    expect(thresholds().map((line) => line.message)).toEqual([
+      "credit allowance 80% used",
+      "credit balance exhausted",
+    ]);
+    expect(thresholds()[1]).toMatchObject({ used: 5 * estimate, remaining: 0 });
+
+    // A refused start writes nothing more.
+    expect((await call(organisation, "POST", "/v1/workspaces/r4/runs", begin)).status).toBe(402);
+    expect(thresholds()).toHaveLength(2);
+    expect(await credits()).toMatchObject({ remaining: 0, warning: true });
+    expect(
+      (await call(organisation, "GET", "/v1/workspaces/r4/runs/estimate")).body.balance,
+    ).toMatchObject({ remaining: 0, sufficient: false });
   });
 });

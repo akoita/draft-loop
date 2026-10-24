@@ -1928,6 +1928,325 @@
           "workspaces"
         ]
       },
+      "MemberCreditsInput": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "entitlements": {
+            "type": "object",
+            "properties": {
+              "modelTiers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                },
+                "description": "The model tiers a run may use."
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Runs per UTC day; null is unlimited."
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Runs in flight; null is unlimited."
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Members, invited and active; null is unlimited."
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Records; null is unlimited."
+              }
+            },
+            "required": [
+              "modelTiers",
+              "runsPerDay",
+              "concurrentRuns",
+              "seats",
+              "candidateRecords"
+            ],
+            "description": "What a member needs of the plan; a null limit is unlimited."
+          },
+          "periodStart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The UTC date the credit period began, YYYY-MM-DD."
+          },
+          "periodEnd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The UTC date the period ends, exclusive."
+          },
+          "unlimited": {
+            "type": "boolean",
+            "description": "An unlimited plan: nothing is refused for credits."
+          },
+          "allowance": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The period's credits; null when unlimited."
+          },
+          "used": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits of the period's allowance that finished runs settled plus the part of `reserved` taken from it. Operator grants are not counted."
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits held by runs in flight, from the allowance and from grants."
+          },
+          "grantsRemaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits left in operator grants."
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a new run can still draw on, allowance and grants; null when unlimited."
+          },
+          "warning": {
+            "type": "boolean",
+            "description": "True once `used` is at least 80% of `allowance`."
+          }
+        },
+        "required": [
+          "organisationId",
+          "planId",
+          "entitlements",
+          "periodStart",
+          "periodEnd",
+          "unlimited",
+          "allowance",
+          "used",
+          "reserved",
+          "grantsRemaining",
+          "remaining",
+          "warning"
+        ]
+      },
+      "RunEstimateInput": {
+        "type": "object",
+        "properties": {
+          "credits": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The most credits a run can need; reserved when it starts."
+          },
+          "estimateVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The version of the estimate rule."
+          },
+          "basis": {
+            "type": "object",
+            "properties": {
+              "base": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "premium": {
+                "type": "boolean"
+              },
+              "roundBlocks": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "base",
+              "premium",
+              "roundBlocks"
+            ]
+          },
+          "maxRounds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The workspace's round limit the estimate assumes."
+          },
+          "authorTier": {
+            "type": "string",
+            "enum": [
+              "premium",
+              "standard",
+              "economy"
+            ]
+          },
+          "criticTier": {
+            "type": "string",
+            "enum": [
+              "premium",
+              "standard",
+              "economy"
+            ]
+          },
+          "plan": {
+            "description": "Sign-in mode, for a member: whether the plan allows these tiers.",
+            "type": "object",
+            "properties": {
+              "allowed": {
+                "type": "boolean"
+              },
+              "code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "plan_required",
+                      "model_tier_not_in_plan"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The refusal the run start would answer for the plan, else null."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "author",
+                  "critic"
+                ]
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "premium",
+                  "standard",
+                  "economy"
+                ]
+              }
+            },
+            "required": [
+              "allowed",
+              "code"
+            ]
+          },
+          "balance": {
+            "description": "Sign-in mode, for a member.",
+            "type": "object",
+            "properties": {
+              "unlimited": {
+                "type": "boolean"
+              },
+              "remaining": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sufficient": {
+                "type": "boolean",
+                "description": "Whether `remaining` covers `credits`; false answers 402 at run start."
+              }
+            },
+            "required": [
+              "unlimited",
+              "remaining",
+              "sufficient"
+            ]
+          }
+        },
+        "required": [
+          "credits",
+          "estimateVersion",
+          "basis",
+          "maxRounds",
+          "authorTier",
+          "criticTier"
+        ]
+      },
       "RunExportInput": {
         "type": "object",
         "properties": {
@@ -5481,6 +5800,331 @@
         ],
         "additionalProperties": false
       },
+      "MemberCredits": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "entitlements": {
+            "type": "object",
+            "properties": {
+              "modelTiers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "premium",
+                    "standard",
+                    "economy"
+                  ]
+                },
+                "description": "The model tiers a run may use."
+              },
+              "runsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Runs per UTC day; null is unlimited."
+              },
+              "concurrentRuns": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Runs in flight; null is unlimited."
+              },
+              "seats": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Members, invited and active; null is unlimited."
+              },
+              "candidateRecords": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Records; null is unlimited."
+              }
+            },
+            "required": [
+              "modelTiers",
+              "runsPerDay",
+              "concurrentRuns",
+              "seats",
+              "candidateRecords"
+            ],
+            "additionalProperties": false,
+            "description": "What a member needs of the plan; a null limit is unlimited."
+          },
+          "periodStart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The UTC date the credit period began, YYYY-MM-DD."
+          },
+          "periodEnd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The UTC date the period ends, exclusive."
+          },
+          "unlimited": {
+            "type": "boolean",
+            "description": "An unlimited plan: nothing is refused for credits."
+          },
+          "allowance": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The period's credits; null when unlimited."
+          },
+          "used": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits of the period's allowance that finished runs settled plus the part of `reserved` taken from it. Operator grants are not counted."
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits held by runs in flight, from the allowance and from grants."
+          },
+          "grantsRemaining": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Credits left in operator grants."
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a new run can still draw on, allowance and grants; null when unlimited."
+          },
+          "warning": {
+            "type": "boolean",
+            "description": "True once `used` is at least 80% of `allowance`."
+          }
+        },
+        "required": [
+          "organisationId",
+          "planId",
+          "entitlements",
+          "periodStart",
+          "periodEnd",
+          "unlimited",
+          "allowance",
+          "used",
+          "reserved",
+          "grantsRemaining",
+          "remaining",
+          "warning"
+        ],
+        "additionalProperties": false
+      },
+      "RunEstimate": {
+        "type": "object",
+        "properties": {
+          "credits": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The most credits a run can need; reserved when it starts."
+          },
+          "estimateVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The version of the estimate rule."
+          },
+          "basis": {
+            "type": "object",
+            "properties": {
+              "base": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "premium": {
+                "type": "boolean"
+              },
+              "roundBlocks": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "base",
+              "premium",
+              "roundBlocks"
+            ],
+            "additionalProperties": false
+          },
+          "maxRounds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The workspace's round limit the estimate assumes."
+          },
+          "authorTier": {
+            "type": "string",
+            "enum": [
+              "premium",
+              "standard",
+              "economy"
+            ]
+          },
+          "criticTier": {
+            "type": "string",
+            "enum": [
+              "premium",
+              "standard",
+              "economy"
+            ]
+          },
+          "plan": {
+            "description": "Sign-in mode, for a member: whether the plan allows these tiers.",
+            "type": "object",
+            "properties": {
+              "allowed": {
+                "type": "boolean"
+              },
+              "code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "plan_required",
+                      "model_tier_not_in_plan"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The refusal the run start would answer for the plan, else null."
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "author",
+                  "critic"
+                ]
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "premium",
+                  "standard",
+                  "economy"
+                ]
+              }
+            },
+            "required": [
+              "allowed",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          "balance": {
+            "description": "Sign-in mode, for a member.",
+            "type": "object",
+            "properties": {
+              "unlimited": {
+                "type": "boolean"
+              },
+              "remaining": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sufficient": {
+                "type": "boolean",
+                "description": "Whether `remaining` covers `credits`; false answers 402 at run start."
+              }
+            },
+            "required": [
+              "unlimited",
+              "remaining",
+              "sufficient"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "credits",
+          "estimateVersion",
+          "basis",
+          "maxRounds",
+          "authorTier",
+          "criticTier"
+        ],
+        "additionalProperties": false
+      },
       "RunExport": {
         "type": "object",
         "properties": {
@@ -8082,6 +8726,65 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/estimate": {
+      "get": {
+        "summary": "Estimate the credits a run on the workspace's settings would reserve",
+        "description": "Prices the workspace as it is now, the way starting a run does: the application's own model pair when `applicationId` names one with a pair, otherwise the workspace's configured models, at its round limit. Refuses nothing. In sign-in mode a member also gets `plan` (whether the plan allows the tiers, with the code and the role and tier the run start would refuse with) and `balance` (whether `remaining` covers the estimate). A model whose tier cannot be determined cannot be priced and answers 422 `model_tier_unknown`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "query",
+            "name": "applicationId",
+            "required": false,
+            "description": "Price a run on this application, whose own model pair applies."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunEstimate"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -11671,6 +12374,44 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organisation/credits": {
+      "get": {
+        "summary": "Read the organisation's plan, limits and credit balance",
+        "description": "Any signed-in member may read it. `used` counts the period's allowance that finished runs settled and the part of `reserved` taken from it, so a started run counts at once. `warning` is true once `used` is at least 80% of `allowance`; it is never true on an unlimited plan or a zero allowance. An organisation with no plan answers 403 `plan_required`. Owner-token mode has no organisations: the route answers 404 there.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberCredits"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

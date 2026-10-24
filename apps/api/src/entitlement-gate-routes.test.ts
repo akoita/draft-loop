@@ -112,6 +112,8 @@ interface Scenario {
   application: Partial<ApplicationView> | undefined;
   workspace: WorkspaceDescriptor;
   consent: ConsentState;
+  /** The balances the ledger reports around a new reservation. */
+  balances: { before: typeof balance; after: typeof balance };
 }
 
 let scenario: Scenario;
@@ -149,6 +151,7 @@ beforeEach(() => {
     application: undefined,
     workspace,
     consent: grantedConsent,
+    balances: { before: balance, after: balance },
   };
   begin.mockClear();
   begin.mockImplementation(async () => snapshot);
@@ -159,6 +162,8 @@ beforeEach(() => {
           refused: null,
           reservation: { ...reservation, runId: input.runId, credits: input.credits },
           created: true,
+          balanceBefore: scenario.balances.before,
+          balanceAfter: scenario.balances.after,
         }
       : scenario.refusal,
   );
@@ -209,7 +214,8 @@ async function api(
       knowledgeOwnersFor: () => ({}) as KnowledgeBaseOwners,
       entitlementsFor: () => ({
         entitlements: entitlementsRead,
-        ledger: { reserve, refund },
+        assignment: vi.fn(),
+        ledger: { reserve, refund, balance: vi.fn() },
       }),
     },
   });
@@ -505,5 +511,189 @@ describe("starting a run with the owner token", () => {
     expect(begin).toHaveBeenCalledTimes(1);
     expect(begin.mock.calls[0]?.[0]).not.toHaveProperty("runId");
     expect(enqueue).toHaveBeenCalledWith("r1", snapshot.runId);
+  });
+});
+
+/** A balance with `used` of a 10-credit allowance spent and no grants. */
+function usedBalance(used: number, overrides: Partial<typeof balance> = {}): typeof balance {
+  return { ...balance, allowanceUsed: used, remaining: 10 - used, ...overrides };
+}
+
+function thresholdLines(): Record<string, unknown>[] {
+  return logLines
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .filter(
+      (line) =>
+        line.message === "credit allowance 80% used" || line.message === "credit balance exhausted",
+    );
+}
+
+describe("credit threshold log lines", () => {
+  const messages = () => thresholdLines().map((line) => line.message);
+
+  it("logs the 80% line once, at the boundary, with ids and numbers only", async () => {
+    scenario.balances = { before: usedBalance(7), after: usedBalance(8) };
+    const server = await api();
+
+    expect((await startRun(server)).status).toBe(201);
+
+    const lines = thresholdLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      severity: "WARNING",
+      message: "credit allowance 80% used",
+      organisationId: tenantId,
+      periodEnd: "2026-11-01",
+      allowance: 10,
+      used: 8,
+      remaining: 2,
+    });
+    // Only the allowed fields, besides the logger's own and the request's bound ids.
+    expect(Object.keys(lines[0] ?? {}).sort()).toEqual(
+      [
+        "allowance",
+        "memberId",
+        "message",
+        "organisationId",
+        "periodEnd",
+        "remaining",
+        "reqId",
+        "severity",
+        "tenantId",
+        "time",
+        "used",
+      ].sort(),
+    );
+  });
+
+  it("counts reserved credits as used", async () => {
+    scenario.balances = {
+      before: usedBalance(5, { reserved: 2, remaining: 3 }),
+      after: usedBalance(5, { reserved: 3, remaining: 2 }),
+    };
+    const server = await api();
+
+    await startRun(server);
+
+    expect(thresholdLines()).toMatchObject([{ message: "credit allowance 80% used", used: 8 }]);
+  });
+
+  it.each([
+    ["below 80% before and after", 6, 7],
+    ["already past 80% before", 8, 9],
+  ])("logs nothing when the use is %s", async (_label, before, after) => {
+    scenario.balances = { before: usedBalance(before), after: usedBalance(after) };
+    const server = await api();
+
+    await startRun(server);
+
+    expect(messages()).toEqual([]);
+  });
+
+  it("logs the exhaustion line when the remaining credits reach zero", async () => {
+    scenario.balances = { before: usedBalance(9), after: usedBalance(10) };
+    const server = await api();
+
+    await startRun(server);
+
+    // Past 80% before, so only exhaustion crosses.
+    expect(thresholdLines()).toMatchObject([
+      { severity: "WARNING", message: "credit balance exhausted", used: 10, remaining: 0 },
+    ]);
+  });
+
+  it("logs both lines when one reservation crosses both", async () => {
+    scenario.balances = { before: usedBalance(7), after: usedBalance(10) };
+    const server = await api();
+
+    await startRun(server);
+
+    expect(messages()).toEqual(["credit allowance 80% used", "credit balance exhausted"]);
+  });
+
+  it("logs nothing when the balance was already empty", async () => {
+    scenario.balances = { before: usedBalance(10), after: usedBalance(10) };
+    const server = await api();
+
+    await startRun(server);
+
+    expect(messages()).toEqual([]);
+  });
+
+  it("never logs the 80% line for an unlimited plan or a zero allowance", async () => {
+    const unlimited = { ...balance, allowance: 0, unlimited: true, remaining: 0 };
+    scenario.balances = {
+      before: { ...unlimited, allowanceUsed: 5 },
+      after: { ...unlimited, allowanceUsed: 99, reserved: 5 },
+    };
+    const server = await api();
+    await startRun(server);
+    expect(messages()).toEqual([]);
+
+    // Only operator grants: no allowance to be 80% through, but running out is still logged.
+    const grantsOnly = { ...balance, allowance: 0, remaining: 1, grantsRemaining: 1 };
+    scenario.balances = {
+      before: grantsOnly,
+      after: { ...grantsOnly, remaining: 0, grantsRemaining: 0, reserved: 1 },
+    };
+    await startRun(server, { key: "key-0000-0002" });
+    expect(messages()).toEqual(["credit balance exhausted"]);
+  });
+
+  it("does not use grants as allowance when it measures the use", async () => {
+    // 8 of 10 allowance credits are gone; 5 grant credits remain: the warning holds, nothing is exhausted.
+    scenario.balances = {
+      before: usedBalance(7, { grantsRemaining: 5, remaining: 8 }),
+      after: usedBalance(8, { grantsRemaining: 5, remaining: 7 }),
+    };
+    const server = await api();
+
+    await startRun(server);
+
+    expect(thresholdLines()).toMatchObject([
+      { message: "credit allowance 80% used", used: 8, remaining: 7 },
+    ]);
+  });
+
+  it("logs once for an idempotent retry", async () => {
+    scenario.balances = { before: usedBalance(7), after: usedBalance(8) };
+    const server = await api();
+
+    await startRun(server, { key: "retry-0000-0009" });
+    await startRun(server, { key: "retry-0000-0009" });
+
+    expect(messages()).toEqual(["credit allowance 80% used"]);
+  });
+
+  it("does not log for a reservation that already existed", async () => {
+    reserve.mockImplementation(async (input: { runId: string; credits: number }) => ({
+      refused: null,
+      reservation: { ...reservation, runId: input.runId, credits: input.credits },
+      created: false,
+    }));
+    const server = await api();
+
+    expect((await startRun(server)).status).toBe(201);
+
+    expect(messages()).toEqual([]);
+  });
+
+  it("logs nothing when the run could not be begun, since its credits are refunded", async () => {
+    scenario.balances = { before: usedBalance(7), after: usedBalance(8) };
+    begin.mockRejectedValueOnce(new CliUserError("The brief is not reviewed."));
+    const server = await api();
+
+    expect((await startRun(server)).status).toBe(422);
+
+    expect(messages()).toEqual([]);
+  });
+
+  it("logs nothing in owner-token mode, where nothing is reserved", async () => {
+    scenario.balances = { before: usedBalance(7), after: usedBalance(10) };
+    const server = await api("owner");
+
+    expect((await startRun(server, { owner: true })).status).toBe(201);
+
+    expect(messages()).toEqual([]);
   });
 });
