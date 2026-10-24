@@ -143,10 +143,11 @@ describe("the worker's failed-call lines", () => {
     const failed = failedCritic(openAiError(401, { code: "invalid_api_key" }));
     const lines: string[] = [];
     const handler = createRunJobHandler({
-      service: {
-        status: async () => run("reviewing"),
-        resume: async () => run("provider-error", failed),
-      } as Pick<ApplicationService, "status" | "resume">,
+      serviceFor: () =>
+        ({
+          status: async () => run("reviewing"),
+          resume: async () => run("provider-error", failed),
+        }) as Pick<ApplicationService, "status" | "resume">,
       workspaceRoot: () => "/tenants/tenant-a/workspaces/workspace-1",
       allowProviderData: true,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
