@@ -26,7 +26,8 @@ function sha256(content: Uint8Array): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
-function statusOf(error: unknown): unknown {
+/** @internal The HTTP status a Cloud Storage error carries, shared with the erasure adapter. */
+export function statusOf(error: unknown): unknown {
   return typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
 }
 
@@ -36,7 +37,8 @@ export function gcsTenantPrefix(tenantId: string): string {
   return `tenants/${tenantId}/`;
 }
 
-function requireTenantLocation(prefix: string, location: string): string {
+/** @internal A key under the tenant's prefix that is a plain object path, or a refusal. */
+export function requireTenantLocation(prefix: string, location: string): string {
   if (!location.startsWith(prefix)) {
     throw new StorageSecurityError("A blob location must sit under the tenant's prefix.");
   }

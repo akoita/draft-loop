@@ -10,6 +10,8 @@ import type { RunJob, RunJobHandler } from "@draft-loop/run-queue";
 export type RunJobOutcome =
   /** No such run in the workspace, as after a deletion. */
   | "missing"
+  /** The run's candidate record is erased or being erased: the job ends without a provider call. */
+  | "record-erased"
   /** The person paused the run; their resume queues it again. */
   | "held"
   /** Nothing to execute: the run awaits the person, or is finished. */
@@ -53,6 +55,11 @@ export interface RunJobHandlerOptions {
    * alone decides; it stays a ceiling above consent either way.
    */
   readonly consentFor?: (job: RunJob) => Promise<boolean>;
+  /**
+   * Whether the job's candidate record is erased or being erased, checked before anything else so
+   * a job queued before the erasure ends quietly. Unset, the worker does not check.
+   */
+  readonly recordErased?: (job: RunJob) => Promise<boolean>;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
@@ -126,6 +133,9 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     requeue: (startAfter: Date) => Promise<void>,
     seen: (snapshot: RunSnapshot) => void,
   ): Promise<RunJobOutcome> => {
+    if (options.recordErased !== undefined && (await options.recordErased(job))) {
+      return "record-erased";
+    }
     const service = options.serviceFor(job);
     const root = options.workspaceRoot(job);
     const snapshot = await service.status({ root, runId: job.runId });

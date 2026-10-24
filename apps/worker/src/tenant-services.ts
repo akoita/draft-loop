@@ -3,6 +3,7 @@ import {
   createApplicationService,
   createHostedApplicationDriver,
   type LocalApplicationDriverOptions,
+  WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import type { RunJob } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
@@ -56,5 +57,32 @@ export function tenantRunConsent(options: TenantConsentOptions): (job: RunJob) =
       .readWorkspace(options.workspaceRoot(job));
     const state = await options.tenancy.forTenant(job.tenantId).consentLedger.current(workspace.id);
     return permitsTransmission(state, workspace);
+  };
+}
+
+export interface TenantRecordErasureOptions {
+  readonly tenancy: Pick<PostgresTenancy, "forTenant">;
+  readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;
+  readonly workspaceRoot: (job: RunJob) => string;
+}
+
+/**
+ * Whether a job's candidate record is erased: closed for erasure, or its workspace gone, as after
+ * an erasure finished (ADR 0011, D7). The record is the workspace's API id, as the job names it.
+ */
+export function tenantRecordErased(
+  options: TenantRecordErasureOptions,
+): (job: RunJob) => Promise<boolean> {
+  return async (job) => {
+    if (await options.tenancy.forTenant(job.tenantId).recordErasure.isClosed(job.workspaceId)) {
+      return true;
+    }
+    try {
+      await options.serviceFor(job.tenantId).readWorkspace(options.workspaceRoot(job));
+      return false;
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) return true;
+      throw error;
+    }
   };
 }

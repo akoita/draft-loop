@@ -33,6 +33,7 @@ import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
+import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
@@ -199,6 +200,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           : { ownerTenantId: options.tenants.ownerTenantId }),
       });
     }
+  }
+  const erasureFor = options.tenants?.erasureFor;
+  if (application !== undefined && erasureFor !== undefined) {
+    // Before the workspace routes, so a record being erased is missing for each of them.
+    registerRecordErasureRoutes(app, {
+      erasureFor,
+      ...(options.tenants?.ownerTenantId === undefined
+        ? {}
+        : { ownerTenantId: options.tenants.ownerTenantId }),
+    });
   }
   const knowledgeOwnersFor = options.tenants?.knowledgeOwnersFor;
   if (application !== undefined && auth.mode === "oidc" && knowledgeOwnersFor === undefined) {

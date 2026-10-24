@@ -37,6 +37,12 @@ export {
   type PostgresIdempotencyStoreOptions,
 } from "./postgres-idempotency.js";
 export {
+  type RecordErasureRoutesOptions,
+  registerRecordErasureRoutes,
+  type TenantErasure,
+  type TenantErasureFor,
+} from "./record-erasure-routes.js";
+export {
   type ApiAuthOptions,
   type Caller,
   isOperatorRequest,

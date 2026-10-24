@@ -9,6 +9,7 @@ import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
 import { buildApi } from "./app.js";
+import type { TenantErasure } from "./record-erasure-routes.js";
 
 /** The committed OpenAPI document, which the drift test keeps equal to the generated one. */
 export const openApiDocumentPath = new URL("../openapi.json", import.meta.url);
@@ -23,6 +24,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     tenants: {
       budgetCeiling: { maxRounds: 1, maxCostUsd: 1, maxDurationMs: 1 },
       recordAccessFor: () => ({}) as CandidateRecordAccess,
+      erasureFor: () => ({}) as TenantErasure,
       applicationFor: () => ({
         service: {} as ApplicationService,
         workspaceRoot: (workspaceId) => workspaceId,

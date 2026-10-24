@@ -10,6 +10,7 @@ import type { ApiOptions } from "./app.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
 import type { RecordAccessFor } from "./record-access.js";
+import type { TenantErasureFor } from "./record-erasure-routes.js";
 import type { Caller } from "./request-auth.js";
 
 /** The application the routes serve: one tenant's, or one that dispatches to the caller's. */
@@ -38,6 +39,8 @@ export interface TenantApplications {
   readonly recordAccessFor?: RecordAccessFor;
   /** Which candidate record owns each of a tenant's knowledge bases; sign-in mode needs it. */
   readonly knowledgeOwnersFor?: KnowledgeOwnersFor;
+  /** Erases a tenant's candidate records; without it `DELETE /v1/workspaces/:id` is not served. */
+  readonly erasureFor?: TenantErasureFor;
 }
 
 export const defaultTenantCacheSize = 100;

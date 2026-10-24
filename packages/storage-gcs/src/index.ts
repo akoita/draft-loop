@@ -1,3 +1,4 @@
+export { createGcsBlobErasure } from "./gcs-blob-erasure.js";
 export {
   createGcsBlobStorage,
   type GcsBlobStorageOptions,

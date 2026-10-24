@@ -13,7 +13,7 @@ import { readWorkerConfig } from "./config.js";
 import { failedCallLines } from "./failed-call-logging.js";
 import { errorFields, logLine, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
-import { tenantRunConsent, tenantServices } from "./tenant-services.js";
+import { tenantRecordErased, tenantRunConsent, tenantServices } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
 // The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
@@ -66,6 +66,8 @@ const worker = await startWorker({
       ? { consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }) }
       : {}),
     budgetCeiling: config.budgetCeiling,
+    // A job queued before its record was erased ends without touching the record.
+    recordErased: tenantRecordErased({ tenancy, serviceFor, workspaceRoot }),
     onOutcome: (job, outcome, run, before) => {
       for (const line of failedCallLines(job, run, before)) console.error(line);
       console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run)));

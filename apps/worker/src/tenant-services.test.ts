@@ -30,7 +30,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { runtimeRole, runtimeUrl } from "./hosted-test-support.js";
 import type { RunJobOutcome } from "./run-job-handler.js";
-import { tenantServices } from "./tenant-services.js";
+import { tenantRecordErased, tenantServices } from "./tenant-services.js";
 import { startWorker } from "./worker.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -291,6 +291,54 @@ describe.runIf(connectionString !== undefined)("worker serving many tenants on P
     }
     expect(new Set(reads.map(({ tenantId }) => tenantId))).toEqual(new Set(tenants));
   }, 120_000);
+
+  it("erases every row a real run left and ends the record's later jobs quietly", async () => {
+    // The first test left a finished run in each tenant's workspace.
+    const tenantId: Tenant = "tenant-north";
+    const storage = tenancy.forTenant(tenantId);
+    const serviceFor = tenantServices({ tenancy, blobsFor });
+    const workspaceRoot = (job: RunJob) => hostedWorkspaceReference(job.tenantId, job.workspaceId);
+    const recordErased = tenantRecordErased({ tenancy, serviceFor, workspaceRoot });
+    const job = { tenantId, workspaceId, runId: "run-after-erasure" };
+    await expect(recordErased(job)).resolves.toBe(false);
+
+    await storage.knowledgeBaseOwners.setOwner({ knowledgeBaseId: "ckb-1", workspaceId });
+    await expect(storage.recordErasure.close(workspaceId)).resolves.toMatchObject({
+      state: "closed",
+      resumed: false,
+    });
+    await expect(recordErased(job)).resolves.toBe(true);
+    const south = (await rowsByTenant())["tenant-south"];
+    await storage.recordErasure.erase(workspaceId);
+    await expect(recordErased(job)).resolves.toBe(true);
+    // Only the tenant's knowledge store, which no record owns, is left; the other tenant is whole.
+    const after = await rowsByTenant();
+    expect(after[tenantId]).toEqual({ candidate_knowledge_stores: 1 });
+    expect(after["tenant-south"]).toEqual(south);
+
+    const finished: RunJobOutcome[] = [];
+    const worker = await startWorker({
+      queue: {
+        connectionString: runtimeUrl(url),
+        schema: queueSchema,
+        pollingIntervalSeconds: 0.5,
+      },
+      runs: {
+        serviceFor: (queued) => serviceFor(queued.tenantId),
+        workspaceRoot,
+        allowProviderData: false,
+        budgetCeiling,
+        recordErased,
+        onOutcome: (_job, outcome) => finished.push(outcome),
+      },
+    });
+    try {
+      await queue.enqueue(job);
+      await eventually(() => expect(finished).toEqual(["record-erased"]));
+    } finally {
+      await worker.stop({ graceMs: 1_000 });
+    }
+  }, 60_000);
 
   it("refuses a job whose tenant id is not a safe identifier before touching storage", () => {
     const blobTenants: string[] = [];

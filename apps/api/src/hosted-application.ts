@@ -8,7 +8,7 @@ import {
 } from "@draft-loop/application";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
-import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
+import { createGcsBlobErasure, createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
@@ -130,6 +130,10 @@ export async function openHostedTenants(
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        erasureFor: (tenantId) => ({
+          records: tenancy.forTenant(tenantId).recordErasure,
+          blobs: createGcsBlobErasure({ bucket, tenantId }),
+        }),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),

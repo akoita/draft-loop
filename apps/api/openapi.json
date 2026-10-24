@@ -5172,6 +5172,87 @@
       }
     },
     "/v1/workspaces/{workspaceId}": {
+      "delete": {
+        "summary": "Erase a workspace's candidate record",
+        "description": "Removes the record for good: its stored files and exports, then its history, settings, consent ledger, audit trail, assignments and the knowledge bases it owns. Owners and admins only, or the owner token in owner-token mode, with the workspace id typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run answers 409 `run_active`; stop it first. The record is missing to every other route from the first call, and calling again finishes an interrupted erasure.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "The workspace id again, typed back by the person."
+                  }
+                },
+                "required": [
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Erased."
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "summary": "Create a workspace",
         "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409.",
