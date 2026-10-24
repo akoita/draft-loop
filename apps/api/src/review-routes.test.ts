@@ -279,7 +279,8 @@ describe("review decisions", () => {
     });
 
     expect(response.statusCode).toBe(status);
-    expect(response.json().error.code).toBe(code);
+    // A run the tenant does not have answers with the one `not_found` code the other routes use.
+    expect(response.json().error.code).toBe(code === "run_not_found" ? "not_found" : code);
   });
 });
 

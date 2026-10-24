@@ -196,6 +196,12 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     void reply.code(409).send(apiError(error.code, error.message));
     return;
   }
+  // A run the caller's tenant does not have answers the same whether it never existed or belongs
+  // to another organisation; the CLI's message quotes the id, so a fixed one replaces it.
+  if (error instanceof RunActionError && error.code === "run_not_found") {
+    void reply.code(404).send(apiError("not_found", "No such run."));
+    return;
+  }
   if (error instanceof RunActionError) {
     void reply.code(runActionStatus[error.code]).send(apiError(error.code, error.message));
     return;

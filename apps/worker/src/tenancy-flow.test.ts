@@ -378,7 +378,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
         () => undefined,
         (error: { status?: number }) => error.status,
       );
-    expect([404, 422]).toContain(intrusion);
+    expect(intrusion).toBe(404);
     await expect(
       clientFor("a").call("GET /v1/knowledge-bases/{knowledgeBaseId}/sources", {
         path: { knowledgeBaseId: bBase.id },

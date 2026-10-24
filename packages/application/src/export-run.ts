@@ -40,6 +40,7 @@ import type { ApplicationIo } from "./index.js";
 import type { WorkspaceConfig } from "./local.js";
 import { noopAgents } from "./noop-agents.js";
 import { timestamp } from "./response-execution.js";
+import { runNotFound } from "./run-action-error.js";
 
 export interface ExportRunDependencies {
   readonly readWorkspace: (root: string) => Promise<WorkspaceConfig>;
@@ -114,7 +115,7 @@ export async function exportApprovedRun(
   try {
     const runStore = createStorageRunStore(storage);
     const snapshot = await runStore.loadRun(runId);
-    if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
+    if (snapshot === undefined) throw runNotFound(runId);
     if (snapshot.state !== "approved" && snapshot.state !== "exported") {
       throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
     }

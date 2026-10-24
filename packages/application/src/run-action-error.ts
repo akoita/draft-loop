@@ -25,3 +25,8 @@ export class RunActionError extends CliUserError {
     this.code = code;
   }
 }
+
+/** The refusal for a run id the workspace (and so the caller's tenant) does not have. */
+export function runNotFound(runId: string): RunActionError {
+  return new RunActionError("run_not_found", `Run ${runId} was not found.`);
+}

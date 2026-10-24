@@ -302,7 +302,8 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     for (const [method, suffix, payload] of runCalls) {
       const intruding = await asB(method, `${runPath}${suffix}`, payload);
       const unknown = await asB(method, `${unknownPath}${suffix}`, payload);
-      expect([404, 422], `${method} ${suffix}`).toContain(intruding.status);
+      expect(intruding.status, `${method} ${suffix}`).toBe(404);
+      expect(intruding.body.error?.code, `${method} ${suffix}`).toBe("not_found");
       expect({ status: intruding.status, code: intruding.body.error?.code }).toEqual({
         status: unknown.status,
         code: unknown.body.error?.code,
