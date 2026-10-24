@@ -45,9 +45,38 @@ public client `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`, and returns to the screen's
 address, `/`, which the provider must accept as a redirect and post-logout
 address. Its tokens stay in the tab's session storage and are refreshed before
 they expire. An account that belongs to no organisation is told so and signed
-out at the provider. The fictional local values are the issuer
-`http://127.0.0.1:58081/realms/draft-loop-local`, the web client
-`draft-loop-web` and the audience `draft-loop-api`.
+out at the provider.
+
+### Sign-in on the stack
+
+The stack also runs Keycloak and a second API, `api-oidc`, in `oidc` mode at
+`http://127.0.0.1:58082/`. Keycloak imports the realm `draft-loop-local` from
+`compose/keycloak/` with fictional people only:
+
+| Username | Email               | Password                 | Email verified |
+| -------- | ------------------- | ------------------------ | -------------- |
+| `ada`    | `ada@org-a.example` | `local-stack-password-a` | yes            |
+| `ben`    | `ben@org-b.example` | `local-stack-password-b` | yes            |
+| `una`    | `una@org-a.example` | `local-stack-password-u` | no             |
+
+A person signs in only once an organisation has invited their verified email.
+Create one with the operator token, then sign in at `http://127.0.0.1:58082/`:
+
+```sh
+curl -X POST http://127.0.0.1:58082/v1/operator/organisations \
+  -H 'authorization: Bearer local-stack-owner-token-not-a-secret' \
+  -H 'content-type: application/json' \
+  -d '{"organisationId":"org-a","name":"Org A","firstOwnerEmail":"ada@org-a.example"}'
+```
+
+The realm's clients are `draft-loop-web` (the screen, code flow with PKCE) and
+`draft-loop-local-smoke` (the password grant, for the smoke test only). Both
+put the audience `draft-loop-api` in their access tokens. Tokens name the
+issuer `http://127.0.0.1:58081/realms/draft-loop-local`, the address the
+browser uses; the API fetches the signing keys inside the Compose network
+(`DRAFT_LOOP_OIDC_JWKS_URL`). Keycloak's admin console is at
+`http://127.0.0.1:58081/admin` with `admin` /
+`local-stack-keycloak-admin-not-a-secret`.
 
 To work on the screen itself, run `pnpm --filter @draft-loop/web dev`. Vite
 serves it with hot reload and forwards `/v1` to the API at
@@ -61,6 +90,8 @@ serves it with hot reload and forwards `/v1` to the API at
 | `postgres` | `pgvector/pgvector:0.8.0-pg16`                | `postgres://postgres:postgres@127.0.0.1:55432/postgres` |
 | `gcs`      | `fsouza/fake-gcs-server:1.56.1`               | `http://127.0.0.1:4443`                                 |
 | `api`      | `apps/api/Dockerfile`, the `/v1` HTTP API and the web screen at `/` | `http://127.0.0.1:58080`                                |
+| `api-oidc` | The same image in `oidc` mode, signing members in through Keycloak | `http://127.0.0.1:58082`                                |
+| `keycloak` | `keycloak/keycloak:26.7.5` in development mode, with the fictional realm | `http://127.0.0.1:58081`                                |
 | `worker`   | `apps/worker/Dockerfile`, executes queued runs | none                                                    |
 
 - Every published port listens on `127.0.0.1` only. The Postgres port is
@@ -212,7 +243,8 @@ suites with the stack's addresses and local values in the environment:
 1. `pnpm test:postgres`, against `DRAFT_LOOP_TEST_POSTGRES_URL`;
 2. `pnpm test:gcs`, against `DRAFT_LOOP_TEST_GCS_URL`;
 3. `pnpm test:server-smoke`, the end-to-end smoke against
-   `DRAFT_LOOP_TEST_API_URL`.
+   `DRAFT_LOOP_TEST_API_URL`, and the sign-in smoke against
+   `DRAFT_LOOP_TEST_OIDC_API_URL` and `DRAFT_LOOP_TEST_OIDC_ISSUER_URL`.
 
 The smoke takes runs from setup to a downloaded CV through the API only, with
 synthetic data and no database seeding:
@@ -227,6 +259,11 @@ synthetic data and no database seeding:
    approval.
 4. **Export.** It exports a DOCX, lists the run's exports, downloads the
    document and checks its size and SHA-256 against the export's record.
+
+The sign-in smoke creates two organisations with the operator token and signs
+`ada` and `ben` in through Keycloak. Each lands in their own organisation, and
+`ben` gets 404 for a workspace `ada` created. The operator route refuses a
+member's token, and an invited person whose email is not verified gets 403.
 
 A second run takes one revision round with a candidate direction before the
 same review, approval and export.

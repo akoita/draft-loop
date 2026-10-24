@@ -8,6 +8,8 @@ export const localServerStack = Object.freeze({
   DRAFT_LOOP_TEST_POSTGRES_URL: "postgres://postgres:postgres@127.0.0.1:55432/postgres",
   DRAFT_LOOP_TEST_GCS_URL: "http://127.0.0.1:4443",
   DRAFT_LOOP_TEST_API_URL: "http://127.0.0.1:58080",
+  DRAFT_LOOP_TEST_OIDC_API_URL: "http://127.0.0.1:58082",
+  DRAFT_LOOP_TEST_OIDC_ISSUER_URL: "http://127.0.0.1:58081",
 });
 
 // What the smoke needs besides the URLs: the stack's fixed, local-only owner token from compose.yaml.

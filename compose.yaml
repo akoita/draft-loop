@@ -1,7 +1,8 @@
 # The hosted service for local development and tests, with no cloud account and no provider
-# calls (ADR 0011, D15): Postgres, a Cloud Storage emulator, the API and one worker. Start it with
-# `pnpm server:up`; see docs/operations/local-server-stack.md. Every credential here is a fixed
-# local-only value; a deployment takes its own from its secrets.
+# calls (ADR 0011, D15): Postgres, a Cloud Storage emulator, Keycloak, the API in owner and in
+# sign-in mode, and one worker. Start it with `pnpm server:up`; see
+# docs/operations/local-server-stack.md. Every credential here is a fixed local-only value; a
+# deployment takes its own from its secrets.
 name: draft-loop-server
 
 # What the API and the worker share: the runtime role, the tenant, the emulated bucket and the
@@ -44,6 +45,34 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+
+  keycloak:
+    # The identity provider for sign-in on the local stack, in development mode, with a realm of
+    # fictional users imported at start (compose/keycloak). A deployment uses a hosted Keycloak.
+    image: keycloak/keycloak:26.7.5
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: local-stack-keycloak-admin-not-a-secret
+      # Tokens name the address the browser and the smoke use; the API reaches the keys inside
+      # the Compose network.
+      KC_HOSTNAME: http://127.0.0.1:58081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./compose/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "127.0.0.1:58081:8080"
+    healthcheck:
+      # The image has no curl or wget; bash's /dev/tcp reaches the management port's health check.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 &&
+          grep -q '"UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 60
 
   # Local-only setup a deployment's infrastructure does instead: the runtime role, then the bucket.
   postgres-setup:
@@ -105,6 +134,38 @@ services:
       DRAFT_LOOP_API_OWNER_TOKEN: local-stack-owner-token-not-a-secret
     ports:
       - "127.0.0.1:58080:8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - --eval
+        - 'fetch("http://127.0.0.1:8080/v1/health").then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))'
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # The same API in sign-in mode: members sign in through the local Keycloak and act in their own
+  # organisation; the owner token is the operator's credential for creating organisations.
+  api-oidc:
+    image: draft-loop-api:local
+    pull_policy: never
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      <<: *hosted-environment
+      DRAFT_LOOP_API_OWNER_TOKEN: local-stack-owner-token-not-a-secret
+      DRAFT_LOOP_AUTH_MODE: oidc
+      DRAFT_LOOP_OIDC_ISSUER: http://127.0.0.1:58081/realms/draft-loop-local
+      DRAFT_LOOP_OIDC_ALLOW_HTTP: "1"
+      DRAFT_LOOP_OIDC_AUDIENCE: draft-loop-api
+      DRAFT_LOOP_OIDC_WEB_CLIENT_ID: draft-loop-web
+      # Tokens name the browser's address for Keycloak; the API fetches the keys inside the network.
+      DRAFT_LOOP_OIDC_JWKS_URL: http://keycloak:8080/realms/draft-loop-local/protocol/openid-connect/certs
+    ports:
+      - "127.0.0.1:58082:8080"
     healthcheck:
       test:
         - CMD
