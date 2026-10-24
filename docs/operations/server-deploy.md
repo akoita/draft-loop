@@ -117,6 +117,35 @@ and grants credits with the owner token, the only credential the
   exhaustion thresholds also write alert lines (see [Alert lines](#alert-lines)).
 - **Trail:** each write logs one `audit` line with ids, the plan id, numbers
   and the reason code, and no free text.
+- **Owner-token mode:** a deployment on the owner token has one tenant with no
+  organisation row, so it holds no plan and no ledger. It skips the run gate
+  and is not metered; plans and credits apply in sign-in mode only.
+
+Example requests for a fictional organisation, with `$API` the API's address
+and `$OWNER_TOKEN` the deployment's owner token. This gives Fern Careers the
+Individual plan with a credit allowance of 5 for the period, then grants it two
+more credits:
+
+```sh
+curl -X PUT "$API/v1/operator/organisations/org-fern/plan" \
+  -H "authorization: Bearer $OWNER_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"planId":"individual","overrides":{"creditsPerPeriod":5}}'
+
+curl -X POST "$API/v1/operator/organisations/org-fern/credit-grants" \
+  -H "authorization: Bearer $OWNER_TOKEN" \
+  -H 'idempotency-key: grant-org-fern-0001' \
+  -H 'content-type: application/json' \
+  -d '{"credits":2,"reason":"goodwill"}'
+
+curl "$API/v1/operator/organisations/org-fern/credits" \
+  -H "authorization: Bearer $OWNER_TOKEN"
+```
+
+A seat-priced plan needs its seats, for example
+`{"planId":"team","seats":3}`. The
+[worker flow test](../../apps/worker/src/plans-credits-flow.test.ts) runs this
+sequence against Postgres with scripted providers.
 
 ## Erasing records and organisations
 

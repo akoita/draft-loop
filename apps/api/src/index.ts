@@ -21,6 +21,7 @@ export {
   hostedEntitlementsFor,
   hostedKnowledgeLocation,
   hostedKnowledgeStoreId,
+  hostedOperatorFor,
 } from "./hosted-application.js";
 export {
   createMemoryIdempotencyStore,
