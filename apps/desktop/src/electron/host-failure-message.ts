@@ -63,6 +63,7 @@ const capabilityLabels: Readonly<Record<string, string>> = {
   "source.add-url": "Adding the source URL",
   "export.write": "Exporting the draft",
   "models.list": "Listing provider models",
+  "credential.test": "Testing the API key",
   "writing-policy.read": "Reading the writing policy",
   "writing-policy.save": "Saving the writing policy",
   "models.saved-profiles.read": "Reading the saved model profiles",

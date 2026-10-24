@@ -1130,6 +1130,8 @@ export function createLocalModelAdapter<
   return new LocalModelAdapter<Input, Output>(client, options);
 }
 
+/** Checking a hosted API key through the model lookup endpoint, before any billed call. */
+export * from "./api-key-check.js";
 export * from "./deepinfra-glm.js";
 /**
  * Model discovery: which model ids a configured credential can actually reach.

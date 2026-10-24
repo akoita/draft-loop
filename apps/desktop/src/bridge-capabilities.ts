@@ -93,6 +93,7 @@ export const bridgeCapabilities = [
   "credential.status",
   "credential.set",
   "credential.remove",
+  "credential.test",
   "provider-auth.status",
   "provider-auth.set",
   "models.list",

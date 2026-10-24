@@ -175,6 +175,29 @@ are API-key-only and are never shared with another provider.
 The renderer receives only whether a key is configured and its storage source
 and protection, never the stored key.
 
+### Testing a saved key
+
+A saved or environment Anthropic or OpenAI API key has a **Test key** button,
+so a mistyped key shows up before a run pays for its author step. The check is
+one GET to the provider's model lookup endpoint (`/v1/models/{model}`) for each
+model the open workspace runs on that provider. With no such model it lists
+models instead, which checks only the key. It makes no billed call, sends no
+workspace or candidate content, and gives up after 10 seconds.
+
+The row then shows one result with the time it was checked:
+
+- **Works**: the provider accepts the key and the workspace's model is available.
+- **Rejected**: the provider refused the key (401).
+- **No access to the model**: the key works but cannot reach that model (403 or 404).
+- **Quota or rate limit**: the provider answered 429, with its own short code
+  such as `insufficient_quota` or `rate_limit_exceeded` when it gives one.
+- **Could not check**: no network, a timeout or an unexpected answer. It never
+  means the key is wrong.
+
+Saving a key does not test it. Editing, saving or removing a key clears its
+result. Provider user sessions and the DeepInfra, Google Gemini and Mistral
+keys have no Test key yet.
+
 The DeepInfra GLM adapter reads structured output as a stream. It allows 120
 seconds for the initial response, resets a 120-second idle limit as chunks
 arrive, and stops after 10 minutes total. Adapter timeout diagnostics identify the

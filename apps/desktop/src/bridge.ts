@@ -85,6 +85,13 @@ import {
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
+import {
+  type CredentialTestInput,
+  type CredentialTestResult,
+  credentialTestInputKeys,
+  credentialTestProviders,
+  normalizeCredentialTestResult,
+} from "./credential-test-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
 import { normalizeFindingRequirement } from "./finding-requirement.js";
@@ -214,6 +221,12 @@ export type {
   ApplicationJobOrigin,
   ApplicationJobResult,
 } from "./application-job-contract.js";
+export type {
+  CredentialTestInput,
+  CredentialTestOutcome,
+  CredentialTestProvider,
+  CredentialTestResult,
+} from "./credential-test-contract.js";
 export type {
   ModelProfileSupportInput,
   ModelProfileSupportResult,
@@ -3192,6 +3205,7 @@ export interface BridgeCommandInputMap {
   "credential.status": CredentialStatusInput;
   "credential.set": CredentialSetInput;
   "credential.remove": CredentialRemoveInput;
+  "credential.test": CredentialTestInput;
   "provider-auth.status": ProviderAuthModeStatusInput;
   "provider-auth.set": ProviderAuthModeSetInput;
   "models.list": ModelsListInput;
@@ -3305,6 +3319,7 @@ export interface BridgeCommandOutputMap {
   "credential.status": CredentialStatus;
   "credential.set": CredentialResult;
   "credential.remove": CredentialResult;
+  "credential.test": CredentialTestResult;
   "provider-auth.status": ProviderAuthModeStatus;
   "provider-auth.set": ProviderAuthModeResult;
   "models.list": ModelsListResult;
@@ -5464,6 +5479,12 @@ function validateCredentialSetInput(value: unknown): CredentialSetInput {
   return { provider, apiKey: input.apiKey.trim() };
 }
 
+function validateCredentialTestInput(value: unknown): CredentialTestInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, credentialTestInputKeys)) return invalidInput();
+  return { provider: enumValue(input.provider, credentialTestProviders) };
+}
+
 function validateProviderAuthModeStatusInput(value: unknown): ProviderAuthModeStatusInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, providerAuthModeStatusKeys)) return invalidInput();
@@ -6028,6 +6049,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "credential.set", input: validateCredentialSetInput(command.input) };
     case "credential.remove":
       return { type: "credential.remove", input: validateCredentialInput(command.input) };
+    case "credential.test":
+      return { type: "credential.test", input: validateCredentialTestInput(command.input) };
     case "provider-auth.status":
       return {
         type: "provider-auth.status",
@@ -8472,6 +8495,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "credential.set":
     case "credential.remove":
       return normalizeCredentialResult(value);
+    case "credential.test":
+      return normalizeCredentialTestResult(value) ?? invalidInput();
     case "provider-auth.status":
     case "provider-auth.set":
       return normalizeProviderAuthModeResult(value);

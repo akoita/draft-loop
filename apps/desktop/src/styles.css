@@ -6506,6 +6506,29 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-xs);
 }
 
+.credential-test-result {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.credential-test-works strong {
+  color: var(--teal-bright);
+}
+
+.credential-test-rejected strong {
+  color: var(--red);
+}
+
+.credential-test-warning strong {
+  color: var(--amber);
+}
+
+.credential-test-unknown strong {
+  color: var(--text-2);
+}
+
 .provider-auth-mode {
   display: grid;
   gap: var(--space-3);
