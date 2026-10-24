@@ -295,6 +295,11 @@ plan instructions after it, so the first plan call writes the cache and the plan
 revision and every draft of the run read it. The critic's calls, including its
 plan review, are sent unchanged.
 
+Claude's cache also keys on the output format, so every author call of a run
+asks for the same one: an object with one member per author output (plan, draft,
+and revision patch). Each call's instructions name the member it returns, and
+the adapter hands back only that member.
+
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
 cached and cache-write counts, and the estimated cost prices each at its own

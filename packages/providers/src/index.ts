@@ -7,7 +7,7 @@ import {
   classifyAnthropicBillingError,
 } from "./anthropic-billing-error.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
-import { anthropicPromptLayout } from "./anthropic-prompt-cache.js";
+import { anthropicPromptLayout, anthropicSharedOutput } from "./anthropic-prompt-cache.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
@@ -78,6 +78,12 @@ export interface PromptCacheLayout {
   readonly callInstructions: string;
   /** How many leading members of the object `input` every call of the run repeats. */
   readonly stableInputMembers: number;
+  /**
+   * Every output the calls sharing this prefix ask for, by output name. A provider whose prompt
+   * cache keys on the output format sends them all as one format, so those calls keep sharing
+   * the cached prefix while each still returns its own output.
+   */
+  readonly outputSchemas?: Readonly<Record<string, JsonSchema>>;
 }
 
 export interface ModelRequest<Input extends JsonValue = JsonValue> {
@@ -738,6 +744,7 @@ export class AnthropicAdapter<
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
+    const sharedOutput = anthropicSharedOutput(request);
     const parameters: MessageCreateParamsNonStreaming = {
       model: request.model.modelId,
       max_tokens: maxOutputTokens,
@@ -746,7 +753,7 @@ export class AnthropicAdapter<
         ? { thinking: profileControls.thinking }
         : {}),
       output_config: {
-        format: normalizeAnthropicOutputSchema(request.outputSchema),
+        format: normalizeAnthropicOutputSchema(sharedOutput?.schema ?? request.outputSchema),
         ...(profileControls?.provider === "anthropic" && profileControls.effort !== undefined
           ? { effort: profileControls.effort }
           : {}),
@@ -779,7 +786,20 @@ export class AnthropicAdapter<
             },
           );
         }
-        const output = parseJson<Output>(this.provider, textBlock.text, "content");
+        const parsed = parseJson<Output>(this.provider, textBlock.text, "content");
+        const output =
+          sharedOutput === undefined ? parsed : (sharedOutput.read(parsed) as Output | undefined);
+        if (output === undefined) {
+          throw new ProviderAdapterError(
+            this.provider,
+            "invalid-response",
+            "The provider did not return the requested output.",
+            {
+              retryable: true,
+              diagnostics: [{ code: "missing_output", path: request.outputName }],
+            },
+          );
+        }
         const accounting = accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing);
         const elapsedMs = Date.now() - startTime;
         request.onProgress?.({

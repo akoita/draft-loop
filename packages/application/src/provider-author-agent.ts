@@ -22,7 +22,7 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
-import { runStableInputMembers } from "./author-run-prefix.js";
+import { authorRunOutputSchemas, runStableInputMembers } from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import {
   evidenceReferenceTableInstructions,
@@ -140,6 +140,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             systemPrompt: `${runInstructions}\n\n${evidenceReferenceTableInstructions}`,
             callInstructions,
             stableInputMembers: runStableInputMembers,
+            outputSchemas: authorRunOutputSchemas(context, evidenceAliases.aliases),
           },
           // Members that stay the same for every round of a run come first, so a
           // provider's prompt-prefix cache can reuse them; per-call members follow.

@@ -26,7 +26,11 @@ import {
 } from "./application-plan-prompts.js";
 import { authorPromptSupportsApplicationPlan } from "./author-adjudication.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
-import { authorRunPrefix, runStableInputMembers } from "./author-run-prefix.js";
+import {
+  authorRunOutputSchemas,
+  authorRunPrefix,
+  runStableInputMembers,
+} from "./author-run-prefix.js";
 import { responseExecution } from "./response-execution.js";
 
 /**
@@ -118,6 +122,7 @@ export function createProviderApplicationPlanner(
               systemPrompt: prefix.systemPrompt,
               callInstructions: systemPrompt,
               stableInputMembers: runStableInputMembers,
+              outputSchemas: authorRunOutputSchemas(request.context, aliases.aliases),
             },
             input: toModel({ ...prefix.input, ...callInput }),
           }),
