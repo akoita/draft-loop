@@ -290,6 +290,15 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   per-tenant data keys.
 - **Data subject rights by design:** export everything, and delete
   everything, including objects and backups within a stated window.
+- **Built in phase 2c (sprint 1l, 2026-10-24):** owners and admins export
+  a candidate record as a
+  [record archive v1](../reference/record-archive.md) zip, and delete a
+  record for good: its stored objects, then its rows, consent ledger and
+  audit trail included. An owner deletes the whole organisation, and the
+  operator can too; identity-provider accounts are not deleted. The web
+  screen exports and deletes records. Database backups age out within 35
+  days, as set in the private infrastructure repository. Per-tenant data
+  keys and retention timers come later.
 - **Retention defaults** (working defaults, accepted 2026-10-20; a GDPR
   lawyer confirms the periods before phase 2 admits other users, especially
   for special-category data):

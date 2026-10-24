@@ -74,6 +74,28 @@ two things the code cannot set up:
 Real reference material goes on staging only with the owner's recorded
 consent; otherwise use synthetic material.
 
+## Erasing records and organisations
+
+Owners and admins delete a candidate record from the web screen or with
+`DELETE /v1/workspaces/{workspaceId}`; an owner deletes the organisation with
+`DELETE /v1/organisation`, and the operator with
+`DELETE /v1/operator/organisations/{organisationId}`. Each asks for the id
+typed back and refuses while a run is queued or running. Offer the record's
+archive first: deletion cannot be undone.
+
+- **What goes:** the record's stored objects in the bucket (sources and
+  exported documents), then its rows: settings, runs, drafts, knowledge
+  bases, assignments, consent ledger and audit trail. Deleting an organisation
+  does this for every record, removes every object under the tenant's prefix,
+  then the organisation and its members.
+- **What stays:** accounts at the identity provider. A deleted member can
+  still sign in there, but reaches no organisation; remove the account at the
+  provider if the person asks.
+- **Backups:** database backups and point-in-time recovery still hold the
+  deleted rows until they age out, within 35 days. The infrastructure
+  repository sets that window. A restore from an older backup must repeat the
+  deletions made since.
+
 ## Logs
 
 The API and the worker write one JSON object per line to standard output, with

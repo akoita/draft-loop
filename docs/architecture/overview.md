@@ -194,6 +194,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     record and its material, an upload and a run wait for the matching
     consent, each run sends only its own candidate's material, and a
     withdrawal stops the next run (`apps/worker/src/coaching-flow.test.ts`).
+  - A third flow test gives one organisation two records, each with its own
+    material, consents, run and export. Each record's archive holds only its
+    own material; erasing one leaves no row or stored object of it while the
+    other still exports and runs; and deleting the organisation leaves
+    nothing of the tenant (`apps/worker/src/erasure-flow.test.ts`).
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
