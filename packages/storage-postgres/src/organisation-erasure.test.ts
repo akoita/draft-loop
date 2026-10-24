@@ -77,6 +77,8 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
         "content_screening_results",
         "idempotency_keys",
         "organisation_members",
+        "organisation_plan_history",
+        "organisation_plans",
         "organisations",
       ]);
       const removed = Object.values(remainder).reduce((sum, rows) => sum + rows.length, 0);

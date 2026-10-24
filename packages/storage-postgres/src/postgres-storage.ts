@@ -14,6 +14,8 @@ import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
 import { createOrganisationErasure } from "./organisation-erasure.js";
 import { organisationErasureGrant } from "./organisation-erasure-migration.js";
+import { createOrganisationPlans } from "./organisation-plans.js";
+import { organisationPlanGrants } from "./organisation-plans-migration.js";
 import { createRecordArchiveRows } from "./record-archive.js";
 import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
@@ -78,6 +80,7 @@ export async function grantPostgresStorageAccess(
       await executor.query(tenantDirectoryGrant(schema, role));
       await executor.query(consentLedgerGrant(schema, role));
       for (const grant of contentScreeningGrants(schema, role)) await executor.query(grant);
+      for (const grant of organisationPlanGrants(schema, role)) await executor.query(grant);
       for (const grant of recordErasureGrants(schema, role)) await executor.query(grant);
       await executor.query(organisationErasureGrant(schema, role));
     });
@@ -123,6 +126,7 @@ function tenantStorage(client: SqlSession) {
     knowledgeBaseOwners: createKnowledgeBaseOwners(client),
     recordErasure: createCandidateRecordErasure(client),
     organisationErasure: createOrganisationErasure(client),
+    organisationPlans: createOrganisationPlans(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),

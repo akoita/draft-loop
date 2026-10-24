@@ -573,6 +573,16 @@ directory (ADR 0011, D6):
   appends a content-free `content-screening.released` audit event with the
   result and member ids. Record and organisation erasure remove both tables, and
   the record archive includes them.
+- Each organisation's plan assignment (ADR 0011, D13) is stored by
+  `createOrganisationPlans` in `@draft-loop/storage-postgres`, reached as
+  `forTenant(organisationId).organisationPlans`. The current row of
+  `organisation_plans` is keyed by the tenant, which is the organisation, and holds
+  the plan id, catalog version, validated entitlement overrides, seats and the UTC
+  start of the credit period. `organisation_plan_history` appends every assignment
+  and refuses updates and deletes. The operator assigns by opening the
+  organisation's tenant. Organisation erasure removes both tables; record
+  erasure and the record archive leave them alone, since a plan is not candidate
+  material.
 
 ### Intake screening
 
