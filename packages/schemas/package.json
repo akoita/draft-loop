@@ -30,6 +30,10 @@
     "./opportunity-draft-patch": {
       "types": "./src/opportunity-draft-patch.ts",
       "import": "./src/opportunity-draft-patch.ts"
+    },
+    "./record-archive": {
+      "types": "./src/record-archive.ts",
+      "import": "./src/record-archive.ts"
     }
   },
   "files": [
