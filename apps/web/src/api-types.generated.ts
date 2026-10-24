@@ -474,6 +474,15 @@ export interface ApiOperations {
     };
     readonly response: void;
   };
+  "DELETE /v1/workspaces/{workspaceId}": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly confirm: string;
+    };
+    readonly response: void;
+  };
   "PUT /v1/workspaces/{workspaceId}": {
     readonly path: {
       readonly workspaceId: string;

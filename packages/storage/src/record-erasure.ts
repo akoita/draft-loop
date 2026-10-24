@@ -72,3 +72,12 @@ export function requireErasedRecordId(workspaceId: string): string {
   }
   return workspaceId;
 }
+
+/**
+ * Removes stored objects outright for an erasure, whatever they hold. Unlike the blob port's
+ * checked delete, an object replaced since its reference was written is removed too.
+ */
+export interface BlobErasure {
+  /** Removes the object at the key; false when there was none. Refuses another tenant's key. */
+  removeObject(key: string): Promise<boolean>;
+}

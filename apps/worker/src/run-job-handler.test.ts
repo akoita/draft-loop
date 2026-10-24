@@ -253,6 +253,32 @@ describe("run job handler", () => {
     }
   });
 
+  it("ends a job for an erased record quietly, before reading the run or calling a provider", async () => {
+    const service = {
+      status: vi.fn<Service["status"]>(async () => snapshot("drafting")),
+      resume: vi.fn<Service["resume"]>(async () => snapshot("awaiting-approval")),
+    };
+    const erased = new Set(["workspace-1"]);
+    const outcomes: RunJobOutcome[] = [];
+    const handler = createRunJobHandler({
+      serviceFor: () => service,
+      workspaceRoot: () => root,
+      allowProviderData: true,
+      budgetCeiling,
+      recordErased: async (queued) => erased.has(queued.workspaceId),
+      onOutcome: (_job, outcome) => outcomes.push(outcome),
+    });
+
+    await handler(job, { requeue: async () => undefined });
+    expect(outcomes).toEqual(["record-erased"]);
+    expect(service.status).not.toHaveBeenCalled();
+    expect(service.resume).not.toHaveBeenCalled();
+
+    erased.clear();
+    await handler(job, { requeue: async () => undefined });
+    expect(outcomes).toEqual(["record-erased", "advanced"]);
+  });
+
   it("lets a failed resume fail the job, so the queue retries it", async () => {
     const service = {
       status: async () => snapshot("drafting"),

@@ -490,16 +490,6 @@ directory (ADR 0011, D6):
   `material-storage` or `provider-transmission` grant or withdrawal with its
   basis, recorded by the caller. The runtime role may only read and insert
   entries, and each one logs a content-free line without its note.
-- A candidate record is erased in two steps (`@draft-loop/storage/record-erasure`).
-  Closing it writes a `candidate_record_erasures` mark, after which the record
-  is missing to every reader, and returns the object keys its rows name.
-  Erasing it calls `erase_candidate_record`, a `SECURITY DEFINER` function
-  owned by the migrating role: the only delete the runtime role may make on
-  the consent ledger and the audit chain. It removes, in one transaction, the
-  record's history, settings, run state, idempotency keys, assignments,
-  consent, its owned knowledge bases with their sources, versions and indexes,
-  and the mark last. A repeated close finds the mark, so an interrupted
-  erasure finishes on the next call.
 - In sign-in mode the API enforces the ledger (`consent-enforcement.ts`). A
   source upload needs a current `material-storage` grant on the base's record;
   starting a run, a revision or a resume needs a `provider-transmission` grant
@@ -518,6 +508,26 @@ directory (ADR 0011, D6):
   checks every source and export object before the first byte is sent, so
   a missing or changed object answers 409 `archive_integrity`. The zip streams
   one file at a time, and each download logs one content-free line.
+- `DELETE /v1/workspaces/:workspaceId` erases a candidate record for good.
+  Owners and admins only, or the owner token in owner-token mode, with the
+  workspace id typed back as `{ "confirm": "<id>" }` (400
+  `confirmation_mismatch`). A queued or running run answers 409 `run_active`
+  until the caller stops it. The record is closed first and is missing (404)
+  to every other route from then on; its stored objects go next, removed by
+  key whatever they hold, then its rows. Calling again finishes an interrupted
+  erasure, and a record already gone answers 404. One content-free line logs
+  the ids and the counts removed. A job queued for an erased record ends in
+  the worker with outcome `record-erased`, without a provider call.
+- Erasure has two storage steps (`@draft-loop/storage/record-erasure`).
+  Closing a record writes a `candidate_record_erasures` mark, after which the record
+  is missing to every reader, and returns the object keys its rows name.
+  Erasing it calls `erase_candidate_record`, a `SECURITY DEFINER` function
+  owned by the migrating role: the only delete the runtime role may make on
+  the consent ledger and the audit chain. It removes, in one transaction, the
+  record's history, settings, run state, idempotency keys, assignments,
+  consent, its owned knowledge bases with their sources, versions and indexes,
+  and the mark last. A repeated close finds the mark, so an interrupted
+  erasure finishes on the next call.
 
 ## Data and quality contracts
 
