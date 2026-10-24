@@ -138,8 +138,16 @@ function scriptedVertexFetch(urls: string[], bodies: string[]): typeof fetch {
     const content = body.messages[0]?.content;
     const text = typeof content === "string" ? content : content?.[0]?.text;
     const request = JSON.parse(text ?? "{}") as ScriptedInput;
-    const plans = JSON.stringify(body.output_config).includes('"themes"');
-    const output = plans ? applicationPlan(evidenceId(request)) : draft(evidenceId(request));
+    // A call that shares the run's output format names its own member in the call instructions.
+    const member = /Return only the \\?"([a-z_]+)\\?" member/u.exec(
+      JSON.stringify(body.messages),
+    )?.[1];
+    const plans =
+      member === undefined
+        ? JSON.stringify(body.output_config).includes('"themes"')
+        : member === "application_plan";
+    const answer = plans ? applicationPlan(evidenceId(request)) : draft(evidenceId(request));
+    const output = member === undefined ? answer : { output: { [member]: answer } };
     const modelId = /models\/([^:]+):/u.exec(url)?.[1] ?? "unknown";
     return new Response(vertexStream(modelId, output), {
       status: 200,
