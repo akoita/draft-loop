@@ -23,6 +23,10 @@
       "types": "./src/model-profile-budget.ts",
       "import": "./src/model-profile-budget.ts"
     },
+    "./run-credit-estimate": {
+      "types": "./src/run-credit-estimate.ts",
+      "import": "./src/run-credit-estimate.ts"
+    },
     "./model-profile-selection": {
       "types": "./src/model-profile-selection.ts",
       "import": "./src/model-profile-selection.ts"
