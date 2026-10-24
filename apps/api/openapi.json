@@ -8,7 +8,8 @@
     "securitySchemes": {
       "ownerToken": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "description": "The owner's token, or in sign-in mode an access token from the identity provider."
       }
     },
     "schemas": {

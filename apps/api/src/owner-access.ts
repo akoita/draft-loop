@@ -1,9 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 /**
- * Phase 1 serves one person, the owner, and has no sign-up (ADR 0011, phase 1). Every route but
- * health requires the owner's bearer token until sign-in through the identity provider (D6)
- * replaces it in phase 2.
+ * Phase 1 serves one person, the owner, and has no sign-up (ADR 0011, phase 1). In owner mode, the
+ * default, every route but health requires the owner's bearer token. Sign-in mode accepts the
+ * identity provider's tokens instead (D6, `oidc-sign-in.ts`) and keeps the owner token as the
+ * operator's credential.
  */
 export const ownerTokenMinimumLength = 32;
 

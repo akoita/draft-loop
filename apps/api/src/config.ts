@@ -1,12 +1,18 @@
 import { isAbsolute } from "node:path";
 
+import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
 import { isCloudRunJobName } from "./worker-wake.js";
+
+/** How the API authenticates requests: the owner token alone, or sign-in through the provider. */
+export type ApiAuthConfig = { readonly mode: "owner" } | (OidcSettings & { readonly mode: "oidc" });
 
 export interface ApiConfig {
   readonly host: string;
   readonly port: number;
+  /** Every request's credential in owner mode; the operator's credential in sign-in mode. */
   readonly ownerToken: string;
+  readonly auth: ApiAuthConfig;
   /** The worker's Cloud Run job, started after each queued run; unset on the local stack. */
   readonly workerJob?: string;
   /** The built web screen's directory, served at `/`; the image sets it. */
@@ -47,8 +53,53 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
     host: env.DRAFT_LOOP_API_HOST ?? "0.0.0.0",
     port,
     ownerToken,
+    auth: readAuthConfig(env),
     ...(workerJob === "" ? {} : { workerJob }),
     ...(webRoot === "" ? {} : { webRoot }),
+  };
+}
+
+/** A client id or audience: printable, with no whitespace. */
+const clientIdentifierPattern = /^[\x21-\x7e]{1,255}$/u;
+
+function clientIdentifier(env: NodeJS.ProcessEnv, name: string): string {
+  const value = required(env, name);
+  if (!clientIdentifierPattern.test(value)) {
+    throw new ApiConfigError(`${name} must be printable with no whitespace.`);
+  }
+  return value;
+}
+
+/**
+ * Reads how requests are authenticated. Sign-in mode names the identity provider by its issuer;
+ * its keys are discovered from the issuer unless `DRAFT_LOOP_OIDC_JWKS_URL` names them. Provider
+ * addresses must be https, except on the local stack, which sets `DRAFT_LOOP_OIDC_ALLOW_HTTP=1`.
+ */
+function readAuthConfig(env: NodeJS.ProcessEnv): ApiAuthConfig {
+  const mode = env.DRAFT_LOOP_AUTH_MODE ?? "";
+  if (mode === "" || mode === "owner") return { mode: "owner" };
+  if (mode !== "oidc") throw new ApiConfigError("DRAFT_LOOP_AUTH_MODE must be owner or oidc.");
+  const allowHttpText = env.DRAFT_LOOP_OIDC_ALLOW_HTTP ?? "";
+  if (!["", "0", "1"].includes(allowHttpText)) {
+    throw new ApiConfigError("DRAFT_LOOP_OIDC_ALLOW_HTTP must be 1 or unset.");
+  }
+  const allowHttp = allowHttpText === "1";
+  const scheme = allowHttp ? "an http or https URL" : "an https URL";
+  const issuer = required(env, "DRAFT_LOOP_OIDC_ISSUER");
+  if (!isProviderUrl(issuer, allowHttp) || new URL(issuer).search !== "") {
+    throw new ApiConfigError(`DRAFT_LOOP_OIDC_ISSUER must be ${scheme} with no query.`);
+  }
+  const jwksUrl = env.DRAFT_LOOP_OIDC_JWKS_URL ?? "";
+  if (jwksUrl !== "" && !isProviderUrl(jwksUrl, allowHttp)) {
+    throw new ApiConfigError(`DRAFT_LOOP_OIDC_JWKS_URL must be ${scheme}.`);
+  }
+  return {
+    mode: "oidc",
+    issuer,
+    audience: clientIdentifier(env, "DRAFT_LOOP_OIDC_AUDIENCE"),
+    webClientId: clientIdentifier(env, "DRAFT_LOOP_OIDC_WEB_CLIENT_ID"),
+    ...(jwksUrl === "" ? {} : { jwksUrl }),
+    allowHttp,
   };
 }
 
