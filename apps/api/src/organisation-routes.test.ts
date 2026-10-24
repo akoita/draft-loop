@@ -5,6 +5,7 @@ import {
   type MemberRecord,
   type MemberRole,
   normalizeMemberEmail,
+  requireManagerAuthority,
   requireMemberRole,
   requireOrganisationId,
   requireOrganisationName,
@@ -101,6 +102,7 @@ function memoryDirectory(): TenantDirectory & {
     inviteMember: async (input) => invite(input.organisationId, input.email, input.role),
     changeRole: async (input) => {
       const { list, index, member } = find(input.organisationId, input.memberId);
+      requireManagerAuthority(input.actorRole, member.role, input.role);
       if (input.role !== "owner") keepAnOwner(list, member);
       const changed = { ...member, role: requireMemberRole(input.role), updatedAt: now() };
       list[index] = changed;
@@ -108,8 +110,10 @@ function memoryDirectory(): TenantDirectory & {
     },
     removeMember: async (input) => {
       const { list, index, member } = find(input.organisationId, input.memberId);
+      requireManagerAuthority(input.actorRole, member.role);
       keepAnOwner(list, member);
       list.splice(index, 1);
+      return member;
     },
     add: (organisationId, email, role) => {
       if (!members.has(organisationId)) {
@@ -369,11 +373,63 @@ describe("an organisation's members", () => {
     expect(promoted.statusCode).toBe(200);
     expect(promoted.json()).toMatchObject({ memberId: member.memberId, role: "admin" });
     expect(adminGrantsOwner.statusCode).toBe(403);
+    expect(adminGrantsOwner.json().error.code).toBe("forbidden");
     expect(adminDemotesOwner.statusCode).toBe(403);
+    expect(adminDemotesOwner.json().error.code).toBe("forbidden");
     // Another organisation's owner cannot reach this organisation's member.
     expect(memberTries.statusCode).toBe(404);
     expect(ownerGrants.statusCode).toBe(200);
     expect(ownerGrants.json().role).toBe("owner");
+  });
+
+  it("change role and removal leave the authority check to the directory", async () => {
+    const { admin, member } = seed();
+    const second = directory.add("org-north", "second@north.example.test", "member");
+    const server = await api();
+    // The target becomes an owner after the route would have read it as a member.
+    const { changeRole, removeMember } = directory;
+    const promoteFirst = async (memberId: string) => {
+      const target = (await directory.listMembers("org-north")).find(
+        (record) => record.memberId === memberId,
+      );
+      if (target?.role !== "owner") {
+        await changeRole({
+          organisationId: "org-north",
+          memberId,
+          role: "owner",
+          actorRole: "owner",
+        });
+      }
+    };
+    directory.changeRole = async (input) => {
+      await promoteFirst(input.memberId);
+      return changeRole(input);
+    };
+    directory.removeMember = async (input) => {
+      await promoteFirst(input.memberId);
+      return removeMember(input);
+    };
+
+    const demoted = await call(server, await signIn(admin.memberId), {
+      method: "PATCH",
+      url: `/v1/organisation/members/${member.memberId}`,
+      payload: { role: "member" },
+    });
+    const removed = await call(server, await signIn(admin.memberId), {
+      method: "DELETE",
+      url: `/v1/organisation/members/${second.memberId}`,
+    });
+
+    expect(demoted.statusCode).toBe(403);
+    expect(demoted.json().error.code).toBe("forbidden");
+    expect(removed.statusCode).toBe(403);
+    expect(removed.json().error.code).toBe("forbidden");
+    expect((await directory.listMembers("org-north")).map((record) => record.role)).toEqual([
+      "owner",
+      "admin",
+      "owner",
+      "owner",
+    ]);
   });
 
   it("keep their last owner", async () => {

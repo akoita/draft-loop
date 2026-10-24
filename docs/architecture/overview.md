@@ -481,7 +481,9 @@ directory (ADR 0011, D6):
 - `PATCH` and `DELETE /v1/organisation/members/:memberId` change a role or
   remove a member.
 - Owners and admins may manage members; members get 403. Only an owner grants, takes away or
-  removes the owner role, and the last owner answers 409 `last_owner`.
+  removes the owner role, and the last owner answers 409 `last_owner`. The directory checks the
+  acting role against the target's role inside the change, under the organisation's row lock, so
+  a promotion racing an admin's request cannot slip past.
 - `POST /v1/operator/organisations` creates an organisation and invites its
   first owner. Operator routes take only the deployment's owner token, in
   both authentication modes, never a member's sign-in.

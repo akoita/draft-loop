@@ -70,12 +70,22 @@ export interface TenantDirectory {
     email: string;
     role: MemberRole;
   }): Promise<MemberRecord>;
+  /**
+   * Gives a member a role. `actorRole` is the role of the member acting; the directory checks it
+   * against the target in the same transaction as the change (see `requireManagerAuthority`).
+   */
   changeRole(input: {
     organisationId: string;
     memberId: string;
     role: MemberRole;
+    actorRole: MemberRole;
   }): Promise<MemberRecord>;
-  removeMember(input: { organisationId: string; memberId: string }): Promise<void>;
+  /** Removes a member and returns the record removed, under the same authority check. */
+  removeMember(input: {
+    organisationId: string;
+    memberId: string;
+    actorRole: MemberRole;
+  }): Promise<MemberRecord>;
 }
 
 export type TenantDirectoryErrorCode =
@@ -90,7 +100,9 @@ export type TenantDirectoryErrorCode =
   /** The organisation has no member with that id. */
   | "member_not_found"
   /** The change would leave the organisation without an owner. */
-  | "last_owner";
+  | "last_owner"
+  /** The acting member's role does not allow the change. */
+  | "forbidden";
 
 /**
  * Why the directory refused a change. Its message is safe to show, and its code lets an adapter
@@ -103,6 +115,32 @@ export class TenantDirectoryError extends Error {
     super(message);
     this.name = "TenantDirectoryError";
     this.code = code;
+  }
+}
+
+/**
+ * Refuses a membership change the acting role may not make: only owners and admins manage
+ * members, and only an owner grants, changes or removes the owner role. Storage calls it with
+ * the target's role read under the row lock, so a promotion racing the change cannot slip past.
+ * `grantedRole` is the role being given; leave it out when removing.
+ */
+export function requireManagerAuthority(
+  actorRole: MemberRole,
+  targetRole: MemberRole,
+  grantedRole?: MemberRole,
+): void {
+  if (actorRole === "owner") return;
+  if (actorRole !== "admin") {
+    throw new TenantDirectoryError(
+      "forbidden",
+      "Only an organisation's owners and admins manage its members.",
+    );
+  }
+  if (targetRole === "owner" || grantedRole === "owner") {
+    throw new TenantDirectoryError(
+      "forbidden",
+      "Only an owner may grant, change or remove the owner role.",
+    );
   }
 }
 
