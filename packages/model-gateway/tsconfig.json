@@ -6,5 +6,11 @@
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../domain" }, { "path": "../providers" }]
+  "references": [
+    { "path": "../application" },
+    { "path": "../domain" },
+    { "path": "../ingestion" },
+    { "path": "../providers" },
+    { "path": "../schemas" }
+  ]
 }

@@ -35,7 +35,7 @@ export const request = {
 };
 
 /** A streamed Messages response, as Vertex AI sends it from `streamRawPredict`. */
-export function streamedMessage(modelId: string): string {
+export function streamedMessage(modelId: string, text = '{"answer":"yes"}'): string {
   const events: [string, unknown][] = [
     [
       "message_start",
@@ -62,7 +62,7 @@ export function streamedMessage(modelId: string): string {
       {
         type: "content_block_delta",
         index: 0,
-        delta: { type: "text_delta", text: '{"answer":"yes"}' },
+        delta: { type: "text_delta", text },
       },
     ],
     ["content_block_stop", { type: "content_block_stop", index: 0 }],
@@ -89,8 +89,17 @@ export const auth = {
   >["authClient"],
 };
 
-/** Vertex AI answering every call with `status`: a streamed message on 200, an error otherwise. */
-export function scriptedVertex(status = 200) {
+/**
+ * Vertex AI answering every call with `status`: a streamed message of `reply` on 200, an error
+ * otherwise. The reply defaults to the Sonnet answer the author tests expect.
+ */
+export function scriptedVertex(
+  status = 200,
+  reply: { readonly modelId: string; readonly text: string } = {
+    modelId: "claude-sonnet-5-5",
+    text: '{"answer":"yes"}',
+  },
+) {
   const calls: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
@@ -102,7 +111,7 @@ export function scriptedVertex(status = 200) {
         headers: { "content-type": "application/json" },
       });
     }
-    return new Response(streamedMessage("claude-sonnet-5-5"), {
+    return new Response(streamedMessage(reply.modelId, reply.text), {
       status: 200,
       headers: { "content-type": "text/event-stream", "request-id": "vertex-request-1" },
     });
