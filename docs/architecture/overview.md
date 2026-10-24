@@ -198,6 +198,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     sign-in is the one cross-tenant read: it goes through
     `resolve_member_sign_in`, a `SECURITY DEFINER` function owned by the
     migrating role, and the runtime role may only execute it.
+- Each tenant's `candidateRecords` port records which members are assigned to
+  which candidate records, behind `CandidateRecordAccess` from
+  `@draft-loop/storage/candidate-records` (ADR 0011, D6). A candidate record is
+  a workspace in the tenant, named by its API id, which the API checks exists;
+  assignments sit under row-level security and go when the member does.
 - `packages/storage-gcs` passes the `blobs` group, which the filesystem
   implementation also runs (ADR 0011, D3):
   - a blob's location is its full object key, and every operation refuses a

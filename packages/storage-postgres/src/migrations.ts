@@ -1,3 +1,4 @@
+import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import type { SqlClient } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 
@@ -763,6 +764,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
     `,
   },
   tenantDirectoryMigration,
+  candidateRecordsMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

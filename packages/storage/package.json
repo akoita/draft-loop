@@ -55,6 +55,10 @@
       "types": "./src/tenant-directory.ts",
       "import": "./src/tenant-directory.ts"
     },
+    "./candidate-records": {
+      "types": "./src/candidate-records.ts",
+      "import": "./src/candidate-records.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"

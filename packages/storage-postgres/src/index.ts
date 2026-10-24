@@ -1,3 +1,4 @@
+export { createCandidateRecordAccess } from "./candidate-records.js";
 export {
   CloudSqlConfigError,
   type CloudSqlConnector,
