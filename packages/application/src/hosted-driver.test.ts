@@ -192,7 +192,7 @@ async function begunRun(prepare?: (service: ApplicationService) => Promise<void>
     },
     silent,
   );
-  return { service, begun, opened };
+  return { service, begun, opened, created: brief };
 }
 
 describe("hosted application driver", () => {
@@ -206,6 +206,20 @@ describe("hosted application driver", () => {
     expect(new Set(opened)).toEqual(new Set([storeReference]));
     await expect(access("/tenants")).rejects.toThrow();
   }, 120_000);
+
+  it("extracts a fixture workspace's job brief without a provider approval", async () => {
+    const { created } = await begunRun();
+
+    expect(created.brief.version).toBe(1);
+    expect(created.brief.role).toEqual({
+      value: "Platform Engineer at Example Ledger",
+      sourceIds: ["posting"],
+    });
+    expect(created.brief.requirements.map((requirement) => requirement.text)).toEqual([
+      "Build TypeScript services",
+      "Practise deterministic testing",
+    ]);
+  });
 
   it("lists the default application's briefs and runs from the hosted history", async () => {
     const { service, begun } = await begunRun();
