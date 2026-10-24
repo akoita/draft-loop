@@ -84,7 +84,7 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
   const tokens = {} as Record<Person, string>;
   const bucket = memoryBucket();
   /** Fails the next erase after its objects are deleted, as a lost connection would. */
-  const interruption = { next: false };
+  const interruption = { next: false, prefix: false };
   let tenancy: PostgresTenancy;
   let directory: PostgresTenantDirectory;
   let app: FastifyInstance;
@@ -282,7 +282,16 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
                 return records.erase(workspaceId);
               },
             },
-            blobs: bucket.erasure,
+            blobs: {
+              ...bucket.erasure,
+              removePrefix: async (keyPrefix) => {
+                if (interruption.prefix) {
+                  interruption.prefix = false;
+                  throw new Error("connection lost");
+                }
+                return bucket.erasure.removePrefix(keyPrefix);
+              },
+            },
             organisation: tenancy.forTenant(id).organisationErasure,
             objectPrefix: `tenants/${id}/`,
           };
@@ -368,6 +377,25 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
     expect(await deleteOwn("owner")).toMatchObject({ status: 409, code: "run_active" });
     expect((await call("owner", "GET", "/v1/workspaces/r-kept")).status).toBe(200);
     expect((await call("coach", "POST", `${keptRun}/pause`, {})).status).toBe(200);
+
+    // Interrupted after the records were erased: the organisation is closing, so a member can
+    // neither create a record nor upload material meanwhile; the repeated delete finishes.
+    interruption.prefix = true;
+    expect((await deleteOwn("owner")).status).toBe(500);
+    expect(
+      await call("coach", "PUT", "/v1/workspaces/r-late", { fixtureMode: true }),
+    ).toMatchObject({ status: 409, code: "organisation_closing" });
+    const late = await app.inject({
+      method: "POST",
+      url: "/v1/knowledge-bases/any-base/sources?name=late.md",
+      headers: { authorization: `Bearer ${tokens.owner}`, "content-type": "text/markdown" },
+      payload: career,
+    });
+    expect(late.statusCode).toBe(409);
+    expect(late.json().error.code).toBe("organisation_closing");
+    expect((await call("owner", "GET", "/v1/workspaces")).code).toBe("organisation_closing");
+    expect(objectsOf(tenantId)).toHaveLength(1);
+    expect((await call("other-owner", "GET", "/v1/workspaces")).status).toBe(200);
     expect((await deleteOwn("owner")).status).toBe(204);
 
     expect(await tenantRows(tenantId)).toEqual({});

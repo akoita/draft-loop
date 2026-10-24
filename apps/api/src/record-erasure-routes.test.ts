@@ -94,7 +94,7 @@ function memoryErasure() {
         throw new Error("a record's erasure removes objects by key");
       },
     },
-    organisation: {} as OrganisationErasure,
+    organisation: { isClosing: async () => false } as OrganisationErasure,
     objectPrefix: "tenants/org-north/",
   };
   return { erasure, records, closed, objects, state };

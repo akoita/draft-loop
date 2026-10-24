@@ -1,4 +1,4 @@
-import type { OrganisationErasure } from "@draft-loop/storage/record-erasure";
+import type { OrganisationClosure, OrganisationErasure } from "@draft-loop/storage/record-erasure";
 import { activeRunStates } from "./record-erasure.js";
 import type { SqlSession } from "./sql-client.js";
 
@@ -8,21 +8,37 @@ import type { SqlSession } from "./sql-client.js";
  */
 export function createOrganisationErasure(client: SqlSession): OrganisationErasure {
   return {
-    organisationExists: async () => {
-      const rows = await client.query(
-        "SELECT 1 FROM organisations WHERE id = current_setting('draft_loop.tenant_id', true)",
-      );
-      return rows.length > 0;
-    },
+    close: async () =>
+      client.transaction<OrganisationClosure>(async (executor) => {
+        // Locks the row, so closing is serialized with membership changes and other closers.
+        const [organisation] = await executor.query(
+          `SELECT closing_at IS NOT NULL AS closing FROM organisations
+           WHERE id = current_setting('draft_loop.tenant_id', true) FOR UPDATE`,
+        );
+        if (organisation === undefined) return { state: "missing" };
+        if (organisation.closing === true) return { state: "closing", resumed: true };
+        const active = await executor.query(
+          `SELECT 1 FROM (
+             SELECT DISTINCT ON (run_id) state FROM run_snapshots ORDER BY run_id, sequence DESC
+           ) latest
+           WHERE state = ANY($1::text[])
+           LIMIT 1`,
+          [activeRunStates],
+        );
+        if (active.length > 0) return { state: "run-active" };
+        await executor.query(
+          "UPDATE organisations SET closing_at = now() WHERE id = current_setting('draft_loop.tenant_id', true)",
+        );
+        return { state: "closing", resumed: false };
+      }),
 
-    hasActiveRun: async () => {
-      const rows = await client.query(
-        `SELECT 1 FROM (
-           SELECT DISTINCT ON (run_id) state FROM run_snapshots ORDER BY run_id, sequence DESC
-         ) latest
-         WHERE state = ANY($1::text[])
-         LIMIT 1`,
-        [activeRunStates],
+    isClosing: async () => {
+      const rows = await client.transaction(
+        (executor) =>
+          executor.query(
+            "SELECT 1 FROM organisations WHERE id = current_setting('draft_loop.tenant_id', true) AND closing_at IS NOT NULL",
+          ),
+        { readOnlySnapshot: true },
       );
       return rows.length > 0;
     },

@@ -26,14 +26,14 @@ no long-lived service account key exists.
 
 ## What runs where
 
-| Part       | Runs as                                     | Notes                                                                          |
-| ---------- | ------------------------------------------- | ------------------------------------------------------------------------------ |
+| Part       | Runs as                                     | Notes                                                                                                     |
+| ---------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | API        | Cloud Run service                           | Scales to zero; serves its Cloud Run address behind the owner token in phase 1, and the web screen at `/` |
-| Worker     | Cloud Run job                               | Drains the queue, then exits (D4)                                              |
-| Migrations | Cloud Run job, from the worker image        | Runs before each deploy as the schema owner                                    |
-| Database   | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only, backups and point-in-time recovery                            |
-| Objects    | One Cloud Storage bucket per environment    | Encrypted with a customer-managed key                                          |
-| Secrets    | Secret Manager in `europe-west1`            | Owner token, the critic's OpenAI EU key, migration login                       |
+| Worker     | Cloud Run job                               | Drains the queue, then exits (D4)                                                                         |
+| Migrations | Cloud Run job, from the worker image        | Runs before each deploy as the schema owner                                                               |
+| Database   | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only, backups and point-in-time recovery                                                       |
+| Objects    | One Cloud Storage bucket per environment    | Encrypted with a customer-managed key                                                                     |
+| Secrets    | Secret Manager in `europe-west1`            | Owner token, the critic's OpenAI EU key, migration login                                                  |
 
 The owner opens the web screen at the API's address and signs in with the
 owner token from Secret Manager. The screen keeps the token in the browser tab
@@ -80,7 +80,9 @@ Owners and admins delete a candidate record from the web screen or with
 `DELETE /v1/workspaces/{workspaceId}`; an owner deletes the organisation with
 `DELETE /v1/organisation`, and the operator with
 `DELETE /v1/operator/organisations/{organisationId}`. Each asks for the id
-typed back and refuses while a run is queued or running. Offer the record's
+typed back and refuses while a run is queued or running. Deleting an
+organisation locks it first: its members get 409 `organisation_closing` until
+a repeated delete finishes. Offer the record's
 archive first: deletion cannot be undone.
 
 - **What goes:** the record's stored objects in the bucket (sources and

@@ -67,16 +67,17 @@ export interface TenantRecordErasureOptions {
 }
 
 /**
- * Whether a job's candidate record is erased: closed for erasure, or its workspace gone, as after
- * an erasure finished (ADR 0011, D7). The record is the workspace's API id, as the job names it.
+ * Whether a job's candidate record is erased: its organisation or the record closed for erasure, or
+ * its workspace gone, as after an erasure finished (ADR 0011, D7). The record is the workspace's
+ * API id, as the job names it.
  */
 export function tenantRecordErased(
   options: TenantRecordErasureOptions,
 ): (job: RunJob) => Promise<boolean> {
   return async (job) => {
-    if (await options.tenancy.forTenant(job.tenantId).recordErasure.isClosed(job.workspaceId)) {
-      return true;
-    }
+    const tenant = options.tenancy.forTenant(job.tenantId);
+    if (await tenant.organisationErasure.isClosing()) return true;
+    if (await tenant.recordErasure.isClosed(job.workspaceId)) return true;
     try {
       await options.serviceFor(job.tenantId).readWorkspace(options.workspaceRoot(job));
       return false;

@@ -45,8 +45,19 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
       const south = await tenantRows(schema.admin, schema.schema, "org-south");
       const north = tenancy.forTenant("org-north");
 
-      await expect(north.organisationErasure.organisationExists()).resolves.toBe(true);
-      await expect(north.organisationErasure.hasActiveRun()).resolves.toBe(false);
+      await expect(north.organisationErasure.isClosing()).resolves.toBe(false);
+      await expect(north.organisationErasure.close()).resolves.toEqual({
+        state: "closing",
+        resumed: false,
+      });
+      await expect(north.organisationErasure.close()).resolves.toEqual({
+        state: "closing",
+        resumed: true,
+      });
+      await expect(north.organisationErasure.isClosing()).resolves.toBe(true);
+      await expect(tenancy.forTenant("org-south").organisationErasure.isClosing()).resolves.toBe(
+        false,
+      );
       // A record closed by an interrupted erasure is still listed, so it is finished too.
       await north.recordErasure.close("record-2");
       await expect(north.organisationErasure.listRecords()).resolves.toEqual([
@@ -73,7 +84,8 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
 
       expect(await tenantRows(schema.admin, schema.schema, "org-north")).toEqual({});
       expect(await tenantRows(schema.admin, schema.schema, "org-south")).toEqual(south);
-      await expect(north.organisationErasure.organisationExists()).resolves.toBe(false);
+      await expect(north.organisationErasure.isClosing()).resolves.toBe(false);
+      await expect(north.organisationErasure.close()).resolves.toEqual({ state: "missing" });
       await expect(north.organisationErasure.listRecords()).resolves.toEqual([]);
       await expect(north.organisationErasure.eraseRemainder()).resolves.toEqual({
         rowsRemoved: 0,
@@ -92,12 +104,21 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
       await seedTenant(schema.admin, "org-north");
       await seedTenant(schema.admin, "org-south");
       await seedRecord(schema.admin, "org-north", "record-1", { runState: "reviewing" });
-      await expect(tenancy.forTenant("org-north").organisationErasure.hasActiveRun()).resolves.toBe(
-        true,
-      );
-      await expect(tenancy.forTenant("org-south").organisationErasure.hasActiveRun()).resolves.toBe(
+      // An active run keeps the organisation open; another tenant's close is unaffected.
+      await expect(tenancy.forTenant("org-north").organisationErasure.close()).resolves.toEqual({
+        state: "run-active",
+      });
+      await expect(tenancy.forTenant("org-north").organisationErasure.isClosing()).resolves.toBe(
         false,
       );
+      await expect(tenancy.forTenant("org-south").organisationErasure.close()).resolves.toEqual({
+        state: "closing",
+        resumed: false,
+      });
+      // The mark is final: not even the table's owner clears it.
+      await expect(
+        schema.admin.query("UPDATE organisations SET closing_at = NULL WHERE id = 'org-south'"),
+      ).rejects.toThrow(/never reopens/u);
       await expect(pool.query("SELECT erase_tenant_remainder()")).rejects.toThrow(/tenant/u);
       // The function is the runtime role's only way past the trigger.
       await expect(

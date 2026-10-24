@@ -27,6 +27,8 @@ const people: Readonly<Record<string, { tenantId: string; role: MemberRole }>> =
 
 interface MemoryTenant {
   exists: boolean;
+  /** Set by the first delete; the organisation never reopens. */
+  closing: boolean;
   active: boolean;
   records: Set<string>;
   closed: Set<string>;
@@ -39,6 +41,7 @@ interface MemoryTenant {
 function memoryTenant(tenantId: string): MemoryTenant {
   return {
     exists: true,
+    closing: false,
     active: false,
     records: new Set(["r1", "r2"]),
     closed: new Set(),
@@ -86,8 +89,14 @@ function erasureOf(tenantId: string, tenant: MemoryTenant): TenantErasure {
       },
     },
     organisation: {
-      organisationExists: async () => tenant.exists,
-      hasActiveRun: async () => tenant.active,
+      close: async () => {
+        if (!tenant.exists) return { state: "missing" };
+        if (tenant.closing) return { state: "closing", resumed: true };
+        if (tenant.active) return { state: "run-active" };
+        tenant.closing = true;
+        return { state: "closing", resumed: false };
+      },
+      isClosing: async () => tenant.exists && tenant.closing,
       listRecords: async () => [...new Set([...tenant.records, ...tenant.closed])].sort(),
       eraseRemainder: async () => {
         const rowsRemoved = tenant.rows;
@@ -243,6 +252,22 @@ describe("organisation erasure routes", () => {
     north.failNextErase = true;
     expect((await remove(server, "owner-north", "/v1/organisation", "org-north")).status).toBe(500);
     expect(north.exists).toBe(true);
+    // The organisation is closing: its members are refused, another organisation's are not.
+    for (const person of ["owner-north", "coach-north"]) {
+      const refused = await server.inject({
+        method: "GET",
+        url: "/v1/usage?month=2026-10",
+        headers: { authorization: await as(person) },
+      });
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json().error.code).toBe("organisation_closing");
+    }
+    const south = await server.inject({
+      method: "GET",
+      url: "/v1/usage?month=2026-10",
+      headers: { authorization: await as("owner-south") },
+    });
+    expect(south.statusCode).toBe(200);
     expect(await remove(server, "owner-north", "/v1/organisation", "org-north")).toEqual({
       status: 204,
       code: undefined,
