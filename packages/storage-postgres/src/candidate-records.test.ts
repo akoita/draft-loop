@@ -230,7 +230,11 @@ describe.runIf(connectionString !== undefined)("Postgres candidate record access
       await north.assignMember({ workspaceId: "record-1", memberId: coachId });
       await north.assignMember({ workspaceId: "record-1", memberId: ownerId });
 
-      await directory.removeMember({ organisationId: "org-north", memberId: coachId });
+      await directory.removeMember({
+        organisationId: "org-north",
+        memberId: coachId,
+        actorRole: "owner",
+      });
 
       await expect(north.listRecordMembers("record-1")).resolves.toEqual([
         expect.objectContaining({ memberId: ownerId }),

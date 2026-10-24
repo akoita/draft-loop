@@ -127,10 +127,7 @@ async function managedOrganisation(
   return { organisationId: caller.tenantId, memberId: caller.memberId, role: caller.role };
 }
 
-/**
- * The member a change targets. The owner-role check reads it before the directory changes it, so
- * a concurrent promotion could slip between the two; the directory still keeps an owner.
- */
+/** A member's record, for the caller's email and for the audit line's role comparison. */
 async function targetMember(
   directory: TenantDirectory,
   organisationId: string,
@@ -141,11 +138,10 @@ async function targetMember(
   );
 }
 
-const memberNotFound = apiError("member_not_found", "The organisation has no such member.");
-
 /**
  * Who the caller is, an organisation's members and the operator's organisation creation
- * (ADR 0011, D6). Owners and admins manage members; only an owner touches the owner role.
+ * (ADR 0011, D6). Owners and admins manage members; only an owner touches the owner role, which the
+ * directory enforces inside the change.
  */
 export function registerOrganisationRoutes(
   parent: FastifyInstance,
@@ -249,17 +245,16 @@ export function registerOrganisationRoutes(
       if (manager === undefined) return reply;
       const { memberId } = request.params;
       const { role } = request.body;
-      const target = await targetMember(directory, manager.organisationId, memberId);
-      if (target === undefined) return reply.code(404).send(memberNotFound);
-      if ((role === "owner" || target.role === "owner") && manager.role !== "owner") {
-        return reply.code(403).send(ownersOnly);
-      }
+      // Read only to skip the audit line of a change that changes nothing; the directory
+      // decides authority itself, under its lock, from the target's role at that moment.
+      const before = await targetMember(directory, manager.organisationId, memberId);
       const member = await directory.changeRole({
         organisationId: manager.organisationId,
         memberId,
         role,
+        actorRole: manager.role,
       });
-      if (target.role !== member.role) {
+      if (before?.role !== member.role) {
         auditMembership(request, "member_role_changed", {
           organisationId: member.organisationId,
           memberId: member.memberId,
@@ -290,16 +285,15 @@ export function registerOrganisationRoutes(
       const manager = await managedOrganisation(request, reply);
       if (manager === undefined) return reply;
       const { memberId } = request.params;
-      const target = await targetMember(directory, manager.organisationId, memberId);
-      if (target === undefined) return reply.code(404).send(memberNotFound);
-      if (target.role === "owner" && manager.role !== "owner") {
-        return reply.code(403).send(ownersOnly);
-      }
-      await directory.removeMember({ organisationId: manager.organisationId, memberId });
+      const removed = await directory.removeMember({
+        organisationId: manager.organisationId,
+        memberId,
+        actorRole: manager.role,
+      });
       auditMembership(request, "member_removed", {
         organisationId: manager.organisationId,
         memberId,
-        role: target.role,
+        role: removed.role,
       });
       return reply.code(204).send(null);
     },

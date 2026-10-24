@@ -5,6 +5,7 @@ import {
   type MemberRole,
   normalizeMemberEmail,
   type OrganisationRecord,
+  requireManagerAuthority,
   requireMemberRole,
   requireOrganisationId,
   requireOrganisationName,
@@ -240,8 +241,10 @@ export async function createPostgresTenantDirectory(
 
     changeRole: async (input) => {
       const role = requireMemberRole(input.role);
+      const actorRole = requireMemberRole(input.actorRole);
       return withOrganisation(client, input.organisationId, async (executor) => {
         const member = await lockedMember(executor, input.memberId);
+        requireManagerAuthority(actorRole, member.role, role);
         if (member.role === role) return member;
         if (role !== "owner") await requireAnotherOwner(executor, member);
         const [row] = await executor.query(
@@ -255,10 +258,13 @@ export async function createPostgresTenantDirectory(
     },
 
     removeMember: async (input) => {
-      await withOrganisation(client, input.organisationId, async (executor) => {
+      const actorRole = requireMemberRole(input.actorRole);
+      return withOrganisation(client, input.organisationId, async (executor) => {
         const member = await lockedMember(executor, input.memberId);
+        requireManagerAuthority(actorRole, member.role);
         await requireAnotherOwner(executor, member);
         await executor.query("DELETE FROM organisation_members WHERE id = $1", [member.memberId]);
+        return member;
       });
     },
 

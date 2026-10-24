@@ -1,4 +1,4 @@
-import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
+import { type MemberRole, TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
 import { describe, expect, it } from "vitest";
 import { createSqlClient } from "./sql-client.js";
 import { createPostgresTenantDirectory, type PostgresTenantDirectory } from "./tenant-directory.js";
@@ -208,10 +208,15 @@ describe.runIf(connectionString !== undefined)("Postgres tenant directory", () =
           organisationId: "org-north",
           memberId: firstOwner.memberId,
           role: "admin",
+          actorRole: "owner",
         }),
       ).rejects.toEqual(refusedWith("last_owner"));
       await expect(
-        directory.removeMember({ organisationId: "org-north", memberId: firstOwner.memberId }),
+        directory.removeMember({
+          organisationId: "org-north",
+          memberId: firstOwner.memberId,
+          actorRole: "owner",
+        }),
       ).rejects.toEqual(refusedWith("last_owner"));
 
       const coach = await directory.inviteMember({
@@ -232,6 +237,7 @@ describe.runIf(connectionString !== undefined)("Postgres tenant directory", () =
           organisationId: "org-north",
           memberId: coach.memberId,
           role: "owner",
+          actorRole: "owner",
         }),
       ).resolves.toMatchObject({ role: "owner", status: "active" });
       await expect(
@@ -244,20 +250,34 @@ describe.runIf(connectionString !== undefined)("Postgres tenant directory", () =
           organisationId: "org-north",
           memberId: firstOwner.memberId,
           role: "member",
+          actorRole: "owner",
         }),
       ).resolves.toMatchObject({ role: "member" });
-      await directory.removeMember({ organisationId: "org-north", memberId: firstOwner.memberId });
+      await directory.removeMember({
+        organisationId: "org-north",
+        memberId: firstOwner.memberId,
+        actorRole: "owner",
+      });
       await expect(
-        directory.removeMember({ organisationId: "org-north", memberId: coach.memberId }),
+        directory.removeMember({
+          organisationId: "org-north",
+          memberId: coach.memberId,
+          actorRole: "owner",
+        }),
       ).rejects.toEqual(refusedWith("last_owner"));
       await expect(
-        directory.removeMember({ organisationId: "org-north", memberId: firstOwner.memberId }),
+        directory.removeMember({
+          organisationId: "org-north",
+          memberId: firstOwner.memberId,
+          actorRole: "owner",
+        }),
       ).rejects.toEqual(refusedWith("member_not_found"));
       await expect(
         directory.changeRole({
           organisationId: "org-south",
           memberId: coach.memberId,
           role: "admin",
+          actorRole: "owner",
         }),
       ).rejects.toEqual(refusedWith("organisation_not_found"));
 
@@ -276,11 +296,128 @@ describe.runIf(connectionString !== undefined)("Postgres tenant directory", () =
       await expect(directory.resolveSignIn(adminIdentity)).resolves.toMatchObject({
         role: "admin",
       });
-      await directory.removeMember({ organisationId: "org-north", memberId: admin.memberId });
+      await directory.removeMember({
+        organisationId: "org-north",
+        memberId: admin.memberId,
+        actorRole: "owner",
+      });
       await expect(directory.resolveSignIn(adminIdentity)).resolves.toBeUndefined();
       expect((await directory.listMembers("org-north")).map((member) => member.email)).toEqual([
         "coach@north.example.test",
       ]);
+    });
+  });
+
+  it("checks the acting role against the target's role inside the change", async () => {
+    await withDirectory(async (directory) => {
+      const { firstOwner } = await directory.createOrganisation({
+        organisationId: "org-north",
+        name: "North",
+        firstOwnerEmail: "owner@north.example.test",
+      });
+      const second = await directory.inviteMember({
+        organisationId: "org-north",
+        email: "second@north.example.test",
+        role: "owner",
+      });
+      const coach = await directory.inviteMember({
+        organisationId: "org-north",
+        email: "coach@north.example.test",
+        role: "member",
+      });
+      const change = (actorRole: MemberRole, memberId: string, role: MemberRole) =>
+        directory.changeRole({ organisationId: "org-north", memberId, role, actorRole });
+      const remove = (actorRole: MemberRole, memberId: string) =>
+        directory.removeMember({ organisationId: "org-north", memberId, actorRole });
+
+      // An admin neither touches an owner nor grants the owner role, even without a change.
+      await expect(change("admin", firstOwner.memberId, "admin")).rejects.toEqual(
+        refusedWith("forbidden"),
+      );
+      await expect(change("admin", firstOwner.memberId, "owner")).rejects.toEqual(
+        refusedWith("forbidden"),
+      );
+      await expect(change("admin", coach.memberId, "owner")).rejects.toEqual(
+        refusedWith("forbidden"),
+      );
+      await expect(remove("admin", second.memberId)).rejects.toEqual(refusedWith("forbidden"));
+      // A member manages nobody.
+      await expect(change("member", coach.memberId, "admin")).rejects.toEqual(
+        refusedWith("forbidden"),
+      );
+      await expect(remove("member", coach.memberId)).rejects.toEqual(refusedWith("forbidden"));
+      expect((await directory.listMembers("org-north")).map((member) => member.role)).toEqual([
+        "owner",
+        "owner",
+        "member",
+      ]);
+
+      await expect(change("admin", coach.memberId, "admin")).resolves.toMatchObject({
+        role: "admin",
+      });
+      await expect(remove("admin", coach.memberId)).resolves.toMatchObject({
+        memberId: coach.memberId,
+        role: "admin",
+      });
+    });
+  });
+
+  it("refuses an admin whose target became an owner after the route read it", async () => {
+    await withDirectory(async (directory, { schema }) => {
+      await directory.createOrganisation({
+        organisationId: "org-north",
+        name: "North",
+        firstOwnerEmail: "owner@north.example.test",
+      });
+      const coach = await directory.inviteMember({
+        organisationId: "org-north",
+        email: "coach@north.example.test",
+        role: "member",
+      });
+      const promoter = createSqlClient({
+        connectionString: runtimeRoleUrl(url),
+        schema,
+        tenantId: "org-north",
+        maxConnections: 1,
+      });
+      try {
+        // The owner's promotion holds the organisation's lock while the admin's requests wait.
+        let settled = 0;
+        let waiting: Promise<unknown>[] = [];
+        await promoter.transaction(async (executor) => {
+          await executor.query("SELECT 1 FROM organisations WHERE id = 'org-north' FOR UPDATE");
+          waiting = [
+            directory.changeRole({
+              organisationId: "org-north",
+              memberId: coach.memberId,
+              role: "member",
+              actorRole: "admin",
+            }),
+            directory.removeMember({
+              organisationId: "org-north",
+              memberId: coach.memberId,
+              actorRole: "admin",
+            }),
+          ].map((request) => request.finally(() => (settled += 1)));
+          for (const request of waiting) request.catch(() => undefined);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          expect(settled).toBe(0);
+          await executor.query("UPDATE organisation_members SET role = 'owner' WHERE id = $1", [
+            coach.memberId,
+          ]);
+        });
+        const outcomes = await Promise.allSettled(waiting);
+        expect(outcomes.map((outcome) => outcome.status)).toEqual(["rejected", "rejected"]);
+        for (const outcome of outcomes) {
+          expect((outcome as PromiseRejectedResult).reason).toEqual(refusedWith("forbidden"));
+        }
+        expect((await directory.listMembers("org-north")).map((member) => member.role)).toEqual([
+          "owner",
+          "owner",
+        ]);
+      } finally {
+        await promoter.close();
+      }
     });
   });
 

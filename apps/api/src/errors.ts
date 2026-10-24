@@ -107,6 +107,7 @@ const tenantDirectoryStatus: Readonly<Record<TenantDirectoryErrorCode, number>> 
   member_exists: 409,
   member_not_found: 404,
   last_owner: 409,
+  forbidden: 403,
 };
 
 /** Record access's refusals by HTTP status; the codes are the API's error codes too. */
