@@ -115,5 +115,20 @@ export function createCandidateRecordAccess(client: SqlSession): CandidateRecord
         { readOnlySnapshot: true },
       );
     },
+
+    // A record is created through the API as the hosted workspace reference's configuration,
+    // `/tenants/<tenant>/workspaces/<id>`; its `workspaces` history row comes later, if ever.
+    listRecords: async () => {
+      const rows = await client.query(
+        `SELECT substr(workspace_ref, length(prefix) + 1) AS workspace_id
+         FROM workspace_settings,
+           LATERAL (SELECT '/tenants/' || current_setting('draft_loop.tenant_id', true)
+             || '/workspaces/' AS prefix) AS reference
+         WHERE name = 'workspace.json' AND starts_with(workspace_ref, prefix)
+           AND strpos(substr(workspace_ref, length(prefix) + 1), '/') = 0
+         ORDER BY workspace_id`,
+      );
+      return rows.map((row) => String(row.workspace_id));
+    },
   };
 }

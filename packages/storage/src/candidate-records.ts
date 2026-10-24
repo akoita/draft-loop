@@ -27,6 +27,8 @@ export interface CandidateRecordAccess {
   listRecordMembers(workspaceId: string): Promise<readonly CandidateRecordAssignment[]>;
   /** The records assigned to the member, oldest assignment first. */
   listMemberRecords(memberId: string): Promise<readonly CandidateRecordAssignment[]>;
+  /** Every record of the tenant, assigned or not, by id in ascending order. */
+  listRecords(): Promise<readonly string[]>;
 }
 
 export type CandidateRecordAccessErrorCode =

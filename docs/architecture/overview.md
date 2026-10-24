@@ -169,6 +169,12 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   - Idempotency keys belong to the tenant: Postgres keeps them under row-level
     security, and the memory store scopes them by tenant.
   - Request logs carry the tenant and member ids, never an email or token.
+  - In sign-in mode a member reaches only the candidate records assigned to
+    them, and owners and admins every record of their organisation. One hook
+    after tenant binding checks every route that names a workspace, and a
+    refused record answers 404 like an unknown one (`registerRecordAccess`,
+    over the tenants' `recordAccessFor`). Creating a workspace assigns its
+    creator, and `GET /v1/workspaces` lists the records the caller reaches.
   - A flow test takes two organisations from creation through sign-in, setup,
     a run on the scripted model gateway, approval and export, and checks that
     neither organisation's material reaches the other's provider requests,
@@ -339,7 +345,8 @@ The owner sets up a hosted workspace through the API before any run:
   OpenAI models are accepted, because the gateway routes only those, and a
   budget above the deployment's ceiling answers 422 before anything is saved.
   The request names no file or folder, and an existing workspace answers 409
-  instead of being overwritten.
+  instead of being overwritten. `GET /v1/workspaces` lists the workspaces the
+  caller can reach.
 - `PUT /v1/workspaces/:id/writing-policy` sets the candidate's writing policy
   from its Markdown text, at most 64 KiB, as a new immutable version that the
   next runs follow and record. `GET` reads the active policy, and

@@ -28,6 +28,7 @@ import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
+import { registerRecordAccess } from "./record-access.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
@@ -166,6 +167,21 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     options.tenants === undefined
       ? options.application
       : registerTenantApplications(app, options.tenants);
+  const recordAccessFor = options.tenants?.recordAccessFor;
+  if (application !== undefined && auth.mode === "oidc" && recordAccessFor === undefined) {
+    throw new Error("Sign-in mode serves workspaces only with candidate record access.");
+  }
+  if (application !== undefined && recordAccessFor !== undefined) {
+    // Before the workspace routes, so its hooks run for each of them.
+    registerRecordAccess(app, {
+      recordAccessFor,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      ...(options.tenants?.ownerTenantId === undefined
+        ? {}
+        : { ownerTenantId: options.tenants.ownerTenantId }),
+    });
+  }
   if (application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.

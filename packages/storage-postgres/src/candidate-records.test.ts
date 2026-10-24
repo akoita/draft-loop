@@ -180,6 +180,49 @@ describe.runIf(connectionString !== undefined)("Postgres candidate record access
     });
   });
 
+  it("lists every record the tenant's API created, assigned or not", async () => {
+    await withTenancy(async ({ tenancy, organisation }) => {
+      await organisation("org-north");
+      await organisation("org-south");
+      const north = tenancy.forTenant("org-north");
+      const south = tenancy.forTenant("org-south");
+      // A record is its hosted workspace reference's configuration; other settings do not count.
+      await north.workspaceSettings.write(
+        "/tenants/org-north/workspaces/record-b",
+        "workspace.json",
+        "{}",
+      );
+      await north.workspaceSettings.write(
+        "/tenants/org-north/workspaces/record-a",
+        "workspace.json",
+        "{}",
+      );
+      await north.workspaceSettings.write(
+        "/tenants/org-north/workspaces/record-c",
+        "writing-policy.md",
+        "#",
+      );
+      await north.workspaceSettings.write(
+        "/tenants/org-north/workspaces/a/b",
+        "workspace.json",
+        "{}",
+      );
+      await north.workspaceSettings.write(
+        "/tenants/org-other/workspaces/record-d",
+        "workspace.json",
+        "{}",
+      );
+      await south.workspaceSettings.write(
+        "/tenants/org-south/workspaces/record-e",
+        "workspace.json",
+        "{}",
+      );
+
+      await expect(north.candidateRecords.listRecords()).resolves.toEqual(["record-a", "record-b"]);
+      await expect(south.candidateRecords.listRecords()).resolves.toEqual(["record-e"]);
+    });
+  });
+
   it("removes a member's assignments when the member leaves the organisation", async () => {
     await withTenancy(async ({ tenancy, directory, organisation }) => {
       const { ownerId, coachId } = await organisation("org-north");

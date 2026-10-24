@@ -1635,6 +1635,28 @@
           "firstOwner"
         ]
       },
+      "WorkspaceListInput": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ]
+      },
       "ReviewDraftInput": {
         "type": "object",
         "properties": {
@@ -3984,6 +4006,30 @@
         ],
         "additionalProperties": false
       },
+      "WorkspaceList": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "workspaces"
+        ],
+        "additionalProperties": false
+      },
       "ReviewDraft": {
         "type": "object",
         "properties": {
@@ -4743,6 +4789,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "summary": "List the workspaces the caller can reach",
+        "description": "Owners and admins, and the owner token, see every workspace of the organisation; a member sees the workspaces assigned to them. Sorted by id.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceList"
                 }
               }
             }
