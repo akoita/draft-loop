@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ApplicationView } from "@draft-loop/application";
+import { maximumApplicationJobTextLength } from "@draft-loop/ui/application-job-contract";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { maximumApplicationJobTextLength } from "../application-job-contract.js";
 import { readApplicationJob } from "./application-job.js";
 
 let root: string;

@@ -1,6 +1,6 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
 import { ApplicationStepsView, focusCurrentStep } from "./application-steps.js";
 import {
   type ApplicationStepState,
@@ -9,7 +9,6 @@ import {
   applicationStepStatusText,
   jobStepOffersExtraction,
 } from "./application-steps-model.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   approvedPageRequirementsDetail,

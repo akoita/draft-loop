@@ -1,6 +1,6 @@
+import type { BridgeCommand, BridgeResult, NativeBridge } from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
 import { contextBridge, ipcRenderer } from "electron";
-import type { BridgeCommand, BridgeResult, NativeBridge } from "../bridge.js";
-import { bridgeCapabilities } from "../bridge-capabilities.js";
 
 const bridgeChannel = "draft-loop:bridge";
 const exposedCapabilities = Object.freeze([...bridgeCapabilities]);

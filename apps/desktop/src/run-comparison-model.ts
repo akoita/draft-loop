@@ -5,8 +5,8 @@
  * only and is never sent a change, so nothing in this state can target it. Leaving the
  * comparison drops this state and the review shows the open run as it was.
  */
-import type { ApplicationRunRowView } from "./application-run-list.js";
-import type { DesktopReviewState, ReviewArtifact } from "./model.js";
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
+import type { DesktopReviewState, ReviewArtifact } from "@draft-loop/ui/model";
 import type { FooterBlocker } from "./review-footer.js";
 import { runModelsLabel, runNumber } from "./run-switcher.js";
 

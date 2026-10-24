@@ -1,4 +1,4 @@
-import type { EarlierRunView } from "./earlier-run.js";
+import type { EarlierRunView } from "@draft-loop/ui/earlier-run";
 
 /**
  * Says the review shows an earlier run, read-only, and leads back to the latest run. Nothing

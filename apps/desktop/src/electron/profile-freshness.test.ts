@@ -1,7 +1,6 @@
 import type { CandidateProfileFreshness } from "@draft-loop/application";
+import { normalizeProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { describe, expect, it } from "vitest";
-
-import { normalizeProfileFreshnessResult } from "../profile-freshness-contract.js";
 import { projectProfileFreshness } from "./profile-freshness.js";
 
 describe("profile freshness projection", () => {

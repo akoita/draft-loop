@@ -1,12 +1,11 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
 import {
   bridgeCapabilities,
   type OpportunityCreateInput,
   opportunityExtractionCancelledMessage,
   validateBridgeCommand,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import {
   JobRequirementsExtractionView,
   type JobRequirementsPhase,

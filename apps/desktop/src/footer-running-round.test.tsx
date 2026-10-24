@@ -1,12 +1,11 @@
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
 import {
   type FooterRunningRoundInput,
   footerRunningRound,
   sentRevisionDirection,
 } from "./footer-running-round.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();

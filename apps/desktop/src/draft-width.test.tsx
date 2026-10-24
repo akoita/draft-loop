@@ -1,6 +1,6 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import {
   clampDraftWidth,
   DraftWidthHandle,
@@ -19,7 +19,6 @@ import {
   readStoredDraftWidth,
   writeStoredDraftWidth,
 } from "./draft-width.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 function memoryStorage(initial: Record<string, string> = {}) {

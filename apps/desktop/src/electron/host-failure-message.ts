@@ -9,8 +9,8 @@ import {
   SourceIngestionUserError,
 } from "@draft-loop/application";
 
-import type { BridgeCommand, BridgeErrorCode } from "../bridge.js";
-import type { ReviewAction } from "../model.js";
+import type { BridgeCommand, BridgeErrorCode } from "@draft-loop/ui/bridge";
+import type { ReviewAction } from "@draft-loop/ui/model";
 import { opportunityVersionConflictMessage } from "../opportunity-brief-review-model.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 

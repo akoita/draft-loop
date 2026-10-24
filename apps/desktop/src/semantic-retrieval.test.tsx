@@ -1,7 +1,6 @@
+import type { EmbeddingModelPlanResult, EmbeddingModelStatusResult } from "@draft-loop/ui/bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { EmbeddingModelPlanResult, EmbeddingModelStatusResult } from "./bridge.js";
 import {
   EmbeddingInstallApproval,
   hasAnySemanticRetrievalCapability,

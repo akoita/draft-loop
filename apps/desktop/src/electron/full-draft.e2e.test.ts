@@ -9,9 +9,8 @@ import {
   type OpenAIClient,
   type ProviderClientFactories,
 } from "@draft-loop/application";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it, vi } from "vitest";
-
-import type { DesktopReviewState } from "../model.js";
 import { createNativeHost, type NativeHost, type NativeHostDialogs } from "./host.js";
 
 type AnthropicParameters = Parameters<AnthropicClient["messages"]["create"]>[0];

@@ -1,4 +1,24 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import type {
+  ApplicationModelProfilesView,
+  ApplicationSummaryView,
+} from "@draft-loop/ui/application-contract";
+import {
+  type CredentialProvider,
+  type ModelCompany,
+  type ModelsPreviewIndependenceResult,
+  modelCompanies,
+} from "@draft-loop/ui/bridge";
+import type {
+  CandidateProfileSelection,
+  DesktopReviewState,
+  FindingDecision,
+  ReviewAction,
+} from "@draft-loop/ui/model";
+import {
+  parseModelProfileSupportResult,
+  type SavedModelProfilesResult,
+} from "@draft-loop/ui/model-profile-bridge";
 import {
   type ReactNode,
   StrictMode,
@@ -9,10 +29,6 @@ import {
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
-import type {
-  ApplicationModelProfilesView,
-  ApplicationSummaryView,
-} from "./application-contract.js";
 import {
   ApplicationModelPairControl,
   workspacePairSides,
@@ -21,12 +37,6 @@ import {
 import { ApplicationNameNudge, ApplicationTitle } from "./application-name.js";
 import { needsApplicationName } from "./application-name-model.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
-import {
-  type CredentialProvider,
-  type ModelCompany,
-  type ModelsPreviewIndependenceResult,
-  modelCompanies,
-} from "./bridge.js";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
 import {
   type CareerFlowStep,
@@ -49,17 +59,7 @@ import {
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import { KeptPage } from "./kept-page.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
-import type {
-  CandidateProfileSelection,
-  DesktopReviewState,
-  FindingDecision,
-  ReviewAction,
-} from "./model.js";
 import { ModelEditorSummary } from "./model-editor-summary.js";
-import {
-  parseModelProfileSupportResult,
-  type SavedModelProfilesResult,
-} from "./model-profile-bridge.js";
 import { ModelProfilePicker } from "./model-profile-picker.js";
 import {
   type AppliedModelProfileSelection,

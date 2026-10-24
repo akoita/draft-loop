@@ -1,7 +1,6 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import { careerEvidenceCardSubtitle, careerProfileCardSubtitle } from "./career-flow.js";
 import { HomeView, type HomeViewProps, WorkspaceLocation } from "./home.js";

@@ -1,4 +1,4 @@
-import type { OpportunityLatestBrief } from "../bridge.js";
+import type { OpportunityLatestBrief } from "@draft-loop/ui/bridge";
 
 /** The brief fields the latest-brief projection reads; it never touches requirement text. */
 interface LatestBriefRecord {

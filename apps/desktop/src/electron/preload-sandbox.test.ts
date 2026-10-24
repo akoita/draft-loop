@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
+import type { BridgeCommand, NativeBridge } from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
 import { build } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { BridgeCommand, NativeBridge } from "../bridge.js";
-import { bridgeCapabilities } from "../bridge-capabilities.js";
 
 let preloadCode = "";
 

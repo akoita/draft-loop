@@ -347,18 +347,23 @@ Build on what the local version already records:
 
 ### D9. Clients
 
-- **Web app first.** Move the desktop renderer's screens into a shared UI
-  package where they are not Electron-specific: Home, application steps,
-  review, run comparison and Run details. The web app uses them over the
-  HTTP API.
-- **Phase 1 screen (amended 2026-10-23).** Phase 1 ships a small,
-  purpose-built `apps/web` for the owner's own use instead. The API serves
-  it on the same origin, and its types are generated from the committed
-  OpenAPI document. The shared UI package moves to phase 2, when the web
-  becomes the main interface for other users.
-  - *Why:* the desktop review screen is one large file wired to the Electron
-    bridge. Extracting it first would take several sprints and put the
-    local-first app at risk before the phase 1 gate.
+- **Web app first.** The desktop renderer's screens move into a shared UI
+  package, `packages/ui`: Home, application steps, review, run comparison and
+  Run details. The web app runs them over the HTTP API.
+- **One seam (amended 2026-10-24).** The screens reach their host only
+  through the capability port: typed commands, typed results, and the list of
+  commands the host supports. The desktop implements the port over Electron;
+  the web implements it over the HTTP API and advertises only what the hosted
+  service offers, so local-only features stay hidden there. The screens move
+  unchanged, not rewritten.
+  - *Why:* a separate web screen drifts from the desktop with every release,
+    as the phase 1 screen did. Its owner walk on staging (2026-10-24) found it
+    far behind the desktop. Moving the screens is a path change, because the
+    review screen reaches Electron only through the port.
+  - *Phase 1:* sprint 1h shipped a small, purpose-built `apps/web` for the
+    owner. Sprints 1o and 1p replace its screens with the shared ones; its
+    sign-in, consent, credits, records and screening panels stay in the web
+    shell.
 - **The desktop app** stays the local-first product and keeps evolving in
   parallel (D15). Making it a thin client of the service is a later,
   separate decision.

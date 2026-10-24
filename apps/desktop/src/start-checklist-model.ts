@@ -1,4 +1,4 @@
-import type { WorkspaceReadiness } from "./model.js";
+import type { WorkspaceReadiness } from "@draft-loop/ui/model";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { RequirementRefusalAction } from "./start-requirements-model.js";
 

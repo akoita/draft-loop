@@ -1,9 +1,8 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import type { ApplicationModelProfilesView } from "@draft-loop/ui/application-contract";
+import type { ModelProfileSupportResult } from "@draft-loop/ui/bridge";
+import type { DesktopReviewState, ProviderTransmissionIdentity } from "@draft-loop/ui/model";
 import { useState } from "react";
-
-import type { ApplicationModelProfilesView } from "./application-contract.js";
-import type { ModelProfileSupportResult } from "./bridge.js";
-import type { DesktopReviewState, ProviderTransmissionIdentity } from "./model.js";
 import { ModelPresetCards } from "./model-preset-cards.js";
 import {
   modelProfileEntryForReference,

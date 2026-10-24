@@ -1,14 +1,16 @@
+import { normalizeApplicationSummary } from "@draft-loop/ui/application-contract";
+import {
+  type ApplicationRunRowView,
+  normalizeApplicationRuns,
+} from "@draft-loop/ui/application-run-list";
+import type { NativeBridge } from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import { chosenRunAllowsAction, normalizeEarlierRun } from "@draft-loop/ui/earlier-run";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import { normalizeApplicationSummary } from "./application-contract.js";
-import { type ApplicationRunRowView, normalizeApplicationRuns } from "./application-run-list.js";
-import type { NativeBridge } from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { chosenRunAllowsAction, normalizeEarlierRun } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { applicationChosenRunText, applicationRunToOpen } from "./home-model.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { RunComparisonView } from "./run-comparison.js";
 import { runComparisonReducer } from "./run-comparison-model.js";

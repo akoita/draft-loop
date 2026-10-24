@@ -1,7 +1,6 @@
+import { createFixtureReviewState, reduceReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { createFixtureReviewState, reduceReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const autopilotInput = (html: string): string =>

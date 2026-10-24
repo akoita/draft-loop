@@ -7,16 +7,16 @@
  * button that jumps to it. The verdicts never block approval, so the cards fold behind a one-line
  * tally until the reviewer asks for all of them.
  */
-import type { JSX } from "react";
 
 import {
   type CoverageSummaryView,
   coverageBasisLabels,
   coverageStatusLabels,
   type ReviewCoverageView,
-} from "./coverage-contract.js";
+} from "@draft-loop/ui/coverage-contract";
+import type { ReviewSection } from "@draft-loop/ui/model";
+import type { JSX } from "react";
 import { COVERAGE_INFORMATION_NOTE } from "./finding-decision-help.js";
-import type { ReviewSection } from "./model.js";
 import { coverageCollapsedSummary, type ReviewWorkPanelProps } from "./review-work-tabs.js";
 
 /** "3 judged · 2 satisfied · 1 not satisfied"; null when the critic judged nothing. */

@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import {
   createFixtureReviewPort,
   createFixtureReviewState,
   type DesktopReviewState,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { describe, expect, it } from "vitest";
 
 describe("integrated local alpha review contract", () => {
   it("preserves review decisions through approval and local export", async () => {

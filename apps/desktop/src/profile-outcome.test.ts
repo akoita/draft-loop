@@ -1,11 +1,10 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
-import { canonicalCandidateProfileGenerationCancelledMessage } from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { canonicalCandidateProfileGenerationCancelledMessage } from "@draft-loop/ui/bridge";
+import { describe, expect, it } from "vitest";
 import {
   canReviewCanonicalCandidateProfile,
   canSelectReviewedCanonicalCandidateProfile,

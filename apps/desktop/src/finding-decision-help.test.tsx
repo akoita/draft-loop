@@ -1,3 +1,4 @@
+import { createFixtureReviewState, type ReviewFinding } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
@@ -14,7 +15,6 @@ import {
   COVERAGE_INFORMATION_NOTE,
   findingDecisionEffects,
 } from "./finding-decision-help.js";
-import { createFixtureReviewState, type ReviewFinding } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();

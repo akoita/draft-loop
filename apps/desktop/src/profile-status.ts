@@ -6,9 +6,9 @@
  * its draft issues and the freshness answer) into one status, spelled out in words, and one
  * primary action.
  */
-import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
+import type { CanonicalCandidateProfileIssueResult } from "@draft-loop/ui/bridge";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { profileFreshnessChangeText } from "./profile-freshness.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 import type { CanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
 export type ProfileStatusKind = "ready" | "needs-review" | "out-of-date" | "none";

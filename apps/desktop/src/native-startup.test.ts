@@ -1,7 +1,7 @@
+import type { NativeBridge } from "@draft-loop/ui/bridge";
+import { bridgeError } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it, vi } from "vitest";
-import type { NativeBridge } from "./bridge.js";
-import { bridgeError } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
 import { createDesktopReviewPort } from "./native.js";
 import { isElectronRendererRuntime, nativeConnectionUnavailableMessage } from "./native-startup.js";
 

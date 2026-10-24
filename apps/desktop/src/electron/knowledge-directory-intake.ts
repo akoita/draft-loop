@@ -4,7 +4,7 @@ import type {
   BridgeResult,
   KnowledgeDirectoryImportResult,
   KnowledgeDirectoryImportSourceResult,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 
 export type KnowledgeDirectoryImport = Awaited<
   ReturnType<CandidateKnowledgeStoreService["importKnowledgeSourceDirectory"]>

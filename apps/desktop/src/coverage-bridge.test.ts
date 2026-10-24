@@ -1,8 +1,7 @@
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
+import type { ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import type { ReviewCoverageView } from "./coverage-contract.js";
-import { createFixtureReviewState } from "./model.js";
 
 /*
  * Drift proof: a real coverage payload goes through the real review-state validator, so a field

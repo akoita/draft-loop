@@ -4,8 +4,8 @@ import {
   chosenRunAllowsAction,
   type EarlierRunView,
   earlierRunAllowsAction,
-} from "../earlier-run.js";
-import type { DesktopReviewState, ReviewAction } from "../model.js";
+} from "@draft-loop/ui/earlier-run";
+import type { DesktopReviewState, ReviewAction } from "@draft-loop/ui/model";
 
 /**
  * Host-side rules for an earlier run of an application: it opens read-only, and the host refuses

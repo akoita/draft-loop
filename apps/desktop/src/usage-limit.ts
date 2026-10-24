@@ -1,4 +1,4 @@
-import type { UsageLimitView } from "./model.js";
+import type { UsageLimitView } from "@draft-loop/ui/model";
 
 const providerNames: Readonly<Record<string, string>> = {
   anthropic: "Anthropic",

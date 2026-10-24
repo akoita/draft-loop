@@ -1,8 +1,7 @@
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationRunRowView } from "./application-run-list.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   RunSwitcher,

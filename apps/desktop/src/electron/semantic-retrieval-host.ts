@@ -16,11 +16,11 @@ import type {
   EmbeddingModelStatusResult,
   EmbeddingModelTierInput,
   WorkspaceRetrievalModeResult,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 import {
   type EmbeddingModelTier,
   embeddingModelInstallCancelledMessage,
-} from "../semantic-retrieval-contract.js";
+} from "@draft-loop/ui/semantic-retrieval-contract";
 
 const modelRootEnvironmentVariable = "DRAFT_LOOP_EMBEDDING_MODEL_ROOT";
 

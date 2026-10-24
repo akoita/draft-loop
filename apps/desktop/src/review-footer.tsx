@@ -8,24 +8,18 @@
  * reason field, and the checklist and the longer explanation sit under a compact "Details"
  * disclosure that scrolls on its own and never pushes the buttons off screen.
  */
-import { type JSX, type ReactNode, type RefObject, useEffect, useRef } from "react";
 
-import { approvalBlockerId } from "./approval-gate-focus.js";
 import {
   type ApprovalReadiness,
   type ApprovalReadinessBlocker,
   formatApprovalReadinessBlocker,
-} from "./approval-readiness.js";
-import { formatElapsedDuration } from "./elapsed-duration.js";
+} from "@draft-loop/ui/approval-readiness";
 import {
   type ExportTemplate,
   exportTemplateDescriptions,
   exportTemplateLabels,
   exportTemplates,
-} from "./export-template.js";
-import { ExportTemplatePreview } from "./export-template-picker.js";
-import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
-import { type FooterRunningRound, FooterRunningRoundStrip } from "./footer-running-round.js";
+} from "@draft-loop/ui/export-template";
 import {
   type DesktopReviewState,
   type ExportFormat,
@@ -33,12 +27,18 @@ import {
   exportFormats,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
-} from "./model.js";
-import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
+} from "@draft-loop/ui/model";
 import {
   maximumRevisionDirectionLength,
   revisionDirectionsUnavailableNote,
-} from "./revision-direction.js";
+} from "@draft-loop/ui/revision-direction";
+import { type JSX, type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { approvalBlockerId } from "./approval-gate-focus.js";
+import { formatElapsedDuration } from "./elapsed-duration.js";
+import { ExportTemplatePreview } from "./export-template-picker.js";
+import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
+import { type FooterRunningRound, FooterRunningRoundStrip } from "./footer-running-round.js";
+import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
 import type { SendVerdict } from "./send-verdict.js";
 import { CONSENSUS_READY_REASON, PERSISTING_FINDINGS_REASON } from "./stop-reason.js";
 

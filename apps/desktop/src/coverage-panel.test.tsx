@@ -1,13 +1,13 @@
+import type { ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { ReviewCoverageView } from "./coverage-contract.js";
 import {
   blockOpening,
   COVERAGE_BLOCK_OPENING_LENGTH,
   coverageSummaryLine,
   RequirementCoveragePanel,
 } from "./coverage-panel.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();

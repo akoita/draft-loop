@@ -88,8 +88,11 @@ import {
   type UserSessionLoginStatus,
 } from "@draft-loop/providers";
 import type { PdfPrinter } from "@draft-loop/rendering";
-import type { ApplicationRunRowView } from "../application-run-list.js";
-import { isApplicationNotReadyFailure, projectApprovalReadiness } from "../approval-readiness.js";
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
+import {
+  isApplicationNotReadyFailure,
+  projectApprovalReadiness,
+} from "@draft-loop/ui/approval-readiness";
 import {
   type BridgeCapability,
   type BridgeCommand,
@@ -165,13 +168,13 @@ import {
   safeBridgeError,
   validateBridgeCommand,
   type WorkspaceCreateInput,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 import type {
   KnowledgeEnsureDefaultResult,
   WorkspaceEvidenceMigrationResult,
-} from "../career-evidence-contract.js";
-import { chosenRunRefusal, earlierRunRefusal } from "../earlier-run.js";
-import { findingRequirement } from "../finding-requirement.js";
+} from "@draft-loop/ui/career-evidence-contract";
+import { chosenRunRefusal, earlierRunRefusal } from "@draft-loop/ui/earlier-run";
+import { findingRequirement } from "@draft-loop/ui/finding-requirement";
 import type {
   DesktopReviewState,
   FindingDecision,
@@ -189,29 +192,35 @@ import type {
   ReviewSection,
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
-} from "../model.js";
-import { exportFormatExtensions, isUnresolvedFinding } from "../model.js";
-import { projectModelProfileSupport, projectSavedModelProfiles } from "../model-profile-bridge.js";
-import type { ProviderRoutesView } from "../provider-routes.js";
-import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
+} from "@draft-loop/ui/model";
+import { exportFormatExtensions, isUnresolvedFinding } from "@draft-loop/ui/model";
+import {
+  projectModelProfileSupport,
+  projectSavedModelProfiles,
+} from "@draft-loop/ui/model-profile-bridge";
+import type { ProviderRoutesView } from "@draft-loop/ui/provider-routes";
 import {
   applicationPlanRequirementIds,
   type RunApplicationPlanView,
   runApplicationPlanView,
   withRunApplicationPlan,
-} from "../run-application-plan.js";
-import { type RunAuthorInputView, runAuthorInputView } from "../run-author-input.js";
-import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "../run-evidence-mode.js";
-import { normalizeRunInputs, type RunInputsView, withRunInputs } from "../run-inputs.js";
+} from "@draft-loop/ui/run-application-plan";
+import { type RunAuthorInputView, runAuthorInputView } from "@draft-loop/ui/run-author-input";
+import {
+  normalizeRunEvidenceMode,
+  type RunEvidenceModeView,
+} from "@draft-loop/ui/run-evidence-mode";
+import { normalizeRunInputs, type RunInputsView, withRunInputs } from "@draft-loop/ui/run-inputs";
 import type {
   ReviewEvidencePreviewInput,
   ReviewEvidencePreviewResult,
-} from "../start-evidence-preview.js";
+} from "@draft-loop/ui/start-evidence-preview";
 import {
   invalidWorkspaceNameMessage,
   normalizeWorkspaceDisplayName,
   workspaceFolderName,
-} from "../workspace-name.js";
+} from "@draft-loop/ui/workspace-name";
+import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import {
   type ApplicationBriefPreference,
   applicationBriefPreference,

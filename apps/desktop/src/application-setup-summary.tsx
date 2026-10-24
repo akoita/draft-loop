@@ -1,6 +1,6 @@
+import type { ApplicationModelProfilesView } from "@draft-loop/ui/application-contract";
+import type { CandidateProfileSelection } from "@draft-loop/ui/model";
 import { useEffect, useRef, useState } from "react";
-
-import type { ApplicationModelProfilesView } from "./application-contract.js";
 import { applicationPairLabel } from "./application-model-pair.js";
 import {
   type CareerEvidenceCapabilities,
@@ -10,7 +10,6 @@ import {
 import { Chip } from "./home.js";
 import { evidencePresentation, type HomeTone } from "./home-model.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
-import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
   defaultReviewedProfile,

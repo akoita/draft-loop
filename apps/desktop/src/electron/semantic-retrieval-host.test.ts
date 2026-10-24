@@ -10,9 +10,8 @@ import {
   type EmbeddingModelService,
   type EmbeddingModelStatus,
 } from "@draft-loop/application";
+import { embeddingModelInstallCancelledMessage } from "@draft-loop/ui/semantic-retrieval-contract";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { embeddingModelInstallCancelledMessage } from "../semantic-retrieval-contract.js";
 import { createNativeHost } from "./host.js";
 import { createRecentWorkspaceStore } from "./recent-workspaces.js";
 import { applyDesktopEmbeddingModelRoot } from "./semantic-retrieval-host.js";

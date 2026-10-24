@@ -1,9 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
-import { ReviewWorkspace } from "./review.js";
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import {
   applicationPlanCutKeys,
   applicationPlanThemeKeys,
@@ -13,7 +9,10 @@ import {
   runApplicationPlanDisplay,
   runApplicationPlanKeys,
   runApplicationPlanView,
-} from "./run-application-plan.js";
+} from "@draft-loop/ui/run-application-plan";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { ReviewWorkspace } from "./review.js";
 
 const plan: RunApplicationPlanView = {
   themes: [

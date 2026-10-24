@@ -15,7 +15,7 @@ import {
   SourceIngestionUserError,
 } from "@draft-loop/application";
 import { ProviderAdapterError, type ProviderErrorCode } from "@draft-loop/providers";
-import { type BridgeErrorCode, bridgeCapabilities } from "../bridge.js";
+import { type BridgeErrorCode, bridgeCapabilities } from "@draft-loop/ui/bridge";
 import { DesktopBridgeError } from "../native.js";
 import { summarizeHostErrorCause } from "./diagnostics-cause.js";
 

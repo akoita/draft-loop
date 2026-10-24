@@ -15,7 +15,6 @@
  * of the tab order; open, it traps focus, Escape or Close shuts it, and focus returns to the
  * header button.
  */
-import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
 
 import {
   type DesktopReviewState,
@@ -23,7 +22,11 @@ import {
   type ReviewEvent,
   type RunWritingPolicyProjection,
   roundLimitRecoveryRequired,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { runApplicationPlanDisplay } from "@draft-loop/ui/run-application-plan";
+import { runAuthorInputDisplay } from "@draft-loop/ui/run-author-input";
+import { runEvidenceModeDisplay } from "@draft-loop/ui/run-evidence-mode";
+import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
 import { modelDisplayName } from "./model-profile-presentation.js";
 import { useModalFocusTrap } from "./review.js";
 import type { FooterBlocker } from "./review-footer.js";
@@ -35,9 +38,6 @@ import {
   reviewFinished,
   reviewInProgress,
 } from "./review-run-status.js";
-import { runApplicationPlanDisplay } from "./run-application-plan.js";
-import { runAuthorInputDisplay } from "./run-author-input.js";
-import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { plainStopReason } from "./stop-reason.js";
 
 /** The time a direction was given, in the reader's locale; the recorded text when unreadable. */

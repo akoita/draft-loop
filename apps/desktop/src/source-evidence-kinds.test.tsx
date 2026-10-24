@@ -1,9 +1,8 @@
+import type { SourceEvidenceKindSummary } from "@draft-loop/ui/source-evidence-kind-contract";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
 import { CareerEvidenceCardView } from "./career-evidence-card.js";
-import type { SourceEvidenceKindSummary } from "./source-evidence-kind-contract.js";
 import { SourceEvidenceKindList, type SourceEvidenceKindsState } from "./source-evidence-kinds.js";
 
 function elements(node: ReactNode): ReactElement<Record<string, unknown>>[] {

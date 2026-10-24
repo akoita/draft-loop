@@ -10,15 +10,18 @@
  * The chosen tab is a reading preference held in `sessionStorage` for the app session; it never
  * reaches the main process and changes nothing about the run.
  */
-import { type JSX, type KeyboardEvent, useCallback, useRef, useState } from "react";
 
-import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
-import type { ReviewCoverageView } from "./coverage-contract.js";
+import type {
+  ApprovalReadiness,
+  ApprovalReadinessBlocker,
+} from "@draft-loop/ui/approval-readiness";
+import type { ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
 import {
   type DesktopReviewState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { type JSX, type KeyboardEvent, useCallback, useRef, useState } from "react";
 import { compactReadinessBlocker, type FooterBlocker } from "./review-footer.js";
 import { reviewInProgress } from "./review-run-status.js";
 

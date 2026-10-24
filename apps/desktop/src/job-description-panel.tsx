@@ -5,9 +5,9 @@
  * the job beside the draft. The text is asked for the first time the tab is shown, and again when
  * the reviewer moves to another run, never while the tab stays hidden.
  */
-import { type JSX, useEffect, useRef, useState } from "react";
 
-import type { ApplicationJobResult } from "./application-job-contract.js";
+import type { ApplicationJobResult } from "@draft-loop/ui/application-job-contract";
+import { type JSX, useEffect, useRef, useState } from "react";
 import type { ReviewWorkPanelProps } from "./review-work-tabs.js";
 
 type JobLoad =

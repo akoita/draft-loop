@@ -1,3 +1,35 @@
+import type { ApplicationJobResult } from "@draft-loop/ui/application-job-contract";
+import {
+  approvalReadinessForArtifact,
+  approvalReadinessGuidance,
+  formatApprovalReadinessBlocker,
+} from "@draft-loop/ui/approval-readiness";
+import {
+  chosenRunAllowsAction,
+  chosenRunRefusal,
+  earlierRunAllowsAction,
+  earlierRunRefusal,
+  isChosenEarlierRun,
+} from "@draft-loop/ui/earlier-run";
+import {
+  defaultExportTemplate,
+  type ExportTemplate,
+  exportTemplateApplicationKey,
+} from "@draft-loop/ui/export-template";
+import {
+  type DesktopReviewState,
+  type ExportFormat,
+  exportFormatLabels,
+  type FindingDecision,
+  type IndependentReviewView,
+  isUnresolvedFinding,
+  type ReviewAction,
+  type ReviewFinding,
+  reviewFindingSummary,
+  roundLimitRecoveryRequired,
+} from "@draft-loop/ui/model";
+import { sendRevisionRequest } from "@draft-loop/ui/revision-direction";
+import { type RunEvidenceModeView, runEvidenceModeDisplay } from "@draft-loop/ui/run-evidence-mode";
 import {
   type CSSProperties,
   type ReactNode,
@@ -10,7 +42,6 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ApplicationJobResult } from "./application-job-contract.js";
 import {
   ApplicationJobStep,
   ApplicationStepsView,
@@ -19,30 +50,13 @@ import {
 } from "./application-steps.js";
 import { applicationStepStates, jobStepOffersExtraction } from "./application-steps-model.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
-import {
-  approvalReadinessForArtifact,
-  approvalReadinessGuidance,
-  formatApprovalReadinessBlocker,
-} from "./approval-readiness.js";
 import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
-import {
-  chosenRunAllowsAction,
-  chosenRunRefusal,
-  earlierRunAllowsAction,
-  earlierRunRefusal,
-  isChosenEarlierRun,
-} from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { formatElapsedDuration } from "./elapsed-duration.js";
-import {
-  defaultExportTemplate,
-  type ExportTemplate,
-  exportTemplateApplicationKey,
-} from "./export-template.js";
 import { useExportTemplate } from "./export-template-picker.js";
 import {
   ACCEPT_UNAVAILABLE_NOTE,
@@ -72,18 +86,6 @@ import {
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
 } from "./job-requirements-extraction.js";
-import {
-  type DesktopReviewState,
-  type ExportFormat,
-  exportFormatLabels,
-  type FindingDecision,
-  type IndependentReviewView,
-  isUnresolvedFinding,
-  type ReviewAction,
-  type ReviewFinding,
-  reviewFindingSummary,
-  roundLimitRecoveryRequired,
-} from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
@@ -113,7 +115,6 @@ import {
   reviewWorkPanelProps,
   useReviewWorkTab,
 } from "./review-work-tabs.js";
-import { sendRevisionRequest } from "./revision-direction.js";
 import {
   type ChooseRunDraft,
   type LoadRunForComparison,
@@ -131,7 +132,6 @@ import {
   RunTrustWarning,
   runDetailsSummary,
 } from "./run-details.js";
-import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";

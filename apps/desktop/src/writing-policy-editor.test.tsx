@@ -1,7 +1,7 @@
+import { maximumWritingPolicyContentBytes } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { maximumWritingPolicyContentBytes } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   WritingPolicyEditAction,

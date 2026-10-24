@@ -2,7 +2,7 @@ import type {
   EmbeddingModelState,
   EmbeddingModelTier,
   RetrievalMode,
-} from "./semantic-retrieval-contract.js";
+} from "@draft-loop/ui/semantic-retrieval-contract";
 
 export const embeddingTierChoices: readonly {
   readonly tier: EmbeddingModelTier;

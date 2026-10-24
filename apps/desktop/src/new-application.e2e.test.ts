@@ -7,13 +7,12 @@ import {
   createApplicationService,
   createLocalApplicationDriver,
 } from "@draft-loop/application";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { applicationStepStates } from "./application-steps-model.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { createNativeHost } from "./electron/host.js";
 import { runJobRequirementsExtraction } from "./job-requirements-extraction.js";
-import type { DesktopReviewState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { submitNewApplication } from "./new-application-form.js";
 import {

@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it } from "vitest";
 import {
   factCountLabel,
   issueCountLabel,

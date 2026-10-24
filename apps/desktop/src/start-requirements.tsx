@@ -1,6 +1,5 @@
+import type { OpportunityLatestResult } from "@draft-loop/ui/bridge";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-
-import type { OpportunityLatestResult } from "./bridge.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import {
   isEmptyDraftBrief,

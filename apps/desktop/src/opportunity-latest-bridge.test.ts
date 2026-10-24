@@ -1,12 +1,11 @@
-import { describe, expect, it } from "vitest";
-
 import {
   bridgeCapabilities,
   createCapabilityPort,
   type NativeBridge,
   validateBridgeCommand,
-} from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
+} from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { describe, expect, it } from "vitest";
 import { createBridgeReviewPort } from "./native.js";
 
 const latest = {

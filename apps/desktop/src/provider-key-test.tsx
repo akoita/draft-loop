@@ -1,6 +1,5 @@
+import type { CredentialTestProvider, CredentialTestResult } from "@draft-loop/ui/bridge";
 import { useMemo, useRef, useState } from "react";
-
-import type { CredentialTestProvider, CredentialTestResult } from "./bridge.js";
 
 /** One key test in the Provider authentication dialog: running, answered, or refused by the host. */
 export type CredentialTestState =

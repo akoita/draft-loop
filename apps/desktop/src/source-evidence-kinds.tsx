@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-
-import type { DesktopKnowledgeCapabilities } from "./native.js";
 import {
   type CandidateEvidenceKind,
   candidateEvidenceKinds,
   evidenceKindLabel,
   evidenceKindOriginLabel,
   type SourceEvidenceKindSummary,
-} from "./source-evidence-kind-contract.js";
+} from "@draft-loop/ui/source-evidence-kind-contract";
+import { useEffect, useRef, useState } from "react";
+import type { DesktopKnowledgeCapabilities } from "./native.js";
 
 /** What the Manage career evidence panel knows about the kinds of the base's sources. */
 export type SourceEvidenceKindsState =

@@ -1,10 +1,10 @@
-import type { CanonicalCandidateProfileRecordResult } from "../bridge.js";
+import type { CanonicalCandidateProfileRecordResult } from "@draft-loop/ui/bridge";
 import {
   ProfileCatalogValidationError,
   parseReviewedCanonicalCandidateProfileCatalogResult,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
-} from "../profile-catalog.js";
+} from "@draft-loop/ui/profile-catalog";
 
 const maximumProfileHistoryVersions = 256;
 

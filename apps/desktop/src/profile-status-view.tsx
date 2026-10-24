@@ -2,12 +2,13 @@
  * The status-first top of the Career profile page and the version facts kept under Details
  * (issue #1090). The status model itself lives in `profile-status.ts`.
  */
+
+import type { CanonicalCandidateProfileRecordResult } from "@draft-loop/ui/bridge";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { CanonicalCandidateProfileRecordResult } from "./bridge.js";
 import { type CareerEvidenceCapabilities, loadCareerEvidenceStatus } from "./career-evidence.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import { loadProfileFreshness } from "./profile-freshness.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 import type { CanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 import { type ProfileStatus, profileApprovalText } from "./profile-status.js";
 

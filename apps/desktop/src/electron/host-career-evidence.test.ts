@@ -1,10 +1,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it } from "vitest";
-
-import type { DesktopReviewState } from "../model.js";
 import { createNativeHost } from "./host.js";
 
 describe("setup readiness follows the selected knowledge base", () => {

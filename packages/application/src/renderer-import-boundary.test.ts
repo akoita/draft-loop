@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
-// Application modules imported at runtime by the desktop renderer (apps/desktop/src/*.tsx).
+// Application modules imported at runtime by the shared screens (packages/ui) and the desktop renderer (apps/desktop/src).
 const rendererEntries = [
   "model-profile-budget.ts",
   "model-profile-catalog.ts",

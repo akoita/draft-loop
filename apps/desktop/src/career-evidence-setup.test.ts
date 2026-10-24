@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   KnowledgeCurrentResult,
   KnowledgeFileImportResult,
   KnowledgeReadinessResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it, vi } from "vitest";
 import { type CareerEvidenceCapabilities, loadCareerEvidenceStatus } from "./career-evidence.js";
 import {
   addFirstCareerEvidence,

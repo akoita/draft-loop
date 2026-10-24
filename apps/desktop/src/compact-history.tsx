@@ -1,7 +1,6 @@
+import type { WorkspaceCompactHistoryResult } from "@draft-loop/ui/bridge";
 import { type RefObject, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
-import type { WorkspaceCompactHistoryResult } from "./bridge.js";
 import { useModalFocusTrap } from "./review.js";
 
 /** Sizes the way a person reads a file: megabytes below a gigabyte, gigabytes above. */

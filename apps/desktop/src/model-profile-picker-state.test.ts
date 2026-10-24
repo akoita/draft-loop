@@ -1,7 +1,7 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { projectModelProfileSupport } from "@draft-loop/ui/model-profile-bridge";
 import { describe, expect, it } from "vitest";
-import { createFixtureReviewState } from "./model.js";
-import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import {
   modelProfileCatalog,
   modelProfileEntryForReference,

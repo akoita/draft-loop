@@ -1,9 +1,8 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
+import type { NativeBridge } from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it, vi } from "vitest";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
-import type { NativeBridge } from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { createFixtureReviewState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 
 const application: ApplicationSummaryView = {

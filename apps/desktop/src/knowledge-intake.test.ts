@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   KnowledgeDirectoryImportResult,
   KnowledgeFileImportResult,
   KnowledgeReadinessResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it, vi } from "vitest";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
   knowledgeIntakeSummary,

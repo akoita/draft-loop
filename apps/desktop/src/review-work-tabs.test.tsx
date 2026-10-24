@@ -1,9 +1,8 @@
+import type { ApprovalReadiness } from "@draft-loop/ui/approval-readiness";
+import type { CoverageAssessmentView, ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ApprovalReadiness } from "./approval-readiness.js";
-import type { CoverageAssessmentView, ReviewCoverageView } from "./coverage-contract.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { findingQueueCounts, ReviewWorkspace } from "./review.js";
 import { type FooterBlockerKind, footerBlocker } from "./review-footer.js";
 import {

@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-
 import type {
   EmbeddingModelPlanResult,
   EmbeddingModelStatusResult,
   WorkspaceRetrievalModeResult,
-} from "./bridge.js";
-import type { DesktopSemanticRetrievalCapabilities } from "./native.js";
+} from "@draft-loop/ui/bridge";
 import {
   defaultEmbeddingModelTier,
   defaultRetrievalMode,
@@ -14,7 +11,9 @@ import {
   embeddingModelInstallCancelledMessage,
   embeddingModelTiers,
   type RetrievalMode,
-} from "./semantic-retrieval-contract.js";
+} from "@draft-loop/ui/semantic-retrieval-contract";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import type { DesktopSemanticRetrievalCapabilities } from "./native.js";
 import {
   embeddingModelStateLabel,
   embeddingTierChoices,

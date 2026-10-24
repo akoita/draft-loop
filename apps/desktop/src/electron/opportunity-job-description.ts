@@ -6,7 +6,7 @@ import {
   type OpportunitySourceInput,
 } from "@draft-loop/application";
 
-import type { OpportunityCreateWorkspaceJobDescriptionSource } from "../bridge.js";
+import type { OpportunityCreateWorkspaceJobDescriptionSource } from "@draft-loop/ui/bridge";
 
 export type WorkspaceJobDescriptionRefusalCode =
   | "permission-denied"

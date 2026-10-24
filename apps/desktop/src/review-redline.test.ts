@@ -1,8 +1,7 @@
+import type { ReviewBlock } from "@draft-loop/ui/model";
 import { describe, expect, it } from "vitest";
-
 import { diffWords } from "./diff.js";
 import { collapseFragmentedRedline, lineSimilarity, pairDraftBlocks } from "./draft-redline.js";
-import type { ReviewBlock } from "./model.js";
 
 function block(id: string, text: string): ReviewBlock {
   return { id, type: "paragraph", text, claimIds: [] };

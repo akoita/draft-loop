@@ -3,7 +3,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import {
   parseSavedModelProfilesResult,
   type SavedModelProfilesResult,
-} from "./model-profile-bridge.js";
+} from "@draft-loop/ui/model-profile-bridge";
 import {
   type AppliedModelProfileSelection,
   ModelProfileSaveError,

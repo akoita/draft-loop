@@ -4,17 +4,13 @@ import type {
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
-import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileListResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
-import type { CareerEvidenceCapabilities } from "./career-evidence.js";
-import type { CandidateProfileSelection } from "./model.js";
-import { providerDisplayName } from "./model-profile-presentation.js";
-import type { DesktopProfileCapabilities } from "./native.js";
+} from "@draft-loop/ui/bridge";
+import type { CandidateProfileSelection } from "@draft-loop/ui/model";
 import {
   defaultProfileToAutoload,
   findReviewedCanonicalCandidateProfileChoice,
@@ -23,7 +19,11 @@ import {
   reviewedCanonicalCandidateProfileChoice,
   type SavedCanonicalCandidateProfileSummary,
   savedCanonicalCandidateProfileLabel,
-} from "./profile-catalog.js";
+} from "@draft-loop/ui/profile-catalog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { CareerEvidenceCapabilities } from "./career-evidence.js";
+import { providerDisplayName } from "./model-profile-presentation.js";
+import type { DesktopProfileCapabilities } from "./native.js";
 import {
   type ProfileGenerationActivity,
   type ProfileGenerationCallProgress,

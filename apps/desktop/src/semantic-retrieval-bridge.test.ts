@@ -1,12 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-
 import {
   type BridgeCommand,
   bridgeCapabilities,
   createCapabilityPort,
   type NativeBridge,
   validateBridgeCommand,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it, vi } from "vitest";
 import { createBridgeReviewPort } from "./native.js";
 
 const tierCommands = [

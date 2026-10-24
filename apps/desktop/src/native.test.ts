@@ -1,7 +1,7 @@
+import type { NativeBridge } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { projectModelProfileSupport } from "@draft-loop/ui/model-profile-bridge";
 import { describe, expect, it, vi } from "vitest";
-import type { NativeBridge } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
-import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 
 function canonicalCandidateProfileResult(

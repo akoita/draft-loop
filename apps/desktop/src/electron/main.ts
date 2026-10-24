@@ -1,4 +1,5 @@
 import { dirname, join, resolve } from "node:path";
+import { supportedFileExtensions } from "@draft-loop/ui/bridge";
 import {
   app,
   BrowserWindow,
@@ -9,7 +10,6 @@ import {
   screen,
   session,
 } from "electron";
-import { supportedFileExtensions } from "../bridge.js";
 import { type PackagedAcceptancePhase, runPackagedAcceptance } from "./acceptance.js";
 import {
   type CredentialAcceptancePhase,

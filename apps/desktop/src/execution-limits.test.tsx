@@ -1,13 +1,12 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { executionLimitText, formatLimitDuration } from "./execution-limits.js";
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
   type ReviewExecutionView,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { executionLimitText, formatLimitDuration } from "./execution-limits.js";
 import { ReviewWorkspace } from "./review.js";
 
 const authorOnSession: ReviewExecutionView = {

@@ -1,8 +1,7 @@
+import type { CanonicalCandidateProfileIssueResult } from "@draft-loop/ui/bridge";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
 import { ProfileIssueBulkStatus } from "./profile-issue-bulk-status.js";
 
 function warning(

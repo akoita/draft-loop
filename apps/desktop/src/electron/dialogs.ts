@@ -1,6 +1,5 @@
+import type { ExportFormat } from "@draft-loop/ui/model";
 import type { BrowserWindow, SaveDialogOptions, SaveDialogReturnValue } from "electron";
-
-import type { ExportFormat } from "../model.js";
 
 export interface ExportDialog {
   showSaveDialog(parent: BrowserWindow, options: SaveDialogOptions): Promise<SaveDialogReturnValue>;

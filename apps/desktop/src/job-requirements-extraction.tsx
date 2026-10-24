@@ -1,5 +1,3 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
-
 import {
   type OpportunityCancelResult,
   type OpportunityCreateInput,
@@ -8,7 +6,8 @@ import {
   type OpportunityLatestResult,
   type OpportunityRecordResult,
   opportunityExtractionCancelledMessage,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";

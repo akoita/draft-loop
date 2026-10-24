@@ -1,5 +1,5 @@
+import { normalizeApplicationDisplayName } from "@draft-loop/ui/application-contract";
 import { useEffect, useRef, useState } from "react";
-import { normalizeApplicationDisplayName } from "./application-contract.js";
 import {
   applicationRenameFailureMessage,
   invalidApplicationNameMessage,

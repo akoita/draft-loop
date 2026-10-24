@@ -1,12 +1,11 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
 import {
   createCapabilityPort,
   type OpportunityRecordResult,
   validateBridgeCommand,
-} from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
+} from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import { OpportunityBriefReviewView } from "./opportunity-brief-review.js";
 import {
   acknowledgeIssue,

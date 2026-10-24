@@ -1,19 +1,22 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-import { createCapabilityPort, type NativeBridge, validateBridgeCommand } from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { createFixtureReviewState, type ReviewAction } from "./model.js";
-import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
-import { ReviewWorkspace } from "./review.js";
-import { ReviewFooter, type ReviewFooterProps } from "./review-footer.js";
+import {
+  createCapabilityPort,
+  type NativeBridge,
+  validateBridgeCommand,
+} from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import { createFixtureReviewState, type ReviewAction } from "@draft-loop/ui/model";
 import {
   maximumRevisionDirectionLength,
   requestRevisionAction,
   revisionDirectionsUnavailableNote,
   sendRevisionRequest,
-} from "./revision-direction.js";
-import { normalizeRunAuthorInput, runAuthorInputDisplay } from "./run-author-input.js";
+} from "@draft-loop/ui/revision-direction";
+import { normalizeRunAuthorInput, runAuthorInputDisplay } from "@draft-loop/ui/run-author-input";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
+import { ReviewWorkspace } from "./review.js";
+import { ReviewFooter, type ReviewFooterProps } from "./review-footer.js";
 
 const noop = (): void => undefined;
 

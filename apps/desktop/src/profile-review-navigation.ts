@@ -6,7 +6,7 @@ import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 import { canReviewCanonicalCandidateProfile } from "./profile-outcome.js";
 import { humanizeProfileFieldLabel } from "./profile-presentation.js";
 

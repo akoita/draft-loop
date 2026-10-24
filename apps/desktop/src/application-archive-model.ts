@@ -2,7 +2,7 @@
  * Wording and rules for archiving, restoring and deleting applications on Home. Pure, so every
  * state of the card actions is testable without a DOM.
  */
-import type { ApplicationSummaryView } from "./application-contract.js";
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import type { ApplicationImportNotice } from "./application-import-model.js";
 
 export type ApplicationAction = "archive" | "restore" | "delete";

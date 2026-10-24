@@ -8,7 +8,7 @@ import {
   meanReadinessScore,
   normalizeApplicationRuns,
   orderApplicationRuns,
-} from "../application-run-list.js";
+} from "@draft-loop/ui/application-run-list";
 
 const maximumModelLength = 200;
 /** The most rows and model pairs each cache keeps; the oldest entries go first. */

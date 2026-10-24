@@ -1,15 +1,14 @@
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   BridgeCommand,
   BridgeResult,
   FileSelectResult,
   ReviewStateResult,
-} from "../bridge.js";
-import { createFixtureReviewState } from "../model.js";
+} from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { describe, expect, it, vi } from "vitest";
 import type { NativeHost } from "./host.js";
 import { hasLiveE2EArtifactSection, runLiveProviderE2E } from "./live-e2e.js";
 

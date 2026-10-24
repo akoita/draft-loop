@@ -1,0 +1,22 @@
+{
+  "name": "@draft-loop/ui",
+  "version": "0.8.0-alpha.4",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./src/*.ts",
+      "import": "./src/*.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@draft-loop/application": "workspace:*",
+    "@draft-loop/artifacts": "workspace:*",
+    "@draft-loop/domain": "workspace:*"
+  }
+}

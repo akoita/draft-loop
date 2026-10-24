@@ -1,4 +1,4 @@
-import type { ModelProfileSupportResult } from "./bridge.js";
+import type { ModelProfileSupportResult } from "@draft-loop/ui/bridge";
 import {
   modelProfileEntryForReference,
   modelProfileRouteIsSupported,

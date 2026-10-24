@@ -1,5 +1,6 @@
+import { defaultKnowledgeStoreDestinationLabel } from "@draft-loop/ui/career-evidence-contract";
+import type { WorkspaceReadiness } from "@draft-loop/ui/model";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-
 import {
   addCareerEvidence,
   type CareerEvidenceCapabilities,
@@ -11,7 +12,6 @@ import {
   loadCareerEvidenceStatus,
   supportsCareerEvidence,
 } from "./career-evidence.js";
-import { defaultKnowledgeStoreDestinationLabel } from "./career-evidence-contract.js";
 import {
   addFirstCareerEvidence,
   type NoSelectionMode,
@@ -20,7 +20,6 @@ import {
 } from "./career-evidence-setup.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
-import type { WorkspaceReadiness } from "./model.js";
 import {
   SourceEvidenceKindList,
   type SourceEvidenceKindListProps,

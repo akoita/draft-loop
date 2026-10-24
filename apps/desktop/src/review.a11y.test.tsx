@@ -1,7 +1,6 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {

@@ -1,4 +1,4 @@
-import type { ReviewFinding } from "./model.js";
+import type { ReviewFinding } from "@draft-loop/ui/model";
 
 /**
  * Plain-words titles for coverage findings that name their requirement.

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import {
   parseRecentWorkspacesListResult,
   type RecentWorkspaceSummary,
-} from "./recent-workspaces.js";
+} from "@draft-loop/ui/recent-workspaces";
+import { useEffect, useState } from "react";
 
 export type RecentWorkspacesLoadState = "loading" | "ready";
 

@@ -1,7 +1,6 @@
+import type { ReviewEvent } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ReviewEvent } from "./model.js";
 import {
   collapsedReviewPanelsStorageKey,
   groupRepeatedReviewEvents,

@@ -14,11 +14,11 @@
  * review on the open run, and the review stops every change while the comparison is shown.
  * "Close comparison" and Escape return to the open run.
  */
-import { type JSX, useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { MarkdownFileSaveResult } from "./bridge.js";
+import type { MarkdownFileSaveResult } from "@draft-loop/ui/bridge";
+import type { DesktopReviewState, ReviewArtifact } from "@draft-loop/ui/model";
+import { type JSX, useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BlockRedline, pairDraftSections } from "./draft-redline.js";
-import type { DesktopReviewState, ReviewArtifact } from "./model.js";
 import {
   comparisonMarkdownFits,
   runComparisonFileName,

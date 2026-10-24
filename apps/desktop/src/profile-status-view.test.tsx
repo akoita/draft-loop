@@ -1,7 +1,6 @@
+import type { CanonicalCandidateProfileRecordResult } from "@draft-loop/ui/bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { CanonicalCandidateProfileRecordResult } from "./bridge.js";
 import { ProfileWorkspace } from "./profile.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 import type { ProfileStatus } from "./profile-status.js";

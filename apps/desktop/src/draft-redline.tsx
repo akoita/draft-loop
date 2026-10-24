@@ -5,10 +5,10 @@
  * and lines are aligned across the two, and each line is set as a redline whose marks are not
  * colour-only (deletions are struck, insertions underlined).
  */
-import { useMemo } from "react";
 
+import type { ReviewArtifact, ReviewBlock } from "@draft-loop/ui/model";
+import { useMemo } from "react";
 import { type DiffOp, diffWords } from "./diff.js";
-import type { ReviewArtifact, ReviewBlock } from "./model.js";
 
 /** One draft line as it stands across two versions, ready to be marked up on the sheet. */
 export interface DraftBlockPair {

@@ -1,5 +1,5 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { describe, expect, it } from "vitest";
-import { createFixtureReviewState } from "./model.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 
 describe("workspace model editor entry", () => {

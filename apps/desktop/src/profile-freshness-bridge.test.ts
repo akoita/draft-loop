@@ -1,8 +1,11 @@
+import {
+  createCapabilityPort,
+  type NativeBridge,
+  validateBridgeCommand,
+} from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge, validateBridgeCommand } from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
 /*
  * Drift proof: real payloads go through the real validator and normalizer, so a field added to an

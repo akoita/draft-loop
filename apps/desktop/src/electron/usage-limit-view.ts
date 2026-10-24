@@ -1,5 +1,5 @@
 import type { RunSnapshot } from "@draft-loop/orchestrator";
-import type { UsageLimitView } from "../model.js";
+import type { UsageLimitView } from "@draft-loop/ui/model";
 
 /** The usage-limit pause a run records, projected for the review screen; `null` otherwise. */
 export function usageLimitView(snapshot: RunSnapshot): UsageLimitView | null {

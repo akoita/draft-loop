@@ -1,4 +1,4 @@
-import type { DesktopReviewState } from "./model.js";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 
 /** The next-action line above the draft: a short label and what it means for the person. */
 export interface ReviewStatusLine {

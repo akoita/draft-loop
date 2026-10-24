@@ -2,7 +2,7 @@ import type {
   KnowledgeDirectoryImportResult,
   KnowledgeFileImportResult,
   KnowledgeReadinessResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 import type { DesktopKnowledgeCapabilities } from "./native.js";
 
 export interface KnowledgeBaseTarget {

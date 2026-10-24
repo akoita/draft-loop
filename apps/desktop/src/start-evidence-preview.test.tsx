@@ -1,20 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
-
 import {
   bridgeCapabilities,
   createCapabilityPort,
   type NativeBridge,
   validateBridgeCommand,
-} from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
+} from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
+import type { StartEvidencePreview } from "@draft-loop/ui/start-evidence-preview";
+import { describe, expect, it, vi } from "vitest";
 import { createBridgeReviewPort } from "./native.js";
-import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import {
   evidencePreviewValue,
   requestStartEvidencePreview,
   startConfirmationSummary,
 } from "./start-confirmation.js";
-import type { StartEvidencePreview } from "./start-evidence-preview.js";
 
 const fits: RunEvidenceModeView = {
   requestedMode: "full-source",

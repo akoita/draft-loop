@@ -1,15 +1,15 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-
-import type { ApplicationRunRowView } from "./application-run-list.js";
-import type { ReviewCoverageView } from "./coverage-contract.js";
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
+import type { ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
   type ReviewArtifact,
   type ReviewFinding,
   type RunWritingPolicyProjection,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import type { RunInputsView } from "@draft-loop/ui/run-inputs";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
 import { RunComparisonFactsTable, RunComparisonView } from "./run-comparison.js";
 import {
   maximumComparisonMarkdownBytes,
@@ -18,7 +18,6 @@ import {
 } from "./run-comparison-export.js";
 import { notRecorded, runComparisonFacts } from "./run-comparison-facts.js";
 import { runComparisonReducer } from "./run-comparison-model.js";
-import type { RunInputsView } from "./run-inputs.js";
 
 const fixture = createFixtureReviewState();
 

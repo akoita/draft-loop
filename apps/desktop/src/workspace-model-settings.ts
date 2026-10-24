@@ -1,5 +1,9 @@
-import { type ModelCompany, modelCompanies, type WorkspaceConfigureModelsInput } from "./bridge.js";
-import type { DesktopReviewState } from "./model.js";
+import {
+  type ModelCompany,
+  modelCompanies,
+  type WorkspaceConfigureModelsInput,
+} from "@draft-loop/ui/bridge";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 
 export interface WorkspaceModelSettingsDraft {
   readonly authorCompany: ModelCompany;

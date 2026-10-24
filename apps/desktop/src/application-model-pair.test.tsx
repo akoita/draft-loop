@@ -1,6 +1,6 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
 import {
   ApplicationModelPairChoice,
   ApplicationModelPairControl,
@@ -12,7 +12,6 @@ import {
   workspacePairValue,
   workspaceScopedState,
 } from "./application-model-pair.js";
-import { createFixtureReviewState } from "./model.js";
 
 const standard = {
   author: { id: "standard-anthropic-author", version: 1 },
