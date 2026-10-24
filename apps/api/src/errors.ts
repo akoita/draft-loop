@@ -10,6 +10,10 @@ import {
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
 import { RunTransitionError } from "@draft-loop/orchestrator";
+import {
+  CandidateRecordAccessError,
+  type CandidateRecordAccessErrorCode,
+} from "@draft-loop/storage/candidate-records";
 import { ConsentLedgerError } from "@draft-loop/storage/consent-ledger";
 import {
   TenantDirectoryError,
@@ -82,6 +86,12 @@ const tenantDirectoryStatus: Readonly<Record<TenantDirectoryErrorCode, number>> 
   last_owner: 409,
 };
 
+/** Record access's refusals by HTTP status; the codes are the API's error codes too. */
+const recordAccessStatus: Readonly<Record<CandidateRecordAccessErrorCode, number>> = {
+  invalid_input: 400,
+  member_not_found: 404,
+};
+
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.code(404).send(apiError("not_found", "No such route."));
 }
@@ -133,6 +143,11 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // The directory's messages are fixed and never quote an email, so they are safe to answer with.
   if (error instanceof TenantDirectoryError) {
     void reply.code(tenantDirectoryStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  // Record access's messages are fixed and never quote an id, so they are safe to answer with.
+  if (error instanceof CandidateRecordAccessError) {
+    void reply.code(recordAccessStatus[error.code]).send(apiError(error.code, error.message));
     return;
   }
   // The ledger's messages are fixed and never quote a note, so they are safe to answer with.
