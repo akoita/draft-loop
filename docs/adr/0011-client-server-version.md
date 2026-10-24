@@ -496,6 +496,27 @@ plan decides what is enabled.
 - **The quality engine is the same on every plan.** Plans gate volume,
   models and professional features, never the grounding, critic or
   validation that make a CV truthful.
+- **Built in phase 2e (sprint 1n, 2026-10-24):** plans and credits are
+  enforced in sign-in mode, with the operator as the only way to change them.
+  - **Plans as data:** catalog v1 holds the working defaults above as
+    entitlements. The operator assigns a plan, with optional overrides, and
+    grants credits that expire after 12 months.
+  - **Credits:** a run's estimate is reserved before it is saved and settled
+    when the worker has a draft. A run that ends without one is refunded.
+  - **Refusals:** 403 `model_tier_not_in_plan`, 429 `run_cap_reached`, 402
+    `credits_insufficient` and, for seats and records, 409
+    `plan_limit_reached`. Members see their balance with the 80% warning, and
+    the 80% and exhaustion thresholds write alert lines.
+  - **Evidence:** a two-organisation flow test on Postgres with scripted
+    providers runs one organisation to the end of its credits, refunds a failed
+    run, and checks that the other is untouched.
+  - **Owner-token mode is not metered.** Its tenant has no organisation row to
+    hold a plan or a ledger, so it skips the gate and the ledger. The earlier
+    plan was to meter it on the `internal` plan; that waits for a tenant row.
+  - **Waits for billing (sprint 1o):** a payment provider, the pricing page,
+    self-serve plan changes and top-ups, and email notices. Until then the
+    operator assigns plans and grants credits, and the prices stay unapplied
+    until the cost check (#1597) passes.
 
 ### D14. Hosting on Google Cloud
 
