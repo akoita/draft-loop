@@ -20,6 +20,7 @@ import { buildApi } from "./app.js";
 import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import type { TenantApplications } from "./tenant-context.js";
+import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -113,6 +114,7 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
       name: "Example Coaching",
       firstOwnerEmail: email("owner"),
     });
+    await assignInternalPlan(tenancy, tenantId);
     for (const [person, role] of [
       ["admin", "admin"],
       ["coach-1", "member"],

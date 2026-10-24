@@ -76,7 +76,17 @@ export const apiErrorSchema = z
         .enum(["concurrent", "per_day"])
         .optional()
         .describe("With run_cap_reached, which of the plan's run caps is reached."),
-      limit: z.number().int().optional().describe("With run_cap_reached, the plan's cap."),
+      limit: z
+        .union([z.number().int(), z.enum(["seats", "candidateRecords"])])
+        .optional()
+        .describe(
+          "With run_cap_reached, the plan's cap as a number. With plan_limit_reached, which limit is reached: seats or candidateRecords.",
+        ),
+      value: z
+        .number()
+        .int()
+        .optional()
+        .describe("With plan_limit_reached, the plan's limit for the item named by limit."),
       estimate: z
         .number()
         .int()
@@ -162,6 +172,7 @@ const tenantDirectoryStatus: Readonly<Record<TenantDirectoryErrorCode, number>> 
   organisation_exists: 409,
   organisation_not_found: 404,
   member_exists: 409,
+  member_limit_reached: 409,
   member_not_found: 404,
   last_owner: 409,
   forbidden: 403,

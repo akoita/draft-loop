@@ -14,7 +14,8 @@ export interface ApiSchemas {
       readonly role?: "author" | "critic";
       readonly tier?: string;
       readonly cap?: "concurrent" | "per_day";
-      readonly limit?: number;
+      readonly limit?: number | "seats" | "candidateRecords";
+      readonly value?: number;
       readonly estimate?: number;
       readonly remaining?: number;
     };

@@ -24,6 +24,7 @@ import { buildApi } from "./app.js";
 import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
 import { cloudLoggingOptions } from "./logging.js";
 import type { TenantApplications } from "./tenant-context.js";
+import { assignInternalPlan } from "./test-plan.js";
 import { readZip } from "./test-zip.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
@@ -131,6 +132,7 @@ describe.runIf(connectionString !== undefined)("record archives through the API"
       name: "Example Archive Coaching",
       firstOwnerEmail: email("owner"),
     });
+    await assignInternalPlan(tenancy, tenantId);
     for (const [person, role] of [
       ["admin", "admin"],
       ["coach", "member"],

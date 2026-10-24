@@ -107,8 +107,11 @@ curl -X POST http://127.0.0.1:58082/v1/operator/organisations/org-a/credit-grant
   -d '{"credits":50,"reason":"goodwill"}'
 ```
 
-In sign-in mode a run starts only under a plan: without one the organisation's
-`POST /v1/workspaces/{id}/runs` answers 403 `plan_required`, and the plan's
+In sign-in mode an organisation works only under a plan: without one, creating
+a workspace, inviting a member and starting a run (`POST
+/v1/workspaces/{id}/runs`) answer 403 `plan_required`. The plan's seats and
+record limit answer 409 `plan_limit_reached` when an invitation or a new
+workspace goes past them, and its
 model tiers, run caps and credit balance decide the rest (402
 `credits_insufficient`, 429 `run_cap_reached`, 403 `model_tier_not_in_plan`).
 The owner-token API on port 58080 is not metered.

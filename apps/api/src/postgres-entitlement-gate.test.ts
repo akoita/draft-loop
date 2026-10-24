@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import { composeHostedApplication, hostedEntitlementsFor } from "./hosted-application.js";
+import { assignInternalPlan } from "./test-plan.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -80,6 +81,8 @@ describe.runIf(connectionString !== undefined)("the run-start gate through the A
 
   /** A record with consent, an owned base and a reviewed brief, ready to begin; returns the body. */
   const prepareRecord = async (organisation: OrganisationId, id: string) => {
+    // Creating the record needs a plan; a test of the gate replaces or removes it afterwards.
+    await assignInternalPlan(tenancy, organisation);
     expect(
       (await call(organisation, "PUT", `/v1/workspaces/${id}`, { fixtureMode: true })).status,
     ).toBe(201);
@@ -306,6 +309,9 @@ describe.runIf(connectionString !== undefined)("the run-start gate through the A
   it("refuses an organisation the operator has not given a plan, reserving nothing", async () => {
     const organisation = "org-bare";
     const begin = await prepareRecord(organisation, "r3");
+    await admin.query(`DELETE FROM ${schema}.organisation_plans WHERE tenant_id = $1`, [
+      organisation,
+    ]);
 
     const refused = await call(organisation, "POST", "/v1/workspaces/r3/runs", begin);
 
