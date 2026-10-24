@@ -51,6 +51,10 @@
       "types": "./src/audit-trail-exports.ts",
       "import": "./src/audit-trail-exports.ts"
     },
+    "./tenant-directory": {
+      "types": "./src/tenant-directory.ts",
+      "import": "./src/tenant-directory.ts"
+    },
     "./errors": {
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"

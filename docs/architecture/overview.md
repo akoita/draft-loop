@@ -170,6 +170,18 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     and the store refuses to open as a superuser or `BYPASSRLS` role;
   - migrations run separately as the schema owner (`migratePostgresStorage`),
     and `grantPostgresStorageAccess` gives the runtime role table access only.
+- `createPostgresTenantDirectory` records organisations and their members
+  behind the `TenantDirectory` port from `@draft-loop/storage/tenant-directory`
+  (ADR 0011, D6):
+  - an organisation's id is its tenant id, and its members have the role
+    `owner`, `admin` or `member`; an organisation always keeps an owner;
+  - a member is invited by email and becomes active on the first sign-in
+    with that verified email, which binds the issuer and subject; later
+    sign-ins resolve by them, and a person belongs to one organisation;
+  - both tables are under row-level security like the rest. Resolving a
+    sign-in is the one cross-tenant read: it goes through
+    `resolve_member_sign_in`, a `SECURITY DEFINER` function owned by the
+    migrating role, and the runtime role may only execute it.
 - `packages/storage-gcs` passes the `blobs` group, which the filesystem
   implementation also runs (ADR 0011, D3):
   - a blob's location is its full object key, and every operation refuses a
