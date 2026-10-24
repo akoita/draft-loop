@@ -88,6 +88,7 @@ import {
   inspectDurationAccounting,
   settleDurationAccounting,
 } from "./duration-accounting.js";
+import { type FailedProviderCall, failedProviderCall } from "./failed-provider-call.js";
 import {
   type AppliedRevisionEdit,
   attributeRevision,
@@ -286,6 +287,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly attempt?: number;
   readonly maxAttempts?: number;
   readonly retryable?: boolean;
+  /** On a failed execution, which call failed; absent on runs that predate it. */
+  readonly failedCall?: FailedProviderCall;
   readonly adjudicatedRevisionTrace?: AdjudicatedRevisionTrace;
   /** Judged requirement coverage; present only on a critic execution that was sent requests. */
   readonly coverageJudgement?: ExecutionCoverageJudgement;
@@ -362,6 +365,8 @@ export interface RunError {
    * rejection. Unlike `diagnostics`, this is not capped at eight issues.
    */
   readonly diagnosticCounts?: readonly RunErrorDiagnosticCount[];
+  /** The provider call a step's execution failed on; absent on other failures and older runs. */
+  readonly failedCall?: FailedProviderCall;
 }
 
 export interface RunErrorDiagnostic {
@@ -1982,24 +1987,23 @@ export function createOrchestrationEngine(
       if (completedExecutionSaved) throw error;
       const failureNow = clock();
       // A failed plan review names the critic's model but stays a failure of this author step.
-      const failure: RunError = {
-        ...providerFailure(
-          error instanceof InvalidAdjudicatedRevisionResponseError
-            ? {
-                code: "invalid-response",
-                retryable: false,
-                failureStage: "artifact-schema-validation",
-                diagnostics: error.diagnostics,
-                diagnosticCounts: error.diagnosticCounts,
-              }
-            : executionFailure(error, signal),
-          context,
-          planStepFailureRole(error) ?? step,
-          attempt,
-          failureNow,
-        ),
-        step,
-      };
+      const roleFailure = providerFailure(
+        error instanceof InvalidAdjudicatedRevisionResponseError
+          ? {
+              code: "invalid-response",
+              retryable: false,
+              failureStage: "artifact-schema-validation",
+              diagnostics: error.diagnostics,
+              diagnosticCounts: error.diagnosticCounts,
+            }
+          : executionFailure(error, signal),
+        context,
+        planStepFailureRole(error) ?? step,
+        attempt,
+        failureNow,
+      );
+      const failedCall = failedProviderCall(error, roleFailure);
+      const failure: RunError = { ...roleFailure, step, failedCall };
       if (failure.code === "usage-limit") return pauseForUsageLimit(snapshot, failure, failureNow);
       const failedExecution: ExecutionRecord = {
         id,
@@ -2020,6 +2024,7 @@ export function createOrchestrationEngine(
         attempt,
         maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
         retryable: failure.retryable,
+        failedCall,
       };
       await options.store.saveExecution(failedExecution);
       return recordFailure(
@@ -2812,6 +2817,7 @@ export * from "./candidate-direction.js";
 export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 export * from "./consensus-stop.js";
 export * from "./duration-accounting.js";
+export * from "./failed-provider-call.js";
 export type {
   ApprovedArtifactBinding,
   BuildApplicationReadinessDecisionInput,

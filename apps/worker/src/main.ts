@@ -11,6 +11,7 @@ import {
 import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
+import { failedCallLines } from "./failed-call-logging.js";
 import { errorFields, logLine, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
@@ -70,8 +71,10 @@ const worker = await startWorker({
     },
     allowProviderData: config.allowProviderData,
     budgetCeiling: config.budgetCeiling,
-    onOutcome: (job, outcome, run) =>
-      console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run))),
+    onOutcome: (job, outcome, run, before) => {
+      for (const line of failedCallLines(job, run, before)) console.error(line);
+      console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run)));
+    },
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);

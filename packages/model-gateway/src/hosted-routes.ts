@@ -98,7 +98,7 @@ export function createHostedAnthropicRoute(
             "anthropic",
             "authentication",
             "The Claude API key for the fallback route is not configured.",
-            { retryable: false },
+            { retryable: false, route: "anthropic-api" },
           );
         }
         return createAnthropicAdapter<JsonObject, JsonObject>(apiClient(apiKey), {

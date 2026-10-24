@@ -231,6 +231,17 @@ export interface ApiSchemas {
       readonly code: string;
       readonly retryable: boolean;
       readonly usageLimitResetsAt: string | null;
+      readonly failedCall?: {
+        readonly role: "author" | "critic";
+        readonly company: string;
+        readonly model: string;
+        readonly route: string | null;
+        readonly status: number | null;
+        readonly providerErrorType: string | null;
+        readonly providerErrorCode: string | null;
+        readonly rateLimit: string | null;
+        readonly retryAfterSeconds: number | null;
+      };
     } | null;
   };
   "RunExport": {

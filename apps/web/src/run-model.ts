@@ -56,9 +56,11 @@ export function usageLimitWait(run: Run, locale?: string): string | undefined {
 /** A content-free error the run stopped on, other than a usage-limit wait. */
 export function runError(run: Run): string | undefined {
   if (run.lastError === null || run.lastError.usageLimitResetsAt !== null) return undefined;
+  const call = run.lastError.failedCall;
+  const cause = `${run.lastError.code}${call === undefined ? "" : `, the ${call.role}'s call to ${call.company}`}`;
   return run.lastError.retryable
-    ? `The last step failed (${run.lastError.code}) and will be retried.`
-    : `The run stopped on an error (${run.lastError.code}).`;
+    ? `The last step failed (${cause}) and will be retried.`
+    : `The run stopped on an error (${cause}).`;
 }
 
 /** An amount in US dollars, as estimated from the model prices. */

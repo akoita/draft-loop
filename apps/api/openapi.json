@@ -1022,6 +1022,103 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "failedCall": {
+                    "type": "object",
+                    "properties": {
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "author",
+                          "critic"
+                        ]
+                      },
+                      "company": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "route": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The endpoint the call went to, such as `vertex-ai`."
+                      },
+                      "status": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The HTTP status the provider answered with."
+                      },
+                      "providerErrorType": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "providerErrorCode": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "rateLimit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens."
+                      },
+                      "retryAfterSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "role",
+                      "company",
+                      "model",
+                      "route",
+                      "status",
+                      "providerErrorType",
+                      "providerErrorCode",
+                      "rateLimit",
+                      "retryAfterSeconds"
+                    ],
+                    "description": "Present when the run stopped on a provider call that it names."
                   }
                 },
                 "required": [
@@ -2944,6 +3041,104 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "failedCall": {
+                    "type": "object",
+                    "properties": {
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "author",
+                          "critic"
+                        ]
+                      },
+                      "company": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "route": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The endpoint the call went to, such as `vertex-ai`."
+                      },
+                      "status": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The HTTP status the provider answered with."
+                      },
+                      "providerErrorType": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "providerErrorCode": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "rateLimit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens."
+                      },
+                      "retryAfterSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "role",
+                      "company",
+                      "model",
+                      "route",
+                      "status",
+                      "providerErrorType",
+                      "providerErrorCode",
+                      "rateLimit",
+                      "retryAfterSeconds"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Present when the run stopped on a provider call that it names."
                   }
                 },
                 "required": [

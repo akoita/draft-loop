@@ -12,10 +12,18 @@ import { anthropicUsage } from "./anthropic-usage.js";
 import { openAIPromptLayout } from "./openai-prompt-cache.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
+import {
+  isProviderRateLimit,
+  type ProviderRateLimit,
+  providerErrorIdentity,
+  safeProviderErrorToken,
+  safeRetryAfterSeconds,
+} from "./provider-error-identity.js";
 import type { AnthropicRoute, ProviderRoute, RouteFallback } from "./provider-route.js";
 
 export * from "./anthropic-billing-error.js";
 export * from "./author-model-preflight.js";
+export * from "./provider-error-identity.js";
 export * from "./provider-route.js";
 export * from "./user-session.js";
 
@@ -217,6 +225,15 @@ export class ProviderAdapterError extends Error {
   readonly failureStage: ProviderFailureStage | null;
   readonly diagnostics: readonly ProviderValidationDiagnostic[];
   readonly diagnosticCounts: readonly ProviderDiagnosticCount[];
+  /** The endpoint the failed call went to, when the adapter that made it names one. */
+  readonly route: ProviderRoute | null;
+  /** The provider's own error `type` and `code`, each only when it is a short safe token. */
+  readonly providerErrorType: string | null;
+  readonly providerErrorCode: string | null;
+  /** On a 429, the limit the provider reported as used up. */
+  readonly rateLimit: ProviderRateLimit | null;
+  /** The provider's Retry-After in whole seconds, uncapped, unlike `retryAfterMs`. */
+  readonly retryAfterSeconds: number | null;
   readonly metadata: ProviderErrorMetadata;
 
   constructor(
@@ -232,6 +249,11 @@ export class ProviderAdapterError extends Error {
       readonly failureStage?: ProviderFailureStage;
       readonly diagnostics?: readonly ProviderValidationDiagnostic[];
       readonly diagnosticCounts?: readonly ProviderDiagnosticCount[];
+      readonly route?: ProviderRoute;
+      readonly providerErrorType?: string;
+      readonly providerErrorCode?: string;
+      readonly rateLimit?: ProviderRateLimit;
+      readonly retryAfterSeconds?: number;
     } = {},
   ) {
     super(message);
@@ -246,6 +268,11 @@ export class ProviderAdapterError extends Error {
     this.failureStage = options.failureStage ?? null;
     this.diagnostics = options.diagnostics ?? [];
     this.diagnosticCounts = options.diagnosticCounts ?? Object.freeze([]);
+    this.route = options.route ?? null;
+    this.providerErrorType = safeProviderErrorToken(options.providerErrorType) ?? null;
+    this.providerErrorCode = safeProviderErrorToken(options.providerErrorCode) ?? null;
+    this.rateLimit = isProviderRateLimit(options.rateLimit) ? options.rateLimit : null;
+    this.retryAfterSeconds = safeRetryAfterSeconds(options.retryAfterSeconds) ?? null;
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
@@ -365,9 +392,36 @@ function parseRetryAfterMs(details: ProviderErrorLike): number | undefined {
   return sanitizeRetryAfterMs(timestamp - Date.now());
 }
 
-export function normalizeProviderError(provider: ProviderId, error: unknown): ProviderAdapterError {
+/** The same error, naming the route its call went to unless it already names one. */
+function withProviderRoute(
+  error: ProviderAdapterError,
+  route: ProviderRoute,
+): ProviderAdapterError {
+  if (error.route !== null) return error;
+  const routed = new ProviderAdapterError(error.provider, error.code, error.message, {
+    ...error.metadata,
+    retryable: error.retryable,
+    route,
+    ...(error.providerErrorType === null ? {} : { providerErrorType: error.providerErrorType }),
+    ...(error.providerErrorCode === null ? {} : { providerErrorCode: error.providerErrorCode }),
+    ...(error.rateLimit === null ? {} : { rateLimit: error.rateLimit }),
+    ...(error.retryAfterSeconds === null ? {} : { retryAfterSeconds: error.retryAfterSeconds }),
+  });
+  if (error.stack !== undefined) routed.stack = error.stack;
+  return routed;
+}
+
+/**
+ * A provider failure as a content-free `ProviderAdapterError`. An adapter passes its `route`, so
+ * the run's failure names the endpoint the call went to (#1568).
+ */
+export function normalizeProviderError(
+  provider: ProviderId,
+  error: unknown,
+  route?: ProviderRoute,
+): ProviderAdapterError {
   if (error instanceof ProviderAdapterError) {
-    return error;
+    return route === undefined ? error : withProviderRoute(error, route);
   }
 
   const details = errorLike(error);
@@ -454,6 +508,8 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
     ...(status === undefined ? {} : { status }),
     ...(requestId === undefined ? {} : { requestId }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+    ...(route === undefined ? {} : { route }),
+    ...providerErrorIdentity(error),
   });
 }
 
@@ -820,7 +876,7 @@ export class AnthropicAdapter<
           ...accounting,
         };
       } catch (error) {
-        throw normalizeProviderError(this.provider, error);
+        throw normalizeProviderError(this.provider, error, this.route);
       }
     }, this.retry);
   }
@@ -924,7 +980,7 @@ export class OpenAIAdapter<
           ...accounting,
         };
       } catch (error) {
-        throw normalizeProviderError(this.provider, error);
+        throw normalizeProviderError(this.provider, error, this.route);
       }
     }, this.retry);
   }
@@ -1061,7 +1117,7 @@ export class LocalModelAdapter<
           ...accounting,
         };
       } catch (error) {
-        throw normalizeProviderError(this.provider, error);
+        throw normalizeProviderError(this.provider, error, this.route);
       }
     }, this.retry);
   }

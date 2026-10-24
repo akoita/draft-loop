@@ -1337,6 +1337,63 @@ describe("durable orchestration", () => {
     expect(await store.loadRun("run-1")).toEqual(failed);
   });
 
+  it("names the failed call's role, company, model and route without its message", async () => {
+    const { engine } = engineFixture({
+      critic: async () =>
+        Promise.reject(
+          Object.assign(new Error("Rate limit reached while reading SYNTHETIC-CANDIDATE-TEXT"), {
+            code: "rate-limit",
+            retryable: true,
+            route: "openai-api",
+            status: 429,
+            providerErrorType: "tokens",
+            providerErrorCode: "rate_limit_exceeded",
+            rateLimit: "tokens",
+            retryAfterSeconds: 20,
+          }),
+        ),
+    });
+    const failed = await engine.start(request());
+    const failedCall = {
+      role: "critic",
+      company: "openai",
+      model: "critic-test",
+      route: "openai-api",
+      status: 429,
+      providerErrorType: "tokens",
+      providerErrorCode: "rate_limit_exceeded",
+      rateLimit: "tokens",
+      retryAfterSeconds: 20,
+    };
+
+    expect(failed.lastError).toMatchObject({ code: "rate-limit", step: "critic", failedCall });
+    expect(failed.executionHistory.at(-1)).toMatchObject({ status: "failed", failedCall });
+    expect(JSON.stringify(failed)).not.toContain("SYNTHETIC-CANDIDATE-TEXT");
+  });
+
+  it("drops a failed call's fields that are not identities, tokens or numbers", async () => {
+    const { engine } = engineFixture({
+      author: async () =>
+        Promise.reject(
+          Object.assign(new Error("private body"), {
+            code: "authentication",
+            route: "Vertex AI near private body",
+            status: "401",
+            providerErrorType: "private body",
+            rateLimit: "private",
+            retryAfterSeconds: 1.5,
+          }),
+        ),
+    });
+    const failed = await engine.start(request());
+
+    expect(failed.lastError?.failedCall).toEqual({
+      role: "author",
+      company: "anthropic",
+      model: "author-test",
+    });
+  });
+
   it("recovers a legacy awaiting-approval critic failure without invoking the author", async () => {
     const savedArtifact = artifact();
     let criticAttempts = 0;
