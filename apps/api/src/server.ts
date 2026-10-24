@@ -8,6 +8,8 @@ import {
 
 import { buildApi } from "./app.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
+import { readScreeningConfig } from "./content-screening-config.js";
+import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import type { ApiAuthOptions } from "./request-auth.js";
@@ -15,21 +17,28 @@ import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
+// Read before anything opens, so an unknown mode stops the start.
+const screening = contentScreeningSetup(readScreeningConfig(process.env));
 // On Cloud Run, the database URL names the connector's socket and the API signs in as its service
 // identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
-const hosted = await openHostedTenants(storageConfig, readRunBudgetCeiling(process.env), {
-  wake: config.workerJob === undefined ? noWake : cloudRunJobWake({ jobName: config.workerJob }),
-  // The run is queued; the scheduled sweep starts the worker if this wake failed.
-  onWakeError: (error) =>
-    console.error(
-      JSON.stringify({
-        severity: "WARNING",
-        message: "worker wake failed",
-        err: errorFields(error),
-      }),
-    ),
-});
+const hosted = await openHostedTenants(
+  storageConfig,
+  readRunBudgetCeiling(process.env),
+  {
+    wake: config.workerJob === undefined ? noWake : cloudRunJobWake({ jobName: config.workerJob }),
+    // The run is queued; the scheduled sweep starts the worker if this wake failed.
+    onWakeError: (error) =>
+      console.error(
+        JSON.stringify({
+          severity: "WARNING",
+          message: "worker wake failed",
+          err: errorFields(error),
+        }),
+      ),
+  },
+  screening,
+);
 // Sign-in resolves each member's organisation, the tenant their requests act in, from the directory.
 const directory =
   config.auth.mode === "oidc"

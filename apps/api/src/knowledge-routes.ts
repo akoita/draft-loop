@@ -8,6 +8,8 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import type { ContentScreeningHooks } from "./content-screening-routes.js";
+import { screeningOutcomeSchema } from "./content-screening-views.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { KnowledgeOwnership } from "./knowledge-access.js";
 
@@ -16,6 +18,8 @@ export interface KnowledgeRoutesOptions {
   readonly intake: HostedKnowledgeIntake;
   /** Each base's owning candidate record, in sign-in mode; without it bases are tenant-wide. */
   readonly ownership?: KnowledgeOwnership;
+  /** Injection screening of each stored upload; without it uploads are not screened. */
+  readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
 }
 
 const identifierSchema = z
@@ -87,6 +91,9 @@ export const knowledgeSourceViewSchema = z
     sizeBytes: z.number().int(),
     checksum: z.string().describe("Lowercase hex SHA-256 of the file."),
     createdAt: z.string().describe("When this version of the source was added."),
+    screening: screeningOutcomeSchema
+      .optional()
+      .describe("Injection screening of the uploaded file; present on upload when it is on."),
   })
   .meta({ id: "KnowledgeSource" });
 
@@ -114,7 +121,7 @@ export function registerKnowledgeRoutes(
   options: KnowledgeRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { intake, ownership } = options;
+  const { intake, ownership, screening } = options;
 
   app.post(
     "/v1/knowledge-bases",
@@ -196,7 +203,7 @@ export function registerKnowledgeRoutes(
         bodyLimit: intake.maxSourceBytes,
         schema: {
           summary: "Upload a candidate source file",
-          description: `Send the file itself as the request body, with its media type as the Content-Type: ${hostedKnowledgeSourceMediaTypes.join(", ")}. The type is checked against the file's signature; the file is stored, never parsed here. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe.`,
+          description: `Send the file itself as the request body, with its media type as the Content-Type: ${hostedKnowledgeSourceMediaTypes.join(", ")}. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.`,
           consumes: [...hostedKnowledgeSourceMediaTypes],
           params: knowledgeBaseParams,
           querystring: uploadQuery,
@@ -225,7 +232,20 @@ export function registerKnowledgeRoutes(
           mediaType: mediaType.toLowerCase(),
           bytes: new Uint8Array(request.body),
         });
-        return reply.code(added.created ? 201 : 200).send(knowledgeSourceView(added));
+        // After the file is stored, so its ids exist; a screener's failure is the result's
+        // verdict, never the upload's.
+        const screened = await screening?.screenUpload(request, {
+          knowledgeBaseId: request.params.knowledgeBaseId,
+          sourceId: added.source.id,
+          sourceVersionId: added.latestVersion.id,
+          name: request.query.name,
+          mediaType: mediaType.toLowerCase(),
+          bytes: new Uint8Array(request.body),
+        });
+        return reply.code(added.created ? 201 : 200).send({
+          ...knowledgeSourceView(added),
+          ...(screened === undefined ? {} : { screening: screened }),
+        });
       },
     );
   });

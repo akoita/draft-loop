@@ -8,6 +8,7 @@ import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import { z } from "zod";
 
+import { opportunityScreeningSchema } from "./content-screening-views.js";
 import { failedCallView, failedCallViewSchema } from "./failed-call-view.js";
 
 /**
@@ -50,7 +51,14 @@ export function workspaceView(
 }
 
 export const opportunityViewSchema = z
-  .object({ workspaceId: z.string(), checksum: z.string(), brief: opportunityBriefSchema })
+  .object({
+    workspaceId: z.string(),
+    checksum: z.string(),
+    brief: opportunityBriefSchema,
+    screening: opportunityScreeningSchema
+      .optional()
+      .describe("Injection screening of the brief's sources; present when it is created."),
+  })
   .meta({ id: "Opportunity" });
 
 export function opportunityView(

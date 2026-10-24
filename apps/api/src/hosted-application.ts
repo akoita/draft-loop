@@ -24,6 +24,11 @@ import {
 import { Storage } from "@google-cloud/storage";
 
 import type { HostedStorageConfig } from "./config.js";
+import {
+  type ContentScreeningSetup,
+  createHostedContentScreening,
+  rulesScreeningSetup,
+} from "./content-screening-service.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import { apiProviderOptions } from "./provider-boundary.js";
 import type { TenantApplication, TenantApplications } from "./tenant-context.js";
@@ -47,6 +52,8 @@ export interface HostedApplicationParts {
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
+  /** What the tenant's uploads and job sources are screened with; the rule screener when unset. */
+  readonly screening?: ContentScreeningSetup;
 }
 
 /**
@@ -85,6 +92,11 @@ export function composeHostedApplication(
       storeId: hostedKnowledgeStoreId,
     }),
     consents: storage.consentLedger,
+    contentScreening: createHostedContentScreening({
+      store: storage.contentScreening,
+      tenantId,
+      setup: parts.screening ?? rulesScreeningSetup(),
+    }),
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
@@ -112,6 +124,7 @@ export async function openHostedTenants(
     wake: noWake,
     onWakeError: () => undefined,
   },
+  screening: ContentScreeningSetup = rulesScreeningSetup(),
 ): Promise<HostedTenants> {
   const tenancy = await openPostgresTenancy({
     connectionString: config.databaseUrl,
@@ -152,6 +165,7 @@ export async function openHostedTenants(
               worker.onWakeError,
             ),
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
+            screening,
             ...(config.maxSourceBytes === undefined
               ? {}
               : { maxSourceBytes: config.maxSourceBytes }),

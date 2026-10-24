@@ -9,6 +9,7 @@ export interface ApiSchemas {
         readonly path: string;
         readonly message: string;
       })[];
+      readonly quarantined?: readonly (ApiSchemas["QuarantinedMaterial"])[];
     };
   };
   "Application": {
@@ -92,6 +93,7 @@ export interface ApiSchemas {
     readonly sizeBytes: number;
     readonly checksum: string;
     readonly createdAt: string;
+    readonly screening?: ApiSchemas["ScreeningOutcome"];
   };
   "Me": {
     readonly kind: "owner";
@@ -202,6 +204,17 @@ export interface ApiSchemas {
         readonly sourceIds: readonly (string)[];
       })[];
     };
+    readonly screening?: ApiSchemas["OpportunityScreening"];
+  };
+  "OpportunityScreening": {
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly sources: readonly ({
+      readonly resultId: string;
+      readonly verdict: "clear" | "flagged" | "unscreened";
+      readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+      readonly sourceId: string;
+    })[];
   };
   "OpportunityVersions": {
     readonly versions: readonly ({
@@ -222,6 +235,22 @@ export interface ApiSchemas {
   "OrganisationMembers": {
     readonly organisationId: string;
     readonly members: readonly (ApiSchemas["OrganisationMember"])[];
+  };
+  "QuarantinedMaterial": {
+    readonly resultId: string;
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly kind: "job-source";
+    readonly briefId: string;
+    readonly sourceId: string;
+  } | {
+    readonly resultId: string;
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly kind: "knowledge-source-version";
+    readonly knowledgeBaseId: string;
+    readonly sourceId: string;
+    readonly sourceVersionId: string;
   };
   "RecordAssignment": {
     readonly memberId: string;
@@ -373,6 +402,17 @@ export interface ApiSchemas {
     readonly runId: string;
     readonly workspaceId: string;
   };
+  "ScreeningOutcome": {
+    readonly resultId: string;
+    readonly verdict: "clear" | "flagged" | "unscreened";
+    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+  };
+  "ScreeningRelease": {
+    readonly resultId: string;
+    readonly memberId: string;
+    readonly reason: string;
+    readonly releasedAt: string;
+  };
   "SensitivityRule": {
     readonly id: string;
     readonly tier: "normal" | "sensitive" | "never-share";
@@ -515,6 +555,16 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: ApiSchemas["Workspace"];
+  };
+  "POST /v1/workspaces/{workspaceId}/screening/{resultId}/release": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly resultId: string;
+    };
+    readonly body: {
+      readonly reason: string;
+    };
+    readonly response: ApiSchemas["ScreeningRelease"];
   };
   "PUT /v1/workspaces/{workspaceId}/knowledge-selection": {
     readonly path: {

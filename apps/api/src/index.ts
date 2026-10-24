@@ -1,6 +1,19 @@
 export { type ApiOptions, apiBodyLimitBytes, buildApi } from "./app.js";
 export { type ApplicationRoutesOptions, registerApplicationRoutes } from "./application-routes.js";
 export { type ApiAuthConfig, type ApiConfig, ApiConfigError, readApiConfig } from "./config.js";
+export {
+  readScreeningConfig,
+  type ScreeningConfig,
+  type ScreeningMode,
+  screeningModes,
+} from "./content-screening-config.js";
+export {
+  type ContentScreeningSetup,
+  contentScreeningSetup,
+  createHostedContentScreening,
+  type HostedContentScreening,
+  rulesScreeningSetup,
+} from "./content-screening-service.js";
 export { type ApiError, apiErrorSchema } from "./errors.js";
 export {
   composeHostedApplication,

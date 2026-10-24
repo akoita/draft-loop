@@ -7,6 +7,7 @@ import {
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
+import { noContentScreening } from "./content-screening-service.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
 import type { RecordAccessFor } from "./record-access.js";
@@ -17,8 +18,10 @@ import type { Caller } from "./request-auth.js";
 export type ApiApplication = NonNullable<ApiOptions["application"]>;
 
 /** One tenant's application: every route's dependencies, bound to that tenant's data. */
-export type TenantApplication = Required<Omit<ApiApplication, "budgetCeiling" | "idempotency">> &
-  Pick<ApiApplication, "idempotency">;
+export type TenantApplication = Required<
+  Omit<ApiApplication, "budgetCeiling" | "idempotency" | "contentScreening">
+> &
+  Pick<ApiApplication, "idempotency" | "contentScreening">;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
 export interface TenantApplications {
@@ -176,5 +179,7 @@ export function registerTenantApplications(
     sensitivityRules: forwarding(() => current().sensitivityRules),
     consents: forwarding(() => current().consents),
     recordArchives: forwarding(() => current().recordArchives),
+    // An application composed without screening holds none, so nothing is quarantined.
+    contentScreening: forwarding(() => current().contentScreening ?? noContentScreening),
   };
 }

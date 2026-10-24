@@ -15,6 +15,10 @@ import {
   type CandidateRecordAccessErrorCode,
 } from "@draft-loop/storage/candidate-records";
 import { ConsentLedgerError } from "@draft-loop/storage/consent-ledger";
+import {
+  ContentScreeningStoreError,
+  type ContentScreeningStoreErrorCode,
+} from "@draft-loop/storage/content-screening";
 import { RecordArchiveError } from "@draft-loop/storage/record-archive";
 import {
   TenantDirectoryError,
@@ -24,6 +28,7 @@ import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { MaterialQuarantinedError, quarantinedMaterialSchema } from "./content-screening-views.js";
 import { IdempotencyConflictError, IdempotencyInProgressError } from "./idempotency.js";
 
 /**
@@ -39,6 +44,12 @@ export const apiErrorSchema = z
         .array(z.object({ path: z.string(), message: z.string() }))
         .optional()
         .describe("Which fields failed validation, by path; values are never repeated."),
+      quarantined: z
+        .array(quarantinedMaterialSchema)
+        .optional()
+        .describe(
+          "With material_quarantined, the stored screening results that hold the request; each resultId is what a release names.",
+        ),
     }),
   })
   .meta({ id: "ApiError" });
@@ -97,6 +108,15 @@ const runActionStatus: Readonly<Record<RunActionErrorCode, number>> = {
   review_target_not_found: 404,
   export_not_found: 404,
   export_integrity: 409,
+};
+
+/** The screening store's refusals by HTTP status; the codes are the API's error codes too. */
+const contentScreeningStatus: Readonly<Record<ContentScreeningStoreErrorCode, number>> = {
+  invalid_input: 400,
+  subject_not_found: 404,
+  result_not_found: 404,
+  result_superseded: 409,
+  not_releasable: 409,
 };
 
 /** The tenant directory's refusals by HTTP status; the codes are the API's error codes too. */
@@ -172,6 +192,24 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // Record access's messages are fixed and never quote an id, so they are safe to answer with.
   if (error instanceof CandidateRecordAccessError) {
     void reply.code(recordAccessStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  // Quarantined material names its ids and verdicts only, so the answer can list it.
+  if (error instanceof MaterialQuarantinedError) {
+    void reply.code(409).send({
+      error: {
+        code: "material_quarantined",
+        message: error.message,
+        quarantined: [...error.quarantined],
+      },
+    } satisfies ApiError);
+    return;
+  }
+  // The store's messages are fixed and never quote the screened text, so they are safe to answer with.
+  if (error instanceof ContentScreeningStoreError) {
+    void reply
+      .code(contentScreeningStatus[error.code])
+      .send(apiError(error.code === "result_not_found" ? "not_found" : error.code, error.message));
     return;
   }
   if (error instanceof ConsentRequiredError) {

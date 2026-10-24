@@ -89,6 +89,11 @@ export interface ContentScreeningStore {
   /** The subject's latest result and status, or undefined when it was never screened. */
   latestFor(subject: ContentScreeningSubject): Promise<ContentScreeningStatus | undefined>;
   /**
+   * One stored result by id, latest or not, so an adapter can check whose it is before it
+   * releases it. Undefined when the tenant has no result with that id.
+   */
+  resultById(resultId: string): Promise<StoredContentScreeningResult | undefined>;
+  /**
    * The subjects among those given that are quarantined, with their latest result, in a stable
    * order. At most `maximumScreeningSubjectsPerQuery` subjects are asked about at once.
    */

@@ -14,6 +14,7 @@ import {
   requireScreeningKnowledgeBaseId,
   requireScreeningRelease,
   requireScreeningResult,
+  requireScreeningResultId,
   requireScreeningSubject,
   requireScreeningWorkspaceId,
   type StoredContentScreeningResult,
@@ -237,6 +238,12 @@ export function createContentScreening(
       return client.transaction((executor) => latestOfSubject(executor, checked), {
         readOnlySnapshot: true,
       });
+    },
+
+    resultById: async (resultId) => {
+      const id = requireScreeningResultId(resultId);
+      const [row] = await client.query(`${statusSelect} WHERE r.id = $1`, [id]);
+      return row === undefined ? undefined : storedOf(row);
     },
 
     quarantined: async (subjects) => {

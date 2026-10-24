@@ -59,6 +59,12 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
+      '@draft-loop/model-gateway':
+        specifier: workspace:*
+        version: link:../../packages/model-gateway
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator

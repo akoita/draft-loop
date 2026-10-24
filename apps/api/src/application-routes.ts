@@ -11,6 +11,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 import {
@@ -36,6 +37,8 @@ export interface ApplicationRoutesOptions {
   readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
   /** The deployment's limit per run; the workspace's budget is checked against it before a run. */
   readonly budgetCeiling: RunBudgetCeiling;
+  /** Injection screening of a brief's sources, and the run gate on quarantined material. */
+  readonly screening?: Pick<ContentScreeningHooks, "screenOpportunity" | "assertRunMaterialClear">;
 }
 
 const identifierSchema = z
@@ -175,7 +178,7 @@ export function registerApplicationRoutes(
   options: ApplicationRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling } = options;
+  const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling, screening } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -195,20 +198,29 @@ export function registerApplicationRoutes(
     {
       schema: {
         summary: "Create a job brief from pasted sources",
+        description:
+          "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off.",
         params: workspaceParams,
         body: createOpportunityBody,
         response: { 201: opportunityViewSchema, ...errorResponses },
       },
     },
     async (request, reply) => {
+      const sources = request.body.sources.map(toOpportunitySource);
       const record = await service.createOpportunity({
         root: workspaceRoot(request.params.workspaceId),
-        sources: request.body.sources.map(toOpportunitySource),
+        sources,
         ...(request.body.applicationId === undefined
           ? {}
           : { applicationId: request.body.applicationId }),
       });
-      return reply.code(201).send(opportunityView(record));
+      // After the brief is saved, so its source ids exist; a screener's failure is the result's
+      // verdict, never this request's.
+      const screened = await screening?.screenOpportunity(request, record, sources);
+      return reply.code(201).send({
+        ...opportunityView(record),
+        ...(screened === undefined ? {} : { screening: screened }),
+      });
     },
   );
 
@@ -346,7 +358,7 @@ export function registerApplicationRoutes(
       schema: {
         summary: "Begin a run; a worker executes it",
         description:
-          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required).",
+          "Persists the run and its context without calling a provider, then queues it for a worker. A retry with the same Idempotency-Key returns the same run and queues it again if it is not already waiting. In sign-in mode the candidate record needs a current provider transmission consent naming every provider the workspace's models use (409 transmission_consent_required). A run on a brief whose job source, or on a knowledge source the workspace selects, is quarantined by injection screening and not released answers 409 material_quarantined and lists the stored results to release.",
         params: workspaceParams,
         headers: idempotencyHeaders,
         body: beginRunBody,
@@ -369,6 +381,11 @@ export function registerApplicationRoutes(
           .code(422)
           .send(apiError("budget_above_ceiling", runBudgetCeilingMessage(violation)));
       }
+      await screening?.assertRunMaterialClear({
+        workspaceId,
+        workspace,
+        opportunityBrief: request.body.opportunityBrief,
+      });
       const command = {
         root: workspaceRoot(workspaceId),
         ...(request.body.applicationId === undefined

@@ -139,6 +139,18 @@ describe.runIf(connectionString !== undefined)("Postgres content screening", () 
     });
   });
 
+  it("finds a result by id, superseded or not, and refuses a malformed id", async () => {
+    await withStore(async (screening) => {
+      const stale = await screening.recordResult(jobSource, flagged);
+      const latest = await screening.recordResult(jobSource, clear);
+
+      await expect(screening.resultById(stale.id)).resolves.toEqual(stale);
+      await expect(screening.resultById(latest.id)).resolves.toEqual(latest);
+      await expect(screening.resultById("screening-unknown")).resolves.toBeUndefined();
+      expect(await refusal(screening.resultById(" "))).toBe("invalid_input");
+    });
+  });
+
   it("releases the latest result, audits it without the reason, and re-quarantines a later flag", async () => {
     await withStore(async (screening, schema) => {
       const stale = await screening.recordResult(jobSource, flagged);
@@ -260,6 +272,7 @@ describe.runIf(connectionString !== undefined)("Postgres content screening", () 
       await expect(south.listForRecord("history-1")).resolves.toEqual([]);
       await expect(south.listForKnowledgeBase("kb-upload")).resolves.toEqual([]);
       expect(await refusal(south.release(release(result.id)))).toBe("result_not_found");
+      await expect(south.resultById(result.id)).resolves.toBeUndefined();
 
       // The same ids in the other tenant are a separate subject.
       const other = await south.recordResult(jobSource, clear);
