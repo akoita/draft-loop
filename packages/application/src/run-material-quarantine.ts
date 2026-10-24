@@ -84,3 +84,73 @@ async function quarantinedKnowledge(
       latest.get(status.subject.sourceId) === status.subject.sourceVersionId,
   );
 }
+
+/** What the unscreened check reads: the latest stored result of each screened subject. */
+export interface RunMaterialScreeningReaders {
+  readonly store: Pick<ContentScreeningStore, "listForRecord" | "listForKnowledgeBase">;
+  readonly listSources: RunMaterialQuarantineReaders["listSources"];
+}
+
+/**
+ * The run's material with no stored screening result at all (ADR 0011, phase 2d, #1677), job
+ * sources first and then the latest version of each knowledge source. With screening on, such
+ * material is never clear: the result may have failed to save, or the material may predate
+ * screening or have been saved while it was off. The run start and the worker both ask it, with
+ * the same scope as `quarantinedRunMaterial`. Subjects carry ids only, never text.
+ */
+export async function unscreenedRunMaterial(
+  readers: RunMaterialScreeningReaders,
+  material: RunMaterial,
+): Promise<readonly ContentScreeningSubject[]> {
+  const { brief } = material;
+  let jobSources: ContentScreeningSubject[] = [];
+  if (brief !== undefined) {
+    const screened = new Set(
+      (await readers.store.listForRecord(brief.workspaceId))
+        .filter(
+          ({ subject }) => subject.kind === "job-source" && subject.briefId === brief.brief.id,
+        )
+        .map(({ subject }) => subject.sourceId),
+    );
+    jobSources = brief.brief.sources
+      .filter((source) => !screened.has(source.id))
+      .map((source) => ({
+        kind: "job-source",
+        workspaceId: brief.workspaceId,
+        briefId: brief.brief.id,
+        sourceId: source.id,
+      }));
+  }
+  const bases = [...new Set(material.knowledgeBaseIds)];
+  const knowledge = await Promise.all(bases.map((base) => unscreenedKnowledge(readers, base)));
+  return [...jobSources, ...knowledge.flat()];
+}
+
+async function unscreenedKnowledge(
+  readers: RunMaterialScreeningReaders,
+  knowledgeBaseId: string,
+): Promise<readonly ContentScreeningSubject[]> {
+  if (readers.listSources === undefined) return [];
+  let views: readonly HostedKnowledgeSourceView[];
+  try {
+    views = await readers.listSources(knowledgeBaseId);
+  } catch (error) {
+    if (error instanceof HostedKnowledgeIntakeError) return [];
+    throw error;
+  }
+  const screened = new Set(
+    (await readers.store.listForKnowledgeBase(knowledgeBaseId)).flatMap(({ subject }) =>
+      subject.kind === "knowledge-source-version"
+        ? [`${subject.sourceId}\u0000${subject.sourceVersionId}`]
+        : [],
+    ),
+  );
+  return views
+    .filter(({ source, latestVersion }) => !screened.has(`${source.id}\u0000${latestVersion.id}`))
+    .map(({ source, latestVersion }) => ({
+      kind: "knowledge-source-version",
+      knowledgeBaseId,
+      sourceId: source.id,
+      sourceVersionId: latestVersion.id,
+    }));
+}

@@ -9,6 +9,8 @@ import { HostedKnowledgeIntakeError } from "./hosted-knowledge-intake.js";
 import {
   quarantinedRunMaterial,
   type RunMaterialQuarantineReaders,
+  type RunMaterialScreeningReaders,
+  unscreenedRunMaterial,
 } from "./run-material-quarantine.js";
 
 const brief = {
@@ -136,5 +138,86 @@ describe("quarantined run material", () => {
 
     expect(await quarantinedRunMaterial(setup, { knowledgeBaseIds: ["base-1"] })).toEqual([]);
     expect(asked).toEqual([]);
+  });
+});
+
+describe("unscreened run material", () => {
+  /** Results as the store lists them: the latest of each subject, clear or not. */
+  function screened(
+    options: {
+      readonly record?: readonly ContentScreeningSubject[];
+      readonly knowledge?: readonly ContentScreeningSubject[];
+      readonly latest?: Readonly<Record<string, string>>;
+      readonly listSources?: RunMaterialScreeningReaders["listSources"];
+    } = {},
+  ): RunMaterialScreeningReaders {
+    const statuses = (subjects: readonly ContentScreeningSubject[] = []) =>
+      subjects.map((subject) => ({ ...status(subject, false), quarantined: false }));
+    return {
+      store: {
+        listForRecord: async (workspaceId) =>
+          statuses(options.record).filter(
+            ({ subject }) => subject.kind === "job-source" && subject.workspaceId === workspaceId,
+          ),
+        listForKnowledgeBase: async () => statuses(options.knowledge),
+      },
+      listSources:
+        "listSources" in options
+          ? options.listSources
+          : async () =>
+              Object.entries(options.latest ?? {}).map(([sourceId, versionId]) => ({
+                source: { id: sourceId },
+                latestVersion: { id: versionId },
+              })) as never,
+    };
+  }
+
+  it("lists the brief's sources that have no result, then the latest knowledge versions that have none", async () => {
+    const found = await unscreenedRunMaterial(
+      screened({
+        record: [jobSource("posting")],
+        knowledge: [knowledgeVersion("career", "v1"), knowledgeVersion("letters", "v3")],
+        latest: { career: "v2", letters: "v3" },
+      }),
+      { brief, knowledgeBaseIds: ["base-1", "base-1"] },
+    );
+
+    expect(found).toEqual([jobSource("notes"), knowledgeVersion("career", "v2")]);
+  });
+
+  it("does not count another brief's results of the same record", async () => {
+    const other: ContentScreeningSubject = {
+      kind: "job-source",
+      workspaceId: "history-1",
+      briefId: "brief-2",
+      sourceId: "posting",
+    };
+
+    const found = await unscreenedRunMaterial(screened({ record: [other] }), {
+      brief,
+      knowledgeBaseIds: [],
+    });
+
+    expect(found).toEqual([jobSource("posting"), jobSource("notes")]);
+  });
+
+  it("finds nothing when everything has a result, a base is gone, or no source reader is given", async () => {
+    expect(
+      await unscreenedRunMaterial(
+        screened({ record: [jobSource("posting"), jobSource("notes")] }),
+        { brief, knowledgeBaseIds: [] },
+      ),
+    ).toEqual([]);
+    const gone = screened({
+      listSources: async () => {
+        throw new HostedKnowledgeIntakeError("knowledge_base_not_found", "No such knowledge base.");
+      },
+    });
+    expect(await unscreenedRunMaterial(gone, { knowledgeBaseIds: ["base-1"] })).toEqual([]);
+    expect(
+      await unscreenedRunMaterial(screened({ listSources: undefined }), {
+        knowledgeBaseIds: ["base-1"],
+      }),
+    ).toEqual([]);
   });
 });

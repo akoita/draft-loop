@@ -10,6 +10,7 @@ export interface ApiSchemas {
         readonly message: string;
       })[];
       readonly quarantined?: readonly (ApiSchemas["QuarantinedMaterial"])[];
+      readonly unscreened?: readonly (ApiSchemas["UnscreenedMaterial"])[];
     };
   };
   "Application": {
@@ -468,6 +469,16 @@ export interface ApiSchemas {
     readonly version: number;
     readonly createdAt: string | null;
     readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
+  };
+  "UnscreenedMaterial": {
+    readonly kind: "job-source";
+    readonly briefId: string;
+    readonly sourceId: string;
+  } | {
+    readonly kind: "knowledge-source-version";
+    readonly knowledgeBaseId: string;
+    readonly sourceId: string;
+    readonly sourceVersionId: string;
   };
   "UsageLine": {
     readonly company: string;

@@ -611,12 +611,19 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   `material_quarantined` when the brief's job sources, or the latest version of
   any source in a selected knowledge base, are quarantined, and lists them with
   their result ids in `error.quarantined`. The gate reads stored results, so it
-  holds in every mode, including `off`.
+  holds in every mode, including `off`. With screening on, it also answers 409
+  `material_unscreened` for material with no stored result, such as a brief
+  saved while screening was `off` or whose result write failed, and lists those
+  subjects by ids in `error.unscreened` (`unscreenedRunMaterial` in
+  `packages/application`). It does not screen at run start, because the brief's
+  text and the upload's bytes are not at hand there; saving the brief again or
+  uploading the file again screens it.
 - **The worker check.** Material can be flagged after a run is queued, so the
   worker asks the same question (`quarantinedRunMaterial` in
   `packages/application`, shared with the gate) as it claims each job, in every
   auth mode and before any provider call. If anything the run would send is
-  quarantined, it pauses the run as it does for withdrawn consent, ends the job
+  quarantined, or, with screening on, has no stored result, it pauses the run
+  as it does for withdrawn consent, ends the job
   with outcome `material-quarantined` and logs one content-free `WARNING` with
   the tenant, workspace and run ids and, for each piece, its kind, result id and
   signal codes. After a release, a resume queues the run and the next job

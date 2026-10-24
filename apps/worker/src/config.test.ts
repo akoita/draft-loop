@@ -19,6 +19,7 @@ describe("readWorkerConfig", () => {
       blobBucket: "draft-loop-local",
       allowProviderData: false,
       requireConsent: false,
+      requireScreening: true,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       mode: { kind: "serve" },
     });
@@ -55,6 +56,16 @@ describe("readWorkerConfig", () => {
         readWorkerConfig({ ...owner, DRAFT_LOOP_REQUIRE_CONSENT: "true" }).requireConsent,
       ).toBe(true);
     }
+  });
+
+  it("holds material with no screening result unless screening is off, and refuses an unknown mode", () => {
+    for (const mode of ["", "rules", "rules+model"]) {
+      expect(readWorkerConfig({ ...env, DRAFT_LOOP_SCREENING: mode }).requireScreening).toBe(true);
+    }
+    expect(readWorkerConfig({ ...env, DRAFT_LOOP_SCREENING: "off" }).requireScreening).toBe(false);
+    expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_SCREENING: "none" })).toThrow(
+      WorkerConfigError,
+    );
   });
 
   it("serves every tenant, so a tenant id in the shared environment changes nothing", () => {

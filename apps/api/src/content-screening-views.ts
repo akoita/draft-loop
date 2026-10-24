@@ -5,6 +5,7 @@ import {
 import type {
   ContentScreeningRelease,
   ContentScreeningStatus,
+  ContentScreeningSubject,
   StoredContentScreeningResult,
 } from "@draft-loop/storage/content-screening";
 import { z } from "zod";
@@ -194,5 +195,54 @@ export class MaterialQuarantinedError extends Error {
       "Material this run would use is quarantined by injection screening. Release it, or replace it, before running.",
     );
     this.quarantined = quarantined;
+  }
+}
+
+const unscreenedJobSourceSchema = z.object({
+  kind: z.literal("job-source"),
+  briefId: z.string(),
+  sourceId: z.string(),
+});
+
+const unscreenedKnowledgeSourceSchema = z.object({
+  kind: z.literal("knowledge-source-version"),
+  knowledgeBaseId: z.string(),
+  sourceId: z.string(),
+  sourceVersionId: z.string(),
+});
+
+/** One piece of material a run would use that has no stored screening result. */
+export const unscreenedMaterialSchema = z
+  .discriminatedUnion("kind", [unscreenedJobSourceSchema, unscreenedKnowledgeSourceSchema])
+  .meta({ id: "UnscreenedMaterial" });
+
+export type UnscreenedMaterial = z.infer<typeof unscreenedMaterialSchema>;
+
+/** A subject with no result, as the run gate lists it: ids only. */
+export function unscreenedMaterial(subject: ContentScreeningSubject): UnscreenedMaterial {
+  return subject.kind === "job-source"
+    ? { kind: "job-source", briefId: subject.briefId, sourceId: subject.sourceId }
+    : {
+        kind: "knowledge-source-version",
+        knowledgeBaseId: subject.knowledgeBaseId,
+        sourceId: subject.sourceId,
+        sourceVersionId: subject.sourceVersionId,
+      };
+}
+
+/**
+ * A run refused because material it would use has no screening result while screening is on. A
+ * missing result is never clear: the material is screened again by saving the brief anew or
+ * uploading the file again.
+ */
+export class MaterialUnscreenedError extends Error {
+  override readonly name = "MaterialUnscreenedError";
+  readonly unscreened: readonly UnscreenedMaterial[];
+
+  constructor(unscreened: readonly UnscreenedMaterial[]) {
+    super(
+      "Material this run would use has not been screened for prompt injection. Save the brief again, or upload the file again, to screen it before running.",
+    );
+    this.unscreened = unscreened;
   }
 }

@@ -300,7 +300,12 @@ describe.runIf(connectionString !== undefined)(
         allowProviderData: true,
         budgetCeiling,
         consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }),
-        quarantinedFor: tenantRunQuarantine({ tenancy, serviceFor, workspaceRoot }),
+        quarantinedFor: tenantRunQuarantine({
+          tenancy,
+          serviceFor,
+          workspaceRoot,
+          requireScreening: true,
+        }),
         onQuarantined: (_job, material) => quarantined.push(...material),
         onOutcome: (_job, outcome) => outcomes.push(outcome),
       });

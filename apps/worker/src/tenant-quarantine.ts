@@ -2,6 +2,7 @@ import {
   type ApplicationService,
   listHostedKnowledgeSources,
   quarantinedRunMaterial,
+  unscreenedRunMaterial,
 } from "@draft-loop/application";
 import type { RunJob } from "@draft-loop/run-queue";
 import type { PostgresTenancy } from "@draft-loop/storage-postgres";
@@ -14,15 +15,20 @@ export interface TenantQuarantineOptions {
     tenantId: string,
   ) => Pick<ApplicationService, "readWorkspace" | "getOpportunity" | "readRunInputs">;
   readonly workspaceRoot: (job: RunJob) => string;
+  /**
+   * Whether screening is on (`DRAFT_LOOP_SCREENING` is not `off`). Then material with no stored
+   * result is held like quarantined material: a missing result is never clear (#1677).
+   */
+  readonly requireScreening: boolean;
 }
 
 /**
  * The job's run material that injection screening quarantined and nobody released (ADR 0011,
  * phase 2d), read from the job's tenant's stored results as each job is claimed. It asks what the
  * API's run gate asks, with the same shared check: every source of the run's brief, and the latest
- * version of each source in the knowledge bases the record's workspace selects. A run begun
- * without a brief has no job sources to check. The answer is content-free: kinds, result ids and
- * signal codes.
+ * version of each source in the knowledge bases the record's workspace selects. With screening on,
+ * material with no stored result is held too, with no result id. A run begun without a brief has
+ * no job sources to check. The answer is content-free: kinds, result ids and signal codes.
  */
 export function tenantRunQuarantine(
   options: TenantQuarantineOptions,
@@ -44,22 +50,28 @@ export function tenantRunQuarantine(
           });
     const workspace = await service.readWorkspace(root);
     const storage = options.tenancy.forTenant(job.tenantId);
-    const quarantined = await quarantinedRunMaterial(
-      {
-        store: storage.contentScreening,
-        listSources: (knowledgeBaseId) => listHostedKnowledgeSources(storage, knowledgeBaseId),
-      },
-      {
-        brief,
-        knowledgeBaseIds: (workspace.candidateKnowledgeSelection ?? []).map(
-          (entry) => entry.knowledgeBaseId,
-        ),
-      },
-    );
-    return quarantined.map((status) => ({
-      kind: status.subject.kind,
-      resultId: status.id,
-      signals: [...status.result.signals],
-    }));
+    const readers = {
+      store: storage.contentScreening,
+      listSources: (knowledgeBaseId: string) =>
+        listHostedKnowledgeSources(storage, knowledgeBaseId),
+    };
+    const material = {
+      brief,
+      knowledgeBaseIds: (workspace.candidateKnowledgeSelection ?? []).map(
+        (entry) => entry.knowledgeBaseId,
+      ),
+    };
+    const quarantined = await quarantinedRunMaterial(readers, material);
+    const unscreened = options.requireScreening
+      ? await unscreenedRunMaterial(readers, material)
+      : [];
+    return [
+      ...quarantined.map((status) => ({
+        kind: status.subject.kind,
+        resultId: status.id,
+        signals: [...status.result.signals],
+      })),
+      ...unscreened.map(({ kind }) => ({ kind, signals: ["unscreened"] })),
+    ];
   };
 }

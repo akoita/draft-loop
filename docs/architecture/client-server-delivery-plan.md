@@ -149,8 +149,9 @@ with structural ROI per plan (ADR 0011, D13).
   Vertex AI in the EU is available, a model screener classify the text. A
   flagged or unscreened source is quarantined, the run gate and the worker
   refuse it, and an owner or admin releases it with an audited reason. A
-  red-team flow test over a synthetic corpus passes. Still open: material with
-  no stored result (#1677), model screening on staging and production, and
+  red-team flow test over a synthetic corpus passes. With screening on, material
+  with no stored result is never clear (#1677). Still open: screening the
+  exact text the worker reads, model screening on staging and production, and
   prompt hardening, which waits for a stage 3 evaluation run. The [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
   lists the gaps.
 - **Review routing by stakes:** the candidate approves every export.
