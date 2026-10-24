@@ -174,7 +174,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     after tenant binding checks every route that names a workspace, and a
     refused record answers 404 like an unknown one (`registerRecordAccess`,
     over the tenants' `recordAccessFor`). Creating a workspace assigns its
-    creator, and `GET /v1/workspaces` lists the records the caller reaches.
+    creator before the workspace is saved, and when several members create the
+    same new record at once storage assigns only one (`assignCreator`); the
+    others get the usual 404. `GET /v1/workspaces` lists the records the
+    caller reaches.
   - Owners and admins assign members to a record and remove them through
     `/v1/workspaces/{workspaceId}/members`, which an assigned member may only
     read; each change is a content-free audit log line

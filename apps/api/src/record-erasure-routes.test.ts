@@ -103,6 +103,11 @@ function memoryErasure() {
 function memoryRecordAccess(): CandidateRecordAccess {
   return {
     assignMember: async ({ workspaceId, memberId }) => ({ workspaceId, memberId, assignedAt: now }),
+    assignCreator: async ({ workspaceId, memberId }) => ({
+      workspaceId,
+      memberId,
+      assignedAt: now,
+    }),
     unassignMember: async () => true,
     listRecordMembers: async (workspaceId) => [
       { workspaceId, memberId: "coach-1", assignedAt: now },

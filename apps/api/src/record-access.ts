@@ -51,12 +51,16 @@ async function isAssigned(
  * Confines each signed-in member to the candidate records assigned to them (ADR 0011, D6), for
  * every route that names a workspace, in one hook that runs after sign-in and tenant binding. A
  * refused record answers exactly as an unknown workspace. A member may create a workspace that
- * does not exist yet, and every signed-in creator is assigned to it. The owner token, which
- * reaches only operator routes in sign-in mode, is never confined.
+ * does not exist yet: storage assigns the first of several racing creators before the workspace
+ * is saved. The others are refused as for any record they cannot reach, except an owner or admin,
+ * who reaches every record and is told it exists. The owner token, which reaches only operator
+ * routes in sign-in mode, is never confined.
  */
 export function registerRecordAccess(parent: FastifyInstance, options: RecordAccessOptions): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { recordAccessFor, service, workspaceRoot } = options;
+  // Requests that hold an assignment for a workspace they have yet to create.
+  const claims = new WeakSet<FastifyRequest>();
 
   const exists = async (workspaceId: string): Promise<boolean> => {
     try {
@@ -71,28 +75,46 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
   app.addHook("preHandler", async (request, reply) => {
     const { caller } = request;
     const workspaceId = workspaceIdOf(request);
-    if (caller?.kind !== "member" || workspaceId === undefined || reachesEveryRecord(caller)) {
-      return;
+    if (caller?.kind !== "member" || workspaceId === undefined) return;
+    const access = recordAccessFor(caller.tenantId);
+    const everyRecord = reachesEveryRecord(caller);
+    const assigned = async () => isAssigned(access, caller.memberId, workspaceId);
+    if (request.method !== "PUT" || request.routeOptions.url !== createRoute) {
+      if (everyRecord || (await assigned())) return;
+    } else {
+      if (!everyRecord && (await assigned())) return;
+      if (await exists(workspaceId)) {
+        if (everyRecord) return;
+      } else {
+        // Two creators can both find the record missing; storage lets only one of them in.
+        const claimed = await access.assignCreator({ workspaceId, memberId: caller.memberId });
+        if (claimed !== undefined) {
+          claims.add(request);
+          return;
+        }
+        if (everyRecord) {
+          await reply
+            .code(409)
+            .send(apiError("workspace_exists", "A workspace with this id already exists."));
+          return reply;
+        }
+      }
     }
-    if (await isAssigned(recordAccessFor(caller.tenantId), caller.memberId, workspaceId)) return;
-    const creating = request.method === "PUT" && request.routeOptions.url === createRoute;
-    if (creating && !(await exists(workspaceId))) return;
     await reply.code(404).send(apiError("not_found", "No such workspace."));
     return reply;
   });
 
-  // Assigned before the response leaves, so the creator reaches the record from their next call.
+  // A creator whose request did not create the record gives the assignment back.
   app.addHook("onSend", async (request, reply, payload) => {
     const { caller } = request;
     const workspaceId = workspaceIdOf(request);
     if (
+      claims.has(request) &&
       caller?.kind === "member" &&
       workspaceId !== undefined &&
-      request.method === "PUT" &&
-      request.routeOptions.url === createRoute &&
-      reply.statusCode === 201
+      reply.statusCode !== 201
     ) {
-      await recordAccessFor(caller.tenantId).assignMember({
+      await recordAccessFor(caller.tenantId).unassignMember({
         workspaceId,
         memberId: caller.memberId,
       });
