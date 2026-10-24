@@ -29,6 +29,12 @@ export interface KnowledgeBaseOwners {
   ownerOf(knowledgeBaseId: string): Promise<string | undefined>;
   /** The bases the records own, by id in ascending order. */
   basesOwnedBy(workspaceIds: readonly string[]): Promise<readonly string[]>;
+  /**
+   * Deletes a base that has no owner, no sources and is not the default, so a base created for a
+   * record is not left unreachable when recording its owner failed. Returns whether it deleted
+   * the base; an owned, populated or unknown base is left as it is.
+   */
+  removeUnowned(knowledgeBaseId: string): Promise<boolean>;
 }
 
 export type KnowledgeBaseOwnersErrorCode =

@@ -235,7 +235,8 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - Each tenant's `knowledgeBaseOwners` port records the one candidate record
   that owns each knowledge base, behind `KnowledgeBaseOwners` from
   `@draft-loop/storage/knowledge-base-owners`. An owner is set once, and goes
-  with its base.
+  with its base. When the API cannot record the owner of a base it just
+  created, `removeUnowned` deletes the base, so none is left unreachable.
 - `packages/storage-gcs` passes the `blobs` group, which the filesystem
   implementation also runs (ADR 0011, D3):
   - a blob's location is its full object key, and every operation refuses a

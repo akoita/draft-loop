@@ -124,4 +124,27 @@ describe.runIf(connectionString !== undefined)("Postgres knowledge base owners",
       await expect(south.ownerOf("kb-1")).resolves.toBe("record-9");
     });
   });
+
+  it("removes only a base that has no owner", async () => {
+    await withTenancy(async ({ tenancy, createBase }) => {
+      const tenant = tenancy.forTenant("org-north");
+      for (const id of ["kb-orphan", "kb-owned"]) await createBase("org-north", id);
+      await createBase("org-south", "kb-orphan");
+      await tenant.knowledgeBaseOwners.setOwner({
+        knowledgeBaseId: "kb-owned",
+        workspaceId: "record-1",
+      });
+
+      await expect(tenant.knowledgeBaseOwners.removeUnowned("kb-owned")).resolves.toBe(false);
+      await expect(tenant.knowledgeBaseOwners.removeUnowned("kb-never")).resolves.toBe(false);
+      await expect(tenant.knowledgeBaseOwners.removeUnowned("kb-orphan")).resolves.toBe(true);
+      await expect(tenant.knowledgeBaseOwners.removeUnowned("kb-orphan")).resolves.toBe(false);
+
+      const remaining = async (tenantId: string) =>
+        (await tenancy.forTenant(tenantId).listCandidateKnowledgeBases()).map(({ id }) => id);
+      expect(await remaining("org-north")).toEqual(["kb-owned"]);
+      // Another tenant's base of the same id is out of reach.
+      expect(await remaining("org-south")).toEqual(["kb-orphan"]);
+    });
+  });
 });

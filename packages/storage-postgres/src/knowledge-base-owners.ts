@@ -85,5 +85,19 @@ export function createKnowledgeBaseOwners(client: SqlSession): KnowledgeBaseOwne
       );
       return rows.map((row) => String(row.knowledge_base_id));
     },
+
+    removeUnowned: async (knowledgeBaseId) => {
+      const id = requireOwnedKnowledgeBaseId(knowledgeBaseId);
+      const rows = await client.query(
+        `DELETE FROM candidate_knowledge_bases AS base
+         WHERE base.id = $1 AND base.is_default = 0
+           AND NOT EXISTS (SELECT 1 FROM knowledge_base_owners WHERE knowledge_base_id = base.id)
+           AND NOT EXISTS (
+             SELECT 1 FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = base.id)
+         RETURNING base.id`,
+        [id],
+      );
+      return rows.length > 0;
+    },
   };
 }
