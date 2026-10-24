@@ -37,17 +37,24 @@ export {
   grantPostgresStorageAccess,
   migratePostgresStorage,
   openPostgresStorage,
+  openPostgresTenancy,
   type PostgresSchemaOptions,
   type PostgresStorage,
   type PostgresStorageOptions,
+  type PostgresTenancy,
+  type PostgresTenantStorage,
 } from "./postgres-storage.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
   createSqlClient,
+  createSqlPool,
   type SqlClient,
   type SqlClientOptions,
   type SqlExecutor,
+  type SqlPool,
+  type SqlPoolOptions,
   type SqlRow,
+  type SqlSession,
   type SqlTransactionOptions,
 } from "./sql-client.js";
 export type { MonthUsageRow } from "./usage.js";

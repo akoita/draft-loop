@@ -4,7 +4,7 @@ import {
   workspaceSettingNames,
 } from "@draft-loop/storage";
 import { StorageValidationError } from "@draft-loop/storage/errors";
-import type { SqlClient } from "./sql-client.js";
+import type { SqlSession } from "./sql-client.js";
 
 const maximumWorkspaceReferenceLength = 1_024;
 
@@ -26,7 +26,7 @@ function requireName(name: WorkspaceSettingName): WorkspaceSettingName {
  * Workspace settings as rows of one tenant, keyed by the driver's workspace reference and the
  * document name. A write is one upsert, so readers see the old or the new text.
  */
-export function createWorkspaceSettings(client: SqlClient): WorkspaceSettingsPort {
+export function createWorkspaceSettings(client: SqlSession): WorkspaceSettingsPort {
   return {
     read: async (workspace, name) => {
       const [row] = await client.query(

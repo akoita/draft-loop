@@ -21,7 +21,7 @@ import {
   vectorInspection,
 } from "@draft-loop/storage/knowledge-vector-rules";
 import { lockIndex } from "./lexical-index.js";
-import type { SqlClient, SqlExecutor } from "./sql-client.js";
+import type { SqlExecutor, SqlSession } from "./sql-client.js";
 
 const lexicalIndexSql =
   "SELECT manifest_checksum, scope_json, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = $1 AND knowledge_base_id = $2";
@@ -79,7 +79,7 @@ async function inspectScope(
  * same hits and scores. An approximate (HNSW) index would trade that exactness for speed, which a
  * single person's knowledge base does not need.
  */
-export function createVectorIndex(client: SqlClient): CandidateKnowledgeVectorStoragePort {
+export function createVectorIndex(client: SqlSession): CandidateKnowledgeVectorStoragePort {
   return {
     upsertCandidateKnowledgeVectors: async (input) => {
       const { storeId, knowledgeBaseId, identity, createdAt, entries } = prepareVectorUpsert(input);

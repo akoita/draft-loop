@@ -10,9 +10,12 @@ import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
 import {
   createSqlClient,
+  createSqlPool,
   requireSchemaName,
-  type SqlClient,
+  requireTenantId,
   type SqlClientOptions,
+  type SqlExecutor,
+  type SqlSession,
 } from "./sql-client.js";
 import { createUsageReads } from "./usage.js";
 import { createVectorIndex } from "./vector-index.js";
@@ -70,7 +73,7 @@ export async function grantPostgresStorageAccess(
  * Fails closed unless row-level security binds this connection and the schema is fully
  * migrated. A superuser or a BYPASSRLS role would see every tenant's rows.
  */
-async function requireTenantSafeConnection(client: SqlClient): Promise<void> {
+async function requireTenantSafeConnection(client: SqlExecutor): Promise<void> {
   const [role] = await client.query(
     "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user",
   );
@@ -84,18 +87,8 @@ async function requireTenantSafeConnection(client: SqlClient): Promise<void> {
   }
 }
 
-/**
- * Opens one tenant's view of the Postgres storage ports. Every transaction sets the tenant, so
- * row-level security confines reads and writes to that tenant's rows (ADR 0011, D3).
- */
-export async function openPostgresStorage(options: PostgresStorageOptions) {
-  const client = createSqlClient(options);
-  try {
-    await requireTenantSafeConnection(client);
-  } catch (error) {
-    await client.close();
-    throw error;
-  }
+/** One tenant's storage ports over a session that sets the tenant in every transaction. */
+function tenantStorage(client: SqlSession) {
   return {
     ...createWorkspaceRecords(client),
     ...createRunHistory(client),
@@ -114,8 +107,57 @@ export async function openPostgresStorage(options: PostgresStorageOptions) {
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>
       listAuditEventRows(client, workspaceId),
     auditEvents: createAuditEventReads(client),
-    close: () => client.close(),
   };
+}
+
+/** One tenant's storage ports, borrowed from a shared pool: they have no close. */
+export type PostgresTenantStorage = ReturnType<typeof tenantStorage>;
+
+/** One connection pool that hands out any tenant's storage ports on demand. */
+export interface PostgresTenancy {
+  /**
+   * Returns the tenant's ports over the shared pool. Every transaction sets the tenant first,
+   * so row-level security confines its reads and writes to that tenant's rows.
+   */
+  readonly forTenant: (tenantId: string) => PostgresTenantStorage;
+  /** Closes the shared pool, and with it every tenant's ports. */
+  readonly close: () => Promise<void>;
+}
+
+/**
+ * Opens one pool that serves many tenants (ADR 0011, D3). The pool never opens more than its
+ * maximum connections however many tenants it serves, since a tenant is set per transaction,
+ * not per connection.
+ */
+export async function openPostgresTenancy(
+  options: PostgresSchemaOptions,
+): Promise<PostgresTenancy> {
+  const pool = createSqlPool({
+    connectionString: options.connectionString,
+    ...(options.schema === undefined ? {} : { schema: options.schema }),
+    ...(options.maxConnections === undefined ? {} : { maxConnections: options.maxConnections }),
+  });
+  try {
+    await requireTenantSafeConnection(pool);
+  } catch (error) {
+    await pool.close();
+    throw error;
+  }
+  return {
+    forTenant: (tenantId) => tenantStorage(pool.forTenant(tenantId)),
+    close: pool.close,
+  };
+}
+
+/**
+ * Opens one tenant's view of the Postgres storage ports over a pool of its own, which `close`
+ * closes. Every transaction sets the tenant, so row-level security confines reads and writes to
+ * that tenant's rows (ADR 0011, D3).
+ */
+export async function openPostgresStorage(options: PostgresStorageOptions) {
+  const tenantId = requireTenantId(options.tenantId);
+  const tenancy = await openPostgresTenancy(options);
+  return { ...tenancy.forTenant(tenantId), close: tenancy.close };
 }
 
 export type PostgresStorage = Awaited<ReturnType<typeof openPostgresStorage>>;

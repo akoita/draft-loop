@@ -2,11 +2,11 @@ import type { BlobStoragePort } from "@draft-loop/storage";
 import { StorageValidationError } from "@draft-loop/storage/errors";
 import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 import { runOnlyCandidateKnowledgeStore } from "@draft-loop/storage/run-knowledge-store";
-import type { PostgresStorage } from "./postgres-storage.js";
+import type { PostgresTenantStorage } from "./postgres-storage.js";
 
 export interface PostgresCandidateKnowledgeStoreOptions {
   /** One tenant's open storage. The store borrows it: closing the store leaves it open. */
-  readonly storage: PostgresStorage;
+  readonly storage: PostgresTenantStorage;
   /** Where managed source bytes live, such as the tenant's Cloud Storage prefix. */
   readonly blobs: BlobStoragePort;
   readonly storeId: string;

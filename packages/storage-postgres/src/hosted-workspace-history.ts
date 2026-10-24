@@ -1,6 +1,6 @@
 import type { WorkspaceHistoryStorage } from "@draft-loop/storage";
 import { StorageUnavailableError } from "@draft-loop/storage/errors";
-import type { PostgresStorage } from "./postgres-storage.js";
+import type { PostgresTenantStorage } from "./postgres-storage.js";
 
 function unavailable(operation: string): () => Promise<never> {
   return () =>
@@ -16,7 +16,7 @@ function unavailable(operation: string): () => Promise<never> {
  * their evidence from candidate knowledge bases. Semantic retrieval
  * traces refuse until hosted semantic retrieval exists.
  */
-export function hostedWorkspaceHistory(storage: PostgresStorage): WorkspaceHistoryStorage {
+export function hostedWorkspaceHistory(storage: PostgresTenantStorage): WorkspaceHistoryStorage {
   return {
     ...storage,
     close: async () => undefined,

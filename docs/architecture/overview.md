@@ -160,8 +160,12 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
-  - a store opens for one tenant, and each transaction sets
-    `draft_loop.tenant_id`, which fills `tenant_id` on insert;
+  - one pool serves many tenants: `openPostgresTenancy` hands out a tenant's
+    ports with `forTenant`, and each transaction sets the transaction-local
+    `draft_loop.tenant_id`, which fills `tenant_id` on insert, so the pool
+    never grows with the number of tenants;
+  - tenant ports borrow the pool and have no close; the tenancy closes it.
+    `openPostgresStorage` opens one tenant over a pool of its own;
   - forced row-level security compares that setting on every read and write,
     and the store refuses to open as a superuser or `BYPASSRLS` role;
   - migrations run separately as the schema owner (`migratePostgresStorage`),

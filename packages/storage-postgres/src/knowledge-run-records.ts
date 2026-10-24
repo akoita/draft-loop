@@ -23,7 +23,7 @@ import {
   sourceSensitivityRuleColumns,
   sourceSensitivityRuleVersionFromRow,
 } from "@draft-loop/storage/source-sensitivity-rules";
-import type { SqlClient, SqlExecutor } from "./sql-client.js";
+import type { SqlExecutor, SqlSession } from "./sql-client.js";
 
 export interface ManagedCandidateKnowledgeSourceVersionInput {
   readonly knowledgeBaseId: string;
@@ -190,7 +190,7 @@ async function readiness(
 
 const sensitivityTable = "candidate_knowledge_source_sensitivity_rule_versions";
 
-export function createKnowledgeRunRecords(client: SqlClient): CandidateKnowledgeRunRecords {
+export function createKnowledgeRunRecords(client: SqlSession): CandidateKnowledgeRunRecords {
   return {
     createCandidateKnowledgeStore: async (descriptor) => {
       const id = requireId(descriptor.id, "candidate knowledge store id");

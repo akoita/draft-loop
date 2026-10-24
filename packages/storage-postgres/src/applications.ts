@@ -13,7 +13,7 @@ import {
 } from "@draft-loop/storage/application-store";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
 import { appendAuditEventRow } from "./audit-trail.js";
-import type { SqlClient, SqlExecutor, SqlRow } from "./sql-client.js";
+import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
 type BindingTable = "application_run_bindings" | "application_brief_bindings";
 type BindingColumn = "run_id" | "brief_id";
@@ -74,7 +74,7 @@ async function readChosenRun(
  * briefs are bound by immutable rows, and an unbound one belongs to the derived default
  * application. Text is ordered with the "C" collation so lists match SQLite's byte order.
  */
-export function createApplications(client: SqlClient): ApplicationStoragePort {
+export function createApplications(client: SqlSession): ApplicationStoragePort {
   const bind = async (
     table: BindingTable,
     column: BindingColumn,

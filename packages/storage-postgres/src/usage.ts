@@ -1,4 +1,4 @@
-import type { SqlClient } from "./sql-client.js";
+import type { SqlSession } from "./sql-client.js";
 
 /** One company, model and route's completed calls in a month: counts and amounts only. */
 export interface MonthUsageRow {
@@ -22,7 +22,7 @@ const applicationPlanEventType = "run.application-plan";
  * step whose calls are not executions, from each run's latest plan event. Row-level security confines the
  * sums to the tenant the storage was opened for (ADR 0011, D3).
  */
-export function createUsageReads(client: SqlClient) {
+export function createUsageReads(client: SqlSession) {
   return {
     /** `month` is `YYYY-MM`; calls count in the UTC month they completed in. */
     monthUsage: async (month: string): Promise<readonly MonthUsageRow[]> => {
