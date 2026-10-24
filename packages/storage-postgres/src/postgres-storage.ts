@@ -6,6 +6,8 @@ import { createConsentLedger } from "./consent-ledger.js";
 import { consentLedgerGrant } from "./consent-ledger-migration.js";
 import { createContentScreening } from "./content-screening.js";
 import { contentScreeningGrants } from "./content-screening-migration.js";
+import { createCreditLedger } from "./credit-ledger.js";
+import { creditLedgerGrants } from "./credit-ledger-migration.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
@@ -81,6 +83,7 @@ export async function grantPostgresStorageAccess(
       await executor.query(consentLedgerGrant(schema, role));
       for (const grant of contentScreeningGrants(schema, role)) await executor.query(grant);
       for (const grant of organisationPlanGrants(schema, role)) await executor.query(grant);
+      for (const grant of creditLedgerGrants(schema, role)) await executor.query(grant);
       for (const grant of recordErasureGrants(schema, role)) await executor.query(grant);
       await executor.query(organisationErasureGrant(schema, role));
     });
@@ -127,6 +130,7 @@ function tenantStorage(client: SqlSession) {
     recordErasure: createCandidateRecordErasure(client),
     organisationErasure: createOrganisationErasure(client),
     organisationPlans: createOrganisationPlans(client),
+    creditLedger: createCreditLedger(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),
