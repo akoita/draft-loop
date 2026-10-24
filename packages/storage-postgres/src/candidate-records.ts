@@ -117,7 +117,8 @@ export function createCandidateRecordAccess(client: SqlSession): CandidateRecord
     },
 
     // A record is created through the API as the hosted workspace reference's configuration,
-    // `/tenants/<tenant>/workspaces/<id>`; its `workspaces` history row comes later, if ever.
+    // `/tenants/<tenant>/workspaces/<id>`; its `workspaces` history row comes later, if ever. A
+    // record closed for erasure is left out: it is gone for every caller.
     listRecords: async () => {
       const rows = await client.query(
         `SELECT substr(workspace_ref, length(prefix) + 1) AS workspace_id
@@ -126,6 +127,10 @@ export function createCandidateRecordAccess(client: SqlSession): CandidateRecord
              || '/workspaces/' AS prefix) AS reference
          WHERE name = 'workspace.json' AND starts_with(workspace_ref, prefix)
            AND strpos(substr(workspace_ref, length(prefix) + 1), '/') = 0
+           AND NOT EXISTS (
+             SELECT 1 FROM candidate_record_erasures erasure
+             WHERE erasure.workspace_id = substr(workspace_ref, length(prefix) + 1)
+           )
          ORDER BY workspace_id`,
       );
       return rows.map((row) => String(row.workspace_id));
