@@ -29,14 +29,21 @@ The API serves the owner's web screen (`apps/web`) at
 1. **Workspace:** create the `owner` workspace. Tick fixture mode on the local
    stack, since it makes no provider calls. Optionally paste your writing
    policy; each save is a new version that the next runs follow.
-2. **Sources:** create a knowledge base, upload PDF, DOCX, Markdown or text
-   files, and tick the bases runs use. Under each base, mark private Markdown
-   sections by heading as never-share or sensitive.
+2. **Sources:** record the basis for storing the candidate's material, create
+   a knowledge base, upload PDF, DOCX, Markdown or text files, and tick the
+   bases runs use. Under each base, mark private Markdown sections by heading
+   as never-share or sensitive.
 3. **Job brief:** paste a job post, check and edit what was read, and mark the
    version reviewed.
-4. **Run:** start a run and follow it; the worker drafts it to your review.
+4. **Run:** record the candidate's consent to send material to the
+   workspace's model providers, then start a run and follow it; the worker
+   drafts it to your review.
 5. **Review:** decide the findings with their evidence, edit blocks, then
    approve or ask for another round, and export and download the CV.
+
+Each consent panel shows the current state and its history, and withdraws a
+grant. A refused upload or run that lacks a consent points to the step that
+records it.
 
 The screen asks the API's public `GET /v1/auth/config` how to sign in. In
 `oidc` mode (`DRAFT_LOOP_AUTH_MODE=oidc`) it has no token field: **Sign in**

@@ -80,4 +80,13 @@ describe("run screen", () => {
     expect(html).toContain("Resume");
     expect(html).toContain("author: anthropic-api (fallback from vertex-ai)");
   });
+
+  it("asks for the transmission consent above the start button", () => {
+    const html = renderToStaticMarkup(
+      <RunPanel {...props} run={undefined} consent={<p>Transmission consent</p>} />,
+    );
+
+    expect(html.indexOf("Transmission consent")).toBeGreaterThan(-1);
+    expect(html.indexOf("Transmission consent")).toBeLessThan(html.indexOf("Start a run"));
+  });
 });

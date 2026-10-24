@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
+import { ConsentStep } from "./consent.js";
 import { SensitivityRulesStep } from "./sensitivity.js";
 import {
   acceptedSourceFiles,
@@ -156,6 +157,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
       }
       onApproveCombination={setCombinationApproved}
       onSaveSelection={() => void saveSelection()}
+      consent={<ConsentStep client={client} kind="material-storage" workspace={workspace} />}
       baseDetails={(knowledgeBaseId) => (
         <SensitivityRulesStep client={client} knowledgeBaseId={knowledgeBaseId} />
       )}
@@ -188,6 +190,8 @@ export interface SourcesPanelProps {
   readonly onToggle: (knowledgeBaseId: string, selected: boolean) => void;
   readonly onApproveCombination: (approved: boolean) => void;
   readonly onSaveSelection: () => void;
+  /** The storage consent, asked before the first upload. */
+  readonly consent?: ReactNode;
   /** What else to show under a knowledge base, such as its sensitivity rules. */
   readonly baseDetails?: (knowledgeBaseId: string) => ReactNode;
 }
@@ -213,6 +217,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
         Upload your career material: CVs, notes and records. Files are stored for your runs and read
         by the worker, never by the API.
       </p>
+      {props.consent}
       <Problems messages={props.messages} />
       {bases.length === 0 ? <p>No knowledge base yet. Create one for your sources.</p> : null}
       {bases.map((base) => (

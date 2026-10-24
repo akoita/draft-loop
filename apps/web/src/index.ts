@@ -3,6 +3,7 @@
 export * from "./api-client.js";
 export * from "./applications.js";
 export * from "./brief-model.js";
+export * from "./consent-model.js";
 export * from "./finish-model.js";
 export * from "./policy-model.js";
 export * from "./records-model.js";

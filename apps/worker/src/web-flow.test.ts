@@ -21,6 +21,8 @@ import {
   approveRequest,
   briefEdit,
   briefPatchBody,
+  consentHistory,
+  consentSummary,
   createApiClient,
   createBriefBody,
   currentRunId,
@@ -28,6 +30,8 @@ import {
   defaultWorkspaceForm,
   exportFileName,
   exportRequestBody,
+  grantRequest,
+  isGranted,
   ownerWorkspaceId,
   readDefaultApplication,
   reviewSections,
@@ -36,6 +40,8 @@ import {
   sourceMediaType,
   startProblem,
   startRunBody,
+  withdrawRequest,
+  workspaceProviders,
   workspaceRequestBody,
 } from "@draft-loop/web";
 import pg from "pg";
@@ -133,6 +139,14 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       });
       expect(created).toMatchObject({ fixtureMode: true });
 
+      // Sources step: the storage consent before the first upload.
+      const storageGrant = grantRequest("material-storage", { basis: "contract" });
+      if ("problem" in storageGrant) throw new Error(storageGrant.problem);
+      await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+        body: storageGrant.body,
+      });
+
       // Sources step: a base, one uploaded file, and the selection.
       const base = await client.call("POST /v1/knowledge-bases", {
         body: { displayName: "Career material" },
@@ -188,6 +202,26 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
         { path: briefPath, body: { expectedVersion: edited.brief.version } },
       );
       expect(startProblem(reviewed.brief)).toBeUndefined();
+
+      // Run step: the transmission consent names the workspace's providers before the first run.
+      const transmissionGrant = grantRequest("provider-transmission", {
+        basis: "candidate-consent",
+        providers: workspaceProviders(created),
+        confirmed: true,
+        note: "Agreed by email.",
+      });
+      if ("problem" in transmissionGrant) throw new Error(transmissionGrant.problem);
+      expect(transmissionGrant.body.providers).toEqual(["anthropic", "openai"]);
+      await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+        body: transmissionGrant.body,
+      });
+      const consents = await client.call("GET /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+      });
+      expect(isGranted(consents, "material-storage")).toBe(true);
+      expect(isGranted(consents, "provider-transmission")).toBe(true);
+      expect(consentSummary(consents, "provider-transmission")).toContain("Anthropic and OpenAI");
 
       // Run step: start, let the worker draft, and stop polling at review.
       const begun = await client.call("POST /v1/workspaces/{workspaceId}/runs", {
@@ -266,6 +300,23 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       expect(bytes.byteLength).toBe(exported.sizeBytes);
       // A DOCX is a zip archive.
       expect(bytes.subarray(0, 2).toString("latin1")).toBe("PK");
+
+      // The member withdraws the transmission consent; the history keeps both entries.
+      const withdrawal = withdrawRequest("provider-transmission", consents);
+      if ("problem" in withdrawal) throw new Error(withdrawal.problem);
+      await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+        body: withdrawal.body,
+      });
+      const after = await client.call("GET /v1/workspaces/{workspaceId}/consents", {
+        path: workspace,
+      });
+      expect(isGranted(after, "provider-transmission")).toBe(false);
+      expect(isGranted(after, "material-storage")).toBe(true);
+      expect(consentHistory(after, "provider-transmission").map((entry) => entry.action)).toEqual([
+        "withdrawn",
+        "granted",
+      ]);
     } finally {
       await api.close();
       await storage.close();

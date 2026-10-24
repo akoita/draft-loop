@@ -1,4 +1,5 @@
 import type { Brief } from "./brief-model.js";
+import type { ConsentEntry, Consents } from "./consent-model.js";
 import type { RunReview } from "./review-model.js";
 import type { Run } from "./run-model.js";
 
@@ -146,4 +147,42 @@ export const syntheticReview: RunReview = {
   },
   approvalCheck: { applicationReady: false, blockers: ["One error finding is not resolved."] },
   candidateDirection: null,
+};
+
+const storageGrant: ConsentEntry = {
+  id: "consent-1",
+  kind: "material-storage",
+  action: "granted",
+  basis: "contract",
+  recordedBy: { kind: "member", memberId: "member-1" },
+  providers: [],
+  recordedAt: "2026-10-23T09:00:00.000Z",
+};
+
+const transmissionWithdrawal: ConsentEntry = {
+  id: "consent-3",
+  kind: "provider-transmission",
+  action: "withdrawn",
+  basis: "candidate-consent",
+  recordedBy: { kind: "member", memberId: "member-1" },
+  providers: [],
+  recordedAt: "2026-10-23T11:00:00.000Z",
+};
+
+/** A transmission grant recorded with the owner token. */
+export const syntheticTransmissionGrant: ConsentEntry = {
+  id: "consent-2",
+  kind: "provider-transmission",
+  action: "granted",
+  basis: "candidate-consent",
+  recordedBy: { kind: "owner" },
+  providers: ["anthropic", "openai"],
+  note: "Agreed by email.",
+  recordedAt: "2026-10-23T10:00:00.000Z",
+};
+
+/** A storage grant, then a transmission grant the candidate later withdrew. */
+export const syntheticConsents: Consents = {
+  current: { "material-storage": storageGrant, "provider-transmission": transmissionWithdrawal },
+  history: [storageGrant, syntheticTransmissionGrant, transmissionWithdrawal],
 };

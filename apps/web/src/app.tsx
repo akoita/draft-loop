@@ -185,6 +185,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
           <RunStep
             client={client}
             brief={brief}
+            workspace={workspace}
             onRun={setRun}
             onReview={() => setStep("review")}
           />
