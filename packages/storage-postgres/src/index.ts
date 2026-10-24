@@ -12,6 +12,23 @@ export {
 export { createConsentLedger } from "./consent-ledger.js";
 export { createContentScreening } from "./content-screening.js";
 export {
+  type CloseCreditReservationResult,
+  type CreditBalance,
+  type CreditClock,
+  type CreditGrant,
+  type CreditLedger,
+  CreditLedgerError,
+  type CreditLedgerErrorCode,
+  type CreditReservation,
+  type CreditReservationState,
+  type CreditRunCaps,
+  createCreditLedger,
+  type GrantCreditsInput,
+  type ReserveCreditsInput,
+  type ReserveCreditsResult,
+} from "./credit-ledger.js";
+export { startOfUtcDay } from "./credit-periods.js";
+export {
   type HostedApplicationPorts,
   type HostedApplicationPortsOptions,
   hostedApplicationPorts,

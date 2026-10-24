@@ -15,6 +15,8 @@ export const tenantWideTables = new Set([
   "organisation_members",
   "organisation_plans",
   "organisation_plan_history",
+  "credit_balances",
+  "credit_ledger",
   "candidate_knowledge_stores",
   "candidate_record_erasures",
 ]);
@@ -40,6 +42,18 @@ export async function seedTenant(admin: SqlClient, tenant: string): Promise<void
       [tenant, at],
     );
   }
+  await admin.query("INSERT INTO credit_balances (tenant_id) VALUES ($1)", [tenant]);
+  await admin.query(
+    `INSERT INTO credit_ledger (tenant_id, kind, amount, bucket, expires_at, period_start, created_at)
+     VALUES ($1, 'grant', 30, 'allowance', '2026-11-01', '2026-10-01', $2)`,
+    [tenant, at],
+  );
+  await admin.query(
+    `INSERT INTO credit_ledger (tenant_id, kind, amount, bucket, run_id, grant_sequence, estimate_version, period_start, created_at)
+     SELECT $1, 'reserve', 2, 'allowance', 'run-credit', sequence, 1, '2026-10-01', $2
+       FROM credit_ledger WHERE tenant_id = $1 AND kind = 'grant'`,
+    [tenant, at],
+  );
   await admin.query(
     "INSERT INTO candidate_knowledge_stores (tenant_id, id, created_at) VALUES ($1, 'knowledge', $2)",
     [tenant, at],

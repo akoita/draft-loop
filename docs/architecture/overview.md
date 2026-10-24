@@ -583,6 +583,15 @@ directory (ADR 0011, D6):
   organisation's tenant. Organisation erasure removes both tables; record
   erasure and the record archive leave them alone, since a plan is not candidate
   material.
+- Each organisation's credits (ADR 0011, D13) live in an append-only ledger,
+  `createCreditLedger` in `@draft-loop/storage-postgres`, reached as
+  `forTenant(organisationId).creditLedger`. Rows of kind `grant`, `reserve`,
+  `settle`, `refund` and `expire` hold positive amounts, and the balance is
+  summed from them. Every write first locks the organisation's balance row, so
+  reservations, run caps and the period roll cannot race. A reservation spends
+  the period's allowance first, then the operator grant that expires first;
+  a refund never revives expired credits. Organisation erasure removes both
+  tables.
 
 ### Intake screening
 
