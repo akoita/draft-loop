@@ -61,9 +61,10 @@ serves it with hot reload and forwards `/v1` to the API at
     and the run queue as the schema owner and grants the runtime role table
     access only;
   - `gcs-setup` creates the bucket `draft-loop-local`.
-- The API and the worker connect as `draft_loop_app`, serve one tenant,
-  `local`, and keep blobs in the emulator. Every credential in `compose.yaml`
-  is a fixed local-only value; the API's owner token is
+- The API and the worker connect as `draft_loop_app` and keep blobs in the
+  emulator. The API serves one tenant, `local`; the worker runs any tenant's
+  queued job in that tenant. Every credential in `compose.yaml` is a fixed
+  local-only value; the API's owner token is
   `local-stack-owner-token-not-a-secret`.
 - Data lives in the named volumes `postgres-data` and `gcs-data`.
 
@@ -101,7 +102,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_DATABASE_URL`               | API, worker    | The runtime role's connection                                   |
 | `DRAFT_LOOP_DATABASE_SCHEMA`            | all            | Storage schema, default `draft_loop`                            |
 | `DRAFT_LOOP_QUEUE_SCHEMA`               | all            | Run queue schema, default `draft_loop_queue`                    |
-| `DRAFT_LOOP_TENANT_ID`                  | API, worker    | The one tenant the deployment serves                            |
+| `DRAFT_LOOP_TENANT_ID`                  | API            | The one tenant the API serves; the worker takes each job's own  |
 | `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket                                        |
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters                |

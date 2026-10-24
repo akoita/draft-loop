@@ -155,8 +155,8 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
 - `hostedApplicationPorts` gives the hosted driver its ports over one
   tenant's Postgres and blob storage, and `hostedWorkspaceReference` and
   `hostedKnowledgeStoreReference` build the references it addresses. The API's
-  and the worker's entry points compose them at startup, with Cloud Storage and
-  the run queue; phase 1 serves one tenant per deployment.
+  entry point composes them at startup for the one tenant it serves. The
+  worker composes them per job, for the tenant the job names (see below).
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;
@@ -226,6 +226,11 @@ The hosted service starts runs through a queue rather than in the request
 - `apps/worker` claims a job, reads the run, and resumes it only when its
   state allows: a run the person paused, one awaiting approval, or one
   finished is left alone, so a duplicate or late job does nothing.
+- One worker serves every tenant. It opens one `openPostgresTenancy` pool and
+  one bucket at startup; for each job, `tenantServices` composes the
+  application over `forTenant(job.tenantId)` and that tenant's blob prefix.
+  Composition only wraps the shared pool and model routes, so nothing is
+  cached between jobs or carried from one tenant's job to another's.
 - A run paused on a provider usage limit is queued again for the reset time
   (15 minutes when the provider names none) and resumed then.
 - A run stopped by a provider rate limit is queued again after at least a
