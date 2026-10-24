@@ -62,7 +62,8 @@ describe("footerRunningRound", () => {
     const round = footerRunningRound(input(revising, { sentDirection: sent }));
     expect(round).toMatchObject({
       activity: `The author is revising version ${revising.artifact.version} for round 2.`,
-      execution: "revision · mistral/mistral-large-4 · attempt 1 · elapsed 113s · no run limit",
+      execution:
+        "revision · mistral/mistral-large-4 · attempt 1 · elapsed 1 min 53 s · no run limit",
       direction: "lead with tokenisation",
     });
     expect(round?.actions.map((action) => action.label)).toEqual(["Stop review"]);

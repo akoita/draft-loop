@@ -9,6 +9,7 @@
  */
 import type { JSX } from "react";
 
+import { formatElapsedDuration } from "./elapsed-duration.js";
 import { executionLimitText } from "./execution-limits.js";
 import type { DesktopReviewState, ReviewExecutionView } from "./model.js";
 import { reviewInProgress, runActivity } from "./review-run-status.js";
@@ -47,10 +48,10 @@ export interface FooterRunningRound {
   readonly onShowProgress: () => void;
 }
 
-/** "revision · mistral/mistral-large-4 · attempt 1 · elapsed 113s · no run limit". */
+/** "revision · mistral/mistral-large-4 · attempt 1 · elapsed 1 min 53 s · no run limit". */
 export function executionLine(execution: ReviewExecutionView): string | null {
   if (execution.step === null) return null;
-  return `${execution.step} · ${execution.provider}/${execution.model} · attempt ${execution.attempt} · elapsed ${Math.floor(execution.elapsedMs / 1_000)}s${executionLimitText(execution)}`;
+  return `${execution.step} · ${execution.provider}/${execution.model} · attempt ${execution.attempt} · elapsed ${formatElapsedDuration(execution.elapsedMs)}${executionLimitText(execution)}`;
 }
 
 export interface FooterRunningRoundInput {

@@ -77,7 +77,7 @@ describe("desktop trust-centered review", () => {
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 
     expect(html).toContain("Stop review");
-    expect(html).toContain("critic · openai/gpt-5 · attempt 1 · elapsed 4s · run limit in 55s");
+    expect(html).toContain("critic · openai/gpt-5 · attempt 1 · elapsed 4 s · run limit in 55s");
   });
 
   it("explains and offers recovery for an interrupted durable run", () => {
@@ -137,7 +137,7 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Starting review…");
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("Elapsed 4 seconds");
+    expect(html).toContain("Elapsed 4 s.");
     expect(html).toContain("Keep this window open");
     expect(html).not.toContain("author step");
     expect(html).not.toContain("critic step");
@@ -599,7 +599,7 @@ describe("desktop trust-centered review", () => {
     );
 
     expect(html).toContain('role="status" aria-live="polite"');
-    expect(html).toContain("Saving finding decision… Elapsed 2 seconds.");
+    expect(html).toContain("Saving finding decision… Elapsed 2 s.");
     for (const decision of ["Accept", "Reject", "Defer", "Override"]) {
       expect(html).toContain(`disabled="">${decision}</button>`);
     }
@@ -674,7 +674,7 @@ describe("desktop trust-centered review", () => {
       />,
     );
 
-    expect(html).toContain("Saving 2 finding decisions… Elapsed 3 seconds.");
+    expect(html).toContain("Saving 2 finding decisions… Elapsed 3 s.");
     for (const decision of ["Accept all", "Reject all", "Defer all"]) {
       expect(html).toContain(`disabled="">${decision}</button>`);
     }
@@ -1054,7 +1054,7 @@ describe("desktop trust-centered review", () => {
     );
 
     expect(html).toContain("Exporting Markdown…");
-    expect(html).toContain("Elapsed 3 seconds");
+    expect(html).toContain("Elapsed 3 s.");
     expect(html).toContain("Choose a destination in the Save As dialog");
     expect(html).toContain("the approved artifact will be written after you confirm.");
     expect(html).not.toContain("while the approved artifact is written");

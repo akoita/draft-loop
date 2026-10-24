@@ -16,6 +16,7 @@ import {
   type ApprovalReadinessBlocker,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
+import { formatElapsedDuration } from "./elapsed-duration.js";
 import {
   type ExportTemplate,
   exportTemplateDescriptions,
@@ -566,9 +567,8 @@ export function ReviewFooter({
             {exportAction.pendingSeconds === null ? null : (
               <p className="pending-action-status" role="status" aria-live="polite">
                 Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
-                {exportAction.pendingSeconds} second
-                {exportAction.pendingSeconds === 1 ? "" : "s"}. Choose a destination in the Save As
-                dialog; the approved artifact will be written after you confirm.
+                {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}. Choose a destination
+                in the Save As dialog; the approved artifact will be written after you confirm.
               </p>
             )}
           </>
