@@ -1,4 +1,9 @@
 import { isAbsolute } from "node:path";
+import {
+  type DeploymentAuthMode,
+  DeploymentAuthModeConfigError,
+  readDeploymentAuthMode,
+} from "@draft-loop/application";
 
 import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
@@ -70,15 +75,22 @@ function clientIdentifier(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
+function authMode(env: NodeJS.ProcessEnv): DeploymentAuthMode {
+  try {
+    return readDeploymentAuthMode(env);
+  } catch (error) {
+    if (error instanceof DeploymentAuthModeConfigError) throw new ApiConfigError(error.message);
+    throw error;
+  }
+}
+
 /**
  * Reads how requests are authenticated. Sign-in mode names the identity provider by its issuer;
  * its keys are discovered from the issuer unless `DRAFT_LOOP_OIDC_JWKS_URL` names them. Provider
  * addresses must be https, except on the local stack, which sets `DRAFT_LOOP_OIDC_ALLOW_HTTP=1`.
  */
 function readAuthConfig(env: NodeJS.ProcessEnv): ApiAuthConfig {
-  const mode = env.DRAFT_LOOP_AUTH_MODE ?? "";
-  if (mode === "" || mode === "owner") return { mode: "owner" };
-  if (mode !== "oidc") throw new ApiConfigError("DRAFT_LOOP_AUTH_MODE must be owner or oidc.");
+  if (authMode(env) === "owner") return { mode: "owner" };
   const allowHttpText = env.DRAFT_LOOP_OIDC_ALLOW_HTTP ?? "";
   if (!["", "0", "1"].includes(allowHttpText)) {
     throw new ApiConfigError("DRAFT_LOOP_OIDC_ALLOW_HTTP must be 1 or unset.");

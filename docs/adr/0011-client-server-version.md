@@ -279,7 +279,7 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   the basis for storing material and the candidate's consent to send it to
   the named providers. In sign-in mode the API refuses an upload or a run
   without the matching current grant, and a worker with
-  `DRAFT_LOOP_REQUIRE_CONSENT=true` pauses a queued run, before any provider
+  `DRAFT_LOOP_AUTH_MODE=oidc` pauses a queued run, before any provider
   call, once consent is withdrawn. The web screen records, shows and
   withdraws both. The candidate's own confirmation and reviewer sharing come
   with those roles.

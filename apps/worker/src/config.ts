@@ -1,4 +1,10 @@
-import { type RunBudgetCeiling, readRunBudgetCeiling } from "@draft-loop/application";
+import {
+  type DeploymentAuthMode,
+  DeploymentAuthModeConfigError,
+  type RunBudgetCeiling,
+  readDeploymentAuthMode,
+  readRunBudgetCeiling,
+} from "@draft-loop/application";
 import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
 import { WorkerConfigError } from "./config-error.js";
@@ -17,9 +23,9 @@ export interface WorkerConfig {
   /** Whether runs may send approved material to providers; off unless the deployment says so. */
   readonly allowProviderData: boolean;
   /**
-   * Whether each job needs its candidate record's current provider transmission consent, as in a
-   * sign-in deployment; `allowProviderData` stays a ceiling above it. Off unless the deployment
-   * says so.
+   * Whether each job needs its candidate record's current provider transmission consent;
+   * `allowProviderData` stays a ceiling above it. Always on when `DRAFT_LOOP_AUTH_MODE` is `oidc`;
+   * in owner mode, off unless `DRAFT_LOOP_REQUIRE_CONSENT` says so.
    */
   readonly requireConsent: boolean;
   /** The deployment's limit per run, re-checked before each run executes. */
@@ -68,6 +74,33 @@ function flag(env: NodeJS.ProcessEnv, name: string): boolean {
   return value === "true";
 }
 
+function authMode(env: NodeJS.ProcessEnv): DeploymentAuthMode {
+  try {
+    return readDeploymentAuthMode(env);
+  } catch (error) {
+    if (error instanceof DeploymentAuthModeConfigError) throw new WorkerConfigError(error.message);
+    throw error;
+  }
+}
+
+/**
+ * A sign-in deployment always checks consent, so a worker setting cannot switch the check off: an
+ * explicit `false` beside `oidc` is refused at startup rather than ignored. In owner mode the
+ * setting keeps its meaning, off by default, because the local stack's one worker also serves its
+ * owner-mode API, whose runs carry no consent.
+ */
+function consentRequired(env: NodeJS.ProcessEnv): boolean {
+  const name = "DRAFT_LOOP_REQUIRE_CONSENT";
+  const explicit = env[name] === undefined ? undefined : flag(env, name);
+  if (authMode(env) !== "oidc") return explicit ?? false;
+  if (explicit === false) {
+    throw new WorkerConfigError(
+      `${name}=false is not allowed when DRAFT_LOOP_AUTH_MODE is oidc; remove it, as a sign-in deployment always checks consent.`,
+    );
+  }
+  return true;
+}
+
 function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
   const value = env[name] ?? "";
   return value === "" ? undefined : value;
@@ -81,7 +114,7 @@ function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
  */
 export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const allow = flag(env, "DRAFT_LOOP_ALLOW_PROVIDER_DATA");
-  const requireConsent = flag(env, "DRAFT_LOOP_REQUIRE_CONSENT");
+  const requireConsent = consentRequired(env);
   const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
   const modelGateway = readModelGatewayConfig(env);

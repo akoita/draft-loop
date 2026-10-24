@@ -519,8 +519,9 @@ directory (ADR 0011, D6):
   starting a run, a revision or a resume needs a `provider-transmission` grant
   naming every company the workspace's author and critic use. Otherwise it
   answers 409 `storage_consent_required` or `transmission_consent_required`.
-  With `DRAFT_LOOP_REQUIRE_CONSENT=true` the worker checks again as it claims
-  each job and pauses the run, without a provider call, when consent is gone.
+  A worker with `DRAFT_LOOP_AUTH_MODE=oidc` always checks again as it claims
+  each job (in owner mode `DRAFT_LOOP_REQUIRE_CONSENT=true` opts in) and
+  pauses the run, without a provider call, when consent is gone.
   `DRAFT_LOOP_ALLOW_PROVIDER_DATA` stays a ceiling above consent.
 - `GET /v1/workspaces/:workspaceId/archive` downloads everything held about
   a candidate record as a zip in the [record archive v1](../reference/record-archive.md)
