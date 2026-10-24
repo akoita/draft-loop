@@ -162,7 +162,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters; also the operator's credential, the only one `/v1/operator/*` routes accept in either mode |
 | `PORT`                                  | API            | Listening port, default 8080                                    |
-| `DRAFT_LOOP_AUTH_MODE`                  | API            | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens, resolves each to an organisation member through the tenant directory, and keeps the owner token for operators |
+| `DRAFT_LOOP_AUTH_MODE`                  | API, worker    | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens, resolves each to an organisation member through the tenant directory, and keeps the owner token for operators |
 | `DRAFT_LOOP_OIDC_ISSUER`                | API            | In `oidc` mode, the provider's issuer, an https URL matched exactly |
 | `DRAFT_LOOP_OIDC_AUDIENCE`              | API            | In `oidc` mode, the audience the API's tokens carry             |
 | `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`         | API            | In `oidc` mode, the web screen's public client id               |
@@ -172,7 +172,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
-| `DRAFT_LOOP_REQUIRE_CONSENT`            | worker         | `true`, for a sign-in deployment, checks each job's candidate record's provider transmission consent before any provider call and pauses the run without it; default `false`. The stack's one worker also serves the owner-mode API, so it stays off there |
+| `DRAFT_LOOP_REQUIRE_CONSENT`            | worker         | In `owner` mode, `true` checks each job's candidate record's provider transmission consent before any provider call and pauses the run without it; default `false`. Under `DRAFT_LOOP_AUTH_MODE=oidc` the check is always on and `false` is a startup error. The stack's one worker also serves the owner-mode API, so it runs in `owner` mode with the check off |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
 | `DRAFT_LOOP_WORKER_MODE`                | worker         | `serve` (the default) keeps claiming jobs; `drain` exits once the queue stays empty, for a Cloud Run job |
 | `DRAFT_LOOP_WORKER_IDLE_MS`             | worker         | In drain mode, how long the queue stays empty before the worker exits, default 60000 |

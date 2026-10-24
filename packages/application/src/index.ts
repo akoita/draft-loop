@@ -862,6 +862,7 @@ export {
   defaultWritingPolicyContent,
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
+export * from "./deployment-auth-mode.js";
 export * from "./embedding-model-install.js";
 export {
   type EvidenceModePreview,

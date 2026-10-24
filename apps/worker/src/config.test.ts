@@ -30,6 +30,33 @@ describe("readWorkerConfig", () => {
     );
   });
 
+  it("always checks consent in sign-in mode, and refuses to have it switched off", () => {
+    const oidc = { ...env, DRAFT_LOOP_AUTH_MODE: "oidc" };
+    expect(readWorkerConfig(oidc).requireConsent).toBe(true);
+    expect(readWorkerConfig({ ...oidc, DRAFT_LOOP_REQUIRE_CONSENT: "true" }).requireConsent).toBe(
+      true,
+    );
+    expect(() => readWorkerConfig({ ...oidc, DRAFT_LOOP_REQUIRE_CONSENT: "false" })).toThrow(
+      WorkerConfigError,
+    );
+    expect(() => readWorkerConfig({ ...oidc, DRAFT_LOOP_REQUIRE_CONSENT: "1" })).toThrow(
+      WorkerConfigError,
+    );
+  });
+
+  it("keeps the consent setting's default and meaning in owner mode", () => {
+    for (const mode of ["", "owner"]) {
+      const owner = { ...env, DRAFT_LOOP_AUTH_MODE: mode };
+      expect(readWorkerConfig(owner).requireConsent).toBe(false);
+      expect(
+        readWorkerConfig({ ...owner, DRAFT_LOOP_REQUIRE_CONSENT: "false" }).requireConsent,
+      ).toBe(false);
+      expect(
+        readWorkerConfig({ ...owner, DRAFT_LOOP_REQUIRE_CONSENT: "true" }).requireConsent,
+      ).toBe(true);
+    }
+  });
+
   it("serves every tenant, so a tenant id in the shared environment changes nothing", () => {
     expect(readWorkerConfig({ ...env, DRAFT_LOOP_TENANT_ID: "owner" })).toEqual(
       readWorkerConfig(env),
@@ -44,6 +71,7 @@ describe("readWorkerConfig", () => {
     ["with an unclear provider-data setting", { DRAFT_LOOP_ALLOW_PROVIDER_DATA: "yes" }],
     ["with an unclear consent setting", { DRAFT_LOOP_REQUIRE_CONSENT: "1" }],
     ["with an unknown mode", { DRAFT_LOOP_WORKER_MODE: "batch" }],
+    ["with an unknown sign-in mode", { DRAFT_LOOP_AUTH_MODE: "password" }],
     [
       "with too short an idle time",
       { DRAFT_LOOP_WORKER_MODE: "drain", DRAFT_LOOP_WORKER_IDLE_MS: "10" },
