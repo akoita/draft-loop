@@ -60,7 +60,7 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("$2/1M input · $10/1M output");
     expect(html).toContain("Official Anthropic model/pricing documentation");
     expect(html).toContain("Official OpenAI model/pricing documentation");
-    expect(html).toContain("up to 200,000 input tokens per call");
+    expect(html).toContain("up to 272,000 input tokens per call");
     expect(html).toContain("Formula: calls ×");
     expect(html).toContain("Combined scenario estimate</dt><dd>$0.150000");
     expect(html).toContain("Actual costs may differ");

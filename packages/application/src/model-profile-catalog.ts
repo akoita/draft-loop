@@ -84,6 +84,8 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
       cacheReadUsdPerMillion: 0.2,
       cacheWriteUsdPerMillion: 8,
     },
+    // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
+    maxInputTokens: 1000000,
     reviewedAt: "2026-10-23",
   },
   // OpenAI reports cache writes on every call that fills its prompt cache, so a critic without a
@@ -108,6 +110,8 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
       cacheReadUsdPerMillion: 0.2,
       cacheWriteUsdPerMillion: 4,
     },
+    // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
+    maxInputTokens: 1000000,
     reviewedAt: "2026-10-23",
   },
   "economy-anthropic-author@2": {
