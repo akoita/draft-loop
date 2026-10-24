@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
+  createPostgresTenantDirectory,
   createSqlClient,
   grantPostgresStorageAccess,
   migratePostgresStorage,
   openPostgresTenancy,
   type PostgresTenancy,
+  type PostgresTenantDirectory,
 } from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -48,6 +50,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
   const queued: { tenantId: string; workspaceId: string; runId: string }[] = [];
   const tokens: Record<string, string> = {};
   let tenancy: PostgresTenancy;
+  let directory: PostgresTenantDirectory;
   let blobRoot: string;
   let app: FastifyInstance;
 
@@ -81,12 +84,24 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     await migratePostgresStorage({ connectionString: url, schema });
     await grantPostgresStorageAccess({ connectionString: url, schema }, runtimeRole);
     tenancy = await openPostgresTenancy({ connectionString: runtimeUrl(url), schema });
+    // Each person owns their organisation, so record access never confines them.
+    directory = await createPostgresTenantDirectory({ connectionString: runtimeUrl(url), schema });
+    for (const [subject, organisationId] of Object.entries(members)) {
+      await directory.createOrganisation({
+        organisationId,
+        name: `Organisation ${organisationId}`,
+        firstOwnerEmail: `${subject}@example.test`,
+      });
+    }
     blobRoot = await mkdtemp(join(tmpdir(), "draft-loop-tenants-"));
 
     const signingKey = await generateKeyPair("ES256");
     const publicJwk = { ...(await exportJWK(signingKey.publicKey)), kid: "key-1", alg: "ES256" };
     for (const subject of Object.keys(members)) {
-      tokens[subject] = await new SignJWT({ email: `${subject}@example.test` })
+      tokens[subject] = await new SignJWT({
+        email: `${subject}@example.test`,
+        email_verified: true,
+      })
         .setProtectedHeader({ alg: "ES256", kid: "key-1" })
         .setIssuer(issuer)
         .setAudience(audience)
@@ -105,15 +120,11 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
         webClientId: "draft-loop-web",
         allowHttp: false,
         keys: createLocalJWKSet({ keys: [publicJwk] }),
-        resolveSignIn: async ({ subject }) => {
-          const tenantId = members[subject];
-          return tenantId === undefined
-            ? undefined
-            : { tenantId, memberId: `${subject}-member`, role: "owner" };
-        },
+        resolveSignIn: directory.resolveSignIn,
       },
       tenants: {
         budgetCeiling,
+        recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -131,6 +142,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
 
   afterAll(async () => {
     await app?.close();
+    await directory?.close();
     await tenancy?.close();
     await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await admin.close();

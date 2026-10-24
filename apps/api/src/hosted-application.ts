@@ -126,6 +126,7 @@ export async function openHostedTenants(
         budgetCeiling,
         ...(config.tenantId === undefined ? {} : { ownerTenantId: config.tenantId }),
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
+        recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),

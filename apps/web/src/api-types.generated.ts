@@ -405,6 +405,11 @@ export interface ApiSchemas {
     readonly fixtureMode: boolean;
     readonly knowledgeBaseIds: readonly (string)[];
   };
+  "WorkspaceList": {
+    readonly workspaces: readonly ({
+      readonly id: string;
+    })[];
+  };
   "WritingPolicy": {
     readonly checksum: string;
     readonly version: string;
@@ -426,6 +431,9 @@ export interface ApiOperations {
   };
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
+  };
+  "GET /v1/workspaces": {
+    readonly response: ApiSchemas["WorkspaceList"];
   };
   "PUT /v1/workspaces/{workspaceId}": {
     readonly path: {

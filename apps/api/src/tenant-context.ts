@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import type { RecordAccessFor } from "./record-access.js";
 import type { Caller } from "./request-auth.js";
 
 /** The application the routes serve: one tenant's, or one that dispatches to the caller's. */
@@ -29,6 +30,11 @@ export interface TenantApplications {
   readonly applicationFor: (tenantId: string) => TenantApplication;
   /** How many tenants' applications stay composed; the least recently used goes first. */
   readonly cacheSize?: number;
+  /**
+   * Which members may reach which of a tenant's candidate records. Sign-in mode needs it to serve
+   * workspaces; it also serves `GET /v1/workspaces` in both modes.
+   */
+  readonly recordAccessFor?: RecordAccessFor;
 }
 
 export const defaultTenantCacheSize = 100;

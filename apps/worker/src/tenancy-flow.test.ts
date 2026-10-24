@@ -145,6 +145,7 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
       directory,
       tenants: {
         budgetCeiling,
+        recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
