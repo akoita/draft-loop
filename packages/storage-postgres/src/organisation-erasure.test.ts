@@ -71,8 +71,10 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
       const remainder = await tenantRows(schema.admin, schema.schema, "org-north");
       expect(Object.keys(remainder)).toEqual([
         "candidate_knowledge_bases",
+        "candidate_knowledge_source_versions",
         "candidate_knowledge_sources",
         "candidate_knowledge_stores",
+        "content_screening_results",
         "idempotency_keys",
         "organisation_members",
         "organisations",

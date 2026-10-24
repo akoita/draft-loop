@@ -186,6 +186,18 @@ const tableQueries: Readonly<
      WHERE knowledge_base_id = ANY($1::text[]) ORDER BY knowledge_base_id, version`,
     [s.knowledgeBaseIds],
   ],
+  // Job sources are keyed by the history id and knowledge source versions by their base.
+  content_screening_results: (s) => [
+    `SELECT * FROM content_screening_results
+     WHERE workspace_id = $1 OR knowledge_base_id = ANY($2::text[]) ORDER BY sequence`,
+    [s.historyId, s.knowledgeBaseIds],
+  ],
+  content_screening_releases: (s) => [
+    `SELECT l.* FROM content_screening_releases AS l
+     JOIN content_screening_results AS r ON r.tenant_id = l.tenant_id AND r.id = l.result_id
+     WHERE r.workspace_id = $1 OR r.knowledge_base_id = ANY($2::text[]) ORDER BY r.sequence`,
+    [s.historyId, s.knowledgeBaseIds],
+  ],
 };
 
 /** One record's rows of each table that has any, without the tenant column. */

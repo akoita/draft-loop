@@ -1,5 +1,6 @@
 import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import { consentLedgerMigration } from "./consent-ledger-migration.js";
+import { contentScreeningMigration } from "./content-screening-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
 import { organisationClosingMigration } from "./organisation-closing-migration.js";
 import { organisationErasureMigration } from "./organisation-erasure-migration.js";
@@ -775,6 +776,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   recordErasureMigration,
   organisationErasureMigration,
   organisationClosingMigration,
+  contentScreeningMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */
