@@ -1,6 +1,7 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
+import { createCandidateRecordAccess } from "./candidate-records.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
@@ -102,6 +103,7 @@ function tenantStorage(client: SqlSession) {
     ...createUsageReads(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
+    candidateRecords: createCandidateRecordAccess(client),
     idempotencyKeys: createIdempotencyKeys(client),
     workspaceSettings: createWorkspaceSettings(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
