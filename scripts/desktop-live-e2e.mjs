@@ -31,11 +31,13 @@ const ANTHROPIC_AUTH_MODE_VARIABLE = "DRAFT_LOOP_ANTHROPIC_AUTH_MODE";
 const OPENAI_AUTH_MODE_VARIABLE = "DRAFT_LOOP_OPENAI_AUTH_MODE";
 const PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
 /**
- * The gate exercises the real provider path, so it should run the cheapest
- * models that still do so rather than the workspace defaults. Anthropic and
- * OpenAI remain the cross-company pair, so provider-diversity is unaffected.
+ * The gate exercises the real provider path, so it runs the cheapest catalog
+ * models that pass it reliably rather than the workspace defaults. The economy
+ * Haiku authors failed the synthetic gate in three releases in a row, so the
+ * author is Sonnet. Anthropic and OpenAI remain the cross-company pair, so
+ * provider-diversity is unaffected.
  */
-const DEFAULT_AUTHOR_MODEL = "claude-haiku-4-5";
+const DEFAULT_AUTHOR_MODEL = "claude-sonnet-5-5";
 const DEFAULT_CRITIC_MODEL = "gpt-5.6-luna";
 const PACKAGED_LAUNCH_ARGUMENTS = Object.freeze(["--headless", "--disable-gpu", "--no-sandbox"]);
 const jobContent = `# Platform Engineer — Willowmere Developer Tools

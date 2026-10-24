@@ -34,7 +34,7 @@ const launchPaths = {
   candidate: "/tmp/draft-loop-live-e2e-profile/candidate.md",
   report: "/tmp/draft-loop-live-e2e-profile/report.json",
 };
-const launchModels = { author: "claude-haiku-4-5", critic: "gpt-6-luna" };
+const launchModels = { author: "claude-sonnet-5-5", critic: "gpt-6-luna" };
 const launchAuthModes = { anthropic: "api-key", openai: "api-key" };
 const savedCredentials = {
   [anthropicVariable]: process.env[anthropicVariable],
@@ -62,7 +62,7 @@ function setCredentials({ anthropic, openai }) {
 describe("resolveGateModels", () => {
   test("defaults to the cheapest verified cross-company pair", () => {
     assert.deepEqual(resolveGateModels({}), {
-      author: "claude-haiku-4-5",
+      author: "claude-sonnet-5-5",
       critic: "gpt-5.6-luna",
     });
   });
@@ -79,7 +79,7 @@ describe("resolveGateModels", () => {
 
   test("overrides each side independently", () => {
     assert.deepEqual(resolveGateModels({ DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-5" }), {
-      author: "claude-haiku-4-5",
+      author: "claude-sonnet-5-5",
       critic: "gpt-5",
     });
   });
@@ -90,7 +90,7 @@ describe("resolveGateModels", () => {
         DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "",
         DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "   ",
       }),
-      { author: "claude-haiku-4-5", critic: "gpt-5.6-luna" },
+      { author: "claude-sonnet-5-5", critic: "gpt-5.6-luna" },
     );
   });
 
