@@ -64,6 +64,13 @@ describe("sources screen", () => {
     expect(html).toContain('role="alert">big.pdf is too large.</p>');
   });
 
+  it("asks for the storage consent above the uploads", () => {
+    const html = renderToStaticMarkup(<SourcesPanel {...props} consent={<p>Storage consent</p>} />);
+
+    expect(html.indexOf("Storage consent")).toBeGreaterThan(-1);
+    expect(html.indexOf("Storage consent")).toBeLessThan(html.indexOf("Add files"));
+  });
+
   it("starts with a base to create", () => {
     const html = renderToStaticMarkup(<SourcesPanel {...props} bases={[]} />);
 

@@ -46,6 +46,12 @@ describe("source files", () => {
     expect(uploadErrorMessage("a.md", new ApiRequestError(404, "not_found", "No such base."))).toBe(
       "a.md: No such base.",
     );
+    expect(
+      uploadErrorMessage(
+        "a.md",
+        new ApiRequestError(409, "storage_consent_required", "Storage consent is required."),
+      ),
+    ).toContain("a.md: The candidate's material cannot be stored yet. Record the basis");
   });
 
   it("formats sizes", () => {

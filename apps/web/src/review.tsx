@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
+import { describeActionError } from "./consent-model.js";
 import { FinishPanel } from "./finish.js";
 import {
   approveRequest,
@@ -106,7 +107,7 @@ export function ReviewStep({ client, run, onFollowRun }: ReviewStepProps) {
       await action();
       setMessages([]);
     } catch (error) {
-      setMessages([describeError(error)]);
+      setMessages([describeActionError(error)]);
     } finally {
       setBusy(false);
     }

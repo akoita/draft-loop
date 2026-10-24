@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { type ApiClient, describeError } from "./api-client.js";
+import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
 import { readDefaultApplication } from "./applications.js";
 import type { Brief } from "./brief-model.js";
+import { ConsentStep } from "./consent.js";
+import { describeActionError } from "./consent-model.js";
 import { useRecordId } from "./record-context.js";
 import {
   formatUsd,
@@ -21,6 +23,8 @@ import { currentBriefId, currentRunId, screenMemory } from "./screen-memory.js";
 export interface RunStepProps {
   readonly client: ApiClient;
   readonly brief: Brief | undefined;
+  /** The workspace whose author and critic the transmission consent names. */
+  readonly workspace?: ApiSchemas["Workspace"];
   /** Called with the run followed, so the review step can open it. */
   readonly onRun: (run: Run | undefined) => void;
   /** Opens the review once the run waits for it. */
@@ -30,7 +34,7 @@ export interface RunStepProps {
 type Control = "pause" | "resume" | "stop";
 
 /** Starts a run from the reviewed brief and follows it until it waits for review. */
-export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepProps) {
+export function RunStep({ client, brief: shownBrief, workspace, onRun, onReview }: RunStepProps) {
   const workspaceId = useRecordId();
   const [run, setRun] = useState<Run | undefined>(undefined);
   // The Job brief step may not have been opened since the page loaded; read the brief then.
@@ -101,7 +105,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
       follow(await action());
       setMessages([]);
     } catch (error) {
-      setMessages([describeError(error)]);
+      setMessages([describeActionError(error)]);
     } finally {
       setBusy(false);
     }
@@ -150,6 +154,7 @@ export function RunStep({ client, brief: shownBrief, onRun, onReview }: RunStepP
       onStart={start}
       onControl={control}
       onReview={onReview}
+      consent={<ConsentStep client={client} kind="provider-transmission" workspace={workspace} />}
     />
   );
 }
@@ -163,6 +168,8 @@ export interface RunPanelProps {
   readonly onStart: () => void;
   readonly onControl: (control: Control) => void;
   readonly onReview: () => void;
+  /** The transmission consent, asked before the first run. */
+  readonly consent?: ReactNode;
 }
 
 export function RunPanel({
@@ -173,6 +180,7 @@ export function RunPanel({
   onStart,
   onControl,
   onReview,
+  consent,
 }: RunPanelProps) {
   const controls = run === undefined ? undefined : runControls(run);
   const canStartAnother = run === undefined || !shouldPoll(run);
@@ -213,6 +221,7 @@ export function RunPanel({
           {error === undefined ? null : <p className="problem">{error}</p>}
         </>
       )}
+      {consent}
       {messages.map((message) => (
         <p key={message} className="problem" role="alert">
           {message}

@@ -1,4 +1,5 @@
-import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { ApiRequestError, type ApiSchemas } from "./api-client.js";
+import { describeActionError } from "./consent-model.js";
 
 /** The media types the API takes for a candidate source, by file extension. */
 const mediaTypes: Readonly<Record<string, SourceMediaType>> = {
@@ -35,13 +36,13 @@ export function sourceFileProblem(file: { readonly name: string; readonly size: 
   return undefined;
 }
 
-/** What to tell the owner when an upload is refused. */
+/** What to tell the member when an upload is refused, pointing to a missing consent. */
 export function uploadErrorMessage(fileName: string, error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 413) return `${fileName} is larger than this service accepts.`;
     if (error.status === 415) return `${fileName}: ${unsupportedMessage} ${error.message}`;
   }
-  return `${fileName}: ${describeError(error)}`;
+  return `${fileName}: ${describeActionError(error)}`;
 }
 
 /** A file size as people read it, such as `12 KB` or `1.4 MB`. */
