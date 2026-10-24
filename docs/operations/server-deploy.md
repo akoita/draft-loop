@@ -152,6 +152,8 @@ The lines are content-free (ADR 0011, D16):
   workspace and run ids, the job's outcome, the run's state, and its usage so
   far: calls, tokens and estimated cost, in total and by company, model and
   route.
+- **Each run whose credits were settled or refunded** logs one
+  `run credits settled` `INFO` line (see below).
 - **Each failed provider call** logs one `provider call failed` line before
   it: the run id, step, role and attempt; the company, model and route; the
   HTTP status and the normalized code; the provider's own error `type` and
@@ -161,6 +163,28 @@ The lines are content-free (ADR 0011, D16):
 
 The run's failure keeps the same fields, and the API returns them as the
 run's `lastError.failedCall`, so the web screen can name the call that failed.
+
+### Margin line
+
+When the worker settles or refunds a run's reserved credits, it writes one
+`INFO` line whose exact `message` is `run credits settled`. A repeated job
+writes nothing more. A log-based margin alert compares the
+credits with the cost. The fields sit at the top level of the entry and are a
+stable contract:
+
+- **`organisationId`** and **`runId`**: the organisation and the run.
+- **`credits`**: the credits the reservation held.
+- **`estimateVersion`**: the version of the credit estimate rule that priced it.
+- **`outcome`**: `settled` when the run had a draft, `refunded` when it ended
+  without one. A refund still carries the cost the run incurred.
+- **`estimatedUsd`**: the run's estimated US dollar cost from its usage, the
+  same number as `usage.estimatedUsd` on its `run job finished` line, or `null`
+  when no run was read (an erased record).
+
+A run with no reservation, as in owner-token mode, writes no line. If the
+reconciliation of an organisation's stale reservations fails, the worker
+writes an `ERROR` line `run credit reconciliation failed` with the `tenantId`
+and the error's type, code and stack frames, and the job is unaffected.
 
 ### Alert lines
 

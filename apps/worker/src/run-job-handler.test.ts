@@ -343,4 +343,66 @@ describe("run job handler", () => {
       "worker lost its provider connection",
     );
   });
+  describe("run credits", () => {
+    function withCredits(status: RunSnapshot, resumed: RunSnapshot | undefined, refunded = false) {
+      const service = {
+        status: vi.fn<Service["status"]>(async () => status),
+        resume: vi.fn<Service["resume"]>(async () => {
+          if (resumed === undefined) throw new Error("unexpected resume");
+          return resumed;
+        }),
+      };
+      const events: string[] = [];
+      const credits = {
+        refunded: vi.fn(async () => refunded),
+        afterJob: vi.fn(async (_job: unknown, outcome: string, run?: RunSnapshot) => {
+          events.push(`credits:${outcome}:${run?.state}`);
+        }),
+      };
+      const handler = createRunJobHandler({
+        serviceFor: () => service,
+        workspaceRoot: () => root,
+        allowProviderData: true,
+        budgetCeiling,
+        credits,
+        onOutcome: (_job, outcome) => events.push(`outcome:${outcome}`),
+      });
+      return { service, credits, events, handler };
+    }
+
+    it("hands the credits the outcome and the run as the job last read it, after its own log", async () => {
+      const { credits, events, handler } = withCredits(
+        snapshot("drafting"),
+        snapshot("awaiting-approval"),
+      );
+
+      await handler(job, { requeue: async () => undefined });
+
+      expect(events).toEqual(["outcome:advanced", "credits:advanced:awaiting-approval"]);
+      expect(credits.afterJob).toHaveBeenCalledWith(job, "advanced", expect.anything());
+    });
+
+    it("does not execute a run whose reservation was refunded", async () => {
+      const { service, events, handler } = withCredits(
+        snapshot("provider-error", { code: "timeout", retryable: true }),
+        snapshot("awaiting-approval"),
+        true,
+      );
+
+      await handler(job, { requeue: async () => undefined });
+
+      expect(events).toEqual(["outcome:credits-closed", "credits:credits-closed:undefined"]);
+      expect(service.status).not.toHaveBeenCalled();
+      expect(service.resume).not.toHaveBeenCalled();
+    });
+
+    it("lets a failure to settle fail the job, so the queue retries it", async () => {
+      const { credits, handler } = withCredits(snapshot("awaiting-approval"), undefined);
+      credits.afterJob.mockRejectedValueOnce(new Error("ledger unavailable"));
+
+      await expect(handler(job, { requeue: async () => undefined })).rejects.toThrow(
+        "ledger unavailable",
+      );
+    });
+  });
 });

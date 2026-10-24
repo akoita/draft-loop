@@ -11,8 +11,16 @@ import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
 import { failedCallLines } from "./failed-call-logging.js";
-import { errorFields, logLine, quarantineFields, runOutcomeFields } from "./logging.js";
+import {
+  errorFields,
+  logLine,
+  quarantineFields,
+  runCreditsFields,
+  runCreditsMessage,
+  runOutcomeFields,
+} from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
+import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import { tenantRecordErased, tenantRunConsent, tenantServices } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
@@ -83,6 +91,20 @@ const worker = await startWorker({
           quarantineFields(job, quarantined),
         ),
       ),
+    // A run's reserved credits are settled when it has a draft and refunded when it ended without
+    // one; a deployment with no reservations (owner-token mode) does nothing here.
+    credits: tenantRunCredits({
+      tenancy,
+      onClosed: (closed) =>
+        console.info(logLine("INFO", runCreditsMessage, runCreditsFields(closed))),
+      onSweepError: (tenantId, error) =>
+        console.error(
+          logLine("ERROR", "run credit reconciliation failed", {
+            tenantId,
+            err: errorFields(error),
+          }),
+        ),
+    }),
     // A job queued before its record was erased ends without touching the record.
     recordErased: tenantRecordErased({ tenancy, serviceFor, workspaceRoot }),
     onOutcome: (job, outcome, run, before) => {

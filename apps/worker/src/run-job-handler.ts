@@ -6,6 +6,8 @@ import {
 import type { RunSnapshot, RunState } from "@draft-loop/orchestrator";
 import type { RunJob, RunJobHandler } from "@draft-loop/run-queue";
 
+import type { RunCredits } from "./run-credit-settlement.js";
+
 /** What one job did with its run; ids and this word are all the worker logs. */
 export type RunJobOutcome =
   /** No such run in the workspace, as after a deletion. */
@@ -32,6 +34,11 @@ export type RunJobOutcome =
    * resume after a release queues it again.
    */
   | "material-quarantined"
+  /**
+   * The run's credit reservation was refunded because it ended without a draft: it is not
+   * executed again, so a replayed job cannot turn it into a free run.
+   */
+  | "credits-closed"
   /** The run advanced as far as it could without the person. */
   | "advanced";
 
@@ -85,6 +92,11 @@ export interface RunJobHandlerOptions {
    * a job queued before the erasure ends quietly. Unset, the worker does not check.
    */
   readonly recordErased?: (job: RunJob) => Promise<boolean>;
+  /**
+   * The run's credit reservation (ADR 0011, D13): checked as each job is claimed, and settled or
+   * refunded after each job that leaves the run in a final state. Unset, the worker meters nothing.
+   */
+  readonly credits?: RunCredits;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
@@ -161,6 +173,9 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
     if (options.recordErased !== undefined && (await options.recordErased(job))) {
       return "record-erased";
     }
+    if (options.credits !== undefined && (await options.credits.refunded(job))) {
+      return "credits-closed";
+    }
     const service = options.serviceFor(job);
     const root = options.workspaceRoot(job);
     const snapshot = await service.status({ root, runId: job.runId });
@@ -223,5 +238,8 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
       last = snapshot;
     });
     options.onOutcome?.(job, outcome, last, first);
+    // After the job's own log line; a failure here fails the job, and its retry closes the
+    // reservation, since the ledger acts once.
+    await options.credits?.afterJob(job, outcome, last);
   };
 }
