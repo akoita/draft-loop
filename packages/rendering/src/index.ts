@@ -25,6 +25,7 @@ import { buildDocx } from "./docx-document.js";
 import { sectionBodyHtml } from "./html-blocks.js";
 import {
   layoutProfileIdForTemplate,
+  profileFromTemplate,
   type RenderingLayoutProfile,
   renderingLayoutProfiles,
   resolveRenderingTemplate,
@@ -441,14 +442,18 @@ function bytesForFormat(
   options: RenderOptions = {},
 ): Uint8Array {
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
-  const profile = resolveRenderingProfile(options);
   const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   if (format === "pdf") {
+    const profile = resolveRenderingProfile(options);
     return buildPdf({ artifact, profile, documentTitle, generatedAt: options.generatedAt });
   }
+  // The DOCX draws the template's own metrics and look (#1412); the built-in PDF writer draws the
+  // profile's layout only, see `builtInPdfDrawsTemplateLook`.
+  const template = resolveRenderingTemplate(options);
   return buildDocx({
     artifact,
-    profile,
+    profile: profileFromTemplate(template),
+    template,
     documentTitle,
     generatedAt: options.generatedAt ?? "2026-08-13T12:00:00.000Z",
   });
@@ -1168,5 +1173,6 @@ export {
   type RenderingLayoutProfile,
   renderingLayoutProfiles,
 } from "./layout-profile.js";
+export { builtInPdfDrawsTemplateLook } from "./pdf-document.js";
 export * from "./print-html.js";
 export * from "./templates.js";

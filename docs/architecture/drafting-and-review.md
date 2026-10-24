@@ -910,15 +910,28 @@ produce the `standard-two-page` profile and `compact`
 produces `compact-one-page`. `profileFromTemplate` derives the profile every
 output format shares; settings a template does not carry (font names, wrapping
 caps, preview spacing, title and heading leading) are fixed per page target for
-the `sans` family. `renderArtifact` takes an optional `templateId` and still accepts
+the `sans` family, except that the title line grows to fit a larger name. `renderArtifact` takes an optional `templateId` and still accepts
 `layoutProfile`; naming both requires that they agree.
 
 Modern (#1329) follows the owner's hand-made reference CV: a left-aligned name,
 uppercase headings and role dates in a teal accent, justified text, labelled
 paragraphs with a hanging indent, and an italic context line under each role
-(the engine slants regular Carlito; no italic face is embedded). Only the
-printed desktop PDF draws these options so far; DOCX and the CLI's PDF writer
-use Modern's sizes in the Classic layout (#1412).
+(the engine slants regular Carlito; no italic face is embedded).
+
+The printed desktop PDF and the DOCX draw these options (#1412):
+
+- **DOCX.** It uses the template's own profile (`profileFromTemplate`), so
+  Modern's margins and sizes too. The look lives in paragraph styles: the
+  `Title` alignment, `caps` and the accent colour on `Heading1`, `both`
+  justification on `Normal`, a `RoleContext` style for the italic line under a
+  role, and a `Labelled` style with a hanging indent. The text stays as
+  written, so rendering QA reads the same words as from Classic. Classic and
+  Compact DOCX bytes are unchanged.
+- **Built-in PDF writer.** It still draws only the Classic look, and for
+  Modern also Classic's sizes. `builtInPdfDrawsTemplateLook` says which
+  templates it draws as designed. For any other template, an export without
+  the desktop's printer writes a `Template note:` line saying the PDF uses the
+  Classic layout.
 
 The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
 and in the export payload as `renderingTemplate`. The rendering-QA report keeps

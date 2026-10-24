@@ -7,6 +7,7 @@ import { renderArtifact } from "@draft-loop/rendering";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
+import { builtInPdfTemplateNoteLine } from "./export-document.js";
 import {
   assertExportRenderingQa,
   buildExportRenderingQa,
@@ -261,6 +262,47 @@ describe("application export rendering QA", () => {
       } finally {
         await storage.close();
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("notes a built-in Modern PDF's Classic layout, but not a DOCX or a Classic PDF", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-export-note-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Synthetic evidence\n", "utf8");
+      const quiet = { write: () => undefined };
+      const driver = createLocalApplicationDriver();
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        quiet,
+      );
+      const started = await driver.start({ root, allowProviderData: false }, quiet);
+      await driver.lifecycle({ root, runId: started.runId, action: "revision" }, quiet);
+      await driver.resume({ root, runId: started.runId, allowProviderData: false }, quiet);
+      await driver.lifecycle({ root, runId: started.runId, action: "approve" }, quiet);
+
+      const notesFor = async (
+        format: "pdf" | "docx",
+        templateId?: string,
+      ): Promise<readonly string[]> => {
+        const lines: string[] = [];
+        await driver.export(
+          {
+            root,
+            runId: started.runId,
+            format,
+            ...(templateId === undefined ? {} : { templateId }),
+          },
+          { write: (line: string) => lines.push(line) },
+        );
+        return lines.filter((line) => line.startsWith("Template note: "));
+      };
+      expect(await notesFor("pdf")).toEqual([builtInPdfTemplateNoteLine("modern")]);
+      expect(await notesFor("docx")).toEqual([]);
+      expect(await notesFor("pdf", "classic")).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

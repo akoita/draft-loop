@@ -709,8 +709,10 @@ away.
     Classic, so any draft comes out shorter in it.
   - Modern has a left-aligned name, teal uppercase headings and dates,
     justified text and an italic context line under each role. The desktop PDF
-    draws all of it; Word files and CLI PDFs keep the Classic layout at Modern's
-    sizes.
+    and Word files draw all of it.
+  - A PDF from the CLI uses the Classic layout for Modern, because Modern's
+    look needs the desktop's printer. The CLI says so when it writes one; export
+    a Word file for the full look.
 
   Each option shows a small preview. The choice is remembered per application, and
   the export record names the template used.
@@ -722,7 +724,8 @@ away.
 - **From the CLI.** `draft-loop export [workspace] --format docx|pdf|md
   --template classic|compact|modern` writes the same files (`md` is short for
   `markdown`, the default) and prints the estimated-length warning when it
-  applies. Without `--template`, a run whose writing policy targets one page
+  applies. A Modern PDF also prints a template note that it uses the Classic
+  layout. Without `--template`, a run whose writing policy targets one page
   uses Compact and any other run uses Modern.
 - **Export again.** An exported run shows its export path and offers **Export
   again…** through the same Save dialog. Each export adds a record; earlier ones

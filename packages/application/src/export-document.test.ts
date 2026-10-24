@@ -2,6 +2,7 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
+  builtInPdfTemplateNoteLine,
   defaultExportTemplateId,
   exportLengthWarningLine,
   exportLengthWarningPrefix,
@@ -151,5 +152,18 @@ describe("default export template", () => {
     expect(defaultExportTemplateId("one-page")).toBe("compact");
     expect(defaultExportTemplateId("two-page")).toBe("modern");
     expect(defaultExportTemplateId(undefined)).toBe("modern");
+  });
+});
+
+describe("built-in PDF template note", () => {
+  it("says plainly that a Modern PDF without the desktop's printer uses the Classic layout", () => {
+    expect(builtInPdfTemplateNoteLine("modern")).toBe(
+      "Template note: this PDF uses the Classic layout, because the Modern look needs the desktop app's PDF printer. A Modern DOCX has the full look.",
+    );
+  });
+
+  it("says nothing for a template the built-in writer draws as designed", () => {
+    expect(builtInPdfTemplateNoteLine("classic")).toBeUndefined();
+    expect(builtInPdfTemplateNoteLine("compact")).toBeUndefined();
   });
 });
