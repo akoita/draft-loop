@@ -29,6 +29,7 @@ import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempoten
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
+import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
@@ -181,6 +182,17 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ? {}
         : { ownerTenantId: options.tenants.ownerTenantId }),
     });
+    if (options.directory !== undefined) {
+      registerRecordMemberRoutes(app, {
+        recordAccessFor,
+        directory: options.directory,
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        ...(options.tenants?.ownerTenantId === undefined
+          ? {}
+          : { ownerTenantId: options.tenants.ownerTenantId }),
+      });
+    }
   }
   if (application !== undefined) {
     const { knowledgeIntake, knowledgeStore } = application;

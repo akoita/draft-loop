@@ -175,6 +175,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     refused record answers 404 like an unknown one (`registerRecordAccess`,
     over the tenants' `recordAccessFor`). Creating a workspace assigns its
     creator, and `GET /v1/workspaces` lists the records the caller reaches.
+  - Owners and admins assign members to a record and remove them through
+    `/v1/workspaces/{workspaceId}/members`, which an assigned member may only
+    read; each change is a content-free audit log line
+    (`registerRecordMemberRoutes`).
   - A flow test takes two organisations from creation through sign-in, setup,
     a run on the scripted model gateway, approval and export, and checks that
     neither organisation's material reaches the other's provider requests,

@@ -223,6 +223,25 @@ export interface ApiSchemas {
     readonly organisationId: string;
     readonly members: readonly (ApiSchemas["OrganisationMember"])[];
   };
+  "RecordAssignment": {
+    readonly memberId: string;
+    readonly email: string;
+    readonly role: "owner" | "admin" | "member";
+    readonly status: "invited" | "active";
+    readonly assignedAt: string;
+    readonly workspaceId: string;
+  };
+  "RecordMember": {
+    readonly memberId: string;
+    readonly email: string;
+    readonly role: "owner" | "admin" | "member";
+    readonly status: "invited" | "active";
+    readonly assignedAt: string;
+  };
+  "RecordMembers": {
+    readonly workspaceId: string;
+    readonly members: readonly (ApiSchemas["RecordMember"])[];
+  };
   "ReviewDraft": {
     readonly id: string;
     readonly version: number;
@@ -434,6 +453,26 @@ export interface ApiOperations {
   };
   "GET /v1/workspaces": {
     readonly response: ApiSchemas["WorkspaceList"];
+  };
+  "GET /v1/workspaces/{workspaceId}/members": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["RecordMembers"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/members/{memberId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly memberId: string;
+    };
+    readonly response: ApiSchemas["RecordAssignment"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/members/{memberId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly memberId: string;
+    };
+    readonly response: void;
   };
   "PUT /v1/workspaces/{workspaceId}": {
     readonly path: {

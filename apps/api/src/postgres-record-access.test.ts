@@ -51,14 +51,19 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
   let signIn: ApiAuthOptions;
   let app: FastifyInstance;
 
-  const call = async (person: Person, method: "GET" | "PUT", path: string, payload?: object) => {
+  const call = async (
+    person: Person,
+    method: "GET" | "PUT" | "DELETE",
+    path: string,
+    payload?: object,
+  ) => {
     const response = await app.inject({
       method,
       url: path,
       headers: { authorization: `Bearer ${tokens[person]}` },
       ...(payload === undefined ? {} : { payload: payload as Record<string, unknown> }),
     });
-    return { status: response.statusCode, body: response.json() };
+    return { status: response.statusCode, body: response.body === "" ? null : response.json() };
   };
   const listed = async (person: Person) =>
     (await call(person, "GET", "/v1/workspaces")).body.workspaces.map(
@@ -129,7 +134,7 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
       keys: createLocalJWKSet({ keys: [publicJwk] }),
       resolveSignIn: directory.resolveSignIn,
     };
-    app = await buildApi({ ownerToken, auth: signIn, tenants });
+    app = await buildApi({ ownerToken, auth: signIn, tenants, directory });
   });
 
   afterAll(async () => {
@@ -211,6 +216,32 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
     await records.assignMember({ workspaceId: "r2", memberId: memberIds["coach-1"] });
     expect((await call("coach-1", "GET", "/v1/workspaces/r2")).status).toBe(200);
     expect(await listed("coach-1")).toEqual(["r1", "r2"]);
+  });
+
+  it("opens a record to an assigned member and closes it at once on removal", async () => {
+    const path = `/v1/workspaces/r1/members/${memberIds["coach-2"]}`;
+    expect((await call("coach-2", "GET", "/v1/workspaces/r1")).status).toBe(404);
+    expect((await call("coach-1", "PUT", path)).status).toBe(403);
+
+    const assigned = await call("admin", "PUT", path);
+    expect(assigned).toMatchObject({
+      status: 200,
+      body: { workspaceId: "r1", memberId: memberIds["coach-2"], role: "member" },
+    });
+    expect((await call("coach-2", "GET", "/v1/workspaces/r1")).status).toBe(200);
+    const listed = await call("coach-2", "GET", "/v1/workspaces/r1/members");
+    expect(listed.body.members.map(({ email }: { email: string }) => email)).toEqual([
+      "coach-1@coaching.example.test",
+      "coach-2@coaching.example.test",
+    ]);
+    expect((await call("owner", "PUT", "/v1/workspaces/r1/members/no-such-member")).body).toEqual({
+      error: { code: "member_not_found", message: "The organisation has no such member." },
+    });
+
+    expect((await call("owner", "DELETE", path)).status).toBe(204);
+    expect((await call("coach-2", "GET", "/v1/workspaces/r1")).status).toBe(404);
+    expect((await call("coach-2", "GET", "/v1/workspaces/r1/members")).status).toBe(404);
+    expect((await call("owner", "DELETE", path)).status).toBe(404);
   });
 
   it("leaves owner-token mode reaching and listing every workspace of its tenant", async () => {
