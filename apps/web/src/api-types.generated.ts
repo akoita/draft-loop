@@ -34,6 +34,13 @@ export interface ApiSchemas {
     })[];
     readonly chosenRunId: string | null;
   };
+  "AuthConfig": {
+    readonly mode: "owner";
+  } | {
+    readonly mode: "oidc";
+    readonly issuer: string;
+    readonly clientId: string;
+  };
   "CreatedOrganisation": {
     readonly organisation: {
       readonly organisationId: string;
@@ -383,6 +390,9 @@ export interface ApiSchemas {
 export interface ApiOperations {
   "GET /v1/health": {
     readonly response: ApiSchemas["Health"];
+  };
+  "GET /v1/auth/config": {
+    readonly response: ApiSchemas["AuthConfig"];
   };
   "PUT /v1/workspaces/{workspaceId}": {
     readonly path: {

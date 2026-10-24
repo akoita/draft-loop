@@ -1,32 +1,43 @@
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
+import { authConfigPath } from "./auth-config-routes.js";
+import type { ApiAuthOptions } from "./request-auth.js";
+
 /**
  * The content security policy for every response. The web screen loads only its own scripts and
  * styles and talks only to this origin, so injected script has nowhere to load from or send to.
+ * In sign-in mode it also talks to the identity provider's origin, for its discovery document and
+ * token endpoint; the sign-in and sign-out redirects are navigations, which the policy leaves alone.
  */
-export const contentSecurityPolicy = {
-  useDefaults: false,
-  directives: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
-    styleSrc: ["'self'"],
-    imgSrc: ["'self'", "data:", "blob:"],
-    fontSrc: ["'self'"],
-    connectSrc: ["'self'"],
-    objectSrc: ["'none'"],
-    baseUri: ["'none'"],
-    formAction: ["'self'"],
-    frameAncestors: ["'none'"],
-  },
-} as const;
+export function contentSecurityPolicy(auth: ApiAuthOptions = { mode: "owner" }) {
+  const connectSrc = auth.mode === "oidc" ? ["'self'", new URL(auth.issuer).origin] : ["'self'"];
+  return {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      fontSrc: ["'self'"],
+      connectSrc,
+      objectSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  };
+}
+
+/** The `/v1` routes anyone may call: health, and how the web screen signs in. */
+const publicApiRoutes: ReadonlySet<string> = new Set(["/v1/health", authConfigPath]);
 
 /**
- * Whether a request needs no owner token: health, and the web screen's files. The screen's
- * catch-all route also matches unknown `/v1` paths, so the request's own path decides.
+ * Whether a request needs no credential: the public `/v1` routes, and the web screen's files. The
+ * screen's catch-all route also matches unknown `/v1` paths, so the request's own path decides.
  */
 export function isPublicRequest(routeUrl: string | undefined, path: string): boolean {
-  if (routeUrl === "/v1/health") return true;
+  if (routeUrl !== undefined && publicApiRoutes.has(routeUrl)) return true;
   return routeUrl !== undefined && path !== "/v1" && !path.startsWith("/v1/");
 }
 

@@ -8,7 +8,7 @@ export interface SignInProps {
   readonly onSignIn: (token: string) => void;
 }
 
-/** Asks for the owner token; phase 2 replaces it with sign-in through the identity provider. */
+/** Asks for the owner token in owner mode; `OidcSignIn` takes its place in sign-in mode. */
 export function SignIn({ notice, onSignIn }: SignInProps) {
   const [token, setToken] = useState("");
   const [problem, setProblem] = useState<string | undefined>(undefined);
@@ -48,6 +48,18 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
         )}
         <button type="submit">Sign in</button>
       </form>
+    </main>
+  );
+}
+
+/** Shown when the API cannot say how to sign in, so the screen cannot start. */
+export function ServiceUnreachable() {
+  return (
+    <main className="sign-in">
+      <h1>DraftLoop</h1>
+      <p className="problem" role="alert">
+        The service cannot be reached. Check your connection and reload the page.
+      </p>
     </main>
   );
 }

@@ -20,6 +20,7 @@ import {
 import { type ZodType, z } from "zod";
 
 import { registerApplicationRoutes } from "./application-routes.js";
+import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -106,7 +107,8 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   app.setErrorHandler(sendError);
   app.setNotFoundHandler(sendNotFound);
 
-  await app.register(helmet, { contentSecurityPolicy });
+  const auth: ApiAuthOptions = options.auth ?? { mode: "owner" };
+  await app.register(helmet, { contentSecurityPolicy: contentSecurityPolicy(auth) });
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
@@ -127,7 +129,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     transformObject: jsonSchemaTransformObject,
   });
 
-  registerRequestAuthentication(app, options.ownerToken, options.auth);
+  registerRequestAuthentication(app, options.ownerToken, auth);
 
   app.get(
     "/v1/health",
@@ -140,6 +142,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     },
     async () => ({ status: "ok" as const }),
   );
+  registerAuthConfigRoutes(app, auth);
 
   app.get(
     "/v1/openapi.json",

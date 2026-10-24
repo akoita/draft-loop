@@ -23,8 +23,8 @@ export interface ApiClient {
 }
 
 export interface ApiClientOptions {
-  /** The owner token, sent as the bearer credential on every call. */
-  readonly token: string;
+  /** The owner token or sign-in access token, sent as the bearer credential on every call. */
+  readonly token?: string;
   /** Where the API is; empty for the origin that served the screen. */
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
@@ -73,10 +73,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     async call(operation, input) {
       const [method, path] = operation.split(" ") as [string, string];
       const request = input as CallInput;
-      const headers: Record<string, string> = {
-        ...request.header,
-        authorization: `Bearer ${options.token}`,
-      };
+      const headers: Record<string, string> = { ...request.header };
+      // Only public routes, such as how to sign in, are called without a credential.
+      if (options.token !== undefined) headers.authorization = `Bearer ${options.token}`;
       let body: BodyInit | undefined;
       if (request.body instanceof Blob) {
         body = request.body;
