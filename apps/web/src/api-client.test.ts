@@ -137,6 +137,19 @@ describe("API client", () => {
     await expect(refused).rejects.toMatchObject({ status: 409, code: "stale-version" });
   });
 
+  it("keeps the numbers and names a plan refusal carries", async () => {
+    const stub = stubFetch(
+      json(402, {
+        error: { code: "credits_insufficient", message: "Not enough.", estimate: 4, remaining: 1 },
+      }),
+    );
+    const client = createApiClient({ token, fetch: stub.fetch });
+
+    await expect(
+      client.call("GET /v1/workspaces/{workspaceId}", { path: { workspaceId: "owner" } }),
+    ).rejects.toMatchObject({ status: 402, details: { estimate: 4, remaining: 1 } });
+  });
+
   it("keeps the quarantined material a refused run names", async () => {
     const quarantined = [
       {

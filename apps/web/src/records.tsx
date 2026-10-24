@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { describeStartError } from "./credits-model.js";
 import { RecordActions } from "./record-actions.js";
 import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
@@ -253,7 +254,7 @@ export function MembersPanel({ client, recordId, exists, manage }: MembersPanelP
       setMessages([]);
       await load();
     } catch (error) {
-      setMessages([describeError(error)]);
+      setMessages([describeStartError(error)]);
     } finally {
       setBusy(false);
     }

@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { describeStartError } from "./credits-model.js";
 import { WritingPolicyStep } from "./policy.js";
 import { useRecordId } from "./record-context.js";
 import {
@@ -67,7 +68,7 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
       setState({ kind: "ready", workspace });
       onWorkspace(workspace);
     } catch (error) {
-      setProblems([describeError(error)]);
+      setProblems([describeStartError(error)]);
     } finally {
       setBusy(false);
     }
