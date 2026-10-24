@@ -1,4 +1,8 @@
-import type { BlobErasure, CandidateRecordErasure } from "@draft-loop/storage/record-erasure";
+import type {
+  BlobErasure,
+  CandidateRecordErasure,
+  OrganisationErasure,
+} from "@draft-loop/storage/record-erasure";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -7,10 +11,13 @@ import { apiError, apiErrorSchema } from "./errors.js";
 import { reachesEveryRecord } from "./record-access.js";
 import { TenantContextMissingError, tenantIdOf } from "./tenant-context.js";
 
-/** One tenant's record erasure: its rows and the objects they name. */
+/** One tenant's erasure: its records' rows, its objects, and what the tenant itself holds. */
 export interface TenantErasure {
   readonly records: CandidateRecordErasure;
   readonly blobs: BlobErasure;
+  readonly organisation: OrganisationErasure;
+  /** The key prefix every one of the tenant's objects sits under, ending in `/`. */
+  readonly objectPrefix: string;
 }
 
 /** One tenant's erasure, by tenant id. */

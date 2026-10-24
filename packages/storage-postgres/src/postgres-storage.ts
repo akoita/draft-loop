@@ -10,6 +10,8 @@ import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
+import { createOrganisationErasure } from "./organisation-erasure.js";
+import { organisationErasureGrant } from "./organisation-erasure-migration.js";
 import { createRecordArchiveRows } from "./record-archive.js";
 import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
@@ -74,6 +76,7 @@ export async function grantPostgresStorageAccess(
       await executor.query(tenantDirectoryGrant(schema, role));
       await executor.query(consentLedgerGrant(schema, role));
       for (const grant of recordErasureGrants(schema, role)) await executor.query(grant);
+      await executor.query(organisationErasureGrant(schema, role));
     });
   } finally {
     await client.close();
@@ -116,6 +119,7 @@ function tenantStorage(client: SqlSession) {
     idempotencyKeys: createIdempotencyKeys(client),
     knowledgeBaseOwners: createKnowledgeBaseOwners(client),
     recordErasure: createCandidateRecordErasure(client),
+    organisationErasure: createOrganisationErasure(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>

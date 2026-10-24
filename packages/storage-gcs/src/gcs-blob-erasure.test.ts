@@ -26,6 +26,12 @@ describe("Cloud Storage erasure keys", () => {
     for (const key of ["tenants/tenant-a/", "tenants/tenant-a/../tenant-b/cv.md"]) {
       await expect(erasure.removeObject(key)).rejects.toBeInstanceOf(StorageValidationError);
     }
+    for (const keyPrefix of ["tenants/tenant-b/", "tenants/tenant-a", "tenants/", ""]) {
+      await expect(erasure.removePrefix(keyPrefix)).rejects.toBeInstanceOf(StorageSecurityError);
+    }
+    for (const keyPrefix of ["tenants/tenant-a/workspaces", "tenants/tenant-a/../tenant-b/"]) {
+      await expect(erasure.removePrefix(keyPrefix)).rejects.toBeInstanceOf(StorageValidationError);
+    }
   });
 });
 
@@ -63,5 +69,25 @@ describe.runIf(emulatorUrl !== undefined)("Cloud Storage erasure on the emulator
     const [exists] = await tenantBucket.file(key).exists();
     expect(exists).toBe(false);
     await expect(blobs.exists(kept)).resolves.toBe(true);
+  });
+
+  it("removes every object under the tenant's prefix and none of another tenant's", async () => {
+    const tenantBucket = await ready();
+    const [tenantA, tenantB] = [`tenant-${randomUUID()}`, `tenant-${randomUUID()}`];
+    const blobsA = createGcsBlobStorage({ bucket: tenantBucket, tenantId: tenantA });
+    const blobsB = createGcsBlobStorage({ bucket: tenantBucket, tenantId: tenantB });
+    const erasure = createGcsBlobErasure({ bucket: tenantBucket, tenantId: tenantA });
+    const prefixA = gcsTenantPrefix(tenantA);
+    for (const name of ["workspaces/record-1/exports/run-1.md", "knowledge/knowledge/v-1", "x"]) {
+      await blobsA.put(`${prefixA}${name}`, bytes(name));
+    }
+    const kept = await blobsB.put(`${gcsTenantPrefix(tenantB)}knowledge/knowledge/v-1`, bytes("b"));
+
+    await expect(erasure.removePrefix(`${prefixA}workspaces/`)).resolves.toBe(1);
+    await expect(erasure.removePrefix(prefixA)).resolves.toBe(2);
+    await expect(erasure.removePrefix(prefixA)).resolves.toBe(0);
+    const [left] = await tenantBucket.getFiles({ prefix: prefixA });
+    expect(left).toEqual([]);
+    await expect(blobsB.exists(kept)).resolves.toBe(true);
   });
 });

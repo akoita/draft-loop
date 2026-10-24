@@ -80,4 +80,25 @@ export function requireErasedRecordId(workspaceId: string): string {
 export interface BlobErasure {
   /** Removes the object at the key; false when there was none. Refuses another tenant's key. */
   removeObject(key: string): Promise<boolean>;
+  /**
+   * Removes every object whose key starts with the prefix, which must end in `/` and sit under the
+   * tenant's own prefix; resolves with how many it removed.
+   */
+  removePrefix(keyPrefix: string): Promise<number>;
+}
+
+/**
+ * Erasing a whole organisation: the caller erases each record with `CandidateRecordErasure`, then
+ * every object under the tenant's prefix, then what the tenant still has with `eraseRemainder`.
+ * The directory rows go last, so an interrupted erasure can be called again.
+ */
+export interface OrganisationErasure {
+  /** Whether the tenant's organisation is in the directory. */
+  organisationExists(): Promise<boolean>;
+  /** Whether any of the tenant's runs is queued or executing. */
+  hasActiveRun(): Promise<boolean>;
+  /** Every candidate record of the tenant, closed ones included, by id in ascending order. */
+  listRecords(): Promise<readonly string[]>;
+  /** Removes every row the tenant still has, the organisation and its members last. */
+  eraseRemainder(): Promise<{ readonly rowsRemoved: number }>;
 }

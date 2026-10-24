@@ -28,6 +28,10 @@ export {
   type VerifySignInToken,
 } from "./oidc-sign-in.js";
 export {
+  type OrganisationErasureRoutesOptions,
+  registerOrganisationErasureRoutes,
+} from "./organisation-erasure-routes.js";
+export {
   type OrganisationRoutesOptions,
   registerOrganisationRoutes,
 } from "./organisation-routes.js";
