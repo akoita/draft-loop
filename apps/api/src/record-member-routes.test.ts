@@ -70,6 +70,7 @@ function memoryRecordAccess(): CandidateRecordAccess {
       assignments.push(created);
       return created;
     },
+    assignCreator: async () => undefined,
     unassignMember: async ({ workspaceId, memberId }) => {
       const index = assignments.findIndex(
         (row) => row.workspaceId === workspaceId && row.memberId === memberId,

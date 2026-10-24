@@ -112,6 +112,48 @@ describe.runIf(connectionString !== undefined)("Postgres candidate record access
     });
   });
 
+  it("assigns only one of several creators racing for a new record", async () => {
+    await withTenancy(async ({ tenancy, organisation }) => {
+      const { ownerId, coachId } = await organisation("org-north");
+      const records = tenancy.forTenant("org-north").candidateRecords;
+
+      // Each record is claimed by both members at once; a check followed by an insert would let
+      // both in on some of them.
+      const ids = Array.from({ length: 12 }, (_, index) => `new-record-${index}`);
+      const outcomes = await Promise.all(
+        ids.map(async (workspaceId) => ({
+          workspaceId,
+          claims: await Promise.all(
+            [ownerId, coachId].map(async (memberId) => ({
+              memberId,
+              assignment: await records.assignCreator({ workspaceId, memberId }),
+            })),
+          ),
+        })),
+      );
+      for (const { workspaceId, claims } of outcomes) {
+        const winners = claims.filter(({ assignment }) => assignment !== undefined);
+        expect(winners).toHaveLength(1);
+        const assigned = await records.listRecordMembers(workspaceId);
+        expect(assigned.map(({ memberId }) => memberId)).toEqual([winners[0]?.memberId]);
+      }
+
+      // A record that already has a member refuses a later creator, even a member it names.
+      await expect(
+        records.assignCreator({ workspaceId: "record-1", memberId: coachId }),
+      ).resolves.toMatchObject({ workspaceId: "record-1", memberId: coachId });
+      await expect(
+        records.assignCreator({ workspaceId: "record-1", memberId: ownerId }),
+      ).resolves.toBeUndefined();
+      await expect(
+        records.assignCreator({ workspaceId: "record-1", memberId: coachId }),
+      ).resolves.toBeUndefined();
+      await expect(
+        records.assignCreator({ workspaceId: "record-2", memberId: "member-missing" }),
+      ).rejects.toEqual(refusedWith("member_not_found"));
+    });
+  });
+
   it("refuses an unknown member and invalid ids", async () => {
     await withTenancy(async ({ tenancy, organisation }) => {
       const { coachId } = await organisation("org-north");

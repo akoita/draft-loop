@@ -21,6 +21,14 @@ export interface CandidateRecordAssignmentInput {
 export interface CandidateRecordAccess {
   /** Assigns the member to the record; assigning again returns the existing assignment. */
   assignMember(input: CandidateRecordAssignmentInput): Promise<CandidateRecordAssignment>;
+  /**
+   * Assigns the member as the record's first member, for the one who creates it. Returns
+   * undefined when any member is already assigned, so of several creators racing for one new
+   * record exactly one is assigned, whatever the interleaving.
+   */
+  assignCreator(
+    input: CandidateRecordAssignmentInput,
+  ): Promise<CandidateRecordAssignment | undefined>;
   /** Removes the assignment. False when the member was not assigned to the record. */
   unassignMember(input: CandidateRecordAssignmentInput): Promise<boolean>;
   /** The record's members, oldest assignment first. */

@@ -268,6 +268,87 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
     }
   });
 
+  it("assigns only the member whose request created a record both found missing", async () => {
+    // Holds the first two existence checks of the contested record until both have answered, so
+    // both requests see it missing before either creates it.
+    const waiting: (() => void)[] = [];
+    const meet = () =>
+      new Promise<void>((resolve) => {
+        waiting.push(resolve);
+        if (waiting.length === 2) for (const release of waiting) release();
+      });
+    let checks = 0;
+    const racing = await buildApi({
+      ownerToken,
+      auth: signIn,
+      directory,
+      tenants: {
+        ...tenants,
+        applicationFor: (id) => {
+          const application = tenants.applicationFor(id);
+          const { service } = application;
+          return {
+            ...application,
+            service: {
+              ...service,
+              readWorkspace: async (root) => {
+                if (root.endsWith("/raced") && (checks += 1) <= 2) await meet();
+                return service.readWorkspace(root);
+              },
+            },
+          };
+        },
+      },
+    });
+    const put = async (person: Person, config: object) => {
+      const response = await racing.inject({
+        method: "PUT",
+        url: "/v1/workspaces/raced",
+        headers: { authorization: `Bearer ${tokens[person]}` },
+        payload: config as Record<string, unknown>,
+      });
+      return { status: response.statusCode, body: response.json() };
+    };
+    try {
+      const outcomes = await Promise.all([
+        put("coach-1", { fixtureMode: true, language: "fr" }),
+        put("coach-2", { fixtureMode: true, language: "de" }),
+      ]);
+      expect(outcomes.map(({ status }) => status).sort()).toEqual([201, 404]);
+      const loser = outcomes.find(({ status }) => status === 404);
+      expect(loser?.body).toEqual({ error: { code: "not_found", message: "No such workspace." } });
+
+      // The loser is not assigned, and the record keeps the winner's settings.
+      const winner =
+        outcomes.findIndex(({ status }) => status === 201) === 0 ? "coach-1" : "coach-2";
+      const other = winner === "coach-1" ? "coach-2" : "coach-1";
+      const records = tenancy.forTenant(tenantId).candidateRecords;
+      expect((await records.listRecordMembers("raced")).map(({ memberId }) => memberId)).toEqual([
+        memberIds[winner],
+      ]);
+      expect((await call(other, "GET", "/v1/workspaces/raced")).status).toBe(404);
+      expect(await listed(other)).not.toContain("raced");
+      const kept = await call(winner, "GET", "/v1/workspaces/raced");
+      expect(kept.status).toBe(200);
+      expect(kept.body.language).toBe(winner === "coach-1" ? "fr" : "de");
+    } finally {
+      await racing.close();
+    }
+  });
+
+  it("gives the assignment back when the creating request fails", async () => {
+    const refused = await call("coach-1", "PUT", "/v1/workspaces/over-budget", {
+      fixtureMode: true,
+      maxRounds: budgetCeiling.maxRounds + 1,
+    });
+    expect(refused.status).toBe(422);
+    const records = tenancy.forTenant(tenantId).candidateRecords;
+    await expect(records.listRecordMembers("over-budget")).resolves.toEqual([]);
+    expect(
+      (await call("coach-2", "PUT", "/v1/workspaces/over-budget", { fixtureMode: true })).status,
+    ).toBe(201);
+  });
+
   it("refuses to serve workspaces in sign-in mode without record access", async () => {
     const { recordAccessFor: _omitted, ...withoutAccess } = tenants;
     await expect(buildApi({ ownerToken, auth: signIn, tenants: withoutAccess })).rejects.toThrow(

@@ -72,6 +72,37 @@ export function createCandidateRecordAccess(client: SqlSession): CandidateRecord
       }
     },
 
+    assignCreator: async (input) => {
+      const workspaceId = requireCandidateRecordId(input.workspaceId);
+      const memberId = requireAssignedMemberId(input.memberId);
+      try {
+        return await client.transaction(async (executor) => {
+          await requireMember(executor, memberId);
+          // One lock per record and tenant, held to commit, so racing creators take turns and the
+          // later one sees the earlier one's assignment.
+          await executor.query(
+            `SELECT pg_advisory_xact_lock(
+               hashtextextended(current_setting('draft_loop.tenant_id', true) || '/' || $1::text, 0))`,
+            [workspaceId],
+          );
+          const taken = await executor.query(
+            "SELECT 1 FROM candidate_record_assignments WHERE workspace_id = $1 LIMIT 1",
+            [workspaceId],
+          );
+          if (taken.length > 0) return undefined;
+          const [row] = await executor.query(
+            `INSERT INTO candidate_record_assignments (workspace_id, member_id) VALUES ($1, $2)
+             RETURNING ${assignmentColumns}`,
+            [workspaceId, memberId],
+          );
+          if (row === undefined) throw new Error("The assignment was not recorded");
+          return assignment(row);
+        });
+      } catch (error) {
+        throw foreignKeyRefusal(error) ?? error;
+      }
+    },
+
     unassignMember: async (input) => {
       const workspaceId = requireCandidateRecordId(input.workspaceId);
       const memberId = requireAssignedMemberId(input.memberId);
