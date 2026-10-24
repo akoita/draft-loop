@@ -17,8 +17,8 @@ import {
   priorities,
   staleVersionMessage,
 } from "./brief-model.js";
+import { useRecordId } from "./record-context.js";
 import { currentBriefId, screenMemory } from "./screen-memory.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
 
 type Opportunity = ApiSchemas["Opportunity"];
 
@@ -39,7 +39,8 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
   const [messages, setMessages] = useState<readonly string[]>([]);
   const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState(false);
-  const workspace = { workspaceId: ownerWorkspaceId };
+  const workspaceId = useRecordId();
+  const workspace = { workspaceId };
 
   const show = useCallback(
     (opportunity: Opportunity) => {
@@ -52,7 +53,7 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
 
   const load = useCallback(async () => {
     try {
-      const application = await readDefaultApplication(client);
+      const application = await readDefaultApplication(client, workspaceId);
       const briefId = currentBriefId(application, screenMemory.read());
       if (briefId === undefined) {
         setState({ kind: "paste" });
@@ -61,14 +62,14 @@ export function BriefStep({ client, onBrief }: BriefStepProps) {
       }
       show(
         await client.call("GET /v1/workspaces/{workspaceId}/opportunities/{briefId}", {
-          path: { workspaceId: ownerWorkspaceId, briefId },
+          path: { workspaceId, briefId },
         }),
       );
       setStale(false);
     } catch (error) {
       setMessages([describeError(error)]);
     }
-  }, [client, onBrief, show]);
+  }, [client, onBrief, show, workspaceId]);
 
   useEffect(() => {
     void load();

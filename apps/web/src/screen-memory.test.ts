@@ -44,6 +44,17 @@ describe("screen memory", () => {
     });
   });
 
+  it("forgets both when the screen switches to another record", () => {
+    const storage = memoryStorage();
+    const memory = createScreenMemory(() => storage);
+    memory.rememberBrief("brief-1");
+    memory.rememberRun("run-1");
+
+    memory.forget();
+
+    expect(memory.read()).toEqual({});
+  });
+
   it("starts afresh when storage is missing, refused or holds something else", () => {
     expect(createScreenMemory(() => undefined).read()).toEqual({});
     expect(

@@ -18,7 +18,6 @@ import {
   sourceMediaType,
   uploadErrorMessage,
 } from "./sources-model.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
 
 type KnowledgeBase = ApiSchemas["KnowledgeBase"];
 type KnowledgeSource = ApiSchemas["KnowledgeSource"];
@@ -43,7 +42,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
     try {
       // In sign-in mode each base belongs to one record, and a workspace selects only its own.
       const { knowledgeBases } = await client.call("GET /v1/knowledge-bases", {
-        query: { workspaceId: ownerWorkspaceId },
+        query: { workspaceId: workspace.id },
       });
       const listed = activeBases(knowledgeBases);
       const entries = await Promise.all(
@@ -64,7 +63,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
     } catch (error) {
       setMessages([describeError(error)]);
     }
-  }, [client]);
+  }, [client, workspace.id]);
 
   useEffect(() => {
     void load();
@@ -83,7 +82,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
     run(async () => {
       try {
         await client.call("POST /v1/knowledge-bases", {
-          body: { displayName, workspaceId: ownerWorkspaceId },
+          body: { displayName, workspaceId: workspace.id },
         });
         await load();
         return undefined;
@@ -124,7 +123,7 @@ export function SourcesStep({ client, workspace, onWorkspace }: SourcesStepProps
       try {
         onWorkspace(
           await client.call("PUT /v1/workspaces/{workspaceId}/knowledge-selection", {
-            path: { workspaceId: ownerWorkspaceId },
+            path: { workspaceId: workspace.id },
             body: request.body,
           }),
         );

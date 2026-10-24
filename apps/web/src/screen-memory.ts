@@ -14,6 +14,8 @@ export interface ScreenMemory {
   read(): Remembered;
   rememberBrief(briefId: string): void;
   rememberRun(runId: string): void;
+  /** Forgets both, such as when the screen switches to another candidate record. */
+  forget(): void;
 }
 
 const storageKey = "draft-loop.screen";
@@ -47,6 +49,7 @@ export function createScreenMemory(storage: () => Storage | undefined): ScreenMe
     read,
     rememberBrief: (briefId) => write({ ...read(), briefId }),
     rememberRun: (runId) => write({ ...read(), runId }),
+    forget: () => write({}),
   };
 }
 

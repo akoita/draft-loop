@@ -1,6 +1,9 @@
 import type { ApiInput, ApiSchemas } from "./api-client.js";
 
-/** Phase 1 serves the owner alone, so the screen works in one workspace (ADR 0011, phase 1). */
+/**
+ * The owner token works in one workspace (ADR 0011, phase 1); sign-in mode chooses among the
+ * caller's candidate records instead.
+ */
 export const ownerWorkspaceId = "owner";
 
 export type Company = "anthropic" | "openai";

@@ -5,6 +5,7 @@ export * from "./applications.js";
 export * from "./brief-model.js";
 export * from "./finish-model.js";
 export * from "./policy-model.js";
+export * from "./records-model.js";
 export * from "./review-model.js";
 export * from "./run-model.js";
 export * from "./screen-memory.js";

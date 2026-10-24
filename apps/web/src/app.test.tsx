@@ -48,6 +48,22 @@ describe("web screen", () => {
     expect(html).toContain("<h1>DraftLoop</h1>");
   });
 
+  it("keeps the owner token's single workspace, with no record picker", () => {
+    const html = renderToStaticMarkup(<Shell client={unusedClient} onSignOut={() => {}} />);
+
+    expect(html).toContain("Reading your workspace…");
+    expect(html).not.toContain("candidate records");
+  });
+
+  it("reads the caller's candidate records first in sign-in mode", () => {
+    const html = renderToStaticMarkup(
+      <Shell mode="sign-in" client={unusedClient} onSignOut={() => {}} />,
+    );
+
+    expect(html).toContain("Reading your candidate records…");
+    expect(html).not.toContain("Reading your workspace…");
+  });
+
   it("says when the service cannot say how to sign in", () => {
     const html = renderToStaticMarkup(<ServiceUnreachable />);
 

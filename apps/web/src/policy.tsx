@@ -7,9 +7,7 @@ import {
   policyTextProblem,
   type WritingPolicy,
 } from "./policy-model.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
-
-const workspacePath = { workspaceId: ownerWorkspaceId };
+import { useRecordId } from "./record-context.js";
 
 type PolicyState =
   | { readonly kind: "loading" }
@@ -18,6 +16,7 @@ type PolicyState =
 
 /** Reads the workspace's writing policy and saves edits as new versions. */
 export function WritingPolicyStep({ client }: { readonly client: ApiClient }) {
+  const workspaceId = useRecordId();
   const [state, setState] = useState<PolicyState>({ kind: "loading" });
   const [text, setText] = useState("");
   const [problems, setProblems] = useState<readonly string[]>([]);
@@ -25,7 +24,7 @@ export function WritingPolicyStep({ client }: { readonly client: ApiClient }) {
 
   useEffect(() => {
     let current = true;
-    client.call("GET /v1/workspaces/{workspaceId}/writing-policy", { path: workspacePath }).then(
+    client.call("GET /v1/workspaces/{workspaceId}/writing-policy", { path: { workspaceId } }).then(
       (policy) => {
         if (!current) return;
         setState({ kind: "ready", policy });
@@ -41,7 +40,7 @@ export function WritingPolicyStep({ client }: { readonly client: ApiClient }) {
     return () => {
       current = false;
     };
-  }, [client]);
+  }, [client, workspaceId]);
 
   async function save() {
     const problem = policyTextProblem(text);
@@ -50,7 +49,7 @@ export function WritingPolicyStep({ client }: { readonly client: ApiClient }) {
     setBusy(true);
     try {
       const policy = await client.call("PUT /v1/workspaces/{workspaceId}/writing-policy", {
-        path: workspacePath,
+        path: { workspaceId },
         body: { content: text },
       });
       setState({ kind: "ready", policy });

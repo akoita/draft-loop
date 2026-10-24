@@ -130,5 +130,5 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
       />
     );
 
-  return <Shell client={client.api} onSignOut={() => client.end(undefined, true)} />;
+  return <Shell mode="sign-in" client={client.api} onSignOut={() => client.end(undefined, true)} />;
 }
