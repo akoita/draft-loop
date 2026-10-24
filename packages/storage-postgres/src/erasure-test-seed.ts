@@ -46,6 +46,16 @@ export async function seedTenant(admin: SqlClient, tenant: string): Promise<void
     [tenant, at],
   );
   await admin.query(
+    `INSERT INTO candidate_knowledge_source_versions (tenant_id, id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at)
+     VALUES ($1, 'version-shared', 'source-shared', 1, NULL, 'text/markdown', $2, 5, $3)`,
+    [tenant, checksum, at],
+  );
+  await admin.query(
+    `INSERT INTO content_screening_results (tenant_id, id, subject_kind, knowledge_base_id, source_id, source_version_id, verdict, signals, screeners, screened_at)
+     VALUES ($1, 'screening-shared', 'knowledge-source-version', 'kb-shared', 'source-shared', 'version-shared', 'clear', '{}', '[{"id":"rules","version":"1"}]', $2)`,
+    [tenant, at],
+  );
+  await admin.query(
     `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
      VALUES ($1, 'knowledge-bases', 'key-1', $2, now() + interval '1 day')`,
     [tenant, "b".repeat(64)],
@@ -279,6 +289,21 @@ export async function seedRecord(
         `${p}version-2`,
         `tenants/${tenant}/knowledge/knowledge/${p}version-2`,
       ],
+    ],
+    [
+      `INSERT INTO content_screening_results (tenant_id, id, workspace_id, brief_id, brief_source_id, subject_kind, verdict, signals, screeners, screened_at)
+       VALUES ($1, $2, $3, 'brief-1', 'source-1', 'job-source', 'flagged', '{role-change}', '[{"id":"rules","version":"1"}]', $4)`,
+      [tenant, `${p}screening-job`, history, at],
+    ],
+    [
+      `INSERT INTO content_screening_results (tenant_id, id, subject_kind, knowledge_base_id, source_id, source_version_id, verdict, signals, screeners, screened_at)
+       VALUES ($1, $2, 'knowledge-source-version', $3, $4, $5, 'unscreened', '{screener-unavailable}', '[]', $6)`,
+      [tenant, `${p}screening-upload`, base, source, `${p}version-2`, at],
+    ],
+    [
+      `INSERT INTO content_screening_releases (tenant_id, result_id, member_id, reason, released_at)
+       VALUES ($1, $2, 'member-1', 'Reviewed by hand.', $3)`,
+      [tenant, `${p}screening-job`, at],
     ],
     [
       `INSERT INTO candidate_knowledge_source_sensitivity_rule_versions (tenant_id, knowledge_base_id, version, rules_json, checksum, created_at)

@@ -4,6 +4,8 @@ import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "
 import { createCandidateRecordAccess } from "./candidate-records.js";
 import { createConsentLedger } from "./consent-ledger.js";
 import { consentLedgerGrant } from "./consent-ledger-migration.js";
+import { createContentScreening } from "./content-screening.js";
+import { contentScreeningGrants } from "./content-screening-migration.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
@@ -75,6 +77,7 @@ export async function grantPostgresStorageAccess(
       await executor.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schema} TO ${role}`);
       await executor.query(tenantDirectoryGrant(schema, role));
       await executor.query(consentLedgerGrant(schema, role));
+      for (const grant of contentScreeningGrants(schema, role)) await executor.query(grant);
       for (const grant of recordErasureGrants(schema, role)) await executor.query(grant);
       await executor.query(organisationErasureGrant(schema, role));
     });
@@ -122,6 +125,7 @@ function tenantStorage(client: SqlSession) {
     organisationErasure: createOrganisationErasure(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
+    contentScreening: createContentScreening(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

@@ -67,6 +67,10 @@
       "types": "./src/knowledge-base-owners.ts",
       "import": "./src/knowledge-base-owners.ts"
     },
+    "./content-screening": {
+      "types": "./src/content-screening.ts",
+      "import": "./src/content-screening.ts"
+    },
     "./record-archive": {
       "types": "./src/record-archive.ts",
       "import": "./src/record-archive.ts"

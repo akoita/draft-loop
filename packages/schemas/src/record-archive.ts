@@ -50,6 +50,8 @@ export const recordArchiveTables = [
   "candidate_knowledge_source_versions",
   "candidate_knowledge_managed_source_versions",
   "candidate_knowledge_source_sensitivity_rule_versions",
+  "content_screening_results",
+  "content_screening_releases",
 ] as const;
 
 export type RecordArchiveTable = (typeof recordArchiveTables)[number];

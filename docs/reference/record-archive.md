@@ -31,12 +31,21 @@ once.
 - **Applications and runs:** applications and their bindings, runs with their
   snapshots, rounds, step executions, findings, decisions and exports, the
   orchestrator's run state, retrieval traces and the record's audit trail.
+- **Screening:** the content-screening results of the record's pasted job
+  sources and of the source versions in its knowledge bases, and the releases
+  that lifted a quarantine, with the releasing member's id and written reason.
+  Results hold closed signal codes and screener identities, never the screened
+  text.
 - **Knowledge:** knowledge bases with their sources, source versions and
   sensitivity rule versions. In sign-in mode these are the bases the record
   owns. In owner-token mode, which holds one workspace and organisation-wide
   bases, they are every base the organisation holds.
 - **Objects:** the bytes of every source version of those bases and of every
   exported document.
+
+The screening tables, `content_screening_results` and
+`content_screening_releases`, were added to v1 as two more table files. Readers
+that skip table files they do not know are unaffected, so the version stays 1.
 
 ## What it never holds
 

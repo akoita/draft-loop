@@ -554,9 +554,21 @@ directory (ADR 0011, D6):
   owned by the migrating role: the only delete the runtime role may make on
   the consent ledger and the audit chain. It removes, in one transaction, the
   record's history, settings, run state, idempotency keys, assignments,
-  consent, its owned knowledge bases with their sources, versions and indexes,
-  and the mark last. A repeated close finds the mark, so an interrupted
+  consent, screening results, its owned knowledge bases with their sources,
+  versions and indexes, and the mark last. A repeated close finds the mark, so an interrupted
   erasure finishes on the next call.
+- Screening results and quarantine are stored through the `ContentScreeningStore`
+  port from `@draft-loop/storage/content-screening`, over the append-only
+  `content_screening_results` and `content_screening_releases` tables. A result
+  is the content-free outcome of the content screener and names its subject: a
+  pasted job source of an opportunity brief, or one knowledge source version.
+  Quarantine is derived rather than stored: a subject is quarantined while its
+  latest result is `flagged` or `unscreened` and no release covers that result,
+  so a newer `clear` result lifts it and a newer flag brings it back. A member's
+  release covers one result, keeps a short written reason in the table and
+  appends a content-free `content-screening.released` audit event with the
+  result and member ids. Record and organisation erasure remove both tables, and
+  the record archive includes them.
 
 ## Data and quality contracts
 

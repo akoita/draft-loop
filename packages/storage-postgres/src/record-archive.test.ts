@@ -265,6 +265,24 @@ async function seedRecord(
      VALUES ($1, 1, $2, $3, $4)`,
     [kb, JSON.stringify({ rules: [{ heading: marker }] }), checksum, at],
   );
+  // Content-free screening: a flagged job source with its release, and an unscreened upload.
+  await q(
+    `INSERT INTO content_screening_results (id, subject_kind, workspace_id, brief_id, brief_source_id,
+       verdict, signals, screeners, screened_at)
+     VALUES ($1, 'job-source', $2, 'brief', 'source-1', 'flagged', '{role-change}', $3::jsonb, $4)`,
+    [`screening-job-${run}`, w, JSON.stringify([{ id: "rules", version: "1" }]), at],
+  );
+  await q(
+    `INSERT INTO content_screening_results (id, subject_kind, knowledge_base_id, source_id,
+       source_version_id, verdict, signals, screeners, screened_at)
+     VALUES ($1, 'knowledge-source-version', $2, $3, $4, 'unscreened', '{screener-unavailable}', '[]', $5)`,
+    [`screening-kb-${run}`, kb, `source-${kb}`, `version-${kb}`, at],
+  );
+  await q(
+    `INSERT INTO content_screening_releases (result_id, member_id, reason, released_at)
+     VALUES ($1, 'member-1', $2, $3)`,
+    [`screening-job-${run}`, `Reviewed by hand for ${marker}.`, at],
+  );
   // Never archived: command results and the tenant's store list.
   await q(
     `INSERT INTO idempotency_keys (scope, key, fingerprint, result_json, expires_at)
@@ -278,6 +296,7 @@ const keyOnlyTables = new Set<string>([
   "application_run_bindings",
   "application_brief_bindings",
   "knowledge_base_owners",
+  "content_screening_results",
   "candidate_knowledge_source_versions",
   "candidate_knowledge_managed_source_versions",
 ]);
@@ -372,7 +391,12 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
     const decoder = new TextDecoder();
     for (const file of rest.filter((candidate) => candidate.path.startsWith("tables/"))) {
       const parsed = recordArchiveTableFileSchema.parse(JSON.parse(decoder.decode(file.content)));
-      const expected = parsed.table === "run_state_entries" ? 4 : 1;
+      const expected =
+        parsed.table === "run_state_entries"
+          ? 4
+          : parsed.table === "content_screening_results"
+            ? 2
+            : 1;
       expect(parsed.rows, parsed.table).toHaveLength(expected);
       const text = decoder.decode(file.content);
       if (keyOnlyTables.has(parsed.table)) {
@@ -429,6 +453,32 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
     expect(text).toContain(second.marker);
     expect(text).not.toContain(first.marker);
     expect(text).not.toContain(otherTenant.marker);
+  });
+
+  it("holds the record's screening results and releases and not another record's", async () => {
+    const archive = await archives().prepare({
+      workspaceId: second.workspaceId,
+      historyId: second.historyId,
+      knowledgeScope: "owned",
+    });
+    const decoder = new TextDecoder();
+    const files = await collect(archive.files());
+    const table = (name: string) => {
+      const file = files.find((candidate) => candidate.path === `tables/${name}.json`);
+      return recordArchiveTableFileSchema.parse(JSON.parse(decoder.decode(file?.content))).rows;
+    };
+    const results = table("content_screening_results");
+    expect(results.map((row) => row.id)).toEqual(["screening-job-run-10", "screening-kb-run-10"]);
+    expect(results.map((row) => row.verdict)).toEqual(["flagged", "unscreened"]);
+    expect(results[0]).toMatchObject({
+      workspace_id: "history-2",
+      signals: ["role-change"],
+      screeners: [{ id: "rules", version: "1" }],
+      screened_at: at,
+    });
+    expect(table("content_screening_releases")).toEqual([
+      expect.objectContaining({ result_id: "screening-job-run-10", member_id: "member-1" }),
+    ]);
   });
 
   it("fails closed on a missing or changed object, before and while streaming", async () => {
