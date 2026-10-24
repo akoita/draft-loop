@@ -611,6 +611,15 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   any source in a selected knowledge base, are quarantined, and lists them with
   their result ids in `error.quarantined`. The gate reads stored results, so it
   holds in every mode, including `off`.
+- **The worker check.** Material can be flagged after a run is queued, so the
+  worker asks the same question (`quarantinedRunMaterial` in
+  `packages/application`, shared with the gate) as it claims each job, in every
+  auth mode and before any provider call. If anything the run would send is
+  quarantined, it pauses the run as it does for withdrawn consent, ends the job
+  with outcome `material-quarantined` and logs one content-free `WARNING` with
+  the tenant, workspace and run ids and, for each piece, its kind, result id and
+  signal codes. After a release, a resume queues the run and the next job
+  continues it.
 - **Release.** `POST /v1/workspaces/:id/screening/:resultId/release` with a
   `{ "reason" }` of 1 to 500 characters lets one result through. Owners and
   admins, and the owner token, may release; members get 403. A result must

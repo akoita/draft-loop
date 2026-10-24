@@ -121,6 +121,9 @@ The lines are content-free (ADR 0011, D16):
   workspace and run ids, the job's outcome, the run's state, and its usage so
   far: calls, tokens and estimated cost, in total and by company, model and
   route.
+- **A run paused for quarantined material** first logs a `WARNING` with the
+  ids and, for each piece, its kind, the result id a release names and the
+  signal codes, never the text.
 - **Each failed provider call** logs one `provider call failed` line before
   it: the run id, step, role and attempt; the company, model and route; the
   HTTP status and the normalized code; the provider's own error `type` and

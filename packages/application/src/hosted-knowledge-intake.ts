@@ -155,6 +155,27 @@ function isHostedMediaType(value: string): value is HostedKnowledgeSourceMediaTy
 }
 
 /**
+ * A base's sources with their latest version, for a reader that already knows the base exists,
+ * such as the worker checking a run's material. A source with no version is left out.
+ */
+export async function listHostedKnowledgeSources(
+  records: Pick<
+    HostedKnowledgeIntakeRecords,
+    "listCandidateKnowledgeSources" | "listCandidateKnowledgeSourceVersions"
+  >,
+  knowledgeBaseId: string,
+): Promise<readonly HostedKnowledgeSourceView[]> {
+  const sources = await records.listCandidateKnowledgeSources(knowledgeBaseId);
+  const views: HostedKnowledgeSourceView[] = [];
+  for (const source of sources) {
+    const versions = await records.listCandidateKnowledgeSourceVersions(knowledgeBaseId, source.id);
+    const latestVersion = versions.at(-1);
+    if (latestVersion !== undefined) views.push({ source, latestVersion });
+  }
+  return views;
+}
+
+/**
  * Takes candidate source files into a tenant's hosted knowledge store (ADR 0011, D3, D11). Bytes go
  * to blob storage first and the source is recorded after, so a recorded version always has its
  * bytes; a failure between the two leaves only an unreferenced blob.
@@ -196,17 +217,7 @@ export function createHostedKnowledgeIntake(
     knowledgeBaseId: string,
   ): Promise<readonly HostedKnowledgeSourceView[]> => {
     await requireKnowledgeBase(knowledgeBaseId);
-    const sources = await records.listCandidateKnowledgeSources(knowledgeBaseId);
-    const views: HostedKnowledgeSourceView[] = [];
-    for (const source of sources) {
-      const versions = await records.listCandidateKnowledgeSourceVersions(
-        knowledgeBaseId,
-        source.id,
-      );
-      const latestVersion = versions.at(-1);
-      if (latestVersion !== undefined) views.push({ source, latestVersion });
-    }
-    return views;
+    return listHostedKnowledgeSources(records, knowledgeBaseId);
   };
 
   return {

@@ -11,8 +11,9 @@ import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
 import { failedCallLines } from "./failed-call-logging.js";
-import { errorFields, logLine, runOutcomeFields } from "./logging.js";
+import { errorFields, logLine, quarantineFields, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
+import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import { tenantRecordErased, tenantRunConsent, tenantServices } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
@@ -66,6 +67,16 @@ const worker = await startWorker({
       ? { consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }) }
       : {}),
     budgetCeiling: config.budgetCeiling,
+    // Material flagged after a run was queued pauses the run before any provider call.
+    quarantinedFor: tenantRunQuarantine({ tenancy, serviceFor, workspaceRoot }),
+    onQuarantined: (job, quarantined) =>
+      console.warn(
+        logLine(
+          "WARNING",
+          "run paused for quarantined material",
+          quarantineFields(job, quarantined),
+        ),
+      ),
     // A job queued before its record was erased ends without touching the record.
     recordErased: tenantRecordErased({ tenancy, serviceFor, workspaceRoot }),
     onOutcome: (job, outcome, run, before) => {

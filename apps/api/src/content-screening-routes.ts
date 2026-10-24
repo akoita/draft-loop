@@ -1,8 +1,8 @@
 import {
   type ApplicationService,
   type HostedKnowledgeIntake,
-  HostedKnowledgeIntakeError,
   type OpportunitySourceInput,
+  quarantinedRunMaterial,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { ingestBytes } from "@draft-loop/ingestion";
@@ -13,7 +13,6 @@ import {
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
 import {
-  type ContentScreeningStatus,
   type ContentScreeningSubject,
   maximumScreeningReleaseReasonLength,
 } from "@draft-loop/storage/content-screening";
@@ -27,7 +26,7 @@ import {
   MaterialQuarantinedError,
   type OpportunityScreening,
   opportunityScreening,
-  type QuarantinedMaterial,
+  quarantinedMaterial,
   type ScreeningOutcome,
   screeningOutcome,
   screeningReleaseSchema,
@@ -254,63 +253,6 @@ export function registerContentScreening(
     return stored === undefined ? undefined : screeningOutcome(stored);
   };
 
-  const quarantinedJobSources = async (
-    record: OpportunityBriefVersionRecord,
-  ): Promise<readonly QuarantinedMaterial[]> => {
-    const subjects = record.brief.sources.map(
-      (source): ContentScreeningSubject => ({
-        kind: "job-source",
-        workspaceId: record.workspaceId,
-        briefId: record.brief.id,
-        sourceId: source.id,
-      }),
-    );
-    return (await screening.store.quarantined(subjects)).flatMap((status) =>
-      status.subject.kind === "job-source"
-        ? [
-            {
-              kind: "job-source" as const,
-              briefId: status.subject.briefId,
-              sourceId: status.subject.sourceId,
-              ...screeningOutcome(status),
-            },
-          ]
-        : [],
-    );
-  };
-
-  /** The base's sources whose latest version is quarantined; older versions no run reads. */
-  const quarantinedKnowledge = async (
-    knowledgeBaseId: string,
-  ): Promise<readonly QuarantinedMaterial[]> => {
-    if (knowledgeIntake === undefined) return [];
-    let latest: ReadonlyMap<string, string>;
-    try {
-      const views = await knowledgeIntake.listSources(knowledgeBaseId);
-      latest = new Map(views.map(({ source, latestVersion }) => [source.id, latestVersion.id]));
-    } catch (error) {
-      // A base that is gone is the run's own error to report.
-      if (error instanceof HostedKnowledgeIntakeError) return [];
-      throw error;
-    }
-    return (await screening.store.listForKnowledgeBase(knowledgeBaseId)).flatMap(
-      (status: ContentScreeningStatus) =>
-        status.quarantined &&
-        status.subject.kind === "knowledge-source-version" &&
-        latest.get(status.subject.sourceId) === status.subject.sourceVersionId
-          ? [
-              {
-                kind: "knowledge-source-version" as const,
-                knowledgeBaseId: status.subject.knowledgeBaseId,
-                sourceId: status.subject.sourceId,
-                sourceVersionId: status.subject.sourceVersionId,
-                ...screeningOutcome(status),
-              },
-            ]
-          : [],
-    );
-  };
-
   const assertRunMaterialClear: ContentScreeningHooks["assertRunMaterialClear"] = async ({
     workspaceId,
     workspace,
@@ -324,16 +266,18 @@ export function registerContentScreening(
             briefId: opportunityBrief.briefId,
             version: opportunityBrief.version,
           });
-    const bases = [
-      ...new Set(
-        (workspace.candidateKnowledgeSelection ?? []).map((entry) => entry.knowledgeBaseId),
-      ),
-    ];
-    const quarantined = [
-      ...(brief === undefined ? [] : await quarantinedJobSources(brief)),
-      ...(await Promise.all(bases.map(quarantinedKnowledge))).flat(),
-    ];
-    if (quarantined.length > 0) throw new MaterialQuarantinedError(quarantined);
+    const quarantined = await quarantinedRunMaterial(
+      { store: screening.store, listSources: knowledgeIntake?.listSources },
+      {
+        brief,
+        knowledgeBaseIds: (workspace.candidateKnowledgeSelection ?? []).map(
+          (entry) => entry.knowledgeBaseId,
+        ),
+      },
+    );
+    if (quarantined.length > 0) {
+      throw new MaterialQuarantinedError(quarantined.map(quarantinedMaterial));
+    }
   };
 
   /** Whether the result belongs to this record: its job source, or a base the record owns. */

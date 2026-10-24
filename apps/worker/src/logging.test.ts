@@ -1,7 +1,7 @@
 import type { ExecutionRecord, RunSnapshot } from "@draft-loop/orchestrator";
 import { describe, expect, it } from "vitest";
 
-import { errorFields, logLine, runOutcomeFields } from "./logging.js";
+import { errorFields, logLine, quarantineFields, runOutcomeFields } from "./logging.js";
 
 /** Synthetic text standing in for anything a person might send or a model might write. */
 const marker = "SYNTHETIC-CANDIDATE-TEXT";
@@ -73,5 +73,31 @@ describe("the worker's logs", () => {
       severity: "ERROR",
       err: { type: "Error", frames: expect.any(Array) },
     });
+  });
+
+  it("name quarantined material by kind, result id and signal codes only", () => {
+    const quarantined = [
+      {
+        kind: "job-source" as const,
+        resultId: "result-1",
+        signals: ["instruction-override"],
+        text: marker,
+      },
+    ];
+    const line = logLine(
+      "WARNING",
+      "run paused for quarantined material",
+      quarantineFields(job, quarantined),
+    );
+
+    expect(JSON.parse(line)).toEqual({
+      severity: "WARNING",
+      message: "run paused for quarantined material",
+      ...job,
+      quarantined: [
+        { kind: "job-source", resultId: "result-1", signals: ["instruction-override"] },
+      ],
+    });
+    expect(line).not.toContain(marker);
   });
 });
