@@ -189,6 +189,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     a run on the scripted model gateway, approval and export, and checks that
     neither organisation's material reaches the other's provider requests,
     export or listings (`apps/worker/src/tenancy-flow.test.ts`).
+  - A second flow test takes one organisation with an owner and two coaches,
+    each assigned to their own candidate record. Each coach reaches only their
+    record and its material, an upload and a run wait for the matching
+    consent, each run sends only its own candidate's material, and a
+    withdrawal stops the next run (`apps/worker/src/coaching-flow.test.ts`).
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;

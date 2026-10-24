@@ -127,8 +127,11 @@ private sections, paste a job, run, review with evidence, approve and download
 the CV. See the [local server stack](docs/operations/local-server-stack.md).
 In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
 identity provider, and each organisation is its own tenant: its members see
-only its workspaces, sources and runs. The stack runs both modes, with
-fictional users for sign-in.
+only its workspaces, sources and runs. Within an organisation, each workspace
+is a candidate record: members reach only the records they are assigned to,
+and material is stored or sent to a provider only after the candidate's
+consents are recorded. The stack runs both modes, with fictional users for
+sign-in.
 Its first phase ends with a run on the hosted service that matches the local
 draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 
