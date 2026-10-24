@@ -42,7 +42,7 @@ import {
   runSnapshotRef,
 } from "@draft-loop/storage/history-records";
 import { appendAuditEventRow } from "./audit-trail.js";
-import type { SqlClient, SqlRow } from "./sql-client.js";
+import type { SqlRow, SqlSession } from "./sql-client.js";
 
 const runColumns =
   "id, workspace_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum";
@@ -72,7 +72,7 @@ function placeholders(count: number): string {
  * re-save is a no-op, and a changed one is a conflict.
  */
 async function appendRecord(
-  client: SqlClient,
+  client: SqlSession,
   table: string,
   label: string,
   columns: string,
@@ -100,7 +100,7 @@ async function appendRecord(
 }
 
 async function readOne<Record>(
-  client: SqlClient,
+  client: SqlSession,
   sql: string,
   id: string,
   fromRow: (row: SqlRow) => Record,
@@ -110,7 +110,7 @@ async function readOne<Record>(
 }
 
 async function readMany<Record>(
-  client: SqlClient,
+  client: SqlSession,
   sql: string,
   id: string,
   fromRow: (row: SqlRow) => Record,
@@ -123,7 +123,7 @@ async function readMany<Record>(
  * come from `@draft-loop/storage/history-records`, the same code SQLite runs, and lists keep
  * SQLite's order.
  */
-export function createRunHistory(client: SqlClient) {
+export function createRunHistory(client: SqlSession) {
   const getRunSnapshotById = (id: string) =>
     readOne(
       client,

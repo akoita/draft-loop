@@ -10,7 +10,7 @@ import type {
 import { payloadChecksum, serialize } from "@draft-loop/storage/audit-trail";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
 import { appendAuditEventRow } from "./audit-trail.js";
-import type { SqlClient, SqlRow } from "./sql-client.js";
+import type { SqlRow, SqlSession } from "./sql-client.js";
 
 function requireNonEmpty(value: string, field: string): string {
   if (value.trim() === "") {
@@ -70,7 +70,7 @@ function artifactVersionFromRow(row: SqlRow): ArtifactVersionRecord {
  * Workspaces and the immutable records every run points at. Each write appends its audit event in
  * the same transaction, with the same event ids and payloads as the SQLite implementation.
  */
-export function createWorkspaceRecords(client: SqlClient) {
+export function createWorkspaceRecords(client: SqlSession) {
   return {
     saveWorkspace: async (record: WorkspaceRecord): Promise<void> => {
       requireNonEmpty(record.id, "workspace id");

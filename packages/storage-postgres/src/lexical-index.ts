@@ -35,7 +35,7 @@ import {
   rankLexicalChunks,
 } from "@draft-loop/storage/lexical-ranking";
 import { now } from "@draft-loop/storage/versioned-records";
-import type { SqlClient, SqlExecutor, SqlRow } from "./sql-client.js";
+import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
 /** Serializes writes to one knowledge base's index; the key is per store and knowledge base. */
 const lexicalIndexLockNamespace = 0x6c786978;
@@ -169,7 +169,7 @@ async function rankedChunks(
  * A knowledge base's lexical index and the retrieval traces on Postgres, with the shared rules
  * from `@draft-loop/storage/candidate-knowledge-lexical` and FTS5-equivalent BM25 ranking.
  */
-export function createLexicalIndex(client: SqlClient): CandidateKnowledgeLexicalStoragePort {
+export function createLexicalIndex(client: SqlSession): CandidateKnowledgeLexicalStoragePort {
   const inspect: CandidateKnowledgeLexicalStoragePort["inspectCandidateKnowledgeLexicalIndex"] =
     async (scopeInput, indexInput) => {
       const requestedScope = validatedCandidateKnowledgeRetrievalScope(scopeInput);

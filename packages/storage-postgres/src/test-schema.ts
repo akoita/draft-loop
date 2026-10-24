@@ -3,7 +3,9 @@ import {
   grantPostgresStorageAccess,
   migratePostgresStorage,
   openPostgresStorage,
+  openPostgresTenancy,
   type PostgresStorage,
+  type PostgresTenancy,
 } from "./postgres-storage.js";
 import { createSqlClient, type SqlClient } from "./sql-client.js";
 
@@ -17,6 +19,8 @@ export interface TestSchema {
   /** A superuser client in the schema, for setup and for edits that bypass the storage. */
   readonly admin: SqlClient;
   readonly open: (tenantId: string) => Promise<PostgresStorage>;
+  /** One pool, as the runtime role, that serves any tenant. */
+  readonly openTenancy: (maxConnections?: number) => Promise<PostgresTenancy>;
   readonly drop: () => Promise<void>;
 }
 
@@ -44,6 +48,12 @@ export async function createTestSchema(url: string, prefix = "conformance"): Pro
     admin,
     open: (tenantId) =>
       openPostgresStorage({ connectionString: runtimeRoleUrl(url), schema, tenantId }),
+    openTenancy: (maxConnections) =>
+      openPostgresTenancy({
+        connectionString: runtimeRoleUrl(url),
+        schema,
+        ...(maxConnections === undefined ? {} : { maxConnections }),
+      }),
     drop: async () => {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.close();

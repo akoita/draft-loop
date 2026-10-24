@@ -42,7 +42,7 @@ import {
   writingPolicyVersionSelect,
 } from "@draft-loop/storage/versioned-records";
 import { appendAuditEventRow } from "./audit-trail.js";
-import type { SqlClient, SqlExecutor } from "./sql-client.js";
+import type { SqlExecutor, SqlSession } from "./sql-client.js";
 
 const briefSelect =
   "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions";
@@ -117,7 +117,7 @@ async function writingPolicyLeaf(executor: SqlExecutor, workspaceId: string) {
  * (validation, append chains, audit events, row checks) come from
  * `@draft-loop/storage/versioned-records`, the same code SQLite runs.
  */
-export function createVersionedRecords(client: SqlClient) {
+export function createVersionedRecords(client: SqlSession) {
   async function saveWritingPolicyVersion(
     workspaceId: string,
     policy: WritingPolicyInput,

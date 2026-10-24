@@ -1,13 +1,13 @@
 import { sensitiveKeyPattern } from "@draft-loop/storage/audit-trail";
 import { StorageSecurityError, StorageValidationError } from "@draft-loop/storage/errors";
 import { requireNonEmpty } from "@draft-loop/storage/history-records";
-import type { SqlClient } from "./sql-client.js";
+import type { SqlSession } from "./sql-client.js";
 
 /**
  * The key-value port the orchestrator keeps run state in, as rows of one tenant. It refuses the
  * same credential-like keys as the local store, and a write is one upsert.
  */
-export function createRunState(client: SqlClient) {
+export function createRunState(client: SqlSession) {
   return {
     get: async (key: string): Promise<string | undefined> => {
       requireNonEmpty(key, "key");

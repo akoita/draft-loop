@@ -20,7 +20,7 @@ import {
 } from "@draft-loop/storage/candidate-knowledge";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
 import { requireNonEmpty } from "@draft-loop/storage/history-records";
-import type { SqlClient, SqlExecutor } from "./sql-client.js";
+import type { SqlExecutor, SqlSession } from "./sql-client.js";
 
 /** The knowledge-base methods this store implements so far; lifecycle and directories come later. */
 export type CandidateKnowledgeBaseRecords = Pick<
@@ -101,7 +101,7 @@ async function insertKnowledgeBase(
  * the shared rules from `@draft-loop/storage/candidate-knowledge`. Appending to a source locks
  * its row, so concurrent appends number their versions one after another.
  */
-export function createKnowledgeBaseRecords(client: SqlClient): CandidateKnowledgeBaseRecords {
+export function createKnowledgeBaseRecords(client: SqlSession): CandidateKnowledgeBaseRecords {
   return {
     ensureDefaultCandidateKnowledgeBase: async (input) => {
       const normalized = normalizeCandidateKnowledgeBaseInput({ ...input, isDefault: true });

@@ -8,7 +8,7 @@ import { StorageSecurityError, StorageValidationError } from "@draft-loop/storag
 import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 import { hostedWorkspaceHistory } from "./hosted-workspace-history.js";
 import { openPostgresCandidateKnowledgeStore } from "./postgres-knowledge-store.js";
-import type { PostgresStorage } from "./postgres-storage.js";
+import type { PostgresTenantStorage } from "./postgres-storage.js";
 
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 
@@ -53,7 +53,7 @@ export function workspaceReferenceBlobs(blobs: BlobStoragePort): BlobStoragePort
 
 export interface HostedApplicationPortsOptions {
   /** One tenant's open storage, shared by every call. */
-  readonly storage: PostgresStorage;
+  readonly storage: PostgresTenantStorage;
   /** The tenant the storage was opened for; references to any other tenant are refused. */
   readonly tenantId: string;
   /** The tenant's blob storage: managed source bytes and exported documents. */

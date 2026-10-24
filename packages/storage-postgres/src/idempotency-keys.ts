@@ -1,4 +1,4 @@
-import type { SqlClient } from "./sql-client.js";
+import type { SqlSession } from "./sql-client.js";
 
 /** What a claim found: the key is now this caller's, already answered, still running, or taken. */
 export type IdempotencyClaim =
@@ -29,7 +29,7 @@ export interface IdempotencyKeyRef {
  * The tenant's idempotency keys on Postgres. A key is claimed in one statement, so of two
  * concurrent callers exactly one runs the command. Times come from the caller's clock.
  */
-export function createIdempotencyKeys(client: SqlClient) {
+export function createIdempotencyKeys(client: SqlSession) {
   return {
     claim: async (input: IdempotencyClaimInput): Promise<IdempotencyClaim> => {
       const at = input.at.toISOString();
