@@ -144,6 +144,15 @@ with structural ROI per plan (ADR 0011, D13).
 | Unequal quality across candidates | An evaluation slice with synthetic profile variants that differ only in name, age or gender signals (stage 3) | A gap beyond tolerance blocks the change, as a regression does |
 | A service reaching more than it needs | Per-service identity and egress allowlists (D11, D14) | The call is denied, and an alert is raised |
 
+- **Status of the injection row (sprint 1m, 2026-10-24):** built for job posts
+  and uploads on the hosted service. A rule screener and, where Claude on
+  Vertex AI in the EU is available, a model screener classify the text. A
+  flagged or unscreened source is quarantined, the run gate and the worker
+  refuse it, and an owner or admin releases it with an audited reason. A
+  red-team flow test over a synthetic corpus passes. Still open: material with
+  no stored result (#1677), model screening on staging and production, and
+  prompt hardening, which waits for a stage 3 evaluation run. The [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
+  lists the gaps.
 - **Review routing by stakes:** the candidate approves every export.
   Team plans can also require a reviewer's approval by policy. Low-stakes
   steps, such as requirement extraction, need no human review.

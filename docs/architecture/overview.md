@@ -587,7 +587,8 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   `rules+model` adds Claude Haiku 5.5 on the EU Vertex route
   (`packages/model-gateway`), and `screenWith` merges the verdicts. An
   upload's text comes from the same extraction the run uses; a file with no
-  readable text is left unscreened.
+  readable text is left unscreened. An edit to a reviewed brief is typed by a
+  member and is not screened again.
 - **What the answer shows.** A `screening` object with the verdict, the closed
   signal codes and the stored result id, never a quote of the text. With
   screening `off` nothing is screened or stored and the object is absent.
@@ -649,6 +650,13 @@ chooses how, the same in both auth modes: `off`, `rules` (the default) or
   base. Ids and closed codes only, never the text, a file name or a release
   reason. [Server deploy](../operations/server-deploy.md#logs) lists their
   fields.
+- **Red-team test.** `apps/worker/src/injection-flow.test.ts` runs the
+  synthetic corpus of `packages/ingestion` through the API on Postgres and the
+  worker with a scripted gateway. It checks that every injected case is
+  quarantined, as a job post and as an upload, by the rule screener alone, that
+  clean cases are not, and that no author or critic call happens before a
+  release. The [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
+  lists the remaining gaps.
 
 ## Data and quality contracts
 

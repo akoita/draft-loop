@@ -299,6 +299,13 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   screen exports and deletes records. Database backups age out within 35
   days, as set in the private infrastructure repository. Per-tenant data
   keys and retention timers come later.
+- **Built in phase 2d (sprint 1m, 2026-10-24):** screening results and their
+  releases are part of a record's data, so deleting a record or an
+  organisation removes them and the record archive includes them. The model
+  screener sends a candidate source to Claude only when the deployment allows
+  provider data and the record's consent names Anthropic. A release is audited
+  with the result and member ids and no text, and the alert lines carry ids and
+  closed codes only.
 - **Retention defaults** (working defaults, accepted 2026-10-20; a GDPR
   lawyer confirms the periods before phase 2 admits other users, especially
   for special-category data):
@@ -406,6 +413,18 @@ Build on what the local version already records:
   its own identity (D14) and an allowlist of destinations: the run worker
   reaches only the model endpoints, the fetcher only approved URLs, and
   ingestion nothing.
+- **Built in phase 2d (sprint 1m, 2026-10-24):** untrusted text is screened
+  for prompt injection before any model reads it. Job posts and uploads go
+  through a rule screener and, where Claude on Vertex AI in the EU is
+  available, a Claude Haiku 5.5 classifier. A flagged or unscreened source is
+  quarantined: the API refuses a run on it (409 `material_quarantined`), the
+  worker pauses a run queued before the flag, and an owner or admin releases
+  it with an audited reason. A red-team flow test over a synthetic corpus pins
+  this end to end. Still open: material with no stored result (#1677), model
+  screening on staging and production, re-screening of brief edits, and
+  author and critic prompt hardening, which waits for a D16 evaluation run. The
+  [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
+  lists the controls and gaps.
 
 ### D12. Bringing local users across
 
