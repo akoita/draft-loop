@@ -46,7 +46,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/embeddings`                            | Local text-embedding runtime, pinned model manifest, and vector normalization behind the `TextEmbedder` port                          | Model download, vector persistence, retrieval policy, or provider calls |
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
-| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role) and the error shape | Domain logic, storage engines, or provider calls |
+| `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role), serving each request from its caller's tenant, and the error shape | Domain logic, storage engines, or provider calls |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage- or rate-limited run for when the limit allows, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 | `apps/web`                                       | The owner's browser screen over the `/v1` API, served by the API on the same origin: owner-token sign-in kept in the tab, and a client typed from the committed OpenAPI document | Domain logic, imports of `apps/api` or server packages, or provider calls |
 
@@ -154,9 +154,21 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   since hosted runs take evidence from candidate knowledge bases.
 - `hostedApplicationPorts` gives the hosted driver its ports over one
   tenant's Postgres and blob storage, and `hostedWorkspaceReference` and
-  `hostedKnowledgeStoreReference` build the references it addresses. The API's
-  entry point composes them at startup for the one tenant it serves. The
+  `hostedKnowledgeStoreReference` build the references it addresses. The
   worker composes them per job, for the tenant the job names (see below).
+- The API serves each request from its caller's tenant (ADR 0011, D6): a
+  member acts in their organisation, and the owner token in
+  `DRAFT_LOOP_TENANT_ID`'s tenant.
+  - It shares one pool, one run queue and one bucket among tenants, and
+    composes a tenant's application on its first request, with its blobs under
+    the tenant's prefix. The 100 most recently used stay composed.
+  - A `preHandler` hook binds the tenant's application to the request's async
+    context, and the routes' dependencies forward each call to it
+    (`registerTenantApplications`). A route that runs with no tenant bound
+    fails with a server error rather than reach a default tenant.
+  - Idempotency keys belong to the tenant: Postgres keeps them under row-level
+    security, and the memory store scopes them by tenant.
+  - Request logs carry the tenant and member ids, never an email or token.
 - Postgres isolates tenants in shared tables (ADR 0011, D3):
   - every table carries `tenant_id`, and every key and foreign key includes
     it, so tenants can reuse ids;

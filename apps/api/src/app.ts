@@ -26,6 +26,7 @@ import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
+import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
@@ -37,7 +38,10 @@ export interface ApiOptions {
   /** How requests are authenticated; owner mode when unset. */
   readonly auth?: ApiAuthOptions;
   readonly logger?: FastifyServerOptions["logger"];
-  /** The application service and how to address its workspaces; without it only health is served. */
+  /**
+   * One tenant's application service and how to address its workspaces, served to every caller;
+   * without it or `tenants` only health is served.
+   */
   readonly application?: {
     readonly service: ApplicationService;
     readonly workspaceRoot: (workspaceId: string) => string;
@@ -55,6 +59,8 @@ export interface ApiOptions {
     /** The tenant's knowledge bases' sensitivity rules; without them those routes are not served. */
     readonly sensitivityRules?: HostedSensitivityRules;
   };
+  /** Serves each request from its caller's tenant instead of one fixed `application`. */
+  readonly tenants?: TenantApplications;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
 }
@@ -139,50 +145,57 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => app.swagger(),
   );
 
-  if (options.application !== undefined) {
-    const { knowledgeIntake, knowledgeStore } = options.application;
+  if (options.application !== undefined && options.tenants !== undefined) {
+    throw new Error("Serve either one application or the callers' tenants, not both.");
+  }
+  const application =
+    options.tenants === undefined
+      ? options.application
+      : registerTenantApplications(app, options.tenants);
+  if (application !== undefined) {
+    const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
-    const idempotency = options.application.idempotency ?? createMemoryIdempotencyStore();
+    const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
     registerWorkspaceRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
-      budgetCeiling: options.application.budgetCeiling,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      budgetCeiling: application.budgetCeiling,
       ...(knowledgeIntake === undefined || knowledgeStore === undefined
         ? {}
         : { knowledge: { intake: knowledgeIntake, store: knowledgeStore } }),
     });
     registerWritingPolicyRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
     });
     registerApplicationRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
       idempotency,
-      enqueueRun: options.application.enqueueRun,
-      budgetCeiling: options.application.budgetCeiling,
+      enqueueRun: application.enqueueRun,
+      budgetCeiling: application.budgetCeiling,
     });
     registerReviewRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
       idempotency,
-      enqueueRun: options.application.enqueueRun,
+      enqueueRun: application.enqueueRun,
     });
     registerExportRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
       idempotency,
     });
     registerUsageRoutes(app, {
-      service: options.application.service,
-      workspaceRoot: options.application.workspaceRoot,
-      monthUsage: options.application.monthUsage,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      monthUsage: application.monthUsage,
     });
-    if (options.application.knowledgeIntake !== undefined) {
-      registerKnowledgeRoutes(app, { intake: options.application.knowledgeIntake });
+    if (application.knowledgeIntake !== undefined) {
+      registerKnowledgeRoutes(app, { intake: application.knowledgeIntake });
     }
-    if (options.application.sensitivityRules !== undefined) {
-      registerSensitivityRulesRoutes(app, { rules: options.application.sensitivityRules });
+    if (application.sensitivityRules !== undefined) {
+      registerSensitivityRulesRoutes(app, { rules: application.sensitivityRules });
     }
   }
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);

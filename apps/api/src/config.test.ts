@@ -153,4 +153,15 @@ describe("readHostedStorageConfig", () => {
   ])("refuses settings %s", (_label, override) => {
     expect(() => readHostedStorageConfig({ ...env, ...override })).toThrow(ApiConfigError);
   });
+
+  it("requires the owner's tenant in owner mode only", () => {
+    const withoutTenant = { ...env, DRAFT_LOOP_TENANT_ID: "" };
+    expect(() => readHostedStorageConfig(withoutTenant)).toThrow(ApiConfigError);
+    expect(() => readHostedStorageConfig(withoutTenant, "owner")).toThrow(ApiConfigError);
+    expect(readHostedStorageConfig(withoutTenant, "oidc")).not.toHaveProperty("tenantId");
+    expect(readHostedStorageConfig(env, "oidc").tenantId).toBe("owner");
+    expect(() =>
+      readHostedStorageConfig({ ...env, DRAFT_LOOP_TENANT_ID: "../other" }, "oidc"),
+    ).toThrow(ApiConfigError);
+  });
 });

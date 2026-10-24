@@ -5,6 +5,7 @@ export { type ApiError, apiErrorSchema } from "./errors.js";
 export {
   composeHostedApplication,
   type HostedApplicationParts,
+  hostedKnowledgeLocation,
   hostedKnowledgeStoreId,
 } from "./hosted-application.js";
 export {
@@ -32,3 +33,12 @@ export {
   type PostgresIdempotencyStoreOptions,
 } from "./postgres-idempotency.js";
 export { type ApiAuthOptions, type Caller, registerRequestAuthentication } from "./request-auth.js";
+export {
+  type ApiApplication,
+  defaultTenantCacheSize,
+  registerTenantApplications,
+  type TenantApplication,
+  type TenantApplications,
+  TenantContextMissingError,
+  tenantIdOf,
+} from "./tenant-context.js";
