@@ -96,7 +96,7 @@ import {
   opportunityExtractionPortFor,
 } from "./local-extraction-ports.js";
 import { fixtureAgents } from "./local-fixture-agents.js";
-import { contextForRun, ensureWorkspaceRecord } from "./local-history-records.js";
+import { contextForRun, ensureWorkspaceRecord, requireRun } from "./local-history-records.js";
 import {
   createProviderAdapter,
   type ProviderClientFactories,
@@ -1733,8 +1733,7 @@ export async function recordReviewDecision(command: RecordReviewDecisionCommand)
   }
   const storage = await openStorage(root);
   try {
-    const snapshot = await createStorageRunStore(storage).loadRun(command.runId);
-    if (snapshot === undefined) throw new CliUserError(`Run ${command.runId} was not found.`);
+    const snapshot = await requireRun(storage, command.runId);
     if (snapshot.workspaceId !== config.id) {
       throw new CliUserError("The review decision does not belong to this workspace.");
     }
@@ -1799,9 +1798,7 @@ export async function statusRun(
   }
   const storage = await openStorage(root);
   try {
-    const runStore = createStorageRunStore(storage);
-    const snapshot = await runStore.loadRun(runId);
-    if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
+    const snapshot = await requireRun(storage, runId);
     outputSnapshot(snapshot, io);
     outputCoverageAssessments(snapshot, io);
     return snapshot;
