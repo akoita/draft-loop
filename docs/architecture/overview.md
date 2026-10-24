@@ -293,8 +293,35 @@ The hosted service starts runs through a queue rather than in the request
   refunds the reservation. All of it runs inside the `Idempotency-Key`'s one
   execution, so a replay reserves nothing more. A reservation stays after a
   queueing failure, since the run is saved. A process that dies between the
-  reservation and the save leaves one open reservation that only a
-  reconciliation of open reservations without a saved run can release.
+  reservation and the save leaves one open reservation, which the worker's
+  reconciliation releases (next item).
+- The worker closes each reservation, in `run-credit-settlement.ts`, after a
+  job leaves its run in a final state. The ledger acts once, so a retried or
+  replayed job settles once.
+  - **Settle** when the run has a draft: `awaiting-approval`, `approved`,
+    `exported`, `stopped` or `provider-error` with an artifact.
+  - **Refund** when the run ended in one of those states without a draft, or
+    when its job was dropped for an erased record or a missing run.
+  - **Keep** while the run can continue: a user pause, a usage-limit pause, a
+    rate limit waiting for its retry, a consent or quarantine hold, or a step
+    in flight. A job for a run with no reservation, as in owner-token mode,
+    does nothing.
+  - **No free run.** No hosted route retries a `provider-error` run, but a
+    repeated begin request queues its run again. A job whose run has a
+    refunded reservation therefore ends as `credits-closed` without a
+    provider call.
+  - **Reconciliation.** After each job the worker reads that tenant's open
+    reservations older than an hour and compares them with their runs: no
+    saved run (a crash between reservation and save, or an erased record) is
+    refunded, and a run that finished with no job to say so, such as a paused
+    run the person stopped, is settled or refunded as above. It runs per
+    tenant, since the ledger does, so a tenant's orphan is found when the
+    tenant next has a job.
+  - **Known limits.** Erasing a record does not close the reservation of its
+    paused runs at once; the reconciliation does within the hour after the
+    tenant's next job. A run above the deployment's ceiling keeps its
+    reservation. Rounds a person adds after the run reached its first draft
+    are not charged again.
 - Idempotency keys live in Postgres (`idempotency_keys`, under row-level
   security), so every API instance replays a key's first result for a day. A
   retry that arrives while the first request still runs waits up to five

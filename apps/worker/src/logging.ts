@@ -2,6 +2,7 @@ import { runUsage } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
 
+import type { RunCreditsClosed } from "./run-credit-settlement.js";
 import type { QuarantinedRunInput, RunJobOutcome } from "./run-job-handler.js";
 
 /**
@@ -99,5 +100,23 @@ export function quarantineFields(
       resultIds: quarantined.flatMap(({ resultId }) => (resultId === undefined ? [] : [resultId])),
       signals: [...new Set(quarantined.flatMap(({ signals }) => signals))].sort(),
     },
+  };
+}
+
+/**
+ * The message of the line written for each run whose credits were settled or refunded. A log-based
+ * alert reads it, so the message and the field names of `runCreditsFields` are a stable contract.
+ */
+export const runCreditsMessage = "run credits settled";
+
+/** The line's fields: ids, numbers and the closed word `settled` or `refunded`; never content. */
+export function runCreditsFields(closed: RunCreditsClosed): Record<string, unknown> {
+  return {
+    organisationId: closed.organisationId,
+    runId: closed.runId,
+    credits: closed.credits,
+    estimateVersion: closed.estimateVersion,
+    outcome: closed.outcome,
+    estimatedUsd: closed.estimatedUsd,
   };
 }

@@ -885,4 +885,42 @@ describe.runIf(connectionString !== undefined)("Postgres credit ledger", () => {
       });
     });
   });
+  it("lists the open reservations made before a time, oldest first, for one organisation", async () => {
+    await withLedger(async (context) => {
+      await context
+        .plans("org-south")
+        .assignPlan({ planId: "individual", periodStart: "2026-10-01", assignedAt });
+      await context.plans().assignPlan({ planId: "pro", periodStart: "2026-10-01", assignedAt });
+      const north = context.ledger();
+      const reserve = (runId: string, now: string) =>
+        north.reserve({ runId, credits: 1, estimateVersion: 1, now });
+      await reserve("run-old", "2026-10-10T08:00:00.000Z");
+      await reserve("run-settled", "2026-10-10T08:30:00.000Z");
+      await reserve("run-refunded", "2026-10-10T08:45:00.000Z");
+      await reserve("run-older", "2026-10-10T07:00:00.000Z");
+      await reserve("run-recent", "2026-10-10T09:30:00.000Z");
+      await north.settle({ runId: "run-settled", now: "2026-10-10T08:31:00.000Z" });
+      await north.refund({ runId: "run-refunded", now: "2026-10-10T08:46:00.000Z" });
+      await context.ledger("org-south").reserve({
+        runId: "run-south",
+        credits: 1,
+        estimateVersion: 1,
+        now: "2026-10-10T06:00:00Z",
+      });
+
+      const before = "2026-10-10T09:00:00.000Z";
+      const stale = await north.openReservationsBefore({ reservedBefore: before, limit: 10 });
+      expect(stale.map((reservation) => reservation.runId)).toEqual(["run-older", "run-old"]);
+      expect(stale[0]).toMatchObject({ state: "open", credits: 1, estimateVersion: 1 });
+      await expect(
+        north.openReservationsBefore({ reservedBefore: before, limit: 1 }),
+      ).resolves.toHaveLength(1);
+      await expect(
+        north.openReservationsBefore({ reservedBefore: "2026-10-10T07:00:00.000Z", limit: 10 }),
+      ).resolves.toEqual([]);
+      await expect(
+        north.openReservationsBefore({ reservedBefore: before, limit: 0 }),
+      ).rejects.toMatchObject({ code: "invalid_credit_request" });
+    });
+  });
 });

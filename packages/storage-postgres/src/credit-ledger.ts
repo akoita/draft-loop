@@ -136,6 +136,14 @@ export interface CreditLedger {
   readonly grant: (input: GrantCreditsInput) => Promise<CreditGrant>;
   /** The run's reservation, or undefined; reads without locking or rolling. */
   readonly reservationFor: (runId: string) => Promise<CreditReservation | undefined>;
+  /**
+   * Open reservations made before `reservedBefore`, oldest first, at most `limit` (1 to 500):
+   * the ones a reconciliation sweep checks against the runs they are for.
+   */
+  readonly openReservationsBefore: (input: {
+    readonly reservedBefore: CreditClock;
+    readonly limit: number;
+  }) => Promise<readonly CreditReservation[]>;
   /** Runs in flight: reservations neither settled nor refunded. */
   readonly openReservationCount: () => Promise<number>;
   /** Reservations created at or after `since` (an ISO timestamp, a UTC day start), in any state. */
@@ -502,6 +510,31 @@ async function countOpen(executor: SqlExecutor): Promise<number> {
   return Number(row?.runs ?? 0);
 }
 
+async function listOpenBefore(
+  executor: SqlExecutor,
+  reservedBefore: Date,
+  limit: number,
+): Promise<readonly CreditReservation[]> {
+  const runs = await executor.query(
+    `SELECT r.run_id FROM credit_ledger r
+      WHERE r.kind = 'reserve'
+        AND NOT EXISTS (SELECT 1 FROM credit_ledger c
+                         WHERE c.tenant_id = r.tenant_id AND c.run_id = r.run_id
+                           AND c.kind IN ('settle', 'refund'))
+      GROUP BY r.run_id
+     HAVING min(r.created_at) < $1
+      ORDER BY min(r.created_at), r.run_id
+      LIMIT $2`,
+    [reservedBefore.toISOString(), limit],
+  );
+  const reservations: CreditReservation[] = [];
+  for (const row of runs) {
+    const found = await loadReservation(executor, String(row.run_id));
+    if (found !== null) reservations.push(found.reservation);
+  }
+  return reservations;
+}
+
 async function countSince(executor: SqlExecutor, since: Date): Promise<number> {
   const [row] = await executor.query(
     `SELECT count(DISTINCT run_id) AS runs FROM credit_ledger
@@ -691,6 +724,16 @@ export function createCreditLedger(client: SqlSession): CreditLedger {
       requireRunId(runId);
       return client.transaction(
         async (executor) => (await loadReservation(executor, runId))?.reservation,
+        { readOnlySnapshot: true },
+      );
+    },
+
+    openReservationsBefore: async ({ reservedBefore, limit }) => {
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+        throw invalid("The limit must be a whole number from 1 to 500.");
+      }
+      return client.transaction(
+        (executor) => listOpenBefore(executor, requireClock(reservedBefore), limit),
         { readOnlySnapshot: true },
       );
     },
