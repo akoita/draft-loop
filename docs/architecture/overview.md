@@ -47,7 +47,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                                                               | Domain workflow decisions                                               |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                            | A second domain layer or provider SDKs in the UI                        |
 | `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, owner-only token access and the error shape | Domain logic, storage engines, or provider calls |
-| `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage-limited run for its reset time, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
+| `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage- or rate-limited run for when the limit allows, and stops within Cloud Run's shutdown notice | Domain logic, provider calls outside the application service, or job payloads with content |
 | `apps/web`                                       | The owner's browser screen over the `/v1` API, served by the API on the same origin: owner-token sign-in kept in the tab, and a client typed from the committed OpenAPI document | Domain logic, imports of `apps/api` or server packages, or provider calls |
 
 ## Key flow
@@ -212,6 +212,9 @@ The hosted service starts runs through a queue rather than in the request
   finished is left alone, so a duplicate or late job does nothing.
 - A run paused on a provider usage limit is queued again for the reset time
   (15 minutes when the provider names none) and resumed then.
+- A run stopped by a provider rate limit is queued again after at least a
+  minute, or later if the provider asks. It retries while its step has
+  attempts left.
 - A job that fails or stops sending heartbeats, as after a crash, is retried
   with backoff, and the worker resumes the run from its last saved step.
 - On SIGTERM the worker stops claiming and gives the job in flight 8 seconds.
