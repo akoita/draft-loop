@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
+import type { RunJob } from "@draft-loop/run-queue";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedWorkspaceReference,
@@ -12,7 +13,7 @@ import { readWorkerConfig } from "./config.js";
 import { failedCallLines } from "./failed-call-logging.js";
 import { errorFields, logLine, runOutcomeFields } from "./logging.js";
 import { workerProviderOptions } from "./model-routes.js";
-import { tenantServices } from "./tenant-services.js";
+import { tenantRunConsent, tenantServices } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
 // The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
@@ -47,6 +48,8 @@ const serviceFor = tenantServices({
   local: workerProviderOptions(config.modelGateway),
 });
 
+const workspaceRoot = (job: RunJob) => hostedWorkspaceReference(job.tenantId, job.workspaceId);
+
 const worker = await startWorker({
   queue: {
     connectionString: config.databaseUrl,
@@ -56,8 +59,12 @@ const worker = await startWorker({
   },
   runs: {
     serviceFor: (job) => serviceFor(job.tenantId),
-    workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
+    workspaceRoot,
     allowProviderData: config.allowProviderData,
+    // In a sign-in deployment, each job checks its record's consent again before any provider call.
+    ...(config.requireConsent
+      ? { consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }) }
+      : {}),
     budgetCeiling: config.budgetCeiling,
     onOutcome: (job, outcome, run, before) => {
       for (const line of failedCallLines(job, run, before)) console.error(line);

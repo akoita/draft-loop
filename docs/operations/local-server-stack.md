@@ -160,6 +160,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | worker         | `true` lets runs send approved material to providers; default `false` |
+| `DRAFT_LOOP_REQUIRE_CONSENT`            | worker         | `true`, for a sign-in deployment, checks each job's candidate record's provider transmission consent before any provider call and pauses the run without it; default `false`. The stack's one worker also serves the owner-mode API, so it stays off there |
 | `DRAFT_LOOP_WORKER_READY_FILE`          | worker         | Touched once the worker claims jobs, for a health check         |
 | `DRAFT_LOOP_WORKER_MODE`                | worker         | `serve` (the default) keeps claiming jobs; `drain` exits once the queue stays empty, for a Cloud Run job |
 | `DRAFT_LOOP_WORKER_IDLE_MS`             | worker         | In drain mode, how long the queue stays empty before the worker exits, default 60000 |

@@ -59,6 +59,28 @@ export class RunQueueUnavailableError extends Error {
   }
 }
 
+/** Which consent a refused request lacked; each is the API's error code. */
+export type ConsentRequiredCode = "storage_consent_required" | "transmission_consent_required";
+
+const consentRequiredMessages: Readonly<Record<ConsentRequiredCode, string>> = {
+  storage_consent_required:
+    "The candidate record has no current material storage consent; record one before uploading.",
+  transmission_consent_required:
+    "The candidate record's current provider transmission consent does not name every provider " +
+    "the workspace's models use; record one that does before running.",
+};
+
+/** A request refused because the candidate record's current consent does not cover it (D7). */
+export class ConsentRequiredError extends Error {
+  readonly code: ConsentRequiredCode;
+
+  constructor(code: ConsentRequiredCode) {
+    super(consentRequiredMessages[code]);
+    this.name = "ConsentRequiredError";
+    this.code = code;
+  }
+}
+
 /** Intake's refusals by HTTP status; the codes are the API's error codes too. */
 const intakeStatus: Readonly<Record<HostedKnowledgeIntakeErrorCode, number>> = {
   knowledge_base_not_found: 404,
@@ -148,6 +170,10 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // Record access's messages are fixed and never quote an id, so they are safe to answer with.
   if (error instanceof CandidateRecordAccessError) {
     void reply.code(recordAccessStatus[error.code]).send(apiError(error.code, error.message));
+    return;
+  }
+  if (error instanceof ConsentRequiredError) {
+    void reply.code(409).send(apiError(error.code, error.message));
     return;
   }
   // The ledger's messages are fixed and never quote a note, so they are safe to answer with.

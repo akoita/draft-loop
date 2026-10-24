@@ -215,6 +215,44 @@ describe("run job handler", () => {
     expect(service.resume).toHaveBeenCalledTimes(1);
   });
 
+  it("pauses an active run without consent, and calls no provider", async () => {
+    const consentCase = async (state: RunSnapshot) => {
+      const service = {
+        status: vi.fn<Service["status"]>(async () => state),
+        resume: vi.fn<Service["resume"]>(async () => state),
+        lifecycle: vi.fn<ApplicationService["lifecycle"]>(async () => snapshot("paused")),
+      };
+      const outcomes: RunJobOutcome[] = [];
+      const consentFor = vi.fn(async () => false);
+      const handler = createRunJobHandler({
+        serviceFor: () => service,
+        workspaceRoot: () => root,
+        allowProviderData: true,
+        budgetCeiling,
+        consentFor,
+        now: () => now,
+        onOutcome: (_job, outcome) => outcomes.push(outcome),
+      });
+      await handler(job, { requeue: async () => undefined });
+      expect(consentFor).toHaveBeenCalledWith(job);
+      expect(service.resume).not.toHaveBeenCalled();
+      return { outcome: outcomes[0], lifecycle: service.lifecycle };
+    };
+
+    const drafting = await consentCase(snapshot("drafting"));
+    expect(drafting.outcome).toBe("consent-required");
+    expect(drafting.lifecycle).toHaveBeenCalledWith({ root, runId: job.runId, action: "pause" });
+    // A run past its usage limit is already paused, and a failed step awaits the person.
+    for (const state of [
+      snapshot("paused", usageLimit("2026-10-21T11:59:00.000Z")),
+      snapshot("provider-error"),
+    ]) {
+      const held = await consentCase(state);
+      expect(held.outcome).toBe("consent-required");
+      expect(held.lifecycle).not.toHaveBeenCalled();
+    }
+  });
+
   it("lets a failed resume fail the job, so the queue retries it", async () => {
     const service = {
       status: async () => snapshot("drafting"),

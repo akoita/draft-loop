@@ -158,3 +158,26 @@ export function currentConsents(history: readonly ConsentEntry[]): ConsentState 
   for (const entry of history) state[entry.kind] = entry;
   return state;
 }
+
+/** Whether a record's current material storage entry is a grant. */
+export function permitsMaterialStorage(state: ConsentState): boolean {
+  return state["material-storage"]?.action === "granted";
+}
+
+/** The companies a workspace's author and critic models belong to, as a run calls them. */
+export interface ConsentModelCompanies {
+  readonly author: { readonly company: string };
+  readonly critic: { readonly company: string };
+}
+
+/**
+ * Whether a record's current provider transmission entry is a grant that names every company the
+ * workspace's author and critic models call. A grant naming only some of them permits nothing.
+ */
+export function permitsTransmission(state: ConsentState, models: ConsentModelCompanies): boolean {
+  const grant = state["provider-transmission"];
+  if (grant?.action !== "granted") return false;
+  return [models.author.company, models.critic.company].every((company) =>
+    grant.providers.includes(company),
+  );
+}
