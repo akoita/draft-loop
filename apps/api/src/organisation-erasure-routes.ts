@@ -28,7 +28,7 @@ const erasedResponses = {
 };
 
 const description =
-  "Erases every candidate record as `DELETE /v1/workspaces/{workspaceId}` does, then every object left under the tenant's storage prefix, then the tenant-wide knowledge bases, idempotency keys and the organisation with its members. The organisation id is typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run anywhere in the organisation answers 409 `run_active`. Calling again finishes an interrupted deletion. Accounts at the identity provider are not touched: a person's sign-in simply no longer resolves to an organisation.";
+  "Erases every candidate record as `DELETE /v1/workspaces/{workspaceId}` does, then every object left under the tenant's storage prefix, then the tenant-wide knowledge bases, idempotency keys and the organisation with its members. The organisation id is typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run anywhere in the organisation answers 409 `run_active`. The first call marks the organisation as closing, and from then on every member request but this one answers 409 `organisation_closing`. Calling again finishes an interrupted deletion. Accounts at the identity provider are not touched: a person's sign-in simply no longer resolves to an organisation.";
 
 type OrganisationErasureOutcome =
   | { readonly state: "missing" }
@@ -41,22 +41,23 @@ type OrganisationErasureOutcome =
     };
 
 /**
- * Erases one organisation: each record closed and erased in turn, its objects by key, then every
+ * Erases one organisation: the organisation is marked closing first, so no member request creates
+ * anything meanwhile; then each record is closed and erased in turn, its objects by key, then every
  * object left under the tenant's prefix, then the tenant's remaining rows, the directory last. An
- * interruption leaves the organisation in the directory, so the next call finishes it.
+ * interruption leaves the organisation closing in the directory, so the next call finishes it.
  */
 async function eraseOrganisation(erasure: TenantErasure): Promise<OrganisationErasureOutcome> {
   const { organisation, records, blobs } = erasure;
-  if (!(await organisation.organisationExists())) return { state: "missing" };
-  if (await organisation.hasActiveRun()) return { state: "run-active" };
+  const closure = await organisation.close();
+  if (closure.state !== "closing") return closure;
   let erasedRecords = 0;
   let objectsRemoved = 0;
   let rowsRemoved = 0;
   for (const workspaceId of await organisation.listRecords()) {
-    const closure = await records.close(workspaceId);
-    if (closure.state === "run-active") return { state: "run-active" };
-    if (closure.state === "missing") continue;
-    for (const key of closure.objectKeys) {
+    const recordClosure = await records.close(workspaceId);
+    if (recordClosure.state === "run-active") return { state: "run-active" };
+    if (recordClosure.state === "missing") continue;
+    for (const key of recordClosure.objectKeys) {
       if (await blobs.removeObject(key)) objectsRemoved += 1;
     }
     rowsRemoved += (await records.erase(workspaceId)).rowsRemoved;

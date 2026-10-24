@@ -30,6 +30,7 @@ import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerRecordAccess } from "./record-access.js";
@@ -176,6 +177,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     options.tenants === undefined
       ? options.application
       : registerTenantApplications(app, options.tenants);
+  const erasureFor = options.tenants?.erasureFor;
+  if (erasureFor !== undefined) {
+    // Before every route, so a closing organisation is refused whatever the route.
+    registerOrganisationClosing(app, {
+      erasureFor,
+      ...(options.tenants?.ownerTenantId === undefined
+        ? {}
+        : { ownerTenantId: options.tenants.ownerTenantId }),
+    });
+  }
   const recordAccessFor = options.tenants?.recordAccessFor;
   if (application !== undefined && auth.mode === "oidc" && recordAccessFor === undefined) {
     throw new Error("Sign-in mode serves workspaces only with candidate record access.");
@@ -202,7 +213,6 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       });
     }
   }
-  const erasureFor = options.tenants?.erasureFor;
   if (application !== undefined && erasureFor !== undefined) {
     // Before the workspace routes, so a record being erased is missing for each of them.
     registerRecordErasureRoutes(app, {
