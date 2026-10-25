@@ -553,6 +553,91 @@ describe("the shared screens' commands over HTTP", () => {
     ]);
   });
 
+  it("starts a review from the application's reviewed brief, then loads its new run", async () => {
+    const reviewed: ApiSchemas["Application"] = {
+      ...ledgerApplication,
+      briefs: [
+        {
+          briefId: "brief-old",
+          latestVersion: 1,
+          status: "reviewed",
+          createdAt: "2026-10-23T00:00:00Z",
+        },
+        {
+          briefId: "brief-1",
+          latestVersion: 3,
+          status: "reviewed",
+          createdAt: "2026-10-23T02:00:00Z",
+        },
+      ],
+    };
+    const projected = { workspaceId, runId: "run-3", state: "drafting" };
+    const { client, calls } = scriptedClient({
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => reviewed,
+      "POST /v1/workspaces/{workspaceId}/runs": () => syntheticRun,
+      "GET /v1/workspaces/{workspaceId}/review-state": () => projected,
+    });
+    const bridge = createHttpBridge({ client, idempotencyKey: () => "run-key-0002" });
+
+    const started = await bridge.invoke({
+      type: "review.dispatch",
+      input: {
+        workspaceId,
+        runId: "pending",
+        applicationId: "app-ledger",
+        action: { type: "start" },
+      },
+    });
+
+    expect(started).toEqual({ ok: true, value: projected });
+    expect(calls.slice(1)).toEqual([
+      {
+        operation: "POST /v1/workspaces/{workspaceId}/runs",
+        input: {
+          path: { workspaceId },
+          header: { "idempotency-key": "run-key-0002" },
+          body: {
+            applicationId: "app-ledger",
+            opportunityBrief: { briefId: "brief-1", version: 3 },
+          },
+        },
+      },
+      {
+        operation: "GET /v1/workspaces/{workspaceId}/review-state",
+        input: { path: { workspaceId }, query: { applicationId: "app-ledger" } },
+      },
+    ]);
+  });
+
+  it("leaves decisions to the classic steps and refuses a start without reviewed requirements", async () => {
+    const { client, calls } = scriptedClient({
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => ledgerApplication,
+    });
+    const bridge = createHttpBridge({ client });
+    const input = { workspaceId, runId: "run-1", applicationId: "app-ledger" };
+
+    const decided = await bridge.invoke({
+      type: "review.dispatch",
+      input: { ...input, action: { type: "approve" } },
+    });
+    const unreviewed = await bridge.invoke({
+      type: "review.dispatch",
+      input: { ...input, action: { type: "start" } },
+    });
+
+    expect(decided).toMatchObject({
+      ok: false,
+      error: { message: expect.stringContaining("Review, approve and export") },
+    });
+    expect(unreviewed).toMatchObject({
+      ok: false,
+      error: { message: "Review this application's requirements first." },
+    });
+    expect(calls.map(({ operation }) => operation)).toEqual([
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}",
+    ]);
+  });
+
   it("answers a review of a run the application does not hold as not found", async () => {
     const { port } = portOver({
       "GET /v1/workspaces/{workspaceId}/review-state": () => {
