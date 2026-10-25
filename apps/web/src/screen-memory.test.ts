@@ -28,6 +28,10 @@ const application = {
   briefs: [],
   runs: [],
   chosenRunId: null,
+  jobSourceKind: "pasted-text" as const,
+  suggestedName: null,
+  exportCount: 0,
+  modelProfiles: null,
 };
 
 describe("screen memory", () => {

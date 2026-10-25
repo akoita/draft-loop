@@ -12,6 +12,11 @@ import { ensureDirectory, ensureFile } from "./workspace-paths.js";
  * candidate knowledge bases.
  */
 export interface WorkspaceFilesPort {
+  /**
+   * Whether the workspace keeps files of its own. Without them, an application's pasted job text
+   * is kept in the application's record instead of a file beside the history.
+   */
+  readonly keepsFiles: boolean;
   readonly requireJobDescription: (path: string) => Promise<void>;
   readonly requireSourceDirectory: (path: string) => Promise<void>;
   /** The trimmed job description; refuses an empty one. */
@@ -45,6 +50,7 @@ async function collectSourceFiles(path: string): Promise<readonly string[]> {
 }
 
 export const localWorkspaceFiles: WorkspaceFilesPort = {
+  keepsFiles: true,
   requireJobDescription: (path) => ensureFile(path, "Job description"),
   requireSourceDirectory: (path) => ensureDirectory(path, "Source directory"),
   readJobDescription: async (path) => {
@@ -58,6 +64,7 @@ export const localWorkspaceFiles: WorkspaceFilesPort = {
 
 /** A workspace without local files, as the hosted service keeps them. */
 export const noWorkspaceFiles: WorkspaceFilesPort = {
+  keepsFiles: false,
   requireJobDescription: async () => undefined,
   requireSourceDirectory: async () => undefined,
   readJobDescription: async () => {

@@ -52,7 +52,8 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
   return {
     id: view.id,
     name: view.name,
-    jobSourceKind: view.jobSource.kind,
+    // Text kept in the record is still the text pasted when the application was created.
+    jobSourceKind: view.jobSource.kind === "stored-text" ? "pasted-text" : view.jobSource.kind,
     status: view.status,
     isDefault: view.isDefault,
     createdAt: view.createdAt,

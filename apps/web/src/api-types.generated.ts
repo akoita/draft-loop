@@ -42,6 +42,24 @@ export interface ApiSchemas {
       readonly updatedAt: string;
     })[];
     readonly chosenRunId: string | null;
+    readonly jobSourceKind: "pasted-text" | "approved-url" | "local-file";
+    readonly suggestedName: string | null;
+    readonly exportCount: number;
+    readonly modelProfiles: {
+      readonly author: {
+        readonly id: string;
+        readonly version: number;
+      };
+      readonly critic: {
+        readonly id: string;
+        readonly version: number;
+      };
+    } | null;
+  };
+  "ApplicationJob": {
+    readonly origin: "pasted-text" | "url" | "unavailable";
+    readonly text: string | null;
+    readonly url: string | null;
   };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];
@@ -916,10 +934,31 @@ export interface ApiOperations {
       readonly applications: readonly (ApiSchemas["Application"])[];
     };
   };
+  "POST /v1/workspaces/{workspaceId}/applications": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly name: string;
+      readonly jobText: string;
+    };
+    readonly response: ApiSchemas["Application"];
+  };
   "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": {
     readonly path: {
       readonly workspaceId: string;
       readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["Application"];
+  };
+  "PATCH /v1/workspaces/{workspaceId}/applications/{applicationId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly name?: string;
+      readonly archived?: boolean;
     };
     readonly response: ApiSchemas["Application"];
   };
@@ -955,6 +994,43 @@ export interface ApiOperations {
       readonly runId: string;
     };
     readonly response: ApiSchemas["Run"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/models": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly modelProfiles: {
+        readonly author: {
+          readonly id: string;
+          readonly version: number;
+        };
+        readonly critic: {
+          readonly id: string;
+          readonly version: number;
+        };
+      } | null;
+    };
+    readonly response: ApiSchemas["Application"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/chosen-run": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly runId: string;
+      readonly reason?: string;
+    };
+    readonly response: ApiSchemas["Application"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["ApplicationJob"];
   };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/review": {
     readonly path: {

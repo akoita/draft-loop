@@ -12,12 +12,23 @@ export const applicationIdSchema = z
 
 export const applicationNameSchema = z.string().trim().min(1).max(applicationNameMaxLength);
 
+/** The longest pasted job description an application keeps, in UTF-16 code units. */
+export const applicationPastedJobMaxLength = 200_000;
+
 /**
  * Where an application's job description comes from. Pasted text lives in the workspace at
- * `storedPath`; a URL needs explicit approval; a local file is referenced, not copied.
+ * `storedPath`, or in the application's record itself (`stored-text`) where the workspace has no
+ * files, as on the hosted service; a URL needs explicit approval; a local file is referenced, not
+ * copied.
  */
 export const applicationJobSourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("pasted-text"), storedPath: z.string().min(1) }).strict(),
+  z
+    .object({
+      kind: z.literal("stored-text"),
+      text: z.string().trim().min(1).max(applicationPastedJobMaxLength),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("approved-url"),

@@ -13,6 +13,7 @@ import {
   type ApplicationModelProfiles,
   applicationIdSchema,
   applicationModelProfilesSchema,
+  applicationPastedJobMaxLength,
   applicationSchema,
 } from "@draft-loop/schemas/application";
 import type {
@@ -49,9 +50,10 @@ import {
   type ImportApplicationCounts,
   importApplicationFromWorkspace,
 } from "./workspace-application-import.js";
+import { workspaceFiles } from "./workspace-files.js";
 
 const historyDirectory = ".draft-loop";
-const maximumPastedJobCharacters = 200_000;
+const maximumPastedJobCharacters = applicationPastedJobMaxLength;
 const epoch = "1970-01-01T00:00:00.000Z";
 
 /** An application with what it holds: its latest brief versions, runs and exports. */
@@ -367,6 +369,7 @@ async function persistJobSource(
   if (text.length > maximumPastedJobCharacters) {
     throw new CliUserError("The pasted job description is too long.");
   }
+  if (!workspaceFiles().keepsFiles) return { jobSource: { kind: "stored-text", text } };
   const storedPath = join(historyDirectory, "applications", id, "job.md");
   const absolute = join(root, storedPath);
   await mkdir(dirname(absolute), { recursive: true });
