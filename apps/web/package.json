@@ -16,6 +16,8 @@
     "api-types": "tsx src/write-api-types.ts"
   },
   "dependencies": {
+    "@draft-loop/domain": "workspace:*",
+    "@draft-loop/ui": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
