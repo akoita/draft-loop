@@ -122,12 +122,18 @@ API with its web screen, and one worker) runs locally with Docker Compose:
 `pnpm server:up` starts it, and `pnpm server:test` runs the server suites and
 an end-to-end smoke against it.
 The API serves the web screen at `/`. Each candidate record opens on the
-desktop's own screens: Home, a new application from a pasted job, its
-requirements, career evidence uploads and the start of a run. The web's earlier
-steps stay one click away to set up a workspace and its writing policy, record
-the candidate's consents, mark private sections, review, approve and download
-the CV. It shows each source's and job brief's injection screening status and
-lets owners and admins release quarantined material with a reason. See the [local server stack](docs/operations/local-server-stack.md).
+desktop's own screens:
+
+- Home, a new application from a pasted job, and its requirements.
+- Career evidence uploads and the reviewed career profile.
+- The run, its review and approval, and the CV the browser downloads.
+- The run details and the comparison between an application's runs.
+
+“Consent, rules and credits” sets up the workspace, records the candidate's
+consents, marks private sections and shows the credit balance. The web also
+shows each source's and job brief's injection screening status, and lets owners
+and admins release quarantined material with a reason. See the
+[local server stack](docs/operations/local-server-stack.md).
 In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
 identity provider, and each organisation is its own tenant: its members see
 only its workspaces, sources and runs. Within an organisation, each workspace
