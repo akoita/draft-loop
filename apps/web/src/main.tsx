@@ -8,6 +8,8 @@ import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
 import { createTokenStore } from "./session.js";
 import { ServiceUnreachable } from "./sign-in.js";
 import "./styles.css";
+// After the web's own styles, so the shared screens keep the desktop's look.
+import "@draft-loop/ui/styles.css";
 
 const element = document.getElementById("root");
 if (element === null) throw new Error("The page has no root element.");

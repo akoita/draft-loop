@@ -15,6 +15,8 @@ export interface NewApplicationFormViewProps {
   /** Why the host refused to create the application, shown in the form. */
   readonly errorMessage: string | null;
   readonly dialogRef?: RefObject<HTMLDivElement | null>;
+  /** False hides the job page address, leaving pasted text only. */
+  readonly jobPagesAllowed?: boolean;
   readonly onDraftChange: (draft: NewApplicationDraft) => void;
   readonly onSubmit: () => void;
   readonly onCancel: () => void;
@@ -29,6 +31,7 @@ export function NewApplicationFormView({
   busy,
   errorMessage,
   dialogRef,
+  jobPagesAllowed = true,
   onDraftChange,
   onSubmit,
   onCancel,
@@ -78,13 +81,15 @@ export function NewApplicationFormView({
               onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
             />
           </label>
-          <fieldset className="model-editor-mode">
-            <legend>Job posting</legend>
-            <div className="view-toggle">
-              {kindButton("text", "Paste text")}
-              {kindButton("url", "Job page address")}
-            </div>
-          </fieldset>
+          {jobPagesAllowed ? (
+            <fieldset className="model-editor-mode">
+              <legend>Job posting</legend>
+              <div className="view-toggle">
+                {kindButton("text", "Paste text")}
+                {kindButton("url", "Job page address")}
+              </div>
+            </fieldset>
+          ) : null}
           {draft.jobKind === "text" ? (
             <label className="new-application-field">
               <span>Job description</span>
@@ -193,6 +198,8 @@ export interface NewApplicationDialogProps {
   /** Opens the created application; the dialog closes itself first. */
   readonly onCreated: (application: ApplicationSummaryView) => void;
   readonly onClose: () => void;
+  /** False offers pasted text only, for a host that fetches no job page. */
+  readonly jobPagesAllowed?: boolean;
 }
 
 /** The form as a modal: it traps the focus, Escape cancels, and a failure stays in the form. */
@@ -200,6 +207,7 @@ export function NewApplicationDialog({
   createApplication,
   onCreated,
   onClose,
+  jobPagesAllowed = true,
 }: NewApplicationDialogProps) {
   const [draft, setDraft] = useState<NewApplicationDraft>(emptyNewApplicationDraft);
   const [creating, setCreating] = useState(false);
@@ -233,6 +241,7 @@ export function NewApplicationDialog({
       busy={creating}
       errorMessage={error}
       dialogRef={dialogRef}
+      jobPagesAllowed={jobPagesAllowed}
       onDraftChange={setDraft}
       onSubmit={() => void create()}
       onCancel={close}

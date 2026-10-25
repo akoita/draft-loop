@@ -90,6 +90,15 @@ describe("New application form", () => {
     expect(approved).not.toMatch(submitDisabled);
   });
 
+  it("takes pasted text only from a host that fetches no job page", () => {
+    const html = renderToStaticMarkup(
+      <NewApplicationFormView {...props} jobPagesAllowed={false} />,
+    );
+    expect(html).toContain("Paste the job description");
+    expect(html).not.toContain("Job page address");
+    expect(html).not.toContain("Paste text");
+  });
+
   it("shows a creation failure inline and a busy state", () => {
     const html = renderToStaticMarkup(
       <NewApplicationFormView

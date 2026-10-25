@@ -14,6 +14,7 @@ import {
   type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
+  type CredentialProvider,
   type CredentialTestProvider,
   type CredentialTestResult,
   createCapabilityPort,
@@ -329,6 +330,11 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
 export interface DesktopApplicationCapabilities {
   readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
   /**
+   * False when the host cannot fetch a job page for the person, as on the hosted service, where
+   * that would be a new outbound boundary: New application then takes pasted text only.
+   */
+  readonly jobPagesAllowed?: boolean;
+  /**
    * Creates an application and resolves with its summary. The job is pasted text, or `{ url }`:
    * a job page the person approved fetching, read only when requirements are extracted.
    */
@@ -502,6 +508,10 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const refresh = async (): Promise<DesktopReviewState> => load();
   return {
     load,
+    ...(capabilityPort.hasCapability("workspace.open") ||
+    capabilityPort.hasCapability("workspace.create")
+      ? {}
+      : { workspaceClosable: false }),
     openWorkspace: async () => {
       unwrap(
         await capabilityPort.execute({
@@ -592,6 +602,8 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ).applications,
         }
       : {}),
+    // A host that fetches no web page for the person cannot take a job by its page's address.
+    ...(capabilityPort.hasCapability("source.add-url") ? {} : { jobPagesAllowed: false }),
     ...(capabilityPort.hasCapability("application.create")
       ? {
           createApplication: async (
@@ -827,27 +839,31 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       if (action.type === "start") runId = undefined;
       return next;
     },
-    getCredentialStatus: async (provider) => {
-      const result = await capabilityPort.execute({
-        type: "credential.status",
-        input: { provider },
-      });
-      return unwrap(result);
-    },
-    setCredential: async (provider, apiKey) => {
-      const result = await capabilityPort.execute({
-        type: "credential.set",
-        input: { provider, apiKey },
-      });
-      return unwrap(result);
-    },
-    removeCredential: async (provider) => {
-      const result = await capabilityPort.execute({
-        type: "credential.remove",
-        input: { provider },
-      });
-      return unwrap(result);
-    },
+    // A host that keeps no provider keys, such as the hosted service, offers none of these.
+    ...(capabilityPort.hasCapability("credential.status")
+      ? {
+          getCredentialStatus: async (provider: CredentialProvider) =>
+            unwrap(
+              await capabilityPort.execute({ type: "credential.status", input: { provider } }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("credential.set")
+      ? {
+          setCredential: async (provider: CredentialProvider, apiKey: string) =>
+            unwrap(
+              await capabilityPort.execute({ type: "credential.set", input: { provider, apiKey } }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("credential.remove")
+      ? {
+          removeCredential: async (provider: CredentialProvider) =>
+            unwrap(
+              await capabilityPort.execute({ type: "credential.remove", input: { provider } }),
+            ),
+        }
+      : {}),
     ...(capabilityPort.hasCapability("credential.test")
       ? {
           testCredential: async (provider: CredentialTestProvider) =>

@@ -1,5 +1,6 @@
 /* DraftLoop web: the owner's review screen. It borrows the desktop's slate surfaces, teal
-   signals and amber and red findings, on a light or dark ground that follows the system. */
+   signals and amber and red findings, on a light or dark ground that follows the system.
+   Element and shared-name rules skip the shared screens, which keep the desktop's own styles. */
 
 :root {
   color-scheme: light dark;
@@ -49,13 +50,13 @@ body {
   color: var(--text-1);
 }
 
-h1,
-h2,
-h3 {
+h1:where(:not(.shared-screens *)),
+h2:where(:not(.shared-screens *)),
+h3:where(:not(.shared-screens *)) {
   line-height: 1.25;
 }
 
-button {
+button:where(:not(.shared-screens *)) {
   font: inherit;
   border: 1px solid var(--teal);
   border-radius: var(--radius);
@@ -65,25 +66,25 @@ button {
   cursor: pointer;
 }
 
-button.secondary {
+button.secondary:where(:not(.shared-screens *)) {
   background: transparent;
   color: var(--teal);
 }
 
-button.danger {
+button.danger:where(:not(.shared-screens *)) {
   background: var(--red-wash);
   border-color: var(--red);
   color: var(--red);
 }
 
-button:disabled {
+button:disabled:where(:not(.shared-screens *)) {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-input,
-select,
-textarea {
+input:where(:not(.shared-screens *)),
+select:where(:not(.shared-screens *)),
+textarea:where(:not(.shared-screens *)) {
   font: inherit;
   color: inherit;
   background: var(--surface);
@@ -93,11 +94,11 @@ textarea {
   width: 100%;
 }
 
-textarea {
+textarea:where(:not(.shared-screens *)) {
   min-height: 12rem;
 }
 
-label {
+label:where(:not(.shared-screens *)) {
   display: block;
   font-weight: 600;
   margin: 0.75rem 0 0.25rem;
@@ -172,7 +173,7 @@ label {
   color: var(--teal-ink);
 }
 
-.panel {
+.panel:where(:not(.shared-screens *)) {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -180,7 +181,7 @@ label {
   margin-bottom: 1rem;
 }
 
-.panel h2 {
+.panel h2:where(:not(.shared-screens *)) {
   margin-top: 0;
   font-size: 1.1rem;
 }
@@ -213,18 +214,18 @@ fieldset {
   gap: 0.5rem;
 }
 
-label.check {
+label.check:where(:not(.shared-screens *)) {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   font-weight: normal;
 }
 
-label.check input {
+label.check input:where(:not(.shared-screens *)) {
   width: auto;
 }
 
-textarea.short {
+textarea.short:where(:not(.shared-screens *)) {
   min-height: 5rem;
 }
 
@@ -424,7 +425,7 @@ form button[type="submit"] {
   margin: 0.75rem 0;
 }
 
-.finding-error {
+.finding-error:where(:not(.shared-screens *)) {
   border-left-color: var(--red);
 }
 
@@ -432,21 +433,21 @@ form button[type="submit"] {
   border-left-color: var(--amber);
 }
 
-.severity {
+.severity:where(:not(.shared-screens *)) {
   font-size: 0.8rem;
   text-transform: uppercase;
   font-weight: 600;
 }
 
-.severity-error {
+.severity-error:where(:not(.shared-screens *)) {
   color: var(--red);
 }
 
-.severity-warning {
+.severity-warning:where(:not(.shared-screens *)) {
   color: var(--amber);
 }
 
-button.small {
+button.small:where(:not(.shared-screens *)) {
   font-size: 0.85rem;
   padding: 0.15rem 0.6rem;
 }

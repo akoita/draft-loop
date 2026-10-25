@@ -431,6 +431,11 @@ export interface DesktopReviewPort {
   ) => Promise<DesktopReviewState>;
   readonly openWorkspace?: () => Promise<DesktopReviewState>;
   readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
+  /**
+   * False when the host neither opens nor creates workspaces, as on the hosted service, where the
+   * shell chooses the workspace: closing one would leave nothing to open.
+   */
+  readonly workspaceClosable?: boolean;
   readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
   readonly selectFiles?: (
     target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",

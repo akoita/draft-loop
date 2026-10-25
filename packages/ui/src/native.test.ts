@@ -264,6 +264,60 @@ describe("desktop native profile capabilities", () => {
     expect(bare.cancelOpportunityExtraction).toBeUndefined();
   });
 
+  it("allows a job page address only from a host that fetches web pages", () => {
+    const state = createFixtureReviewState();
+    const portWith = (capabilities: readonly string[]) =>
+      createBridgeReviewPort(
+        createNativeCapabilityPort({
+          capabilities: capabilities as never,
+          invoke: async () => ({ ok: true, value: state }),
+        }),
+      );
+
+    expect(portWith(["review.load", "source.add-url"]).jobPagesAllowed).toBeUndefined();
+    expect(portWith(["review.load"]).jobPagesAllowed).toBe(false);
+  });
+
+  it("keeps a workspace open on a host that neither opens nor creates one", () => {
+    const state = createFixtureReviewState();
+    const portWith = (capabilities: readonly string[]) =>
+      createBridgeReviewPort(
+        createNativeCapabilityPort({
+          capabilities: capabilities as never,
+          invoke: async () => ({ ok: true, value: state }),
+        }),
+      );
+
+    expect(portWith(["review.load", "workspace.open"]).workspaceClosable).toBeUndefined();
+    expect(portWith(["review.load", "workspace.create"]).workspaceClosable).toBeUndefined();
+    expect(portWith(["review.load"]).workspaceClosable).toBe(false);
+  });
+
+  it("offers provider keys only from a host that keeps them", () => {
+    const state = createFixtureReviewState();
+    const portWith = (capabilities: readonly string[]) =>
+      createBridgeReviewPort(
+        createNativeCapabilityPort({
+          capabilities: capabilities as never,
+          invoke: async () => ({ ok: true, value: state }),
+        }),
+      );
+    const keeping = portWith([
+      "review.load",
+      "credential.status",
+      "credential.set",
+      "credential.remove",
+    ]);
+    const hosted = portWith(["review.load"]);
+
+    expect(keeping.getCredentialStatus).toBeDefined();
+    expect(keeping.setCredential).toBeDefined();
+    expect(keeping.removeCredential).toBeDefined();
+    expect(hosted.getCredentialStatus).toBeUndefined();
+    expect(hosted.setCredential).toBeUndefined();
+    expect(hosted.removeCredential).toBeUndefined();
+  });
+
   it("keeps profile methods capability-gated", async () => {
     const state = createFixtureReviewState();
     const port = createBridgeReviewPort(
