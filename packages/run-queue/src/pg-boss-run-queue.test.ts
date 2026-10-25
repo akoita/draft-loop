@@ -129,6 +129,27 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     ).rejects.toThrow();
   });
 
+  it("tells a waiting brief extraction from a failed one and from none", async () => {
+    const job = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      applicationId: "app-1",
+      briefId: "brief-2",
+      version: 1,
+    };
+    const { applicationId: _application, ...version } = job;
+
+    expect(await queue.briefExtractionState(version)).toBeUndefined();
+    await queue.enqueueBriefExtraction(job);
+    expect(await queue.briefExtractionState(version)).toBe("pending");
+    await admin.query(
+      `UPDATE ${schema}.job SET state = 'failed' WHERE name = $1 AND singleton_key = $2`,
+      [briefExtractionQueueName, "tenant-a/workspace-1/brief-2@1"],
+    );
+    expect(await queue.briefExtractionState(version)).toBe("failed");
+    expect(await queue.briefExtractionState({ ...version, version: 2 })).toBeUndefined();
+  });
+
   it("does not let the runtime role change the queue's schema", async () => {
     const runtime = new pg.Client({ connectionString: runtimeUrl(url) });
     await runtime.connect();

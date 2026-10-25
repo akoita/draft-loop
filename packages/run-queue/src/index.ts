@@ -1,5 +1,6 @@
 export {
   type BriefExtractionJob,
+  type BriefExtractionState,
   briefExtractionJobKey,
   briefExtractionJobSchema,
 } from "./brief-extraction-job.js";

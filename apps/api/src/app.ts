@@ -24,6 +24,7 @@ import { type ZodType, z } from "zod";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
+import type { BriefExtractions } from "./brief-extraction.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -91,6 +92,8 @@ export interface ApiOptions {
      * none of that happens.
      */
     readonly contentScreening?: HostedContentScreening;
+    /** The worker's extraction of live briefs; without it a live brief is left for the person. */
+    readonly briefExtractions?: BriefExtractions;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -333,6 +336,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       budgetCeiling: application.budgetCeiling,
       ...(screening === undefined ? {} : { screening }),
       ...(entitlementGate === undefined ? {} : { entitlementGate }),
+      ...(application.briefExtractions === undefined
+        ? {}
+        : { briefExtractions: application.briefExtractions }),
     });
     registerModelCatalogRoutes(app);
     registerApplicationLifecycleRoutes(app, {

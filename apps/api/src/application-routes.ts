@@ -11,6 +11,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { type BriefExtractions, queueLiveBriefExtraction } from "./brief-extraction.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import type { EntitlementGate } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
@@ -45,6 +46,8 @@ export interface ApplicationRoutesOptions {
    * nothing is refused or metered.
    */
   readonly entitlementGate?: EntitlementGate;
+  /** The worker's extraction of live briefs; without it a live brief is left for the person. */
+  readonly briefExtractions?: BriefExtractions;
 }
 
 const identifierSchema = z
@@ -185,7 +188,7 @@ export function registerApplicationRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling, screening } = options;
-  const { entitlementGate } = options;
+  const { entitlementGate, briefExtractions } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -206,7 +209,7 @@ export function registerApplicationRoutes(
       schema: {
         summary: "Create a job brief from pasted sources",
         description:
-          "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off.",
+          "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off. In a live workspace, a brief made from an application's job text is saved without extraction; once screening clears that text, the worker extracts it and saves the next draft version, and the answer's extraction says pending.",
         params: workspaceParams,
         body: createOpportunityBody,
         response: { 201: opportunityViewSchema, ...errorResponses },
@@ -224,9 +227,22 @@ export function registerApplicationRoutes(
       // After the brief is saved, so its source ids exist; a screener's failure is the result's
       // verdict, never this request's.
       const screened = await screening?.screenOpportunity(request, record, sources);
+      const extraction =
+        briefExtractions === undefined
+          ? undefined
+          : await queueLiveBriefExtraction({
+              extractions: briefExtractions,
+              workspaceId: request.params.workspaceId,
+              workspace: await service.readWorkspace(workspaceRoot(request.params.workspaceId)),
+              applicationId: request.body.applicationId,
+              record,
+              screening: screened,
+              log: request.log,
+            });
       return reply.code(201).send({
         ...opportunityView(record),
         ...(screened === undefined ? {} : { screening: screened }),
+        ...(extraction === undefined ? {} : { extraction }),
       });
     },
   );
@@ -248,7 +264,12 @@ export function registerApplicationRoutes(
         ...(request.query.version === undefined ? {} : { version: request.query.version }),
       });
       if (record === undefined) return reply.code(404).send(notFound("job brief"));
-      return opportunityView(record);
+      const extraction = await briefExtractions?.state({
+        workspaceId: request.params.workspaceId,
+        briefId: record.brief.id,
+        version: record.brief.version,
+      });
+      return { ...opportunityView(record), ...(extraction === undefined ? {} : { extraction }) };
     },
   );
 

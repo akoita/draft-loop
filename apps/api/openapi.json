@@ -1326,6 +1326,14 @@
           "screening": {
             "description": "Injection screening of the brief's sources; present when it is created.",
             "$ref": "#/components/schemas/OpportunityScreeningInput"
+          },
+          "extraction": {
+            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+            "type": "string",
+            "enum": [
+              "pending",
+              "failed"
+            ]
           }
         },
         "required": [
@@ -5518,6 +5526,14 @@
           "screening": {
             "description": "Injection screening of the brief's sources; present when it is created.",
             "$ref": "#/components/schemas/OpportunityScreening"
+          },
+          "extraction": {
+            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+            "type": "string",
+            "enum": [
+              "pending",
+              "failed"
+            ]
           }
         },
         "required": [
@@ -9633,7 +9649,7 @@
     "/v1/workspaces/{workspaceId}/opportunities": {
       "post": {
         "summary": "Create a job brief from pasted sources",
-        "description": "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off.",
+        "description": "Saves the brief, then screens each source for prompt injection. The answer's screening shows each source's verdict and signal codes, never a quote; a flagged or unscreened source is quarantined and a run on the brief is refused (409 material_quarantined) until an owner or admin releases it. Absent when screening is off. In a live workspace, a brief made from an application's job text is saved without extraction; once screening clears that text, the worker extracts it and saves the next draft version, and the answer's extraction says pending.",
         "requestBody": {
           "required": true,
           "content": {

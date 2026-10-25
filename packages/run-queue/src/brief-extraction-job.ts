@@ -18,6 +18,11 @@ export const briefExtractionJobSchema = z.strictObject({
 export type BriefExtractionJob = z.infer<typeof briefExtractionJobSchema>;
 
 /** One job per brief version: the key the queue deduplicates on. */
-export function briefExtractionJobKey(job: BriefExtractionJob): string {
+export function briefExtractionJobKey(
+  job: Pick<BriefExtractionJob, "tenantId" | "workspaceId" | "briefId" | "version">,
+): string {
   return `${job.tenantId}/${job.workspaceId}/${job.briefId}@${job.version}`;
 }
+
+/** Where a brief version's extraction stands: waiting or running, or failed after its retries. */
+export type BriefExtractionState = "pending" | "failed";

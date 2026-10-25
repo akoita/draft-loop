@@ -3,6 +3,7 @@ import { type ConstructorOptions, PgBoss, type Queue } from "pg-boss";
 
 import {
   type BriefExtractionJob,
+  type BriefExtractionState,
   briefExtractionJobKey,
   briefExtractionJobSchema,
 } from "./brief-extraction-job.js";
@@ -34,6 +35,13 @@ export interface RunQueue {
    * repeat, and the worker skips a brief that moved past the queued version.
    */
   readonly enqueueBriefExtraction: (job: BriefExtractionJob) => Promise<void>;
+  /**
+   * Where the newest extraction job for the brief version stands; undefined when none was queued
+   * or the newest one finished, as after the worker saved the extracted version or skipped it.
+   */
+  readonly briefExtractionState: (
+    job: Omit<BriefExtractionJob, "applicationId">,
+  ) => Promise<BriefExtractionState | undefined>;
   readonly close: () => Promise<void>;
 }
 
@@ -169,6 +177,17 @@ export async function openRunQueue(options: RunQueueOptions): Promise<RunQueue> 
       await boss.send(briefExtractionQueueName, data, {
         singletonKey: briefExtractionJobKey(data),
       });
+    },
+    briefExtractionState: async (job) => {
+      const key = briefExtractionJobKey(job);
+      const [newest] = (await boss.findJobs(briefExtractionQueueName, { key })).sort(
+        (a, b) => b.createdOn.getTime() - a.createdOn.getTime(),
+      );
+      if (newest === undefined) return undefined;
+      if (newest.state === "failed") return "failed";
+      return newest.state === "created" || newest.state === "retry" || newest.state === "active"
+        ? "pending"
+        : undefined;
     },
     close: () => boss.stop({ graceful: false, close: true }),
   };

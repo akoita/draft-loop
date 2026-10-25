@@ -58,6 +58,12 @@ export const opportunityViewSchema = z
     screening: opportunityScreeningSchema
       .optional()
       .describe("Injection screening of the brief's sources; present when it is created."),
+    extraction: z
+      .enum(["pending", "failed"])
+      .optional()
+      .describe(
+        "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+      ),
   })
   .meta({ id: "Opportunity" });
 

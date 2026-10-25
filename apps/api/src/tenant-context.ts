@@ -7,6 +7,7 @@ import {
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
+import { noBriefExtractions } from "./brief-extraction.js";
 import { noContentScreening } from "./content-screening-service.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -21,9 +22,9 @@ export type ApiApplication = NonNullable<ApiOptions["application"]>;
 
 /** One tenant's application: every route's dependencies, bound to that tenant's data. */
 export type TenantApplication = Required<
-  Omit<ApiApplication, "budgetCeiling" | "idempotency" | "contentScreening">
+  Omit<ApiApplication, "budgetCeiling" | "idempotency" | "contentScreening" | "briefExtractions">
 > &
-  Pick<ApiApplication, "idempotency" | "contentScreening">;
+  Pick<ApiApplication, "idempotency" | "contentScreening" | "briefExtractions">;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
 export interface TenantApplications {
@@ -194,5 +195,7 @@ export function registerTenantApplications(
     recordArchives: forwarding(() => current().recordArchives),
     // An application composed without screening holds none, so nothing is quarantined.
     contentScreening: forwarding(() => current().contentScreening ?? noContentScreening),
+    // An application composed without a queue extracts nothing on the worker.
+    briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
   };
 }

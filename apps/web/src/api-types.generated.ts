@@ -323,6 +323,7 @@ export interface ApiSchemas {
       })[];
     };
     readonly screening?: ApiSchemas["OpportunityScreening"];
+    readonly extraction?: "pending" | "failed";
   };
   "OpportunityScreening": {
     readonly verdict: "clear" | "flagged" | "unscreened";
