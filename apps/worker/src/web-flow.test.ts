@@ -17,9 +17,9 @@ import {
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
+import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import {
   type ApiClient,
-  approveRequest,
   briefEdit,
   briefPatchBody,
   consentHistory,
@@ -28,7 +28,6 @@ import {
   createBriefBody,
   createHttpBridge,
   currentRunId,
-  decisionRequest,
   defaultWorkspaceForm,
   exportFileName,
   exportRequestBody,
@@ -36,7 +35,6 @@ import {
   isGranted,
   ownerWorkspaceId,
   readDefaultApplication,
-  reviewSections,
   selectionRequest,
   shouldPoll,
   sourceMediaType,
@@ -243,58 +241,61 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       expect(drafted.state).toBe("awaiting-approval");
       expect(shouldPoll(drafted)).toBe(false);
 
-      // Review step: the draft with its evidence, and one revision round.
-      let review = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
-        path: runPath,
-      });
-      if (review.draft === null) throw new Error("The run has a draft.");
-      const { sections } = reviewSections(review.draft, review.findings);
-      expect(sections.length).toBeGreaterThan(0);
-      const revised = await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/revision", {
-        path: runPath,
-        header: { "idempotency-key": randomUUID() },
-        body: { candidateDirection: "Lead with the TypeScript services." },
-      });
-      expect(shouldPoll(revised)).toBe(true);
-      await drainQueue();
-      review = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
-        path: runPath,
-      });
-      expect(review.run).toMatchObject({ state: "awaiting-approval", round: drafted.round + 1 });
-      for (const finding of review.findings) {
-        const request = decisionRequest("accepted", "Checked against the source.");
-        if ("problem" in request) throw new Error(request.problem);
-        review = await client.call(
-          "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
-          { path: { ...runPath, findingId: finding.id }, body: request.body },
-        );
-      }
-
-      // The shared screens open on the same run, projected by the server with those decisions.
-      const screens = createCapabilityPort(createHttpBridge({ client }));
-      const shared = await screens.execute({ type: "review.load", input: {} });
-      if (!shared.ok) throw new Error(shared.error.message);
-      expect(shared.value).toMatchObject({
+      // The shared review screen: the draft with its evidence, then one revision round, each
+      // action through the port the screens dispatch on.
+      const screens = createBridgeReviewPort(createCapabilityPort(createHttpBridge({ client })));
+      let shared = await screens.load();
+      expect(shared).toMatchObject({
         workspaceId: ownerWorkspaceId,
         runId: begun.runId,
         state: "awaiting-approval",
-        round: drafted.round + 1,
       });
-      expect(shared.value.findings.map(({ decision }) => decision)).toEqual(
-        review.findings.map(() => "accepted"),
+      expect(shared.artifact.sections.length).toBeGreaterThan(0);
+      shared = await screens.dispatch(shared, {
+        type: "request-revision",
+        candidateDirection: "Lead with the TypeScript services.",
+      });
+      expect(shared.runId).toBe(begun.runId);
+      await drainQueue();
+      shared = await screens.load();
+      expect(shared).toMatchObject({ state: "awaiting-approval", round: drafted.round + 1 });
+
+      // Decide every finding: a blocking one is overridden with a reason, the rest accepted.
+      for (const finding of shared.findings) {
+        shared = await screens.dispatch(
+          shared,
+          finding.severity === "error"
+            ? {
+                type: "finding-decision",
+                findingId: finding.id,
+                decision: "overridden",
+                rationale: "Checked against the source.",
+              }
+            : { type: "finding-decision", findingId: finding.id, decision: "accepted" },
+        );
+      }
+      expect(shared.findings.map(({ decision }) => decision)).toEqual(
+        shared.findings.map(({ severity }) => (severity === "error" ? "overridden" : "accepted")),
+      );
+      // The server keeps the decisions: the run's own review reads them back.
+      const review = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
+        path: runPath,
+      });
+      expect(review.findings.map(({ decision }) => decision)).toEqual(
+        shared.findings.map(({ decision }) => decision),
       );
 
-      // Approve and export: approve past any open check with a reason, export, download.
-      const approval = approveRequest(
-        review,
-        "Synthetic test run: the owner accepts the open checks.",
-      );
-      if ("problem" in approval) throw new Error(approval.problem);
-      const approved = await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/approve", {
-        path: runPath,
-        body: approval.body,
-      });
-      expect(approved).toMatchObject({ state: "approved", approval: "approved" });
+      // Approve on the shared screen, past any failing final check with a reason.
+      shared = await screens.dispatch(shared, { type: "approve" });
+      if (shared.state !== "approved") {
+        shared = await screens.dispatch(shared, {
+          type: "approve",
+          readinessOverrideRationale: "Synthetic test run: the owner accepts the open checks.",
+        });
+      }
+      expect(shared).toMatchObject({ state: "approved", runId: begun.runId });
+
+      // Export stays on the earlier steps until the shared screens download it.
       const exported = await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/exports", {
         path: runPath,
         header: { "idempotency-key": randomUUID() },

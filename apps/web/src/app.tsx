@@ -147,13 +147,13 @@ export interface RecordStepsProps {
 
 /**
  * Which screens show a set-up record: the desktop's shared screens, or the earlier steps, kept
- * until the shared review covers decisions, approval and export.
+ * until the shared screens export and download an approved draft (#1723).
  */
 export type RecordScreens = "shared" | "steps";
 
 /**
- * One candidate record: its workspace is set up first, then the shared screens open on it. The
- * earlier steps stay one click away for reviewing, approving and exporting a run.
+ * One candidate record: its workspace is set up first, then the shared screens open on it, with
+ * the run's review and approval. The earlier steps stay one click away for exporting a run.
  */
 export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   const [screens, setScreens] = useState<RecordScreens>("shared");
@@ -174,7 +174,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
       <RecordContext.Provider value={recordId}>
         <nav className="steps" aria-label="Screens">
           <button type="button" className="step" onClick={() => setScreens("steps")}>
-            Review, approve and export
+            Export
           </button>
         </nav>
         <SharedScreens client={client} workspaceId={recordId} />

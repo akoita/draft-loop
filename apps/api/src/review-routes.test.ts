@@ -350,6 +350,45 @@ describe("approve and stop", () => {
     });
   });
 
+  it("refuses approval over a blocking finding the person has not settled, as the desktop does", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "approved", approval: "approved" }));
+    const blocking = (decision: RunReview["findings"][number]["decision"]): RunReview => ({
+      ...syntheticReview,
+      findings: syntheticReview.findings.map((finding) => ({
+        ...finding,
+        severity: "error",
+        decision,
+      })),
+    });
+    const readRunReview = vi
+      .fn()
+      .mockResolvedValueOnce(blocking("pending"))
+      .mockResolvedValueOnce(blocking("accepted"))
+      .mockResolvedValueOnce(blocking("overridden"))
+      .mockResolvedValueOnce(syntheticReview);
+    await build({ lifecycle, readRunReview } as unknown as Partial<ApplicationService>);
+    const approve = () =>
+      app.inject({
+        method: "POST",
+        url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+        headers: { authorization },
+        payload: {},
+      });
+
+    const pending = await approve();
+    const accepted = await approve();
+    const overridden = await approve();
+    // A pending warning does not block approval.
+    const warning = await approve();
+
+    expect(pending.statusCode).toBe(409);
+    expect(pending.json().error.code).toBe("findings_unresolved");
+    expect(accepted.statusCode).toBe(409);
+    expect(overridden.statusCode).toBe(200);
+    expect(warning.statusCode).toBe(200);
+    expect(lifecycle).toHaveBeenCalledTimes(2);
+  });
+
   it("refuses an overlong reason before calling the service", async () => {
     const lifecycle = vi.fn();
     await build({ lifecycle } as unknown as Partial<ApplicationService>);

@@ -487,13 +487,20 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
           const decided = await call(
             "PUT",
             `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
-            { decision: "accepted", rationale: "Checked against the source." },
+            // A blocking finding is overridden: accepting it would only ask for another round.
+            {
+              decision: finding.severity === "error" ? "overridden" : "accepted",
+              rationale: "Checked against the source.",
+            },
           );
           expect(decided.status).toBe(200);
           review = decided.body;
         }
         expect(
-          review.findings.every(({ decision }: { decision: string }) => decision === "accepted"),
+          review.findings.every(
+            ({ decision, severity }: { decision: string; severity: string }) =>
+              decision === (severity === "error" ? "overridden" : "accepted"),
+          ),
         ).toBe(true);
         let approved = await call("POST", `${runPath}/approve`, {});
         if (approved.status === 409 && approved.body.error.code === "readiness_blocked") {
