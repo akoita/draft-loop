@@ -3803,6 +3803,27 @@
           "candidateDirection"
         ]
       },
+      "ReviewStateInput": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string",
+            "description": "`pending` before the first run."
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "runId",
+          "state"
+        ],
+        "additionalProperties": {}
+      },
       "SensitivityRuleMatchInput": {
         "oneOf": [
           {
@@ -8028,6 +8049,27 @@
         ],
         "additionalProperties": false
       },
+      "ReviewState": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string",
+            "description": "`pending` before the first run."
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "runId",
+          "state"
+        ],
+        "additionalProperties": {}
+      },
       "SensitivityRuleMatch": {
         "oneOf": [
           {
@@ -12001,6 +12043,75 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/review-state": {
+      "get": {
+        "summary": "Read the review state the shared screens open on",
+        "description": "The run on screen with its draft, findings, decisions and edits, the workspace's readiness for the next run, and what a live run sends to which provider. Without a run it is the workspace's start state, with `runId` `pending`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "query",
+            "name": "applicationId",
+            "required": false,
+            "description": "The job application to show; its newest run when no run is named."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "query",
+            "name": "runId",
+            "required": false,
+            "description": "The run to show; the workspace's or the application's newest when absent."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

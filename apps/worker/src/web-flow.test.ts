@@ -16,6 +16,7 @@ import {
   migratePostgresStorage,
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
+import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import {
   type ApiClient,
   approveRequest,
@@ -25,6 +26,7 @@ import {
   consentSummary,
   createApiClient,
   createBriefBody,
+  createHttpBridge,
   currentRunId,
   decisionRequest,
   defaultWorkspaceForm,
@@ -267,6 +269,20 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
           { path: { ...runPath, findingId: finding.id }, body: request.body },
         );
       }
+
+      // The shared screens open on the same run, projected by the server with those decisions.
+      const screens = createCapabilityPort(createHttpBridge({ client }));
+      const shared = await screens.execute({ type: "review.load", input: {} });
+      if (!shared.ok) throw new Error(shared.error.message);
+      expect(shared.value).toMatchObject({
+        workspaceId: ownerWorkspaceId,
+        runId: begun.runId,
+        state: "awaiting-approval",
+        round: drafted.round + 1,
+      });
+      expect(shared.value.findings.map(({ decision }) => decision)).toEqual(
+        review.findings.map(() => "accepted"),
+      );
 
       // Approve and export: approve past any open check with a reason, export, download.
       const approval = approveRequest(

@@ -6,6 +6,7 @@ export * from "./brief-model.js";
 export * from "./consent-model.js";
 export * from "./credits-model.js";
 export * from "./finish-model.js";
+export * from "./http-bridge.js";
 export * from "./policy-model.js";
 export * from "./record-actions-model.js";
 export * from "./records-model.js";

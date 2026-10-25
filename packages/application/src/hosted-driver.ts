@@ -54,6 +54,7 @@ export const hostedDriverMethods = [
   "status",
   "readIndependentReview",
   "readRunInputs",
+  "readRunRequirements",
   "readRunWritingPolicy",
   "recordReviewDecision",
   "lifecycle",

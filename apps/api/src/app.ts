@@ -47,6 +47,7 @@ import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerReviewRoutes } from "./review-routes.js";
+import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
@@ -343,6 +344,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: application.workspaceRoot,
       idempotency,
       enqueueRun: application.enqueueRun,
+    });
+    registerReviewStateRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
     });
     registerExportRoutes(app, {
       service: application.service,
