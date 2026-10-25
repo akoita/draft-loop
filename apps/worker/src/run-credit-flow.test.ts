@@ -152,8 +152,9 @@ describe.runIf(connectionString !== undefined)("run credits on Postgres", () => 
   it("refunds a run that failed before its first draft, and does not execute it again", async () => {
     await reserve("run-failed");
     closed.length = 0;
+    // A failure with no attempts left: the worker does not retry it (#1763).
     const failed = snapshot("run-failed", "provider-error", {
-      lastError: { code: "timeout", retryable: true },
+      lastError: { code: "timeout", retryable: false },
     });
     const first = handlerFor(snapshot("run-failed", "drafting"), failed);
 

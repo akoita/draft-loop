@@ -132,17 +132,48 @@ describe("run job handler", () => {
     expect(later.requeue).toHaveBeenCalledWith(new Date("2026-10-21T12:03:00.000Z"));
   });
 
-  it("leaves a run in provider-error once its step has no retries left, or for other errors", async () => {
+  it.each(["timeout", "transient", "invalid-response"])(
+    "queues the run again after a retryable %s, after a short wait",
+    async (code) => {
+      const tenSeconds = new Date(now.getTime() + 10_000);
+      const { outcome, requeue } = await handle(
+        snapshot("drafting"),
+        snapshot("provider-error", { code, retryable: true }),
+      );
+      const later = await handle(
+        snapshot("drafting"),
+        snapshot("provider-error", {
+          code,
+          retryable: true,
+          retryNotBefore: "2026-10-21T12:00:30.000Z",
+        }),
+      );
+
+      expect(outcome).toBe("rescheduled");
+      expect(requeue).toHaveBeenCalledWith(tenSeconds);
+      expect(later.requeue).toHaveBeenCalledWith(new Date("2026-10-21T12:00:30.000Z"));
+    },
+  );
+
+  it("leaves a run in provider-error once its step has no retries left, or for the person to fix", async () => {
     const exhausted = await handle(
       snapshot("reviewing"),
       snapshot("provider-error", { code: "rate-limit", retryable: false }),
     );
-    const timeout = await handle(
+    const rejected = await handle(
+      snapshot("drafting"),
+      snapshot("provider-error", { code: "invalid-response", retryable: false }),
+    );
+    const credential = await handle(
       snapshot("reviewing"),
-      snapshot("provider-error", { code: "timeout", retryable: true }),
+      snapshot("provider-error", { code: "authentication", retryable: true }),
+    );
+    const credit = await handle(
+      snapshot("reviewing"),
+      snapshot("provider-error", { code: "quota-exhausted", retryable: false }),
     );
 
-    for (const { outcome, requeue } of [exhausted, timeout]) {
+    for (const { outcome, requeue } of [exhausted, rejected, credential, credit]) {
       expect(outcome).toBe("advanced");
       expect(requeue).not.toHaveBeenCalled();
     }

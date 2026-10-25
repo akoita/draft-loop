@@ -126,6 +126,18 @@ describe("credit action for a run", () => {
     expect(creditActionForRun(undefined)).toBe("keep");
   });
 
+  it("keeps a run the worker retries after a rejected output, and refunds one left to the person", () => {
+    const retried = run("provider-error", {
+      lastError: { code: "invalid-response", retryable: true },
+    });
+    const credential = run("provider-error", {
+      lastError: { code: "authentication", retryable: true },
+    });
+
+    expect(creditActionForRun(retried)).toBe("keep");
+    expect(creditActionForRun(credential)).toBe("refund");
+  });
+
   it.each<[RunJobOutcome, string]>([
     ["held", "keep"],
     ["rescheduled", "keep"],
@@ -184,7 +196,7 @@ describe("run credits after a job", () => {
     await handler.afterJob(
       job,
       "advanced",
-      run("provider-error", { lastError: { code: "timeout", retryable: true } }),
+      run("provider-error", { lastError: { code: "timeout", retryable: false } }),
     );
 
     expect(reservations.get("run-1")?.state).toBe("refunded");

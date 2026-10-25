@@ -358,8 +358,8 @@ The hosted service starts runs through a queue rather than in the request
   - **Refund** when the run ended in one of those states without a draft, or
     when its job was dropped for an erased record or a missing run.
   - **Keep** while the run can continue: a user pause, a usage-limit pause, a
-    rate limit waiting for its retry, a consent or quarantine hold, or a step
-    in flight. A job for a run with no reservation, as in owner-token mode,
+    failure waiting for the worker's retry, a consent or quarantine hold, or a
+    step in flight. A job for a run with no reservation, as in owner-token mode,
     does nothing.
   - **No free run.** No hosted route retries a `provider-error` run, but a
     repeated begin request queues its run again. A job whose run has a
@@ -397,9 +397,11 @@ The hosted service starts runs through a queue rather than in the request
   cached between jobs or carried from one tenant's job to another's.
 - A run paused on a provider usage limit is queued again for the reset time
   (15 minutes when the provider names none) and resumed then.
-- A run stopped by a provider rate limit is queued again after at least a
-  minute, or later if the provider asks. It retries while its step has
-  attempts left.
+- A run stopped by a retryable failure is queued again and retries while its
+  step has attempts left (#1763). The failures are a rate limit, a timeout, a
+  provider fault and an output DraftLoop rejected. A rate limit waits at least
+  a minute, the others at least 10 seconds, or later if the provider asks. An
+  authentication or credit failure waits for the operator.
 - A job that fails or stops sending heartbeats, as after a crash, is retried
   with backoff, and the worker resumes the run from its last saved step.
 - On SIGTERM the worker stops claiming and gives the job in flight 8 seconds.
