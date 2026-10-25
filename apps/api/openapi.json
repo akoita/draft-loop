@@ -10587,7 +10587,7 @@
     "/v1/workspaces/{workspaceId}/knowledge-selection": {
       "put": {
         "summary": "Select the knowledge bases a workspace's runs use",
-        "description": "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with every source's file held.",
+        "description": "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with at least one source and every source's file held. A base without a source answers 422 `knowledge_base_empty`.",
         "requestBody": {
           "required": true,
           "content": {

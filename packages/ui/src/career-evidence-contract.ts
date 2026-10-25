@@ -20,6 +20,11 @@ function exactKeys<Shape extends object>() {
 
 export interface KnowledgeEnsureDefaultInput {
   readonly workspaceId: string;
+  /**
+   * The base's name, as the person typed it. A host that keeps one store for every workspace,
+   * such as the hosted service, then makes or reuses a base by that name.
+   */
+  readonly displayName?: string;
 }
 
 /**
@@ -43,7 +48,10 @@ export interface WorkspaceEvidenceMigrationResult {
   readonly declined: boolean;
 }
 
-export const knowledgeEnsureDefaultKeys = exactKeys<KnowledgeEnsureDefaultInput>()(["workspaceId"]);
+export const knowledgeEnsureDefaultKeys = exactKeys<KnowledgeEnsureDefaultInput>()([
+  "workspaceId",
+  "displayName",
+]);
 export const knowledgeEnsureDefaultResultKeys = exactKeys<KnowledgeEnsureDefaultResult>()([
   "storeId",
   "knowledgeBaseId",

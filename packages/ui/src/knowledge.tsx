@@ -227,6 +227,7 @@ export function KnowledgeWorkspace({
   const storesSwitchable = hasDesktopKnowledgeCapabilities(capabilities);
   const [store, setStore] = useState<KnowledgeStoreResult | null>(null);
   const [name, setName] = useState("candidate-knowledge");
+  const [baseName, setBaseName] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [selection, setSelection] = useState<{
@@ -330,6 +331,8 @@ export function KnowledgeWorkspace({
         setSelection({ storeId: result.store.storeId, ids: result.selectedKnowledgeBaseIds });
         setSavedUnavailable(false);
         setLoadingSaved(false);
+        // The change elsewhere supersedes this panel's last notice, such as "add a source".
+        setMessage(null);
       },
       () => undefined,
     );
@@ -392,6 +395,39 @@ export function KnowledgeWorkspace({
     void perform(async (generation) => {
       const result = await capabilities.createCandidateKnowledgeStore({ name: trimmedName });
       await readStore(result, generation);
+    });
+  };
+
+  // A host with one store for every workspace, such as the hosted service, names bases instead.
+  const ensureNamedBase = storesSwitchable
+    ? undefined
+    : capabilities.ensureDefaultCandidateKnowledgeBase;
+
+  const createKnowledgeBase = () => {
+    if (ensureNamedBase === undefined) return;
+    const trimmedName = baseName.trim();
+    if (trimmedName === "") {
+      setMessage("Enter a name for the knowledge base.");
+      return;
+    }
+    const expectedWorkspaceId = workspaceId;
+    const load = capabilities.getCurrentCandidateKnowledge;
+    void perform(async (generation) => {
+      const made = await ensureNamedBase(expectedWorkspaceId, trimmedName);
+      const current = load === undefined ? null : await load(expectedWorkspaceId);
+      if (operationGeneration.current !== generation) return;
+      userTouched.current = true;
+      if (current?.store != null) {
+        setStore(current.store);
+        setSelection({ storeId: current.store.storeId, ids: current.selectedKnowledgeBaseIds });
+        setSavedUnavailable(false);
+      }
+      setBaseName("");
+      setFormToggled(false);
+      const shown = safeKnowledgeBaseDisplayName(made.displayName);
+      setMessage(
+        `${made.created ? `Created knowledge base “${shown}”.` : `Knowledge base “${shown}” already exists.`} Add a source to it to use it in this workspace.`,
+      );
     });
   };
 
@@ -535,6 +571,33 @@ export function KnowledgeWorkspace({
     </div>
   );
 
+  const baseForm = (
+    <div className="knowledge-store-row">
+      <label className="setup-field" htmlFor="candidate-knowledge-name">
+        <span>New knowledge base name</span>
+        <input
+          id="candidate-knowledge-name"
+          type="text"
+          value={baseName}
+          maxLength={120}
+          onChange={(event) => setBaseName(event.currentTarget.value)}
+          disabled={controlsDisabled}
+        />
+      </label>
+      <div className="knowledge-store-actions">
+        <button
+          type="button"
+          className="button button-primary"
+          disabled={controlsDisabled}
+          onClick={createKnowledgeBase}
+        >
+          Create knowledge base
+        </button>
+      </div>
+    </div>
+  );
+  const baseFormOpen = knowledgeBases.length === 0 || (formToggled ?? false);
+
   return (
     <section
       className={embedded ? "knowledge-section" : "panel knowledge-panel"}
@@ -584,6 +647,24 @@ export function KnowledgeWorkspace({
           onSelect={selectKnowledgeBase}
           onImport={importIntoKnowledgeBase}
         />
+      )}
+      {ensureNamedBase === undefined ? null : knowledgeBases.length === 0 ? (
+        baseForm
+      ) : (
+        <div className="knowledge-store-disclosure">
+          <button
+            type="button"
+            className="button button-quiet"
+            aria-expanded={baseFormOpen}
+            aria-controls="candidate-knowledge-base-form"
+            onClick={() => setFormToggled(!baseFormOpen)}
+          >
+            New knowledge base
+          </button>
+          <div id="candidate-knowledge-base-form" hidden={!baseFormOpen}>
+            {baseFormOpen ? baseForm : null}
+          </div>
+        </div>
       )}
       {!storesSwitchable ? null : formPresentation === "form" ? (
         storeForm

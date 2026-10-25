@@ -185,6 +185,39 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).not.toContain(differentStoreDisclosureLabel);
   });
 
+  it("lets a host with one store name a new base, and keeps store folders to the desktop", () => {
+    const ensureDefaultCandidateKnowledgeBase = async () => ({
+      storeId: "hosted-store",
+      knowledgeBaseId: "kb-new",
+      displayName: "Portfolio",
+      created: true,
+    });
+    const render = (capabilities: Parameters<typeof KnowledgeWorkspace>[0]["capabilities"]) =>
+      renderToStaticMarkup(
+        <KnowledgeWorkspace
+          workspaceId="workspace-1"
+          capabilities={capabilities}
+          disabled={false}
+          embedded
+          onPendingChange={noop}
+          onSelectionSaved={async () => true}
+        />,
+      );
+
+    const hosted = render({
+      selectCandidateKnowledgeBase: workspaceCapabilities.selectCandidateKnowledgeBase,
+      ensureDefaultCandidateKnowledgeBase,
+    });
+    expect(hosted).toContain("New knowledge base name");
+    expect(hosted).toContain('id="candidate-knowledge-name"');
+    expect(hosted).toMatch(/class="button button-primary"[^>]*>Create knowledge base</);
+    expect(hosted).not.toContain("Create knowledge store");
+
+    const desktop = render({ ...workspaceCapabilities, ensureDefaultCandidateKnowledgeBase });
+    expect(desktop).not.toContain("New knowledge base name");
+    expect(desktop).not.toContain("Create knowledge base<");
+  });
+
   it("leaves adding to the card: an embedded list has no Add file or Add directory", () => {
     const html = renderToStaticMarkup(
       <KnowledgeBaseList

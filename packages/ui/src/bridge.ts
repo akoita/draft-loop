@@ -5578,7 +5578,11 @@ function validateWorkspaceRetrievalModeSetInput(value: unknown): WorkspaceRetrie
 function validateKnowledgeEnsureDefaultInput(value: unknown): KnowledgeEnsureDefaultInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeEnsureDefaultKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId) };
+  const workspaceId = identifier(input.workspaceId);
+  if (input.displayName === undefined) return { workspaceId };
+  const name = displayName(input.displayName);
+  if (name === "") return invalidInput();
+  return { workspaceId, displayName: name };
 }
 
 function validateWorkspaceEvidenceMigrationInput(value: unknown): WorkspaceEvidenceMigrationInput {

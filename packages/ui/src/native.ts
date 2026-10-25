@@ -250,9 +250,13 @@ export interface DesktopKnowledgeCapabilities {
   readonly importWorkspaceCandidateSources?: (
     input: KnowledgeWorkspaceSourcesImportInput,
   ) => Promise<KnowledgeDirectoryImportResult>;
-  /** Creates the default store and base in DraftLoop application data when absent; no dialog. */
+  /**
+   * Creates the default store and base in DraftLoop application data when absent; no dialog. A
+   * host without store folders also takes a name the person typed, and makes or reuses that base.
+   */
   readonly ensureDefaultCandidateKnowledgeBase?: (
     workspaceId: string,
+    displayName?: string,
   ) => Promise<KnowledgeEnsureDefaultResult>;
   /** Whether the person chose to keep using legacy workspace evidence for this workspace. */
   readonly getLegacyEvidenceMigration?: (
@@ -1173,11 +1177,11 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(capabilityPort.hasCapability("knowledge.ensure-default")
       ? {
-          ensureDefaultCandidateKnowledgeBase: async (workspaceId: string) =>
+          ensureDefaultCandidateKnowledgeBase: async (workspaceId: string, displayName?: string) =>
             unwrap(
               await capabilityPort.execute({
                 type: "knowledge.ensure-default",
-                input: { workspaceId },
+                input: displayName === undefined ? { workspaceId } : { workspaceId, displayName },
               }),
             ),
         }

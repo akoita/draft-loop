@@ -39,7 +39,9 @@ const missing = async (): Promise<WorkspaceDescriptor> => {
 let app: FastifyInstance;
 
 const knowledgeIntake = {
-  listKnowledgeBases: async () => [{ id: "base-1" }, { id: "base-2" }],
+  listKnowledgeBases: async () => [{ id: "base-1" }, { id: "base-2" }, { id: "base-empty" }],
+  listSources: async (knowledgeBaseId: string) =>
+    knowledgeBaseId === "base-empty" ? [] : [{ id: `${knowledgeBaseId}-source` }],
 } as unknown as HostedKnowledgeIntake;
 
 async function build(methods: Partial<ApplicationService>): Promise<void> {
@@ -272,6 +274,17 @@ describe("knowledge selection", () => {
     const response = await select(payload);
 
     expect(response.statusCode).toBe(400);
+    expect(configureKnowledgeSelection).not.toHaveBeenCalled();
+  });
+
+  it("answers 422 for a knowledge base without a source", async () => {
+    const configureKnowledgeSelection = vi.fn();
+    await build({ configureKnowledgeSelection });
+
+    const response = await select({ knowledgeBaseIds: ["base-empty"] });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.code).toBe("knowledge_base_empty");
     expect(configureKnowledgeSelection).not.toHaveBeenCalled();
   });
 
