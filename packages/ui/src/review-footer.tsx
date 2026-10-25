@@ -277,6 +277,8 @@ export interface ReviewFooterProps {
     readonly onTemplateChange: (template: ExportTemplate) => void;
     /** An estimated-length warning from the export just made, or null. */
     readonly note: string | null;
+    /** The browser downloads the export instead of a Save As dialog writing it (hosted). */
+    readonly downloads?: boolean;
     readonly onExport: () => void;
   };
 }
@@ -567,14 +569,16 @@ export function ReviewFooter({
             {exportAction.pendingSeconds === null ? null : (
               <p className="pending-action-status" role="status" aria-live="polite">
                 Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
-                {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}. Choose a destination
-                in the Save As dialog; the approved artifact will be written after you confirm.
+                {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}.{" "}
+                {exportAction.downloads === true
+                  ? "The file downloads when it is ready."
+                  : "Choose a destination in the Save As dialog; the approved artifact will be written after you confirm."}
               </p>
             )}
           </>
         ) : (
           <p className="export-later">
-            <strong>Export locally</strong>
+            <strong>{exportAction.downloads === true ? "Export" : "Export locally"}</strong>
             <span>{exportAction.pathLabel}</span>
           </p>
         )}

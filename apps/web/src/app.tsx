@@ -6,9 +6,7 @@ import type { Brief } from "./brief-model.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
-import { ReviewStep } from "./review.js";
 import { RunStep } from "./run.js";
-import type { Run } from "./run-model.js";
 import { screenMemory } from "./screen-memory.js";
 import type { TokenStore } from "./session.js";
 import { SharedScreens } from "./shared-screens.js";
@@ -84,13 +82,15 @@ export interface ShellProps {
   readonly memory?: RecordMemory;
 }
 
-/** The screen's steps, in the order a run needs them. */
+/**
+ * The earlier steps, in the order a run needs them. They keep what the shared screens do not show
+ * yet: the workspace form, consent, sensitivity rules and the plan's credits.
+ */
 export const steps = [
   { id: "workspace", label: "Workspace" },
   { id: "sources", label: "Sources" },
   { id: "brief", label: "Job brief" },
   { id: "run", label: "Run" },
-  { id: "review", label: "Review" },
 ] as const;
 
 export type StepId = (typeof steps)[number]["id"];
@@ -147,20 +147,20 @@ export interface RecordStepsProps {
 
 /**
  * Which screens show a set-up record: the desktop's shared screens, or the earlier steps, kept
- * until the shared screens export and download an approved draft (#1723).
+ * for what the shared screens do not show yet.
  */
 export type RecordScreens = "shared" | "steps";
 
 /**
- * One candidate record: its workspace is set up first, then the shared screens open on it, with
- * the run's review and approval. The earlier steps stay one click away for exporting a run.
+ * One candidate record: its workspace is set up first, then the shared screens open on it, from
+ * Home to the run's review, approval and export. The earlier steps stay one click away for
+ * consent, sensitivity rules and credits.
  */
 export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   const [screens, setScreens] = useState<RecordScreens>("shared");
   const [step, setStep] = useState<StepId>("workspace");
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
   const [brief, setBrief] = useState<Brief | undefined>(undefined);
-  const [run, setRun] = useState<Run | undefined>(undefined);
   const onWorkspace = useCallback(
     (workspace: ApiSchemas["Workspace"]) => {
       setWorkspace(workspace);
@@ -174,7 +174,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
       <RecordContext.Provider value={recordId}>
         <nav className="steps" aria-label="Screens">
           <button type="button" className="step" onClick={() => setScreens("steps")}>
-            Export
+            Consent, rules and credits
           </button>
         </nav>
         <SharedScreens client={client} workspaceId={recordId} />
@@ -215,17 +215,9 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
             client={client}
             brief={brief}
             workspace={workspace}
-            onRun={setRun}
-            onReview={() => setStep("review")}
-          />
-        ) : step === "review" ? (
-          <ReviewStep
-            client={client}
-            run={run}
-            onFollowRun={(next) => {
-              setRun(next);
-              setStep("run");
-            }}
+            onRun={() => undefined}
+            // The run's review is on the shared screens.
+            onReview={() => setScreens("shared")}
           />
         ) : null}
       </main>

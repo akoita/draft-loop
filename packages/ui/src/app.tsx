@@ -2718,6 +2718,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(activePort.saveMarkdownFile === undefined
         ? {}
         : { onSaveMarkdownFile: activePort.saveMarkdownFile })}
+      exportsDownload={activePort.exportsDownload === true}
       onBulkFindingDecision={onBulkFindingDecision}
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}

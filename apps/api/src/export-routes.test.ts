@@ -134,7 +134,9 @@ describe("export downloads", () => {
     expect(response.statusCode).toBe(200);
     expect(readRunExport).toHaveBeenCalledWith({ root, runId: "run-1", exportId: "export-1" });
     expect(response.headers["content-type"]).toBe(docxExport.mimeType);
-    expect(response.headers["content-disposition"]).toBe('attachment; filename="run-1.docx"');
+    expect(response.headers["content-disposition"]).toBe(
+      'attachment; filename="cv-2026-10-22-export-1.docx"',
+    );
     expect(response.headers["x-content-sha256"]).toBe(docxExport.checksum);
     expect(response.headers["cache-control"]).toBe("private, no-store");
     expect(new Uint8Array(response.rawPayload)).toEqual(content);

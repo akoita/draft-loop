@@ -180,6 +180,8 @@ interface ReviewWorkspaceProps {
   readonly onLoadRunForComparison?: LoadRunForComparison;
   /** Saves an exported run comparison where the reviewer picks; absent offers no export. */
   readonly onSaveMarkdownFile?: SaveMarkdownFile;
+  /** The host downloads exports in the browser instead of writing them to a chosen file. */
+  readonly exportsDownload?: boolean;
   /**
    * Uses a run's draft for approval and export, with an optional reason, and opens that run;
    * absent offers no choice in the run comparison.
@@ -911,6 +913,7 @@ export function ReviewWorkspace({
   onOpenRun,
   onLoadRunForComparison,
   onSaveMarkdownFile,
+  exportsDownload = false,
   onChooseRun,
   initialRunComparison = null,
   onBulkFindingDecision,
@@ -3891,6 +3894,7 @@ export function ReviewWorkspace({
               template: exportTemplate,
               onTemplateChange: setExportTemplate,
               note: state.exportNote ?? null,
+              downloads: exportsDownload,
               onExport: () => onAction(exportReviewAction(exportFormat, exportTemplate)),
             }}
           />

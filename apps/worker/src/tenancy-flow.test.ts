@@ -21,13 +21,11 @@ import {
 } from "@draft-loop/storage-postgres";
 import {
   type ApiClient,
-  approveRequest,
   briefEdit,
   briefPatchBody,
   createApiClient,
   createBriefBody,
   defaultWorkspaceForm,
-  exportRequestBody,
   ownerWorkspaceId,
   selectionRequest,
   startRunBody,
@@ -372,18 +370,16 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
         path: own.runPath,
       });
       expect(review.run.state).toBe("awaiting-approval");
-      const approval = approveRequest(review, "Synthetic test run: the owner accepts the checks.");
-      if ("problem" in approval) throw new Error(approval.problem);
       await own.client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/approve", {
         path: own.runPath,
-        body: approval.body,
+        body: { readinessOverrideRationale: "Synthetic test run: the owner accepts the checks." },
       });
       const exported = await own.client.call(
         "POST /v1/workspaces/{workspaceId}/runs/{runId}/exports",
         {
           path: own.runPath,
           header: { "idempotency-key": randomUUID() },
-          body: exportRequestBody("markdown", "modern"),
+          body: { format: "markdown" },
         },
       );
       const document = await own.client.call(

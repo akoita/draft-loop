@@ -1,8 +1,8 @@
 import type { ApplicationService, RunExport } from "@draft-loop/application";
+import { exportFileName } from "@draft-loop/ui/export-file-name";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
 import { apiErrorSchema } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 
@@ -21,13 +21,6 @@ const exportParams = runParams.extend({
     .string()
     .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u, "must be an export id from the list"),
 });
-
-/** The download's file extension by export format. */
-const fileExtensions: Readonly<Record<string, string>> = {
-  markdown: "md",
-  docx: "docx",
-  pdf: "pdf",
-};
 
 const idempotencyHeaders = z.object({
   "idempotency-key": z
@@ -162,11 +155,10 @@ export function registerExportRoutes(parent: FastifyInstance, options: ExportRou
         runId,
         exportId,
       });
-      const extension = fileExtensions[entry.format] ?? "bin";
       return reply
         .code(200)
         .header("content-type", entry.mimeType)
-        .header("content-disposition", `attachment; filename="${runId}.${extension}"`)
+        .header("content-disposition", `attachment; filename="${exportFileName(entry)}"`)
         .header("x-content-sha256", entry.checksum)
         .header("cache-control", "private, no-store")
         .send(Buffer.from(content));
