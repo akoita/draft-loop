@@ -2812,6 +2812,7 @@ export interface OrchestrationPort {
 }
 
 export * from "./adjudication.js";
+export * from "./automatic-retry.js";
 export * from "./autopilot.js";
 export * from "./candidate-direction.js";
 export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";

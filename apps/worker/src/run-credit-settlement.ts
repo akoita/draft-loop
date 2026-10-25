@@ -1,5 +1,10 @@
 import { runUsage } from "@draft-loop/application";
-import { createStorageRunStore, type RunSnapshot, type RunState } from "@draft-loop/orchestrator";
+import {
+  createStorageRunStore,
+  type RunSnapshot,
+  type RunState,
+  retriesAutomatically,
+} from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
 import type { CreditLedger, PostgresTenancy } from "@draft-loop/storage-postgres";
 
@@ -32,18 +37,12 @@ const finalStates: ReadonlySet<RunState> = new Set([
 /**
  * What a run's state asks of its reservation: a draft past drafting settles it, a final state
  * without a draft refunds it, and a run that can still continue keeps it. A `provider-error` is
- * final unless the worker queued the run again after a rate limit, since no hosted route retries
- * it. A run that does not exist is kept: this is the question for a run that was read.
+ * final unless the worker queued the run again to retry it. A run that does not exist is kept:
+ * this is the question for a run that was read.
  */
 export function creditActionForRun(run: RunSnapshot | undefined): RunCreditAction {
   if (run === undefined || !finalStates.has(run.state)) return "keep";
-  if (
-    run.state === "provider-error" &&
-    run.lastError?.code === "rate-limit" &&
-    run.lastError.retryable
-  ) {
-    return "keep";
-  }
+  if (retriesAutomatically(run)) return "keep";
   return run.artifact ? "settle" : "refund";
 }
 
