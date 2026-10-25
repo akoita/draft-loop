@@ -184,6 +184,11 @@ export interface ProviderFailureView {
   readonly attempt: number;
   readonly maxAttempts: number;
   readonly retryAvailable: boolean;
+  /**
+   * The host retries the step without the person, as the hosted worker does (#1764). Never
+   * together with `retryAvailable`.
+   */
+  readonly automaticRetry: boolean;
   readonly retryNotBefore: string | null;
   readonly availableActions: readonly ProviderFailureAction[];
   readonly diagnostics: readonly ProviderFailureDiagnostic[];

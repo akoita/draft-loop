@@ -327,7 +327,8 @@ export function registerReviewStateRoutes(
           await newestExportName(root, snapshot.runId),
           setup,
           preflight,
-          { running: executingRunStates.has(snapshot.state) },
+          // The worker retries a failed step itself (#1763), so the screen never offers it.
+          { running: executingRunStates.has(snapshot.state), retriedByHost: true },
           undefined,
           requirementTexts,
           details.evidenceMode,

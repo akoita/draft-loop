@@ -64,6 +64,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: false,
+        automaticRetry: false,
         retryNotBefore: null,
         availableActions: ["stop"] as const,
         diagnostics: [],

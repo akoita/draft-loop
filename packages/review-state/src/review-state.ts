@@ -13,6 +13,7 @@ import type {
 import {
   hasCompletedIndependentCritique,
   type RunSnapshot,
+  retriesAutomatically,
   reviewFindingId,
 } from "@draft-loop/orchestrator";
 import { defaultUserSessionTimeoutMs } from "@draft-loop/providers";
@@ -90,6 +91,11 @@ export interface BackgroundRunStatus {
   readonly running: boolean;
   /** The safe reason the last background attempt for this run failed, if it did. */
   readonly failure?: string;
+  /**
+   * The host retries a failed step itself, as the hosted worker does, so the person never retries
+   * it by hand (#1764). Absent on the desktop, whose person retries.
+   */
+  readonly retriedByHost?: boolean;
 }
 
 function reviewExecution(
@@ -147,7 +153,10 @@ export const providerFailureExplanations: Readonly<Record<ProviderFailureView["c
   unknown: "The provider request failed for an unknown reason.",
 };
 
-function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
+function providerFailure(
+  snapshot: RunSnapshot,
+  retriedByHost: boolean,
+): ProviderFailureView | null {
   const legacyCriticRecovery =
     snapshot.state === "awaiting-approval" &&
     snapshot.artifact !== null &&
@@ -163,8 +172,10 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
   const code = supportedCodes.includes(snapshot.lastError.code as ProviderFailureView["code"])
     ? (snapshot.lastError.code as ProviderFailureView["code"])
     : "unknown";
-  const retryAvailable =
+  const retryable =
     snapshot.lastError.retryable && snapshot.lastError.attempt < snapshot.lastError.maxAttempts;
+  const retryAvailable = retryable && !retriedByHost;
+  const automaticRetry = retriedByHost && retryable && retriesAutomatically(snapshot);
   const retryNotBefore =
     snapshot.lastError.retryNotBefore !== undefined &&
     Number.isFinite(Date.parse(snapshot.lastError.retryNotBefore))
@@ -184,6 +195,7 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
     attempt: snapshot.lastError.attempt,
     maxAttempts: snapshot.lastError.maxAttempts,
     retryAvailable,
+    automaticRetry,
     retryNotBefore,
     availableActions: [...(retryAvailable ? (["retry"] as const) : []), "stop" as const],
     diagnostics: snapshot.lastError.diagnostics ?? [],
@@ -404,7 +416,7 @@ export function reviewState(
     },
     providerTransmissionPreflight: preflight,
     providerRoutes: providerRoutesView(providerAuthModeConfiguration),
-    providerFailure: providerFailure(snapshot),
+    providerFailure: providerFailure(snapshot, background.retriedByHost === true),
     usageLimit: usageLimitView(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,

@@ -1964,6 +1964,7 @@ describe("native host", () => {
             attempt: 2,
             maxAttempts: 3,
             retryAvailable: true,
+            automaticRetry: false,
             retryNotBefore: null,
             availableActions: ["retry", "stop"],
             diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
@@ -2087,6 +2088,7 @@ describe("native host", () => {
           providerFailure: {
             step: "critic",
             retryAvailable: true,
+            automaticRetry: false,
             availableActions: ["retry", "stop"],
           },
         },

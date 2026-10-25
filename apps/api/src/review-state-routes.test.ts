@@ -430,6 +430,50 @@ describe("review state", () => {
     expect(unknown.statusCode).toBe(404);
   });
 
+  it.each([
+    ["the worker retries", { code: "invalid-response", retryable: true, attempt: 1 }, true],
+    ["no retry is left", { code: "invalid-response", retryable: false, attempt: 3 }, false],
+    ["the credit ran out", { code: "quota-exhausted", retryable: false, attempt: 1 }, false],
+  ])(
+    "never offers a hand retry of a failed step, and says when %s",
+    async (_label, error, automaticRetry) => {
+      const failed = {
+        ...snapshot,
+        state: "provider-error",
+        currentStep: "author",
+        lastError: {
+          ...error,
+          message: "provider text that may quote the prompt",
+          provider: "anthropic",
+          modelId: "claude-test-author",
+          step: "author",
+          maxAttempts: 3,
+          providerRequestId: null,
+        },
+      } as unknown as RunSnapshot;
+      await build({
+        status: async () => failed,
+        readRunReview: async () => review,
+        readRunRequirements: async () => [],
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `${url}?runId=run-1`,
+        headers: { authorization },
+      });
+
+      expect(response.statusCode, response.body).toBe(200);
+      const state = response.json();
+      expect(state.providerFailure).toMatchObject({
+        retryAvailable: false,
+        automaticRetry,
+        availableActions: ["stop"],
+      });
+      await expect(throughPort(state)).resolves.toMatchObject({ ok: true });
+    },
+  );
+
   it("refuses an unknown run named without an application", async () => {
     await build({ status: async () => undefined });
 

@@ -361,8 +361,10 @@ The hosted service starts runs through a queue rather than in the request
     failure waiting for the worker's retry, a consent or quarantine hold, or a
     step in flight. A job for a run with no reservation, as in owner-token mode,
     does nothing.
-  - **No free run.** No hosted route retries a `provider-error` run, but a
-    repeated begin request queues its run again. A job whose run has a
+  - **No free run.** Only the worker retries a `provider-error` run, and the
+    shared screen offers no retry by hand there: it says the service retries
+    the step, or that a new run is needed (#1764). A repeated begin request
+    still queues its run again. A job whose run has a
     refunded reservation therefore ends as `credits-closed` without a
     provider call.
   - **Reconciliation.** After each job the worker reads that tenant's open

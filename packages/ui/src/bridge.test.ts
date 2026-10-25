@@ -2663,6 +2663,7 @@ describe("desktop capability bridge", () => {
       attempt: 1,
       maxAttempts: 3,
       retryAvailable: true,
+      automaticRetry: false,
       retryNotBefore: null,
       availableActions: ["retry", "return-to-review", "stop"],
       diagnostics: [],
@@ -2672,6 +2673,8 @@ describe("desktop capability bridge", () => {
       { ...baseFailure, attempt: 4 },
       { ...baseFailure, availableActions: ["retry", "retry"] },
       { ...baseFailure, retryAvailable: false },
+      // A step the host retries itself is never offered to the person as well.
+      { ...baseFailure, automaticRetry: true },
     ]) {
       const state = {
         ...createFixtureReviewState(),
@@ -2700,6 +2703,7 @@ describe("desktop capability bridge", () => {
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: true,
+        automaticRetry: false,
         retryNotBefore: null,
         availableActions: ["retry", "return-to-review", "stop"] as const,
         diagnostics: [],
