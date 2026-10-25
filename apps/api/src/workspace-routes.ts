@@ -11,6 +11,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { hostedDefaultModelPair } from "./hosted-model-catalog.js";
 import type { PlanLimits } from "./plan-limits.js";
 import { workspaceView, workspaceViewSchema } from "./views.js";
 
@@ -91,17 +92,21 @@ const defaultMaxRounds = 2;
 /**
  * A hosted workspace has no job file or source folder: job briefs and knowledge come through the
  * API. The driver still records the two settings, so they are fixed names that address nothing.
+ * A side the request leaves out gets the hosted default preset's model, not the desktop's.
  */
 function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeWorkspaceCommand {
-  const { author, critic, ...settings } = body;
+  const defaults = hostedDefaultModelPair();
+  const { author = defaults.author, critic = defaults.critic, ...settings } = body;
   return {
     root,
     jobDescription: "job.md",
     sources: "sources",
     maxRounds: defaultMaxRounds,
     ...Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)),
-    ...(author === undefined ? {} : { authorCompany: author.company, authorModel: author.model }),
-    ...(critic === undefined ? {} : { criticCompany: critic.company, criticModel: critic.model }),
+    authorCompany: author.company,
+    authorModel: author.model,
+    criticCompany: critic.company,
+    criticModel: critic.model,
   };
 }
 
@@ -130,7 +135,7 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Create a workspace",
         description:
-          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service; a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         params: workspaceParams,
         body: createWorkspaceBody,
         response: {

@@ -2503,6 +2503,193 @@
           "createdAt"
         ]
       },
+      "CatalogModelInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The model profile's id; with its version, an exact reference."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "company": {
+            "type": "string",
+            "enum": [
+              "anthropic",
+              "openai"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "description": "The provider's model id, which the screens name for display."
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "standard",
+              "premium"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "author",
+                "critic"
+              ]
+            }
+          },
+          "qualityStatus": {
+            "type": "string",
+            "const": "unvalidated"
+          },
+          "pricing": {
+            "type": "object",
+            "properties": {
+              "inputUsdPerMillion": {
+                "type": "number"
+              },
+              "outputUsdPerMillion": {
+                "type": "number"
+              },
+              "cacheReadUsdPerMillion": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cacheWriteUsdPerMillion": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxInputTokens": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "inputUsdPerMillion",
+              "outputUsdPerMillion",
+              "cacheReadUsdPerMillion",
+              "cacheWriteUsdPerMillion",
+              "maxInputTokens"
+            ],
+            "description": "The provider's list price per million tokens, before any location premium."
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "company",
+          "model",
+          "tier",
+          "roles",
+          "qualityStatus",
+          "pricing"
+        ]
+      },
+      "CatalogPresetInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "standard",
+              "premium"
+            ]
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ]
+          },
+          "critic": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "tier",
+          "author",
+          "critic"
+        ]
+      },
+      "ModelCatalogInput": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogModelInput"
+            }
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogPresetInput"
+            }
+          },
+          "defaultPresetId": {
+            "type": "string",
+            "description": "The preset a new workspace gets when it names no model."
+          }
+        },
+        "required": [
+          "models",
+          "presets",
+          "defaultPresetId"
+        ]
+      },
       "PlanAssignmentInput": {
         "type": "object",
         "properties": {
@@ -6508,6 +6695,199 @@
         ],
         "additionalProperties": false
       },
+      "CatalogModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The model profile's id; with its version, an exact reference."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "company": {
+            "type": "string",
+            "enum": [
+              "anthropic",
+              "openai"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "description": "The provider's model id, which the screens name for display."
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "standard",
+              "premium"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "author",
+                "critic"
+              ]
+            }
+          },
+          "qualityStatus": {
+            "type": "string",
+            "const": "unvalidated"
+          },
+          "pricing": {
+            "type": "object",
+            "properties": {
+              "inputUsdPerMillion": {
+                "type": "number"
+              },
+              "outputUsdPerMillion": {
+                "type": "number"
+              },
+              "cacheReadUsdPerMillion": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cacheWriteUsdPerMillion": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxInputTokens": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "inputUsdPerMillion",
+              "outputUsdPerMillion",
+              "cacheReadUsdPerMillion",
+              "cacheWriteUsdPerMillion",
+              "maxInputTokens"
+            ],
+            "additionalProperties": false,
+            "description": "The provider's list price per million tokens, before any location premium."
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "company",
+          "model",
+          "tier",
+          "roles",
+          "qualityStatus",
+          "pricing"
+        ],
+        "additionalProperties": false
+      },
+      "CatalogPreset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "standard",
+              "premium"
+            ]
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          "critic": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "tier",
+          "author",
+          "critic"
+        ],
+        "additionalProperties": false
+      },
+      "ModelCatalog": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogModel"
+            }
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogPreset"
+            }
+          },
+          "defaultPresetId": {
+            "type": "string",
+            "description": "The preset a new workspace gets when it names no model."
+          }
+        },
+        "required": [
+          "models",
+          "presets",
+          "defaultPresetId"
+        ],
+        "additionalProperties": false
+      },
       "PlanAssignment": {
         "type": "object",
         "properties": {
@@ -8326,7 +8706,7 @@
       },
       "put": {
         "summary": "Create a workspace",
-        "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+        "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service; a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -10549,6 +10929,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/model-catalog": {
+      "get": {
+        "summary": "List the models and presets the hosted service runs",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalog"
                 }
               }
             }

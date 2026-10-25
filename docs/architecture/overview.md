@@ -468,6 +468,13 @@ The owner sets up a hosted workspace through the API before any run:
   The request names no file or folder, and an existing workspace answers 409
   instead of being overwritten. `GET /v1/workspaces` lists the workspaces the
   caller can reach.
+- A side the request leaves out gets the hosted default, the Balanced preset:
+  Claude Sonnet 5.5 as the author and GPT-6.1 Sol as the critic. The desktop
+  keeps the cheaper Economy pair as its own default.
+- `GET /v1/model-catalog` lists the catalog's model profiles the gateway
+  serves, with their tier, roles and list prices, the presets whose author and
+  critic it both serves, and the default preset (`hosted-model-catalog.ts`).
+  Desktop-only companies and local models are left out.
 - `PUT /v1/workspaces/:id/writing-policy` sets the candidate's writing policy
   from its Markdown text, at most 64 KiB, as a new immutable version that the
   next runs follow and record. `GET` reads the active policy, and
