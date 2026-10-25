@@ -10,6 +10,9 @@ import type { BlobStoragePort } from "@draft-loop/storage";
 import { permitsTransmission } from "@draft-loop/storage/consent-ledger";
 import { hostedApplicationPorts, type PostgresTenancy } from "@draft-loop/storage-postgres";
 
+/** The ids every queued job names: its tenant and its workspace, the candidate record. */
+export type WorkspaceJob = Pick<RunJob, "tenantId" | "workspaceId">;
+
 export interface TenantServicesOptions {
   /** The shared pool, opened once at startup, that hands out any tenant's storage. */
   readonly tenancy: Pick<PostgresTenancy, "forTenant">;
@@ -39,10 +42,10 @@ export function tenantServices(
   };
 }
 
-export interface TenantConsentOptions {
+export interface TenantConsentOptions<Job extends WorkspaceJob = WorkspaceJob> {
   readonly tenancy: Pick<PostgresTenancy, "forTenant">;
   readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;
-  readonly workspaceRoot: (job: RunJob) => string;
+  readonly workspaceRoot: (job: Job) => string;
 }
 
 /**
@@ -50,7 +53,9 @@ export interface TenantConsentOptions {
  * its workspace's author and critic models call (ADR 0011, D7), read from the job's tenant's
  * consent ledger, which keys by the workspace's record id as the API's consent routes do.
  */
-export function tenantRunConsent(options: TenantConsentOptions): (job: RunJob) => Promise<boolean> {
+export function tenantRunConsent<Job extends WorkspaceJob>(
+  options: TenantConsentOptions<Job>,
+): (job: Job) => Promise<boolean> {
   return async (job) => {
     const workspace = await options
       .serviceFor(job.tenantId)
@@ -60,10 +65,10 @@ export function tenantRunConsent(options: TenantConsentOptions): (job: RunJob) =
   };
 }
 
-export interface TenantRecordErasureOptions {
+export interface TenantRecordErasureOptions<Job extends WorkspaceJob = WorkspaceJob> {
   readonly tenancy: Pick<PostgresTenancy, "forTenant">;
   readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;
-  readonly workspaceRoot: (job: RunJob) => string;
+  readonly workspaceRoot: (job: Job) => string;
 }
 
 /**
@@ -71,9 +76,9 @@ export interface TenantRecordErasureOptions {
  * its workspace gone, as after an erasure finished (ADR 0011, D7). The record is the workspace's
  * API id, as the job names it.
  */
-export function tenantRecordErased(
-  options: TenantRecordErasureOptions,
-): (job: RunJob) => Promise<boolean> {
+export function tenantRecordErased<Job extends WorkspaceJob>(
+  options: TenantRecordErasureOptions<Job>,
+): (job: Job) => Promise<boolean> {
   return async (job) => {
     const tenant = options.tenancy.forTenant(job.tenantId);
     if (await tenant.organisationErasure.isClosing()) return true;

@@ -3,6 +3,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  briefExtractionQueueName,
   grantRunQueueAccess,
   migrateRunQueue,
   openRunQueue,
@@ -97,6 +98,34 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     ).rejects.toThrow();
     await expect(
       queue.enqueue({ tenantId: "../x", workspaceId: "workspace-1", runId: "run-3" }),
+    ).rejects.toThrow();
+  });
+
+  it("queues one brief extraction per brief version, carrying only ids", async () => {
+    const job = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      applicationId: "app-1",
+      briefId: "brief-1",
+      version: 1,
+    };
+
+    await queue.enqueueBriefExtraction(job);
+    await queue.enqueueBriefExtraction(job);
+    await queue.enqueueBriefExtraction({ ...job, version: 2 });
+
+    const extractions = (
+      await admin.query(
+        `SELECT data, singleton_key FROM ${schema}.job WHERE name = $1 ORDER BY created_on`,
+        [briefExtractionQueueName],
+      )
+    ).rows;
+    expect(extractions).toEqual([
+      { data: job, singleton_key: "tenant-a/workspace-1/brief-1@1" },
+      { data: { ...job, version: 2 }, singleton_key: "tenant-a/workspace-1/brief-1@2" },
+    ]);
+    await expect(
+      queue.enqueueBriefExtraction({ ...job, jobText: "candidate material" } as never),
     ).rejects.toThrow();
   });
 

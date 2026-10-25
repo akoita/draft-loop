@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ApplicationService } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import {
+  briefExtractionQueueName,
   grantRunQueueAccess,
   migrateRunQueue,
   openRunQueue,
@@ -11,7 +12,13 @@ import {
 import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { startWorker, stopOnSignals, stopWhenIdle, type Worker } from "./worker.js";
+import {
+  startWorker,
+  stopOnSignals,
+  stopWhenIdle,
+  type Worker,
+  type WorkerOptions,
+} from "./worker.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -64,8 +71,9 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       )
     ).rows as { state: string; start_after: Date; retry_count: number }[];
 
-  const start = async (service: Service) => {
+  const start = async (service: Service, briefs?: WorkerOptions["briefs"]) => {
     worker = await startWorker({
+      ...(briefs === undefined ? {} : { briefs }),
       queue: {
         connectionString: runtimeUrl(url),
         schema,
@@ -122,6 +130,47 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
     expect(resume).toHaveBeenCalledWith({
       root: "/tenants/tenant-a/workspaces/workspace-1",
       runId: "run-1",
+      allowProviderData: true,
+    });
+  });
+
+  it("extracts a queued brief through the service, then completes the job", async () => {
+    const extractApplicationBrief = vi.fn<
+      NonNullable<ApplicationService["extractApplicationBrief"]>
+    >(async () => ({ outcome: "extracted" }));
+    const outcomes: string[] = [];
+    await start(
+      { status: async () => undefined, resume: vi.fn() },
+      {
+        serviceFor: () => ({ extractApplicationBrief }),
+        workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
+        allowProviderData: true,
+        onOutcome: (_job, outcome) => outcomes.push(outcome),
+      },
+    );
+    const job = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      applicationId: "app-1",
+      briefId: "brief-1",
+      version: 1,
+    };
+
+    await queue.enqueueBriefExtraction(job);
+
+    await eventually(async () => {
+      const { rows } = await admin.query(
+        `SELECT state FROM ${schema}.job WHERE name = $1 AND data->>'briefId' = 'brief-1'`,
+        [briefExtractionQueueName],
+      );
+      expect(rows).toEqual([{ state: "completed" }]);
+    });
+    expect(outcomes).toEqual(["extracted"]);
+    expect(extractApplicationBrief).toHaveBeenCalledWith({
+      root: "/tenants/tenant-a/workspaces/workspace-1",
+      applicationId: "app-1",
+      briefId: "brief-1",
+      expectedVersion: 1,
       allowProviderData: true,
     });
   });

@@ -16,6 +16,10 @@ import type {
   CanonicalCandidateProfileVersionRecord,
   OpportunityBriefVersionRecord,
 } from "@draft-loop/storage";
+import type {
+  ApplicationBriefExtractionResult,
+  ExtractApplicationBriefCommand,
+} from "./application-brief-extraction.js";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
 import type {
   CandidateProfileFreshness,
@@ -586,6 +590,14 @@ export interface ApplicationDriver {
    * background; `resume` lifts it and executes in one call. The hosted driver offers it.
    */
   readonly releasePause?: (command: ReleasePauseCommand) => Promise<RunSnapshot>;
+  /**
+   * Extracts a brief saved without extraction from the job text its application keeps, at the
+   * version it was queued for, as the worker does for a live hosted brief. The hosted driver
+   * offers it.
+   */
+  readonly extractApplicationBrief?: (
+    command: ExtractApplicationBriefCommand,
+  ) => Promise<ApplicationBriefExtractionResult>;
   /** A run's completed, verifiable exports, newest first. The hosted driver offers it. */
   readonly listRunExports?: (command: RunExportsCommand) => Promise<readonly RunExport[]>;
   /** One export's document, verified against its recorded checksum. The hosted driver offers it. */
@@ -787,6 +799,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
         throw new CliUserError("This application driver resumes runs itself; use resume.");
       return driver.releasePause({ ...command, root: requireRoot(command.root) });
     },
+    extractApplicationBrief: async (command) => {
+      if (driver.extractApplicationBrief === undefined)
+        throw new CliUserError("This application driver extracts briefs as it saves them.");
+      return driver.extractApplicationBrief({ ...command, root: requireRoot(command.root) });
+    },
     listRunExports: async (command) =>
       driver.listRunExports === undefined
         ? []
@@ -852,6 +869,12 @@ export function createApplicationService(driver: ApplicationDriver): Application
   return Object.freeze(service);
 }
 
+export {
+  type ApplicationBriefExtractionOutcome,
+  type ApplicationBriefExtractionResult,
+  type ExtractApplicationBriefCommand,
+  extractApplicationBrief,
+} from "./application-brief-extraction.js";
 export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
 export * from "./candidate-profile-extraction.js";

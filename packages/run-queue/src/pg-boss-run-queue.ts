@@ -1,9 +1,15 @@
 import pg from "pg";
 import { type ConstructorOptions, PgBoss, type Queue } from "pg-boss";
 
+import {
+  type BriefExtractionJob,
+  briefExtractionJobKey,
+  briefExtractionJobSchema,
+} from "./brief-extraction-job.js";
 import { type RunJob, runJobKey, runJobSchema } from "./run-job.js";
 
 export const runQueueName = "draft-loop-runs";
+export const briefExtractionQueueName = "draft-loop-brief-extractions";
 
 export interface RunQueueOptions {
   readonly connectionString: string;
@@ -23,6 +29,11 @@ export interface RunQueue {
    * queues nothing new while the first job waits, and a worker skips a run that is already done.
    */
   readonly enqueue: (job: RunJob, options?: EnqueueRunOptions) => Promise<void>;
+  /**
+   * Queues a brief's extraction unless one for the same brief version waits or runs. Safe to
+   * repeat, and the worker skips a brief that moved past the queued version.
+   */
+  readonly enqueueBriefExtraction: (job: BriefExtractionJob) => Promise<void>;
   readonly close: () => Promise<void>;
 }
 
@@ -41,6 +52,23 @@ export const runQueueSettings: Omit<Queue, "name"> = {
   heartbeatSeconds: 60,
   // A whole author-critic round can take many minutes; the heartbeat catches crashes sooner.
   expireInSeconds: 2 * 60 * 60,
+  deleteAfterSeconds: 7 * 24 * 60 * 60,
+};
+
+/**
+ * How brief extractions are retried: one provider call each, so a short expiry and a few retries.
+ * A failed extraction becomes an issue on the brief rather than a throw, so retries cover crashes
+ * and lost connections.
+ */
+export const briefExtractionQueueSettings: Omit<Queue, "name"> = {
+  // One waiting or running job per brief version.
+  policy: "exclusive",
+  retryLimit: 3,
+  retryDelay: 15,
+  retryBackoff: true,
+  retryDelayMax: 300,
+  heartbeatSeconds: 60,
+  expireInSeconds: 10 * 60,
   deleteAfterSeconds: 7 * 24 * 60 * 60,
 };
 
@@ -68,8 +96,9 @@ export function bossOptions(
 }
 
 /**
- * Creates or upgrades the queue's schema and the run queue, as the role that owns the database
- * objects. Like storage migrations, it runs at deploy time, never from the running service.
+ * Creates or upgrades the queue's schema, the run queue and the brief extraction queue, as the
+ * role that owns the database objects. Like storage migrations, it runs at deploy time, never from
+ * the running service.
  */
 export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
   const boss = new PgBoss(
@@ -77,17 +106,22 @@ export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
   );
   await boss.start();
   try {
-    if ((await boss.getQueue(runQueueName)) === null) {
-      await boss.createQueue(runQueueName, runQueueSettings);
-    } else {
+    for (const [name, settings] of [
+      [runQueueName, runQueueSettings],
+      [briefExtractionQueueName, briefExtractionQueueSettings],
+    ] as const) {
+      if ((await boss.getQueue(name)) === null) {
+        await boss.createQueue(name, settings);
+        continue;
+      }
       // A queue's policy and heartbeat are fixed at creation; the rest can change.
       const {
         policy: _policy,
         retryDelayMax: _max,
         heartbeatSeconds: _heartbeat,
         ...mutable
-      } = runQueueSettings;
-      await boss.updateQueue(runQueueName, mutable);
+      } = settings;
+      await boss.updateQueue(name, mutable);
     }
   } finally {
     await boss.stop({ graceful: false, close: true });
@@ -130,6 +164,12 @@ export async function openRunQueue(options: RunQueueOptions): Promise<RunQueue> 
   await boss.start();
   return {
     enqueue: (job, enqueueOptions) => sendRunJob(boss, job, enqueueOptions),
+    enqueueBriefExtraction: async (job) => {
+      const data = briefExtractionJobSchema.parse(job);
+      await boss.send(briefExtractionQueueName, data, {
+        singletonKey: briefExtractionJobKey(data),
+      });
+    },
     close: () => boss.stop({ graceful: false, close: true }),
   };
 }

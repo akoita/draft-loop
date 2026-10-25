@@ -1,7 +1,9 @@
 import { PgBoss } from "pg-boss";
 
+import { type BriefExtractionJob, briefExtractionJobSchema } from "./brief-extraction-job.js";
 import {
   bossOptions,
+  briefExtractionQueueName,
   type RunQueueOptions,
   runQueueName,
   sendRunJob,
@@ -28,6 +30,9 @@ export interface RunJobControl {
 /** Executes one claimed run job. A throw fails the attempt, and the queue retries it with backoff. */
 export type RunJobHandler = (job: RunJob, control: RunJobControl) => Promise<void>;
 
+/** Extracts one claimed brief. A throw fails the attempt, and the queue retries it with backoff. */
+export type BriefExtractionJobHandler = (job: BriefExtractionJob) => Promise<void>;
+
 export interface StopRunWorkerOptions {
   /**
    * How long a job in flight may keep running, in milliseconds. A job still running then is failed
@@ -47,37 +52,43 @@ export interface RunWorker {
 }
 
 /**
- * Starts taking run jobs, as the restricted runtime role. It never migrates. It also supervises the
- * queue, which is what retries the job of a worker that stopped sending heartbeats.
+ * Starts taking run jobs, and brief extractions when given their handler, as the restricted
+ * runtime role. It never migrates. It also supervises the queues, which is what retries the job of
+ * a worker that stopped sending heartbeats.
  */
 export async function startRunWorker(
   options: RunWorkerOptions,
   handle: RunJobHandler,
+  handleBriefExtraction?: BriefExtractionJobHandler,
 ): Promise<RunWorker> {
   const boss = new PgBoss(
     bossOptions(options, { migrate: false, createSchema: false, supervise: true }),
   );
   boss.on("error", (error) => options.onError?.(error));
+  const claim = {
+    batchSize: 1,
+    localConcurrency: options.concurrency ?? 1,
+    ...(options.pollingIntervalSeconds === undefined
+      ? {}
+      : { pollingIntervalSeconds: options.pollingIntervalSeconds }),
+  };
   await boss.start();
   try {
-    await boss.work<RunJob>(
-      runQueueName,
-      {
-        batchSize: 1,
-        localConcurrency: options.concurrency ?? 1,
-        ...(options.pollingIntervalSeconds === undefined
-          ? {}
-          : { pollingIntervalSeconds: options.pollingIntervalSeconds }),
-      },
-      async (jobs) => {
+    await boss.work<RunJob>(runQueueName, claim, async (jobs) => {
+      for (const claimed of jobs) {
+        const job = runJobSchema.parse(claimed.data);
+        await handle(job, {
+          requeue: (startAfter) => sendRunJob(boss, job, { startAfter }),
+        });
+      }
+    });
+    if (handleBriefExtraction !== undefined) {
+      await boss.work<BriefExtractionJob>(briefExtractionQueueName, claim, async (jobs) => {
         for (const claimed of jobs) {
-          const job = runJobSchema.parse(claimed.data);
-          await handle(job, {
-            requeue: (startAfter) => sendRunJob(boss, job, { startAfter }),
-          });
+          await handleBriefExtraction(briefExtractionJobSchema.parse(claimed.data));
         }
-      },
-    );
+      });
+    }
   } catch (error) {
     await boss.stop({ graceful: false, close: true });
     throw error;

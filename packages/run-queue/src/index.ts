@@ -1,4 +1,11 @@
 export {
+  type BriefExtractionJob,
+  briefExtractionJobKey,
+  briefExtractionJobSchema,
+} from "./brief-extraction-job.js";
+export {
+  briefExtractionQueueName,
+  briefExtractionQueueSettings,
   type EnqueueRunOptions,
   grantRunQueueAccess,
   migrateRunQueue,
@@ -9,6 +16,7 @@ export {
   runQueueSettings,
 } from "./pg-boss-run-queue.js";
 export {
+  type BriefExtractionJobHandler,
   type RunJobControl,
   type RunJobHandler,
   type RunWorker,

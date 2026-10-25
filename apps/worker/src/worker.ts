@@ -5,11 +5,17 @@ import {
   startRunWorker,
 } from "@draft-loop/run-queue";
 
+import {
+  type BriefExtractionHandlerOptions,
+  createBriefExtractionHandler,
+} from "./brief-extraction-handler.js";
 import { createRunJobHandler, type RunJobHandlerOptions } from "./run-job-handler.js";
 
 export interface WorkerOptions {
   readonly queue: RunWorkerOptions;
   readonly runs: RunJobHandlerOptions;
+  /** Live briefs to extract (ADR 0011, D9); unset, the worker takes run jobs only. */
+  readonly briefs?: BriefExtractionHandlerOptions;
 }
 
 export interface Worker extends RunWorker {
@@ -17,23 +23,33 @@ export interface Worker extends RunWorker {
   readonly idleMs: () => number | undefined;
 }
 
-/** Starts executing queued runs through the application service the composition root built. */
+/**
+ * Starts executing queued runs, and extracting queued briefs when given their options, through the
+ * application service the composition root built.
+ */
 export async function startWorker(
   options: WorkerOptions,
   now: () => number = Date.now,
 ): Promise<Worker> {
   const handle = createRunJobHandler(options.runs);
+  const extract =
+    options.briefs === undefined ? undefined : createBriefExtractionHandler(options.briefs);
   let running = 0;
   let lastActiveAt = now();
-  const worker = await startRunWorker(options.queue, async (job, control) => {
+  const tracked = async (work: () => Promise<void>) => {
     running += 1;
     try {
-      await handle(job, control);
+      await work();
     } finally {
       running -= 1;
       lastActiveAt = now();
     }
-  });
+  };
+  const worker = await startRunWorker(
+    options.queue,
+    (job, control) => tracked(() => handle(job, control)),
+    extract === undefined ? undefined : (job) => tracked(() => extract(job)),
+  );
   return {
     stop: (stopOptions) => worker.stop(stopOptions),
     idleMs: () => (running > 0 ? undefined : now() - lastActiveAt),
