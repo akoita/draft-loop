@@ -1,6 +1,5 @@
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
-import type { RunJob } from "@draft-loop/run-queue";
 import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedWorkspaceReference,
@@ -22,7 +21,12 @@ import {
 import { workerProviderOptions } from "./model-routes.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
-import { tenantRecordErased, tenantRunConsent, tenantServices } from "./tenant-services.js";
+import {
+  tenantRecordErased,
+  tenantRunConsent,
+  tenantServices,
+  type WorkspaceJob,
+} from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
 // The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
@@ -57,7 +61,14 @@ const serviceFor = tenantServices({
   local: workerProviderOptions(config.modelGateway),
 });
 
-const workspaceRoot = (job: RunJob) => hostedWorkspaceReference(job.tenantId, job.workspaceId);
+const workspaceRoot = (job: WorkspaceJob) =>
+  hostedWorkspaceReference(job.tenantId, job.workspaceId);
+// In a sign-in deployment, each job checks its record's consent again before any provider call.
+const consentFor = config.requireConsent
+  ? tenantRunConsent({ tenancy, serviceFor, workspaceRoot })
+  : undefined;
+// A job queued before its record was erased ends without touching the record.
+const recordErased = tenantRecordErased({ tenancy, serviceFor, workspaceRoot });
 
 const worker = await startWorker({
   queue: {
@@ -70,10 +81,7 @@ const worker = await startWorker({
     serviceFor: (job) => serviceFor(job.tenantId),
     workspaceRoot,
     allowProviderData: config.allowProviderData,
-    // In a sign-in deployment, each job checks its record's consent again before any provider call.
-    ...(config.requireConsent
-      ? { consentFor: tenantRunConsent({ tenancy, serviceFor, workspaceRoot }) }
-      : {}),
+    ...(consentFor === undefined ? {} : { consentFor }),
     budgetCeiling: config.budgetCeiling,
     // Material flagged after a run was queued, or with no result while screening is on, pauses the
     // run before any provider call.
@@ -105,12 +113,22 @@ const worker = await startWorker({
           }),
         ),
     }),
-    // A job queued before its record was erased ends without touching the record.
-    recordErased: tenantRecordErased({ tenancy, serviceFor, workspaceRoot }),
+    recordErased,
     onOutcome: (job, outcome, run, before) => {
       for (const line of failedCallLines(job, run, before)) console.error(line);
       console.info(logLine("INFO", "run job finished", runOutcomeFields(job, outcome, run)));
     },
+  },
+  // A live brief saved before screening is extracted here, once the API queues it (ADR 0011, D9).
+  briefs: {
+    serviceFor: (job) => serviceFor(job.tenantId),
+    workspaceRoot,
+    allowProviderData: config.allowProviderData,
+    ...(consentFor === undefined ? {} : { consentFor }),
+    recordErased,
+    // The job is ids only, so its line carries no candidate material.
+    onOutcome: (job, outcome) =>
+      console.info(logLine("INFO", "brief extraction finished", { ...job, outcome })),
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
