@@ -47,6 +47,17 @@ export function hasDesktopKnowledgeCapabilities(
   );
 }
 
+/**
+ * Whether the section can choose a base for the workspace. A host without store folders, such as
+ * the hosted service with its one store per tenant, chooses among its bases but switches no store.
+ */
+export function hasKnowledgeSelection(
+  capabilities: DesktopKnowledgeCapabilities,
+): capabilities is DesktopKnowledgeCapabilities &
+  Required<Pick<DesktopKnowledgeCapabilities, "selectCandidateKnowledgeBase">> {
+  return capabilities.selectCandidateKnowledgeBase !== undefined;
+}
+
 export function activeKnowledgeBases(
   result: KnowledgeStoreResult,
 ): readonly KnowledgeBaseSummary[] {
@@ -212,7 +223,8 @@ export function KnowledgeWorkspace({
   onSelectionSaved,
   embedded = false,
 }: KnowledgeWorkspaceProps) {
-  const supported = hasDesktopKnowledgeCapabilities(capabilities);
+  const supported = hasKnowledgeSelection(capabilities);
+  const storesSwitchable = hasDesktopKnowledgeCapabilities(capabilities);
   const [store, setStore] = useState<KnowledgeStoreResult | null>(null);
   const [name, setName] = useState("candidate-knowledge");
   const [pending, setPending] = useState(false);
@@ -371,7 +383,7 @@ export function KnowledgeWorkspace({
   };
 
   const createStore = () => {
-    if (!supported) return;
+    if (!storesSwitchable) return;
     const trimmedName = name.trim();
     if (trimmedName === "" || /[\\/]/u.test(trimmedName)) {
       setMessage("Enter a folder name without path separators.");
@@ -384,7 +396,7 @@ export function KnowledgeWorkspace({
   };
 
   const openStore = () => {
-    if (!supported) return;
+    if (!storesSwitchable) return;
     void perform(async (generation) => {
       await readStore(await capabilities.openCandidateKnowledgeStore(), generation);
     });
@@ -573,7 +585,7 @@ export function KnowledgeWorkspace({
           onImport={importIntoKnowledgeBase}
         />
       )}
-      {formPresentation === "form" ? (
+      {!storesSwitchable ? null : formPresentation === "form" ? (
         storeForm
       ) : (
         <div className="knowledge-store-disclosure">

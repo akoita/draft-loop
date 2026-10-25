@@ -17,6 +17,13 @@ import {
 } from "@draft-loop/ui/opportunity-projection";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { Refusal, refuse } from "./bridge-refusal.js";
+import {
+  createKnowledgeAnswers,
+  hostedKnowledgeCapabilities,
+  isKnowledgeCommand,
+  type PickFile,
+} from "./knowledge-bridge.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 /**
@@ -35,6 +42,7 @@ export const hostedBridgeCapabilities = [
   "application.rename",
   "application.set-models",
   "application.choose-run",
+  ...hostedKnowledgeCapabilities,
   "opportunity.create",
   "opportunity.get",
   "opportunity.list",
@@ -66,6 +74,8 @@ export interface HttpBridgeOptions {
    * the owner's workspace when unset.
    */
   readonly workspaceId?: string;
+  /** Opens a file picker for a career evidence upload; the browser's own file input when unset. */
+  readonly pickFile?: PickFile;
 }
 
 /** The policy's text and identity, without the dates the editor does not show. */
@@ -79,20 +89,6 @@ const hostedCompany = (company: string): "anthropic" | "openai" =>
   company === "anthropic" || company === "openai"
     ? company
     : refuse("The hosted service runs Anthropic and OpenAI models only.");
-
-/** A refusal the bridge makes itself, before any request, in words for the owner. */
-class Refusal extends Error {
-  constructor(
-    readonly code: BridgeErrorCode,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-const refuse = (message: string): never => {
-  throw new Refusal("operation-failed", message);
-};
 
 function errorCode(status: number): BridgeErrorCode {
   if (status === 404) return "not-found";
@@ -154,6 +150,7 @@ function hostedSource(source: OpportunityCreateSource) {
 export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const { client } = options;
   const idempotencyKey = options.idempotencyKey ?? (() => globalThis.crypto.randomUUID());
+  const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
 
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))
@@ -183,6 +180,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     });
 
   async function answer(command: BridgeCommand): Promise<unknown> {
+    if (isKnowledgeCommand(command)) return answerKnowledge(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;

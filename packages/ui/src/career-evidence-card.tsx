@@ -100,6 +100,8 @@ export interface CareerEvidenceCardViewProps {
   /** False when the host offers no way to add files or a URL in the current mode. */
   readonly canAddFile: boolean;
   readonly canAddUrl: boolean;
+  /** False when the host fetches no URL at all, such as the hosted service: the URL box is hidden. */
+  readonly urlsOffered?: boolean;
   /**
    * The Knowledge base section: which base the workspace uses, the legacy import and the store.
    * It sits inside the card so the page has one place for career evidence.
@@ -129,6 +131,7 @@ export function CareerEvidenceCardView({
   onChooseKnowledgeBase,
   canAddFile,
   canAddUrl,
+  urlsOffered = true,
   automatic = false,
   knowledgeBase = null,
   evidenceKinds,
@@ -279,27 +282,31 @@ export function CareerEvidenceCardView({
               Add folder
             </button>
           ) : null}
-          <label className="url-input-label">
-            <span>Or provide public URLs, one per line</span>
-            <textarea
-              className="url-input"
-              rows={3}
-              placeholder={"https://github.com/…\nhttps://www.linkedin.com/in/…"}
-              value={url}
-              onChange={(event) => onUrlChange(event.target.value)}
-              aria-label={
-                inKnowledgeBase ? "Career evidence URLs" : "Legacy workspace evidence URLs"
-              }
-            />
-          </label>
-          <button
-            className="button button-outline"
-            type="button"
-            disabled={addDisabled || !canAddUrl || urlCount === 0 || tooManyForLegacy}
-            onClick={onAddUrl}
-          >
-            {urlLabel}
-          </button>
+          {urlsOffered ? (
+            <>
+              <label className="url-input-label">
+                <span>Or provide public URLs, one per line</span>
+                <textarea
+                  className="url-input"
+                  rows={3}
+                  placeholder={"https://github.com/…\nhttps://www.linkedin.com/in/…"}
+                  value={url}
+                  onChange={(event) => onUrlChange(event.target.value)}
+                  aria-label={
+                    inKnowledgeBase ? "Career evidence URLs" : "Legacy workspace evidence URLs"
+                  }
+                />
+              </label>
+              <button
+                className="button button-outline"
+                type="button"
+                disabled={addDisabled || !canAddUrl || urlCount === 0 || tooManyForLegacy}
+                onClick={onAddUrl}
+              >
+                {urlLabel}
+              </button>
+            </>
+          ) : null}
         </>
       ) : null}
       {knowledgeBase}
@@ -526,6 +533,9 @@ export function CareerEvidenceCard({
         knowledge?.onRequestStoreForm?.();
         focusKnowledgeStore();
       }}
+      {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeUrl === undefined
+        ? { urlsOffered: false }
+        : {})}
       {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeDirectory !== undefined
         ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
         : {})}
