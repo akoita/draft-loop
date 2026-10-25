@@ -1,9 +1,8 @@
-import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
-import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
+import { storageFactory } from "./local-storage-factory.js";
 import { readRunContext } from "./run-context-read.js";
 
 /** One role's model as a run was configured with it. */
@@ -24,14 +23,11 @@ export interface RunModels {
  */
 export async function readRunModels(command: StatusCommand): Promise<RunModels | undefined> {
   const root = resolve(command.root);
-  try {
-    await stat(localHistoryPath(root));
-  } catch {
-    return undefined;
-  }
+  const factory = storageFactory();
+  if (factory.hasHistory !== undefined && !(await factory.hasHistory(root))) return undefined;
   const context = await readRunContext(root, command.runId, {
     readWorkspace,
-    openStorage: async (workspaceRoot) => openLocalHistory(localHistoryPath(workspaceRoot)),
+    openStorage: factory.open,
   });
   if (context === undefined) return undefined;
   const { author, critic } = context.modelConfiguration;

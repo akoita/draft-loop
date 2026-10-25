@@ -341,8 +341,11 @@ const day = 24 * hour;
 
 /** "Last activity …" in words a person uses; the exact time stays available as a tooltip. */
 export function applicationActivityText(updatedAt: string, now: Date): string {
-  const elapsed = now.getTime() - Date.parse(updatedAt);
-  if (!Number.isFinite(elapsed)) return "Last activity unknown";
+  const time = Date.parse(updatedAt);
+  // An application with no recorded time reads the epoch, e.g. a hosted default application
+  // before its first run.
+  if (!Number.isFinite(time) || time <= 0) return "Last activity unknown";
+  const elapsed = now.getTime() - time;
   if (elapsed < minute) return "Last activity just now";
   if (elapsed < hour) return `Last activity ${plural(Math.floor(elapsed / minute), "minute")} ago`;
   if (elapsed < day) return `Last activity ${plural(Math.floor(elapsed / hour), "hour")} ago`;

@@ -1,14 +1,13 @@
-import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
-import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
 import {
   applicationPlanEventType,
   parseRunApplicationPlanPayload,
   type RunApplicationPlan,
 } from "./run-application-plan.js";
+import { openRunHistory } from "./run-history-read.js";
 
 /**
  * The application plan of the given run, or of the workspace's latest run, from its latest
@@ -22,12 +21,8 @@ export async function readRunApplicationPlan(
   const config = await readWorkspace(root);
   const runId = command.runId ?? config.latestRunId;
   if (runId === undefined) return undefined;
-  try {
-    await stat(localHistoryPath(root));
-  } catch {
-    return undefined;
-  }
-  const storage = openLocalHistory(localHistoryPath(root));
+  const storage = await openRunHistory(root);
+  if (storage === undefined) return undefined;
   try {
     const event = await storage.auditEvents.findLatestAuditEvent({
       workspaceId: config.id,

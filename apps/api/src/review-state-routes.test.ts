@@ -180,6 +180,9 @@ const baseMethods: Partial<ApplicationService> = {
   listWritingPolicyVersions: async () => [],
   listApplications: async () => [application],
   listRunExports: async () => [],
+  readRunEvidenceMode: async () => undefined,
+  readRunAuthorInput: async () => undefined,
+  readRunModels: async () => undefined,
 };
 
 /** What the shared screens make of a response: the port validates every field it reads. */
@@ -320,6 +323,65 @@ describe("review state", () => {
       ok: true,
       value: { runId: "run-1" },
     });
+  });
+
+  it("lists the application's runs with their models, and the run's recorded evidence mode", async () => {
+    const withRuns = {
+      ...application,
+      runs: [
+        { id: "run-1", state: "awaiting-approval", startedAt: at, updatedAt: at },
+        {
+          id: "run-0",
+          state: "stopped",
+          startedAt: "2026-10-21T10:00:00.000Z",
+          updatedAt: "2026-10-21T10:00:00.000Z",
+        },
+      ],
+      chosenRun: { runId: "run-0" },
+    };
+    await build({
+      getApplication: async () => withRuns as unknown as ApplicationView,
+      status: async ({ runId }) =>
+        runId === "run-0"
+          ? { ...snapshot, runId: "run-0", state: "stopped", startedAt: "2026-10-21T10:00:00.000Z" }
+          : snapshot,
+      readRunReview: async () => review,
+      readRunRequirements: async () => [],
+      readRunModels: async () => ({
+        author: { company: "anthropic", modelId: "synthetic-author" },
+        critic: { company: "openai", modelId: "synthetic-critic" },
+      }),
+      readRunEvidenceMode: async () => ({
+        requestedMode: "full-source",
+        effectiveMode: "retrieval",
+        chunkCount: 12,
+        sourceCount: 2,
+        fallbackReason: "budget-exceeded",
+      }),
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `${url}?applicationId=app-ledger`,
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const state = response.json();
+    expect(state.applicationRuns).toEqual([
+      expect.objectContaining({
+        runId: "run-1",
+        authorModel: "synthetic-author",
+        criticModel: "synthetic-critic",
+        latest: true,
+      }),
+      expect.objectContaining({ runId: "run-0", state: "stopped", latest: false, chosen: true }),
+    ]);
+    expect(state.evidenceMode).toMatchObject({
+      effectiveMode: "retrieval",
+      fallbackReason: "budget-exceeded",
+    });
+    await expect(throughPort(state)).resolves.toMatchObject({ ok: true });
   });
 
   it("names an exported run's newest download instead of a path on this machine", async () => {

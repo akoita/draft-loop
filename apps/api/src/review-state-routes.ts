@@ -17,6 +17,7 @@ import {
   type ReviewDecisions,
   reviewState,
 } from "@draft-loop/review-state";
+import { createApplicationRunRowsReader } from "@draft-loop/review-state/application-runs";
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { newestApplicationRunId } from "@draft-loop/ui/application-run-order";
@@ -29,6 +30,11 @@ import type {
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "@draft-loop/ui/model";
+import { type RunAuthorInputView, runAuthorInputView } from "@draft-loop/ui/run-author-input";
+import {
+  normalizeRunEvidenceMode,
+  type RunEvidenceModeView,
+} from "@draft-loop/ui/run-evidence-mode";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -180,6 +186,26 @@ export function registerReviewStateRoutes(
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, knowledgeIntake } = options;
 
+  const applicationRunRows = createApplicationRunRowsReader(service);
+
+  /** What the run recorded about its evidence and its latest author step, for the run details. */
+  const runDetails = async (
+    root: string,
+    runId: string,
+    requirementTexts: ReadonlyMap<string, string>,
+  ): Promise<{
+    readonly evidenceMode: RunEvidenceModeView | null;
+    readonly authorInput: RunAuthorInputView | null;
+  }> => {
+    const mode = await service.readRunEvidenceMode?.({ root, runId });
+    const input = await service.readRunAuthorInput?.({ root, runId });
+    return {
+      evidenceMode: mode === undefined ? null : (normalizeRunEvidenceMode(mode) ?? null),
+      authorInput:
+        input === undefined ? null : (runAuthorInputView(input, requirementTexts) ?? null),
+    };
+  };
+
   /**
    * A hosted export has no path on this machine: the screen names the newest one's downloaded
    * file instead, so an exported run never reads as a file not found.
@@ -290,6 +316,8 @@ export function registerReviewStateRoutes(
       }
       const review = await service.readRunReview?.({ root, runId: snapshot.runId });
       const requirements = await service.readRunRequirements?.({ root, runId: snapshot.runId });
+      const requirementTexts = new Map((requirements ?? []).map(({ id, text }) => [id, text]));
+      const details = await runDetails(root, snapshot.runId, requirementTexts);
       return reviewStateView(
         reviewState(
           descriptor,
@@ -301,7 +329,17 @@ export function registerReviewStateRoutes(
           preflight,
           { running: executingRunStates.has(snapshot.state) },
           undefined,
-          new Map((requirements ?? []).map(({ id, text }) => [id, text])),
+          requirementTexts,
+          details.evidenceMode,
+          details.authorInput,
+          // The application's runs for the run list and the comparison, as the desktop lists them.
+          scope === undefined
+            ? null
+            : await applicationRunRows(
+                root,
+                scope,
+                newestApplicationRunId(scope.runs) ?? undefined,
+              ),
         ),
       );
     },
