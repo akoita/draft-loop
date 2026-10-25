@@ -154,6 +154,9 @@ importers:
       '@draft-loop/providers':
         specifier: workspace:*
         version: link:../../packages/providers
+      '@draft-loop/review-state':
+        specifier: workspace:*
+        version: link:../../packages/review-state
       '@draft-loop/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -464,6 +467,21 @@ importers:
       '@draft-loop/schemas':
         specifier: workspace:*
         version: link:../schemas
+
+  packages/review-state:
+    dependencies:
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../application
+      '@draft-loop/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
+      '@draft-loop/providers':
+        specifier: workspace:*
+        version: link:../providers
+      '@draft-loop/ui':
+        specifier: workspace:*
+        version: link:../ui
 
   packages/run-queue:
     dependencies:
