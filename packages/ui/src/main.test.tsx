@@ -529,6 +529,7 @@ describe("desktop trust-centered review", () => {
         attempt: 2,
         maxAttempts: 3,
         retryAvailable: true,
+        automaticRetry: false,
         retryNotBefore: null,
         availableActions: ["retry", "stop"] as const,
         diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
@@ -568,6 +569,7 @@ describe("desktop trust-centered review", () => {
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: true,
+        automaticRetry: false,
         retryNotBefore: new Date(Date.now() + 5_000).toISOString(),
         availableActions: ["retry", "stop"] as const,
         diagnostics: [],
@@ -580,6 +582,42 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Retry is paused until the provider retry window opens");
     expect(html).toContain('disabled=""');
     expect(html).toContain("Provider recovery remains before approval");
+  });
+
+  it("says the host retries a failed step itself, and offers no retry when none is left", () => {
+    const failure = {
+      code: "invalid-response" as const,
+      explanation: "The provider returned a response that could not be validated.",
+      provider: "anthropic",
+      model: "claude-test-author",
+      step: "author" as const,
+      attempt: 1,
+      maxAttempts: 3,
+      retryAvailable: false,
+      automaticRetry: true,
+      retryNotBefore: null,
+      availableActions: ["stop"] as const,
+      diagnostics: [],
+    };
+    const state = (providerFailure: typeof failure | ReturnType<typeof noRetry>) => ({
+      ...createFixtureReviewState(),
+      state: "provider-error" as const,
+      providerFailure,
+    });
+    const noRetry = () => ({ ...failure, attempt: 3, automaticRetry: false });
+
+    const retrying = renderToStaticMarkup(
+      <ReviewWorkspace state={state(failure)} onAction={() => undefined} />,
+    );
+    const exhausted = renderToStaticMarkup(
+      <ReviewWorkspace state={state(noRetry())} onAction={() => undefined} />,
+    );
+
+    expect(retrying).toContain("DraftLoop retries the author automatically.");
+    expect(retrying).not.toContain("Retry author");
+    expect(exhausted).toContain("This run has no retry left. Stop it, then start a new run.");
+    expect(exhausted).not.toContain("Retry author");
+    expect(exhausted).toContain("Stop run");
   });
 
   it("shows pending finding feedback and disables every decision button", () => {

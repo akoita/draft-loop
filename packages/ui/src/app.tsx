@@ -1035,7 +1035,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   });
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
   const requestedCompanies = useRef(new Set<ModelCompany>());
-  const activeExecutionStatus = state?.execution.status;
+  // A step the host retries itself is in progress too, so the screen keeps refreshing (#1764).
+  const activeExecutionStatus =
+    state?.providerFailure?.automaticRetry === true ? "running" : state?.execution.status;
   const activeWorkspaceId = state?.workspaceId ?? null;
   const workspaceGeneration = contextGenerationRef.current;
   const profilePendingForActiveWorkspace =

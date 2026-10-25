@@ -172,6 +172,7 @@ function createStubHost(
                 attempt: 1,
                 maxAttempts: 1,
                 retryAvailable: false,
+                automaticRetry: false,
                 retryNotBefore: null,
                 availableActions: ["stop"],
                 diagnostics: [{ code: "schema.invalid", path: "response.output" }],

@@ -2136,6 +2136,7 @@ const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
   "attempt",
   "maxAttempts",
   "retryAvailable",
+  "automaticRetry",
   "retryNotBefore",
   "availableActions",
   "diagnostics",
@@ -7651,6 +7652,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     const maxAttempts = finiteInteger(failure.maxAttempts, 100);
     if (attempt < 1 || maxAttempts < 1 || attempt > maxAttempts) return invalidInput();
     const retryAvailable = booleanValue(failure.retryAvailable);
+    if (booleanValue(failure.automaticRetry) && retryAvailable) return invalidInput();
     if (
       failure.retryNotBefore !== null &&
       (typeof failure.retryNotBefore !== "string" ||

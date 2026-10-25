@@ -2907,11 +2907,19 @@ export function ReviewWorkspace({
                   ) : null}
                 </div>
               )}
-              {retryRemainingMs > 0 ? (
+              {state.providerFailure.automaticRetry ? (
+                <p className="pending-action-status" role="status" aria-live="polite">
+                  {retryRemainingMs > 0
+                    ? `DraftLoop retries the ${state.providerFailure.step} automatically in ${retryWaitLabel(retryRemainingMs)}.`
+                    : `DraftLoop retries the ${state.providerFailure.step} automatically.`}
+                </p>
+              ) : retryRemainingMs > 0 && state.providerFailure.retryAvailable ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   Retry is paused until the provider retry window opens (
                   {retryWaitLabel(retryRemainingMs)}).
                 </p>
+              ) : !state.providerFailure.availableActions.some((action) => action !== "stop") ? (
+                <p className="subtle">This run has no retry left. Stop it, then start a new run.</p>
               ) : null}
             </section>
           ) : null}
