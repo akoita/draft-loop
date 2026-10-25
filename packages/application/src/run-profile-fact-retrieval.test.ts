@@ -448,13 +448,14 @@ describe("withPinnedProfileFacts", () => {
       await expect(
         request({ ...reviewed, profile: { ...reviewed.profile, reviewedAt: undefined } }),
       ).rejects.toThrow(runCandidateProfileUnavailableMessage);
+      // A history without origin traces, as the hosted one, still pins the profile's facts.
       await expect(
         withPinnedProfileFacts(runtime, {
           storage: { getCanonicalCandidateProfile: async () => reviewed },
           workspaceId: reviewed.workspaceId,
           context: pinned,
         }),
-      ).rejects.toThrow("requires storage with retrieval origin traces");
+      ).resolves.not.toBe(runtime);
       await expect(
         withPinnedProfileFacts(runtime, {
           storage: {},

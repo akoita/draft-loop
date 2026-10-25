@@ -42,6 +42,11 @@ import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { createPlanLimits } from "./plan-limits.js";
+import {
+  noProfileDerivations,
+  type ProfileDerivations,
+  registerProfileRoutes,
+} from "./profile-routes.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
@@ -94,6 +99,8 @@ export interface ApiOptions {
     readonly contentScreening?: HostedContentScreening;
     /** The worker's extraction of live briefs; without it a live brief is left for the person. */
     readonly briefExtractions?: BriefExtractions;
+    /** The worker's derivation of career profiles; without it a derivation start answers 503. */
+    readonly profileDerivations?: ProfileDerivations;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -339,6 +346,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(application.briefExtractions === undefined
         ? {}
         : { briefExtractions: application.briefExtractions }),
+    });
+    registerProfileRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      derivations: application.profileDerivations ?? noProfileDerivations,
     });
     registerModelCatalogRoutes(app);
     registerApplicationLifecycleRoutes(app, {

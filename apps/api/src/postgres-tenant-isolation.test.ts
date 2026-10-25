@@ -53,6 +53,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
   let tenancy: PostgresTenancy;
   let directory: PostgresTenantDirectory;
   let blobRoot: string;
+  let blobs: ReturnType<typeof createFilesystemBlobStorage>;
   let app: FastifyInstance;
 
   const call = async (
@@ -112,7 +113,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
         .sign(signingKey.privateKey);
     }
 
-    const blobs = createFilesystemBlobStorage();
+    blobs = createFilesystemBlobStorage();
     app = await buildApi({
       ownerToken,
       auth: {
@@ -241,6 +242,61 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
         })
       ).status,
     ).toBe(200);
+    // A career profile, derived as the worker derives it, then read and reviewed through the API.
+    const tenantA = composeHostedApplication({
+      storage: tenancy.forTenant("org-a"),
+      blobs,
+      tenantId: "org-a",
+      budgetCeiling,
+      enqueueRun: async () => undefined,
+      knowledgeLocation: (versionId) => join(blobRoot, "org-a", "knowledge", versionId),
+    });
+    await tenantA.service.deriveCanonicalCandidateProfile({
+      root: tenantA.workspaceRoot("shared"),
+      profileId: "career",
+      allowProviderData: true,
+    });
+    const profilePath = "/v1/workspaces/shared/profiles/career";
+    const profile = await asA("GET", profilePath);
+    expect(profile.status).toBe(200);
+    expect(profile.body.profile).toMatchObject({ id: "career", version: 1, status: "draft" });
+    expect((await asB("GET", profilePath)).status).toBe(404);
+    expect((await asB("GET", "/v1/workspaces/shared/profiles")).body.versions).toEqual([]);
+    expect((await asB("GET", "/v1/workspaces/a-only/profiles")).status).toBe(404);
+    expect(
+      (await asB("POST", `${profilePath}/review`, { expectedVersion: 1 })).body.error.code,
+    ).toBe("not_found");
+    // Open issues block a review until the person acknowledges them, as on the desktop.
+    const openIssues = profile.body.profile.issues as { status: string }[];
+    expect(openIssues.length).toBeGreaterThan(0);
+    expect(
+      (await asA("POST", `${profilePath}/review`, { expectedVersion: 1 })).body.error.code,
+    ).toBe("profile_rule");
+    const acknowledged = await asA("PATCH", profilePath, {
+      expectedVersion: 1,
+      patch: { issues: openIssues.map((issue) => ({ ...issue, status: "acknowledged" })) },
+    });
+    expect(acknowledged.status).toBe(200);
+    expect(
+      (await asB("PATCH", profilePath, { expectedVersion: 2, patch: { issues: [] } })).status,
+    ).toBe(404);
+    expect(
+      (await asA("POST", `${profilePath}/review`, { expectedVersion: 1 })).body.error.code,
+    ).toBe("profile_version_stale");
+    const profileReview = await asA("POST", `${profilePath}/review`, { expectedVersion: 2 });
+    expect(profileReview.status).toBe(200);
+    expect(profileReview.body.profile).toMatchObject({ version: 3, status: "reviewed" });
+    expect((await asA("GET", "/v1/workspaces/shared/profiles")).body.versions).toHaveLength(3);
+    expect((await asA("GET", `${profilePath}/freshness`)).body).toEqual({
+      state: "up-to-date",
+      version: 3,
+    });
+    // This deployment queues no derivation, so a start says so rather than pretending.
+    expect(
+      (await asA("POST", `${profilePath}/derivation`, { providerDataApproved: true })).body.error
+        .code,
+    ).toBe("derivation_unavailable");
+
     const created = await asA("POST", "/v1/workspaces/shared/opportunities", {
       sources: [
         {
@@ -285,6 +341,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
 
     const run = await asA("POST", "/v1/workspaces/shared/runs", {
       opportunityBrief: { briefId, version: reviewed.body.brief.version },
+      candidateProfile: { profileId: "career", version: 3 },
     });
     expect(run.status).toBe(201);
     const runId = run.body.runId as string;

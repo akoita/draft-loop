@@ -86,16 +86,16 @@ export async function withPinnedProfileFacts(
   const reference = request.context.candidateProfileReference;
   if (reference === undefined) return runtime;
   const profile = await loadPinnedProfile(request.storage, request.workspaceId, reference);
+  // Local history records which evidence came from the profile, for evaluations. The hosted
+  // history keeps no such traces yet, so its runs retrieve the same evidence and record none.
   const originTrace = request.storage.candidateKnowledgeRetrievalOriginTrace;
-  if (originTrace === undefined) {
-    throw new Error("Pinned-profile retrieval requires storage with retrieval origin traces.");
-  }
   /** Content-free: opaque item and source ids, the origin, and a query checksum only. */
   const recordOrigins = async (
     text: string,
     factRankingMode: "lexical" | "semantic" | "hybrid",
     selected: readonly ScoredEvidenceChunk[],
   ): Promise<readonly ScoredEvidenceChunk[]> => {
+    if (originTrace === undefined) return selected;
     await originTrace.appendRetrievalOriginTrace({
       workspaceId: request.workspaceId,
       traceId: `origin-trace-${randomUUID()}`,

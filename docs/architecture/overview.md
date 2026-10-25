@@ -280,6 +280,13 @@ The hosted service starts runs through a queue rather than in the request
   (calls done of calls planned), a cancel stops it before its next provider
   call, and the job keeps how it ended: the saved version, or a fixed message
   the person can act on.
+- `/v1/workspaces/:id/profiles/:profileId/derivation` starts (POST), reads
+  (GET) and cancels (DELETE) that derivation; a start needs the record's
+  transmission consent in sign-in mode. The profile's own routes read, list,
+  edit, review and check freshness through `ApplicationService`, and a run
+  start's optional `candidateProfile` binds a reviewed version as on the
+  desktop. The hosted history records no retrieval origin traces yet, so a
+  hosted run with a profile retrieves the same evidence and traces none.
 - Its optional `modelProfiles` binds exact author and critic profile versions
   to that run, such as a preset's pair, as the CLI and the desktop do. Without
   them the run uses provider-default runtime controls and unknown context

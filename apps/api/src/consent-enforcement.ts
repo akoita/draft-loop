@@ -31,6 +31,7 @@ const transmissionRoutes: ReadonlySet<string> = new Set([
   "POST /v1/workspaces/:workspaceId/runs",
   "POST /v1/workspaces/:workspaceId/runs/:runId/revision",
   "POST /v1/workspaces/:workspaceId/runs/:runId/resume",
+  "POST /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
 ]);
 
 function param(request: FastifyRequest, name: string): string | undefined {
@@ -46,7 +47,7 @@ function routeKey(method: string, url: string): string {
  * Refuses, in sign-in mode, to store a candidate's material or to queue a provider call without
  * the candidate record's current consent (ADR 0011, D7). An upload needs a `material-storage`
  * grant on the record that owns the base; a base no record owns, reachable only by owners and
- * admins, carries no consent and is refused, while an unknown base keeps the route's 404. Starting a run, a revision or a resume needs a
+ * admins, carries no consent and is refused, while an unknown base keeps the route's 404. Starting a run, a revision, a resume or a profile derivation needs a
  * `provider-transmission` grant that names every company the workspace's author and critic models
  * call. A refusal is a 409 with a stable code. The checks are route-level preHandlers, so they run
  * after record and knowledge access have answered 404 for a record the caller does not reach.

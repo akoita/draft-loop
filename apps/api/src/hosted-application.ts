@@ -34,6 +34,7 @@ import {
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
+import type { ProfileDerivations } from "./profile-routes.js";
 import { apiProviderOptions } from "./provider-boundary.js";
 import type { TenantApplication, TenantApplications } from "./tenant-context.js";
 import { enqueueThenWake, noWake, type WakeWorker } from "./worker-wake.js";
@@ -55,6 +56,8 @@ export interface HostedApplicationParts {
   readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
   /** The worker's extraction of live briefs; a live brief is left for the person without it. */
   readonly briefExtractions?: BriefExtractions;
+  /** The worker's derivation of career profiles; a derivation start answers 503 without it. */
+  readonly profileDerivations?: ProfileDerivations;
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
@@ -84,6 +87,9 @@ export function composeHostedApplication(
     workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
     enqueueRun: parts.enqueueRun,
     ...(parts.briefExtractions === undefined ? {} : { briefExtractions: parts.briefExtractions }),
+    ...(parts.profileDerivations === undefined
+      ? {}
+      : { profileDerivations: parts.profileDerivations }),
     budgetCeiling,
     monthUsage: storage.monthUsage,
     idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
@@ -205,6 +211,16 @@ export async function openHostedTenants(
                 return true;
               },
               state: (version) => queue.briefExtractionState({ tenantId, ...version }),
+            },
+            profileDerivations: {
+              // Queued, then the worker woken as for a run; a wake failure only delays it.
+              queue: async (job) => {
+                const queued = await queue.enqueueProfileDerivation({ tenantId, ...job });
+                if (queued) await worker.wake().catch(worker.onWakeError);
+                return queued;
+              },
+              state: (address) => queue.profileDerivationState({ tenantId, ...address }),
+              cancel: (address) => queue.cancelProfileDerivation({ tenantId, ...address }),
             },
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
             screening,
