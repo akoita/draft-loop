@@ -130,6 +130,17 @@ const worker = await startWorker({
     onOutcome: (job, outcome) =>
       console.info(logLine("INFO", "brief extraction finished", { ...job, outcome })),
   },
+  // The career profile is derived here once the API queues it, as the desktop derives it locally.
+  profiles: {
+    serviceFor: (job) => serviceFor(job.tenantId),
+    workspaceRoot,
+    allowProviderData: config.allowProviderData,
+    ...(consentFor === undefined ? {} : { consentFor }),
+    recordErased,
+    // Ids, flags and the outcome's fixed words only: no candidate material.
+    onOutcome: (job, outcome) =>
+      console.info(logLine("INFO", "profile derivation finished", { ...job, ...outcome })),
+  },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
 

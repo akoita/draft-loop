@@ -3,7 +3,8 @@ import type { CandidateKnowledgeStoreHandle } from "./knowledge-store.js";
 /**
  * The candidate-knowledge operations a run uses: the selection's lifecycle check, the sensitivity
  * rules, the derived lexical and vector projections it brings up to date and queries, and the bytes
- * of pinned managed source versions. A hosted store that offers only these can serve runs.
+ * of pinned managed source versions, and the source records a career profile's derivation reads. A
+ * hosted store that offers only these can serve runs and profile derivations.
  */
 export const candidateKnowledgeRunOperations = [
   "close",
@@ -11,6 +12,8 @@ export const candidateKnowledgeRunOperations = [
   "getCandidateKnowledgeBaseLifecycleReadiness",
   "getCandidateKnowledgeSourceSensitivityRules",
   "readManagedCandidateKnowledgeSourceVersion",
+  "getCandidateKnowledgeSource",
+  "listCandidateKnowledgeSourceEvidenceKindOverrides",
   "inspectCandidateKnowledgeLexicalIndex",
   "queryCandidateKnowledge",
   "rebuildCandidateKnowledgeLexicalIndex",

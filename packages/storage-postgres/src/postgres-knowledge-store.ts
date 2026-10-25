@@ -13,10 +13,10 @@ export interface PostgresCandidateKnowledgeStoreOptions {
 }
 
 /**
- * Opens one tenant's candidate knowledge store for runs (ADR 0011, D3, D11): records and
- * projections from Postgres, source bytes from blob storage checked against the version's recorded
- * checksum and size. It offers a run's operations only; intake and every local-only operation
- * refuse (see `runOnlyCandidateKnowledgeStore`).
+ * Opens one tenant's candidate knowledge store for runs and profile derivations (ADR 0011, D3,
+ * D11): records and projections from Postgres, source bytes from blob storage checked against the
+ * version's recorded checksum and size. It offers those operations only; intake and every
+ * local-only operation refuse (see `runOnlyCandidateKnowledgeStore`).
  */
 export async function openPostgresCandidateKnowledgeStore(
   options: PostgresCandidateKnowledgeStoreOptions,
@@ -56,6 +56,9 @@ export async function openPostgresCandidateKnowledgeStore(
       }
       return Object.freeze({ metadata, bytes });
     },
+    getCandidateKnowledgeSource: storage.getCandidateKnowledgeSource,
+    // The hosted service records no evidence-kind overrides yet, so each source's kind is detected.
+    listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
     inspectCandidateKnowledgeLexicalIndex: storage.inspectCandidateKnowledgeLexicalIndex,
     queryCandidateKnowledge: storage.queryCandidateKnowledge,
     rebuildCandidateKnowledgeLexicalIndex: storage.rebuildCandidateKnowledgeLexicalIndex,

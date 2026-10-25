@@ -16,10 +16,7 @@ import type {
   CanonicalCandidateProfileProvenanceReference,
 } from "@draft-loop/schemas";
 import type { CanonicalCandidateProfileVersionRecord } from "@draft-loop/storage";
-import {
-  type CandidateKnowledgeStoreHandle,
-  openCandidateKnowledgeStore as defaultOpenCandidateKnowledgeStore,
-} from "@draft-loop/storage/knowledge-store";
+import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
 
 import { buildCanonicalCandidateProfile } from "./candidate-profile.js";
 import {
@@ -58,6 +55,7 @@ import {
   type CreateKnowledgeSelectionSnapshotSelection,
   createCandidateKnowledgeStoreService,
 } from "./knowledge-base.js";
+import { openKnowledgeStore as openActiveKnowledgeStore } from "./knowledge-store-opener.js";
 
 export const canonicalCandidateProfileDerivationApprovalErrorMessage =
   "Canonical candidate profile derivation requires explicit provider-data approval.";
@@ -470,7 +468,8 @@ export function createCanonicalCandidateProfileDerivationService(
   dependencies: CanonicalCandidateProfileDerivationDependencies,
 ): CanonicalCandidateProfileDerivationService {
   const knowledgeService = dependencies.knowledgeService ?? createCandidateKnowledgeStoreService();
-  const openKnowledgeStore = dependencies.openKnowledgeStore ?? defaultOpenCandidateKnowledgeStore;
+  // The driver's opener: a local folder, or the hosted service's store by its reference.
+  const openKnowledgeStore = dependencies.openKnowledgeStore ?? openActiveKnowledgeStore;
   const ingestBytes = dependencies.ingestBytes ?? defaultIngestBytes;
   const now = dependencies.now ?? (() => new Date().toISOString());
 

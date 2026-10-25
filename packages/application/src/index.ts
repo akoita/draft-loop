@@ -877,6 +877,7 @@ export {
 } from "./application-brief-extraction.js";
 export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
+export { userFixableProfileDerivationMessage } from "./candidate-profile-derivation-messages.js";
 export * from "./candidate-profile-extraction.js";
 export * from "./candidate-profile-freshness.js";
 export * from "./candidate-profile-persistence.js";
