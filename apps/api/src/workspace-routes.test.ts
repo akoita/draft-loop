@@ -112,7 +112,7 @@ describe("workspace setup", () => {
     expect(response.body).not.toContain("/tenants/");
   });
 
-  it("creates a workspace with two rounds and the driver's other defaults from an empty body", async () => {
+  it("creates a workspace with two rounds, Claude Sonnet as the author and the driver's other defaults from an empty body", async () => {
     const initialize = vi.fn(async (_command: InitializeWorkspaceCommand) => descriptor);
     await build({ readWorkspace: missing, initialize });
 
@@ -124,6 +124,24 @@ describe("workspace setup", () => {
       jobDescription: "job.md",
       sources: "sources",
       maxRounds: 2,
+      authorCompany: "anthropic",
+      authorModel: "claude-sonnet-5-5",
+      criticCompany: "openai",
+      criticModel: "gpt-6.1-sol",
+    });
+  });
+
+  it("fills only the side a request leaves out with the hosted default", async () => {
+    const initialize = vi.fn(async (_command: InitializeWorkspaceCommand) => descriptor);
+    await build({ readWorkspace: missing, initialize });
+
+    await create({ critic: { company: "openai", model: "gpt-6-luna" } });
+
+    expect(initialize.mock.calls[0]?.[0]).toMatchObject({
+      authorCompany: "anthropic",
+      authorModel: "claude-sonnet-5-5",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
     });
   });
 

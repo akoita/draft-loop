@@ -35,6 +35,7 @@ import { registerExportRoutes } from "./export-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
@@ -332,6 +333,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(screening === undefined ? {} : { screening }),
       ...(entitlementGate === undefined ? {} : { entitlementGate }),
     });
+    registerModelCatalogRoutes(app);
     registerApplicationLifecycleRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,

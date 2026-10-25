@@ -87,6 +87,35 @@ export interface ApiSchemas {
     readonly issuer: string;
     readonly clientId: string;
   };
+  "CatalogModel": {
+    readonly id: string;
+    readonly version: number;
+    readonly company: "anthropic" | "openai";
+    readonly model: string;
+    readonly tier: "economy" | "standard" | "premium";
+    readonly roles: readonly ("author" | "critic")[];
+    readonly qualityStatus: "unvalidated";
+    readonly pricing: {
+      readonly inputUsdPerMillion: number;
+      readonly outputUsdPerMillion: number;
+      readonly cacheReadUsdPerMillion: number | null;
+      readonly cacheWriteUsdPerMillion: number | null;
+      readonly maxInputTokens: number;
+    };
+  };
+  "CatalogPreset": {
+    readonly id: string;
+    readonly label: string;
+    readonly tier: "economy" | "standard" | "premium";
+    readonly author: {
+      readonly id: string;
+      readonly version: number;
+    };
+    readonly critic: {
+      readonly id: string;
+      readonly version: number;
+    };
+  };
   "ConsentEntry": {
     readonly id: string;
     readonly kind: "material-storage" | "provider-transmission";
@@ -187,6 +216,11 @@ export interface ApiSchemas {
     readonly grantsRemaining: number;
     readonly remaining: number | null;
     readonly warning: boolean;
+  };
+  "ModelCatalog": {
+    readonly models: readonly (ApiSchemas["CatalogModel"])[];
+    readonly presets: readonly (ApiSchemas["CatalogPreset"])[];
+    readonly defaultPresetId: string;
   };
   "MonthUsage": {
     readonly calls: number;
@@ -994,6 +1028,9 @@ export interface ApiOperations {
       readonly runId: string;
     };
     readonly response: ApiSchemas["Run"];
+  };
+  "GET /v1/model-catalog": {
+    readonly response: ApiSchemas["ModelCatalog"];
   };
   "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/models": {
     readonly path: {
