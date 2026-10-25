@@ -20,19 +20,50 @@ export interface ProfileGenerationCallProgress {
   readonly plannedCalls: number;
 }
 
+/** A host that queues generations reports one still waiting for a worker to start it. */
+export interface ProfileGenerationQueued {
+  readonly queued: true;
+}
+
+export type ProfileGenerationProgressState =
+  | ProfileGenerationCallProgress
+  | ProfileGenerationQueued;
+
+export const profileGenerationQueuedLabel = "Waiting for a worker to start…";
+
+/**
+ * What the screen shows after a progress poll of an active generation: the wait to start, else
+ * the reported counts. A start without counts yet clears the wait and keeps any earlier counts.
+ */
+export function nextProfileGenerationProgress(
+  shown: ProfileGenerationProgressState | undefined,
+  reported: {
+    readonly queued?: boolean;
+    readonly completedCalls?: number;
+    readonly plannedCalls?: number;
+  },
+): ProfileGenerationProgressState | undefined {
+  if (reported.queued === true) return { queued: true };
+  if (reported.completedCalls !== undefined && reported.plannedCalls !== undefined) {
+    return { completedCalls: reported.completedCalls, plannedCalls: reported.plannedCalls };
+  }
+  return shown !== undefined && "queued" in shown ? undefined : shown;
+}
+
 /**
  * A profile generation still running, as the profile page reports it to the rest of the window so
  * Home can show it in progress while the person works elsewhere.
  */
 export interface ProfileGenerationActivity {
   readonly startedAt: number;
-  readonly progress?: ProfileGenerationCallProgress;
+  readonly progress?: ProfileGenerationProgressState;
 }
 
-/** The part label is shown only once the host has reported a bounded plan. */
+/** The part label is shown only once the host has reported a bounded plan, or a wait to start. */
 export function formatProfileGenerationPart(
-  progress: ProfileGenerationCallProgress | undefined,
+  progress: ProfileGenerationProgressState | undefined,
 ): string | null {
+  if (progress !== undefined && "queued" in progress) return profileGenerationQueuedLabel;
   if (progress === undefined || progress.plannedCalls < 1) return null;
   if (progress.completedCalls >= progress.plannedCalls) return "Finishing…";
   // Parts run in parallel, so report finished parts rather than a "current" part.
@@ -63,7 +94,7 @@ export function ProfileGenerationProgress({
 }: {
   readonly startedAt: number;
   readonly now?: number;
-  readonly progress?: ProfileGenerationCallProgress;
+  readonly progress?: ProfileGenerationProgressState;
 }) {
   const part = formatProfileGenerationPart(progress);
   const elapsed = useElapsed(startedAt, now);

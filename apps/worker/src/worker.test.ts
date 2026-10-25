@@ -215,6 +215,7 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
     await eventually(async () => {
       expect(await queue.profileDerivationState(key)).toEqual({
         status: "pending",
+        started: true,
         completedCalls: 1,
         plannedCalls: 2,
       });

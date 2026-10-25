@@ -108,6 +108,9 @@ export const profileDerivationViewSchema = z
   .discriminatedUnion("status", [
     z.object({
       status: z.literal("pending"),
+      started: z
+        .boolean()
+        .describe("False while the derivation waits for a worker; true once one runs it."),
       completedCalls: z.number().int().optional(),
       plannedCalls: z.number().int().optional(),
     }),
@@ -325,7 +328,7 @@ export function registerProfileRoutes(
           .code(409)
           .send(apiError("derivation_running", "This profile's derivation is already running."));
       }
-      return reply.code(202).send({ status: "pending" as const });
+      return reply.code(202).send({ status: "pending" as const, started: false });
     },
   );
 

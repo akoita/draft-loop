@@ -25,10 +25,11 @@ import {
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
+  nextProfileGenerationProgress,
   type ProfileGenerationActivity,
-  type ProfileGenerationCallProgress,
   ProfileGenerationCancel,
   ProfileGenerationProgress,
+  type ProfileGenerationProgressState,
 } from "./profile-generation-progress.js";
 import { ProfileIssueBulkStatus } from "./profile-issue-bulk-status.js";
 import {
@@ -773,7 +774,7 @@ export function ProfileWorkspace({
   const [statusMessage, setStatusMessage] = useState("");
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
   const [generationProgress, setGenerationProgress] = useState<
-    ProfileGenerationCallProgress | undefined
+    ProfileGenerationProgressState | undefined
   >(undefined);
   const [cancelRequested, setCancelRequested] = useState(false);
   const generatingProfileIdRef = useRef("");
@@ -1218,6 +1219,7 @@ export function ProfileWorkspace({
     // on another page and the page shows the current count when they return.
     const getProgress = capabilities.getCanonicalCandidateProfileProgress;
     let polling = true;
+    let shownProgress: ProfileGenerationProgressState | undefined;
     const timer =
       getProgress === undefined
         ? undefined
@@ -1225,14 +1227,11 @@ export function ProfileWorkspace({
             void getProgress(generatingProfileId)
               .then((progress) => {
                 if (!polling || !progress.active) return;
-                if (progress.completedCalls === undefined || progress.plannedCalls === undefined)
-                  return;
-                const next = {
-                  completedCalls: progress.completedCalls,
-                  plannedCalls: progress.plannedCalls,
-                };
+                const next = nextProfileGenerationProgress(shownProgress, progress);
+                if (next === shownProgress) return;
+                shownProgress = next;
                 setGenerationProgress(next);
-                report({ startedAt, progress: next });
+                report(next === undefined ? { startedAt } : { startedAt, progress: next });
               })
               .catch(() => {
                 // Progress is advisory; a missed poll never fails the generation itself.

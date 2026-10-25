@@ -50,7 +50,11 @@ export type ProfileDerivationOutcome =
 
 /** Where a profile's newest derivation stands, as the screen polls it. */
 export type ProfileDerivationState =
-  | ({ readonly status: "pending" } & Partial<ProfileDerivationProgress>)
+  | ({
+      readonly status: "pending";
+      /** False while the job waits for a worker to claim it. */
+      readonly started: boolean;
+    } & Partial<ProfileDerivationProgress>)
   | { readonly status: "derived"; readonly version: number }
   | { readonly status: "cancelled" }
   | {
