@@ -120,6 +120,28 @@ describe("a failed provider call's identity", () => {
     });
   });
 
+  it.each([
+    ["its code", { type: "insufficient_quota", code: "insufficient_quota" }],
+    ["only its type", { type: "insufficient_quota", code: null }],
+  ])("names a spent OpenAI credit when %s says so, never a rate limit", (_label, body) => {
+    const sdkError = new OpenAI.RateLimitError(
+      429,
+      {
+        message: "You exceeded your current quota, please check your plan and billing details.",
+        param: null,
+        ...body,
+      },
+      undefined,
+      new Headers({ "x-request-id": "req-synthetic" }),
+    );
+
+    expect(normalizeProviderError("openai", sdkError, "openai-api")).toMatchObject({
+      code: "quota-exhausted",
+      status: 429,
+      providerErrorType: "insufficient_quota",
+    });
+  });
+
   it("names Claude's limit and error type on its route", async () => {
     const sdkError = new Anthropic.RateLimitError(
       429,

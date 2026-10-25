@@ -181,6 +181,8 @@ export interface ProviderFailureView {
   readonly provider: string;
   readonly model: string;
   readonly step: "author" | "critic" | "revision";
+  /** Whose call failed: the critic's plan review fails the author step, for one. */
+  readonly role: "author" | "critic";
   readonly attempt: number;
   readonly maxAttempts: number;
   readonly retryAvailable: boolean;

@@ -36,6 +36,7 @@
     "@draft-loop/web": "workspace:*",
     "@types/pg": "8.23.1",
     "jose": "6.2.12",
+    "openai": "7.23.0",
     "pg": "8.23.1"
   }
 }

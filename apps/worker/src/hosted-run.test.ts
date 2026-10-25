@@ -19,6 +19,7 @@ import {
   openPostgresStorage,
   type PostgresStorage,
 } from "@draft-loop/storage-postgres";
+import OpenAI from "openai";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -352,6 +353,89 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       await api.close();
     }
   }, 120_000);
+
+  it("names a critic's spent OpenAI credit as such, not as a rate limit", async () => {
+    const gatewayEnv = {
+      DRAFT_LOOP_VERTEX_PROJECT_ID: "synthetic-project",
+      DRAFT_LOOP_VERTEX_LOCATION: "eu",
+      DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
+      DRAFT_LOOP_OPENAI_KEY_SECRET: "projects/synthetic/secrets/openai-key/versions/1",
+    };
+    const gateway = scriptedGateway(gatewayEnv.DRAFT_LOOP_OPENAI_KEY_SECRET);
+    // OpenAI's answer when the project's credit is used up, as its SDK throws it: on staging only
+    // the error's type named the spent credit (#1759).
+    const spent = OpenAI.APIError.generate(
+      429,
+      {
+        error: {
+          message: "You exceeded your current quota, please check your plan and billing details.",
+          type: "insufficient_quota",
+          param: null,
+          code: null,
+        },
+      },
+      undefined,
+      new Headers({ "x-request-id": "req-synthetic" }),
+    );
+    const ports = hostedApplicationPorts({ storage, tenantId, blobs });
+    const service = createApplicationService(
+      createHostedApplicationDriver({
+        ...ports,
+        settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
+        local: workerProviderOptions(readModelGatewayConfig(gatewayEnv), {
+          ...gateway.dependencies,
+          openAiClient: () =>
+            ({
+              responses: {
+                create: async () => {
+                  throw spent;
+                },
+              },
+            }) as never,
+        }),
+      }),
+    );
+    const root = hostedWorkspaceReference(tenantId, "workspace-spent");
+    await service.initialize(
+      {
+        root,
+        jobDescription: "job.md",
+        sources: "sources",
+        authorCompany: "anthropic",
+        authorModel: "claude-sonnet-5-5",
+        criticCompany: "openai",
+        criticModel: "gpt-6-luna",
+      },
+      silent,
+    );
+    const begun = await beginRun(service, root);
+    const outcomes: RunJobOutcome[] = [];
+    const handle = createRunJobHandler({
+      serviceFor: () => service,
+      workspaceRoot: (job) => hostedWorkspaceReference(job.tenantId, job.workspaceId),
+      allowProviderData: true,
+      budgetCeiling,
+      onOutcome: (_job, outcome) => outcomes.push(outcome),
+    });
+    const requeued: Date[] = [];
+
+    await handle(
+      { tenantId, workspaceId: "workspace-spent", runId: begun.runId },
+      { requeue: async (at) => void requeued.push(at) },
+    );
+
+    const snapshot = await service.status({ root, runId: begun.runId });
+    expect(snapshot?.state).toBe("provider-error");
+    expect(snapshot?.lastError).toMatchObject({
+      code: "quota-exhausted",
+      retryable: false,
+      step: "author",
+      provider: "openai",
+      failedCall: { role: "critic", status: 429, providerErrorType: "insufficient_quota" },
+    });
+    // No wait helps until the credit is topped up, so the worker does not queue the run again.
+    expect(requeued).toEqual([]);
+  });
 
   it("takes runs from setup to a downloaded DOCX through the API only, one after a revision", async () => {
     const ownerToken = "owner-token-for-tests-0123456789abcdef";

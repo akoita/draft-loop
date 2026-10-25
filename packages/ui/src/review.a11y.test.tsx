@@ -61,6 +61,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
         provider: "anthropic",
         model: "claude-sonnet-4-5",
         step: "author" as const,
+        role: "author" as const,
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: false,

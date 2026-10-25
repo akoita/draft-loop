@@ -169,6 +169,7 @@ function createStubHost(
                 provider: "anthropic",
                 model: "claude-test",
                 step: "author",
+                role: "author",
                 attempt: 1,
                 maxAttempts: 1,
                 retryAvailable: false,
