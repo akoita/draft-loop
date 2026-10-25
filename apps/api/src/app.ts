@@ -423,7 +423,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (entitlementsFor !== undefined) {
     registerMemberCreditsRoute(app, { entitlementsFor, signIn: auth.mode === "oidc" });
   }
-  if (erasureFor !== undefined) registerOrganisationErasureRoutes(app, { erasureFor });
+  if (erasureFor !== undefined) {
+    registerOrganisationErasureRoutes(app, {
+      erasureFor,
+      ...(options.tenants?.ownerTenantId === undefined
+        ? {}
+        : { ownerTenantId: options.tenants.ownerTenantId }),
+    });
+  }
   if (options.tenants?.operatorFor !== undefined) {
     registerOperatorPlanRoutes(app, { operatorFor: options.tenants.operatorFor });
   }

@@ -153,7 +153,9 @@ Owners and admins delete a candidate record from the web screen or with
 `DELETE /v1/workspaces/{workspaceId}`; an owner deletes the organisation with
 `DELETE /v1/organisation`, and the operator with
 `DELETE /v1/operator/organisations/{organisationId}`. Each asks for the id
-typed back and refuses while a run is queued or running. Deleting an
+typed back and refuses while a run is queued or running. In owner-token mode,
+the operator erases the deployment's own tenant (`DRAFT_LOOP_TENANT_ID`) the
+same way, although no organisation was ever registered for it. Deleting an
 organisation locks it first: its members get 409 `organisation_closing` until
 a repeated delete finishes. Offer the record's
 archive first: deletion cannot be undone.

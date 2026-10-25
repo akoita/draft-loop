@@ -102,6 +102,54 @@ describe.runIf(connectionString !== undefined)("Postgres organisation erasure", 
     }
   });
 
+  it("erases a tenant the directory never registered, as the owner token's", async () => {
+    const schema = await createTestSchema(url, "organisation_erasure");
+    const tenancy = await schema.openTenancy();
+    try {
+      await seedTenant(schema.admin, "org-south");
+      await seedRecord(schema.admin, "org-south", "record-1");
+      const south = await tenantRows(schema.admin, schema.schema, "org-south");
+      // The owner token's tenant: knowledge and a record, with no organisation row.
+      const at = "2026-10-25T10:00:00.000Z";
+      await schema.admin.query(
+        "INSERT INTO candidate_knowledge_stores (tenant_id, id, created_at) VALUES ('owner', 'knowledge', $1)",
+        [at],
+      );
+      await schema.admin.query(
+        `INSERT INTO candidate_knowledge_bases (tenant_id, id, display_name, description, state, is_default, created_at, updated_at)
+         VALUES ('owner', 'kb-ownerless', 'Fictional career evidence', '', 'active', 1, $1, $1)`,
+        [at],
+      );
+      await schema.admin.query(
+        `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
+         VALUES ('owner', 'knowledge-bases', 'key-1', $1, now() + interval '1 day')`,
+        ["c".repeat(64)],
+      );
+      await seedRecord(schema.admin, "owner", "record-1", { assigned: false });
+      const owner = tenancy.forTenant("owner");
+
+      await expect(owner.organisationErasure.close()).resolves.toEqual({ state: "missing" });
+      for (const id of await owner.organisationErasure.listRecords()) {
+        await owner.recordErasure.close(id);
+        await owner.recordErasure.erase(id);
+      }
+      expect(Object.keys(await tenantRows(schema.admin, schema.schema, "owner"))).toEqual([
+        "candidate_knowledge_bases",
+        "candidate_knowledge_stores",
+        "idempotency_keys",
+      ]);
+      await expect(owner.organisationErasure.eraseRemainder()).resolves.toEqual({
+        rowsRemoved: 3,
+      });
+
+      expect(await tenantRows(schema.admin, schema.schema, "owner")).toEqual({});
+      expect(await tenantRows(schema.admin, schema.schema, "org-south")).toEqual(south);
+    } finally {
+      await tenancy.close();
+      await schema.drop();
+    }
+  });
+
   it("reports an active run anywhere in the tenant and erases nothing without a tenant", async () => {
     const schema = await createTestSchema(url, "organisation_erasure");
     const tenancy = await schema.openTenancy();

@@ -94,7 +94,8 @@ export async function seedRecord(
   admin: SqlClient,
   tenant: string,
   record: string,
-  options: { readonly runState?: string } = {},
+  /** `assigned: false` leaves out the member assignment, as an owner-token record has none. */
+  options: { readonly runState?: string; readonly assigned?: boolean } = {},
 ): Promise<void> {
   const history = `workspace-${record}`;
   const p = `${record}-`;
@@ -270,11 +271,15 @@ export async function seedRecord(
               ($1, 'exports:' || $2 || ':' || $4, 'key-1', $3, now() + interval '1 day')`,
       [tenant, record, "a".repeat(64), run],
     ],
-    [
-      `INSERT INTO candidate_record_assignments (tenant_id, workspace_id, member_id)
-       VALUES ($1, $2, 'member-1')`,
-      [tenant, record],
-    ],
+    ...((options.assigned ?? true)
+      ? ([
+          [
+            `INSERT INTO candidate_record_assignments (tenant_id, workspace_id, member_id)
+             VALUES ($1, $2, 'member-1')`,
+            [tenant, record],
+          ],
+        ] as [string, unknown[]][])
+      : []),
     [
       `INSERT INTO consent_events (tenant_id, id, workspace_id, kind, action, basis, recorded_by)
        VALUES ($1, $2, $3, 'material-storage', 'granted', 'contract', 'owner'),
