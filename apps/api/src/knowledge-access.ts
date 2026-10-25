@@ -19,7 +19,7 @@ export interface KnowledgeAccessOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
 }
 
-/** What the knowledge routes ask in sign-in mode, where each base belongs to one record. */
+/** What the knowledge routes ask of base ownership, where each base belongs to one record. */
 export interface KnowledgeOwnership {
   /**
    * The bases the caller may list, only those `workspaceId` owns when it is given; undefined for
@@ -78,8 +78,8 @@ async function refuse(reply: FastifyReply, status: number, body: ApiError): Prom
  * One hook, after record access, confines every route: a base is created for a record the caller
  * reaches; a member reaches only the bases their assigned records own, and any other answers
  * exactly as an unknown base; and a workspace selects only its own bases. Owners and admins
- * reach every base, including those created before bases had owners. Owner-token mode does not
- * register this module, so its bases stay tenant-wide.
+ * reach every base, including those created before bases had owners. Owner-token mode registers
+ * `registerOwnerTokenKnowledge` instead.
  */
 export function registerKnowledgeAccess(
   app: FastifyInstance,

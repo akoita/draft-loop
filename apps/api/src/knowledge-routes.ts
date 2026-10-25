@@ -151,7 +151,7 @@ export function registerKnowledgeRoutes(
       schema: {
         summary: "List the knowledge bases the caller can reach",
         description:
-          "Owner-token mode lists every base of the tenant. In sign-in mode, owners and admins see every base, and a member sees the bases their assigned candidate records own.",
+          "With `workspaceId`, only the bases that candidate record owns, in both modes. Without it, owner-token mode lists every base of the tenant; in sign-in mode, owners and admins see every base, and a member sees the bases their assigned candidate records own.",
         querystring: listKnowledgeBasesQuery,
         response: {
           200: z.object({ knowledgeBases: z.array(knowledgeBaseViewSchema) }),

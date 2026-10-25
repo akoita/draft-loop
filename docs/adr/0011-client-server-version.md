@@ -254,7 +254,8 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
 - Owners and admins assign members to a record and remove them; creating a
   record assigns its creator.
 - Each knowledge base belongs to one record in sign-in mode and follows its
-  access. Owner-token mode keeps one workspace and tenant-wide bases.
+  access. Owner-token mode keeps one workspace, whose bases belong to it the
+  same way.
 - The web screen lists the caller's records, switches between them and
   manages a record's members.
 - The candidate and reviewer roles, and approval by a member the candidate

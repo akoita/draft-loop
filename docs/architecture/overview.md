@@ -189,7 +189,11 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
     whose records do not own a base gets the 404 of an unknown base on its
     sources, rules and uploads; listing shows only reachable bases; and a
     workspace selects only its own bases (`registerKnowledgeAccess`, over the
-    tenants' `knowledgeOwnersFor`). Owner-token mode keeps bases tenant-wide.
+    tenants' `knowledgeOwnersFor`).
+  - In owner-token mode a base created for a workspace belongs to it too, so
+    erasing the workspace erases the base, a workspace lists only its own
+    bases, and no workspace selects another's (`registerOwnerTokenKnowledge`,
+    #1758). The owner token still lists every base of the tenant.
   - A flow test takes two organisations from creation through sign-in, setup,
     a run on the scripted model gateway, approval and export, and checks that
     neither organisation's material reaches the other's provider requests,
