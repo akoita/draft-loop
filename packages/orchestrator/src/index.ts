@@ -1561,6 +1561,67 @@ export function createOrchestrationEngine(
     return undefined;
   };
 
+  /**
+   * The final CV checks over the current round's artifact and critiques: what approval checks.
+   * The run computes them on arriving at approval too, so the screens show every blocker before
+   * the person's first click.
+   */
+  const currentReadinessDecision = (
+    snapshot: RunSnapshot,
+    artifact: NonNullable<RunSnapshot["artifact"]>,
+    context: ContextSnapshot,
+    now: string,
+  ) => {
+    const currentCritiques = snapshot.executionHistory.filter(
+      (execution) =>
+        execution.runId === snapshot.runId &&
+        execution.contextSnapshotId === snapshot.contextSnapshotId &&
+        execution.round === snapshot.round &&
+        execution.step === "critic" &&
+        execution.status === "completed" &&
+        structurallyValidCritique(execution.output),
+    );
+    const currentCritiqueFindings = currentCritiques.flatMap((execution) =>
+      executionOutputIsCritique(execution) && execution.output !== undefined
+        ? execution.output.findings
+        : [],
+    );
+    // The artifact only changes when the round advances, so the latest critic
+    // execution of the current round reviewed exactly this artifact.
+    const coverageAssessments = currentCritiques.at(-1)?.coverageJudgement?.assessments;
+    const latestRevisionTrace = snapshot.adjudicationRuntime?.trace ?? undefined;
+    return buildApplicationReadinessStoppingDecision({
+      artifact,
+      context,
+      critiqueFindings: currentCritiqueFindings,
+      ...(coverageAssessments === undefined ? {} : { coverageAssessments }),
+      round: snapshot.round,
+      budget: snapshot.budget,
+      priorScoreHistory: snapshot.scoreHistory,
+      ...(latestRevisionTrace === undefined ? {} : { latestRevisionTrace }),
+      createdAt: now,
+    });
+  };
+
+  /** The readiness decision a run arriving at approval shows; null when it cannot be computed. */
+  const arrivalReadinessDecision = async (snapshot: RunSnapshot, now: string) => {
+    if (snapshot.artifact === null || !hasCompletedIndependentCritique(snapshot)) return null;
+    try {
+      const context =
+        contextsByRunId.get(snapshot.runId) ??
+        (await options.contextResolver?.(snapshot.contextSnapshotId));
+      if (context === undefined) return null;
+      return currentReadinessDecision(
+        snapshot,
+        snapshot.artifact,
+        context,
+        notBefore(now, snapshot.artifact.createdAt, snapshot.adjudicationRuntime?.trace?.createdAt),
+      );
+    } catch {
+      return null;
+    }
+  };
+
   const transitionToAwaitingApproval = async (
     snapshot: RunSnapshot,
     reason: string,
@@ -1573,6 +1634,7 @@ export function createOrchestrationEngine(
       state: "awaiting-approval" as const,
       currentStep: null,
       approval: "pending" as const,
+      readinessDecision: await arrivalReadinessDecision(settled, now),
       updatedAt: now,
       lastError: null,
     };
@@ -2481,42 +2543,14 @@ export function createOrchestrationEngine(
     contextsByRunId.set(runId, context);
     if (snapshot.artifact === null)
       throw new RunTransitionError("A draft artifact is required before approval.");
-    const currentCritiques = snapshot.executionHistory.filter(
-      (execution) =>
-        execution.runId === snapshot.runId &&
-        execution.contextSnapshotId === snapshot.contextSnapshotId &&
-        execution.round === snapshot.round &&
-        execution.step === "critic" &&
-        execution.status === "completed" &&
-        structurallyValidCritique(execution.output),
-    );
-    const currentCritiqueFindings = currentCritiques.flatMap((execution) =>
-      executionOutputIsCritique(execution) && execution.output !== undefined
-        ? execution.output.findings
-        : [],
-    );
-    // The artifact only changes when the round advances, so the latest critic
-    // execution of the current round reviewed exactly this artifact.
-    const coverageAssessments = currentCritiques.at(-1)?.coverageJudgement?.assessments;
-    const latestRevisionTrace =
-      snapshot.adjudicationRuntime?.trace === null ||
-      snapshot.adjudicationRuntime?.trace === undefined
-        ? undefined
-        : snapshot.adjudicationRuntime.trace;
     // Approval may run in a later process whose wall clock reads earlier than
     // the drafted artifact; one causal stamp keeps every record ordered.
-    const now = notBefore(clock(), snapshot.artifact.createdAt, latestRevisionTrace?.createdAt);
-    const readinessDecision = buildApplicationReadinessStoppingDecision({
-      artifact: snapshot.artifact,
-      context,
-      critiqueFindings: currentCritiqueFindings,
-      ...(coverageAssessments === undefined ? {} : { coverageAssessments }),
-      round: snapshot.round,
-      budget: snapshot.budget,
-      priorScoreHistory: snapshot.scoreHistory,
-      ...(latestRevisionTrace === undefined ? {} : { latestRevisionTrace }),
-      createdAt: now,
-    });
+    const now = notBefore(
+      clock(),
+      snapshot.artifact.createdAt,
+      snapshot.adjudicationRuntime?.trace?.createdAt,
+    );
+    const readinessDecision = currentReadinessDecision(snapshot, snapshot.artifact, context, now);
     const reviewed = {
       ...settledForTransition(snapshot, now),
       readinessDecision,

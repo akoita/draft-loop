@@ -6,7 +6,7 @@ import {
   validateBridgeCommand,
 } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { OpportunityBriefReviewView } from "./opportunity-brief-review.js";
+import { briefDialogClosesAfter, OpportunityBriefReviewView } from "./opportunity-brief-review.js";
 import {
   acknowledgeIssue,
   type BriefEditState,
@@ -650,5 +650,19 @@ describe("an employer the candidate enters", () => {
       ok: true,
       value: { sources: [{}, { classification: "candidate-provided-fact" }] },
     });
+  });
+});
+
+describe("the brief dialog after an operation", () => {
+  it("closes once the brief is marked reviewed, and stays open after a save or a refusal", () => {
+    const done = { kind: "done", record: {} as OpportunityRecordResult } as const;
+    expect(briefDialogClosesAfter("reviewing", done)).toBe(true);
+    expect(briefDialogClosesAfter("saving", done)).toBe(false);
+    expect(
+      briefDialogClosesAfter("reviewing", { kind: "conflict", message: "Newer version." }),
+    ).toBe(false);
+    expect(briefDialogClosesAfter("reviewing", { kind: "failed", message: "Not saved." })).toBe(
+      false,
+    );
   });
 });
