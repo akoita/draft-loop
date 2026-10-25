@@ -707,6 +707,9 @@ export interface ApiSchemas {
     readonly priorChecksum: string | null;
     readonly content: string;
   };
+  "WritingPolicyTemplate": {
+    readonly content: string;
+  };
   "WritingPolicyVersion": {
     readonly checksum: string;
     readonly version: string;
@@ -803,6 +806,23 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["ScreeningRelease"];
   };
+  "PATCH /v1/workspaces/{workspaceId}/models": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly author: {
+        readonly company: "anthropic" | "openai";
+        readonly model: string;
+      };
+      readonly critic: {
+        readonly company: "anthropic" | "openai";
+        readonly model: string;
+      };
+      readonly independenceOverrideRationale?: string;
+    };
+    readonly response: ApiSchemas["Workspace"];
+  };
   "PUT /v1/workspaces/{workspaceId}/knowledge-selection": {
     readonly path: {
       readonly workspaceId: string;
@@ -827,6 +847,9 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: ApiSchemas["WritingPolicy"];
+  };
+  "GET /v1/writing-policy-template": {
+    readonly response: ApiSchemas["WritingPolicyTemplate"];
   };
   "GET /v1/workspaces/{workspaceId}/writing-policy/versions": {
     readonly path: {

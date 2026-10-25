@@ -24,6 +24,9 @@ import { ownerWorkspaceId } from "./workspace-model.js";
  * as folders, recent workspaces, provider keys and local models, stays hidden by capability.
  */
 export const hostedBridgeCapabilities = [
+  "workspace.configure-models",
+  "writing-policy.read",
+  "writing-policy.save",
   "application.list",
   "application.get",
   "application.job",
@@ -64,6 +67,18 @@ export interface HttpBridgeOptions {
    */
   readonly workspaceId?: string;
 }
+
+/** The policy's text and identity, without the dates the editor does not show. */
+const pick = ({ content, version, checksum }: ApiSchemas["WritingPolicy"]) => ({
+  content,
+  version,
+  checksum,
+});
+
+const hostedCompany = (company: string): "anthropic" | "openai" =>
+  company === "anthropic" || company === "openai"
+    ? company
+    : refuse("The hosted service runs Anthropic and OpenAI models only.");
 
 /** A refusal the bridge makes itself, before any request, in words for the owner. */
 class Refusal extends Error {
@@ -383,6 +398,65 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           authModes: { anthropic: "api-key", openai: "api-key" },
           profiles: catalog.models.map(({ id, version }) => ({ id, version, supported: true })),
         };
+      }
+      case "workspace.configure-models": {
+        const { workspaceId, independenceOverrideRationale } = command.input;
+        if (command.input.localEndpoint !== undefined) {
+          return refuse("A local model server cannot be used on the hosted service.");
+        }
+        if (
+          command.input.authorLineage !== undefined ||
+          command.input.criticLineage !== undefined
+        ) {
+          return refuse("The hosted service derives each model's lineage itself.");
+        }
+        const changed = await client.call("PATCH /v1/workspaces/{workspaceId}/models", {
+          path: { workspaceId },
+          body: {
+            author: {
+              company: hostedCompany(command.input.authorCompany),
+              model: command.input.authorModel,
+            },
+            critic: {
+              company: hostedCompany(command.input.criticCompany),
+              model: command.input.criticModel,
+            },
+            ...(independenceOverrideRationale === undefined
+              ? {}
+              : { independenceOverrideRationale }),
+          },
+        });
+        // The screens address the workspace by the id they asked with, never the driver's own.
+        return {
+          workspaceId,
+          authorCompany: changed.author.company,
+          authorModel: changed.author.model,
+          criticCompany: changed.critic.company,
+          criticModel: changed.critic.model,
+          localEndpoint: null,
+        };
+      }
+      case "writing-policy.read": {
+        const { workspaceId } = command.input;
+        try {
+          const active = await client.call("GET /v1/workspaces/{workspaceId}/writing-policy", {
+            path: { workspaceId },
+          });
+          return { workspaceId, ...pick(active), isDefaultTemplate: false };
+        } catch (error) {
+          if (!(error instanceof ApiRequestError) || error.status !== 404) throw error;
+        }
+        // Nothing saved yet: the editor starts from the template, and reading it saves nothing.
+        const { content } = await client.call("GET /v1/writing-policy-template", {});
+        return { workspaceId, content, version: null, checksum: null, isDefaultTemplate: true };
+      }
+      case "writing-policy.save": {
+        const { workspaceId, content } = command.input;
+        const saved = await client.call("PUT /v1/workspaces/{workspaceId}/writing-policy", {
+          path: { workspaceId },
+          body: { content },
+        });
+        return { workspaceId, version: saved.version, checksum: saved.checksum };
       }
       case "review.load": {
         // The server projects the review as the desktop host does; the port validates each field.

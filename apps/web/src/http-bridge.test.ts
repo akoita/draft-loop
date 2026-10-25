@@ -574,4 +574,108 @@ describe("the shared screens' commands over HTTP", () => {
       error: { code: "not-found", message: "That run does not belong to this application." },
     });
   });
+
+  it("changes the workspace's models over the API, refusing what the gateway cannot route", async () => {
+    const changed = {
+      id: "workspace-0b5c",
+      language: "en",
+      requiredSections: ["Experience"],
+      maxRounds: 2,
+      author: { company: "openai", model: "gpt-6.1-sol" },
+      critic: { company: "anthropic", model: "claude-sonnet-5-5" },
+      fixtureMode: true,
+      knowledgeBaseIds: [],
+    } as ApiSchemas["Workspace"];
+    const { port, calls } = portOver({
+      "PATCH /v1/workspaces/{workspaceId}/models": () => changed,
+    });
+    const selection = {
+      workspaceId,
+      authorCompany: "openai",
+      authorModel: "gpt-6.1-sol",
+      criticCompany: "anthropic",
+      criticModel: "claude-sonnet-5-5",
+    } as const;
+
+    const result = await port.execute({ type: "workspace.configure-models", input: selection });
+    const local = await port.execute({
+      type: "workspace.configure-models",
+      input: { ...selection, authorCompany: "local", localEndpoint: "http://127.0.0.1:11434" },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        workspaceId,
+        authorCompany: "openai",
+        authorModel: "gpt-6.1-sol",
+        criticCompany: "anthropic",
+        criticModel: "claude-sonnet-5-5",
+        localEndpoint: null,
+      },
+    });
+    expect(calls).toEqual([
+      {
+        operation: "PATCH /v1/workspaces/{workspaceId}/models",
+        input: {
+          path: { workspaceId },
+          body: {
+            author: { company: "openai", model: "gpt-6.1-sol" },
+            critic: { company: "anthropic", model: "claude-sonnet-5-5" },
+          },
+        },
+      },
+    ]);
+    expect(local).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
+  it("opens the policy editor on the saved policy, or on the template when none is saved", async () => {
+    const saved = {
+      checksum: "c".repeat(64),
+      version: `sha256:${"c".repeat(12)}`,
+      createdAt: "2026-10-23T08:00:00.000Z",
+      priorChecksum: null,
+      content: "# Writing policy\n\nKeep each bullet to one sentence.",
+    };
+    let stored: typeof saved | undefined;
+    const { port } = portOver({
+      "GET /v1/workspaces/{workspaceId}/writing-policy": () => {
+        if (stored === undefined) {
+          throw new ApiRequestError(404, "not_found", "The workspace has no writing policy.");
+        }
+        return stored;
+      },
+      "GET /v1/writing-policy-template": () => ({ content: "# Default CV writing policy\n" }),
+      "PUT /v1/workspaces/{workspaceId}/writing-policy": (input) => {
+        stored = { ...saved, content: (input.body as { content: string }).content };
+        return stored;
+      },
+    });
+
+    const template = await port.execute({ type: "writing-policy.read", input: { workspaceId } });
+    const written = await port.execute({
+      type: "writing-policy.save",
+      input: { workspaceId, content: saved.content },
+    });
+    const reread = await port.execute({ type: "writing-policy.read", input: { workspaceId } });
+
+    expect(template).toEqual({
+      ok: true,
+      value: {
+        workspaceId,
+        content: "# Default CV writing policy\n",
+        version: null,
+        checksum: null,
+        isDefaultTemplate: true,
+      },
+    });
+    expect(written).toEqual({
+      ok: true,
+      value: { workspaceId, version: saved.version, checksum: saved.checksum },
+    });
+    expect(reread).toMatchObject({
+      ok: true,
+      value: { content: saved.content, checksum: saved.checksum, isDefaultTemplate: false },
+    });
+  });
 });

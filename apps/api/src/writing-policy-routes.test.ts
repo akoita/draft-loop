@@ -151,4 +151,19 @@ describe("writing policy routes", () => {
       ],
     });
   });
+
+  it("reads the template an editor starts from, saving nothing", async () => {
+    const configureWritingPolicy = vi.fn();
+    await build({ configureWritingPolicy });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/writing-policy-template",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().content).toMatch(/^# Default CV writing policy/u);
+    expect(configureWritingPolicy).not.toHaveBeenCalled();
+  });
 });

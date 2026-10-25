@@ -32,6 +32,7 @@ export interface HostedApplicationDriverOptions {
 export const hostedDriverMethods = [
   "initialize",
   "readWorkspace",
+  "reconfigureModels",
   "configureWritingPolicy",
   "getWritingPolicy",
   "listWritingPolicyVersions",

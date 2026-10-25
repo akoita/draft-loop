@@ -306,6 +306,31 @@ describe("hosted application driver", () => {
     await expect(access("/tenants")).rejects.toThrow();
   }, 120_000);
 
+  it("changes the workspace's models for the next runs, beside a recorded run", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+
+    const changed = await service.reconfigureModels(
+      {
+        root: workspace,
+        authorCompany: "openai",
+        authorModel: "gpt-6.1-sol",
+        criticCompany: "anthropic",
+        criticModel: "claude-sonnet-5-5",
+      },
+      silent,
+    );
+
+    expect(changed.author).toEqual({ company: "openai", model: "gpt-6.1-sol" });
+    expect((await service.readWorkspace(workspace)).critic).toEqual({
+      company: "anthropic",
+      model: "claude-sonnet-5-5",
+    });
+    expect((await service.status({ root: workspace, runId: resumed.runId }))?.state).toBe(
+      "awaiting-approval",
+    );
+    await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
   it("refuses a hosted writing policy named by a file path", async () => {
     const { service } = await begunRun();
 
