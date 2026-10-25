@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { OpportunityLatestResult } from "./bridge.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import {
+  extractionPending,
   isEmptyDraftBrief,
   latestBriefNote,
   latestBriefTitle,
@@ -12,6 +13,9 @@ import {
   rawJobDescriptionOverDraftLabel,
   reviewedRequirementsLabel,
 } from "./start-requirements-model.js";
+
+/** How often the setup card reads a brief the service is still extracting. */
+export const pendingExtractionPollMs = 3_000;
 
 /**
  * Reads the workspace's latest opportunity brief (draft or reviewed) from the host. `undefined`
@@ -49,10 +53,17 @@ export function useLatestOpportunity(
       cancelled = true;
     };
   }, [supported, workspaceId, reloadKey, tick]);
-  return {
-    latest: loaded !== null && loaded.workspaceId === workspaceId ? loaded.latest : undefined,
-    refresh: () => setTick((value) => value + 1),
-  };
+  const latest = loaded !== null && loaded.workspaceId === workspaceId ? loaded.latest : undefined;
+  // While the service extracts the brief, read it again until the extracted version arrives. Each
+  // read sets `loaded` anew, which schedules the next one.
+  const pending = extractionPending(latest);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => setTick((value) => value + 1), pendingExtractionPollMs);
+    return () => clearTimeout(timer);
+  }, [pending, loaded]);
+  return { latest, refresh: () => setTick((value) => value + 1) };
 }
 
 /**

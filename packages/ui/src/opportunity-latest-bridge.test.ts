@@ -47,7 +47,13 @@ describe("opportunity.latest bridge command", () => {
       ).execute({ type: "opportunity.latest", input: { workspaceId: "workspace-1" } });
     await expect(respond(latest)).resolves.toEqual({ ok: true, value: latest });
     await expect(respond(null)).resolves.toEqual({ ok: true, value: null });
+    const pending = { ...latest, version: 1, requirementCount: 0, criticalCount: 0 };
+    await expect(respond({ ...pending, extraction: "pending" })).resolves.toEqual({
+      ok: true,
+      value: { ...pending, extraction: "pending" },
+    });
     for (const malformed of [
+      { ...latest, extraction: "running" },
       { ...latest, status: "published" },
       { ...latest, requirementCount: -1 },
       { ...latest, criticalCount: 6 },

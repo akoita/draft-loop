@@ -271,7 +271,8 @@ The hosted service starts runs through a queue rather than in the request
   queue's brief extraction queue, and the brief's view says `extraction:
   pending` until the worker saves the extracted next version (or `failed`). A
   flagged or unscreened text is never queued, and a fixture workspace's brief
-  is extracted as it is saved.
+  is extracted as it is saved. The shared setup card says the requirements are
+  being read and reads the brief again every few seconds until they arrive.
 - Its optional `modelProfiles` binds exact author and critic profile versions
   to that run, such as a preset's pair, as the CLI and the desktop do. Without
   them the run uses provider-default runtime controls and unknown context

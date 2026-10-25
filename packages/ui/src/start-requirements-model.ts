@@ -105,6 +105,18 @@ export const noRequirementsFoundTitle = "No requirements were found in this job 
 export const noRequirementsFoundNote =
   "Nothing was found to review. Extract again, or paste the job text into the application instead.";
 
+/** What the setup card says while the service extracts a just-saved brief, as the hosted worker does. */
+export const pendingExtractionNote =
+  "Reading this job's requirements. This takes about a minute; the page updates when they are ready.";
+/** What it says when that extraction failed after its retries. */
+export const failedExtractionNote =
+  "The requirements could not be extracted. Extract them again, or paste the job text into the application instead.";
+
+/** Whether the service is still extracting the latest brief: nothing to review or extract yet. */
+export function extractionPending(latest: OpportunityLatestBrief | null | undefined): boolean {
+  return latest?.extraction === "pending";
+}
+
 /** A draft that holds no requirements: there is nothing to review, only a retry or a paste. */
 export function isEmptyDraftBrief(latest: OpportunityLatestBrief): boolean {
   return latest.status === "draft" && latest.requirementCount === 0;
@@ -118,10 +130,14 @@ export function briefReviewActionKey(workspaceId: string, briefId: string): stri
   return `${workspaceId}:${briefId}`;
 }
 
-/** Whether setup card 01 offers extraction: no brief yet, or only an empty draft to replace. */
+/**
+ * Whether setup card 01 offers extraction: no brief yet, or only an empty draft to replace, and
+ * not while the service is still extracting one.
+ */
 export function offersRequirementsExtraction(
   latest: OpportunityLatestBrief | null | undefined,
 ): boolean {
+  if (extractionPending(latest)) return false;
   return latest === null || latest === undefined || isEmptyDraftBrief(latest);
 }
 
@@ -139,6 +155,8 @@ export function requirementRefusalAction(
   canExtract: boolean,
 ): RequirementRefusalAction {
   if (reviewed !== null) return "use-reviewed";
+  // The service is still reading the job: there is nothing to review or extract yet.
+  if (extractionPending(latest)) return null;
   const emptyDraft = latest !== null && latest !== undefined && isEmptyDraftBrief(latest);
   if (latest?.status === "draft" && !emptyDraft) return "review-draft";
   if (!canExtract) return null;
@@ -152,6 +170,8 @@ export function latestBriefTitle(latest: OpportunityLatestBrief): string {
 
 /** What the person can do with the latest brief, stated for the setup card. */
 export function latestBriefNote(latest: OpportunityLatestBrief): string {
+  if (extractionPending(latest)) return pendingExtractionNote;
+  if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote;
   if (isEmptyDraftBrief(latest)) return `${noRequirementsFoundTitle}. ${noRequirementsFoundNote}`;
   const counts = `${plural(latest.requirementCount, "requirement")}, ${latest.criticalCount} critical.`;
   return latest.status === "draft"

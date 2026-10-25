@@ -375,6 +375,45 @@ describe("the shared screens' commands over HTTP", () => {
     expect(none).toEqual({ ok: true, value: null });
   });
 
+  it("says a newest brief is still being extracted, and creates one that says so", async () => {
+    const { port } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => ledgerApplication,
+      "GET /v1/workspaces/{workspaceId}/opportunities/{briefId}": () => ({
+        ...opportunity,
+        extraction: "pending",
+      }),
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job": () => ({
+        text: "Fictional Platform Engineer role at Example Ledger",
+      }),
+      "POST /v1/workspaces/{workspaceId}/opportunities": () => ({
+        ...opportunity,
+        extraction: "pending",
+      }),
+    });
+
+    const latest = await port.execute({
+      type: "opportunity.latest",
+      input: { workspaceId, applicationId: "app-ledger" },
+    });
+    const created = await port.execute({
+      type: "opportunity.create",
+      input: {
+        workspaceId,
+        applicationId: "app-ledger",
+        sources: [
+          {
+            id: "workspace-job-description",
+            kind: "workspace-job-description",
+            classification: "job-posting",
+          },
+        ],
+      },
+    });
+
+    expect(latest).toMatchObject({ ok: true, value: { extraction: "pending" } });
+    expect(created).toMatchObject({ ok: true, value: { extraction: "pending" } });
+  });
+
   it("begins a run with an idempotency key and reads queued work as drafting", async () => {
     const { port, calls } = portOver({
       "POST /v1/workspaces/{workspaceId}/runs": () => ({

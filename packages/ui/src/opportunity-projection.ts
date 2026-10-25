@@ -15,6 +15,7 @@ function opportunityRecordObject(
 ): {
   readonly brief: Record<string, unknown>;
   readonly checksum: string | null;
+  readonly extraction?: "pending" | "failed";
 } {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return fail("The opportunity service returned an invalid record.");
@@ -25,6 +26,9 @@ function opportunityRecordObject(
     return {
       brief: brief as Record<string, unknown>,
       checksum: typeof record.checksum === "string" ? record.checksum : null,
+      ...(record.extraction === "pending" || record.extraction === "failed"
+        ? { extraction: record.extraction }
+        : {}),
     };
   }
   return { brief: record, checksum: null };
@@ -155,7 +159,7 @@ export function projectOpportunityRecord(
   value: unknown,
   fail: ProjectionFailure,
 ): OpportunityRecordResult {
-  const { brief, checksum } = opportunityRecordObject(value, fail);
+  const { brief, checksum, extraction } = opportunityRecordObject(value, fail);
   if (
     typeof brief.id !== "string" ||
     typeof brief.version !== "number" ||
@@ -186,11 +190,14 @@ export function projectOpportunityRecord(
     priorities: opportunityFactCollection(brief.priorities, "priorities", fail),
     candidateInstructions: opportunityInstructions(brief.candidateInstructions, fail),
     issues: opportunityIssues(brief.issues, fail),
+    ...(extraction === undefined ? {} : { extraction }),
   };
 }
 
 /** The brief fields the latest-brief projection reads; it never touches requirement text. */
 interface LatestBriefRecord {
+  /** The service's extraction of this version, when a hosted worker still owes it. */
+  readonly extraction?: "pending" | "failed";
   readonly brief: {
     readonly id: string;
     readonly version: number;
@@ -216,5 +223,6 @@ export function projectLatestOpportunity(
     requirementCount: brief.requirements.length,
     criticalCount: brief.requirements.filter((requirement) => requirement.priority === "critical")
       .length,
+    ...(record.extraction === undefined ? {} : { extraction: record.extraction }),
   };
 }

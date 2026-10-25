@@ -259,6 +259,27 @@ describe("runJobRequirementsExtraction", () => {
     });
   });
 
+  it("keeps the card waiting while the service extracts the saved brief", async () => {
+    const outcome = await runJobRequirementsExtraction(async () =>
+      record({ requirements: [], responsibilities: [], issues: [], extraction: "pending" }),
+    );
+
+    expect(outcome).toEqual({ kind: "running", background: true });
+    const html = renderToStaticMarkup(
+      <JobRequirementsExtractionView
+        phase={outcome}
+        writingModel={writingModel}
+        disabled={false}
+        onOpen={() => undefined}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+        onCancelExtraction={() => undefined}
+      />,
+    );
+    expect(html).toContain("Reading this job&#x27;s requirements");
+    expect(html).not.toContain("Cancel extraction");
+  });
+
   it("reports the failure message the host gave", async () => {
     const outcome = await runJobRequirementsExtraction(async () => {
       throw new Error("The job description is larger than the 64 KiB extraction limit.");

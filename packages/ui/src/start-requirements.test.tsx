@@ -11,10 +11,12 @@ import {
 } from "./start-requirements.js";
 import {
   briefReviewActionKey,
+  failedExtractionNote,
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
   offersRequirementsExtraction,
+  pendingExtractionNote,
   rawJobDescriptionChoiceLabel,
   rawJobDescriptionChoiceNote,
   rawJobDescriptionLabel,
@@ -93,6 +95,42 @@ describe("setup card 01 latest brief", () => {
     expect(html).toContain("No requirements were found in this job text");
     expect(html).toContain("Extract again, or paste the job text");
     expect(html).not.toContain("Review requirements");
+  });
+
+  it("says the service is reading the requirements while it extracts a saved brief", () => {
+    const pending: OpportunityLatestBrief = {
+      ...draft,
+      version: 1,
+      requirementCount: 0,
+      extraction: "pending",
+    };
+    const html = renderToStaticMarkup(
+      <LatestRequirementsBriefView
+        latest={pending}
+        action={<button type="button">Review requirements</button>}
+      />,
+    );
+
+    expect(latestBriefNote(pending)).toBe(pendingExtractionNote);
+    expect(html).toContain("Reading this job");
+    expect(html).not.toContain("No requirements were found");
+    expect(html).not.toContain("Review requirements");
+    // Nothing to extract again or review until the extracted version arrives.
+    expect(offersRequirementsExtraction(pending)).toBe(false);
+    expect(requirementRefusalAction(pending, null, true)).toBeNull();
+  });
+
+  it("offers a fresh extraction when the service's extraction failed", () => {
+    const failed: OpportunityLatestBrief = {
+      ...draft,
+      version: 1,
+      requirementCount: 0,
+      extraction: "failed",
+    };
+
+    expect(latestBriefNote(failed)).toBe(failedExtractionNote);
+    expect(offersRequirementsExtraction(failed)).toBe(true);
+    expect(requirementRefusalAction(failed, null, true)).toBe("extract-again");
   });
 
   it("offers a reviewed brief for viewing and says runs start from it", () => {
