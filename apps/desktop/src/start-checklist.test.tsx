@@ -1,12 +1,12 @@
+import { applicationStepStates } from "@draft-loop/ui/application-steps-model";
 import { createFixtureReviewState } from "@draft-loop/ui/model";
-import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { applicationStepStates } from "./application-steps-model.js";
-import { urlJobBriefStep } from "./electron/host-applications.js";
-import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
-import { ReviewWorkspace } from "./review.js";
-import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
+import type { ProviderSignInReadiness } from "@draft-loop/ui/provider-sign-in-readiness";
+import { ReviewWorkspace } from "@draft-loop/ui/review";
+import {
+  revealStartTarget,
+  StartChecklistView,
+  startActionTargets,
+} from "@draft-loop/ui/start-checklist";
 import {
   approvedPageRequirementsDetail,
   candidateProfilePendingBlockerMessage,
@@ -20,7 +20,11 @@ import {
   startButtonLabel,
   startChecklist,
   startChecklistTooltip,
-} from "./start-checklist-model.js";
+} from "@draft-loop/ui/start-checklist-model";
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { urlJobBriefStep } from "./electron/host-applications.js";
 
 const problem = "Requirement 1 in the job description is too long to match against CV lines.";
 

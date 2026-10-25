@@ -3,6 +3,27 @@
   "version": "0.8.0-alpha.4",
   "type": "module",
   "exports": {
+    "./app": {
+      "types": "./src/app.tsx",
+      "import": "./src/app.tsx"
+    },
+    "./job-requirements-extraction": {
+      "types": "./src/job-requirements-extraction.tsx",
+      "import": "./src/job-requirements-extraction.tsx"
+    },
+    "./new-application-form": {
+      "types": "./src/new-application-form.tsx",
+      "import": "./src/new-application-form.tsx"
+    },
+    "./review": {
+      "types": "./src/review.tsx",
+      "import": "./src/review.tsx"
+    },
+    "./start-checklist": {
+      "types": "./src/start-checklist.tsx",
+      "import": "./src/start-checklist.tsx"
+    },
+    "./styles.css": "./src/styles.css",
     "./*": {
       "types": "./src/*.ts",
       "import": "./src/*.ts"
@@ -17,6 +38,13 @@
   "dependencies": {
     "@draft-loop/application": "workspace:*",
     "@draft-loop/artifacts": "workspace:*",
-    "@draft-loop/domain": "workspace:*"
+    "@draft-loop/domain": "workspace:*",
+    "@draft-loop/providers": "workspace:*",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@draft-loop/rendering": "workspace:*",
+    "@draft-loop/storage": "workspace:*"
   }
 }

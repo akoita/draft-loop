@@ -11,7 +11,7 @@ import {
 
 import type { BridgeCommand, BridgeErrorCode } from "@draft-loop/ui/bridge";
 import type { ReviewAction } from "@draft-loop/ui/model";
-import { opportunityVersionConflictMessage } from "../opportunity-brief-review-model.js";
+import { opportunityVersionConflictMessage } from "@draft-loop/ui/opportunity-brief-review-model";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 
 const bridgeErrorCodes: ReadonlySet<string> = new Set([

@@ -7,20 +7,23 @@ import {
   createApplicationService,
   createLocalApplicationDriver,
 } from "@draft-loop/application";
+import { applicationStepStates } from "@draft-loop/ui/application-steps-model";
 import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
+import { runJobRequirementsExtraction } from "@draft-loop/ui/job-requirements-extraction";
 import type { DesktopReviewState } from "@draft-loop/ui/model";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applicationStepStates } from "./application-steps-model.js";
-import { createNativeHost } from "./electron/host.js";
-import { runJobRequirementsExtraction } from "./job-requirements-extraction.js";
-import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
-import { submitNewApplication } from "./new-application-form.js";
+import { createBridgeReviewPort, createNativeCapabilityPort } from "@draft-loop/ui/native";
+import { submitNewApplication } from "@draft-loop/ui/new-application-form";
 import {
   defaultReviewedProfile,
   emptyNewApplicationDraft,
   loadReviewedProfileChoices,
-} from "./new-application-model.js";
-import { candidateProfileStartBlockerMessage, startChecklist } from "./start-checklist-model.js";
+} from "@draft-loop/ui/new-application-model";
+import {
+  candidateProfileStartBlockerMessage,
+  startChecklist,
+} from "@draft-loop/ui/start-checklist-model";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createNativeHost } from "./electron/host.js";
 
 /*
  * Home's New application form and the application screen's three steps, driven through their

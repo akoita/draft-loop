@@ -199,6 +199,7 @@ import {
   projectSavedModelProfiles,
 } from "@draft-loop/ui/model-profile-bridge";
 import type { ProviderRoutesView } from "@draft-loop/ui/provider-routes";
+import { providerSessionModelFeedback } from "@draft-loop/ui/provider-session-model-feedback";
 import {
   applicationPlanRequirementIds,
   type RunApplicationPlanView,
@@ -220,7 +221,6 @@ import {
   normalizeWorkspaceDisplayName,
   workspaceFolderName,
 } from "@draft-loop/ui/workspace-name";
-import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import {
   type ApplicationBriefPreference,
   applicationBriefPreference,

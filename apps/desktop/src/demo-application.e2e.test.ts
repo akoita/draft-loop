@@ -4,16 +4,16 @@ import { join } from "node:path";
 
 import { createApplicationService, createLocalApplicationDriver } from "@draft-loop/application";
 import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createNativeHost } from "./electron/host.js";
-import { runJobRequirementsExtraction } from "./job-requirements-extraction.js";
-import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
-import { submitNewApplication } from "./new-application-form.js";
+import { runJobRequirementsExtraction } from "@draft-loop/ui/job-requirements-extraction";
+import { createBridgeReviewPort, createNativeCapabilityPort } from "@draft-loop/ui/native";
+import { submitNewApplication } from "@draft-loop/ui/new-application-form";
 import {
   defaultReviewedProfile,
   emptyNewApplicationDraft,
   loadReviewedProfileChoices,
-} from "./new-application-model.js";
+} from "@draft-loop/ui/new-application-model";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createNativeHost } from "./electron/host.js";
 
 /*
  * A demo workspace from career evidence to a started review, against the real native host and the

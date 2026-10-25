@@ -6,11 +6,11 @@ import {
   reduceReviewState,
   type UsageLimitView,
 } from "@draft-loop/ui/model";
+import { ReviewWorkspace } from "@draft-loop/ui/review";
+import { usageLimitText } from "@draft-loop/ui/usage-limit";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { usageLimitView } from "./electron/usage-limit-view.js";
-import { ReviewWorkspace } from "./review.js";
-import { usageLimitText } from "./usage-limit.js";
 
 const resetsAt = "2026-10-16T15:30:00.000Z";
 const limited: UsageLimitView = {
