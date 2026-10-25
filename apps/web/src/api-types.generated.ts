@@ -475,6 +475,11 @@ export interface ApiSchemas {
       readonly text?: string;
     };
   };
+  "ReviewState": {
+    readonly workspaceId: string;
+    readonly runId: string;
+    readonly state: string;
+  };
   "Run": {
     readonly runId: string;
     readonly workspaceId: string;
@@ -1145,6 +1150,16 @@ export interface ApiOperations {
       readonly "idempotency-key": string;
     };
     readonly response: ApiSchemas["Run"];
+  };
+  "GET /v1/workspaces/{workspaceId}/review-state": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query?: {
+      readonly applicationId?: string;
+      readonly runId?: string;
+    };
+    readonly response: ApiSchemas["ReviewState"];
   };
   "POST /v1/workspaces/{workspaceId}/runs/{runId}/exports": {
     readonly path: {

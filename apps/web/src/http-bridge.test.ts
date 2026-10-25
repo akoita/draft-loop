@@ -523,4 +523,55 @@ describe("the shared screens' commands over HTTP", () => {
       error: { code: "not-found", message: "No such application." },
     });
   });
+
+  it("loads the review the server projects, for the workspace on screen or the one named", async () => {
+    const projected = { workspaceId: "candidate-7", runId: "pending", state: "collecting" };
+    const { client, calls } = scriptedClient({
+      "GET /v1/workspaces/{workspaceId}/review-state": () => projected,
+    });
+    const bridge = createHttpBridge({ client, workspaceId: "candidate-7" });
+
+    const onScreen = await bridge.invoke({
+      type: "review.load",
+      input: { applicationId: "app-ledger" },
+    });
+    await bridge.invoke({ type: "review.load", input: { workspaceId, runId: "run-1" } });
+
+    expect(onScreen).toEqual({ ok: true, value: projected });
+    expect(calls).toEqual([
+      {
+        operation: "GET /v1/workspaces/{workspaceId}/review-state",
+        input: {
+          path: { workspaceId: "candidate-7" },
+          query: { applicationId: "app-ledger" },
+        },
+      },
+      {
+        operation: "GET /v1/workspaces/{workspaceId}/review-state",
+        input: { path: { workspaceId }, query: { runId: "run-1" } },
+      },
+    ]);
+  });
+
+  it("answers a review of a run the application does not hold as not found", async () => {
+    const { port } = portOver({
+      "GET /v1/workspaces/{workspaceId}/review-state": () => {
+        throw new ApiRequestError(
+          404,
+          "not_found",
+          "That run does not belong to this application.",
+        );
+      },
+    });
+
+    const result = await port.execute({
+      type: "review.load",
+      input: { applicationId: "app-ledger", runId: "run-elsewhere" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "not-found", message: "That run does not belong to this application." },
+    });
+  });
 });

@@ -50,7 +50,7 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | A second domain layer or provider SDKs in the UI                                           |
 | `apps/api`                                       | The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role), serving each request from its caller's tenant, organisation membership and operator routes over the tenant directory, and the error shape | Domain logic, storage engines, or provider calls                                           |
 | `apps/worker`                                    | The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage- or rate-limited run for when the limit allows, and stops within Cloud Run's shutdown notice                                                                                                                                                                                                                                                                                                                           | Domain logic, provider calls outside the application service, or job payloads with content |
-| `apps/web`                                       | The owner's browser screen over the `/v1` API, served by the API on the same origin: sign-in with the owner token or, in `oidc` mode, through the identity provider (authorization code with PKCE), kept in the tab, and a client typed from the committed OpenAPI document. In `oidc` mode it lists the caller's candidate records, switches between them and lets owners and admins assign members, export a record's archive and delete a record. Its Run step shows the organisation's credit balance with the 80% warning, the run's credit estimate beside the start button and a plain message for each plan refusal (`credits_insufficient`, `model_tier_not_in_plan`, `plan_required`, `run_cap_reached`, `plan_limit_reached`); the balance stays hidden with the owner token, which keeps one workspace. Its HTTP bridge (`http-bridge.ts`) answers the shared screens' application, brief, run and model commands over the API, and advertises nothing else                                                                           | Domain logic, imports of `apps/api` or server packages, or provider calls                  |
+| `apps/web`                                       | The owner's browser screen over the `/v1` API, served by the API on the same origin: sign-in with the owner token or, in `oidc` mode, through the identity provider (authorization code with PKCE), kept in the tab, and a client typed from the committed OpenAPI document. In `oidc` mode it lists the caller's candidate records, switches between them and lets owners and admins assign members, export a record's archive and delete a record. Its Run step shows the organisation's credit balance with the 80% warning, the run's credit estimate beside the start button and a plain message for each plan refusal (`credits_insufficient`, `model_tier_not_in_plan`, `plan_required`, `run_cap_reached`, `plan_limit_reached`); the balance stays hidden with the owner token, which keeps one workspace. Its HTTP bridge (`http-bridge.ts`) answers the shared screens' application, brief, run, review-load and model commands over the API, and advertises nothing else                                                                           | Domain logic, imports of `apps/api` or server packages, or provider calls                  |
 
 ## Key flow
 
@@ -497,6 +497,23 @@ The owner manages a workspace's job applications through the API
   and an unknown application answers 404.
 - `PUT .../models` sets or clears an application's author and critic pair, and
   `PUT .../chosen-run` chooses the run whose draft it uses.
+
+The shared screens open on a review state the server projects
+(`review-state-routes.ts`), with the same `packages/review-state` code the
+desktop host calls:
+
+- `GET /v1/workspaces/:id/review-state` returns the run on screen with its
+  draft, findings, decisions and edits, and the workspace's readiness for the
+  next run. `applicationId` scopes it to one application's newest run, and
+  `runId` names an earlier one; a run the application does not hold answers
+  404.
+- Readiness reads the application's pasted job or reviewed brief, the selected
+  knowledge bases' sources and the writing policy. Without a run the state is
+  the start state, with `runId` `pending`.
+- The provider preflight names the gateway's routes and reads as acknowledged,
+  because the server itself refuses a provider call without recorded consent.
+- The web's HTTP bridge answers `review.load` from this route, and the port
+  validates every field as it does the desktop host's.
 
 Candidate sources reach a hosted knowledge store through
 `createHostedKnowledgeIntake` in `packages/application`, over the storage ports

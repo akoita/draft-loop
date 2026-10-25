@@ -20,6 +20,9 @@
       "path": "../../packages/orchestrator"
     },
     {
+      "path": "../../packages/review-state"
+    },
+    {
       "path": "../../packages/run-queue"
     },
     {
@@ -33,6 +36,9 @@
     },
     {
       "path": "../../packages/storage-postgres"
+    },
+    {
+      "path": "../../packages/ui"
     }
   ]
 }

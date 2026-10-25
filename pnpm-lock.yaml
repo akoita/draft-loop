@@ -68,6 +68,9 @@ importers:
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@draft-loop/review-state':
+        specifier: workspace:*
+        version: link:../../packages/review-state
       '@draft-loop/run-queue':
         specifier: workspace:*
         version: link:../../packages/run-queue
@@ -83,6 +86,9 @@ importers:
       '@draft-loop/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@draft-loop/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@fastify/helmet':
         specifier: 13.1.1
         version: 13.1.1
@@ -262,6 +268,9 @@ importers:
       '@draft-loop/ingestion':
         specifier: workspace:*
         version: link:../../packages/ingestion
+      '@draft-loop/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@draft-loop/web':
         specifier: workspace:*
         version: link:../web

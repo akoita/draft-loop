@@ -21,11 +21,8 @@ import {
   type EmbeddingModelService,
   environmentCredentialResolver,
   exportLengthWarningPrefix,
-  type IndependentReviewRecord,
   importKnowledgeFileWithoutDuplicates,
   isLoopbackEndpoint,
-  JobRequirementUserError,
-  localJobRequirements,
   type OpportunityDraftPatch,
   type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -71,13 +68,8 @@ import {
   type UrlFetcher,
   type UrlHostnameResolver,
 } from "@draft-loop/ingestion";
+import { hasCompletedIndependentCritique, type RunSnapshot } from "@draft-loop/orchestrator";
 import {
-  hasCompletedIndependentCritique,
-  type RunSnapshot,
-  reviewFindingId,
-} from "@draft-loop/orchestrator";
-import {
-  defaultUserSessionTimeoutMs,
   listAnthropicModels,
   listLocalModels,
   listOpenAIModels,
@@ -98,6 +90,7 @@ import {
   reviewState,
   runState,
 } from "@draft-loop/review-state";
+import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import {
   isApplicationNotReadyFailure,
@@ -184,7 +177,6 @@ import type {
   WorkspaceEvidenceMigrationResult,
 } from "@draft-loop/ui/career-evidence-contract";
 import { chosenRunRefusal, earlierRunRefusal } from "@draft-loop/ui/earlier-run";
-import { findingRequirement } from "@draft-loop/ui/finding-requirement";
 import type {
   DesktopReviewState,
   FindingDecision,
@@ -194,12 +186,6 @@ import type {
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
   ReviewAction,
-  ReviewArtifact,
-  ReviewClaim,
-  ReviewEvent,
-  ReviewExecutionView,
-  ReviewFinding,
-  ReviewSection,
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "@draft-loop/ui/model";
@@ -212,8 +198,6 @@ import {
   projectOpportunityRecord as projectBriefRecord,
   projectLatestOpportunity,
 } from "@draft-loop/ui/opportunity-projection";
-import type { ProviderRoutesView } from "@draft-loop/ui/provider-routes";
-import { providerSessionModelFeedback } from "@draft-loop/ui/provider-session-model-feedback";
 import {
   applicationPlanRequirementIds,
   type RunApplicationPlanView,
@@ -1100,68 +1084,27 @@ async function workspaceReadiness(
       retrievalStatus = "unavailable";
     }
   }
-  // The run splits the job description into requirements unless a reviewed brief supplies
-  // them, so surface the same guard here instead of failing when Start is clicked.
-  let rawJobRequirementProblem: string | undefined;
-  if (jobDescriptionReady) {
-    try {
-      localJobRequirements(jobDescription);
-    } catch (error) {
-      if (!(error instanceof JobRequirementUserError)) throw error;
-      rawJobRequirementProblem = error.summary;
-    }
-  }
-  // A reviewed brief supplies the requirements, so the raw refusal only blocks without one.
-  const jobRequirementProblem =
-    overrides.reviewedOpportunity === undefined ? rawJobRequirementProblem : undefined;
-  const nextSteps: string[] = [];
-  if (!jobDescriptionReady && !briefSuppliesJob) {
-    nextSteps.push(
-      applicationScope?.jobFromUrl === true ? urlJobBriefStep : "Add a target job description.",
-    );
-  }
-  if (jobRequirementProblem !== undefined) nextSteps.push(jobRequirementProblem);
-  if (evidenceSourceCount === 0) {
-    nextSteps.push(
-      selectedKnowledgeSourceCount === undefined
-        ? "Add at least one candidate evidence source."
-        : "Add at least one source to the selected knowledge base.",
-    );
-  }
-  if (writingPolicyStatus === "unavailable") {
-    nextSteps.push("Replace the configured writing policy before starting a review.");
-  }
-  if (retrievalStatus === "no-query") {
-    nextSteps.push("Replace the job description with searchable role content.");
-  }
-  if (retrievalStatus === "unavailable") {
-    nextSteps.push("Resolve the local evidence index error before starting a review.");
-  }
-  return {
-    fixtureMode: descriptor.fixtureMode,
-    jobDescriptionReady: jobDescriptionReady || briefSuppliesJob,
+  return workspaceReadinessFrom({
+    descriptor,
+    jobDescription,
+    jobDescriptionReady,
+    briefSuppliesJob,
     evidenceSourceCount,
-    writingPolicyStatus,
-    writingPolicy: writingPolicy ?? null,
+    knowledgeSelected: selectedKnowledgeSourceCount !== undefined,
+    writingPolicy,
     writingPolicyHistory,
-    pendingWritingPolicyOverride: overrides.pendingWritingPolicyOverride ?? null,
-    reviewedOpportunity: overrides.reviewedOpportunity ?? null,
-    jobRequirementProblem: rawJobRequirementProblem ?? null,
-    retrievalStatus,
-    indexedEvidenceChunkCount,
-    selectedEvidenceChunkCount,
-    selectedEvidenceSourceCount,
-    requiredSections: [...descriptor.requiredSections],
-    autopilot: descriptor.autopilot === true,
-    ready:
-      (jobDescriptionReady || briefSuppliesJob) &&
-      jobRequirementProblem === undefined &&
-      evidenceSourceCount > 0 &&
-      writingPolicyStatus !== "unavailable" &&
-      retrievalStatus !== "no-query" &&
-      retrievalStatus !== "unavailable",
-    nextSteps,
-  };
+    writingPolicyStatus,
+    retrieval: {
+      status: retrievalStatus,
+      indexedEvidenceChunkCount,
+      selectedEvidenceChunkCount,
+      selectedEvidenceSourceCount,
+    },
+    reviewedOpportunity: overrides.reviewedOpportunity,
+    pendingWritingPolicyOverride: overrides.pendingWritingPolicyOverride,
+    missingJobStep:
+      applicationScope?.jobFromUrl === true ? urlJobBriefStep : "Add a target job description.",
+  });
 }
 
 const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;

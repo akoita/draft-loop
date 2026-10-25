@@ -17,6 +17,7 @@ import {
 } from "@draft-loop/ui/opportunity-projection";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { ownerWorkspaceId } from "./workspace-model.js";
 
 /**
  * The commands the hosted service can serve today. Everything else the shared screens offer, such
@@ -42,6 +43,7 @@ export const hostedBridgeCapabilities = [
   "run.pause",
   "run.resume",
   "run.stop",
+  "review.load",
   "models.list",
   "models.preview-independence",
   "models.profile-support",
@@ -56,6 +58,11 @@ export interface HttpBridgeOptions {
   readonly onRefusal?: (error: ApiRequestError) => void;
   /** A fresh key for each run start, so a retried request never begins a second run. */
   readonly idempotencyKey?: () => string;
+  /**
+   * The workspace a review load opens when it names none, as the desktop opens its active one;
+   * the owner's workspace when unset.
+   */
+  readonly workspaceId?: string;
 }
 
 /** A refusal the bridge makes itself, before any request, in words for the owner. */
@@ -376,6 +383,19 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           authModes: { anthropic: "api-key", openai: "api-key" },
           profiles: catalog.models.map(({ id, version }) => ({ id, version, supported: true })),
         };
+      }
+      case "review.load": {
+        // The server projects the review as the desktop host does; the port validates each field.
+        const { applicationId, runId } = command.input;
+        return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
+          path: {
+            workspaceId: command.input.workspaceId ?? options.workspaceId ?? ownerWorkspaceId,
+          },
+          query: {
+            ...(applicationId === undefined ? {} : { applicationId }),
+            ...(runId === undefined ? {} : { runId }),
+          },
+        });
       }
       default:
         throw new Refusal(
