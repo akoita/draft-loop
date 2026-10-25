@@ -24,6 +24,11 @@ import {
   isKnowledgeCommand,
   type PickFile,
 } from "./knowledge-bridge.js";
+import {
+  createProfileAnswers,
+  hostedProfileCapabilities,
+  isProfileCommand,
+} from "./profile-bridge.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 /**
@@ -49,6 +54,7 @@ export const hostedBridgeCapabilities = [
   "opportunity.latest",
   "opportunity.edit",
   "opportunity.review",
+  ...hostedProfileCapabilities,
   "run.status",
   "run.start",
   "run.pause",
@@ -166,6 +172,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const { client } = options;
   const idempotencyKey = options.idempotencyKey ?? (() => globalThis.crypto.randomUUID());
   const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
+  const answerProfile = createProfileAnswers(client);
 
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))
@@ -196,6 +203,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
 
   async function answer(command: BridgeCommand): Promise<unknown> {
     if (isKnowledgeCommand(command)) return answerKnowledge(command);
+    if (isProfileCommand(command)) return answerProfile(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;
@@ -364,10 +372,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         return runStatus(workspaceId, newest === null ? undefined : await run(workspaceId, newest));
       }
       case "run.start": {
-        const { workspaceId, applicationId, opportunityBrief } = command.input;
-        if (command.input.candidateProfile !== undefined) {
-          return refuse("A career profile cannot be chosen for a hosted run yet.");
-        }
+        const { workspaceId, applicationId, opportunityBrief, candidateProfile } = command.input;
         if (command.input.writingPolicyOverrideChecksum !== undefined) {
           return refuse("A one-run writing policy cannot be used on the hosted service yet.");
         }
@@ -379,6 +384,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
             ...(opportunityBrief === undefined
               ? {}
               : { opportunityBrief: { ...opportunityBrief } }),
+            ...(candidateProfile === undefined
+              ? {}
+              : { candidateProfile: { ...candidateProfile } }),
           },
         });
         return runStatus(workspaceId, begun);
@@ -508,9 +516,6 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "review.dispatch": {
         const { workspaceId, action } = command.input;
         if (action.type !== "start") return refuse(classicReviewMessage);
-        if (action.candidateProfile !== undefined) {
-          return refuse("A career profile cannot be chosen for a hosted run yet.");
-        }
         if (action.pageTarget !== undefined) {
           return refuse("Set the draft's length in the writing policy on the hosted service.");
         }
@@ -520,13 +525,16 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         const scoped = await scopedApplication(workspaceId, command.input.applicationId);
         const opportunityBrief =
           reviewedBrief(scoped) ?? refuse("Review this application's requirements first.");
-        const { modelProfiles } = action;
+        const { modelProfiles, candidateProfile } = action;
         await client.call("POST /v1/workspaces/{workspaceId}/runs", {
           path: { workspaceId },
           header: { "idempotency-key": idempotencyKey() },
           body: {
             applicationId: scoped.id,
             opportunityBrief,
+            ...(candidateProfile === undefined
+              ? {}
+              : { candidateProfile: { ...candidateProfile } }),
             ...(modelProfiles === undefined
               ? {}
               : {

@@ -1,6 +1,6 @@
-import type { CanonicalCandidateProfileRecordResult } from "@draft-loop/ui/bridge";
 import { describe, expect, it } from "vitest";
-import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
+import type { CanonicalCandidateProfileRecordResult } from "./bridge.js";
+import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog-projection.js";
 
 function projectedRecord(
   profileId: string,

@@ -1,6 +1,25 @@
-import type { CandidateProfileFreshness } from "@draft-loop/application";
+import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
-import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
+/**
+ * The service's freshness, as the desktop's application service and the hosted API's freshness
+ * view both state it.
+ */
+export type ServiceProfileFreshness =
+  | { readonly state: "not-generated" }
+  | { readonly state: "up-to-date"; readonly version: number }
+  | {
+      readonly state: "update-available";
+      readonly version: number;
+      readonly newSourceCount: number;
+      readonly changedSourceCount: number;
+      readonly removedSourceCount: number;
+    }
+  | {
+      readonly state: "review-pending";
+      readonly version: number;
+      readonly reviewedVersion?: number;
+    }
+  | { readonly state: "unavailable"; readonly version: number };
 
 /**
  * Host-side projection of the profile freshness: a state and counts, never source names or paths.
@@ -9,7 +28,7 @@ import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-co
 export function projectProfileFreshness(
   workspaceId: string,
   profileId: string,
-  freshness: CandidateProfileFreshness | undefined,
+  freshness: ServiceProfileFreshness | undefined,
 ): ProfileFreshnessResult {
   const base = {
     workspaceId,

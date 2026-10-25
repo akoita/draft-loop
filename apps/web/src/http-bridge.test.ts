@@ -414,7 +414,7 @@ describe("the shared screens' commands over HTTP", () => {
     expect(created).toMatchObject({ ok: true, value: { extraction: "pending" } });
   });
 
-  it("begins a run with an idempotency key and reads queued work as drafting", async () => {
+  it("begins a run with an idempotency key and a chosen career profile, reading queued work as drafting", async () => {
     const { port, calls } = portOver({
       "POST /v1/workspaces/{workspaceId}/runs": () => ({
         ...syntheticRun,
@@ -445,8 +445,10 @@ describe("the shared screens' commands over HTTP", () => {
       header: { "idempotency-key": "run-key-0001" },
       body: { applicationId: "app-ledger", opportunityBrief: { briefId: "brief-1", version: 2 } },
     });
-    expect(withProfile).toMatchObject({ ok: false, error: { code: "operation-failed" } });
-    expect(calls).toHaveLength(1);
+    expect(withProfile).toMatchObject({ ok: true, value: { runId: "run-1" } });
+    expect(calls[1]?.input).toMatchObject({
+      body: { candidateProfile: { profileId: "profile-1", version: 1 } },
+    });
   });
 
   it("reads the workspace's newest run when none is named, and no run before the first", async () => {
@@ -624,7 +626,7 @@ describe("the shared screens' commands over HTTP", () => {
         workspaceId,
         runId: "pending",
         applicationId: "app-ledger",
-        action: { type: "start" },
+        action: { type: "start", candidateProfile: { profileId: "career", version: 2 } },
       },
     });
 
@@ -638,6 +640,7 @@ describe("the shared screens' commands over HTTP", () => {
           body: {
             applicationId: "app-ledger",
             opportunityBrief: { briefId: "brief-1", version: 3 },
+            candidateProfile: { profileId: "career", version: 2 },
           },
         },
       },
