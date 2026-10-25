@@ -335,6 +335,12 @@ describe("hosted application driver", () => {
     }
     expect(review?.independentReview).not.toBeNull();
     expect(review?.readiness).not.toBeNull();
+    // The review screen names each finding's requirement from the run's recorded context.
+    const requirements = await service.readRunRequirements?.({
+      root: workspace,
+      runId: resumed.runId,
+    });
+    expect(requirements?.length).toBeGreaterThan(0);
     await expect(
       service.readRunReview?.({ root: workspace, runId: "missing" }),
     ).resolves.toBeUndefined();
