@@ -86,10 +86,10 @@ function derivationStates(...states: ApiSchemas["CareerProfileDerivation"][]): H
 describe("career profile commands over HTTP", () => {
   it("queues a derivation with the person's approval and waits for the version it saved", async () => {
     const { answer, calls, waits } = answersOver({
-      [`POST ${derivationPath}`]: () => ({ status: "pending" }),
+      [`POST ${derivationPath}`]: () => ({ status: "pending", started: false }),
       [`GET ${derivationPath}`]: derivationStates(
-        { status: "pending" },
-        { status: "pending", completedCalls: 1, plannedCalls: 2 },
+        { status: "pending", started: false },
+        { status: "pending", started: true, completedCalls: 1, plannedCalls: 2 },
         { status: "derived", version: 3 },
       ),
       "GET /v1/workspaces/{workspaceId}/profiles/{profileId}": () => profileView(3),
@@ -111,7 +111,7 @@ describe("career profile commands over HTTP", () => {
 
   it("asks for every source again only when the person chose it", async () => {
     const { answer, calls } = answersOver({
-      [`POST ${derivationPath}`]: () => ({ status: "pending" }),
+      [`POST ${derivationPath}`]: () => ({ status: "pending", started: false }),
       [`GET ${derivationPath}`]: () => ({ status: "derived", version: 1 }),
       "GET /v1/workspaces/{workspaceId}/profiles/{profileId}": () => profileView(1),
     });
@@ -141,7 +141,7 @@ describe("career profile commands over HTTP", () => {
     ];
     for (const [state, message] of outcomes) {
       const { answer } = answersOver({
-        [`POST ${derivationPath}`]: () => ({ status: "pending" }),
+        [`POST ${derivationPath}`]: () => ({ status: "pending", started: false }),
         [`GET ${derivationPath}`]: () => state,
       });
 
@@ -149,11 +149,12 @@ describe("career profile commands over HTTP", () => {
     }
   });
 
-  it("reads progress while a derivation runs, and nothing active before or after", async () => {
+  it("reads progress while a derivation waits or runs, and nothing active before or after", async () => {
     const { answer } = answersOver({
       [`GET ${derivationPath}`]: derivationStates(
-        { status: "pending", completedCalls: 2, plannedCalls: 5 },
-        { status: "pending" },
+        { status: "pending", started: false },
+        { status: "pending", started: true, completedCalls: 2, plannedCalls: 5 },
+        { status: "pending", started: true },
         { status: "derived", version: 1 },
       ),
     });
@@ -167,6 +168,8 @@ describe("career profile commands over HTTP", () => {
       input: { workspaceId, profileId },
     };
 
+    // Queued and not yet claimed by a worker, the screen says it waits to start.
+    expect(await answer(progress)).toEqual({ active: true, queued: true });
     expect(await answer(progress)).toEqual({ active: true, completedCalls: 2, plannedCalls: 5 });
     expect(await answer(progress)).toEqual({ active: true });
     expect(await answer(progress)).toEqual({ active: false });

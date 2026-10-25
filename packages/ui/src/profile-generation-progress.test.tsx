@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   formatProfileGenerationElapsed,
   formatProfileGenerationPart,
+  nextProfileGenerationProgress,
   ProfileGenerationCancel,
   ProfileGenerationProgress,
+  profileGenerationQueuedLabel,
 } from "./profile-generation-progress.js";
 
 describe("formatProfileGenerationElapsed", () => {
@@ -93,5 +95,27 @@ describe("ProfileGenerationCancel", () => {
     );
     expect(cancelling).toContain("Cancelling…");
     expect(cancelling).toContain('disabled=""');
+  });
+});
+
+describe("a generation that waits for a worker", () => {
+  it("says it waits to start, then shows the counts once the worker reports them", () => {
+    const queued = nextProfileGenerationProgress(undefined, { queued: true });
+    expect(queued).toEqual({ queued: true });
+    if (queued === undefined) throw new Error("expected the queued state");
+    expect(formatProfileGenerationPart(queued)).toBe(profileGenerationQueuedLabel);
+    expect(
+      renderToStaticMarkup(<ProfileGenerationProgress startedAt={0} now={0} progress={queued} />),
+    ).toContain(profileGenerationQueuedLabel);
+
+    // Started without counts yet: the wait is over, so the label goes.
+    expect(nextProfileGenerationProgress(queued, {})).toBeUndefined();
+    const counted = nextProfileGenerationProgress(undefined, {
+      completedCalls: 1,
+      plannedCalls: 2,
+    });
+    expect(counted).toEqual({ completedCalls: 1, plannedCalls: 2 });
+    // A poll without counts keeps the last ones.
+    expect(nextProfileGenerationProgress(counted, {})).toBe(counted);
   });
 });

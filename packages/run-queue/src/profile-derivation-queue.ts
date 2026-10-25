@@ -81,7 +81,7 @@ export function profileDerivationQueue(boss: PgBoss, schema: string): ProfileDer
       if (job === undefined) return undefined;
       if (outstanding.has(job.state)) {
         const progress = await readProgress(boss, schema, job.id);
-        return { status: "pending", ...progress };
+        return { status: "pending", started: job.state === "active", ...progress };
       }
       if (job.state === "cancelled") return { status: "cancelled" };
       // A job that failed its retries, as after crashes, says nothing a person can act on.

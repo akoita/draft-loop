@@ -2817,6 +2817,10 @@
                 "type": "string",
                 "const": "pending"
               },
+              "started": {
+                "type": "boolean",
+                "description": "False while the derivation waits for a worker; true once one runs it."
+              },
               "completedCalls": {
                 "type": "integer",
                 "minimum": -9007199254740991,
@@ -2829,7 +2833,8 @@
               }
             },
             "required": [
-              "status"
+              "status",
+              "started"
             ]
           },
           {
@@ -7340,6 +7345,10 @@
                 "type": "string",
                 "const": "pending"
               },
+              "started": {
+                "type": "boolean",
+                "description": "False while the derivation waits for a worker; true once one runs it."
+              },
               "completedCalls": {
                 "type": "integer",
                 "minimum": -9007199254740991,
@@ -7352,7 +7361,8 @@
               }
             },
             "required": [
-              "status"
+              "status",
+              "started"
             ],
             "additionalProperties": false
           },

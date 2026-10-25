@@ -2750,6 +2750,8 @@ export const canonicalCandidateProfileGenerationCancelledMessage =
 /** Counts are present only once the running generation has reported them. */
 export interface CanonicalCandidateProfileProgressResult {
   readonly active: boolean;
+  /** True while a host that queues generations has not started this one yet. */
+  readonly queued?: boolean;
   readonly completedCalls?: number;
   readonly plannedCalls?: number;
 }
@@ -2840,6 +2842,7 @@ const canonicalCandidateProfileCancelKeys = inputKeys<CanonicalCandidateProfileC
 const canonicalCandidateProfileProgressResultKeys =
   resultKeys<CanonicalCandidateProfileProgressResult>()([
     "active",
+    "queued",
     "completedCalls",
     "plannedCalls",
   ]);
@@ -8101,6 +8104,18 @@ function normalizeCanonicalCandidateProfileProgressResult(
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, canonicalCandidateProfileProgressResultKeys)) return invalidInput();
   const active = booleanValue(result.active);
+  if (result.queued !== undefined) {
+    // A queued generation has neither started nor counted anything.
+    if (
+      !active ||
+      booleanValue(result.queued) !== true ||
+      result.completedCalls !== undefined ||
+      result.plannedCalls !== undefined
+    ) {
+      return invalidInput();
+    }
+    return { active, queued: true };
+  }
   if (result.completedCalls === undefined && result.plannedCalls === undefined) {
     return { active };
   }

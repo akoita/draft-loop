@@ -2294,8 +2294,15 @@ describe("desktop capability bridge", () => {
     await expect(
       respond({ active: true, completedCalls: 1, plannedCalls: 3 }, "profile.progress"),
     ).resolves.toEqual({ ok: true, value: { active: true, completedCalls: 1, plannedCalls: 3 } });
+    await expect(respond({ active: true, queued: true }, "profile.progress")).resolves.toEqual({
+      ok: true,
+      value: { active: true, queued: true },
+    });
     for (const malformed of [
       { active: "yes" },
+      { active: false, queued: true },
+      { active: true, queued: false },
+      { active: true, queued: true, completedCalls: 0, plannedCalls: 3 },
       { active: true, completedCalls: 1 },
       { active: false, completedCalls: 1, plannedCalls: 3 },
       { active: true, completedCalls: 4, plannedCalls: 3 },

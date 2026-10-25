@@ -181,7 +181,7 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     expect(await queue.profileDerivationState(key)).toBeUndefined();
     expect(await queue.cancelProfileDerivation(key)).toBe(false);
     await queue.enqueueProfileDerivation({ ...key, providerDataApproved: true });
-    expect(await queue.profileDerivationState(key)).toEqual({ status: "pending" });
+    expect(await queue.profileDerivationState(key)).toEqual({ status: "pending", started: false });
 
     const [{ id }] = (
       await keyed(
@@ -194,6 +194,7 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     );
     expect(await queue.profileDerivationState(key)).toEqual({
       status: "pending",
+      started: true,
       completedCalls: 2,
       plannedCalls: 5,
     });

@@ -48,6 +48,7 @@ function fakeDerivations() {
     queue: vi.fn<ProfileDerivations["queue"]>(async () => true),
     state: vi.fn<ProfileDerivations["state"]>(async () => ({
       status: "pending",
+      started: true,
       completedCalls: 1,
       plannedCalls: 3,
     })),
@@ -62,7 +63,7 @@ describe("career profile derivation routes", () => {
 
     const started = await call("POST", { providerDataApproved: true, fullExtraction: true });
 
-    expect(started).toEqual({ status: 202, body: { status: "pending" } });
+    expect(started).toEqual({ status: 202, body: { status: "pending", started: false } });
     expect(derivations.queue).toHaveBeenCalledWith({
       workspaceId: "r1",
       profileId: "career",
@@ -88,6 +89,7 @@ describe("career profile derivation routes", () => {
 
     expect((await call("GET")).body).toEqual({
       status: "pending",
+      started: true,
       completedCalls: 1,
       plannedCalls: 3,
     });

@@ -97,6 +97,7 @@ export interface ApiSchemas {
   };
   "CareerProfileDerivation": {
     readonly status: "pending";
+    readonly started: boolean;
     readonly completedCalls?: number;
     readonly plannedCalls?: number;
   } | {

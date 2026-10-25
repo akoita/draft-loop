@@ -109,6 +109,7 @@ export function createProfileAnswers(client: ApiClient, options: ProfileAnswerOp
         const { workspaceId, profileId } = command.input;
         const state = await derivation(workspaceId, profileId);
         if (state?.status !== "pending") return { active: false };
+        if (!state.started) return { active: true, queued: true };
         return {
           active: true,
           ...(state.completedCalls === undefined || state.plannedCalls === undefined
