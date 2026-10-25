@@ -10,6 +10,7 @@ import {
   type RunQueue,
   runQueueName,
 } from "./pg-boss-run-queue.js";
+import { profileDerivationQueueName } from "./profile-derivation-queue.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -148,6 +149,73 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     );
     expect(await queue.briefExtractionState(version)).toBe("failed");
     expect(await queue.briefExtractionState({ ...version, version: 2 })).toBeUndefined();
+  });
+
+  it("queues one career profile derivation at a time per profile, carrying only ids", async () => {
+    const job = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      profileId: "career",
+      providerDataApproved: true,
+    };
+
+    expect(await queue.enqueueProfileDerivation(job)).toBe(true);
+    expect(await queue.enqueueProfileDerivation(job)).toBe(false);
+
+    const derivations = (
+      await admin.query(`SELECT data, singleton_key FROM ${schema}.job WHERE name = $1`, [
+        profileDerivationQueueName,
+      ])
+    ).rows;
+    expect(derivations).toEqual([{ data: job, singleton_key: "tenant-a/workspace-1/career" }]);
+    await expect(
+      queue.enqueueProfileDerivation({ ...job, evidence: "candidate material" } as never),
+    ).rejects.toThrow();
+  });
+
+  it("reports a derivation's progress, its outcome and a cancel", async () => {
+    const key = { tenantId: "tenant-a", workspaceId: "workspace-2", profileId: "career" };
+    const keyed = (sql: string, values: unknown[] = []) =>
+      admin.query(sql, [profileDerivationQueueName, "tenant-a/workspace-2/career", ...values]);
+
+    expect(await queue.profileDerivationState(key)).toBeUndefined();
+    expect(await queue.cancelProfileDerivation(key)).toBe(false);
+    await queue.enqueueProfileDerivation({ ...key, providerDataApproved: true });
+    expect(await queue.profileDerivationState(key)).toEqual({ status: "pending" });
+
+    const [{ id }] = (
+      await keyed(
+        `UPDATE ${schema}.job SET state = 'active' WHERE name = $1 AND singleton_key = $2 RETURNING id`,
+      )
+    ).rows;
+    await admin.query(
+      `INSERT INTO ${schema}.job_progress (job_id, completed_calls, planned_calls) VALUES ($1, 2, 5)`,
+      [id],
+    );
+    expect(await queue.profileDerivationState(key)).toEqual({
+      status: "pending",
+      completedCalls: 2,
+      plannedCalls: 5,
+    });
+
+    await keyed(
+      `UPDATE ${schema}.job SET state = 'completed', output = $3 WHERE name = $1 AND singleton_key = $2`,
+      [JSON.stringify({ outcome: "derived", version: 3 })],
+    );
+    expect(await queue.profileDerivationState(key)).toEqual({ status: "derived", version: 3 });
+    await keyed(`UPDATE ${schema}.job SET output = $3 WHERE name = $1 AND singleton_key = $2`, [
+      JSON.stringify({ outcome: "consent-required" }),
+    ]);
+    expect(await queue.profileDerivationState(key)).toEqual({
+      status: "failed",
+      reason: "consent-required",
+    });
+
+    // A later derivation is the newest, and a cancel ends it.
+    await queue.enqueueProfileDerivation({ ...key, providerDataApproved: true });
+    expect(await queue.cancelProfileDerivation(key)).toBe(true);
+    expect(await queue.profileDerivationState(key)).toEqual({ status: "cancelled" });
+    expect(await queue.cancelProfileDerivation(key)).toBe(false);
   });
 
   it("does not let the runtime role change the queue's schema", async () => {

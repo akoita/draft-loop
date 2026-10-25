@@ -2,10 +2,10 @@ import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
   canonicalCandidateProfileSelectionStaleErrorMessage,
-} from "@draft-loop/application";
+} from "./candidate-profile-derivation.js";
 
 // Fixed, path-free application messages a user can act on. Only these exact
-// strings may cross the bridge; any other derivation failure stays generic.
+// strings may reach a person; any other derivation failure stays generic.
 // The derivation service throws the first three as plain errors, and the
 // workspace layer throws the last as a user error, so the message identifies
 // them, not the error class. Profile size limits are not thrown: the
@@ -19,8 +19,8 @@ const userFixableProfileDerivationMessages: ReadonlySet<string> = new Set([
 
 /**
  * Returns the user-facing message for a known, user-fixable profile derivation
- * failure, or `undefined` when the error must stay behind the generic bridge
- * message.
+ * failure, or `undefined` when the error must stay behind a generic message.
+ * The desktop host and the hosted worker both use it.
  */
 export function userFixableProfileDerivationMessage(error: unknown): string | undefined {
   if (!(error instanceof Error) || !userFixableProfileDerivationMessages.has(error.message)) {

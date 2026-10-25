@@ -9,6 +9,10 @@ import {
   type BriefExtractionHandlerOptions,
   createBriefExtractionHandler,
 } from "./brief-extraction-handler.js";
+import {
+  createProfileDerivationHandler,
+  type ProfileDerivationHandlerOptions,
+} from "./profile-derivation-handler.js";
 import { createRunJobHandler, type RunJobHandlerOptions } from "./run-job-handler.js";
 
 export interface WorkerOptions {
@@ -16,6 +20,8 @@ export interface WorkerOptions {
   readonly runs: RunJobHandlerOptions;
   /** Live briefs to extract (ADR 0011, D9); unset, the worker takes run jobs only. */
   readonly briefs?: BriefExtractionHandlerOptions;
+  /** Career profiles to derive (ADR 0011, D9); unset, the worker takes none. */
+  readonly profiles?: ProfileDerivationHandlerOptions;
 }
 
 export interface Worker extends RunWorker {
@@ -24,8 +30,8 @@ export interface Worker extends RunWorker {
 }
 
 /**
- * Starts executing queued runs, and extracting queued briefs when given their options, through the
- * application service the composition root built.
+ * Starts executing queued runs, and extracting queued briefs and deriving queued career profiles
+ * when given their options, through the application service the composition root built.
  */
 export async function startWorker(
   options: WorkerOptions,
@@ -34,12 +40,14 @@ export async function startWorker(
   const handle = createRunJobHandler(options.runs);
   const extract =
     options.briefs === undefined ? undefined : createBriefExtractionHandler(options.briefs);
+  const derive =
+    options.profiles === undefined ? undefined : createProfileDerivationHandler(options.profiles);
   let running = 0;
   let lastActiveAt = now();
-  const tracked = async (work: () => Promise<void>) => {
+  const tracked = async <Result>(work: () => Promise<Result>): Promise<Result> => {
     running += 1;
     try {
-      await work();
+      return await work();
     } finally {
       running -= 1;
       lastActiveAt = now();
@@ -48,7 +56,12 @@ export async function startWorker(
   const worker = await startRunWorker(
     options.queue,
     (job, control) => tracked(() => handle(job, control)),
-    extract === undefined ? undefined : (job) => tracked(() => extract(job)),
+    {
+      ...(extract === undefined ? {} : { briefExtraction: (job) => tracked(() => extract(job)) }),
+      ...(derive === undefined
+        ? {}
+        : { profileDerivation: (job, control) => tracked(() => derive(job, control)) }),
+    },
   );
   return {
     stop: (stopOptions) => worker.stop(stopOptions),

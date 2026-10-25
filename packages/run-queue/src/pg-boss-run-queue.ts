@@ -7,6 +7,13 @@ import {
   briefExtractionJobKey,
   briefExtractionJobSchema,
 } from "./brief-extraction-job.js";
+import {
+  type ProfileDerivationQueue,
+  profileDerivationProgressTableSql,
+  profileDerivationQueue,
+  profileDerivationQueueName,
+  profileDerivationQueueSettings,
+} from "./profile-derivation-queue.js";
 import { type RunJob, runJobKey, runJobSchema } from "./run-job.js";
 
 export const runQueueName = "draft-loop-runs";
@@ -24,7 +31,7 @@ export interface EnqueueRunOptions {
 }
 
 /** The producer side of the run queue, as the API uses it. */
-export interface RunQueue {
+export interface RunQueue extends ProfileDerivationQueue {
   /**
    * Queues the run unless a job for it is already waiting. Safe to repeat: a retried request
    * queues nothing new while the first job waits, and a worker skips a run that is already done.
@@ -83,7 +90,8 @@ export const briefExtractionQueueSettings: Omit<Queue, "name"> = {
 const schemaPattern = /^[a-z_][a-z0-9_]{0,62}$/u;
 const rolePattern = /^[a-z_][a-z0-9_]{0,62}$/u;
 
-function queueSchema(options: RunQueueOptions): string {
+/** @internal Shared with the worker side; not part of the package's exports. */
+export function queueSchema(options: RunQueueOptions): string {
   const schema = options.schema ?? "draft_loop_queue";
   if (!schemaPattern.test(schema)) throw new Error(`Invalid queue schema name: ${schema}`);
   return schema;
@@ -104,8 +112,8 @@ export function bossOptions(
 }
 
 /**
- * Creates or upgrades the queue's schema, the run queue and the brief extraction queue, as the
- * role that owns the database objects. Like storage migrations, it runs at deploy time, never from
+ * Creates or upgrades the queue's schema, the run, brief extraction and profile derivation queues
+ * and the derivations' progress table, as the role that owns the database objects. Like storage migrations, it runs at deploy time, never from
  * the running service.
  */
 export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
@@ -117,6 +125,7 @@ export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
     for (const [name, settings] of [
       [runQueueName, runQueueSettings],
       [briefExtractionQueueName, briefExtractionQueueSettings],
+      [profileDerivationQueueName, profileDerivationQueueSettings],
     ] as const) {
       if ((await boss.getQueue(name)) === null) {
         await boss.createQueue(name, settings);
@@ -131,6 +140,7 @@ export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
       } = settings;
       await boss.updateQueue(name, mutable);
     }
+    await boss.getDb().executeSql(profileDerivationProgressTableSql(queueSchema(options)));
   } finally {
     await boss.stop({ graceful: false, close: true });
   }
@@ -189,6 +199,7 @@ export async function openRunQueue(options: RunQueueOptions): Promise<RunQueue> 
         ? "pending"
         : undefined;
     },
+    ...profileDerivationQueue(boss, queueSchema(options)),
     close: () => boss.stop({ graceful: false, close: true }),
   };
 }

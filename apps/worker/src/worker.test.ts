@@ -71,9 +71,9 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       )
     ).rows as { state: string; start_after: Date; retry_count: number }[];
 
-  const start = async (service: Service, briefs?: WorkerOptions["briefs"]) => {
+  const start = async (service: Service, more: Pick<WorkerOptions, "briefs" | "profiles"> = {}) => {
     worker = await startWorker({
-      ...(briefs === undefined ? {} : { briefs }),
+      ...more,
       queue: {
         connectionString: runtimeUrl(url),
         schema,
@@ -142,10 +142,12 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
     await start(
       { status: async () => undefined, resume: vi.fn() },
       {
-        serviceFor: () => ({ extractApplicationBrief }),
-        workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
-        allowProviderData: true,
-        onOutcome: (_job, outcome) => outcomes.push(outcome),
+        briefs: {
+          serviceFor: () => ({ extractApplicationBrief }),
+          workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
+          allowProviderData: true,
+          onOutcome: (_job, outcome) => outcomes.push(outcome),
+        },
       },
     );
     const job = {
@@ -173,6 +175,81 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       expectedVersion: 1,
       allowProviderData: true,
     });
+  });
+
+  /** A derivation that reports one call of two, then waits for `finish` or its cancel. */
+  function heldDerivation() {
+    let finish: (() => void) | undefined;
+    const calls: number[] = [];
+    const derive = vi.fn<ApplicationService["deriveCanonicalCandidateProfile"]>(
+      (command) =>
+        new Promise((resolve, reject) => {
+          calls.push(1);
+          command.onProgress?.({ completedCalls: 1, plannedCalls: 2 });
+          finish = () => resolve({ profile: { version: 1 } } as never);
+          command.signal?.addEventListener("abort", () => reject(command.signal?.reason));
+        }),
+    );
+    return { derive, calls, finish: () => finish?.() };
+  }
+
+  const startDeriving = (derive: ApplicationService["deriveCanonicalCandidateProfile"]) =>
+    start(
+      { status: async () => undefined, resume: vi.fn() },
+      {
+        profiles: {
+          serviceFor: () => ({ deriveCanonicalCandidateProfile: derive }),
+          workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
+          allowProviderData: true,
+        },
+      },
+    );
+
+  it("derives a queued career profile, showing its progress, then keeps the outcome", async () => {
+    const held = heldDerivation();
+    await startDeriving(held.derive);
+    const key = { tenantId: "tenant-a", workspaceId: "workspace-1", profileId: "career" };
+
+    await queue.enqueueProfileDerivation({ ...key, providerDataApproved: true });
+
+    await eventually(async () => {
+      expect(await queue.profileDerivationState(key)).toEqual({
+        status: "pending",
+        completedCalls: 1,
+        plannedCalls: 2,
+      });
+    });
+    held.finish();
+    await eventually(async () => {
+      expect(await queue.profileDerivationState(key)).toEqual({ status: "derived", version: 1 });
+    });
+    expect(held.derive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        root: "/tenants/tenant-a/workspaces/workspace-1",
+        profileId: "career",
+        allowProviderData: true,
+      }),
+    );
+    // The finished job leaves no progress behind.
+    expect((await admin.query(`SELECT * FROM ${schema}.job_progress`)).rows).toEqual([]);
+  });
+
+  it("stops a running derivation within seconds of its cancel, saving nothing", async () => {
+    const held = heldDerivation();
+    await startDeriving(held.derive);
+    const key = { tenantId: "tenant-a", workspaceId: "workspace-2", profileId: "career" };
+    await queue.enqueueProfileDerivation({ ...key, providerDataApproved: true });
+    await eventually(() => expect(held.calls).toEqual([1]));
+
+    expect(await queue.cancelProfileDerivation(key)).toBe(true);
+
+    // The worker's next heartbeat finds the job cancelled and aborts the derivation's signal.
+    await eventually(() => {
+      const signal = held.derive.mock.calls[0]?.[0].signal;
+      expect(signal?.aborted).toBe(true);
+    }, 10_000);
+    expect(await queue.profileDerivationState(key)).toEqual({ status: "cancelled" });
+    expect(held.calls).toEqual([1]);
   });
 
   it("pauses on a usage limit and resumes the run at the reset time", async () => {

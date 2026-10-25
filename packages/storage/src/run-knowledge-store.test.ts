@@ -16,6 +16,8 @@ function runStore(): CandidateKnowledgeRunStore {
     getCandidateKnowledgeBaseLifecycleReadiness: vi.fn(missing),
     getCandidateKnowledgeSourceSensitivityRules: missing,
     readManagedCandidateKnowledgeSourceVersion: missing,
+    getCandidateKnowledgeSource: missing,
+    listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
     inspectCandidateKnowledgeLexicalIndex: vi.fn(),
     queryCandidateKnowledge: vi.fn(),
     rebuildCandidateKnowledgeLexicalIndex: vi.fn(),
