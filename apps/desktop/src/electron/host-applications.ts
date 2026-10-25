@@ -9,10 +9,10 @@ import {
 } from "@draft-loop/application/model-profiles";
 
 import type {
-  ApplicationChosenRunView,
   ApplicationImportCounts,
   ApplicationSummaryView,
 } from "@draft-loop/ui/application-contract";
+import { chosenApplicationRun, newestApplicationRunId } from "@draft-loop/ui/application-run-order";
 
 /**
  * Host-side projection of job applications (ADR 0010).
@@ -21,34 +21,8 @@ import type {
  * and counts, and opens an application by id.
  */
 
-function newestRunId(view: ApplicationView): string | null {
-  let newest: ApplicationView["runs"][number] | undefined;
-  for (const run of view.runs) {
-    if (newest === undefined || Date.parse(run.startedAt) >= Date.parse(newest.startedAt)) {
-      newest = run;
-    }
-  }
-  return newest?.id ?? null;
-}
-
-/**
- * The chosen run with its number among the application's runs, oldest = 1, as the run switcher
- * numbers them; undefined when the application uses its newest run.
- */
-function chosenRunSummary(view: ApplicationView): ApplicationChosenRunView | undefined {
-  const chosen = view.chosenRun;
-  if (chosen === null || chosen === undefined) return undefined;
-  const oldestFirst = [...view.runs].sort((left, right) => {
-    const byTime = Date.parse(left.startedAt) - Date.parse(right.startedAt);
-    if (byTime !== 0 && !Number.isNaN(byTime)) return byTime;
-    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-  });
-  const index = oldestFirst.findIndex((run) => run.id === chosen.runId);
-  return index < 0 ? undefined : { runId: chosen.runId, runNumber: index + 1 };
-}
-
 export function projectApplication(view: ApplicationView): ApplicationSummaryView {
-  const chosenRun = chosenRunSummary(view);
+  const chosenRun = chosenApplicationRun(view.runs, view.chosenRun?.runId);
   return {
     id: view.id,
     name: view.name,
@@ -61,7 +35,7 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     runCount: view.runs.length,
     briefCount: view.briefs.length,
     exportCount: view.exports.length,
-    latestRunId: newestRunId(view),
+    latestRunId: newestApplicationRunId(view.runs),
     archivedAt: view.archivedAt,
     modelProfiles: view.modelProfiles,
     nameChosen: view.nameChosen,
@@ -221,7 +195,7 @@ export async function resolveApplicationScope(
   if (application === undefined) return null;
   return {
     application,
-    latestRunId: newestRunId(application) ?? undefined,
+    latestRunId: newestApplicationRunId(application.runs) ?? undefined,
     chosenRunId: application.chosenRun?.runId ?? undefined,
     created: !application.isDefault,
   };

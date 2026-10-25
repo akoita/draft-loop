@@ -198,6 +198,10 @@ import {
   projectModelProfileSupport,
   projectSavedModelProfiles,
 } from "@draft-loop/ui/model-profile-bridge";
+import {
+  projectOpportunityRecord as projectBriefRecord,
+  projectLatestOpportunity,
+} from "@draft-loop/ui/opportunity-projection";
 import type { ProviderRoutesView } from "@draft-loop/ui/provider-routes";
 import { providerSessionModelFeedback } from "@draft-loop/ui/provider-session-model-feedback";
 import {
@@ -264,10 +268,7 @@ import { backgroundRunFailureMessage, hostFailureMessage } from "./host-failure-
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { serializeKnowledgeStoreReads } from "./knowledge-store-reads.js";
 import { resolveWorkspaceJobDescriptionSource } from "./opportunity-job-description.js";
-import {
-  persistedLatestOpportunityBriefId,
-  projectLatestOpportunity,
-} from "./opportunity-latest.js";
+import { persistedLatestOpportunityBriefId } from "./opportunity-latest.js";
 import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
 import { projectProfileFreshness } from "./profile-freshness.js";
 import {
@@ -1784,163 +1785,9 @@ async function workspaceResult(
   return { workspace: { id: descriptor.id, name: await displayNameFor(root) } };
 }
 
-function opportunityRecordObject(value: unknown): {
-  readonly brief: Record<string, unknown>;
-  readonly checksum: string | null;
-} {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned an invalid record.");
-  }
-  const record = value as Record<string, unknown>;
-  const brief = record.brief;
-  if (typeof brief === "object" && brief !== null && !Array.isArray(brief)) {
-    return {
-      brief: brief as Record<string, unknown>,
-      checksum: typeof record.checksum === "string" ? record.checksum : null,
-    };
-  }
-  return { brief: record, checksum: null };
-}
-
-function opportunitySourcedText(value: unknown): OpportunityRecordResult["role"] {
-  if (value === null) return null;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned an invalid fact.");
-  }
-  const fact = value as Record<string, unknown>;
-  return { value: fact.value, sourceIds: fact.sourceIds } as OpportunityRecordResult["role"];
-}
-
-function opportunitySource(value: unknown): OpportunityRecordResult["sources"][number] {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned an invalid source.");
-  }
-  const source = value as Record<string, unknown>;
-  const provenance = source.provenance;
-  if (typeof provenance !== "object" || provenance === null || Array.isArray(provenance)) {
-    return fail("operation-failed", "The opportunity service returned an invalid source.");
-  }
-  const provenanceRecord = provenance as Record<string, unknown>;
-  const kind = provenanceRecord.kind;
-  const checksum =
-    kind === "approved-url" ? provenanceRecord.contentChecksum : provenanceRecord.checksum;
-  if (typeof kind !== "string" || typeof source.id !== "string") {
-    return fail("operation-failed", "The opportunity service returned an invalid source.");
-  }
-  return {
-    id: source.id,
-    kind,
-    classification: source.classification,
-    status: source.status,
-    checksum: checksum === null || typeof checksum === "string" ? checksum : null,
-    capturedAt: provenanceRecord.capturedAt,
-    ...(provenanceRecord.textOrigin === "job-posting-json-ld"
-      ? { textOrigin: "job-posting-json-ld" }
-      : {}),
-  } as OpportunityRecordResult["sources"][number];
-}
-
-function opportunityFactCollection<
-  Value extends "responsibilities" | "requirements" | "priorities",
->(value: unknown, field: Value): OpportunityRecordResult[Value] {
-  if (!Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned invalid facts.");
-  }
-  return value.map((entry) => {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      return fail("operation-failed", "The opportunity service returned invalid facts.");
-    }
-    const fact = entry as Record<string, unknown>;
-    return {
-      id: fact.id,
-      text: fact.text,
-      sourceIds: fact.sourceIds,
-      ...(field === "requirements" ? { priority: fact.priority } : {}),
-      ...(field !== "priorities" && fact.excerpt !== undefined ? { excerpt: fact.excerpt } : {}),
-    } as OpportunityRecordResult[Value][number];
-  }) as OpportunityRecordResult[Value];
-}
-
-function opportunityInstructions(value: unknown): OpportunityRecordResult["candidateInstructions"] {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned invalid instructions.");
-  }
-  const instructions = value as Record<string, unknown>;
-  const list = (candidate: unknown): readonly unknown[] => {
-    if (!Array.isArray(candidate)) {
-      return fail("operation-failed", "The opportunity service returned invalid instructions.");
-    }
-    return candidate;
-  };
-  return {
-    tone: opportunitySourcedText(instructions.tone),
-    applicationGoal: opportunitySourcedText(instructions.applicationGoal),
-    forbiddenLanguage: list(instructions.forbiddenLanguage).map(opportunitySourcedText),
-    focusAreas: list(instructions.focusAreas).map(opportunitySourcedText),
-  } as OpportunityRecordResult["candidateInstructions"];
-}
-
-function opportunityIssues(value: unknown): OpportunityRecordResult["issues"] {
-  if (!Array.isArray(value)) {
-    return fail("operation-failed", "The opportunity service returned invalid issues.");
-  }
-  return value.map((entry) => {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      return fail("operation-failed", "The opportunity service returned invalid issues.");
-    }
-    const issue = entry as Record<string, unknown>;
-    return {
-      id: issue.id,
-      code: issue.code,
-      status: issue.status,
-      severity: issue.severity,
-      message: issue.message,
-      sourceIds: issue.sourceIds,
-    };
-  }) as OpportunityRecordResult["issues"];
-}
-
-/**
- * Projects a persisted opportunity record before it reaches the renderer.
- *
- * In particular, URL provenance (originalUrl/finalUrl) and local file
- * paths/display names are intentionally not copied. This projection is kept
- * separate from bridge validation so a future application/storage field cannot
- * accidentally become renderer-visible merely by being added to a brief.
- */
+/** Projects a brief record for the renderer; a record it cannot read fails the command. */
 function projectOpportunityRecord(workspaceId: string, value: unknown): OpportunityRecordResult {
-  const { brief, checksum } = opportunityRecordObject(value);
-  if (
-    typeof brief.id !== "string" ||
-    typeof brief.version !== "number" ||
-    (brief.priorVersion !== null && typeof brief.priorVersion !== "number") ||
-    (brief.reviewedAt !== null && typeof brief.reviewedAt !== "string") ||
-    typeof brief.createdAt !== "string" ||
-    typeof brief.status !== "string"
-  ) {
-    return fail("operation-failed", "The opportunity service returned an invalid record.");
-  }
-  const sources = Array.isArray(brief.sources)
-    ? brief.sources.map(opportunitySource)
-    : fail("operation-failed", "The opportunity service returned invalid sources.");
-  return {
-    workspaceId,
-    briefId: brief.id,
-    version: brief.version,
-    priorVersion: brief.priorVersion,
-    status: brief.status as OpportunityRecordResult["status"],
-    createdAt: brief.createdAt,
-    reviewedAt: brief.reviewedAt,
-    checksum,
-    sources,
-    role: opportunitySourcedText(brief.role),
-    employer: opportunitySourcedText(brief.employer),
-    responsibilities: opportunityFactCollection(brief.responsibilities, "responsibilities"),
-    requirements: opportunityFactCollection(brief.requirements, "requirements"),
-    priorities: opportunityFactCollection(brief.priorities, "priorities"),
-    candidateInstructions: opportunityInstructions(brief.candidateInstructions),
-    issues: opportunityIssues(brief.issues),
-  };
+  return projectBriefRecord(workspaceId, value, (message) => fail("operation-failed", message));
 }
 
 const canonicalCandidateProfileRecordKeys = new Set([
