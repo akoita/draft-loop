@@ -260,6 +260,8 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     const profile = await asA("GET", profilePath);
     expect(profile.status).toBe(200);
     expect(profile.body.profile).toMatchObject({ id: "career", version: 1, status: "draft" });
+    // The view names the workspace the client addressed, so the shared screens can check it.
+    expect(profile.body.workspaceId).toBe("shared");
     expect((await asB("GET", profilePath)).status).toBe(404);
     expect((await asB("GET", "/v1/workspaces/shared/profiles")).body.versions).toEqual([]);
     expect((await asB("GET", "/v1/workspaces/a-only/profiles")).status).toBe(404);

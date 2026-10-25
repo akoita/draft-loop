@@ -92,10 +92,12 @@ export const profileViewSchema = z
   })
   .meta({ id: "CareerProfile" });
 
+/** The profile under the workspace id the client addressed, never the history's internal id. */
 function profileView(
+  workspaceId: string,
   record: CanonicalCandidateProfileVersionRecord,
 ): z.infer<typeof profileViewSchema> {
-  return { workspaceId: record.workspaceId, checksum: record.checksum, profile: record.profile };
+  return { workspaceId, checksum: record.checksum, profile: record.profile };
 }
 
 const profileVersionsSchema = z
@@ -177,7 +179,7 @@ export function registerProfileRoutes(
         await service.listCanonicalCandidateProfileVersions({
           root: workspaceRoot(request.params.workspaceId),
         })
-      ).map(profileView),
+      ).map((record) => profileView(request.params.workspaceId, record)),
     }),
   );
 
@@ -198,7 +200,7 @@ export function registerProfileRoutes(
         ...(request.query.version === undefined ? {} : { version: request.query.version }),
       });
       if (record === undefined) return reply.code(404).send(notFound);
-      return profileView(record);
+      return profileView(request.params.workspaceId, record);
     },
   );
 
@@ -217,7 +219,7 @@ export function registerProfileRoutes(
           root: workspaceRoot(request.params.workspaceId),
           profileId: request.params.profileId,
         })
-      ).map(profileView),
+      ).map((record) => profileView(request.params.workspaceId, record)),
     }),
   );
 
@@ -236,6 +238,7 @@ export function registerProfileRoutes(
     async (request) => {
       const { facts, issues } = request.body.patch;
       return profileView(
+        request.params.workspaceId,
         await refusingProfileRules(
           service.editCanonicalCandidateProfile({
             root: workspaceRoot(request.params.workspaceId),
@@ -266,6 +269,7 @@ export function registerProfileRoutes(
     },
     async (request) =>
       profileView(
+        request.params.workspaceId,
         await refusingProfileRules(
           service.reviewCanonicalCandidateProfile({
             root: workspaceRoot(request.params.workspaceId),
