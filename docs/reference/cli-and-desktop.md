@@ -1047,7 +1047,9 @@ its immutable versions, and creates edited or reviewed successors. Creation
 reads a JSON manifest containing an `id` and ordered `sources`; local-file
 paths exist only in that runtime input. Add `--allow-provider-data` only when
 the source text may be sent to the configured author model for structured
-extraction.
+extraction. A fixture workspace always extracts with its local fixture
+extractor, which reaches no provider, so it needs no flag; the hosted service's
+fixture workspaces extract the same way.
 
 ```sh
 pnpm --filter @draft-loop/cli start opportunity create ./workspace \

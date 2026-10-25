@@ -2214,7 +2214,7 @@ export function createLocalApplicationDriver(
           {
             now: timestamp,
             ...(command.signal === undefined ? {} : { signal: command.signal }),
-            ...(command.allowProviderData === true && {
+            ...((command.allowProviderData === true || config.fixtureMode) && {
               extractor: opportunityExtractionPortFor(config, {
                 ...providerOpportunityOptions,
                 allowProviderData: true,
