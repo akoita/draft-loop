@@ -66,6 +66,21 @@ const createWorkspaceBody = z.strictObject({
 
 type CreateWorkspaceBody = z.infer<typeof createWorkspaceBody>;
 
+/** The domain's limit for a reason to accept one lineage on both sides. */
+const maximumIndependenceRationaleCharacters = 500;
+
+const changeModelsBody = z.strictObject({
+  author: hostedModelSchema,
+  critic: hostedModelSchema,
+  independenceOverrideRationale: z
+    .string()
+    .trim()
+    .min(1)
+    .max(maximumIndependenceRationaleCharacters)
+    .optional()
+    .describe("Required only when the author and critic descend from the same weights."),
+});
+
 const knowledgeSelectionBody = z
   .strictObject({
     knowledgeBaseIds: z
@@ -173,6 +188,44 @@ export function registerWorkspaceRoutes(
       if (caller?.kind === "member") await options.planLimits?.requireRecordRoom(caller.tenantId);
       const descriptor = await service.initialize(initializeCommand(root, body), silent);
       return reply.code(201).send(workspaceView(descriptor));
+    },
+  );
+
+  app.patch(
+    "/v1/workspaces/:workspaceId/models",
+    {
+      schema: {
+        summary: "Change a workspace's author and critic models",
+        description:
+          "Applies from the next run; recorded runs keep the pair they ran with. Only Anthropic and OpenAI models are routed. A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
+        params: workspaceParams,
+        body: changeModelsBody,
+        response: {
+          200: workspaceViewSchema,
+          400: apiErrorSchema,
+          404: apiErrorSchema,
+          422: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const root = workspaceRoot(request.params.workspaceId);
+      if (!(await workspaceExists(service, root))) {
+        return reply.code(404).send(apiError("not_found", "No such workspace."));
+      }
+      const { author, critic, independenceOverrideRationale } = request.body;
+      const descriptor = await service.reconfigureModels(
+        {
+          root,
+          authorCompany: author.company,
+          authorModel: author.model,
+          criticCompany: critic.company,
+          criticModel: critic.model,
+          ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
+        },
+        silent,
+      );
+      return workspaceView(descriptor);
     },
   );
 

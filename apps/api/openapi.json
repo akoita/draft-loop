@@ -4160,6 +4160,18 @@
           "content"
         ]
       },
+      "WritingPolicyTemplateInput": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The template's Markdown text."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
       "HealthInput": {
         "type": "object",
         "properties": {
@@ -8413,6 +8425,19 @@
         ],
         "additionalProperties": false
       },
+      "WritingPolicyTemplate": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The template's Markdown text."
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "additionalProperties": false
+      },
       "Health": {
         "type": "object",
         "properties": {
@@ -9129,6 +9154,130 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/models": {
+      "patch": {
+        "summary": "Change a workspace's author and critic models",
+        "description": "Applies from the next run; recorded runs keep the pair they ran with. Only Anthropic and OpenAI models are routed. A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "author": {
+                    "type": "object",
+                    "properties": {
+                      "company": {
+                        "type": "string",
+                        "enum": [
+                          "anthropic",
+                          "openai"
+                        ]
+                      },
+                      "model": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                      }
+                    },
+                    "required": [
+                      "company",
+                      "model"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "critic": {
+                    "type": "object",
+                    "properties": {
+                      "company": {
+                        "type": "string",
+                        "enum": [
+                          "anthropic",
+                          "openai"
+                        ]
+                      },
+                      "model": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                      }
+                    },
+                    "required": [
+                      "company",
+                      "model"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "independenceOverrideRationale": {
+                    "description": "Required only when the author and critic descend from the same weights.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "author",
+                  "critic"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/knowledge-selection": {
       "put": {
         "summary": "Select the knowledge bases a workspace's runs use",
@@ -9337,6 +9486,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/writing-policy-template": {
+      "get": {
+        "summary": "Read the writing policy template",
+        "description": "The policy a new desktop workspace starts with, for an editor to begin from when a workspace has none. Reading it saves nothing.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingPolicyTemplate"
                 }
               }
             }

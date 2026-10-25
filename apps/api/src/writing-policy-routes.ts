@@ -1,5 +1,6 @@
 import {
   type ApplicationService,
+  defaultWritingPolicyContent,
   maximumWritingPolicyBytes,
   type WritingPolicyVersionView,
 } from "@draft-loop/application";
@@ -39,6 +40,10 @@ const writingPolicyVersionSchema = z
 const writingPolicySchema = writingPolicyVersionSchema
   .extend({ content: z.string().describe("The policy's Markdown text.") })
   .meta({ id: "WritingPolicy" });
+
+const writingPolicyTemplateSchema = z
+  .object({ content: z.string().describe("The template's Markdown text.") })
+  .meta({ id: "WritingPolicyTemplate" });
 
 /** Copies only the schema's fields: the compiled rules and preferences stay on the server. */
 const versionView = (view: WritingPolicyVersionView) => ({
@@ -116,6 +121,19 @@ export function registerWritingPolicyRoutes(
       }
       return active;
     },
+  );
+
+  app.get(
+    "/v1/writing-policy-template",
+    {
+      schema: {
+        summary: "Read the writing policy template",
+        description:
+          "The policy a new desktop workspace starts with, for an editor to begin from when a workspace has none. Reading it saves nothing.",
+        response: { 200: writingPolicyTemplateSchema },
+      },
+    },
+    async () => ({ content: defaultWritingPolicyContent }),
   );
 
   app.get(

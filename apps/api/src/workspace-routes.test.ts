@@ -286,3 +286,68 @@ describe("knowledge selection", () => {
     expect(response.statusCode).toBe(422);
   });
 });
+
+describe("workspace models", () => {
+  const change = (payload: unknown, workspaceId = "workspace-1") =>
+    app.inject({
+      method: "PATCH",
+      url: `/v1/workspaces/${workspaceId}/models`,
+      headers: { authorization },
+      payload: payload as Record<string, unknown>,
+    });
+  const pair = {
+    author: { company: "openai", model: "gpt-6.1-sol" },
+    critic: { company: "anthropic", model: "claude-sonnet-5-5" },
+  };
+
+  it("changes the pair for the next runs, with the reason for one lineage when given", async () => {
+    const reconfigureModels = vi.fn(async () => ({
+      ...descriptor,
+      author: pair.author,
+      critic: pair.critic,
+    }));
+    await build({ readWorkspace: async () => descriptor, reconfigureModels });
+
+    const response = await change({ ...pair, independenceOverrideRationale: "Checked by hand." });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ author: pair.author, critic: pair.critic });
+    expect(reconfigureModels).toHaveBeenCalledWith(
+      {
+        root,
+        authorCompany: "openai",
+        authorModel: "gpt-6.1-sol",
+        criticCompany: "anthropic",
+        criticModel: "claude-sonnet-5-5",
+        independenceOverrideRationale: "Checked by hand.",
+      },
+      expect.anything(),
+    );
+  });
+
+  it("routes only Anthropic and OpenAI models, and never a local endpoint", async () => {
+    const reconfigureModels = vi.fn();
+    await build({ readWorkspace: async () => descriptor, reconfigureModels });
+
+    const local = await change({ ...pair, author: { company: "local", model: "llama-4" } });
+    const endpoint = await change({ ...pair, localEndpoint: "http://127.0.0.1:11434" });
+
+    expect(local.statusCode).toBe(400);
+    expect(endpoint.statusCode).toBe(400);
+    expect(reconfigureModels).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for an unknown workspace and the service's refusal as 422", async () => {
+    await build({ readWorkspace: missing });
+    expect((await change(pair)).statusCode).toBe(404);
+    await app.close();
+
+    await build({
+      readWorkspace: async () => descriptor,
+      reconfigureModels: async () => {
+        throw new CliUserError("author and critic must use different model lineages");
+      },
+    });
+    expect((await change(pair)).statusCode).toBe(422);
+  });
+});
