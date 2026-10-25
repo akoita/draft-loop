@@ -471,6 +471,17 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
   );
 }
 
+/**
+ * Marking the brief reviewed finishes the dialog's job, so it closes and the next step's button
+ * is in reach; a save keeps it open on the new draft.
+ */
+export function briefDialogClosesAfter(
+  operation: "saving" | "reviewing",
+  outcome: BriefOperationOutcome,
+): boolean {
+  return operation === "reviewing" && outcome.kind === "done";
+}
+
 export interface OpportunityBriefReviewProps {
   readonly briefId: string;
   readonly operations: BriefOperations;
@@ -502,6 +513,8 @@ export function OpportunityBriefReview({
   operationsRef.current = operations;
   const changedRef = useRef(onBriefChanged);
   changedRef.current = onBriefChanged;
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     mounted.current = true;
@@ -568,6 +581,7 @@ export function OpportunityBriefReview({
         operation === "saving" && outcome.record.status === "draft" ? outcome.record.version : null,
       );
       changedRef.current?.();
+      if (briefDialogClosesAfter(operation, outcome)) closeRef.current();
       return;
     }
     setNotice({ kind: outcome.kind, message: outcome.message });

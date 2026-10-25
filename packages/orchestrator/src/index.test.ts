@@ -518,7 +518,15 @@ describe("durable orchestration", () => {
       author: async () => execution(unsupported, "anthropic", "author-test"),
     });
 
-    await engine.start(request());
+    const arrived = await engine.start(request());
+    // The run carries the final checks on arriving at approval, before any approval attempt.
+    expect(arrived.state).toBe("awaiting-approval");
+    expect(arrived.readinessDecision).toMatchObject({
+      applicationReady: false,
+      blockers: expect.arrayContaining([
+        expect.objectContaining({ code: "deterministic-error", checkCode: "unsupported-claim" }),
+      ]),
+    });
     await expect(engine.approve("run-1")).rejects.toThrow(/not application-ready/i);
     const blocked = await store.loadRun("run-1");
     expect(blocked?.state).toBe("awaiting-approval");
