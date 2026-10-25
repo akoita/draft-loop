@@ -2,6 +2,7 @@ import type {
   ApplicationService,
   ApplicationView,
   HostedKnowledgeIntake,
+  RunExport,
   RunReview,
   WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -178,6 +179,7 @@ const baseMethods: Partial<ApplicationService> = {
   getWritingPolicy: async () => undefined,
   listWritingPolicyVersions: async () => [],
   listApplications: async () => [application],
+  listRunExports: async () => [],
 };
 
 /** What the shared screens make of a response: the port validates every field it reads. */
@@ -317,6 +319,30 @@ describe("review state", () => {
     await expect(throughPort(state)).resolves.toMatchObject({
       ok: true,
       value: { runId: "run-1" },
+    });
+  });
+
+  it("names an exported run's newest download instead of a path on this machine", async () => {
+    const exported = (id: string, createdAt: string) =>
+      ({ id, runId: "run-1", format: "docx", createdAt }) as unknown as RunExport;
+    const listRunExports = vi.fn(async () => [
+      exported("export-old", "2026-10-24T09:00:00.000Z"),
+      exported("export-new", "2026-10-25T09:00:00.000Z"),
+    ]);
+    await build({
+      status: async () => ({ ...snapshot, state: "exported", approval: "approved" }),
+      readRunReview: async () => review,
+      readRunRequirements: async () => [],
+      listRunExports,
+    });
+
+    const response = await app.inject({ method: "GET", url, headers: { authorization } });
+
+    expect(response.statusCode).toBe(200);
+    expect(listRunExports).toHaveBeenCalledWith({ root, runId: "run-1" });
+    expect(response.json()).toMatchObject({
+      state: "exported",
+      exportPath: "cv-2026-10-25-export-new.docx",
     });
   });
 

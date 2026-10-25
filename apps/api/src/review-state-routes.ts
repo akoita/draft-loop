@@ -20,6 +20,7 @@ import {
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { newestApplicationRunId } from "@draft-loop/ui/application-run-order";
+import { exportFileName } from "@draft-loop/ui/export-file-name";
 import type {
   DesktopReviewState,
   OpportunityBriefSelection,
@@ -179,6 +180,18 @@ export function registerReviewStateRoutes(
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, knowledgeIntake } = options;
 
+  /**
+   * A hosted export has no path on this machine: the screen names the newest one's downloaded
+   * file instead, so an exported run never reads as a file not found.
+   */
+  const newestExportName = async (root: string, runId: string): Promise<string | null> => {
+    const exports = (await service.listRunExports?.({ root, runId })) ?? [];
+    const newest = [...exports].sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt),
+    )[0];
+    return newest === undefined ? null : exportFileName(newest);
+  };
+
   /** The selected knowledge bases' sources, the evidence a hosted run reads. */
   const evidenceSourceCount = async (descriptor: WorkspaceDescriptor): Promise<number> => {
     if (knowledgeIntake === undefined) return 0;
@@ -283,8 +296,7 @@ export function registerReviewStateRoutes(
           snapshot,
           independentReviewView(review?.independentReview ?? undefined),
           recordedDecisions(review, workspaceId),
-          // A hosted export is downloaded from its own route; it has no path on this machine.
-          null,
+          await newestExportName(root, snapshot.runId),
           setup,
           preflight,
           { running: executingRunStates.has(snapshot.state) },

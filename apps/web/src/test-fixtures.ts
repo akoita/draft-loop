@@ -1,7 +1,6 @@
 import type { ApiSchemas } from "./api-client.js";
 import type { Brief } from "./brief-model.js";
 import type { ConsentEntry, Consents } from "./consent-model.js";
-import type { RunReview } from "./review-model.js";
 import type { Run } from "./run-model.js";
 
 /** Fictional records for the screen's tests; no real candidate or employer. */
@@ -60,94 +59,6 @@ export const syntheticRun: Run = {
   startedAt: "2026-10-23T01:00:00.000Z",
   updatedAt: "2026-10-23T01:01:00.000Z",
   lastError: null,
-};
-
-export const syntheticReview: RunReview = {
-  run: { ...syntheticRun, state: "awaiting-approval", currentStep: null, findingCount: 2 },
-  draft: {
-    id: "draft-1",
-    version: 1,
-    createdAt: "2026-10-23T01:02:00.000Z",
-    sections: [
-      {
-        id: "experience",
-        title: "Experience",
-        kind: "experience",
-        blocks: [
-          {
-            id: "block-1",
-            type: "bullet",
-            text: "Built TypeScript services for Example Ledger's billing platform.",
-            edited: false,
-            claimIds: ["claim-1"],
-          },
-        ],
-      },
-      {
-        id: "skills",
-        title: "Skills",
-        kind: "skills",
-        blocks: [
-          {
-            id: "block-2",
-            type: "paragraph",
-            text: "TypeScript, Postgres",
-            edited: true,
-            claimIds: [],
-          },
-        ],
-      },
-    ],
-    claims: [
-      {
-        id: "claim-1",
-        text: "Built TypeScript services",
-        status: "supported",
-        substantive: true,
-        evidence: [
-          {
-            sourcePath: "career.md",
-            locator: "Experience, line 4",
-            excerpt: "Built TypeScript services with deterministic testing.",
-          },
-        ],
-      },
-    ],
-  },
-  findings: [
-    {
-      id: "finding-1",
-      code: "weak-impact",
-      category: "quality",
-      severity: "warning",
-      message: "Say what the services changed for the billing team.",
-      decision: "pending",
-      claimId: "claim-1",
-    },
-    {
-      id: "finding-2",
-      code: "uncovered-requirement",
-      category: "coverage",
-      severity: "error",
-      message: "No block covers the Postgres requirement.",
-      decision: "accepted",
-      requirement: { id: "req-2", text: "Postgres" },
-    },
-  ],
-  independentReview: {
-    authorLineage: "anthropic",
-    criticLineage: "openai",
-    lineagesDistinct: true,
-    required: true,
-  },
-  readiness: {
-    status: "not-ready",
-    ready: false,
-    stopReason: "blocking-findings",
-    scores: [{ dimension: "coverage", score: 0.75, threshold: 0.8, meets: false }],
-  },
-  approvalCheck: { applicationReady: false, blockers: ["One error finding is not resolved."] },
-  candidateDirection: null,
 };
 
 const storageGrant: ConsentEntry = {

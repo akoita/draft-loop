@@ -512,6 +512,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     capabilityPort.hasCapability("workspace.create")
       ? {}
       : { workspaceClosable: false }),
+    ...(capabilityPort.hasCapability("export.write") ? {} : { exportsDownload: true }),
     openWorkspace: async () => {
       unwrap(
         await capabilityPort.execute({

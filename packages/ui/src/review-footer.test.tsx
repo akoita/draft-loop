@@ -393,6 +393,32 @@ describe("ReviewFooter", () => {
     expect(html).toContain("Exporting Markdown… Elapsed 4 min 36 s.");
   });
 
+  it("says a hosted export downloads instead of naming a Save As dialog", () => {
+    const exportAction: ReviewFooterProps["exportAction"] = {
+      disabled: true,
+      pathLabel: "Available after approval",
+      again: false,
+      pendingSeconds: 5,
+      format: "docx",
+      onFormatChange: noop,
+      template: "modern",
+      onTemplateChange: noop,
+      note: null,
+      downloads: true,
+      onExport: noop,
+    };
+    const pending = render({
+      blocker: { kind: "approved", text: "Approved · ready to export", tone: "safe" },
+      exportAction,
+    });
+    const later = render({ exportAction: { ...exportAction, pendingSeconds: null } });
+
+    expect(pending).toContain("The file downloads when it is ready.");
+    expect(pending).not.toContain("Save As");
+    expect(later).toContain("<strong>Export</strong>");
+    expect(later).not.toContain("Export locally");
+  });
+
   it("keeps the blocker and Details but hides every action on a read-only run", () => {
     const html = render({ readOnly: true, override });
     expect(html).toContain('aria-label="approval actions" hidden="">');

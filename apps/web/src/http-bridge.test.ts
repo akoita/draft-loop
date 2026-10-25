@@ -651,26 +651,22 @@ describe("the shared screens' commands over HTTP", () => {
     ]);
   });
 
-  it("leaves export to the classic steps and refuses a start without reviewed requirements", async () => {
+  it("refuses a start without reviewed requirements", async () => {
     const { client, calls } = scriptedClient({
       "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => ledgerApplication,
     });
     const bridge = createHttpBridge({ client });
-    const input = { workspaceId, runId: "run-1", applicationId: "app-ledger" };
 
-    const exported = await bridge.invoke({
-      type: "review.dispatch",
-      input: { ...input, action: { type: "export" } },
-    });
     const unreviewed = await bridge.invoke({
       type: "review.dispatch",
-      input: { ...input, action: { type: "start" } },
+      input: {
+        workspaceId,
+        runId: "run-1",
+        applicationId: "app-ledger",
+        action: { type: "start" },
+      },
     });
 
-    expect(exported).toMatchObject({
-      ok: false,
-      error: { message: expect.stringContaining("“Export”") },
-    });
     expect(unreviewed).toMatchObject({
       ok: false,
       error: { message: "Review this application's requirements first." },

@@ -436,6 +436,11 @@ export interface DesktopReviewPort {
    * shell chooses the workspace: closing one would leave nothing to open.
    */
   readonly workspaceClosable?: boolean;
+  /**
+   * True when the host has no file to write an export to, as on the hosted service: an export is
+   * downloaded by the browser instead of saved through a Save As dialog.
+   */
+  readonly exportsDownload?: boolean;
   readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
   readonly selectFiles?: (
     target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",

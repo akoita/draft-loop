@@ -21,13 +21,18 @@ function portOver(handlers: Readonly<Record<string, Handler>>) {
     },
   };
   // The bridge itself: the port would also check the projected state, which these stubs leave out.
-  const bridge = createHttpBridge({ client, idempotencyKey: () => "review-key-01" });
+  const downloads: { bytes: Blob; fileName: string }[] = [];
+  const bridge = createHttpBridge({
+    client,
+    idempotencyKey: () => "review-key-01",
+    download: (bytes, fileName) => downloads.push({ bytes, fileName }),
+  });
   const dispatch = (action: Record<string, unknown>) =>
     bridge.invoke({
       type: "review.dispatch",
       input: { workspaceId, runId, applicationId: "app-ledger", action },
     } as never);
-  return { dispatch, calls };
+  return { dispatch, calls, downloads };
 }
 
 const reviewState = { "GET /v1/workspaces/{workspaceId}/review-state": () => projected };
@@ -169,6 +174,67 @@ describe("the shared review screen's actions over HTTP", () => {
 
     expect(result).toEqual({ ok: true, value: projected });
     expect(calls).toEqual([reload]);
+  });
+
+  it("exports each format, Modern unless another template is chosen, and downloads the file", async () => {
+    const document = new Blob(["synthetic document"]);
+    const { dispatch, calls, downloads } = portOver({
+      ...reviewState,
+      "POST /v1/workspaces/{workspaceId}/runs/{runId}/exports": ({ body }) => ({
+        id: `export-${(body as { format: string }).format}`,
+        runId,
+        format: (body as { format: string }).format,
+        mimeType: "application/octet-stream",
+        createdAt: "2026-10-25T06:00:00.000Z",
+        checksum: "c".repeat(64),
+        sizeBytes: 18,
+      }),
+      "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content": () => document,
+    });
+
+    for (const action of [
+      { type: "export" },
+      { type: "export", format: "docx" },
+      { type: "export", format: "pdf", template: "compact" },
+    ]) {
+      expect(await dispatch(action)).toEqual({ ok: true, value: projected });
+    }
+
+    const exports = calls.filter(({ operation }) => operation.endsWith("/exports"));
+    expect(exports.map(({ input }) => input.body)).toEqual([
+      { format: "markdown" },
+      { format: "docx", templateId: "modern" },
+      { format: "pdf", templateId: "compact" },
+    ]);
+    expect(exports.every(({ input }) => input.header !== undefined)).toBe(true);
+    expect(downloads.map(({ fileName }) => fileName)).toEqual([
+      "cv-2026-10-25-export-markdown.md",
+      "cv-2026-10-25-export-docx.docx",
+      "cv-2026-10-25-export-pdf.pdf",
+    ]);
+    expect(downloads.every(({ bytes }) => bytes === document)).toBe(true);
+    expect(calls.at(-1)).toEqual(reload);
+  });
+
+  it("downloads nothing when the export is refused", async () => {
+    const { dispatch, downloads } = portOver({
+      ...reviewState,
+      "POST /v1/workspaces/{workspaceId}/runs/{runId}/exports": () => {
+        throw new ApiRequestError(
+          409,
+          "run_state_conflict",
+          "Only an approved run can be exported.",
+        );
+      },
+    });
+
+    const refused = await dispatch({ type: "export", format: "docx" });
+
+    expect(refused).toMatchObject({
+      ok: false,
+      error: { message: "Only an approved run can be exported." },
+    });
+    expect(downloads).toEqual([]);
   });
 
   it("refuses what the hosted service does not do yet, calling nothing", async () => {

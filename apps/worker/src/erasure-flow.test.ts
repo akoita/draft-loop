@@ -21,7 +21,6 @@ import {
 } from "@draft-loop/storage-postgres";
 import {
   type ApiClient,
-  approveRequest,
   archiveRequest,
   briefEdit,
   briefPatchBody,
@@ -29,7 +28,6 @@ import {
   createBriefBody,
   defaultWorkspaceForm,
   deleteRecordRequest,
-  exportRequestBody,
   recordIds,
   selectionRequest,
   startRunBody,
@@ -303,19 +301,14 @@ describe.runIf(connectionString !== undefined)("record export and erasure", () =
 
   /** Approves the drafted run and exports it as Markdown. */
   const approveAndExport = async (runPath: { workspaceId: string; runId: string }) => {
-    const review = await client().call("GET /v1/workspaces/{workspaceId}/runs/{runId}/review", {
-      path: runPath,
-    });
-    const approval = approveRequest(review, "Synthetic test run: the owner accepts the checks.");
-    if ("problem" in approval) throw new Error(approval.problem);
     await client().call("POST /v1/workspaces/{workspaceId}/runs/{runId}/approve", {
       path: runPath,
-      body: approval.body,
+      body: { readinessOverrideRationale: "Synthetic test run: the owner accepts the checks." },
     });
     await client().call("POST /v1/workspaces/{workspaceId}/runs/{runId}/exports", {
       path: runPath,
       header: { "idempotency-key": randomUUID() },
-      body: exportRequestBody("markdown", "modern"),
+      body: { format: "markdown" },
     });
   };
 

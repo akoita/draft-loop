@@ -17,6 +17,7 @@ import {
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
+import { exportFileName } from "@draft-loop/ui/export-file-name";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import {
   type ApiClient,
@@ -29,8 +30,6 @@ import {
   createHttpBridge,
   currentRunId,
   defaultWorkspaceForm,
-  exportFileName,
-  exportRequestBody,
   grantRequest,
   isGranted,
   ownerWorkspaceId,
@@ -243,7 +242,16 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
 
       // The shared review screen: the draft with its evidence, then one revision round, each
       // action through the port the screens dispatch on.
-      const screens = createBridgeReviewPort(createCapabilityPort(createHttpBridge({ client })));
+      const downloads: { bytes: Blob; fileName: string }[] = [];
+      const screens = createBridgeReviewPort(
+        createCapabilityPort(
+          createHttpBridge({
+            client,
+            download: (bytes, fileName) => downloads.push({ bytes, fileName }),
+          }),
+        ),
+      );
+      expect(screens.exportsDownload).toBe(true);
       let shared = await screens.load();
       expect(shared).toMatchObject({
         workspaceId: ownerWorkspaceId,
@@ -295,24 +303,22 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       }
       expect(shared).toMatchObject({ state: "approved", runId: begun.runId });
 
-      // Export stays on the earlier steps until the shared screens download it.
-      const exported = await client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/exports", {
-        path: runPath,
-        header: { "idempotency-key": randomUUID() },
-        body: exportRequestBody("docx", "modern"),
-      });
-      expect(exported).toMatchObject({ format: "docx", templateId: "modern" });
-      expect(exportFileName(exported)).toMatch(/\.docx$/);
+      // Export on the shared screen: Modern by default, downloaded by the browser under the
+      // name the screen then shows.
+      shared = await screens.dispatch(shared, { type: "export", format: "docx" });
+      const download = downloads.at(-1);
+      if (download === undefined) throw new Error("The export was downloaded.");
       const { exports } = await client.call(
         "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports",
         { path: runPath },
       );
-      expect(exports).toEqual([exported]);
-      const document = await client.call(
-        "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content",
-        { path: { ...runPath, exportId: exported.id } },
-      );
-      const bytes = Buffer.from(await document.arrayBuffer());
+      const [exported] = exports;
+      if (exported === undefined) throw new Error("The run has an export.");
+      expect(exported).toMatchObject({ format: "docx", templateId: "modern" });
+      expect(download.fileName).toBe(exportFileName(exported));
+      expect(download.fileName).toMatch(/\.docx$/);
+      expect(shared).toMatchObject({ state: "exported", exportPath: download.fileName });
+      const bytes = Buffer.from(await download.bytes.arrayBuffer());
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(exported.checksum);
       expect(bytes.byteLength).toBe(exported.sizeBytes);
       // A DOCX is a zip archive.

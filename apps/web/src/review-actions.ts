@@ -1,4 +1,6 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
+import { exportFileName } from "@draft-loop/ui/export-file-name";
+import { defaultExportTemplate } from "@draft-loop/ui/export-template";
 
 import { type ApiClient, ApiRequestError } from "./api-client.js";
 import { refuse } from "./bridge-refusal.js";
@@ -6,15 +8,19 @@ import { refuse } from "./bridge-refusal.js";
 type ReviewDispatch = Extract<BridgeCommand, { type: "review.dispatch" }>["input"];
 type ReviewAction = Exclude<ReviewDispatch["action"], { type: "start" }>;
 
-/** Export stays on the earlier steps until the shared screens download it. */
-export const classicExportMessage = "Export an approved draft in “Export” for now.";
+/** Hands an exported document to the browser as a file to save. */
+export type DownloadFile = (bytes: Blob, fileName: string) => void;
 
 /**
  * Carries out one of the shared review screen's actions on a run through the review routes
  * (ADR 0011, D9). The server decides each one as the desktop host does; the caller then reads the
  * review state again, so the screens see what the server recorded.
  */
-export function createReviewActions(client: ApiClient, idempotencyKey: () => string) {
+export function createReviewActions(
+  client: ApiClient,
+  idempotencyKey: () => string,
+  download: DownloadFile,
+) {
   return async (workspaceId: string, runId: string, action: ReviewAction): Promise<void> => {
     if (runId === "pending") return refuse("Start a run first.");
     const path = { workspaceId, runId };
@@ -84,8 +90,28 @@ export function createReviewActions(client: ApiClient, idempotencyKey: () => str
         return refuse(
           "This recovery is not available on the hosted service yet. Stop the run and start a new one.",
         );
-      case "export":
-        return refuse(classicExportMessage);
+      case "export": {
+        // The desktop's save dialog becomes a download: the service renders and keeps the
+        // document, then the browser saves its bytes under the name the screen shows.
+        const format = action.format ?? "markdown";
+        const exported = await client.call(
+          "POST /v1/workspaces/{workspaceId}/runs/{runId}/exports",
+          {
+            path,
+            header: { "idempotency-key": idempotencyKey() },
+            body:
+              format === "markdown"
+                ? { format }
+                : { format, templateId: action.template ?? defaultExportTemplate },
+          },
+        );
+        const bytes = await client.call(
+          "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content",
+          { path: { ...path, exportId: exported.id } },
+        );
+        download(bytes, exportFileName(exported));
+        return;
+      }
     }
   };
 }

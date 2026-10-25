@@ -29,7 +29,8 @@ import {
   hostedProfileCapabilities,
   isProfileCommand,
 } from "./profile-bridge.js";
-import { createReviewActions } from "./review-actions.js";
+import { createReviewActions, type DownloadFile } from "./review-actions.js";
+import { saveFile } from "./save-file.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 /**
@@ -84,6 +85,8 @@ export interface HttpBridgeOptions {
   readonly workspaceId?: string;
   /** Opens a file picker for a career evidence upload; the browser's own file input when unset. */
   readonly pickFile?: PickFile;
+  /** Saves an exported document; the browser's download when unset. */
+  readonly download?: DownloadFile;
 }
 
 /** The policy's text and identity, without the dates the editor does not show. */
@@ -172,7 +175,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const idempotencyKey = options.idempotencyKey ?? (() => globalThis.crypto.randomUUID());
   const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
   const answerProfile = createProfileAnswers(client);
-  const reviewAction = createReviewActions(client, idempotencyKey);
+  const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))
