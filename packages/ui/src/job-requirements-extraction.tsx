@@ -11,7 +11,11 @@ import {
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";
-import { noRequirementsFoundNote, noRequirementsFoundTitle } from "./start-requirements-model.js";
+import {
+  noRequirementsFoundNote,
+  noRequirementsFoundTitle,
+  pendingExtractionNote,
+} from "./start-requirements-model.js";
 
 /** The host connection that lets setup card 01 extract requirements from the workspace's job text. */
 export interface JobRequirementsExtractionBinding {
@@ -107,6 +111,8 @@ export async function runJobRequirementsExtraction(
       ],
       providerTransmissionApproved: true,
     });
+    // The service extracts it in the background: the setup card follows the saved brief until then.
+    if (record.extraction === "pending") return { kind: "running", background: true };
     return { kind: "done", summary: summarizeJobRequirements(record) };
   } catch (reason: unknown) {
     // A cancelled extraction is the person's own decision, so the card calmly returns to idle.
@@ -125,7 +131,12 @@ export async function runJobRequirementsExtraction(
 export type JobRequirementsPhase =
   | { readonly kind: "idle"; readonly notice?: string }
   | { readonly kind: "consent" }
-  | { readonly kind: "running"; readonly cancelling?: boolean }
+  | {
+      readonly kind: "running";
+      readonly cancelling?: boolean;
+      /** The brief is saved and the service is extracting it; nothing is left to cancel. */
+      readonly background?: boolean;
+    }
   | { readonly kind: "done"; readonly summary: JobRequirementsSummary }
   | { readonly kind: "failed"; readonly message: string };
 
@@ -265,9 +276,11 @@ export function JobRequirementsExtractionView({
           <p className="setup-note">
             {fixtureMode
               ? "Splitting the job text with local fixtures. Nothing is sent to a provider."
-              : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
+              : phase.background === true
+                ? pendingExtractionNote
+                : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
           </p>
-          {onCancelExtraction === undefined ? null : (
+          {onCancelExtraction === undefined || phase.background === true ? null : (
             <button
               className="button button-quiet"
               type="button"

@@ -2615,6 +2615,8 @@ export interface OpportunityRecordResult {
   readonly priorities: readonly OpportunityPriorityResult[];
   readonly candidateInstructions: OpportunityCandidateInstructionsResult;
   readonly issues: readonly OpportunityIssueResult[];
+  /** The service's own extraction of this version, as on `OpportunityLatestBrief`. */
+  readonly extraction?: "pending" | "failed";
 }
 
 export interface OpportunityListResult {
@@ -2631,6 +2633,11 @@ export interface OpportunityLatestBrief {
   readonly status: "draft" | "reviewed";
   readonly requirementCount: number;
   readonly criticalCount: number;
+  /**
+   * The service's own extraction of this version, as the hosted worker runs it: pending while it
+   * waits or runs, failed after its retries. Absent when none is outstanding, as on the desktop.
+   */
+  readonly extraction?: "pending" | "failed";
 }
 
 export type OpportunityLatestResult = OpportunityLatestBrief | null;
@@ -2698,6 +2705,7 @@ const opportunityRecordResultKeys = resultKeys<OpportunityRecordResult>()([
   "priorities",
   "candidateInstructions",
   "issues",
+  "extraction",
 ]);
 const opportunityListResultKeys = resultKeys<OpportunityListResult>()([
   "workspaceId",
@@ -2711,6 +2719,7 @@ const opportunityLatestResultKeys = resultKeys<OpportunityLatestBrief>()([
   "status",
   "requirementCount",
   "criticalCount",
+  "extraction",
 ]);
 
 export interface CanonicalCandidateProfileDeriveInput {
@@ -7964,6 +7973,9 @@ function normalizeOpportunityRecordResult(value: unknown): OpportunityRecordResu
     priorities,
     candidateInstructions,
     issues,
+    ...(result.extraction === undefined
+      ? {}
+      : { extraction: enumValue(result.extraction, ["pending", "failed"] as const) }),
   };
 }
 
@@ -7992,6 +8004,9 @@ function normalizeOpportunityLatestResult(value: unknown): OpportunityLatestResu
     status: enumValue(result.status, ["draft", "reviewed"] as const),
     requirementCount,
     criticalCount,
+    ...(result.extraction === undefined
+      ? {}
+      : { extraction: enumValue(result.extraction, ["pending", "failed"] as const) }),
   };
 }
 
