@@ -3,9 +3,9 @@
  * application can reuse. Home's New application form holds the draft; the application screen's
  * Profile step lists the reviewed profiles. Every state is testable without a DOM.
  */
-import type { CandidateProfileSelection } from "./model.js";
+import type { CandidateProfileSelection } from "@draft-loop/ui/model";
+import { parseReviewedCanonicalCandidateProfileCatalogResult } from "@draft-loop/ui/profile-catalog";
 import type { DesktopProfileCapabilities } from "./native.js";
-import { parseReviewedCanonicalCandidateProfileCatalogResult } from "./profile-catalog.js";
 
 // -- The new application's name and job ------------------------------------------------------
 

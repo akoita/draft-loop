@@ -1,7 +1,17 @@
+import type { ModelCompany } from "@draft-loop/ui/bridge";
+import {
+  createFixtureReviewState,
+  type DesktopReviewState,
+  type IndependentReviewView,
+  type ReviewAction,
+  reduceReviewState,
+  reviewFindingSummary,
+  roundLimitRecoveryRequired,
+  unresolvedBlockingFindings,
+} from "@draft-loop/ui/model";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { ModelCompany } from "./bridge.js";
 import {
   candidateProfileStartBlockerMessage,
   candidateProfileStartDisabledReason,
@@ -26,16 +36,6 @@ import {
   workspaceSetupBlocker,
   workspaceSetupFailureMessage,
 } from "./main.js";
-import {
-  createFixtureReviewState,
-  type DesktopReviewState,
-  type IndependentReviewView,
-  type ReviewAction,
-  reduceReviewState,
-  reviewFindingSummary,
-  roundLimitRecoveryRequired,
-  unresolvedBlockingFindings,
-} from "./model.js";
 import { DesktopBridgeError, workspaceCreateInput } from "./native.js";
 import {
   bulkFindingDecisionTargets,

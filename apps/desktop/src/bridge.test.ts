@@ -1,5 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
-
 import {
   bridgeCapabilities,
   createCapabilityPort,
@@ -10,8 +8,9 @@ import {
   safeBridgeError,
   unavailableResult,
   validateBridgeCommand,
-} from "./bridge.js";
-import { createFixtureReviewState, reduceReviewState } from "./model.js";
+} from "@draft-loop/ui/bridge";
+import { createFixtureReviewState, reduceReviewState } from "@draft-loop/ui/model";
+import { describe, expect, it, vi } from "vitest";
 import {
   createBridgeReviewPort,
   createBrowserCapabilityPort,

@@ -7,11 +7,11 @@
  * footer hides them until the run needs the person again. Run progress at the top of the side
  * panel keeps the event timeline, and **Show run progress** scrolls to it.
  */
-import type { JSX } from "react";
 
+import type { DesktopReviewState, ReviewExecutionView } from "@draft-loop/ui/model";
+import type { JSX } from "react";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import { executionLimitText } from "./execution-limits.js";
-import type { DesktopReviewState, ReviewExecutionView } from "./model.js";
 import { reviewInProgress, runActivity } from "./review-run-status.js";
 
 /** The directions the candidate sent with Request revision, and the round they steer. */

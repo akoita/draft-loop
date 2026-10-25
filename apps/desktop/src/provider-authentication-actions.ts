@@ -3,7 +3,7 @@ import type {
   ProviderAuthMode,
   ProviderAuthModeProvider,
   ProviderAuthModeStatus,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 
 export const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
   anthropic: "Anthropic",

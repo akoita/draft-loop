@@ -1,7 +1,6 @@
 import type { SourceEvidenceKindService } from "@draft-loop/application";
+import { maximumSourceEvidenceKindEntries } from "@draft-loop/ui/source-evidence-kind-contract";
 import { describe, expect, it, vi } from "vitest";
-
-import { maximumSourceEvidenceKindEntries } from "../source-evidence-kind-contract.js";
 import { createSourceEvidenceKindHost } from "./source-evidence-kind-host.js";
 
 const entry = {

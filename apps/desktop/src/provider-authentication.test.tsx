@@ -1,7 +1,10 @@
+import type {
+  CredentialProvider,
+  CredentialStatus,
+  ProviderAuthModeStatus,
+} from "@draft-loop/ui/bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { CredentialProvider, CredentialStatus, ProviderAuthModeStatus } from "./bridge.js";
 import { HomeView } from "./home.js";
 import {
   ProviderAuthentication,

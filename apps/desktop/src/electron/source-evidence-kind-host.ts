@@ -12,7 +12,7 @@ import {
   type SourceEvidenceKindSummary,
   type SourceEvidenceKindsInput,
   type SourceEvidenceKindsResult,
-} from "../source-evidence-kind-contract.js";
+} from "@draft-loop/ui/source-evidence-kind-contract";
 
 export interface SourceEvidenceKindHostDependencies {
   /** Replaces the application evidence-kind service; tests inject a fake. */

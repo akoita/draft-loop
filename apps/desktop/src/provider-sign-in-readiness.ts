@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import type {
   CredentialProvider,
   CredentialStatus,
@@ -7,7 +5,8 @@ import type {
   ProviderAuthMode,
   ProviderAuthModeProvider,
   ProviderAuthModeStatus,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
 
 /**

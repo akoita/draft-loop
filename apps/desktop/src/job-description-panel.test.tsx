@@ -1,9 +1,8 @@
+import type { ApplicationJobResult } from "@draft-loop/ui/application-job-contract";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationJobResult } from "./application-job-contract.js";
 import { JobDescriptionView, jobOriginNote } from "./job-description-panel.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   availableReviewWorkTab,

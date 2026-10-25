@@ -1,4 +1,4 @@
-import type { DesktopReviewState } from "./model.js";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 
 export interface RunCostLabel {
   readonly text: string;

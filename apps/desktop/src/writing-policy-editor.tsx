@@ -1,6 +1,9 @@
+import {
+  maximumWritingPolicyContentBytes,
+  type WritingPolicyReadResult,
+} from "@draft-loop/ui/bridge";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { maximumWritingPolicyContentBytes, type WritingPolicyReadResult } from "./bridge.js";
 import { useModalFocusTrap } from "./review.js";
 import {
   type PolicySelectorDirective,

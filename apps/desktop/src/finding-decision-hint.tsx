@@ -1,5 +1,5 @@
+import type { ReviewFinding } from "@draft-loop/ui/model";
 import type { JSX } from "react";
-
 import {
   ACCEPT_UNAVAILABLE_NOTE,
   acceptUnavailable,
@@ -7,7 +7,6 @@ import {
   type FindingDecisionContext,
   findingDecisionEffects,
 } from "./finding-decision-help.js";
-import type { ReviewFinding } from "./model.js";
 
 const hintLabels: Readonly<Record<ExplainedFindingDecision, string>> = {
   accepted: "Accept",

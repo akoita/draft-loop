@@ -5,7 +5,7 @@ import type {
   OpportunityRecordResult,
   OpportunityRequirementResult,
   OpportunitySourceResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 
 /**
  * The fixed sentence the host sends when an opportunity edit or review used an out-of-date

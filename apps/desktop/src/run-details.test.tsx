@@ -1,13 +1,12 @@
-import { createRef } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-
-import type { ApplicationRunRowView } from "./application-run-list.js";
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
   type WritingPolicyVersionMetadata,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { createRef } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
 import { ReviewWorkspace } from "./review.js";
 import { footerBlocker } from "./review-footer.js";
 import {

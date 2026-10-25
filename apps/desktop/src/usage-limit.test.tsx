@@ -1,15 +1,14 @@
 import type { RunError, RunSnapshot } from "@draft-loop/orchestrator";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-
-import { bridgeCapabilities, createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { usageLimitView } from "./electron/usage-limit-view.js";
+import { bridgeCapabilities, createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
   reduceReviewState,
   type UsageLimitView,
-} from "./model.js";
+} from "@draft-loop/ui/model";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { usageLimitView } from "./electron/usage-limit-view.js";
 import { ReviewWorkspace } from "./review.js";
 import { usageLimitText } from "./usage-limit.js";
 

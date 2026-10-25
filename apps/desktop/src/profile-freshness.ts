@@ -6,9 +6,10 @@
  * when the newest version is reviewed. The action always opens the Career profile page; Home never
  * starts generation.
  */
+
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import type { HomeProfileStatus, HomeTone } from "./home-model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
 export interface ProfileFreshnessPresentation {
   readonly tone: HomeTone;

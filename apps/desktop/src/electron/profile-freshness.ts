@@ -1,6 +1,6 @@
 import type { CandidateProfileFreshness } from "@draft-loop/application";
 
-import type { ProfileFreshnessResult } from "../profile-freshness-contract.js";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 
 /**
  * Host-side projection of the profile freshness: a state and counts, never source names or paths.

@@ -89,6 +89,9 @@ recorded limit in the same change so the reduction cannot regress.
 - `packages/embeddings` owns local text-embedding runtimes and the pinned model
   manifest behind a provider-independent port. It does not download models or
   persist vectors.
+- `packages/ui` owns the screens the desktop and the web share and the
+  capability port they reach their host through. It runs in a browser: it
+  never imports Electron, Node built-ins, provider SDKs or server packages.
 - `apps/cli` is an adapter over package APIs, not a second domain layer.
 - `apps/api` is the hosted service's HTTP adapter over the same application
   contracts: Fastify routes typed by Zod schemas, with no domain logic. The
@@ -99,7 +102,8 @@ recorded limit in the same change so the reduction cannot regress.
 - `apps/web` is the hosted service's browser screen over the HTTP API, typed
   from the API's OpenAPI document. It holds no domain logic and never imports
   `apps/api` or server packages; the API serves its built files.
-- `apps/desktop` is a UI shell and must call the same application contracts as the CLI.
+- `apps/desktop` is a UI shell over `packages/ui` and must call the same
+  application contracts as the CLI.
 
 ## Commands and quality gates
 

@@ -1,10 +1,9 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import type { ModelProfileSupportResult } from "@draft-loop/ui/bridge";
+import { projectModelProfileSupport } from "@draft-loop/ui/model-profile-bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ModelProfileSupportResult } from "./bridge.js";
 import { ModelEditorSummary, modelEditorSummaryText } from "./model-editor-summary.js";
-import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import { modelProfilePresetReferences, modelProfilePresets } from "./model-profile-picker-state.js";
 
 function presetReferences(id: string): ModelProfileReferences {

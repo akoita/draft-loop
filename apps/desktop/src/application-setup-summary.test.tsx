@@ -1,14 +1,13 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
 import {
   ApplicationProfileChoice,
   ApplicationSetupSummaryView,
   type ApplicationSetupSummaryViewProps,
   WorkspaceSettingsLinks,
 } from "./application-setup-summary.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const fixture = createFixtureReviewState();

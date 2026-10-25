@@ -1,6 +1,6 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 
-import type { ModelProfileSupportResult } from "./bridge.js";
+import type { ModelProfileSupportResult } from "@draft-loop/ui/bridge";
 import { ProfileDetails } from "./model-profile-details.js";
 import {
   modelProfileEntryForReference,

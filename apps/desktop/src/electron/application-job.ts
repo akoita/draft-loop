@@ -6,7 +6,7 @@ import type { ApplicationView } from "@draft-loop/application";
 import {
   type ApplicationJobResult,
   maximumApplicationJobTextLength,
-} from "../application-job-contract.js";
+} from "@draft-loop/ui/application-job-contract";
 
 /**
  * The job an application is written for, read back for the review screen.

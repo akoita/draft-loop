@@ -4,7 +4,7 @@ import type { RunSnapshot } from "@draft-loop/orchestrator";
 import {
   maximumCoverageRequirementTextLength,
   type ReviewCoverageView,
-} from "../coverage-contract.js";
+} from "@draft-loop/ui/coverage-contract";
 
 /**
  * The review panel's coverage, from the same selection the CLI `status` uses: the latest

@@ -1,6 +1,5 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { type RefObject, useRef, useState } from "react";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
 import {
   emptyNewApplicationDraft,
   type NewApplicationDraft,

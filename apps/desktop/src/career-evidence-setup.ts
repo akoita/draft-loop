@@ -1,10 +1,10 @@
+import { defaultKnowledgeStoreDestinationLabel } from "@draft-loop/ui/career-evidence-contract";
 import {
   addCareerEvidence,
   type CareerEvidenceAddOutcome,
   type CareerEvidenceCapabilities,
   type CareerEvidenceSource,
 } from "./career-evidence.js";
-import { defaultKnowledgeStoreDestinationLabel } from "./career-evidence-contract.js";
 
 /**
  * What the Career evidence card does while the workspace has no knowledge base selected.

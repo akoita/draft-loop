@@ -1,9 +1,11 @@
+import type {
+  ApprovalReadiness,
+  ApprovalReadinessBlocker,
+} from "@draft-loop/ui/approval-readiness";
+import { createFixtureReviewState, type DesktopReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
 import { approvalBlockerId } from "./approval-gate-focus.js";
-import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   compactReadinessBlocker,

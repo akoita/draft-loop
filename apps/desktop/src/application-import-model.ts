@@ -2,7 +2,7 @@
  * Wording for importing another workspace as an application (ADR 0010). Pure, so every state of
  * the Home action is testable without a DOM.
  */
-import type { ApplicationImportCounts } from "./application-contract.js";
+import type { ApplicationImportCounts } from "@draft-loop/ui/application-contract";
 
 export type ApplicationImportNotice =
   | { readonly kind: "success"; readonly message: string }

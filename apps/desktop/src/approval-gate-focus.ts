@@ -1,6 +1,5 @@
+import type { ApprovalReadiness } from "@draft-loop/ui/approval-readiness";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import type { ApprovalReadiness } from "./approval-readiness.js";
 
 /** The review footer's one-line blocker, the place a refused approval sends the reviewer. */
 export const approvalBlockerId = "approval-blocker";

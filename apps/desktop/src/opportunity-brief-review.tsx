@@ -1,7 +1,6 @@
+import type { OpportunityRecordResult } from "@draft-loop/ui/bridge";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
-import type { OpportunityRecordResult } from "./bridge.js";
 import {
   acknowledgeIssue,
   type BriefEditState,

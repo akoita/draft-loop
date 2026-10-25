@@ -1,11 +1,10 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import {
   candidateProfileApprovalAfterIdChange,
   candidateProfileSelectionForRecord,

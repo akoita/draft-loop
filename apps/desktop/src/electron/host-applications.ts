@@ -12,7 +12,7 @@ import type {
   ApplicationChosenRunView,
   ApplicationImportCounts,
   ApplicationSummaryView,
-} from "../application-contract.js";
+} from "@draft-loop/ui/application-contract";
 
 /**
  * Host-side projection of job applications (ADR 0010).

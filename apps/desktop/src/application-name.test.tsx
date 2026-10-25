@@ -1,7 +1,6 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
 import { ApplicationNameNudge, ApplicationTitle } from "./application-name.js";
 import { needsApplicationName } from "./application-name-model.js";
 import { ApplicationCard } from "./home.js";

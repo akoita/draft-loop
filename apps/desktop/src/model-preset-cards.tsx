@@ -1,7 +1,6 @@
 import type { ModelProfilePreset } from "@draft-loop/application/model-profile-catalog";
+import type { ModelProfileSupportResult } from "@draft-loop/ui/bridge";
 import type { ReactNode } from "react";
-
-import type { ModelProfileSupportResult } from "./bridge.js";
 import {
   modelProfileEntryForReference,
   modelProfilePresets,

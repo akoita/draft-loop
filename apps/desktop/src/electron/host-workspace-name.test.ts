@@ -1,10 +1,8 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import type { DesktopReviewState } from "../model.js";
 import { createNativeHost } from "./host.js";
 import { createRecentWorkspaceStore, type RecentWorkspaceStore } from "./recent-workspaces.js";
 

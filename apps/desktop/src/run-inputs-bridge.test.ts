@@ -1,8 +1,7 @@
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { type RunInputsView, runInputsKeys } from "@draft-loop/ui/run-inputs";
 import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
-import { type RunInputsView, runInputsKeys } from "./run-inputs.js";
 
 /*
  * Drift proof: a real run-inputs payload goes through the real review-state validator, so a

@@ -6,8 +6,8 @@ import {
   maximumRecentWorkspaceNameLength,
   maximumRecentWorkspaces,
   type RecentWorkspaceSummary,
-} from "../recent-workspaces.js";
-import { normalizeWorkspaceDisplayName } from "../workspace-name.js";
+} from "@draft-loop/ui/recent-workspaces";
+import { normalizeWorkspaceDisplayName } from "@draft-loop/ui/workspace-name";
 
 const maximumStoreBytes = 64 * 1024;
 const maximumStoredPathLength = 4_096;

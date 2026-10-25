@@ -1,6 +1,5 @@
+import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "@draft-loop/ui/bridge";
 import { useEffect, useRef, useState } from "react";
-
-import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
 import { supportsAutomaticKnowledgeBase } from "./career-evidence-setup.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import {

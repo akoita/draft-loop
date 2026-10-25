@@ -1,6 +1,5 @@
+import type { CredentialProvider, CredentialStatus } from "@draft-loop/ui/bridge";
 import { describe, expect, it } from "vitest";
-
-import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import {
   credentialProvidersForRoute,
   emptyCredentialStatus,

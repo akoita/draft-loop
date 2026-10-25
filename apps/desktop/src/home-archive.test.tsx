@@ -1,6 +1,6 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
 import {
   applicationActionErrorNotice,
   applicationActionSuccessNotice,
@@ -8,7 +8,6 @@ import {
   canDeleteApplication,
   partitionApplications,
 } from "./application-archive-model.js";
-import type { ApplicationSummaryView } from "./application-contract.js";
 import { ApplicationCard, HomeView, type HomeViewProps } from "./home.js";
 
 const now = new Date("2026-10-09T12:00:00.000Z");

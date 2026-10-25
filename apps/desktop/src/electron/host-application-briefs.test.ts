@@ -7,15 +7,14 @@ import {
   createApplicationService,
   createLocalApplicationDriver,
 } from "@draft-loop/application";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { ApplicationSummaryView } from "../application-contract.js";
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import {
   createCapabilityPort,
   type OpportunityLatestResult,
   type OpportunityRecordResult,
-} from "../bridge.js";
-import type { DesktopReviewState } from "../model.js";
+} from "@draft-loop/ui/bridge";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNativeHost } from "./host.js";
 
 let parent: string;

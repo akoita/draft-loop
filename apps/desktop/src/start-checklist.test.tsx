@@ -1,9 +1,9 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applicationStepStates } from "./application-steps-model.js";
 import { urlJobBriefStep } from "./electron/host-applications.js";
-import { createFixtureReviewState } from "./model.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import { ReviewWorkspace } from "./review.js";
 import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";

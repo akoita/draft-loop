@@ -3,7 +3,7 @@ import {
   type CanonicalCandidateProfileIssueResult,
   type CanonicalCandidateProfileRecordResult,
   canonicalCandidateProfileGenerationCancelledMessage,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
 const genericProfileOperationFailure = "The profile operation could not be completed.";

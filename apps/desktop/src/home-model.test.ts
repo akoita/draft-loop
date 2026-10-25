@@ -1,6 +1,5 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import {
   applicationActivityText,

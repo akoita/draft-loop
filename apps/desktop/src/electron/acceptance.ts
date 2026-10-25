@@ -13,7 +13,7 @@ import type {
   SelectedFile,
   SourceAddUrlResult,
   WorkspaceResult,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 import type { NativeHost } from "./host.js";
 
 export type PackagedAcceptancePhase = "prepare" | "resume";

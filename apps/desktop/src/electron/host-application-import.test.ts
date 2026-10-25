@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createApplicationService, createLocalApplicationDriver } from "@draft-loop/application";
+import type { ApplicationImportResult } from "@draft-loop/ui/application-contract";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import type { ApplicationImportResult } from "../application-contract.js";
 import { createNativeHost } from "./host.js";
 
 let parent: string;

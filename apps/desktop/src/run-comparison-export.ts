@@ -5,8 +5,8 @@
  * the runs by number and the models by their ids, and carries no other identifier, no critic
  * rationale and no finding text, so nothing beyond what the comparison shows leaves the review.
  */
-import { maximumMarkdownFileSaveBytes } from "./bridge.js";
-import type { ReviewArtifact } from "./model.js";
+import { maximumMarkdownFileSaveBytes } from "@draft-loop/ui/bridge";
+import type { ReviewArtifact } from "@draft-loop/ui/model";
 import type { RunComparisonFacts } from "./run-comparison-facts.js";
 
 /** The most the host writes for one comparison, in UTF-8 bytes. */

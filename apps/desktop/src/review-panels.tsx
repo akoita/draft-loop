@@ -12,9 +12,9 @@
  * finding decision, one per retried provider call) collapse into one row with a count, and only
  * the most recent rows show until the reviewer asks for the earlier ones.
  */
-import { type JSX, useCallback, useState } from "react";
 
-import type { ReviewEvent } from "./model.js";
+import type { ReviewEvent } from "@draft-loop/ui/model";
+import { type JSX, useCallback, useState } from "react";
 
 /**
  * The review panels a reviewer can fold. The trust facts moved into Run details (#1238);

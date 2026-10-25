@@ -11,7 +11,7 @@ import type {
   ReviewStateResult,
   SelectedFile,
   WorkspaceResult,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 import type { NativeHost } from "./host.js";
 
 const defaultTimeoutMs = 180_000;

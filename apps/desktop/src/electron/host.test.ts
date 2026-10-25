@@ -20,8 +20,6 @@ import {
   type WorkspaceDescriptor,
   withDefaultWritingPolicy,
 } from "@draft-loop/application";
-import { describe, expect, it, vi } from "vitest";
-
 import {
   type BridgeCapability,
   type BridgeErrorCode,
@@ -29,8 +27,9 @@ import {
   bridgeCapabilities,
   type ReviewStateResult,
   safeBridgeError,
-} from "../bridge.js";
-import type { DesktopReviewState, ReviewAction } from "../model.js";
+} from "@draft-loop/ui/bridge";
+import type { DesktopReviewState, ReviewAction } from "@draft-loop/ui/model";
+import { describe, expect, it, vi } from "vitest";
 import {
   createMemoryCredentialStore,
   createNativeHost,

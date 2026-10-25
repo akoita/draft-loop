@@ -5,7 +5,7 @@ import {
   type CredentialProtection,
   type CredentialProvider,
   credentialProviders,
-} from "../bridge.js";
+} from "@draft-loop/ui/bridge";
 import { type NativeCredentialStore, resolveCredential } from "./host.js";
 
 export type CredentialAcceptancePhase = "prepare" | "verify";

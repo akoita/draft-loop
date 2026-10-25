@@ -154,6 +154,9 @@ importers:
       '@draft-loop/providers':
         specifier: workspace:*
         version: link:../../packages/providers
+      '@draft-loop/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3
@@ -532,6 +535,18 @@ importers:
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
+
+  packages/ui:
+    dependencies:
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../application
+      '@draft-loop/artifacts':
+        specifier: workspace:*
+        version: link:../artifacts
+      '@draft-loop/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/validation:
     dependencies:

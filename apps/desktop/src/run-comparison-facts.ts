@@ -9,8 +9,8 @@
  * another policy or another brief is never credited with today's setup. A value a run did not
  * record reads "not recorded".
  */
-import { meanReadinessScore } from "./application-run-list.js";
-import { type DesktopReviewState, isUnresolvedFinding } from "./model.js";
+import { meanReadinessScore } from "@draft-loop/ui/application-run-list";
+import { type DesktopReviewState, isUnresolvedFinding } from "@draft-loop/ui/model";
 import { coverageTally } from "./review-work-tabs.js";
 import { costNotRecorded, runCostLabel } from "./run-cost.js";
 import { policyChecksumLabel, recordedRunModels } from "./run-details.js";

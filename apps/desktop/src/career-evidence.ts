@@ -2,13 +2,13 @@ import type {
   KnowledgeDirectoryImportResult,
   KnowledgeReadinessResult,
   KnowledgeUrlImportResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import type { EmbeddingModelState } from "@draft-loop/ui/semantic-retrieval-contract";
 import type { KnowledgeIntakeResult } from "./knowledge-intake.js";
 import type {
   DesktopKnowledgeCapabilities,
   DesktopSemanticRetrievalCapabilities,
 } from "./native.js";
-import type { EmbeddingModelState } from "./semantic-retrieval-contract.js";
 
 export type CareerEvidenceCapabilities = DesktopKnowledgeCapabilities &
   DesktopSemanticRetrievalCapabilities;

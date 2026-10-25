@@ -1,4 +1,4 @@
-import type { ReviewAction } from "./model.js";
+import type { ReviewAction } from "@draft-loop/ui/model";
 
 export interface PendingReviewAction {
   readonly action: ReviewAction["type"];

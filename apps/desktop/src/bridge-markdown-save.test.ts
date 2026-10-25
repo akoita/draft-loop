@@ -1,12 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-
 import {
   bridgeCapabilities,
   createCapabilityPort,
   maximumMarkdownFileSaveBytes,
   type NativeBridge,
   validateBridgeCommand,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it, vi } from "vitest";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 
 function bridge(invoke: NativeBridge["invoke"]): NativeBridge {

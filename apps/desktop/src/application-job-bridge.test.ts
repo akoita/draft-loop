@@ -1,8 +1,11 @@
+import type { ApplicationJobResult } from "@draft-loop/ui/application-job-contract";
+import {
+  createCapabilityPort,
+  type NativeBridge,
+  validateBridgeCommand,
+} from "@draft-loop/ui/bridge";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
 import { describe, expect, it } from "vitest";
-
-import type { ApplicationJobResult } from "./application-job-contract.js";
-import { createCapabilityPort, type NativeBridge, validateBridgeCommand } from "./bridge.js";
-import { bridgeCapabilities } from "./bridge-capabilities.js";
 
 /*
  * Drift proof: real payloads go through the real validator and normalizer, so a field added to an

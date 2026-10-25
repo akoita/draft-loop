@@ -1,6 +1,6 @@
 import { codexSessionModelUnsupportedDiagnosticCode } from "@draft-loop/providers";
 
-import type { ProviderFailureDiagnostic, ProviderFailureView } from "./model.js";
+import type { ProviderFailureDiagnostic, ProviderFailureView } from "@draft-loop/ui/model";
 
 export interface ProviderSessionModelFeedbackInput {
   readonly code: ProviderFailureView["code"];

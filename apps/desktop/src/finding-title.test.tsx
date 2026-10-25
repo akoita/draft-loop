@@ -1,10 +1,16 @@
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
+import {
+  findingRequirement,
+  normalizeFindingRequirement,
+} from "@draft-loop/ui/finding-requirement";
+import {
+  createFixtureReviewState,
+  type DesktopReviewState,
+  type ReviewFinding,
+} from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { findingRequirement, normalizeFindingRequirement } from "./finding-requirement.js";
 import { findingTitle } from "./finding-title.js";
-import { createFixtureReviewState, type DesktopReviewState, type ReviewFinding } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const requirement = { id: "req-1", text: "Lead synthetic platform migrations" };

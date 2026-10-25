@@ -1,4 +1,4 @@
-import type { OpportunityLatestBrief } from "../bridge.js";
+import type { OpportunityLatestBrief } from "@draft-loop/ui/bridge";
 
 /**
  * The host's refusal to start while the application's requirements brief is still a draft. The

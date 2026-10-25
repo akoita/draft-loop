@@ -7,10 +7,9 @@ import {
   createApplicationService,
   createLocalApplicationDriver,
 } from "@draft-loop/application";
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
+import type { DesktopReviewState } from "@draft-loop/ui/model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { ApplicationSummaryView } from "../application-contract.js";
-import type { DesktopReviewState } from "../model.js";
 import { createNativeHost } from "./host.js";
 
 let parent: string;

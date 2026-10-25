@@ -1,6 +1,9 @@
 import { checkProviderApiKey } from "@draft-loop/providers";
 
-import type { CredentialTestProvider, CredentialTestResult } from "../credential-test-contract.js";
+import type {
+  CredentialTestProvider,
+  CredentialTestResult,
+} from "@draft-loop/ui/credential-test-contract";
 
 /** The configured pair of the open workspace, when one is open. */
 export interface CredentialTestModelPair {

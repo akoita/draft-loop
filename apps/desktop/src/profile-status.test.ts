@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
-} from "./bridge.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
+} from "@draft-loop/ui/bridge";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
+import { describe, expect, it } from "vitest";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 import {
   profileApprovalText,

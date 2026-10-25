@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
 import {
   bridgeCapabilities,
   createCapabilityPort,
   maximumWritingPolicyContentBytes,
   type NativeBridge,
   validateBridgeCommand,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
+import { describe, expect, it, vi } from "vitest";
 import { createBridgeReviewPort } from "./native.js";
 
 const checksum = "a".repeat(64);

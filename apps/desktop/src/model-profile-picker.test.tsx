@@ -1,7 +1,7 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { projectModelProfileSupport } from "@draft-loop/ui/model-profile-bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import { ModelProfilePicker } from "./model-profile-picker.js";
 import {
   type ModelProfileSupportState,

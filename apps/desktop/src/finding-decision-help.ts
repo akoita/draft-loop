@@ -1,4 +1,4 @@
-import type { FindingDecision, ReviewFinding } from "./model.js";
+import type { FindingDecision, ReviewFinding } from "@draft-loop/ui/model";
 
 /** The four decisions a person can record on a finding. */
 export type ExplainedFindingDecision = Exclude<FindingDecision, "pending">;

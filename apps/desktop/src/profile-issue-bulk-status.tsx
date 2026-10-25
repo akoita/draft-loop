@@ -2,7 +2,7 @@ import type {
   CanonicalCandidateProfileIssueSeverity,
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
-import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
+import type { CanonicalCandidateProfileIssueResult } from "@draft-loop/ui/bridge";
 
 const bulkStatusOptions: readonly (readonly [CanonicalCandidateProfileIssueStatus, string])[] = [
   ["open", "Open"],

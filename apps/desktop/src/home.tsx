@@ -1,5 +1,9 @@
+import {
+  type ApplicationSummaryView,
+  normalizeApplicationDisplayName,
+} from "@draft-loop/ui/application-contract";
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-
 import {
   type ApplicationAction,
   type ApplicationActionNotice,
@@ -10,10 +14,6 @@ import {
   canDeleteApplication,
   partitionApplications,
 } from "./application-archive-model.js";
-import {
-  type ApplicationSummaryView,
-  normalizeApplicationDisplayName,
-} from "./application-contract.js";
 import {
   type ApplicationImportNotice,
   applicationImportErrorNotice,
@@ -62,7 +62,6 @@ import {
   type ProfileFreshnessPresentation,
   profileFreshnessPresentation,
 } from "./profile-freshness.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 import {
   type ProfileGenerationActivity,
   ProfileGenerationSummary,

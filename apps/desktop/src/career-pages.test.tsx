@@ -1,3 +1,4 @@
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -14,7 +15,6 @@ import {
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeView, WorkspaceLocation } from "./home.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
-import { createFixtureReviewState } from "./model.js";
 import { ProfileWorkspace } from "./profile.js";
 import { ReviewWorkspace } from "./review.js";
 import { SemanticRetrievalPanel } from "./semantic-retrieval.js";

@@ -1,5 +1,8 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
-import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
+import type {
+  ApplicationImportResult,
+  ApplicationSummaryView,
+} from "@draft-loop/ui/application-contract";
 
 import {
   type ApplicationJobResult,
@@ -60,26 +63,26 @@ import {
   type WorkspaceCreateInput,
   type WorkspaceRetrievalModeResult,
   type WritingPolicyReadResult,
-} from "./bridge.js";
+} from "@draft-loop/ui/bridge";
 import type {
   KnowledgeEnsureDefaultResult,
   WorkspaceEvidenceMigrationResult,
-} from "./career-evidence-contract.js";
+} from "@draft-loop/ui/career-evidence-contract";
 import {
   createFixtureReviewPort,
   type DesktopReviewPort,
   type DesktopReviewState,
   type ReviewAction,
-} from "./model.js";
-import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
+} from "@draft-loop/ui/model";
 import {
   parseRecentWorkspacesListResult,
   type RecentWorkspaceSummary,
-} from "./recent-workspaces.js";
-import type { RunEvidenceModeView } from "./run-evidence-mode.js";
-import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
+} from "@draft-loop/ui/recent-workspaces";
+import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
+import type { EmbeddingModelTier, RetrievalMode } from "@draft-loop/ui/semantic-retrieval-contract";
+import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 
-export type { NativeBridge } from "./bridge.js";
+export type { NativeBridge } from "@draft-loop/ui/bridge";
 
 /**
  * What a person chose for a workspace before it existed.

@@ -1,4 +1,4 @@
-import type { DesktopReviewPort } from "./model.js";
+import type { DesktopReviewPort } from "@draft-loop/ui/model";
 
 export const nativeConnectionUnavailableMessage =
   "The desktop native connection is unavailable. Restart DraftLoop and try again.";

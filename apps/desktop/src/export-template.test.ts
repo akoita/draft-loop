@@ -1,6 +1,4 @@
 import { builtInRenderingTemplates } from "@draft-loop/rendering";
-import { describe, expect, it } from "vitest";
-
 import {
   defaultExportTemplate,
   exportTemplateApplicationKey,
@@ -9,7 +7,8 @@ import {
   parseExportTemplate,
   readStoredExportTemplate,
   writeStoredExportTemplate,
-} from "./export-template.js";
+} from "@draft-loop/ui/export-template";
+import { describe, expect, it } from "vitest";
 import { exportReviewAction } from "./review.js";
 
 function memoryStorage(): Pick<Storage, "getItem" | "setItem"> {

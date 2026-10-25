@@ -1,7 +1,6 @@
+import type { ApplicationSummaryView } from "@draft-loop/ui/application-contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { ApplicationSummaryView } from "./application-contract.js";
 import {
   type CreateApplication,
   NewApplicationFormView,

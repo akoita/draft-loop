@@ -1,14 +1,13 @@
-import { describe, expect, it } from "vitest";
-
 import {
   type ApplicationRunInput,
   type ApplicationRunRowView,
   meanReadinessScore,
   normalizeApplicationRuns,
   orderApplicationRuns,
-} from "./application-run-list.js";
-import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
+} from "@draft-loop/ui/application-run-list";
+import { createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
+import { describe, expect, it } from "vitest";
 
 function run(runId: string, startedAt: string, extra: Partial<ApplicationRunInput> = {}) {
   return {

@@ -39,6 +39,7 @@
     { "path": "./packages/security" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
+    { "path": "./packages/ui" },
     { "path": "./apps/api" },
     { "path": "./apps/worker" },
     { "path": "./apps/cli" },

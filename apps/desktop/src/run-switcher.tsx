@@ -8,6 +8,8 @@
  * menu-button pattern: arrow keys, Home and End move focus, Enter or Space chooses, and Escape or
  * a click outside closes it and returns focus to the button.
  */
+
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import {
   type JSX,
   type KeyboardEvent,
@@ -17,8 +19,6 @@ import {
   useRef,
   useState,
 } from "react";
-
-import type { ApplicationRunRowView } from "./application-run-list.js";
 
 /** The start time as a fixed UTC minute, so every reader sees the same order. */
 export function runStartedLabel(startedAt: string): string {

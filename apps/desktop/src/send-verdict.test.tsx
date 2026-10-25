@@ -1,7 +1,6 @@
+import { createFixtureReviewState, type ReviewFinding } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { createFixtureReviewState, type ReviewFinding } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import { sendVerdict } from "./send-verdict.js";
 

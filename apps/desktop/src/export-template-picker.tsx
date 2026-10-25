@@ -2,13 +2,13 @@
  * The Export area's template hook and schematic preview (#1330); the template data and the
  * remembered-choice storage live in `export-template.ts`.
  */
-import { type JSX, useCallback, useState } from "react";
 
 import {
   type ExportTemplate,
   readStoredExportTemplate,
   writeStoredExportTemplate,
-} from "./export-template.js";
+} from "@draft-loop/ui/export-template";
+import { type JSX, useCallback, useState } from "react";
 
 function browserStorage(): Pick<Storage, "getItem" | "setItem"> | undefined {
   try {

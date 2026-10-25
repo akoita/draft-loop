@@ -1,4 +1,4 @@
-import type { OpportunityLatestBrief } from "./bridge.js";
+import type { OpportunityLatestBrief } from "@draft-loop/ui/bridge";
 
 /** The reviewed brief a run would start from: the latest version, reviewed and selected. */
 export interface ReviewedRequirementsSelection {

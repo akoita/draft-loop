@@ -1,6 +1,6 @@
 import type { ApplicationView } from "@draft-loop/application";
 
-import type { OpportunityBriefSelectionInput } from "../bridge.js";
+import type { OpportunityBriefSelectionInput } from "@draft-loop/ui/bridge";
 
 /**
  * Per-application opportunity brief preferences (ADR 0010).

@@ -1,6 +1,9 @@
+import {
+  invalidWorkspaceNameMessage,
+  normalizeWorkspaceDisplayName,
+} from "@draft-loop/ui/workspace-name";
 import type { KeyboardEvent } from "react";
 import { useInlineRename } from "./inline-rename.js";
-import { invalidWorkspaceNameMessage, normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 const nameInputId = "workspace-title-input";
 const renameButtonId = "workspace-title-rename";

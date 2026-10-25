@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createApplicationService, createLocalApplicationDriver } from "@draft-loop/application";
+import { bridgeCapabilities } from "@draft-loop/ui/bridge-capabilities";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { createNativeHost } from "./electron/host.js";
 import { runJobRequirementsExtraction } from "./job-requirements-extraction.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";

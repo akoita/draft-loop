@@ -5,7 +5,10 @@
  * and lists the applications inside it. This module holds the navigation state and the wording
  * for each state, so the components stay thin and the states are testable without a DOM.
  */
-import type { ApplicationStatus, ApplicationSummaryView } from "./application-contract.js";
+import type {
+  ApplicationStatus,
+  ApplicationSummaryView,
+} from "@draft-loop/ui/application-contract";
 import {
   type CareerEvidenceStatus,
   careerEvidenceReadinessText,

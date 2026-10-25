@@ -1,7 +1,6 @@
+import type { KnowledgeStoreResult } from "@draft-loop/ui/bridge";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { KnowledgeStoreResult } from "./bridge.js";
 import {
   activeKnowledgeBases,
   KnowledgeBaseList,

@@ -1,13 +1,12 @@
+import type { ApprovalReadiness } from "@draft-loop/ui/approval-readiness";
+import { createFixtureReviewState } from "@draft-loop/ui/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
 import {
   approvalAttemptNeedsGate,
   approvalBlockerId,
   focusApprovalGate,
 } from "./approval-gate-focus.js";
-import type { ApprovalReadiness } from "./approval-readiness.js";
-import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 
 const blocked: ApprovalReadiness = {

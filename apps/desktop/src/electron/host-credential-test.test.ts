@@ -1,10 +1,8 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { createCapabilityPort } from "../bridge.js";
 import { credentialTestModels } from "./credential-test-host.js";
 import { createMemoryCredentialStore, createNativeHost } from "./host.js";
 

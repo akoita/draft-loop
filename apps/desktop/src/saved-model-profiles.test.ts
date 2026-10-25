@@ -1,6 +1,5 @@
+import type { SavedModelProfilesResult } from "@draft-loop/ui/model-profile-bridge";
 import { describe, expect, it, vi } from "vitest";
-
-import type { SavedModelProfilesResult } from "./model-profile-bridge.js";
 import {
   ModelProfileSaveError,
   modelProfileApplyErrorMessage,

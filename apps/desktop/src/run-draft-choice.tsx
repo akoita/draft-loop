@@ -5,9 +5,10 @@
  * Choosing never deletes or changes a run. The chosen earlier run then opens for approval and
  * export only; revision and new rounds stay on the latest run.
  */
+
+import { maximumChosenRunReasonLength } from "@draft-loop/ui/application-contract";
+import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import { type FormEvent, type JSX, useId, useState } from "react";
-import { maximumChosenRunReasonLength } from "./application-contract.js";
-import type { ApplicationRunRowView } from "./application-run-list.js";
 
 /** Uses a run's draft for approval and export, with an optional reason, and opens that run. */
 export type ChooseRunDraft = (runId: string, reason: string | null) => Promise<void>;

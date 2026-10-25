@@ -1,10 +1,13 @@
+import type {
+  CandidateProfileSelection,
+  DesktopReviewState,
+  ReviewAction,
+} from "@draft-loop/ui/model";
+import type { ProviderRoute } from "@draft-loop/ui/provider-routes";
+import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
+import type { StartEvidencePreview } from "@draft-loop/ui/start-evidence-preview";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-
 import { formatLimitDuration } from "./execution-limits.js";
-import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
-import type { ProviderRoute } from "./provider-routes.js";
-import type { RunEvidenceModeView } from "./run-evidence-mode.js";
-import type { StartEvidencePreview } from "./start-evidence-preview.js";
 import type { ReviewedRequirementsSelection } from "./start-requirements-model.js";
 
 /** The action a confirmed Start dispatches, unchanged from what the trigger would have sent. */

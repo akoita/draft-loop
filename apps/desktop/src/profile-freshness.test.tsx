@@ -1,6 +1,6 @@
+import type { ProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
 import { HomeView, ProfileFreshnessNote } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
@@ -9,7 +9,6 @@ import {
   profileFreshnessChangeText,
   profileFreshnessPresentation,
 } from "./profile-freshness.js";
-import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 
 const result = (overrides: Partial<ProfileFreshnessResult> = {}): ProfileFreshnessResult => ({
   workspaceId: "workspace-1",

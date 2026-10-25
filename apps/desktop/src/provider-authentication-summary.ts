@@ -1,4 +1,4 @@
-import type { ModelCompany, ProviderAuthMode } from "./bridge.js";
+import type { ModelCompany, ProviderAuthMode } from "@draft-loop/ui/bridge";
 
 export interface ProviderAuthenticationSummaryInput {
   readonly fixtureMode: boolean;

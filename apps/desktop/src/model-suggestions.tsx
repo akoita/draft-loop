@@ -2,7 +2,7 @@ import { listModelProfileCatalog } from "@draft-loop/application/model-profile-c
 import type { ModelProfileRegistry } from "@draft-loop/application/model-profiles";
 import type { AgentRole } from "@draft-loop/domain";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import type { ModelCompany } from "./bridge.js";
+import type { ModelCompany } from "@draft-loop/ui/bridge";
 
 export interface RegisteredModelSuggestion {
   readonly modelId: string;

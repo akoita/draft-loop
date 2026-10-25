@@ -1,4 +1,4 @@
-import type { ReviewExecutionView } from "./model.js";
+import type { ReviewExecutionView } from "@draft-loop/ui/model";
 
 /** "10 min" for whole minutes, otherwise whole seconds rounded up, e.g. "90s". */
 export function formatLimitDuration(ms: number): string {
