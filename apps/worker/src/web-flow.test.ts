@@ -252,6 +252,9 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
         ),
       );
       expect(screens.exportsDownload).toBe(true);
+      // Opened from the home's application list, as the screens open it.
+      if (application === undefined) throw new Error("The default application is listed.");
+      screens.selectApplication?.(application.id);
       let shared = await screens.load();
       expect(shared).toMatchObject({
         workspaceId: ownerWorkspaceId,
@@ -267,6 +270,13 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       await drainQueue();
       shared = await screens.load();
       expect(shared).toMatchObject({ state: "awaiting-approval", round: drafted.round + 1 });
+      // The run details read what the run recorded: its models in the run list, and what the
+      // author was sent.
+      expect(shared.applicationRuns).toEqual([
+        expect.objectContaining({ runId: begun.runId, authorModel: expect.stringMatching(/\S/) }),
+      ]);
+      expect(shared.applicationRuns?.[0]?.criticModel).toMatch(/\S/);
+      expect(shared.authorInput).not.toBeNull();
 
       // Decide every finding: a blocking one is overridden with a reason, the rest accepted.
       for (const finding of shared.findings) {

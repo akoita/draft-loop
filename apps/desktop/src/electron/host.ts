@@ -70,6 +70,7 @@ import {
   reviewState,
   runState,
 } from "@draft-loop/review-state";
+import { createApplicationRunRowsReader } from "@draft-loop/review-state/application-runs";
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import {
@@ -217,7 +218,6 @@ import {
   runBelongsToApplication,
   withEarlierRun,
 } from "./earlier-run-guard.js";
-import { createApplicationRunRowsReader } from "./host-application-runs.js";
 import {
   type ApplicationReadinessScope,
   type ApplicationScope,

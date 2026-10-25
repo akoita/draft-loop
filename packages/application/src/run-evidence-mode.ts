@@ -1,4 +1,3 @@
-import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { z } from "zod";
@@ -6,9 +5,9 @@ import { z } from "zod";
 import { previewEvidenceMode } from "./evidence-mode-preview.js";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
-import { localHistoryPath, openLocalHistory } from "./local-storage-factory.js";
 import { readRunApplicationPlan } from "./run-application-plan-read.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
+import { openRunHistory } from "./run-history-read.js";
 import { readRunInputs } from "./run-inputs-read.js";
 import { readRunModels } from "./run-models-read.js";
 import { evidenceModes } from "./workspace-evidence-mode.js";
@@ -63,12 +62,8 @@ export async function readRunEvidenceMode(
   const config = await readWorkspace(root);
   const runId = command.runId ?? config.latestRunId;
   if (runId === undefined) return undefined;
-  try {
-    await stat(localHistoryPath(root));
-  } catch {
-    return undefined;
-  }
-  const storage = openLocalHistory(localHistoryPath(root));
+  const storage = await openRunHistory(root);
+  if (storage === undefined) return undefined;
   try {
     // One targeted read: listing the whole trail would parse every run snapshot it repeats.
     const event = await storage.auditEvents.findLatestAuditEvent({

@@ -228,6 +228,7 @@ describe("application list wording", () => {
       "Last activity on 2026-08-01",
     );
     expect(applicationActivityText("garbage", now)).toBe("Last activity unknown");
+    expect(applicationActivityText("1970-01-01T00:00:00.000Z", now)).toBe("Last activity unknown");
   });
 
   it("words run counts and statuses", () => {
