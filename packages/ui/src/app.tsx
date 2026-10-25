@@ -2451,15 +2451,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       />
     );
 
-  const workspaceNavigationNode = (
-    <WorkspaceNavigation
-      closeDisabledReason={closeDisabledReason}
-      confirmationOpen={workspaceCloseConfirmationOpen}
-      onRequestClose={requestWorkspaceClose}
-      onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
-      onConfirmClose={closeWorkspace}
-    />
-  );
+  const workspaceNavigationNode =
+    activePort.workspaceClosable === false ? null : (
+      <WorkspaceNavigation
+        closeDisabledReason={closeDisabledReason}
+        confirmationOpen={workspaceCloseConfirmationOpen}
+        onRequestClose={requestWorkspaceClose}
+        onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
+        onConfirmClose={closeWorkspace}
+      />
+    );
 
   const knowledgePanelFor = (embedded: boolean) => (
     <KnowledgeWorkspace

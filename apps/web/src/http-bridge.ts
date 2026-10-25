@@ -259,10 +259,31 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       }
       case "opportunity.create": {
         const { workspaceId, applicationId } = command.input;
+        const sources = [];
+        for (const source of command.input.sources) {
+          if (source.kind !== "workspace-job-description") {
+            sources.push(hostedSource(source));
+            continue;
+          }
+          // The application's own job: the hosted service keeps pasted text in its record.
+          const scoped = await scopedApplication(workspaceId, applicationId);
+          const job = await client.call(
+            "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job",
+            { path: { workspaceId, applicationId: scoped.id } },
+          );
+          if (job.text === null) return refuse("Paste this application's job description first.");
+          sources.push({
+            id: source.id,
+            kind: "pasted-content" as const,
+            classification: source.classification,
+            content: job.text,
+            ...(source.capturedAt === undefined ? {} : { capturedAt: source.capturedAt }),
+          });
+        }
         const created = await client.call("POST /v1/workspaces/{workspaceId}/opportunities", {
           path: { workspaceId },
           body: {
-            sources: command.input.sources.map(hostedSource),
+            sources,
             ...(applicationId === undefined ? {} : { applicationId }),
           },
         });

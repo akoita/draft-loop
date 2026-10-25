@@ -1040,6 +1040,7 @@ export function HomeScreen({
       {homeView}
       <NewApplicationDialog
         createApplication={(name, job) => createApplication(workspaceId, name, job)}
+        jobPagesAllowed={applicationCapabilities.jobPagesAllowed !== false}
         onCreated={(application) => {
           // Home lists the new application when the person comes back to it.
           setApplicationsRevision((revision) => revision + 1);
