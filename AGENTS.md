@@ -92,6 +92,9 @@ recorded limit in the same change so the reduction cannot regress.
 - `packages/ui` owns the screens the desktop and the web share and the
   capability port they reach their host through. It runs in a browser: it
   never imports Electron, Node built-ins, provider SDKs or server packages.
+- `packages/review-state` projects a run into the shared screens' review state
+  on the host side, for both the desktop host and the hosted API. It fills
+  `packages/ui`'s view models but never goes into a browser bundle.
 - `apps/cli` is an adapter over package APIs, not a second domain layer.
 - `apps/api` is the hosted service's HTTP adapter over the same application
   contracts: Fastify routes typed by Zod schemas, with no domain logic. The

@@ -1,4 +1,5 @@
 import type { RunError, RunSnapshot } from "@draft-loop/orchestrator";
+import { usageLimitView } from "@draft-loop/review-state/usage-limit-view";
 import { bridgeCapabilities, createCapabilityPort, type NativeBridge } from "@draft-loop/ui/bridge";
 import {
   createFixtureReviewState,
@@ -10,7 +11,6 @@ import { ReviewWorkspace } from "@draft-loop/ui/review";
 import { usageLimitText } from "@draft-loop/ui/usage-limit";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { usageLimitView } from "./electron/usage-limit-view.js";
 
 const resetsAt = "2026-10-16T15:30:00.000Z";
 const limited: UsageLimitView = {
