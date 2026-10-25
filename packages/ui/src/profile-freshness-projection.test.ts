@@ -1,10 +1,12 @@
-import type { CandidateProfileFreshness } from "@draft-loop/application";
-import { normalizeProfileFreshnessResult } from "@draft-loop/ui/profile-freshness-contract";
 import { describe, expect, it } from "vitest";
-import { projectProfileFreshness } from "./profile-freshness.js";
+import { normalizeProfileFreshnessResult } from "./profile-freshness-contract.js";
+import {
+  projectProfileFreshness,
+  type ServiceProfileFreshness,
+} from "./profile-freshness-projection.js";
 
 describe("profile freshness projection", () => {
-  const project = (freshness: CandidateProfileFreshness | undefined) =>
+  const project = (freshness: ServiceProfileFreshness | undefined) =>
     projectProfileFreshness("workspace-1", "profile-1", freshness);
 
   it("projects every application state to a contract-valid, path-free answer", () => {

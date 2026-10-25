@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildApi, composeHostedApplication } from "@draft-loop/api";
+import type { ProfileDerivationState } from "@draft-loop/run-queue";
 import { createFilesystemBlobStorage } from "@draft-loop/storage/blobs";
 import {
   grantPostgresStorageAccess,
@@ -24,6 +25,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
+import { createProfileDerivationHandler } from "./profile-derivation-handler.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -65,23 +67,41 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
     await rm(blobRoot, { recursive: true, force: true });
   });
 
-  it("goes from Home to a started run through the port the shared screens use", async () => {
+  it("goes from Home through a reviewed career profile to a started run, through the port the shared screens use", async () => {
     const storage = await openPostgresStorage({
       connectionString: runtimeUrl(url),
       schema,
       tenantId,
     });
-    const api = await buildApi({
-      ownerToken,
-      application: composeHostedApplication({
-        storage,
-        blobs: tenantKeyBlobs(blobRoot, createFilesystemBlobStorage()),
-        tenantId,
-        budgetCeiling,
-        enqueueRun: async () => undefined,
-        knowledgeLocation: (versionId) => `tenants/${tenantId}/knowledge/${versionId}`,
-      }),
+    // The worker's derivation, run in place when queued; its outcome is what the screens poll.
+    let derivation: ProfileDerivationState | undefined;
+    const derive = createProfileDerivationHandler({
+      serviceFor: () => application.service,
+      workspaceRoot: (job) => application.workspaceRoot(job.workspaceId),
+      allowProviderData: true,
     });
+    const application = composeHostedApplication({
+      storage,
+      blobs: tenantKeyBlobs(blobRoot, createFilesystemBlobStorage()),
+      tenantId,
+      budgetCeiling,
+      enqueueRun: async () => undefined,
+      profileDerivations: {
+        queue: async (job) => {
+          const signal = new AbortController().signal;
+          const outcome = await derive({ tenantId, ...job }, { signal, reportProgress: () => {} });
+          derivation =
+            outcome.outcome === "derived"
+              ? { status: "derived", version: outcome.version }
+              : { status: "failed", reason: "failed" };
+          return true;
+        },
+        state: async () => derivation,
+        cancel: async () => false,
+      },
+      knowledgeLocation: (versionId) => `tenants/${tenantId}/knowledge/${versionId}`,
+    });
+    const api = await buildApi({ ownerToken, application });
     const client = createApiClient({ token: ownerToken, fetch: injectFetch(api) });
     const port = createBridgeReviewPort(
       createCapabilityPort(createHttpBridge({ client, pickFile: async () => evidenceFile })),
@@ -147,8 +167,35 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       const ready = await port.load();
       expect(ready.setup.nextSteps).toEqual([]);
 
+      // Career profile: derived on the worker, its open issues acknowledged, then reviewed; the
+      // run chooses it from the reviewed catalog, as on the desktop.
+      const drafted = await port.deriveCanonicalCandidateProfile?.({
+        profileId: "career",
+        providerTransmissionApproved: true,
+      });
+      if (drafted === undefined) throw new Error("The hosted port derives profiles.");
+      expect(drafted).toMatchObject({ version: 1, status: "draft" });
+      expect(drafted.facts.length).toBeGreaterThan(0);
+      const acknowledged = await port.editCanonicalCandidateProfile?.({
+        profileId: "career",
+        expectedVersion: drafted.version,
+        patch: { issues: drafted.issues.map((issue) => ({ ...issue, status: "acknowledged" })) },
+      });
+      const reviewedProfile = await port.reviewCanonicalCandidateProfile?.(
+        "career",
+        acknowledged?.version ?? drafted.version,
+      );
+      expect(reviewedProfile?.status).toBe("reviewed");
+      const catalog = await port.listReviewedCanonicalCandidateProfiles?.(ownerWorkspaceId);
+      const chosen = catalog?.profiles[0];
+      if (chosen === undefined) throw new Error("The reviewed profile is in the catalog.");
+      expect(chosen).toMatchObject({ profileId: "career", version: reviewedProfile?.version });
+
       // Start the review from the Review step: the run is saved and queued for a worker.
-      const started = await port.dispatch(ready, { type: "start" });
+      const started = await port.dispatch(ready, {
+        type: "start",
+        candidateProfile: { profileId: chosen.profileId, version: chosen.version },
+      });
       expect(started.runId).not.toBe("pending");
       const listed = await client.call(
         "GET /v1/workspaces/{workspaceId}/applications/{applicationId}",
