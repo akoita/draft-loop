@@ -21,7 +21,8 @@ const jobText =
   "Platform Engineer at Example Ledger\n\nRequirements:\n- Build TypeScript services\n- Write deterministic tests\n";
 
 const descriptor = {
-  id: "workspace-1",
+  // The driver's own id differs from the one in the path, as on the hosted service.
+  id: "workspace-0b5c",
   root,
   language: "en",
   requiredSections: ["summary", "experience"],

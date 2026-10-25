@@ -257,7 +257,8 @@ export function registerReviewStateRoutes(
       }
       // Without an application, the job is the default application's: it is always listed first.
       const jobApplication = scope ?? (await service.listApplications?.({ root }))?.[0];
-      const descriptor = pairDescriptor(workspace, scope);
+      // The screens address the workspace by the id in the path, never the driver's own.
+      const descriptor = { ...pairDescriptor(workspace, scope), id: workspaceId };
       const setup = await readiness(root, descriptor, jobApplication);
       const preflight = hostedPreflight(descriptor);
       const shownRunId =
