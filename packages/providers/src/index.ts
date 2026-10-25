@@ -331,6 +331,7 @@ interface ProviderErrorLike {
   readonly status?: unknown;
   readonly statusCode?: unknown;
   readonly code?: unknown;
+  readonly type?: unknown;
   readonly name?: unknown;
   readonly message?: unknown;
   readonly requestID?: unknown;
@@ -431,11 +432,14 @@ export function normalizeProviderError(
     nonEmptyString(details.requestID) ??
     nonEmptyString(details.request_id) ??
     nonEmptyString(details._request_id);
+  // The error `type` too: OpenAI can name a spent credit only as `type: "insufficient_quota"`.
   const combined = [
     details.code,
+    details.type,
     details.name,
     details.message,
     nested.code,
+    nested.type,
     nested.name,
     nested.message,
     nested.error,
@@ -463,7 +467,8 @@ export function normalizeProviderError(
       combined.includes("insufficient quota") ||
       combined.includes("quota exceeded") ||
       combined.includes("quota exhausted") ||
-      combined.includes("quota_exhausted"))
+      combined.includes("quota_exhausted") ||
+      combined.includes("exceeded your current quota"))
   ) {
     code = "quota-exhausted";
   } else if (

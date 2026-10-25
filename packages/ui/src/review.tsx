@@ -79,6 +79,7 @@ import {
   type FindingDecision,
   type IndependentReviewView,
   isUnresolvedFinding,
+  type ProviderFailureView,
   type ReviewAction,
   type ReviewFinding,
   reviewFindingSummary,
@@ -709,6 +710,12 @@ function independenceGateLabel(view: IndependentReviewView | null): string {
     return "Shared lineage overridden on a recorded rationale; critique was not independent";
   }
   return "Author and critic share one lineage; critique was not independent";
+}
+
+/** The failed call's step, and its role when another role's call failed that step. */
+function failedCallLabel({ step, role }: Pick<ProviderFailureView, "step" | "role">): string {
+  const stepRole = step === "critic" ? "critic" : "author";
+  return role === stepRole ? step : `${role} call in the ${step} step`;
 }
 
 function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
@@ -2856,8 +2863,8 @@ export function ReviewWorkspace({
               <h2>{state.providerFailure.explanation}</h2>
               <p className="subtle">
                 {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
-                {state.providerFailure.step} · attempt {state.providerFailure.attempt} of{" "}
-                {state.providerFailure.maxAttempts}
+                {failedCallLabel(state.providerFailure)} · attempt {state.providerFailure.attempt}{" "}
+                of {state.providerFailure.maxAttempts}
               </p>
               {state.providerFailure.diagnostics.length > 0 ? (
                 <div className="provider-diagnostics">

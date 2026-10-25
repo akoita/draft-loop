@@ -2133,6 +2133,7 @@ const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
   "provider",
   "model",
   "step",
+  "role",
   "attempt",
   "maxAttempts",
   "retryAvailable",
@@ -7648,6 +7649,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     identifier(failure.provider);
     identifier(failure.model);
     enumValue(failure.step, ["author", "critic", "revision"] as const);
+    enumValue(failure.role, ["author", "critic"] as const);
     const attempt = finiteInteger(failure.attempt, 100);
     const maxAttempts = finiteInteger(failure.maxAttempts, 100);
     if (attempt < 1 || maxAttempts < 1 || attempt > maxAttempts) return invalidInput();

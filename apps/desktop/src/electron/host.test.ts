@@ -1961,6 +1961,7 @@ describe("native host", () => {
             provider: "openai",
             model: "gpt-5",
             step: "critic",
+            role: "critic",
             attempt: 2,
             maxAttempts: 3,
             retryAvailable: true,

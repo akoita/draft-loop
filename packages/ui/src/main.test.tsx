@@ -526,6 +526,7 @@ describe("desktop trust-centered review", () => {
         provider: "openai",
         model: "gpt-5",
         step: "critic" as const,
+        role: "critic" as const,
         attempt: 2,
         maxAttempts: 3,
         retryAvailable: true,
@@ -566,6 +567,7 @@ describe("desktop trust-centered review", () => {
         provider: "openai",
         model: "gpt-5",
         step: "critic" as const,
+        role: "critic" as const,
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: true,
@@ -591,6 +593,7 @@ describe("desktop trust-centered review", () => {
       provider: "anthropic",
       model: "claude-test-author",
       step: "author" as const,
+      role: "author" as const,
       attempt: 1,
       maxAttempts: 3,
       retryAvailable: false,
@@ -618,6 +621,35 @@ describe("desktop trust-centered review", () => {
     expect(exhausted).toContain("This run has no retry left. Stop it, then start a new run.");
     expect(exhausted).not.toContain("Retry author");
     expect(exhausted).toContain("Stop run");
+  });
+
+  it("names the critic's call that failed the author step", () => {
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{
+          ...createFixtureReviewState(),
+          state: "provider-error" as const,
+          providerFailure: {
+            code: "quota-exhausted" as const,
+            explanation: "The provider account's credit is used up.",
+            provider: "openai",
+            model: "gpt-test-critic",
+            step: "author" as const,
+            role: "critic" as const,
+            attempt: 1,
+            maxAttempts: 3,
+            retryAvailable: false,
+            automaticRetry: false,
+            retryNotBefore: null,
+            availableActions: ["stop"] as const,
+            diagnostics: [],
+          },
+        }}
+        onAction={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("openai · gpt-test-critic · critic call in the author step · attempt");
   });
 
   it("shows pending finding feedback and disables every decision button", () => {

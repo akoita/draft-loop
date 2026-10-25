@@ -141,7 +141,7 @@ export const providerFailureExplanations: Readonly<Record<ProviderFailureView["c
   permission: "The provider denied permission for this request or model.",
   "rate-limit": "The provider rate limit was reached. Wait briefly before retrying.",
   "quota-exhausted":
-    "The OpenAI quota is exhausted. Add credits or use a different OpenAI project before retrying.",
+    "The provider account's credit is used up, so no retry can pass. Add credits, then start a new run.",
   "usage-limit":
     "The subscription usage limit was reached. Resume the review after the limit resets.",
   timeout: "The provider did not respond before the request timed out.",
@@ -192,6 +192,10 @@ function providerFailure(
     provider: snapshot.lastError.provider,
     model: snapshot.lastError.modelId,
     step: snapshot.lastError.step,
+    // A plan review fails the author step on the critic's call, so the call names its own role.
+    role:
+      snapshot.lastError.failedCall?.role ??
+      (snapshot.lastError.step === "critic" ? "critic" : "author"),
     attempt: snapshot.lastError.attempt,
     maxAttempts: snapshot.lastError.maxAttempts,
     retryAvailable,

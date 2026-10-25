@@ -280,6 +280,9 @@ importers:
       jose:
         specifier: 6.2.12
         version: 6.2.12
+      openai:
+        specifier: 7.23.0
+        version: 7.23.0(undici@7.30.0)(ws@8.22.0)(zod@4.4.3)
       pg:
         specifier: 8.23.1
         version: 8.23.1
