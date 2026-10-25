@@ -33,11 +33,13 @@ export const workspaceViewSchema = z
   })
   .meta({ id: "Workspace" });
 
+/** A workspace by the id in its path: the driver's own id is a reference clients never send. */
 export function workspaceView(
+  workspaceId: string,
   descriptor: WorkspaceDescriptor,
 ): z.infer<typeof workspaceViewSchema> {
   return {
-    id: descriptor.id,
+    id: workspaceId,
     language: descriptor.language,
     requiredSections: [...descriptor.requiredSections],
     maxRounds: descriptor.maxRounds,

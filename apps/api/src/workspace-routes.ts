@@ -187,7 +187,7 @@ export function registerWorkspaceRoutes(
       const { caller } = request;
       if (caller?.kind === "member") await options.planLimits?.requireRecordRoom(caller.tenantId);
       const descriptor = await service.initialize(initializeCommand(root, body), silent);
-      return reply.code(201).send(workspaceView(descriptor));
+      return reply.code(201).send(workspaceView(request.params.workspaceId, descriptor));
     },
   );
 
@@ -225,7 +225,7 @@ export function registerWorkspaceRoutes(
         },
         silent,
       );
-      return workspaceView(descriptor);
+      return workspaceView(request.params.workspaceId, descriptor);
     },
   );
 
@@ -269,7 +269,7 @@ export function registerWorkspaceRoutes(
         },
         silent,
       );
-      return workspaceView(descriptor);
+      return workspaceView(request.params.workspaceId, descriptor);
     },
   );
 }
