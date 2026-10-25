@@ -479,6 +479,17 @@ The owner sets up a hosted workspace through the API before any run:
   409 `brief_version_stale`, as a review of a stale version does.
   `GET .../versions` lists each version's number, status and dates.
 
+The owner manages a workspace's job applications through the API
+(`application-lifecycle-routes.ts`), as the desktop does:
+
+- `POST /v1/workspaces/:id/applications` creates one from a name and pasted job
+  text. The hosted service keeps that text in the application's record, never
+  in a file, and `GET .../applications/:applicationId/job` reads it back.
+- `PATCH .../applications/:applicationId` renames, archives or restores one,
+  and an unknown application answers 404.
+- `PUT .../models` sets or clears an application's author and critic pair, and
+  `PUT .../chosen-run` chooses the run whose draft it uses.
+
 Candidate sources reach a hosted knowledge store through
 `createHostedKnowledgeIntake` in `packages/application`, over the storage ports
 and the blob port:

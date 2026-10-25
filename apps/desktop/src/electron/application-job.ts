@@ -32,6 +32,8 @@ export async function readApplicationJob(input: {
       url: source.url,
     };
   }
+  // Kept in the record where the workspace has no files; the desktop's own applications never are.
+  if (source?.kind === "stored-text") return jobText(input.workspaceId, "pasted-text", source.text);
   const origin = source === undefined ? "workspace-file" : source.kind;
   const path =
     source === undefined
@@ -54,9 +56,17 @@ export async function readApplicationJob(input: {
     return unavailable;
   }
   if (text === "") return unavailable;
+  return jobText(input.workspaceId, origin, text);
+}
+
+function jobText(
+  workspaceId: string,
+  origin: ApplicationJobResult["origin"],
+  text: string,
+): ApplicationJobResult {
   const truncated = text.length > maximumApplicationJobTextLength;
   return {
-    workspaceId: input.workspaceId,
+    workspaceId,
     origin,
     text: truncated ? text.slice(0, maximumApplicationJobTextLength) : text,
     truncated,

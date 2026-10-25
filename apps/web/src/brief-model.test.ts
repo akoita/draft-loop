@@ -54,6 +54,10 @@ describe("pasted job", () => {
         ],
         runs: [],
         chosenRunId: null,
+        jobSourceKind: "pasted-text",
+        suggestedName: null,
+        exportCount: 0,
+        modelProfiles: null,
       })?.briefId,
     ).toBe("new");
   });

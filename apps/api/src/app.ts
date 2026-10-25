@@ -21,6 +21,7 @@ import {
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
 
+import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
@@ -330,6 +331,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       budgetCeiling: application.budgetCeiling,
       ...(screening === undefined ? {} : { screening }),
       ...(entitlementGate === undefined ? {} : { entitlementGate }),
+    });
+    registerApplicationLifecycleRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
     });
     registerReviewRoutes(app, {
       service: application.service,

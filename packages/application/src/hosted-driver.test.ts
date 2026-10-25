@@ -238,6 +238,55 @@ describe("hosted application driver", () => {
     await expect(access("/tenants")).rejects.toThrow();
   }, 120_000);
 
+  it("keeps a created application's pasted job in its record, then renames, pairs and archives it", async () => {
+    const { service, resumed } = await awaitingApprovalRun();
+
+    const created = await service.createApplication({
+      root: workspace,
+      id: "app-platform",
+      name: "Example Ledger platform engineer",
+      jobSource: { kind: "pasted-text", text: "  Platform Engineer at Example Ledger\n" },
+    });
+    expect(created.jobSource).toEqual({
+      kind: "stored-text",
+      text: "Platform Engineer at Example Ledger",
+    });
+
+    const renamed = await service.renameApplication?.({
+      root: workspace,
+      applicationId: "app-platform",
+      name: "Platform engineer",
+    });
+    const paired = await service.setApplicationModels?.({
+      root: workspace,
+      applicationId: "app-platform",
+      modelProfiles: {
+        author: { id: "standard-anthropic-author", version: 1 },
+        critic: { id: "standard-openai-critic", version: 1 },
+      },
+    });
+    const chosen = await service.chooseApplicationRun?.({
+      root: workspace,
+      applicationId: "default",
+      runId: resumed.runId,
+    });
+    const archived = await service.archiveApplication?.({
+      root: workspace,
+      applicationId: "app-platform",
+      archived: true,
+    });
+
+    expect(renamed?.name).toBe("Platform engineer");
+    expect(paired?.modelProfiles?.author.id).toBe("standard-anthropic-author");
+    expect(chosen?.chosenRun?.runId).toBe(resumed.runId);
+    expect(archived?.archivedAt).toEqual(expect.any(String));
+    expect((await service.listApplications({ root: workspace })).map(({ id }) => id)).toEqual([
+      "default",
+      "app-platform",
+    ]);
+    await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
   it("activates a writing policy given as text, and a run records its version", async () => {
     const policyText = "# Writing policy\n\nKeep each bullet to one sentence.";
     const { service, begun } = await begunRun(async (hosted) => {

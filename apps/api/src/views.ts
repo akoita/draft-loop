@@ -89,6 +89,21 @@ export const applicationViewSchema = z
       z.object({ id: z.string(), state: z.string(), startedAt: z.string(), updatedAt: z.string() }),
     ),
     chosenRunId: z.string().nullable(),
+    jobSourceKind: z
+      .enum(["pasted-text", "approved-url", "local-file"])
+      .describe("Where the job came from; a hosted application's pasted text is kept with it."),
+    suggestedName: z
+      .string()
+      .nullable()
+      .describe("A name read from the newest brief's role and employer, until one is chosen."),
+    exportCount: z.number().int(),
+    modelProfiles: z
+      .object({
+        author: z.object({ id: z.string(), version: z.number().int() }),
+        critic: z.object({ id: z.string(), version: z.number().int() }),
+      })
+      .nullable()
+      .describe("The application's own model pair; null uses the workspace's."),
   })
   .meta({ id: "Application" });
 
@@ -115,6 +130,10 @@ export function applicationView(view: ApplicationView): z.infer<typeof applicati
       updatedAt,
     })),
     chosenRunId: view.chosenRun?.runId ?? null,
+    jobSourceKind: view.jobSource.kind === "stored-text" ? "pasted-text" : view.jobSource.kind,
+    suggestedName: view.suggestedName,
+    exportCount: view.exports.length,
+    modelProfiles: view.modelProfiles,
   };
 }
 
