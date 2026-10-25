@@ -24,6 +24,7 @@ import {
 } from "@draft-loop/storage-postgres";
 import { Storage } from "@google-cloud/storage";
 
+import type { BriefExtractions } from "./brief-extraction.js";
 import type { HostedStorageConfig } from "./config.js";
 import {
   type ContentScreeningSetup,
@@ -52,6 +53,8 @@ export interface HostedApplicationParts {
   readonly tenantId: string;
   readonly budgetCeiling: RunBudgetCeiling;
   readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
+  /** The worker's extraction of live briefs; a live brief is left for the person without it. */
+  readonly briefExtractions?: BriefExtractions;
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
@@ -80,6 +83,7 @@ export function composeHostedApplication(
     service,
     workspaceRoot: (workspaceId) => hostedWorkspaceReference(tenantId, workspaceId),
     enqueueRun: parts.enqueueRun,
+    ...(parts.briefExtractions === undefined ? {} : { briefExtractions: parts.briefExtractions }),
     budgetCeiling,
     monthUsage: storage.monthUsage,
     idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
@@ -193,6 +197,15 @@ export async function openHostedTenants(
               worker.wake,
               worker.onWakeError,
             ),
+            briefExtractions: {
+              // Queued, then the worker woken as for a run; a wake failure only delays it.
+              queue: async (job) => {
+                await queue.enqueueBriefExtraction({ tenantId, ...job });
+                await worker.wake().catch(worker.onWakeError);
+                return true;
+              },
+              state: (version) => queue.briefExtractionState({ tenantId, ...version }),
+            },
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
             screening,
             ...(config.maxSourceBytes === undefined

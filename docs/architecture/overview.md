@@ -265,6 +265,13 @@ The hosted service starts runs through a queue rather than in the request
   provider call, then queues its ids in `packages/run-queue`. A request that
   saved the run but could not queue it answers 503, and a retry with the same
   `Idempotency-Key` queues the saved run.
+- A live workspace's brief made from an application's job text is saved
+  without extraction. Once injection screening clears that text,
+  `POST /v1/workspaces/:id/opportunities` queues its extraction on the same
+  queue's brief extraction queue, and the brief's view says `extraction:
+  pending` until the worker saves the extracted next version (or `failed`). A
+  flagged or unscreened text is never queued, and a fixture workspace's brief
+  is extracted as it is saved.
 - Its optional `modelProfiles` binds exact author and critic profile versions
   to that run, such as a preset's pair, as the CLI and the desktop do. Without
   them the run uses provider-default runtime controls and unknown context
