@@ -65,7 +65,7 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
     await rm(blobRoot, { recursive: true, force: true });
   });
 
-  it("goes from Home to a reviewed brief and career evidence through the port the shared screens use", async () => {
+  it("goes from Home to a started run through the port the shared screens use", async () => {
     const storage = await openPostgresStorage({
       connectionString: runtimeUrl(url),
       schema,
@@ -146,6 +146,15 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       });
       const ready = await port.load();
       expect(ready.setup.nextSteps).toEqual([]);
+
+      // Start the review from the Review step: the run is saved and queued for a worker.
+      const started = await port.dispatch(ready, { type: "start" });
+      expect(started.runId).not.toBe("pending");
+      const listed = await client.call(
+        "GET /v1/workspaces/{workspaceId}/applications/{applicationId}",
+        { path: { workspaceId: ownerWorkspaceId, applicationId: created.id } },
+      );
+      expect(listed.runs.map(({ id }) => id)).toEqual([started.runId]);
     } finally {
       await api.close();
       await storage.close();

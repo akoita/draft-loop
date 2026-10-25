@@ -55,6 +55,7 @@ export const hostedBridgeCapabilities = [
   "run.resume",
   "run.stop",
   "review.load",
+  "review.dispatch",
   "models.list",
   "models.preview-independence",
   "models.profile-support",
@@ -135,6 +136,20 @@ function runStatus(workspaceId: string, run: ApiSchemas["Run"] | undefined): Run
     approval: run.approval,
   };
 }
+
+/** The application's newest reviewed brief, the one a run starts from. */
+function reviewedBrief(application: Application) {
+  const reviewed = application.briefs
+    .filter(({ status }) => status === "reviewed")
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
+  return reviewed === undefined
+    ? undefined
+    : { briefId: reviewed.briefId, version: reviewed.latestVersion };
+}
+
+/** Until the shared review reaches the web (sprint 1p), only a start goes through the screens. */
+const classicReviewMessage =
+  "Decide findings, approve and export in “Review, approve and export” for now.";
 
 /** The API's own source kinds; a URL, a file or a job file needs the desktop. */
 function hostedSource(source: OpportunityCreateSource) {
@@ -488,6 +503,45 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
             ...(applicationId === undefined ? {} : { applicationId }),
             ...(runId === undefined ? {} : { runId }),
           },
+        });
+      }
+      case "review.dispatch": {
+        const { workspaceId, action } = command.input;
+        if (action.type !== "start") return refuse(classicReviewMessage);
+        if (action.candidateProfile !== undefined) {
+          return refuse("A career profile cannot be chosen for a hosted run yet.");
+        }
+        if (action.pageTarget !== undefined) {
+          return refuse("Set the draft's length in the writing policy on the hosted service.");
+        }
+        if (action.requirementsSource === "job-description") {
+          return refuse("The hosted service starts a run from the reviewed requirements.");
+        }
+        const scoped = await scopedApplication(workspaceId, command.input.applicationId);
+        const opportunityBrief =
+          reviewedBrief(scoped) ?? refuse("Review this application's requirements first.");
+        const { modelProfiles } = action;
+        await client.call("POST /v1/workspaces/{workspaceId}/runs", {
+          path: { workspaceId },
+          header: { "idempotency-key": idempotencyKey() },
+          body: {
+            applicationId: scoped.id,
+            opportunityBrief,
+            ...(modelProfiles === undefined
+              ? {}
+              : {
+                  modelProfiles: {
+                    author: { id: modelProfiles.author.id, version: modelProfiles.author.version },
+                    critic: { id: modelProfiles.critic.id, version: modelProfiles.critic.version },
+                  },
+                }),
+          },
+        });
+        // The started run is the application's newest, so the screens load it as they do after a
+        // desktop start.
+        return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
+          path: { workspaceId },
+          query: { applicationId: scoped.id },
         });
       }
       default:
