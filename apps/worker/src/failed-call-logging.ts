@@ -1,4 +1,4 @@
-import type { ExecutionRecord, RunSnapshot } from "@draft-loop/orchestrator";
+import type { ExecutionRecord, RunError, RunSnapshot } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
 
 import { logLine, type Severity } from "./logging.js";
@@ -17,11 +17,17 @@ function failedDuringJob(run: RunSnapshot, before?: RunSnapshot): readonly Execu
 /**
  * One content-free line per failed provider call (#1568): which call failed, by role, company,
  * model and route, with the HTTP status, the normalized code, the provider's own `type` and `code`
- * tokens, and for a rate limit the limit that ran out and the Retry-After seconds. Never the
- * provider's message or a body, which can quote the prompt.
+ * tokens, and for a rate limit the limit that ran out and the Retry-After seconds. For the call the
+ * run's last error describes, a rejected output adds where it failed and its diagnostic codes and
+ * field paths (#1762). Never the provider's message, a body or a value, which can quote the prompt.
  */
-export function failedCallFields(job: RunJob, execution: ExecutionRecord): Record<string, unknown> {
+export function failedCallFields(
+  job: RunJob,
+  execution: ExecutionRecord,
+  lastError?: RunError | null,
+): Record<string, unknown> {
   const call = execution.failedCall;
+  const rejection = describesExecution(lastError, execution) ? lastError : undefined;
   return {
     runId: job.runId,
     step: execution.step,
@@ -36,7 +42,29 @@ export function failedCallFields(job: RunJob, execution: ExecutionRecord): Recor
     ...(call?.providerErrorCode === undefined ? {} : { providerErrorCode: call.providerErrorCode }),
     ...(call?.rateLimit === undefined ? {} : { rateLimit: call.rateLimit }),
     ...(call?.retryAfterSeconds === undefined ? {} : { retryAfterSeconds: call.retryAfterSeconds }),
+    ...(rejection?.failureStage === undefined ? {} : { failureStage: rejection.failureStage }),
+    ...(rejection?.diagnostics === undefined || rejection.diagnostics.length === 0
+      ? {}
+      : { diagnostics: rejection.diagnostics.map(({ code, path }) => ({ code, path })) }),
+    ...(rejection?.diagnosticCounts === undefined || rejection.diagnosticCounts.length === 0
+      ? {}
+      : {
+          diagnosticCounts: rejection.diagnosticCounts.map(({ code, count }) => ({ code, count })),
+        }),
   };
+}
+
+/** The run's last error belongs to this execution when it names the same step and attempt. */
+function describesExecution(
+  lastError: RunError | null | undefined,
+  execution: ExecutionRecord,
+): lastError is RunError {
+  return (
+    lastError !== null &&
+    lastError !== undefined &&
+    lastError.step === execution.step &&
+    lastError.attempt === execution.attempt
+  );
 }
 
 /** The job's failed-call lines; a call the run will retry is a warning, any other an error. */
@@ -44,6 +72,10 @@ export function failedCallLines(job: RunJob, run?: RunSnapshot, before?: RunSnap
   if (run === undefined) return [];
   return failedDuringJob(run, before).map((execution) => {
     const severity: Severity = execution.retryable === true ? "WARNING" : "ERROR";
-    return logLine(severity, "provider call failed", failedCallFields(job, execution));
+    return logLine(
+      severity,
+      "provider call failed",
+      failedCallFields(job, execution, run.lastError),
+    );
   });
 }

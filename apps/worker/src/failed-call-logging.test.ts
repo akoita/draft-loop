@@ -126,6 +126,68 @@ describe("the worker's failed-call lines", () => {
     expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({ code: "invalid-request", status: 400 });
   });
 
+  it("say where a rejected author output failed, by diagnostic codes and paths only", () => {
+    const failed: ExecutionRecord = {
+      ...failedCritic(openAiError(500, {})),
+      id: "run-1:1:author:attempt:1",
+      step: "author",
+      provider: "anthropic",
+      modelId: "claude-test-author",
+      errorCode: "invalid-response",
+      retryable: true,
+    };
+    const { failedCall: _failedCall, ...withoutCall } = failed;
+    const rejected = {
+      ...run("provider-error", withoutCall),
+      lastError: {
+        code: "invalid-response",
+        message: `The author returned ${marker}.`,
+        provider: "anthropic",
+        modelId: "claude-test-author",
+        step: "author",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        providerRequestId: null,
+        failureStage: "artifact-schema-validation",
+        diagnostics: [{ code: "too_small", path: "sections.1.bullets" }],
+        diagnosticCounts: [{ code: "too_small", count: 2 }],
+      },
+    } as unknown as RunSnapshot;
+
+    const [line] = failedCallLines(job, rejected, run("drafting"));
+
+    expect(line).not.toContain(marker);
+    expect(JSON.parse(line ?? "{}")).toMatchObject({
+      severity: "WARNING",
+      step: "author",
+      role: "author",
+      code: "invalid-response",
+      failureStage: "artifact-schema-validation",
+      diagnostics: [{ code: "too_small", path: "sections.1.bullets" }],
+      diagnosticCounts: [{ code: "too_small", count: 2 }],
+    });
+  });
+
+  it("leave the last error's diagnostics off an earlier attempt's line", () => {
+    const first = failedCritic(openAiError(500, {}), 1, true);
+    const second = failedCritic(openAiError(500, {}), 2, true);
+    const latest = {
+      ...run("provider-error", first, second),
+      lastError: {
+        code: "transient",
+        step: "critic",
+        attempt: 2,
+        failureStage: "transport-parsing",
+      },
+    } as unknown as RunSnapshot;
+
+    const lines = failedCallLines(job, latest, run("reviewing")).map((line) => JSON.parse(line));
+
+    expect(lines[0]).not.toHaveProperty("failureStage");
+    expect(lines[1]).toMatchObject({ failureStage: "transport-parsing" });
+  });
+
   it("log each failure once, in the job that met it", () => {
     const first = failedCritic(openAiError(500, {}), 1, true);
     const second = failedCritic(openAiError(500, {}), 2, true);

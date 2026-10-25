@@ -10,7 +10,7 @@ import {
   startRunBody,
   usageLimitWait,
 } from "./run-model.js";
-import { syntheticBrief, syntheticRun } from "./test-fixtures.js";
+import { noRejection, syntheticBrief, syntheticRun } from "./test-fixtures.js";
 
 describe("run progress", () => {
   it("keeps reading an active run and stops at review or an end", () => {
@@ -37,6 +37,7 @@ describe("run progress", () => {
         code: "usage-limit",
         retryable: true,
         usageLimitResetsAt: "2026-10-23T14:30:00.000Z",
+        ...noRejection,
       },
     };
     expect(usageLimitWait(waiting, "en-GB")).toBe(
@@ -46,7 +47,12 @@ describe("run progress", () => {
     expect(
       runError({
         ...syntheticRun,
-        lastError: { code: "provider-error", retryable: false, usageLimitResetsAt: null },
+        lastError: {
+          code: "provider-error",
+          retryable: false,
+          usageLimitResetsAt: null,
+          ...noRejection,
+        },
       }),
     ).toBe("The run stopped on an error (provider-error).");
     expect(
@@ -56,6 +62,7 @@ describe("run progress", () => {
           code: "rate-limit",
           retryable: true,
           usageLimitResetsAt: null,
+          ...noRejection,
           failedCall: {
             role: "critic",
             company: "openai",

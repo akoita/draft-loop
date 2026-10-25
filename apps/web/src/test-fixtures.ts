@@ -42,6 +42,9 @@ export const syntheticBrief: Brief = {
   issues: [],
 };
 
+/** A run error's rejection fields when DraftLoop rejected no output. */
+export const noRejection = { failureStage: null, diagnostics: [], diagnosticCounts: [] } as const;
+
 export const syntheticRun: Run = {
   runId: "run-1",
   workspaceId: "owner",

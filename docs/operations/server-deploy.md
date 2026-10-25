@@ -191,11 +191,13 @@ The lines are content-free (ADR 0011, D16):
   it: the run id, step, role and attempt; the company, model and route; the
   HTTP status and the normalized code; the provider's own error `type` and
   `code` when each is a short token; and, for a rate limit, which limit ran out
-  and the Retry-After seconds. A call the run retries is a `WARNING`, any other
-  an `ERROR`.
+  and the Retry-After seconds. When DraftLoop rejected the call's output, the
+  line also names the `failureStage` and the diagnostic codes and field paths,
+  never a value. A call the run retries is a `WARNING`, any other an `ERROR`.
 
-The run's failure keeps the same fields, and the API returns them as the
-run's `lastError.failedCall`, so the web screen can name the call that failed.
+The run's failure keeps the same fields. The API returns the call as the run's
+`lastError.failedCall` and a rejection's stage and diagnostics beside it, so
+the web screen can name the call that failed and why.
 
 ### Margin line
 
