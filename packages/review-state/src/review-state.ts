@@ -41,6 +41,7 @@ import type { RunAuthorInputView } from "@draft-loop/ui/run-author-input";
 import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
 
 import { executionCallLimitMs } from "./execution-call-limit.js";
+import { readableFindingMessage } from "./finding-message.js";
 import { reviewCoverage } from "./review-coverage.js";
 import { usageLimitView } from "./usage-limit-view.js";
 
@@ -279,7 +280,10 @@ export function reviewFinding(
     code: finding.code,
     category: finding.category ?? "quality",
     severity: finding.severity,
-    message: finding.message,
+    message: readableFindingMessage(finding.message, {
+      ...(requirementTexts === undefined ? {} : { requirements: requirementTexts }),
+      claims: new Map((snapshot.artifact?.claims ?? []).map(({ id, text }) => [id, text])),
+    }),
     decision: overrides.decisions[id] ?? "pending",
     agreement: "critic-only",
     ...(overrides.rationales[id] === undefined ? {} : { rationale: overrides.rationales[id] }),
