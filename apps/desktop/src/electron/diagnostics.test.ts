@@ -8,8 +8,8 @@ import {
 } from "@draft-loop/application";
 import { SemanticValidationError } from "@draft-loop/domain";
 import { ProviderAdapterError } from "@draft-loop/providers";
+import { DesktopBridgeError } from "@draft-loop/ui/native";
 import { describe, expect, it } from "vitest";
-import { DesktopBridgeError } from "../native.js";
 import { createHostErrorLogger } from "./diagnostics.js";
 
 const filenames = ["host-errors.jsonl", "host-errors.1.jsonl"] as const;

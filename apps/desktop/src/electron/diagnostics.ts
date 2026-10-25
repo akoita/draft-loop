@@ -16,7 +16,7 @@ import {
 } from "@draft-loop/application";
 import { ProviderAdapterError, type ProviderErrorCode } from "@draft-loop/providers";
 import { type BridgeErrorCode, bridgeCapabilities } from "@draft-loop/ui/bridge";
-import { DesktopBridgeError } from "../native.js";
+import { DesktopBridgeError } from "@draft-loop/ui/native";
 import { summarizeHostErrorCause } from "./diagnostics-cause.js";
 
 const maximumLogBytes = 64 * 1024;

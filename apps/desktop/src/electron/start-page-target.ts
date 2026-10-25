@@ -6,7 +6,10 @@ import {
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 
-import { readPolicySelectorValues, setPolicySelectorValue } from "../writing-policy-directives.js";
+import {
+  readPolicySelectorValues,
+  setPolicySelectorValue,
+} from "@draft-loop/ui/writing-policy-directives";
 
 /*
  * The length chosen on the Start confirmation (#1366). The author writes to the writing policy's

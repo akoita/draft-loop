@@ -8,9 +8,8 @@ import {
   createLocalApplicationDriver,
   opportunityBriefVersionStaleErrorMessage,
 } from "@draft-loop/application";
+import { opportunityVersionConflictMessage } from "@draft-loop/ui/opportunity-brief-review-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { opportunityVersionConflictMessage } from "../opportunity-brief-review-model.js";
 import { createNativeHost } from "./host.js";
 import { hostFailureMessage } from "./host-failure-message.js";
 
