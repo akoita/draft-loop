@@ -65,6 +65,7 @@ function erasureOf(tenantId: string, tenant: MemoryTenant): TenantErasure {
         if (tenant.closed.has(id))
           return { state: "closed", resumed: true, objectKeys: keysOf(id) };
         if (!tenant.records.has(id)) return { state: "missing" };
+        if (tenant.active) return { state: "run-active" };
         tenant.closed.add(id);
         return { state: "closed", resumed: false, objectKeys: keysOf(id) };
       },
@@ -159,12 +160,13 @@ afterEach(async () => {
   app = undefined;
 });
 
-async function api(): Promise<FastifyInstance> {
+async function api(auth: ApiAuthOptions = signIn): Promise<FastifyInstance> {
   app = await buildApi({
     ownerToken,
-    auth: signIn,
+    auth,
     logger: cloudLoggingOptions({ write: (line) => logLines.push(line) }),
     tenants: {
+      ...(auth.mode === "owner" ? { ownerTenantId: "owner" } : {}),
       budgetCeiling,
       applicationFor: fakeApplication,
       recordAccessFor: () => ({}) as CandidateRecordAccess,
@@ -297,6 +299,37 @@ describe("organisation erasure routes", () => {
       status: 404,
       code: "not_found",
     });
+    expect(
+      await remove(server, "operator", "/v1/operator/organisations/org-never", "org-never"),
+    ).toEqual({ status: 404, code: "not_found" });
+  });
+
+  it("lets the operator erase the owner token's tenant, which the directory never registered", async () => {
+    const server = await api({ mode: "owner" });
+    const owner = { ...memoryTenant("owner"), exists: false };
+    tenants.owner = owner;
+    const url = "/v1/operator/organisations/owner";
+
+    owner.active = true;
+    expect(await remove(server, "operator", url, "owner")).toEqual({
+      status: 409,
+      code: "run_active",
+    });
+    expect(owner.closed.size).toBe(0);
+
+    owner.active = false;
+    expect(await remove(server, "operator", url, "owner")).toEqual({
+      status: 204,
+      code: undefined,
+    });
+    expect(owner).toMatchObject({ rows: 0 });
+    expect(owner.records.size).toBe(0);
+    expect(owner.objects.size).toBe(0);
+    expect(erasureLines()).toEqual([
+      { organisationId: "owner", records: 2, objectsRemoved: 3, rowsRemoved: 10 },
+    ]);
+    // Nothing is left to erase, and another unregistered id is still unknown.
+    expect((await remove(server, "operator", url, "owner")).status).toBe(204);
     expect(
       await remove(server, "operator", "/v1/operator/organisations/org-never", "org-never"),
     ).toEqual({ status: 404, code: "not_found" });

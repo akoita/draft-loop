@@ -7,6 +7,11 @@ import type { TenantErasure, TenantErasureFor } from "./record-erasure-routes.js
 
 export interface OrganisationErasureRoutesOptions {
   readonly erasureFor: TenantErasureFor;
+  /**
+   * The owner token's tenant, which sign-in never registered: the operator erases it although the
+   * directory has no organisation for it.
+   */
+  readonly ownerTenantId?: string;
 }
 
 const identifierSchema = z
@@ -45,11 +50,19 @@ type OrganisationErasureOutcome =
  * anything meanwhile; then each record is closed and erased in turn, its objects by key, then every
  * object left under the tenant's prefix, then the tenant's remaining rows, the directory last. An
  * interruption leaves the organisation closing in the directory, so the next call finishes it.
+ *
+ * An unregistered tenant, the owner token's, has no organisation to mark and no members to refuse:
+ * its erasure goes straight to the records, each of which still refuses while its run is active,
+ * and a repeated call finishes an interrupted one the same way.
  */
-async function eraseOrganisation(erasure: TenantErasure): Promise<OrganisationErasureOutcome> {
+async function eraseOrganisation(
+  erasure: TenantErasure,
+  unregistered = false,
+): Promise<OrganisationErasureOutcome> {
   const { organisation, records, blobs } = erasure;
   const closure = await organisation.close();
-  if (closure.state !== "closing") return closure;
+  if (closure.state === "run-active") return closure;
+  if (closure.state === "missing" && !unregistered) return closure;
   let erasedRecords = 0;
   let objectsRemoved = 0;
   let rowsRemoved = 0;
@@ -105,7 +118,7 @@ export function registerOrganisationErasureRoutes(
   options: OrganisationErasureRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { erasureFor } = options;
+  const { erasureFor, ownerTenantId } = options;
 
   app.delete(
     "/v1/organisation",
@@ -147,7 +160,7 @@ export function registerOrganisationErasureRoutes(
     {
       schema: {
         summary: "Delete an organisation and everything it holds",
-        description: `Operator only: takes the deployment's owner token in both authentication modes. ${description}`,
+        description: `Operator only: takes the deployment's owner token in both authentication modes. ${description} The owner token's own tenant has no organisation in the directory; it is erased the same way, record by record, and a repeated call answers 204 again.`,
         params: organisationParams,
         body: eraseBody,
         response: erasedResponses,
@@ -164,7 +177,10 @@ export function registerOrganisationErasureRoutes(
       if (request.body.confirm !== organisationId) {
         return reply.code(400).send(confirmationMismatch);
       }
-      const outcome = await eraseOrganisation(erasureFor(organisationId));
+      const outcome = await eraseOrganisation(
+        erasureFor(organisationId),
+        organisationId === ownerTenantId,
+      );
       return answer(request, reply, organisationId, outcome);
     },
   );
