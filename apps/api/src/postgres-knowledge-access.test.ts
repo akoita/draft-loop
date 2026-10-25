@@ -258,7 +258,7 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
     expect((await select("coach-1", "r1", [baseA])).status).toBe(200);
   });
 
-  it("leaves owner-token mode with tenant-wide bases", async () => {
+  it("gives owner-token mode's bases their workspace too, so no other workspace sees them", async () => {
     const owner = await buildApi({ ownerToken, tenants: { ...tenants, ownerTenantId: tenantId } });
     try {
       const send = async (method: Method, path: string, payload?: object) => {
@@ -270,19 +270,40 @@ describe.runIf(connectionString !== undefined)("knowledge base access through th
         });
         return { status: response.statusCode, body: response.json() };
       };
-      const created = await send("POST", "/v1/knowledge-bases", { displayName: "Shared notes" });
-      expect(created.status).toBe(201);
-      expect(
-        await tenancy.forTenant(tenantId).knowledgeBaseOwners.ownerOf(created.body.id),
-      ).toBeUndefined();
-      // Every base of the tenant, whichever record owns it; the filter is ignored.
-      const all = (await send("GET", "/v1/knowledge-bases?workspaceId=r1")).body.knowledgeBases;
-      expect(all).toHaveLength(3);
-      const baseA = (await listed("coach-1"))[0];
-      expect(
-        (await send("PUT", "/v1/workspaces/r2/knowledge-selection", { knowledgeBaseIds: [baseA] }))
-          .status,
-      ).toBe(200);
+      const owners = tenancy.forTenant(tenantId).knowledgeBaseOwners;
+      const shared = await send("POST", "/v1/knowledge-bases", { displayName: "Shared notes" });
+      expect(shared.status).toBe(201);
+      expect(await owners.ownerOf(shared.body.id)).toBeUndefined();
+      const own = await send("POST", "/v1/knowledge-bases", {
+        displayName: "Career material",
+        workspaceId: "r1",
+      });
+      expect(own.status).toBe(201);
+      // As in sign-in mode, so erasing the workspace erases the base with it (#1758).
+      expect(await owners.ownerOf(own.body.id)).toBe("r1");
+
+      // The owner token lists every base; a workspace lists only its own.
+      const ids = async (query: string) =>
+        (await send("GET", `/v1/knowledge-bases${query}`)).body.knowledgeBases.map(
+          (base: { id: string }) => base.id,
+        );
+      expect(await ids("")).toHaveLength(4);
+      // The record's first base and this one, as a member assigned to it sees them.
+      expect((await ids("?workspaceId=r1")).sort()).toEqual((await listed("coach-1")).sort());
+      expect(await ids("?workspaceId=r1")).toContain(own.body.id);
+      expect(await ids("?workspaceId=never-created")).toEqual([]);
+
+      // No workspace selects another's base; a base no workspace owns stays selectable.
+      const baseB = (await listed("coach-2"))[0];
+      const select = async (workspaceId: string, knowledgeBaseIds: string[]) =>
+        send("PUT", `/v1/workspaces/${workspaceId}/knowledge-selection`, { knowledgeBaseIds });
+      expect(await select("r1", [baseB])).toEqual(unknownBase);
+      const baseA = (await listed("coach-1")).find((id: string) => id !== own.body.id);
+      expect((await select("r1", [baseA])).status).toBe(200);
+      // A base no workspace owns is never refused as another workspace's.
+      expect((await select("r1", [shared.body.id])).body.error.code).not.toBe(
+        "knowledge_base_not_found",
+      );
     } finally {
       await owner.close();
     }

@@ -41,6 +41,7 @@ import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
+import { registerOwnerTokenKnowledge } from "./owner-token-knowledge.js";
 import { createPlanLimits } from "./plan-limits.js";
 import {
   noProfileDerivations,
@@ -265,6 +266,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
     });
+  } else if (
+    application !== undefined &&
+    knowledgeOwnersFor !== undefined &&
+    options.tenants?.ownerTenantId !== undefined
+  ) {
+    knowledgeOwnership = registerOwnerTokenKnowledge(
+      app,
+      knowledgeOwnersFor(options.tenants.ownerTenantId),
+    );
   }
   if (application !== undefined && auth.mode === "oidc" && knowledgeOwnersFor !== undefined) {
     if (application.consents === undefined) {
