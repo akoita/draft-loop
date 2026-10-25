@@ -91,6 +91,13 @@ describe("Career evidence setup card", () => {
     );
   });
 
+  it("hides the URL box when the host fetches no URL, keeping Add files", () => {
+    const html = render(selected, { urlsOffered: false });
+    expect(html).toContain(">Add files<");
+    expect(html).not.toContain("Or provide public URLs");
+    expect(html).not.toContain("Review and fetch source URL");
+  });
+
   it("splits typed URLs on lines and spaces, dropping blanks and repeats", () => {
     expect(parseSourceUrls("")).toEqual([]);
     expect(

@@ -10,6 +10,8 @@ import {
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
+import { loadCareerEvidenceStatus } from "@draft-loop/ui/career-evidence";
+import { addFirstCareerEvidence } from "@draft-loop/ui/career-evidence-setup";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import {
   createApiClient,
@@ -29,6 +31,12 @@ const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const tenantId = "tenant-shared";
 const budgetCeiling = { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 };
+/** A fictional CV the browser's file picker would hand over. */
+const evidenceFile = new File(
+  ["# Example Candidate\n\n- Built TypeScript services at Example Ledger.\n"],
+  "example-cv.md",
+  { type: "text/markdown" },
+);
 const jobText =
   "Platform Engineer at Example Ledger\n\nRequirements:\n- Build TypeScript services\n- Write deterministic tests\n";
 
@@ -57,7 +65,7 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
     await rm(blobRoot, { recursive: true, force: true });
   });
 
-  it("goes from Home to a reviewed brief through the port the shared screens use", async () => {
+  it("goes from Home to a reviewed brief and career evidence through the port the shared screens use", async () => {
     const storage = await openPostgresStorage({
       connectionString: runtimeUrl(url),
       schema,
@@ -75,7 +83,9 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       }),
     });
     const client = createApiClient({ token: ownerToken, fetch: injectFetch(api) });
-    const port = createBridgeReviewPort(createCapabilityPort(createHttpBridge({ client })));
+    const port = createBridgeReviewPort(
+      createCapabilityPort(createHttpBridge({ client, pickFile: async () => evidenceFile })),
+    );
 
     try {
       // The shell sets the workspace up first; the shared screens then open on it.
@@ -117,6 +127,25 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       expect(application.setup.nextSteps).toEqual([
         "Add at least one source to the selected knowledge base.",
       ]);
+
+      // Career evidence: the card's first add creates the workspace's base, uploads the picked
+      // file and selects the base; the start checklist then has nothing left to ask.
+      const added = await addFirstCareerEvidence({
+        capabilities: port,
+        workspaceId: ownerWorkspaceId,
+        source: { kind: "file" },
+        safeName: (name) => name,
+        isCurrent: () => true,
+        onChanged: async () => true,
+      });
+      expect(added).toMatchObject({ status: "added" });
+      expect(await loadCareerEvidenceStatus(port, ownerWorkspaceId, (name) => name)).toMatchObject({
+        kind: "selected",
+        displayName: "Career evidence",
+        sourceCount: 1,
+      });
+      const ready = await port.load();
+      expect(ready.setup.nextSteps).toEqual([]);
     } finally {
       await api.close();
       await storage.close();

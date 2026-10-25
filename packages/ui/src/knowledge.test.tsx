@@ -165,6 +165,26 @@ describe("desktop candidate knowledge workspace", () => {
     ).toBe("");
   });
 
+  it("chooses among a host's bases without offering store folders the host does not have", () => {
+    const html = renderToStaticMarkup(
+      <KnowledgeWorkspace
+        workspaceId="workspace-1"
+        capabilities={{
+          selectCandidateKnowledgeBase: workspaceCapabilities.selectCandidateKnowledgeBase,
+        }}
+        disabled={false}
+        embedded
+        onPendingChange={noop}
+        onSelectionSaved={async () => true}
+      />,
+    );
+
+    expect(html).toContain("Knowledge base");
+    expect(html).not.toContain("Create knowledge store");
+    expect(html).not.toContain("Open knowledge store");
+    expect(html).not.toContain(differentStoreDisclosureLabel);
+  });
+
   it("leaves adding to the card: an embedded list has no Add file or Add directory", () => {
     const html = renderToStaticMarkup(
       <KnowledgeBaseList
