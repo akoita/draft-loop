@@ -150,6 +150,14 @@ describe.runIf(connectionString !== undefined)("hosted setup through the API", (
     });
     expect((await call("GET", "/v1/knowledge-bases/missing/sensitivity-rules")).status).toBe(404);
 
+    // A base without a source says so, instead of a bare refusal.
+    const empty = await call("POST", "/v1/knowledge-bases", { displayName: "Empty notes" });
+    expect(
+      await call("PUT", "/v1/workspaces/setup-1/knowledge-selection", {
+        knowledgeBaseIds: [empty.body.id],
+      }),
+    ).toMatchObject({ status: 422, body: { error: { code: "knowledge_base_empty" } } });
+
     const selected = await call("PUT", "/v1/workspaces/setup-1/knowledge-selection", {
       knowledgeBaseIds: [base.body.id],
     });

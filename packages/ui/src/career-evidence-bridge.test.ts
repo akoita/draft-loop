@@ -57,6 +57,18 @@ describe("career evidence bridge commands", () => {
     }
   });
 
+  it("lets ensure-default carry a typed base name, and refuses a blank or multi-line one", () => {
+    const type = "knowledge.ensure-default";
+    expect(
+      validateBridgeCommand({ type, input: { workspaceId: "workspace-1", displayName: "Notes" } }),
+    ).toEqual({ type, input: { workspaceId: "workspace-1", displayName: "Notes" } });
+    for (const displayName of ["", " Notes", "Two\nlines", 7]) {
+      expect(() =>
+        validateBridgeCommand({ type, input: { workspaceId: "workspace-1", displayName } }),
+      ).toThrow("invalid");
+    }
+  });
+
   it("accepts the real result of ensure-default and rejects a leaked path", async () => {
     const command = { type: "knowledge.ensure-default", input: { workspaceId: "workspace-1" } };
     await expect(respond(command as BridgeCommand, ensured)).resolves.toEqual({
@@ -98,8 +110,13 @@ describe("career evidence bridge commands", () => {
     await expect(port.ensureDefaultCandidateKnowledgeBase?.("workspace-1")).resolves.toEqual(
       ensured,
     );
+    await port.ensureDefaultCandidateKnowledgeBase?.("workspace-1", "Notes");
     expect(calls).toEqual([
       { type: "knowledge.ensure-default", input: { workspaceId: "workspace-1" } },
+      {
+        type: "knowledge.ensure-default",
+        input: { workspaceId: "workspace-1", displayName: "Notes" },
+      },
     ]);
     const without = createBridgeReviewPort(
       createCapabilityPort({

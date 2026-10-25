@@ -162,18 +162,22 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         }
       }
       case "knowledge.ensure-default": {
-        const { workspaceId } = command.input;
+        const { workspaceId, displayName } = command.input;
         const [{ knowledgeBaseIds }, owned] = await Promise.all([
           workspace(workspaceId),
           bases(workspaceId),
         ]);
         const active = owned.filter(({ state }) => state === "active");
+        // A name the person typed makes or reuses that base. Otherwise the first source goes to
+        // the selected base, else the newest one, which a person who just named one expects.
         const existing =
-          active.find(({ id }) => knowledgeBaseIds.includes(id)) ??
-          active.find(({ displayName }) => displayName === defaultHostedKnowledgeBaseName);
+          displayName === undefined
+            ? (active.find(({ id }) => knowledgeBaseIds.includes(id)) ??
+              [...active].sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0])
+            : active.find((base) => base.displayName === displayName);
         if (existing !== undefined) return target(existing, false);
         const created = await client.call("POST /v1/knowledge-bases", {
-          body: { displayName: defaultHostedKnowledgeBaseName, workspaceId },
+          body: { displayName: displayName ?? defaultHostedKnowledgeBaseName, workspaceId },
         });
         return target(created, true);
       }

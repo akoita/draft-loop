@@ -126,6 +126,48 @@ describe("career evidence over HTTP", () => {
     expect(calls.some(({ operation }) => operation === "POST /v1/knowledge-bases")).toBe(false);
   });
 
+  it("makes or reuses the base a person names, and adds a first source to the newest base", async () => {
+    let owned = [
+      { ...base("kb-old", "Career evidence"), createdAt: "2026-10-24T00:00:00.000Z" },
+      { ...base("kb-portfolio", "Portfolio"), createdAt: "2026-10-25T00:00:00.000Z" },
+    ];
+    const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}": () => workspace([]),
+      "GET /v1/knowledge-bases": () => ({ knowledgeBases: owned }),
+      "POST /v1/knowledge-bases": (input) => {
+        const made = base("kb-notes", (input.body as { displayName: string }).displayName);
+        owned = [...owned, { ...made, createdAt: "2026-10-26T00:00:00.000Z" }];
+        return made;
+      },
+    });
+    const ensure = (displayName?: string) =>
+      port.execute({
+        type: "knowledge.ensure-default",
+        input: displayName === undefined ? { workspaceId } : { workspaceId, displayName },
+      });
+
+    expect(await ensure()).toMatchObject({
+      ok: true,
+      value: { knowledgeBaseId: "kb-portfolio", created: false },
+    });
+    expect(await ensure("Portfolio")).toMatchObject({
+      ok: true,
+      value: { knowledgeBaseId: "kb-portfolio", created: false },
+    });
+    expect(await ensure("Project notes")).toEqual({
+      ok: true,
+      value: { storeId, knowledgeBaseId: "kb-notes", displayName: "Project notes", created: true },
+    });
+    expect(calls.filter(({ operation }) => operation === "POST /v1/knowledge-bases")).toEqual([
+      {
+        operation: "POST /v1/knowledge-bases",
+        input: { body: { displayName: "Project notes", workspaceId } },
+      },
+    ]);
+    // The base just named is the newest, so the first source goes there.
+    expect(await ensure()).toMatchObject({ ok: true, value: { knowledgeBaseId: "kb-notes" } });
+  });
+
   it("uploads the file the person picks, and tells a new source from one already held", async () => {
     let held: ApiSchemas["KnowledgeSource"][] = [];
     const { port, calls } = portOver(

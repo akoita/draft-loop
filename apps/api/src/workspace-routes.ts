@@ -238,7 +238,7 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Select the knowledge bases a workspace's runs use",
         description:
-          "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with every source's file held.",
+          "Replaces the selection; it applies from the next run. Each knowledge base must be ready: active, with at least one source and every source's file held. A base without a source answers 422 `knowledge_base_empty`.",
         params: workspaceParams,
         body: knowledgeSelectionBody,
         response: {
@@ -256,6 +256,18 @@ export function registerWorkspaceRoutes(
         return reply
           .code(404)
           .send(apiError("knowledge_base_not_found", "No such knowledge base."));
+      }
+      for (const knowledgeBaseId of knowledgeBaseIds) {
+        if ((await knowledge.intake.listSources(knowledgeBaseId)).length === 0) {
+          return reply
+            .code(422)
+            .send(
+              apiError(
+                "knowledge_base_empty",
+                "Add a source to the knowledge base before selecting it.",
+              ),
+            );
+        }
       }
       const descriptor = await service.configureKnowledgeSelection(
         {
