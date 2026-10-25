@@ -20,7 +20,11 @@ interface ResponseBody {
   readonly brief: { readonly id: string; readonly version: number };
   readonly run: { readonly state: string; readonly round: number };
   readonly draft: { readonly sections: readonly unknown[] } | null;
-  readonly findings: readonly { readonly id: string; readonly decision: string }[];
+  readonly findings: readonly {
+    readonly id: string;
+    readonly severity: string;
+    readonly decision: string;
+  }[];
   readonly candidateDirection: string | null;
   readonly error: { readonly code: string };
   readonly checksum: string;
@@ -135,6 +139,8 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     });
   }, 120_000);
 
+  const settled = (severity: string) => (severity === "error" ? "overridden" : "accepted");
+
   /** Decides every finding, approves, exports a DOCX and downloads it, checking its bytes. */
   const approveAndDownload = async (runId: string) => {
     const runPath = `${workspacePath}/runs/${runId}`;
@@ -145,12 +151,18 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
       const decided = await send(
         "PUT",
         `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
-        { decision: "accepted", rationale: "Checked against the source." },
+        // A blocking finding is overridden: accepting it would only ask for another round.
+        {
+          decision: settled(finding.severity),
+          rationale: "Checked against the source.",
+        },
       );
       expect(decided.status).toBe(200);
     }
     const decided = await request(`${runPath}/review`);
-    expect(decided.body.findings.filter(({ decision }) => decision !== "accepted")).toEqual([]);
+    expect(
+      decided.body.findings.filter(({ decision, severity }) => decision !== settled(severity)),
+    ).toEqual([]);
 
     let approved = await send("POST", `${runPath}/approve`, {});
     if (approved.status === 409 && approved.body.error.code === "readiness_blocked") {

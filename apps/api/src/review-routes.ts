@@ -164,6 +164,19 @@ export function runReviewView(review: RunReview): z.infer<typeof runReviewSchema
   return { run: runView(snapshot), ...rest } as z.infer<typeof runReviewSchema>;
 }
 
+/**
+ * A blocking finding the person has not settled: still pending or deferred, or accepted, which
+ * only asks the next round to fix it. The desktop refuses approval over one; so does the API.
+ */
+function blocksApproval(finding: RunReview["findings"][number]): boolean {
+  return (
+    finding.severity === "error" &&
+    (finding.decision === "pending" ||
+      finding.decision === "deferred" ||
+      finding.decision === "accepted")
+  );
+}
+
 const notFound = (what: string) => apiError("not_found", `No such ${what}.`);
 const errorResponses = { 400: apiErrorSchema, 404: apiErrorSchema, 422: apiErrorSchema };
 const actionResponses = { 200: runViewSchema, 409: apiErrorSchema, ...errorResponses };
@@ -287,13 +300,25 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
       schema: {
         summary: "Approve the run's current draft",
         description:
-          "Approves a run awaiting approval after its independent critic review. When the final CV checks fail, it answers 409 readiness_blocked and the review's approvalCheck lists the blockers; approving past them needs readinessOverrideRationale.",
+          "Approves a run awaiting approval after its independent critic review. A blocking finding still pending, deferred or merely accepted answers 409 findings_unresolved, as on the desktop. When the final CV checks fail, it answers 409 readiness_blocked and the review's approvalCheck lists the blockers; approving past them needs readinessOverrideRationale.",
         params: runParams,
         body: approveBody,
         response: actionResponses,
       },
     },
-    async (request) => {
+    async (request, reply) => {
+      const { workspaceId, runId } = request.params;
+      const review = await service.readRunReview?.({ root: workspaceRoot(workspaceId), runId });
+      if (review?.findings.some(blocksApproval) === true) {
+        return reply
+          .code(409)
+          .send(
+            apiError(
+              "findings_unresolved",
+              "Resolve, reject, or override blocking findings before approval.",
+            ),
+          );
+      }
       const rationale = request.body.readinessOverrideRationale;
       const snapshot = await service.lifecycle({
         root: workspaceRoot(request.params.workspaceId),

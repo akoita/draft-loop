@@ -29,6 +29,7 @@ import {
   hostedProfileCapabilities,
   isProfileCommand,
 } from "./profile-bridge.js";
+import { createReviewActions } from "./review-actions.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
 /**
@@ -154,8 +155,6 @@ function reviewedBrief(application: Application) {
 }
 
 /** Until the shared review reaches the web (sprint 1p), only a start goes through the screens. */
-const classicReviewMessage =
-  "Decide findings, approve and export in “Review, approve and export” for now.";
 
 /** The API's own source kinds; a URL, a file or a job file needs the desktop. */
 function hostedSource(source: OpportunityCreateSource) {
@@ -173,6 +172,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const idempotencyKey = options.idempotencyKey ?? (() => globalThis.crypto.randomUUID());
   const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
   const answerProfile = createProfileAnswers(client);
+  const reviewAction = createReviewActions(client, idempotencyKey);
 
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))
@@ -514,8 +514,15 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         });
       }
       case "review.dispatch": {
-        const { workspaceId, action } = command.input;
-        if (action.type !== "start") return refuse(classicReviewMessage);
+        const { workspaceId, action, applicationId, runId } = command.input;
+        if (action.type !== "start") {
+          await reviewAction(workspaceId, runId, action);
+          // The run as the server now holds it, decisions and edits included.
+          return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
+            path: { workspaceId },
+            query: { ...(applicationId === undefined ? {} : { applicationId }), runId },
+          });
+        }
         if (action.pageTarget !== undefined) {
           return refuse("Set the draft's length in the writing policy on the hosted service.");
         }
