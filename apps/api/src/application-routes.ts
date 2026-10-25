@@ -206,7 +206,10 @@ export function registerApplicationRoutes(
       },
     },
     async (request) =>
-      workspaceView(await service.readWorkspace(workspaceRoot(request.params.workspaceId))),
+      workspaceView(
+        request.params.workspaceId,
+        await service.readWorkspace(workspaceRoot(request.params.workspaceId)),
+      ),
   );
 
   app.post(

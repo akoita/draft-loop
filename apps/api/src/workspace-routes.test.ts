@@ -99,8 +99,9 @@ describe("workspace setup", () => {
       requiredSections: ["Experience"],
       fixtureMode: false,
     });
+    // The path's id, never the driver's own: clients address the workspace by it.
     expect(response.json()).toEqual({
-      id: "workspace-0b5c",
+      id: "workspace-1",
       language: "fr",
       requiredSections: ["Experience"],
       maxRounds: 2,
