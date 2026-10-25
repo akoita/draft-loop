@@ -166,6 +166,12 @@ const beginRunBody = z.strictObject({
     .describe(
       "Exact author and critic profile versions bound to this run, such as a preset's pair; their models replace the workspace's for this run. Without them the run uses provider-default runtime controls and unknown context windows.",
     ),
+  candidateProfile: z
+    .strictObject({ profileId: identifierSchema, version: z.number().int().positive() })
+    .optional()
+    .describe(
+      "A reviewed career profile version bound to this run, as the shared screens choose it. It must be bound to the workspace's current knowledge selection.",
+    ),
 });
 
 const idempotencyHeaders = z.object({
@@ -433,6 +439,9 @@ export function registerApplicationRoutes(
                 critic: { ...request.body.modelProfiles.critic },
               },
             }),
+        ...(request.body.candidateProfile === undefined
+          ? {}
+          : { candidateProfile: { ...request.body.candidateProfile } }),
       };
       const snapshot = await idempotency.once(
         `runs:${workspaceId}`,

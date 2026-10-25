@@ -13,6 +13,7 @@ import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
+import { noProfileDerivations } from "./profile-routes.js";
 import type { RecordAccessFor } from "./record-access.js";
 import type { TenantErasureFor } from "./record-erasure-routes.js";
 import type { Caller } from "./request-auth.js";
@@ -22,9 +23,15 @@ export type ApiApplication = NonNullable<ApiOptions["application"]>;
 
 /** One tenant's application: every route's dependencies, bound to that tenant's data. */
 export type TenantApplication = Required<
-  Omit<ApiApplication, "budgetCeiling" | "idempotency" | "contentScreening" | "briefExtractions">
+  Omit<
+    ApiApplication,
+    "budgetCeiling" | "idempotency" | "contentScreening" | "briefExtractions" | "profileDerivations"
+  >
 > &
-  Pick<ApiApplication, "idempotency" | "contentScreening" | "briefExtractions">;
+  Pick<
+    ApiApplication,
+    "idempotency" | "contentScreening" | "briefExtractions" | "profileDerivations"
+  >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
 export interface TenantApplications {
@@ -197,5 +204,7 @@ export function registerTenantApplications(
     contentScreening: forwarding(() => current().contentScreening ?? noContentScreening),
     // An application composed without a queue extracts nothing on the worker.
     briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
+    // Nor does it derive career profiles there.
+    profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
   };
 }

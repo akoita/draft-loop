@@ -36,6 +36,7 @@ import {
 } from "./content-screening-views.js";
 import { EntitlementRefusedError, entitlementRefusalStatus } from "./entitlement-gate.js";
 import { IdempotencyConflictError, IdempotencyInProgressError } from "./idempotency.js";
+import { profileRefusal } from "./profile-errors.js";
 
 /**
  * The one error shape every route answers with. It names what went wrong and never echoes the
@@ -230,6 +231,13 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   if (error.message === opportunityBriefNotFoundErrorMessage) {
     void reply.code(404).send(apiError("not_found", "No such job brief."));
+    return;
+  }
+  const refusedProfile = profileRefusal(error);
+  if (refusedProfile !== undefined) {
+    void reply
+      .code(refusedProfile.status)
+      .send(apiError(refusedProfile.code, refusedProfile.message));
     return;
   }
   // The directory's messages are fixed and never quote an email, so they are safe to answer with.

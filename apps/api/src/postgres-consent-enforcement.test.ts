@@ -239,14 +239,25 @@ describe.runIf(connectionString !== undefined)("consent enforcement through the 
         opportunityBrief: { briefId, version: reviewed.body.brief.version },
       });
 
+    const deriveProfile = () =>
+      call("coach", "POST", "/v1/workspaces/r1/profiles/career/derivation", {
+        providerDataApproved: true,
+      });
+
     // Transmission: refused without a grant, and with one that omits the critic's company.
     expect(outcome(await beginRun())).toEqual(transmissionRequired);
+    expect(outcome(await deriveProfile())).toEqual(transmissionRequired);
     await consent("provider-transmission", "granted", ["anthropic"]);
     expect(outcome(await beginRun())).toEqual(transmissionRequired);
     expect(queued).toEqual([]);
     await consent("provider-transmission", "granted", ["anthropic", "openai"]);
     const begun = await beginRun();
     expect(begun.status).toBe(201);
+    // Past consent, a deployment without a derivation queue says so.
+    expect(outcome(await deriveProfile())).toEqual({
+      status: 503,
+      code: "derivation_unavailable",
+    });
     const runPath = `/v1/workspaces/r1/runs/${begun.body.runId as string}`;
     expect(queued).toEqual([begun.body.runId]);
 

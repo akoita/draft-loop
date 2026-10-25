@@ -87,6 +87,50 @@ export interface ApiSchemas {
     readonly issuer: string;
     readonly clientId: string;
   };
+  "CareerProfile": {
+    readonly workspaceId: string;
+    readonly checksum: string;
+    readonly profile: unknown;
+  };
+  "CareerProfileCancel": {
+    readonly cancelled: boolean;
+  };
+  "CareerProfileDerivation": {
+    readonly status: "pending";
+    readonly completedCalls?: number;
+    readonly plannedCalls?: number;
+  } | {
+    readonly status: "derived";
+    readonly version: number;
+  } | {
+    readonly status: "cancelled";
+  } | {
+    readonly status: "failed";
+    readonly reason: "failed" | "consent-required" | "record-erased";
+    readonly message?: string;
+  };
+  "CareerProfileFreshness": {
+    readonly state: "not-generated";
+  } | {
+    readonly state: "up-to-date";
+    readonly version: number;
+  } | {
+    readonly state: "update-available";
+    readonly version: number;
+    readonly newSourceCount: number;
+    readonly changedSourceCount: number;
+    readonly removedSourceCount: number;
+  } | {
+    readonly state: "review-pending";
+    readonly version: number;
+    readonly reviewedVersion?: number;
+  } | {
+    readonly state: "unavailable";
+    readonly version: number;
+  };
+  "CareerProfileVersions": {
+    readonly versions: readonly (ApiSchemas["CareerProfile"])[];
+  };
   "CatalogModel": {
     readonly id: string;
     readonly version: number;
@@ -1048,6 +1092,10 @@ export interface ApiOperations {
           readonly version: number;
         };
       };
+      readonly candidateProfile?: {
+        readonly profileId: string;
+        readonly version: number;
+      };
     };
     readonly response: ApiSchemas["Run"];
   };
@@ -1057,6 +1105,113 @@ export interface ApiOperations {
       readonly runId: string;
     };
     readonly response: ApiSchemas["Run"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["CareerProfileVersions"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly query?: {
+      readonly version?: number;
+    };
+    readonly response: ApiSchemas["CareerProfile"];
+  };
+  "PATCH /v1/workspaces/{workspaceId}/profiles/{profileId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly body: {
+      readonly expectedVersion: number;
+      readonly patch: {
+        readonly facts?: readonly ({
+          readonly id: string;
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly subjectId?: string;
+          readonly field: string;
+          readonly value: string;
+          readonly provenance: readonly ({
+            readonly storeId: string;
+            readonly knowledgeBaseId: string;
+            readonly sourceId: string;
+            readonly versionId: string;
+            readonly kind: "candidate-provided" | "public-corroboration";
+            readonly quote?: string;
+          })[];
+        })[];
+        readonly issues?: readonly ({
+          readonly id: string;
+          readonly code: "conflict-date" | "conflict-title" | "conflict-duration" | "conflict-metric" | "conflict-value" | "duplicate" | "omission";
+          readonly severity: "error" | "warning";
+          readonly status: "open" | "acknowledged" | "resolved";
+          readonly message: string;
+          readonly factIds?: readonly (string)[];
+          readonly sourceRefs?: readonly ({
+            readonly storeId: string;
+            readonly knowledgeBaseId: string;
+            readonly sourceId: string;
+            readonly versionId: string;
+            readonly kind: "candidate-provided" | "public-corroboration";
+          })[];
+        })[];
+      };
+    };
+    readonly response: ApiSchemas["CareerProfile"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/versions": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly response: ApiSchemas["CareerProfileVersions"];
+  };
+  "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/review": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly body: {
+      readonly expectedVersion: number;
+    };
+    readonly response: ApiSchemas["CareerProfile"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/freshness": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly response: ApiSchemas["CareerProfileFreshness"];
+  };
+  "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly body: {
+      readonly providerDataApproved: boolean;
+      readonly fullExtraction?: boolean;
+    };
+    readonly response: ApiSchemas["CareerProfileDerivation"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly response: ApiSchemas["CareerProfileDerivation"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly response: ApiSchemas["CareerProfileCancel"];
   };
   "GET /v1/model-catalog": {
     readonly response: ApiSchemas["ModelCatalog"];
