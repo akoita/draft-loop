@@ -560,6 +560,15 @@ export interface ApiSchemas {
         readonly rateLimit: string | null;
         readonly retryAfterSeconds: number | null;
       };
+      readonly failureStage: "transport-parsing" | "response-schema-validation" | "artifact-schema-validation" | "factual-invariant-rejection" | "output-token-budget-exceeded" | null;
+      readonly diagnostics: readonly ({
+        readonly code: string;
+        readonly path: string;
+      })[];
+      readonly diagnosticCounts: readonly ({
+        readonly code: string;
+        readonly count: number;
+      })[];
     } | null;
   };
   "RunEstimate": {

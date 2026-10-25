@@ -1749,19 +1749,80 @@
                       "retryAfterSeconds"
                     ],
                     "description": "Present when the run stopped on a provider call that it names."
+                  },
+                  "failureStage": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "transport-parsing",
+                          "response-schema-validation",
+                          "artifact-schema-validation",
+                          "factual-invariant-rejection",
+                          "output-token-budget-exceeded"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Where a rejected output failed, such as artifact schema validation."
+                  },
+                  "diagnostics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "path": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "path"
+                      ]
+                    },
+                    "description": "The first issues of a rejected output: codes and field paths, never values."
+                  },
+                  "diagnosticCounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "count"
+                      ]
+                    },
+                    "description": "How many issues of each code the whole rejection held."
                   }
                 },
                 "required": [
                   "code",
                   "retryable",
-                  "usageLimitResetsAt"
+                  "usageLimitResetsAt",
+                  "failureStage",
+                  "diagnostics",
+                  "diagnosticCounts"
                 ]
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Content-free: the error's code, never its provider message."
+            "description": "Content-free: the error's code and, for a rejected output, where and why it failed, never its provider message or values."
           }
         },
         "required": [
@@ -6877,12 +6938,75 @@
                     ],
                     "additionalProperties": false,
                     "description": "Present when the run stopped on a provider call that it names."
+                  },
+                  "failureStage": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "transport-parsing",
+                          "response-schema-validation",
+                          "artifact-schema-validation",
+                          "factual-invariant-rejection",
+                          "output-token-budget-exceeded"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Where a rejected output failed, such as artifact schema validation."
+                  },
+                  "diagnostics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "path": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "path"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "The first issues of a rejected output: codes and field paths, never values."
+                  },
+                  "diagnosticCounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "count"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "How many issues of each code the whole rejection held."
                   }
                 },
                 "required": [
                   "code",
                   "retryable",
-                  "usageLimitResetsAt"
+                  "usageLimitResetsAt",
+                  "failureStage",
+                  "diagnostics",
+                  "diagnosticCounts"
                 ],
                 "additionalProperties": false
               },
@@ -6890,7 +7014,7 @@
                 "type": "null"
               }
             ],
-            "description": "Content-free: the error's code, never its provider message."
+            "description": "Content-free: the error's code and, for a rejected output, where and why it failed, never its provider message or values."
           }
         },
         "required": [

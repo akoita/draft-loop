@@ -3,7 +3,7 @@ import {
   runStepRoutes,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
-import type { RunSnapshot } from "@draft-loop/orchestrator";
+import { type RunSnapshot, runFailureStages } from "@draft-loop/orchestrator";
 import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import { z } from "zod";
@@ -176,9 +176,21 @@ export const runViewSchema = z
         retryable: z.boolean(),
         usageLimitResetsAt: z.string().nullable(),
         failedCall: failedCallViewSchema.optional(),
+        failureStage: z
+          .enum(runFailureStages)
+          .nullable()
+          .describe("Where a rejected output failed, such as artifact schema validation."),
+        diagnostics: z
+          .array(z.object({ code: z.string(), path: z.string() }))
+          .describe("The first issues of a rejected output: codes and field paths, never values."),
+        diagnosticCounts: z
+          .array(z.object({ code: z.string(), count: z.number().int() }))
+          .describe("How many issues of each code the whole rejection held."),
       })
       .nullable()
-      .describe("Content-free: the error's code, never its provider message."),
+      .describe(
+        "Content-free: the error's code and, for a rejected output, where and why it failed, never its provider message or values.",
+      ),
   })
   .meta({ id: "Run" });
 
@@ -204,6 +216,14 @@ export function runView(snapshot: RunSnapshot): z.infer<typeof runViewSchema> {
             retryable: snapshot.lastError.retryable,
             usageLimitResetsAt: snapshot.lastError.usageLimitResetsAt ?? null,
             ...failedCallView(snapshot.lastError.failedCall),
+            failureStage: snapshot.lastError.failureStage ?? null,
+            diagnostics: (snapshot.lastError.diagnostics ?? []).map(({ code, path }) => ({
+              code,
+              path,
+            })),
+            diagnosticCounts: (snapshot.lastError.diagnosticCounts ?? []).map(
+              ({ code, count }) => ({ code, count }),
+            ),
           },
   };
 }

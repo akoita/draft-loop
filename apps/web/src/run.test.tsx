@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { RunPanel, type RunPanelProps } from "./run.js";
-import { syntheticRun } from "./test-fixtures.js";
+import { noRejection, syntheticRun } from "./test-fixtures.js";
 
 const props: RunPanelProps = {
   run: syntheticRun,
@@ -64,6 +64,7 @@ describe("run screen", () => {
             code: "usage-limit",
             retryable: true,
             usageLimitResetsAt: "2026-10-23T14:30:00.000Z",
+            ...noRejection,
           },
           routes: [
             {

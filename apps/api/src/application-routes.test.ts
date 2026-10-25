@@ -524,6 +524,9 @@ describe("runs", () => {
         rateLimit: "output-tokens",
         retryAfterSeconds: 30,
       },
+      failureStage: null,
+      diagnostics: [],
+      diagnosticCounts: [],
     });
     expect(response.json().routes).toEqual([
       { step: "author", route: "vertex-ai" },
@@ -533,6 +536,47 @@ describe("runs", () => {
         fallback: { from: "vertex-ai", cause: "model-not-offered" },
       },
     ]);
+    expect(response.body).not.toContain("provider text");
+  });
+
+  it("says where a rejected author output failed, by codes and paths without values", async () => {
+    const rejected = {
+      ...snapshot,
+      state: "provider-error",
+      executionHistory: [],
+      lastError: {
+        code: "invalid-response",
+        message: "provider text that may quote the prompt",
+        provider: "anthropic",
+        modelId: "claude-sonnet-5-5",
+        step: "author",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        providerRequestId: null,
+        failureStage: "artifact-schema-validation",
+        failureReason: "artifact-schema-validation",
+        diagnostics: [{ code: "invalid_type", path: "sections.0.bullets.2.evidenceIds" }],
+        diagnosticCounts: [{ code: "invalid_type", count: 3 }],
+      },
+    } as unknown as RunSnapshot;
+    await build({ status: vi.fn(async () => rejected) });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1",
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().lastError).toEqual({
+      code: "invalid-response",
+      retryable: true,
+      usageLimitResetsAt: null,
+      failureStage: "artifact-schema-validation",
+      diagnostics: [{ code: "invalid_type", path: "sections.0.bullets.2.evidenceIds" }],
+      diagnosticCounts: [{ code: "invalid_type", count: 3 }],
+    });
     expect(response.body).not.toContain("provider text");
   });
 
