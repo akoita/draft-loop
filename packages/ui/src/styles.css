@@ -1647,6 +1647,9 @@ input[type="text"].workspace-title-input {
 .review-column {
   display: grid;
   flex: 1 0 auto;
+  /* A track no wider than the column, so a long toolbar or card wraps instead of widening the
+     page on a phone (#1794). */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   gap: var(--space-4);
   min-width: 0;
@@ -2597,6 +2600,7 @@ input[type="text"].workspace-title-input {
 
 .claim-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
@@ -4742,6 +4746,19 @@ input[type="text"].workspace-title-input {
     grid-column: 2;
     justify-self: start;
   }
+
+  /* The start button names what is missing, which is longer than a phone's column. */
+  .onboarding-footer {
+    flex-wrap: wrap;
+  }
+
+  .onboarding-footer .button-primary {
+    max-width: 100%;
+    min-height: 38px;
+    height: auto;
+    padding-block: var(--space-2);
+    white-space: normal;
+  }
 }
 
 .start-requirements {
@@ -5553,7 +5570,7 @@ input[type="text"].workspace-title-input {
 /* Compact cards: as many columns as fit, so every preset shows without scrolling. */
 .model-preset-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
   gap: var(--space-2) var(--space-3);
 }
 
@@ -7288,10 +7305,20 @@ input[type="text"].workspace-title-input {
   .onboarding-footer,
   .preflight-acknowledgement,
   .section-heading,
+  .claim-heading,
   .export-action {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-3);
+  }
+
+  .claim-heading-actions,
+  .claims-disclosure-title {
+    flex-wrap: wrap;
+  }
+
+  .claims-disclosure-title {
+    flex-shrink: 1;
   }
 
   .doc-toolbar-note {
@@ -7305,6 +7332,9 @@ input[type="text"].workspace-title-input {
   }
 
   .doc-toolbar-views {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    min-width: 0;
     margin-left: 0;
   }
 
@@ -7844,6 +7874,7 @@ input[type="text"].workspace-title-input {
 .home-card-head,
 .home-section-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -8041,12 +8072,13 @@ input[type="text"].workspace-title-input {
 .home-applications,
 .home-settings {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
 .application-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -8479,6 +8511,7 @@ input[type="text"].application-card-name-input {
 
 .application-step-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   min-width: 0;
 }
