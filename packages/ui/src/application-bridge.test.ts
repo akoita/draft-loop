@@ -295,6 +295,29 @@ describe("application.create job source", () => {
       expect(() => validateBridgeCommand({ type: "application.create", input })).toThrow();
     }
   });
+
+  it("accepts an attached job file in place of pasted text", () => {
+    const jobFile = { name: "role.md", mediaType: "text/markdown", bytes: Uint8Array.of(0x23) };
+    const create = { type: "application.create", input: { ...base, jobFile } };
+    expect(validateBridgeCommand(create)).toEqual(create);
+  });
+
+  it("refuses a job file with a path, another type, no bytes, too many bytes or another source", () => {
+    const jobFile = { name: "role.txt", mediaType: "text/plain", bytes: Uint8Array.of(0x52) };
+    for (const input of [
+      { ...base, jobFile: { ...jobFile, name: "../role.txt" } },
+      { ...base, jobFile: { ...jobFile, name: "dir/role.txt" } },
+      { ...base, jobFile: { ...jobFile, mediaType: "text/html" } },
+      { ...base, jobFile: { ...jobFile, bytes: new Uint8Array(0) } },
+      { ...base, jobFile: { ...jobFile, bytes: new Uint8Array(10 * 1024 * 1024 + 1) } },
+      { ...base, jobFile: { ...jobFile, bytes: [0x52] } },
+      { ...base, jobFile: { ...jobFile, path: "/home/me/role.txt" } },
+      { ...base, jobFile, jobText: "x" },
+      { ...base, jobFile, jobUrl: "https://jobs.example.test/1", jobUrlApproved: true },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "application.create", input })).toThrow();
+    }
+  });
 });
 
 describe("application.import", () => {

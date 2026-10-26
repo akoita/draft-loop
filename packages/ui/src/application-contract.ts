@@ -101,6 +101,15 @@ export interface ApplicationCreateInput {
   readonly jobUrl?: string;
   /** Must be `true` with a `jobUrl`: the person approved fetching that page. */
   readonly jobUrlApproved?: boolean;
+  /** A job description file the person attached; the host keeps only its text. */
+  readonly jobFile?: ApplicationJobFileInput;
+}
+
+/** An attached job description file: its own name, its media type and its bytes, never a path. */
+export interface ApplicationJobFileInput {
+  readonly name: string;
+  readonly mediaType: string;
+  readonly bytes: Uint8Array;
 }
 
 /** Archives an application with `archived: true`, or restores it with `false`. */
@@ -233,6 +242,7 @@ export const applicationCreateKeys = exactKeys<ApplicationCreateInput>()([
   "jobText",
   "jobUrl",
   "jobUrlApproved",
+  "jobFile",
 ]);
 const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "id",

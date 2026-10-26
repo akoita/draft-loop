@@ -42,6 +42,7 @@ import {
   type ApplicationGetInput,
   type ApplicationImportInput,
   type ApplicationImportResult,
+  type ApplicationJobFileInput,
   type ApplicationListInput,
   type ApplicationListResult,
   type ApplicationRecordResult,
@@ -4619,6 +4620,11 @@ function validateApplicationCreateInput(value: unknown): ApplicationCreateInput 
   const workspaceId = identifier(input.workspaceId);
   const name = stringValue(input.name, 240);
   // Exactly one job source, and a URL only with the person's approval to fetch it.
+  if (input.jobFile !== undefined) {
+    if (input.jobText !== undefined || input.jobUrl !== undefined) return invalidInput();
+    if (input.jobUrlApproved !== undefined) return invalidInput();
+    return { workspaceId, name, jobFile: applicationJobFileValue(input.jobFile) };
+  }
   if (input.jobUrl !== undefined) {
     if (input.jobText !== undefined || input.jobUrlApproved !== true) return invalidInput();
     return { workspaceId, name, jobUrl: urlValue(input.jobUrl), jobUrlApproved: true };
@@ -4630,6 +4636,31 @@ function validateApplicationCreateInput(value: unknown): ApplicationCreateInput 
     jobText: proseValue(input.jobText, maximumApplicationJobTextLength),
   };
 }
+
+/** The largest attached job file the port carries, the career-evidence upload limit. */
+const maximumApplicationJobFileBytes = 10 * 1024 * 1024;
+
+/** An attached job file: a plain name, a known media type and its bytes, never a path. */
+function applicationJobFileValue(value: unknown): ApplicationJobFileInput {
+  const file = requireRecord(value);
+  if (!hasOnlyKeys(file, ["name", "mediaType", "bytes"])) return invalidInput();
+  const name = stringValue(file.name, 200);
+  if (/[/\\]/u.test(name)) return invalidInput();
+  const mediaType = stringValue(file.mediaType, 100);
+  if (!applicationJobFileMediaTypes.includes(mediaType)) return invalidInput();
+  if (!(file.bytes instanceof Uint8Array)) return invalidInput();
+  if (file.bytes.byteLength === 0 || file.bytes.byteLength > maximumApplicationJobFileBytes) {
+    return invalidInput();
+  }
+  return { name, mediaType, bytes: file.bytes };
+}
+
+const applicationJobFileMediaTypes: readonly string[] = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/markdown",
+  "text/plain",
+];
 
 function validateApplicationImportInput(value: unknown): ApplicationImportInput {
   const input = requireRecord(value);

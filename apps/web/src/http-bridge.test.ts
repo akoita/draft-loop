@@ -189,9 +189,32 @@ describe("the shared screens' commands over HTTP", () => {
       ok: false,
       error: {
         code: "operation-failed",
-        message: "The hosted service takes a job as pasted text only.",
+        message: "The hosted service takes a job as pasted text or a file only.",
       },
     });
+  });
+
+  it("creates an application from an attached job file, sent as raw bytes with its type", async () => {
+    const { port, calls } = portOver({
+      "POST /v1/workspaces/{workspaceId}/applications/from-file": () => ledgerApplication,
+    });
+    const bytes = new TextEncoder().encode("Platform Engineer");
+
+    const created = await port.execute({
+      type: "application.create",
+      input: {
+        workspaceId,
+        name: "Example Ledger",
+        jobFile: { name: "role.md", mediaType: "text/markdown", bytes },
+      },
+    });
+
+    expect(created).toMatchObject({ ok: true, value: { application: { id: "app-ledger" } } });
+    expect(calls).toHaveLength(1);
+    const input = calls[0]?.input as { query: unknown; body: Blob; contentType: string };
+    expect(input.query).toEqual({ name: "Example Ledger", fileName: "role.md" });
+    expect(input.contentType).toBe("text/markdown");
+    expect(new Uint8Array(await input.body.arrayBuffer())).toEqual(bytes);
   });
 
   it("renames, archives, pairs and chooses a run through the application routes", async () => {

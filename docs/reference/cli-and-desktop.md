@@ -447,9 +447,13 @@ still calls the configured provider; it has no fixture path.
 
 - **Name.** For example a company and role. Until it is filled in,
   **Create application** is disabled and the form says why.
-- **Job posting.** Paste the job text, or give a job page address and approve
-  fetching it. The address is stored with that approval and fetched only when
-  requirements are extracted on the application's first step, never before.
+- **Job posting.** Paste the job text, attach a file, or give a job page
+  address and approve fetching it.
+  - **Attach file** takes a PDF, DOCX, Markdown or plain text file of up to
+    10 MB. Its text is read once and kept as if pasted; the file itself is not
+    kept.
+  - A job page address is stored with that approval and fetched only when
+    requirements are extracted on the application's first step, never before.
 
 **Create application** creates it and opens its screen at its first unfinished
 step. A problem with the form, or the host's refusal, is shown in the form. The
