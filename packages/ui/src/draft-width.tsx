@@ -10,7 +10,8 @@
  * not a property of a workspace. Nothing is stored until the reader moves the edge, so an
  * untouched desk keeps the stylesheet's own measure. A stored width is a wish, not a promise: it
  * is clamped on every render against the room the sheet actually has, which always leaves the
- * margin-note gutter beside the paper.
+ * margin-note gutter beside the paper. From 1280px the stylesheet's default measure grows with
+ * the window up to a readable cap, so a wide screen is not left mostly empty (#1808).
  *
  * The handle is keyboard-operable: arrow keys nudge (Shift for a larger step), Home/End jump to the
  * bounds, and a double-click restores the default.
@@ -29,6 +30,22 @@ export const draftWidthStorageKey = "draft-loop.review.draftWidth";
 
 /** The stylesheet's measure for the sheet when the reader has not chosen one. */
 export const defaultDraftWidth = 608;
+
+/**
+ * From this viewport width the margin and the handle show, and the default measure is a share of
+ * the viewport, up to the widest default. `styles.css` sets the same rule with `clamp()`.
+ */
+export const wideDraftViewport = 1280;
+export const defaultDraftWidthShare = 0.5;
+export const widestDefaultDraftWidth = 840;
+
+/** The stylesheet's default measure at a viewport width; the fixed measure when it is unknown. */
+export function defaultDraftWidthFor(viewportWidth: number | null): number {
+  if (viewportWidth === null || !Number.isFinite(viewportWidth)) return defaultDraftWidth;
+  if (viewportWidth < wideDraftViewport) return defaultDraftWidth;
+  const share = Math.round(viewportWidth * defaultDraftWidthShare);
+  return Math.min(widestDefaultDraftWidth, Math.max(defaultDraftWidth, share));
+}
 
 /** Narrower than this and the sheet stops reading as a page of prose. */
 export const minimumDraftWidth = 480;
@@ -169,19 +186,23 @@ export interface DraftWidth {
   readonly maximum: number;
   readonly choose: (next: number) => void;
   readonly reset: () => void;
-  /** Called by the handle whenever it measures the sheet's stage. */
-  readonly measure: (maximum: number) => void;
+  /** Called by the handle whenever it measures the sheet's stage, with the viewport's width. */
+  readonly measure: (maximum: number, viewportWidth?: number) => void;
 }
 
 /** Hold the chosen width, persist every change, and re-clamp it to the measured room. */
 export function useDraftWidth(): DraftWidth {
   const [stored, setStored] = useState<number | null>(() => readStoredDraftWidth(browserStorage()));
   const [maximum, setMaximum] = useState<number>(maximumDraftWidth);
+  const [viewport, setViewport] = useState<number | null>(null);
   const maximumRef = useRef(maximum);
 
-  const measure = useCallback((next: number) => {
+  const measure = useCallback((next: number, viewportWidth?: number) => {
     maximumRef.current = next;
     setMaximum((current) => (current === next ? current : next));
+    if (viewportWidth !== undefined) {
+      setViewport((current) => (current === viewportWidth ? current : viewportWidth));
+    }
   }, []);
 
   const choose = useCallback((next: number) => {
@@ -196,7 +217,9 @@ export function useDraftWidth(): DraftWidth {
   }, []);
 
   const width = stored === null ? null : clampDraftWidth(stored, maximum);
-  const reportedWidth = width ?? clampDraftWidth(defaultDraftWidth, maximum);
+  // Untouched, the handle reports the stylesheet's measure for this window, so a first nudge
+  // starts from the width the reader sees.
+  const reportedWidth = width ?? clampDraftWidth(defaultDraftWidthFor(viewport), maximum);
   return { width, reportedWidth, maximum, choose, reset, measure };
 }
 
@@ -236,7 +259,7 @@ export function DraftWidthHandle({
   readonly maximum: number;
   readonly onWidthChange: (next: number) => void;
   readonly onReset: () => void;
-  readonly onMeasure: (maximum: number) => void;
+  readonly onMeasure: (maximum: number, viewportWidth?: number) => void;
 }): JSX.Element {
   const handleRef = useRef<HTMLDivElement | null>(null);
   // Where the drag started, so the edge follows the pointer's travel rather than jumping to it.
@@ -250,7 +273,7 @@ export function DraftWidthHandle({
     }
     const update = () => {
       const next = measureMaximum(handle);
-      if (next !== null) onMeasure(next);
+      if (next !== null) onMeasure(next, handle.ownerDocument.documentElement.clientWidth);
     };
     update();
     if (typeof ResizeObserver === "undefined") return undefined;
