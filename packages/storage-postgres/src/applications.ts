@@ -9,6 +9,7 @@ import {
   type ApplicationChosenRunRecord,
   type ApplicationStoragePort,
   applicationFromRow,
+  jobSourceWithPage,
   maximumChosenRunReasonLength,
 } from "@draft-loop/storage/application-store";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
@@ -269,6 +270,27 @@ export function createApplications(client: SqlSession): ApplicationStoragePort {
       if (changed.length === 0) {
         throw new StorageValidationError(`Application ${applicationId} was not found`);
       }
+    },
+    recordJobPage: async (workspaceId, applicationId, page, updatedAt) => {
+      const [current] = await client.query(
+        `${applicationSelect} WHERE workspace_id = $1 AND application_id = $2`,
+        [workspaceId, applicationId],
+      );
+      const jobSource = jobSourceWithPage(
+        current === undefined ? undefined : applicationFromRow(current),
+        applicationId,
+        page,
+      );
+      const [updated] = await client.query(
+        `UPDATE applications SET job_source_json = $1, updated_at = $2
+         WHERE workspace_id = $3 AND application_id = $4
+         RETURNING workspace_id, application_id, name, job_source_json, created_at, updated_at`,
+        [JSON.stringify(jobSource), updatedAt, workspaceId, applicationId],
+      );
+      if (updated === undefined) {
+        throw new StorageValidationError(`Application ${applicationId} was not found`);
+      }
+      return applicationFromRow(updated);
     },
     getDefaultApplicationName: async (workspaceId) => {
       const [row] = await client.query(

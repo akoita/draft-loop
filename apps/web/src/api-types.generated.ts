@@ -932,6 +932,13 @@ export interface ApiOperations {
     readonly body: {
       readonly sources: readonly ({
         readonly id: string;
+        readonly kind: "approved-url";
+        readonly classification: "job-posting";
+        readonly capturedAt?: string;
+        readonly url: string;
+        readonly approved: true;
+      } | {
+        readonly id: string;
         readonly kind: "pasted-content";
         readonly classification: "job-posting" | "social-announcement" | "company-context";
         readonly capturedAt?: string;
@@ -1059,7 +1066,9 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly name: string;
-      readonly jobText: string;
+      readonly jobText?: string;
+      readonly jobUrl?: string;
+      readonly jobUrlApproved?: true;
     };
     readonly response: ApiSchemas["Application"];
   };

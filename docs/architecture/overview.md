@@ -529,6 +529,17 @@ The owner manages a workspace's job applications through the API
 - `POST /v1/workspaces/:id/applications` creates one from a name and pasted job
   text. The hosted service keeps that text in the application's record, never
   in a file, and `GET .../applications/:applicationId/job` reads it back.
+- The same route takes a job page address instead, with `jobUrlApproved: true`
+  as the person's approval to fetch it. Nothing is fetched then; the job reads
+  back as that address.
+- The page is fetched once, when requirements are extracted: the brief's
+  `approved-url` source must be the application's approved address. The
+  fetcher connects only to an address it checked (`job-page-brief.ts`, over
+  `@draft-loop/ingestion`'s pinned fetcher), a page it cannot read is refused
+  with 422 before a brief is saved, and the brief records the original and
+  final address and the fetch time. The page's text is kept with the
+  application for the worker's extraction and screened like pasted job text
+  before the worker's model sees it.
 - `POST .../applications/from-file?name=<name>&fileName=<file name>` creates
   one from a job description file sent as the raw body: a PDF, DOCX, Markdown
   or plain text file within the career-evidence upload limit

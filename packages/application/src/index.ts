@@ -20,6 +20,7 @@ import type {
   ApplicationBriefExtractionResult,
   ExtractApplicationBriefCommand,
 } from "./application-brief-extraction.js";
+import type { RecordApplicationJobPageCommand } from "./application-job-page.js";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
 import type {
   CandidateProfileFreshness,
@@ -31,7 +32,11 @@ import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
-import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
+import type {
+  OpportunityDraftPatch,
+  OpportunityIntakeDependencies,
+  OpportunitySourceInput,
+} from "./opportunity-intake.js";
 import type { RunApplicationPlan } from "./run-application-plan.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
@@ -331,6 +336,11 @@ export interface CreateOpportunityCommand {
   readonly signal?: AbortSignal;
   /** The application the brief belongs to; omitted means the workspace's default application. */
   readonly applicationId?: string;
+  /**
+   * Fetches an approved URL source in place of the default, such as one that keeps the page's
+   * text for the caller so the page is fetched only once (#1812).
+   */
+  readonly ingestUrl?: NonNullable<OpportunityIntakeDependencies["ingestUrl"]>;
 }
 
 export interface GetOpportunityCommand {
@@ -598,6 +608,11 @@ export interface ApplicationDriver {
   readonly extractApplicationBrief?: (
     command: ExtractApplicationBriefCommand,
   ) => Promise<ApplicationBriefExtractionResult>;
+  /**
+   * Keeps the text an application's approved job page gave when it was fetched, for the worker's
+   * extraction. The hosted driver offers it.
+   */
+  readonly recordApplicationJobPage?: (command: RecordApplicationJobPageCommand) => Promise<void>;
   /** A run's completed, verifiable exports, newest first. The hosted driver offers it. */
   readonly listRunExports?: (command: RunExportsCommand) => Promise<readonly RunExport[]>;
   /** One export's document, verified against its recorded checksum. The hosted driver offers it. */
@@ -804,6 +819,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
         throw new CliUserError("This application driver extracts briefs as it saves them.");
       return driver.extractApplicationBrief({ ...command, root: requireRoot(command.root) });
     },
+    recordApplicationJobPage: async (command) => {
+      if (driver.recordApplicationJobPage === undefined)
+        throw new CliUserError("This application driver fetches a job page as it extracts it.");
+      return driver.recordApplicationJobPage({ ...command, root: requireRoot(command.root) });
+    },
     listRunExports: async (command) =>
       driver.listRunExports === undefined
         ? []
@@ -875,6 +895,10 @@ export {
   type ExtractApplicationBriefCommand,
   extractApplicationBrief,
 } from "./application-brief-extraction.js";
+export {
+  type RecordApplicationJobPageCommand,
+  recordApplicationJobPage,
+} from "./application-job-page.js";
 export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
 export { userFixableProfileDerivationMessage } from "./candidate-profile-derivation-messages.js";

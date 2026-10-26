@@ -16,10 +16,23 @@ export const applicationNameSchema = z.string().trim().min(1).max(applicationNam
 export const applicationPastedJobMaxLength = 200_000;
 
 /**
+ * The text a hosted application's approved job page gave when requirements were extracted, kept
+ * so the worker extracts that one fetch (#1812). The brief's source records the same fetch.
+ */
+export const applicationJobPageSchema = z
+  .object({
+    text: z.string().trim().min(1).max(applicationPastedJobMaxLength),
+    finalUrl: z.url({ protocol: /^https?$/u }),
+    fetchedAt: strictTimestampSchema,
+  })
+  .strict();
+export type ApplicationJobPage = z.infer<typeof applicationJobPageSchema>;
+
+/**
  * Where an application's job description comes from. Pasted text lives in the workspace at
  * `storedPath`, or in the application's record itself (`stored-text`) where the workspace has no
- * files, as on the hosted service; a URL needs explicit approval; a local file is referenced, not
- * copied.
+ * files, as on the hosted service; a URL needs explicit approval, and on the hosted service keeps
+ * the page's text once it is fetched; a local file is referenced, not copied.
  */
 export const applicationJobSourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("pasted-text"), storedPath: z.string().min(1) }).strict(),
@@ -34,6 +47,7 @@ export const applicationJobSourceSchema = z.discriminatedUnion("kind", [
       kind: z.literal("approved-url"),
       url: z.url({ protocol: /^https?$/u }),
       approved: z.literal(true),
+      page: applicationJobPageSchema.optional(),
     })
     .strict(),
   z.object({ kind: z.literal("local-file"), path: z.string().min(1) }).strict(),

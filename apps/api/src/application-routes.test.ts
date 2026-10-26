@@ -241,12 +241,22 @@ describe("job briefs", () => {
       { id: "s", kind: "local-file", classification: "job-posting", path: "/etc/passwd" },
     ],
     [
-      "a URL to fetch",
+      "an unapproved URL to fetch",
       {
         id: "s",
         kind: "approved-url",
         classification: "job-posting",
         url: "https://example.test",
+        approved: false,
+      },
+    ],
+    [
+      "a plain http URL to fetch",
+      {
+        id: "s",
+        kind: "approved-url",
+        classification: "job-posting",
+        url: "http://example.test",
         approved: true,
       },
     ],

@@ -21,11 +21,19 @@ import type { Caller } from "./request-auth.js";
 /** The application the routes serve: one tenant's, or one that dispatches to the caller's. */
 export type ApiApplication = NonNullable<ApiOptions["application"]>;
 
-/** One tenant's application: every route's dependencies, bound to that tenant's data. */
+/**
+ * One tenant's application: every route's dependencies, bound to that tenant's data. A test's job
+ * page fetcher is not a tenant's: tenants use the pinned one.
+ */
 export type TenantApplication = Required<
   Omit<
     ApiApplication,
-    "budgetCeiling" | "idempotency" | "contentScreening" | "briefExtractions" | "profileDerivations"
+    | "budgetCeiling"
+    | "idempotency"
+    | "contentScreening"
+    | "briefExtractions"
+    | "profileDerivations"
+    | "jobPageFetcher"
   >
 > &
   Pick<
