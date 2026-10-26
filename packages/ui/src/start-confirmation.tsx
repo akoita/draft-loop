@@ -1,6 +1,8 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { formatLimitDuration } from "./execution-limits.js";
 import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
+import { modelProfilePresets } from "./model-profile-picker-state.js";
+import { presetDisplayName } from "./model-profile-presentation.js";
 import type { ProviderRoute } from "./provider-routes.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import type { StartEvidencePreview } from "./start-evidence-preview.js";
@@ -13,7 +15,7 @@ export interface StartConfirmationModel {
   readonly role: "Author" | "Critic";
   readonly company: string;
   readonly model: string;
-  /** The model profile tier, when the applied profile's id names one. */
+  /** The model profile tier, when the applied profile's id names one and no preset covers the pair. */
   readonly tier: string | null;
   /** How the call is reached and billed, or `null` when the host did not say. */
   readonly route: string | null;
@@ -25,6 +27,8 @@ export interface StartConfirmationLine {
 }
 
 export interface StartConfirmationSummary {
+  /** The preset the applied pair matches, named once instead of a tier per model. */
+  readonly preset: string | null;
   readonly models: readonly [StartConfirmationModel, StartConfirmationModel];
   readonly sameCompanyWarning: string | null;
   readonly inputs: readonly StartConfirmationLine[];
@@ -46,9 +50,31 @@ export interface StartConfirmationContext {
 
 export type StartCandidateProfile = Pick<CandidateProfileSelection, "version">;
 
+export interface StartModelProfile {
+  readonly id: string;
+  readonly version?: number;
+}
+
 export interface StartModelProfiles {
-  readonly author?: { readonly id: string };
-  readonly critic?: { readonly id: string };
+  readonly author?: StartModelProfile;
+  readonly critic?: StartModelProfile;
+}
+
+function sameProfile(
+  applied: StartModelProfile | undefined,
+  preset: { readonly id: string; readonly version: number },
+): boolean {
+  return applied?.id === preset.id && applied.version === preset.version;
+}
+
+/** The display name of the preset whose two profiles the run applies, or `null` for any other pair. */
+export function startModelPreset(profiles: StartModelProfiles | undefined): string | null {
+  const preset = modelProfilePresets.find(
+    (candidate) =>
+      sameProfile(profiles?.author, candidate.author) &&
+      sameProfile(profiles?.critic, candidate.critic),
+  );
+  return preset === undefined ? null : presetDisplayName(preset.label);
 }
 
 const tierPrefixes: readonly (readonly [string, string])[] = [
@@ -219,6 +245,7 @@ export function startConfirmationSummary(
   context: StartConfirmationContext,
 ): StartConfirmationSummary {
   const { author, critic } = state.providerTransmissionPreflight;
+  const preset = startModelPreset(context.modelProfiles);
   const model = (
     role: "Author" | "Critic",
     identity: { readonly company: string; readonly model: string },
@@ -226,9 +253,12 @@ export function startConfirmationSummary(
     role,
     company: companyName(identity.company),
     model: identity.model,
-    tier: modelProfileTier(
-      (role === "Author" ? context.modelProfiles?.author : context.modelProfiles?.critic)?.id,
-    ),
+    tier:
+      preset === null
+        ? modelProfileTier(
+            (role === "Author" ? context.modelProfiles?.author : context.modelProfiles?.critic)?.id,
+          )
+        : null,
     route: routeLabel(state, identity.company),
   });
   const sameCompany = author.company.trim().toLowerCase() === critic.company.trim().toLowerCase();
@@ -257,6 +287,7 @@ export function startConfirmationSummary(
   const callLimit = callLimitValue(state);
   if (callLimit !== null) settings.push({ label: "Call limit", value: callLimit });
   return {
+    preset,
     models: [model("Author", author), model("Critic", critic)],
     sameCompanyWarning: sameCompany
       ? `Author and critic are both from ${companyName(author.company)}, so the critique is not a cross-company check.`
@@ -349,6 +380,12 @@ export function StartConfirmation({
         <section aria-labelledby="start-confirmation-models">
           <h3 id="start-confirmation-models">Models</h3>
           <dl className="start-confirmation-lines">
+            {summary.preset === null ? null : (
+              <div>
+                <dt>Preset</dt>
+                <dd>{summary.preset}</dd>
+              </div>
+            )}
             {summary.models.map((model) => (
               <div key={model.role}>
                 <dt>{model.role}</dt>
