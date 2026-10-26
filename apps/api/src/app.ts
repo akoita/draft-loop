@@ -1,9 +1,10 @@
-import type {
-  ApplicationService,
-  HostedKnowledgeIntake,
-  HostedSensitivityRules,
-  RunBudgetCeiling,
-  UsageLine,
+import {
+  type ApplicationService,
+  defaultHostedKnowledgeSourceMaxBytes,
+  type HostedKnowledgeIntake,
+  type HostedSensitivityRules,
+  type RunBudgetCeiling,
+  type UsageLine,
 } from "@draft-loop/application";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
@@ -21,6 +22,7 @@ import {
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
 
+import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
@@ -366,6 +368,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerApplicationLifecycleRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+    });
+    registerApplicationFileRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      maxBytes: knowledgeIntake?.maxSourceBytes ?? defaultHostedKnowledgeSourceMaxBytes,
     });
     registerReviewRoutes(app, {
       service: application.service,

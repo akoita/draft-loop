@@ -529,6 +529,12 @@ The owner manages a workspace's job applications through the API
 - `POST /v1/workspaces/:id/applications` creates one from a name and pasted job
   text. The hosted service keeps that text in the application's record, never
   in a file, and `GET .../applications/:applicationId/job` reads it back.
+- `POST .../applications/from-file?name=<name>&fileName=<file name>` creates
+  one from a job description file sent as the raw body: a PDF, DOCX, Markdown
+  or plain text file within the career-evidence upload limit
+  (`application-file-routes.ts`). The API reads the file's text as it reads
+  career evidence and keeps that text as if it were pasted; the file is not
+  stored.
 - `PATCH .../applications/:applicationId` renames, archives or restores one,
   and an unknown application answers 404.
 - `PUT .../models` sets or clears an application's author and critic pair, and
