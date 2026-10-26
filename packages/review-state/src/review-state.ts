@@ -41,6 +41,7 @@ import type { RunAuthorInputView } from "@draft-loop/ui/run-author-input";
 import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
 
 import { executionCallLimitMs } from "./execution-call-limit.js";
+import { groupRepeatedWarnings } from "./finding-groups.js";
 import { readableFindingMessage } from "./finding-message.js";
 import { reviewCoverage } from "./review-coverage.js";
 import { usageLimitView } from "./usage-limit-view.js";
@@ -428,8 +429,12 @@ export function reviewState(
     usageLimit: usageLimitView(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
-    findings: snapshot.findings.map((_finding, index) =>
-      reviewFinding(snapshot, index, overrides, requirementTexts),
+    findings: groupRepeatedWarnings(
+      snapshot.findings.map((_finding, index) =>
+        reviewFinding(snapshot, index, overrides, requirementTexts),
+      ),
+      new Map((snapshot.artifact?.sections ?? []).map(({ id, title }) => [id, title])),
+      overrides,
     ),
     evaluation: {
       ready: evaluation?.ready ?? false,
