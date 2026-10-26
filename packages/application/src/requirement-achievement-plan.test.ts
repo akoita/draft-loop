@@ -1,7 +1,10 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
+import {
+  createRequirementAchievementPlan,
+  requirementsWithoutEvidence,
+} from "./requirement-achievement-plan.js";
 
 function chunk(id: string, text: string, rank: number): ScoredEvidenceChunk {
   return {
@@ -70,5 +73,41 @@ describe("requirement-to-achievement planning", () => {
       achievements: [],
       uncoveredRequirementIds: ["typescript", "mentoring", "kubernetes"],
     });
+  });
+});
+
+describe("requirements without sent evidence (#1775)", () => {
+  it("counts one chunk for every requirement it answers, worded differently or not", () => {
+    const requirements = [
+      { id: "services", text: "Build TypeScript services" },
+      {
+        id: "remote",
+        text: "Communicate clearly in writing and work autonomously with remote teams",
+      },
+      { id: "kubernetes", text: "Operate Kubernetes clusters" },
+    ];
+    const sent = [
+      chunk(
+        "notes",
+        "Built TypeScript services and collaborated remotely through written design notes",
+        -1,
+      ),
+    ];
+
+    // The plan gives the one chunk to the first requirement only.
+    expect(createRequirementAchievementPlan(requirements, sent).uncoveredRequirementIds).toEqual([
+      "remote",
+      "kubernetes",
+    ]);
+    // "remote" begins "remotely", so the chunk speaks to it too; nothing speaks to Kubernetes.
+    expect(requirementsWithoutEvidence(requirements, sent)).toEqual(["kubernetes"]);
+  });
+
+  it("does not match a short shared beginning or an empty chunk", () => {
+    const requirements = [{ id: "art", text: "Art direction" }];
+    expect(requirementsWithoutEvidence(requirements, [chunk("a", "Artist portfolio", -1)])).toEqual(
+      ["art"],
+    );
+    expect(requirementsWithoutEvidence(requirements, [chunk("b", "   ", -1)])).toEqual(["art"]);
   });
 });
