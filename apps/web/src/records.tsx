@@ -40,7 +40,7 @@ export interface RecordsProps {
 
 /**
  * Sign-in mode: the candidate records the caller reaches, the one the screen works on, and who is
- * assigned to it (ADR 0011, D6). A new record is set up in the Workspace step under its new id.
+ * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under its new id.
  */
 export function Records({ client, memory, onSwitch, children }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
@@ -174,7 +174,7 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
           >
             {options.map((id) => (
               <option key={id} value={id}>
-                {ids.includes(id) ? id : `${id} (new, set it up in the Workspace step)`}
+                {ids.includes(id) ? id : `${id} (new, set it up when you open it)`}
               </option>
             ))}
           </select>
@@ -212,7 +212,7 @@ type MembersState =
 export interface MembersPanelProps {
   readonly client: ApiClient;
   readonly recordId: string;
-  /** False for a new id the Workspace step has not set up yet. */
+  /** False for a new id not set up yet. */
   readonly exists: boolean;
   /** Owners and admins assign and remove members; members read the list. */
   readonly manage: boolean;

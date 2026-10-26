@@ -1,59 +1,49 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  defaultWorkspaceForm,
-  samePairWarning,
-  sectionList,
-  workspaceFormProblems,
-  workspaceRequestBody,
-} from "./workspace-model.js";
+import { routablePresets, samePairWarning, setupRequestBody } from "./workspace-model.js";
 
-describe("workspace form", () => {
-  it("accepts the defaults and leaves models to the service", () => {
-    expect(workspaceFormProblems(defaultWorkspaceForm)).toEqual([]);
-    expect(workspaceRequestBody(defaultWorkspaceForm)).toEqual({
-      language: "en",
-      maxRounds: 2,
-      fixtureMode: false,
-    });
-  });
+const balanced = {
+  id: "balanced",
+  label: "Balanced",
+  author: { company: "anthropic", model: "synthetic-author-1" },
+  critic: { company: "openai", model: "synthetic-critic-1" },
+};
 
-  it("sends chosen models, sections and fixture mode", () => {
+describe("first-run setup request", () => {
+  it("sends the chosen language, rounds, demo mode and the preset's two models", () => {
     expect(
-      workspaceRequestBody({
-        ...defaultWorkspaceForm,
-        requiredSections: "Summary, Experience\nSkills\n",
-        authorModel: " synthetic-author-1 ",
-        criticModel: "synthetic-critic-1",
-        fixtureMode: true,
-      }),
+      setupRequestBody({ language: "fr", maxRounds: 3, preset: balanced, fixtureMode: true }),
     ).toEqual({
-      language: "en",
-      maxRounds: 2,
+      language: "fr",
+      maxRounds: 3,
       fixtureMode: true,
-      requiredSections: ["Summary", "Experience", "Skills"],
       author: { company: "anthropic", model: "synthetic-author-1" },
       critic: { company: "openai", model: "synthetic-critic-1" },
     });
   });
 
-  it("explains what to fix", () => {
-    expect(
-      workspaceFormProblems({
-        ...defaultWorkspaceForm,
-        language: "e",
-        maxRounds: "0",
-        authorModel: "bad model",
+  it("refuses a preset with a company the hosted service does not run", () => {
+    expect(() =>
+      setupRequestBody({
+        language: "en",
+        maxRounds: 2,
+        fixtureMode: false,
+        preset: { ...balanced, author: { company: "mistral", model: "synthetic-author-2" } },
       }),
-    ).toEqual([
-      "Give the CV's language as a code such as en or fr.",
-      "Allow from 1 to 10 rounds.",
-      "The author model is a model id, such as the provider names it.",
-    ]);
+    ).toThrow(/Anthropic and OpenAI/u);
   });
 
-  it("splits sections on commas and lines", () => {
-    expect(sectionList(" Summary ,\n\nSkills")).toEqual(["Summary", "Skills"]);
+  it("offers only the presets whose two models the service routes", () => {
+    const other = { ...balanced, id: "standard", critic: { company: "openai", model: "unrouted" } };
+    expect(
+      routablePresets(
+        [balanced, other],
+        [
+          { company: "anthropic", model: "synthetic-author-1" },
+          { company: "openai", model: "synthetic-critic-1" },
+        ],
+      ),
+    ).toEqual([balanced]);
   });
 });
 

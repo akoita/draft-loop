@@ -50,12 +50,12 @@ describe("record picker", () => {
     expect(html).toContain("Create record");
   });
 
-  it("marks a new id the Workspace step has not set up yet", () => {
+  it("marks a new id not set up yet", () => {
     const html = renderToStaticMarkup(
       <RecordPicker ids={["record-a"]} chosen="record-new" notice="unused" onChoose={() => {}} />,
     );
 
-    expect(html).toContain("record-new (new, set it up in the Workspace step)");
+    expect(html).toContain("record-new (new, set it up when you open it)");
   });
 
   it("says why there is no record to choose", () => {

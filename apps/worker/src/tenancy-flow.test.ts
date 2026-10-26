@@ -25,11 +25,9 @@ import {
   briefPatchBody,
   createApiClient,
   createBriefBody,
-  defaultWorkspaceForm,
   ownerWorkspaceId,
   selectionRequest,
   startRunBody,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -249,11 +247,13 @@ describe.runIf(connectionString !== undefined)("two organisations on one deploym
     const workspace = { workspaceId: ownerWorkspaceId };
     await client.call("PUT /v1/workspaces/{workspaceId}", {
       path: workspace,
-      body: workspaceRequestBody({
-        ...defaultWorkspaceForm,
-        authorModel: "claude-sonnet-5-5",
-        criticModel: "gpt-6-luna",
-      }),
+      body: {
+        language: "en",
+        maxRounds: 2,
+        fixtureMode: false,
+        author: { company: "anthropic", model: "claude-sonnet-5-5" },
+        critic: { company: "openai", model: "gpt-6-luna" },
+      },
     });
     // The candidate record's consents come before any material is stored or sent (#1622).
     await grantConsents(client);

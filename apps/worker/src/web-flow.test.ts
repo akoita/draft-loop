@@ -18,6 +18,7 @@ import {
 } from "@draft-loop/storage-postgres";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
+import { workspaceSetupPresets } from "@draft-loop/ui/workspace-setup-model";
 import {
   type ApiClient,
   briefEdit,
@@ -28,25 +29,31 @@ import {
   createBriefBody,
   createHttpBridge,
   currentRunId,
-  defaultWorkspaceForm,
   grantRequest,
   isGranted,
   ownerWorkspaceId,
   readDefaultApplication,
   selectionRequest,
+  setupRequestBody,
   shouldPoll,
   sourceMediaType,
   startProblem,
   startRunBody,
   withdrawRequest,
   workspaceProviders,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { injectFetch, runtimeRole, runtimeUrl, tenantKeyBlobs } from "./hosted-test-support.js";
 import { createRunJobHandler } from "./run-job-handler.js";
+
+/** The first-run screen's defaults: English, two rounds and the Balanced preset. */
+function balancedFirstRun() {
+  const preset = workspaceSetupPresets().find(({ id }) => id === "balanced");
+  if (preset === undefined) throw new Error("The Balanced preset is listed.");
+  return { language: "en", maxRounds: 2, preset };
+}
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -126,14 +133,14 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
     const workspace = { workspaceId: ownerWorkspaceId };
 
     try {
-      // Workspace step: a first visit finds none and offers setup; create it in fixture mode, so
-      // the run calls no model.
+      // First run: a visit finds no workspace and shows the setup screen; create it in demo mode,
+      // with the Balanced preset, so the run calls no model.
       await expect(
         client.call("GET /v1/workspaces/{workspaceId}", { path: workspace }),
       ).rejects.toMatchObject({ status: 404, code: "not_found" });
       const created = await client.call("PUT /v1/workspaces/{workspaceId}", {
         path: workspace,
-        body: workspaceRequestBody({ ...defaultWorkspaceForm, fixtureMode: true }),
+        body: setupRequestBody({ ...balancedFirstRun(), fixtureMode: true }),
       });
       expect(created).toMatchObject({ fixtureMode: true });
 

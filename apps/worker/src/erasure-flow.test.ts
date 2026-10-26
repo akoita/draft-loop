@@ -26,12 +26,10 @@ import {
   briefPatchBody,
   createApiClient,
   createBriefBody,
-  defaultWorkspaceForm,
   deleteRecordRequest,
   recordIds,
   selectionRequest,
   startRunBody,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -221,11 +219,13 @@ describe.runIf(connectionString !== undefined)("record export and erasure", () =
     const workspace = { workspaceId: records[side].id };
     await client().call("PUT /v1/workspaces/{workspaceId}", {
       path: workspace,
-      body: workspaceRequestBody({
-        ...defaultWorkspaceForm,
-        authorModel: "claude-sonnet-5-5",
-        criticModel: "gpt-6-luna",
-      }),
+      body: {
+        language: "en",
+        maxRounds: 2,
+        fixtureMode: false,
+        author: { company: "anthropic", model: "claude-sonnet-5-5" },
+        critic: { company: "openai", model: "gpt-6-luna" },
+      },
     });
     await client().call("POST /v1/workspaces/{workspaceId}/consents", {
       path: workspace,

@@ -26,11 +26,9 @@ import {
   briefPatchBody,
   createApiClient,
   createBriefBody,
-  defaultWorkspaceForm,
   ownerWorkspaceId,
   selectionRequest,
   startRunBody,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -294,11 +292,13 @@ describe.runIf(connectionString !== undefined)("plans and credits across two org
     const workspace = { workspaceId: ownerWorkspaceId };
     await client.call("PUT /v1/workspaces/{workspaceId}", {
       path: workspace,
-      body: workspaceRequestBody({
-        ...defaultWorkspaceForm,
-        authorModel: "claude-sonnet-5-5",
-        criticModel: "gpt-6-luna",
-      }),
+      body: {
+        language: "en",
+        maxRounds: 2,
+        fixtureMode: false,
+        author: { company: "anthropic", model: "claude-sonnet-5-5" },
+        critic: { company: "openai", model: "gpt-6-luna" },
+      },
     });
     for (const body of [
       { kind: "material-storage", action: "granted", basis: "contract" },

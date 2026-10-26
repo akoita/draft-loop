@@ -22,12 +22,10 @@ import {
   briefPatchBody,
   createApiClient,
   createBriefBody,
-  defaultWorkspaceForm,
   ownerWorkspaceId,
   ruleRequest,
   selectionRequest,
   startRunBody,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -136,11 +134,13 @@ describe.runIf(connectionString !== undefined)("never-share material on Postgres
     try {
       await client.call("PUT /v1/workspaces/{workspaceId}", {
         path: workspace,
-        body: workspaceRequestBody({
-          ...defaultWorkspaceForm,
-          authorModel: "claude-sonnet-5-5",
-          criticModel: "gpt-6-luna",
-        }),
+        body: {
+          language: "en",
+          maxRounds: 2,
+          fixtureMode: false,
+          author: { company: "anthropic", model: "claude-sonnet-5-5" },
+          critic: { company: "openai", model: "gpt-6-luna" },
+        },
       });
       await client.call("PUT /v1/workspaces/{workspaceId}/writing-policy", {
         path: workspace,

@@ -8869,3 +8869,65 @@ body:has(.review-column) .workspace-activity {
   padding: var(--space-3) var(--space-6);
   background: var(--surface);
 }
+
+/* The first-run setup of a hosted workspace (#1790). */
+.workspace-setup {
+  display: grid;
+  justify-items: center;
+  padding: 2rem 1rem;
+}
+
+.workspace-setup-card {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 36rem);
+}
+
+.workspace-setup-card h1 {
+  margin: 0;
+}
+
+.workspace-setup-intro {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.workspace-setup-field {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.workspace-setup-presets {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.workspace-setup-presets legend {
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.workspace-setup-preset,
+.workspace-setup-toggle {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.workspace-setup-preset > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.workspace-setup-preset-models {
+  font-size: 0.875rem;
+  color: var(--text-2);
+}
+
+.workspace-setup-card > .button {
+  justify-self: start;
+}

@@ -2,8 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { ApiSchemas } from "./api-client.js";
-import { WorkspaceSetupForm, WorkspaceSummary } from "./workspace.js";
-import { defaultWorkspaceForm } from "./workspace-model.js";
+import { WorkspaceSummary } from "./workspace.js";
 
 const workspace: ApiSchemas["Workspace"] = {
   id: "owner",
@@ -35,38 +34,5 @@ describe("workspace screen", () => {
     );
 
     expect(html).toContain("same company");
-  });
-
-  it("offers the default cross-company pair when creating", () => {
-    const html = renderToStaticMarkup(
-      <WorkspaceSetupForm
-        form={defaultWorkspaceForm}
-        problems={[]}
-        busy={false}
-        onChange={() => {}}
-        onSubmit={() => {}}
-      />,
-    );
-
-    expect(html).toContain('<option value="anthropic" selected="">Anthropic</option>');
-    expect(html).toContain('<option value="openai" selected="">OpenAI</option>');
-    expect(html).toContain("Create workspace");
-    expect(html).not.toContain("same company");
-  });
-
-  it("shows what to fix and the same-company warning in the form", () => {
-    const html = renderToStaticMarkup(
-      <WorkspaceSetupForm
-        form={{ ...defaultWorkspaceForm, criticCompany: "anthropic" }}
-        problems={["Allow from 1 to 10 rounds."]}
-        busy={true}
-        onChange={() => {}}
-        onSubmit={() => {}}
-      />,
-    );
-
-    expect(html).toContain('role="alert">Allow from 1 to 10 rounds.</p>');
-    expect(html).toContain("same company");
-    expect(html).toContain("Creating…");
   });
 });

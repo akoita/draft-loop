@@ -119,7 +119,7 @@ export function estimateNotes(estimate: RunEstimate): string[] {
 function tierNotInPlan(role: string | undefined, tier: string | undefined): string {
   const models = tier === undefined ? "These models" : `${capital(tier)} models`;
   const who = role === undefined ? "" : ` for the ${role}`;
-  return `Your plan does not include ${models.toLowerCase()}${who}. Choose another model in the Workspace step.`;
+  return `Your plan does not include ${models.toLowerCase()}${who}. Choose another preset or model.`;
 }
 
 function capital(word: string): string {
@@ -150,7 +150,7 @@ export function planRefusalMessage(error: unknown): string | undefined {
     case "403 plan_required":
       return "Your organisation has no plan yet. Ask the owner to choose one.";
     case "422 model_tier_unknown":
-      return "DraftLoop cannot price one of the workspace's models yet. Choose another model in the Workspace step.";
+      return "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model.";
     case "429 run_cap_reached":
       return runCapMessage(details);
     case "409 plan_limit_reached":

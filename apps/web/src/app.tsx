@@ -84,7 +84,7 @@ export interface ShellProps {
 
 /**
  * The earlier steps, in the order a run needs them. They keep what the shared screens do not show
- * yet: the workspace form, consent, sensitivity rules and the plan's credits.
+ * yet: the workspace's settings, consent, sensitivity rules and the plan's credits.
  */
 export const steps = [
   { id: "workspace", label: "Workspace" },
@@ -141,7 +141,7 @@ export interface RecordStepsProps {
   readonly client: ApiClient;
   /** The workspace id of the candidate record every step works on. */
   readonly recordId: string;
-  /** Called with the record's id once the Workspace step reads or creates it. */
+  /** Called with the record's id once the workspace is read or created. */
   readonly onSaved?: (recordId: string) => void;
 }
 
@@ -169,7 +169,16 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
     [onSaved],
   );
 
-  if (workspace !== undefined && screens === "shared") {
+  // A first run shows only the shared setup screen, then lands on Home.
+  if (workspace === undefined) {
+    return (
+      <RecordContext.Provider value={recordId}>
+        <WorkspaceStep client={client} onWorkspace={onWorkspace} />
+      </RecordContext.Provider>
+    );
+  }
+
+  if (screens === "shared") {
     return (
       <RecordContext.Provider value={recordId}>
         <nav className="steps" aria-label="Screens">
@@ -185,18 +194,15 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   return (
     <RecordContext.Provider value={recordId}>
       <nav className="steps" aria-label="Steps">
-        {workspace === undefined ? null : (
-          <button type="button" className="step" onClick={() => setScreens("shared")}>
-            Home
-          </button>
-        )}
+        <button type="button" className="step" onClick={() => setScreens("shared")}>
+          Home
+        </button>
         {steps.map((item) => (
           <button
             key={item.id}
             type="button"
             className={item.id === step ? "step current" : "step"}
             aria-current={item.id === step ? "step" : undefined}
-            disabled={item.id !== "workspace" && workspace === undefined}
             onClick={() => setStep(item.id)}
           >
             {item.label}
@@ -204,7 +210,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
         ))}
       </nav>
       <main>
-        {step === "workspace" || workspace === undefined ? (
+        {step === "workspace" ? (
           <WorkspaceStep client={client} onWorkspace={onWorkspace} />
         ) : step === "sources" ? (
           <SourcesStep client={client} workspace={workspace} onWorkspace={onWorkspace} />
