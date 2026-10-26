@@ -46,11 +46,7 @@ function groupedFinding(
   const [first] = members as readonly [ReviewFinding, ...ReviewFinding[]];
   // A member decided before the findings were grouped still shows its decision on the group.
   const decided = members.find(({ id }) => overrides.decisions[id] !== undefined);
-  const places = members.map(({ sectionId, message }) => {
-    const title = sectionId === undefined ? undefined : sectionTitles.get(sectionId);
-    const place = title === undefined ? message : `${title}: ${message}`;
-    return /[.!?]$/u.test(place) ? place : `${place}.`;
-  });
+  const places = placesBySection(members, sectionTitles);
   const { rationale: _rationale, ...rest } = first;
   const rationale = decided === undefined ? undefined : overrides.rationales[decided.id];
   return {
@@ -59,4 +55,31 @@ function groupedFinding(
     decision: decided === undefined ? "pending" : (overrides.decisions[decided.id] ?? "pending"),
     ...(rationale === undefined ? {} : { rationale }),
   };
+}
+
+/**
+ * The group's places, one sentence per section in the order the draft first reaches it (#1807):
+ * "Skills: section is 5 one-line bullets." for one place, "2 in Experience: …" for several, with a
+ * message repeated in the same section said once. Places outside any named section come last.
+ */
+function placesBySection(
+  members: readonly ReviewFinding[],
+  sectionTitles: ReadonlyMap<string, string>,
+): readonly string[] {
+  const sections = new Map<string | undefined, string[]>();
+  for (const { sectionId, message } of members) {
+    const title = sectionId === undefined ? undefined : sectionTitles.get(sectionId);
+    sections.set(title, [...(sections.get(title) ?? []), message.trim().replace(/[.!?]+$/u, "")]);
+  }
+  const untitled = sections.get(undefined);
+  sections.delete(undefined);
+  if (untitled !== undefined) sections.set(undefined, untitled);
+  return [...sections].map(([title, messages]) => {
+    const said = [...new Set(messages)].join("; ");
+    if (title === undefined)
+      return messages.length === 1 ? `${said}.` : `${messages.length} more: ${said}.`;
+    return messages.length === 1
+      ? `${title}: ${said}.`
+      : `${messages.length} in ${title}: ${said}.`;
+  });
 }

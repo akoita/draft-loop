@@ -48,6 +48,26 @@ describe("repeated warnings in the review", () => {
     );
   });
 
+  it("names a section once for its places, saying a repeated message once (#1807)", () => {
+    const shown = groupRepeatedWarnings(
+      [
+        finding("f-1", { sectionId: "experience" }),
+        finding("f-2", { sectionId: "skills", message: "section is 5 one-line bullets." }),
+        finding("f-3", { sectionId: "experience" }),
+        finding("f-4", { sectionId: "experience", message: "3 one-line bullets" }),
+        finding("f-5"),
+        finding("f-6", { message: "2 bullets in a row" }),
+      ],
+      titles,
+      decisions(),
+    );
+
+    expect(shown).toHaveLength(1);
+    expect(shown[0]?.message).toBe(
+      "Found in 6 places. 3 in Experience: 4 bullets in a row; keep at most 3 and put a paragraph between series; 3 one-line bullets. Skills: section is 5 one-line bullets. 2 more: 4 bullets in a row; keep at most 3 and put a paragraph between series; 2 bullets in a row.",
+    );
+  });
+
   it("leaves a single warning, blocking findings and a requirement's warnings as they are", () => {
     const requirement = { id: "r-1", text: "Build TypeScript services" };
     const findings = [
