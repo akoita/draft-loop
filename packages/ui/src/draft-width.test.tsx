@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clampDraftWidth,
   DraftWidthHandle,
   defaultDraftWidth,
+  defaultDraftWidthFor,
+  defaultDraftWidthShare,
   draftWidthFromDrag,
   draftWidthLargeStep,
   draftWidthStep,
@@ -16,6 +19,7 @@ import {
   nextDraftWidthForKey,
   parseDraftWidth,
   readStoredDraftWidth,
+  widestDefaultDraftWidth,
   writeStoredDraftWidth,
 } from "./draft-width.js";
 import { createFixtureReviewState } from "./model.js";
@@ -55,6 +59,21 @@ describe("draft width", () => {
     expect(maximumDraftWidthFor(600, 272)).toBe(minimumDraftWidth);
     expect(maximumDraftWidthFor(3000, 272)).toBe(maximumDraftWidth);
     expect(maximumDraftWidthFor(null)).toBe(maximumDraftWidth);
+  });
+
+  it("grows the default measure with a wide window up to a readable cap (#1808)", () => {
+    expect(defaultDraftWidthFor(null)).toBe(defaultDraftWidth);
+    expect(defaultDraftWidthFor(1279)).toBe(defaultDraftWidth);
+    expect(defaultDraftWidthFor(1280)).toBe(640);
+    expect(defaultDraftWidthFor(1440)).toBe(720);
+    expect(defaultDraftWidthFor(2560)).toBe(widestDefaultDraftWidth);
+    expect(widestDefaultDraftWidth).toBeLessThanOrEqual(maximumDraftWidth);
+
+    // The stylesheet sets the same rule, which the handle reports before the reader moves it.
+    const styles = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+    expect(styles).toContain(
+      `clamp(${defaultDraftWidth}px, ${defaultDraftWidthShare * 100}vw, ${widestDefaultDraftWidth}px)`,
+    );
   });
 
   it("reads a stored width and treats anything unusable as no choice", () => {

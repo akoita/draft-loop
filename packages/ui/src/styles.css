@@ -2061,17 +2061,31 @@ input[type="text"].workspace-title-input {
 
 /* The reader can move the sheet's right edge. A chosen width arrives on the single-document grid
    as `--draft-width`; Compare never carries it. It applies only where the margin is shown: below
-   1280px the margin is gone, the handle with it, and the sheet keeps the fixed measure. The sheet
-   still shrinks before the margin column does, so the notes keep their gutter however the window
-   changes between measurements. */
+   1280px the margin is gone, the handle with it, and the sheet keeps the fixed measure. Untouched,
+   the measure grows with the window, half its width up to 840px, so a wide screen is not mostly
+   empty desk (`defaultDraftWidthFor` in draft-width.tsx mirrors it); Compare keeps 608px. The sheet still shrinks
+   before the margin column does, so the notes keep their gutter however the window changes
+   between measurements. */
 @media (min-width: 1280px) {
+  .diff-column-current {
+    --draft-default-width: 608px;
+  }
+
+  .doc-grid:not(.doc-grid-compare) .diff-column-current {
+    --draft-default-width: clamp(608px, 50vw, 840px);
+  }
+
   .sheet {
-    flex-basis: var(--draft-width, 608px);
-    max-width: var(--draft-width, 608px);
+    flex-basis: var(--draft-width, var(--draft-default-width));
+    max-width: var(--draft-width, var(--draft-default-width));
   }
 
   .diff-column-current .pane-heading {
-    max-width: calc(var(--draft-width, 608px) + var(--margin-gap) + var(--margin-column));
+    max-width: calc(
+      var(--draft-width, var(--draft-default-width)) +
+      var(--margin-gap) +
+      var(--margin-column)
+    );
   }
 }
 
