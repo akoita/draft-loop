@@ -27,7 +27,7 @@
     "server:down": "docker compose down",
     "server:test": "node scripts/server-stack.mjs",
     "test:server-smoke": "node -e \"if (!process.env.DRAFT_LOOP_TEST_API_URL) { console.error('Run pnpm server:test, which starts the local stack.'); process.exit(1); }\" && vitest run apps/api/src/server-stack.smoke.test.ts apps/api/src/sign-in-stack.smoke.test.ts",
-    "test:release": "node --test scripts/architecture-hotspots.test.mjs scripts/desktop-acceptance.test.mjs scripts/desktop-ci-scope.test.mjs scripts/desktop-live-e2e.test.mjs scripts/release.test.mjs scripts/release-local-preflight.test.mjs scripts/security.test.mjs scripts/server-stack.test.mjs",
+    "test:release": "node --test scripts/architecture-hotspots.test.mjs scripts/desktop-acceptance.test.mjs scripts/desktop-ci-scope.test.mjs scripts/desktop-live-e2e.test.mjs scripts/release.test.mjs scripts/release-local-preflight.test.mjs scripts/security.test.mjs scripts/server-release.test.mjs scripts/server-stack.test.mjs",
     "release:check": "node scripts/release.mjs check",
     "release:preflight": "node scripts/release-local-preflight.mjs",
     "release:manifest": "node scripts/release.mjs manifest",

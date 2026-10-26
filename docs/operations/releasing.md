@@ -6,6 +6,9 @@ stage exit. Every release is created only from the approved `main` branch;
 publishing an artifact proves the Released evidence level for that artifact,
 but it does not by itself prove that the product outcome was Validated.
 
+This page covers the desktop and CLI releases. Server releases of the hosted
+service (`server-vX.Y.Z`) follow [Deploying the hosted service](server-deploy.md).
+
 ## Release policy
 
 - The root `package.json` version is the release version source of truth.

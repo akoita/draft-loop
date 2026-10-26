@@ -7,22 +7,41 @@ project id, service account, pool id or bucket name belongs here.
 
 ## Releasing a server version
 
-1. **Tag.** Tag a commit of `main` whose CI gate passed with `server-vX.Y.Z`:
-   CI on the commit, and the desktop acceptance gates on the pull request that
-   produced it. Server tags are independent of the desktop's `v*` tags, and
-   `pnpm release:preflight` stays the rule for desktop releases only.
-2. **Staging.** The owner starts the deploy workflow in the infrastructure
-   repository for the tag; pushing a tag starts nothing. The workflow checks
-   the gate, builds the API and worker images from their Dockerfiles, pushes
-   them by digest, runs the migration job and deploys staging.
-3. **Smoke.** The workflow runs the synthetic smoke
-   (`pnpm test:server-smoke`, the same one as on the local stack) against
-   staging. A failure stops the release.
-4. **Production.** A second, manual run of the workflow deploys the same image
-   digests to production, migrates, and runs the smoke there.
+1. **Tag.** The owner starts the staging release workflow in the
+   infrastructure repository. It tags a commit of `main` whose CI gate passed
+   with `server-vX.Y.Z`: CI on the commit, and the desktop acceptance gates on
+   the pull request that produced it. Server tags are independent of the
+   desktop's `v*` tags, and `pnpm release:preflight` stays the rule for desktop
+   releases only.
+2. **Staging.** The same run checks the gate, builds the API and worker images
+   from their Dockerfiles, pushes them by digest, runs the migration job and
+   deploys staging.
+3. **Smoke.** It runs the synthetic smoke (`pnpm test:server-smoke`, the same
+   one as on the local stack) against staging. A failure stops the release.
+4. **Release notes.** Once the smoke passes, the run publishes a GitHub Release
+   for the tag (see [Server release notes](#server-release-notes)).
+5. **Production.** A second, manual run of the deploy workflow deploys the same
+   image digests to production, migrates, runs the smoke there and adds a
+   `Production: deployed on <date>` line to the release.
 
 The workflow signs in to Google Cloud through Workload Identity Federation, so
 no long-lived service account key exists.
+
+### Server release notes
+
+Each server tag that passed on staging gets a GitHub Release titled
+`Hosted service: <name> server-vX.Y.Z`. It is a pre-release and never marked
+Latest, so it never takes that place from a desktop release.
+
+- **Text.** The name, summary, known limitations, roadmap stage, stage issue
+  and milestone come from [`server-release.json`](../../server-release.json) at
+  the tagged commit. Update it in the last pull request of each sprint.
+- **Generated parts.** `scripts/server-release.mjs` renders the notes in the
+  desktop releases' layout, linking the public CI run on the source commit.
+  GitHub's What's Changed since the previous server release follows, and a
+  CycloneDX SBOM of the source is attached.
+- **Public only.** The notes never link to the infrastructure repository or
+  name a cloud identifier; `pnpm test:release` checks the file for them.
 
 ## What runs where
 
