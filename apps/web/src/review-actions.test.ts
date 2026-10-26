@@ -7,6 +7,8 @@ import { syntheticRun } from "./test-fixtures.js";
 const workspaceId = "owner";
 const runId = "run-1";
 const projected = { workspaceId, runId, state: "awaiting-approval" };
+// The owner token's workspace reads as "Your workspace" in the screens' headings.
+const shown = { ...projected, workspaceName: "Your workspace" };
 
 type Handler = (input: Record<string, unknown>) => unknown;
 
@@ -55,7 +57,7 @@ describe("the shared review screen's actions over HTTP", () => {
       rationale: "The source covers it.",
     });
 
-    expect(result).toEqual({ ok: true, value: projected });
+    expect(result).toEqual({ ok: true, value: shown });
     expect(calls).toEqual([
       {
         operation: "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
@@ -109,12 +111,12 @@ describe("the shared review screen's actions over HTTP", () => {
       readinessOverrideRationale: "The employer asked for two pages.",
     });
 
-    expect(blocked).toEqual({ ok: true, value: projected });
+    expect(blocked).toEqual({ ok: true, value: shown });
     expect(unresolved).toMatchObject({
       ok: false,
       error: { message: "Resolve, reject, or override blocking findings before approval." },
     });
-    expect(approved).toEqual({ ok: true, value: projected });
+    expect(approved).toEqual({ ok: true, value: shown });
     expect(calls.at(-2)?.input).toEqual({
       path: { workspaceId, runId },
       body: { readinessOverrideRationale: "The employer asked for two pages." },
@@ -145,7 +147,7 @@ describe("the shared review screen's actions over HTTP", () => {
     });
 
     for (const type of ["pause", "resume", "stop"]) {
-      expect(await dispatch({ type })).toEqual({ ok: true, value: projected });
+      expect(await dispatch({ type })).toEqual({ ok: true, value: shown });
     }
 
     expect(calls.filter(({ operation }) => operation.startsWith("POST"))).toEqual([
@@ -172,7 +174,7 @@ describe("the shared review screen's actions over HTTP", () => {
       fingerprint: "a".repeat(64),
     });
 
-    expect(result).toEqual({ ok: true, value: projected });
+    expect(result).toEqual({ ok: true, value: shown });
     expect(calls).toEqual([reload]);
   });
 
@@ -198,7 +200,7 @@ describe("the shared review screen's actions over HTTP", () => {
       { type: "export", format: "docx" },
       { type: "export", format: "pdf", template: "compact" },
     ]) {
-      expect(await dispatch(action)).toEqual({ ok: true, value: projected });
+      expect(await dispatch(action)).toEqual({ ok: true, value: shown });
     }
 
     const exports = calls.filter(({ operation }) => operation.endsWith("/exports"));

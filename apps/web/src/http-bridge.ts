@@ -31,7 +31,7 @@ import {
 } from "./profile-bridge.js";
 import { createReviewActions, type DownloadFile } from "./review-actions.js";
 import { saveFile } from "./save-file.js";
-import { ownerWorkspaceId } from "./workspace-model.js";
+import { ownerWorkspaceId, ownerWorkspaceName } from "./workspace-model.js";
 
 /**
  * The commands the hosted service can serve today. Everything else the shared screens offer, such
@@ -178,6 +178,19 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerProfile = createProfileAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
+  /** The run as the server projects it, with the owner token's fixed workspace named in words. */
+  const reviewState = async (
+    workspaceId: string,
+    query: { readonly applicationId?: string; readonly runId?: string },
+  ) => {
+    const state = await client.call("GET /v1/workspaces/{workspaceId}/review-state", {
+      path: { workspaceId },
+      query,
+    });
+    return workspaceId === ownerWorkspaceId
+      ? { ...state, workspaceName: ownerWorkspaceName }
+      : state;
+  };
   const applications = async (workspaceId: string) =>
     (await client.call("GET /v1/workspaces/{workspaceId}/applications", { path: { workspaceId } }))
       .applications;
@@ -507,14 +520,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "review.load": {
         // The server projects the review as the desktop host does; the port validates each field.
         const { applicationId, runId } = command.input;
-        return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
-          path: {
-            workspaceId: command.input.workspaceId ?? options.workspaceId ?? ownerWorkspaceId,
-          },
-          query: {
-            ...(applicationId === undefined ? {} : { applicationId }),
-            ...(runId === undefined ? {} : { runId }),
-          },
+        return reviewState(command.input.workspaceId ?? options.workspaceId ?? ownerWorkspaceId, {
+          ...(applicationId === undefined ? {} : { applicationId }),
+          ...(runId === undefined ? {} : { runId }),
         });
       }
       case "review.dispatch": {
@@ -522,9 +530,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         if (action.type !== "start") {
           await reviewAction(workspaceId, runId, action);
           // The run as the server now holds it, decisions and edits included.
-          return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
-            path: { workspaceId },
-            query: { ...(applicationId === undefined ? {} : { applicationId }), runId },
+          return reviewState(workspaceId, {
+            ...(applicationId === undefined ? {} : { applicationId }),
+            runId,
           });
         }
         if (action.pageTarget !== undefined) {
@@ -558,10 +566,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         });
         // The started run is the application's newest, so the screens load it as they do after a
         // desktop start.
-        return client.call("GET /v1/workspaces/{workspaceId}/review-state", {
-          path: { workspaceId },
-          query: { applicationId: scoped.id },
-        });
+        return reviewState(workspaceId, { applicationId: scoped.id });
       }
       default:
         throw new Refusal(
