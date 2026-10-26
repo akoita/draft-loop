@@ -96,6 +96,31 @@ describe("profile generation approval", () => {
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Update profile<\/button>/u);
     expect(html).toContain("Tick the approval box to update.");
   });
+
+  it("keeps the box ticked and disabled while the generation it allowed runs, then clears it", () => {
+    const action = (generating: boolean) =>
+      renderToStaticMarkup(
+        <ProfileGenerationAction
+          outcome={projectCanonicalCandidateProfileOutcome(null, "sample-profile", null)}
+          profileIdValid
+          // The page clears the approval when it sends, so each generation asks again.
+          providerTransmissionApproved={false}
+          busy={generating}
+          generating={generating}
+          providerName="Anthropic"
+          onApprovalChange={() => undefined}
+          onDerive={() => undefined}
+        />,
+      );
+    const running = action(true);
+    expect(running).toContain('<input type="checkbox" disabled="" checked=""/>');
+    expect(running).toContain("Generating…");
+    expect(running).not.toContain("Tick the approval box");
+
+    const ended = action(false);
+    expect(ended).toMatch(/<input type="checkbox"\/>/u);
+    expect(ended).toContain("Tick the approval box to generate.");
+  });
 });
 
 describe("profile version details", () => {
