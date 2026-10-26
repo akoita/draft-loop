@@ -9,6 +9,7 @@ import {
 import { Storage } from "@google-cloud/storage";
 
 import { readWorkerConfig } from "./config.js";
+import { embeddingModelReadiness } from "./embedding-model.js";
 import { failedCallLines } from "./failed-call-logging.js";
 import {
   errorFields,
@@ -41,6 +42,12 @@ if (config.modelGateway !== undefined) {
     }),
   );
 }
+// Without its embedding model the critic judges no requirement coverage, so each start names the
+// model's state (#1806).
+const embeddingModel = await embeddingModelReadiness(process.env);
+console.info(
+  logLine(embeddingModel.state === "ready" ? "INFO" : "WARNING", "embedding model", embeddingModel),
+);
 // On Cloud Run, the database URL names the connector's socket and the worker signs in as its
 // service identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
