@@ -176,7 +176,7 @@ describe("the shared review screen's actions over HTTP", () => {
     expect(calls).toEqual([reload]);
   });
 
-  it("exports each format, Modern unless another template is chosen, and downloads the file", async () => {
+  it("exports each format, Modern unless another template is chosen, and downloads it under the service's name", async () => {
     const document = new Blob(["synthetic document"]);
     const { dispatch, calls, downloads } = portOver({
       ...reviewState,
@@ -188,6 +188,7 @@ describe("the shared review screen's actions over HTTP", () => {
         createdAt: "2026-10-25T06:00:00.000Z",
         checksum: "c".repeat(64),
         sizeBytes: 18,
+        fileName: `Example-Ledger-CV-2026-10-25.${(body as { format: string }).format === "markdown" ? "md" : (body as { format: string }).format}`,
       }),
       "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content": () => document,
     });
@@ -208,9 +209,9 @@ describe("the shared review screen's actions over HTTP", () => {
     ]);
     expect(exports.every(({ input }) => input.header !== undefined)).toBe(true);
     expect(downloads.map(({ fileName }) => fileName)).toEqual([
-      "cv-2026-10-25-export-markdown.md",
-      "cv-2026-10-25-export-docx.docx",
-      "cv-2026-10-25-export-pdf.pdf",
+      "Example-Ledger-CV-2026-10-25.md",
+      "Example-Ledger-CV-2026-10-25.docx",
+      "Example-Ledger-CV-2026-10-25.pdf",
     ]);
     expect(downloads.every(({ bytes }) => bytes === document)).toBe(true);
     expect(calls.at(-1)).toEqual(reload);

@@ -3382,6 +3382,10 @@
           },
           "templateId": {
             "type": "string"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The name the document downloads under, from its application and day."
           }
         },
         "required": [
@@ -3391,7 +3395,8 @@
           "mimeType",
           "createdAt",
           "checksum",
-          "sizeBytes"
+          "sizeBytes",
+          "fileName"
         ],
         "description": "Where the document is stored is never shown."
       },
@@ -7927,6 +7932,10 @@
           },
           "templateId": {
             "type": "string"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The name the document downloads under, from its application and day."
           }
         },
         "required": [
@@ -7936,7 +7945,8 @@
           "mimeType",
           "createdAt",
           "checksum",
-          "sizeBytes"
+          "sizeBytes",
+          "fileName"
         ],
         "additionalProperties": false,
         "description": "Where the document is stored is never shown."

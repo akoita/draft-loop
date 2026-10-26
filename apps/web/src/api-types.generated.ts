@@ -605,6 +605,7 @@ export interface ApiSchemas {
     readonly sizeBytes: number;
     readonly artifactVersion?: number;
     readonly templateId?: string;
+    readonly fileName: string;
   };
   "RunExports": {
     readonly exports: readonly (ApiSchemas["RunExport"])[];

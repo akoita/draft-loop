@@ -40,6 +40,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { runApplicationName } from "./export-routes.js";
 
 export interface ReviewStateRoutesOptions {
   readonly service: ApplicationService;
@@ -215,7 +216,11 @@ export function registerReviewStateRoutes(
     const newest = [...exports].sort((left, right) =>
       right.createdAt.localeCompare(left.createdAt),
     )[0];
-    return newest === undefined ? null : exportFileName(newest);
+    if (newest === undefined) return null;
+    return exportFileName({
+      ...newest,
+      applicationName: await runApplicationName(service, root, runId),
+    });
   };
 
   /** The selected knowledge bases' sources, the evidence a hosted run reads. */

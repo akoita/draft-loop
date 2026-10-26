@@ -17,7 +17,6 @@ import {
   openPostgresStorage,
 } from "@draft-loop/storage-postgres";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
-import { exportFileName } from "@draft-loop/ui/export-file-name";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import {
   type ApiClient,
@@ -325,8 +324,8 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       const [exported] = exports;
       if (exported === undefined) throw new Error("The run has an export.");
       expect(exported).toMatchObject({ format: "docx", templateId: "modern" });
-      expect(download.fileName).toBe(exportFileName(exported));
-      expect(download.fileName).toMatch(/\.docx$/);
+      expect(download.fileName).toBe(exported.fileName);
+      expect(download.fileName).toMatch(/-CV-\d{4}-\d{2}-\d{2}\.docx$/u);
       expect(shared).toMatchObject({ state: "exported", exportPath: download.fileName });
       const bytes = Buffer.from(await download.bytes.arrayBuffer());
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(exported.checksum);
