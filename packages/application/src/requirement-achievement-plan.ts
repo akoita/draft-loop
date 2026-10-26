@@ -100,3 +100,38 @@ export function createRequirementAchievementPlan(
     uncoveredRequirementIds: Object.freeze(uncoveredRequirementIds),
   });
 }
+
+/** Shortest stem that lets a term match a longer word it begins ("remote", "remotely"). */
+const minimumSharedStem = 5;
+
+function sharesTerm(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  for (const term of left) {
+    if (right.has(term)) return true;
+    for (const other of right) {
+      const [shorter, longer] = term.length <= other.length ? [term, other] : [other, term];
+      if (shorter.length >= minimumSharedStem && longer.startsWith(shorter)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The requirements no sent item speaks to, for the run's record of the author's input (#1775).
+ * Unlike the plan, which gives each chunk to one requirement, any sent chunk counts for every
+ * requirement it shares a term with, so run details never call a requirement the sent evidence
+ * covers a gap. A term also matches a longer word it begins with, from five letters.
+ */
+export function requirementsWithoutEvidence(
+  requirements: readonly PlanningRequirement[],
+  retrievedEvidence: readonly ScoredEvidenceChunk[],
+): readonly string[] {
+  const evidence = retrievedEvidence
+    .filter((chunk) => chunk.text.trim() !== "")
+    .map((chunk) => terms(chunk.text));
+  return requirements
+    .filter((requirement) => {
+      const requirementTerms = terms(requirement.text);
+      return !evidence.some((chunkTerms) => sharesTerm(requirementTerms, chunkTerms));
+    })
+    .map(({ id }) => id);
+}

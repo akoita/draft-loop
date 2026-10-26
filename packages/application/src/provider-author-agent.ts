@@ -29,7 +29,10 @@ import {
   modelFacingArtifactWithEvidenceTable,
 } from "./provider-artifact-input.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
+import {
+  createRequirementAchievementPlan,
+  requirementsWithoutEvidence,
+} from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
 
 /** What one author step was given, handed to the optional recorder before the provider call. */
@@ -98,12 +101,16 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         throw deps.userError("Drafting requires retrieved candidate evidence.");
       }
       try {
-        const { uncoveredRequirementIds } = achievementPlan;
+        // Every requirement a sent chunk speaks to counts as matched, not only the one the plan
+        // gave that chunk to (#1775).
         await deps.recordAuthorInput?.({
           runId,
           round,
           retrievedEvidence,
-          uncoveredRequirementIds,
+          uncoveredRequirementIds: requirementsWithoutEvidence(
+            context.requirements,
+            retrievedEvidence,
+          ),
           ...(candidateDirection === undefined ? {} : { candidateDirection }),
         });
       } catch {
