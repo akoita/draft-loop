@@ -918,7 +918,7 @@ uppercase headings and role dates in a teal accent, justified text, labelled
 paragraphs with a hanging indent, and an italic context line under each role
 (the engine slants regular Carlito; no italic face is embedded).
 
-The printed desktop PDF and the DOCX draw these options (#1412):
+Every output draws these options: the printed desktop PDF and the DOCX since #1412, the built-in PDF writer since #1791.
 
 - **DOCX.** It uses the template's own profile (`profileFromTemplate`), so
   Modern's margins and sizes too. The look lives in paragraph styles: the
@@ -927,11 +927,12 @@ The printed desktop PDF and the DOCX draw these options (#1412):
   role, and a `Labelled` style with a hanging indent. The text stays as
   written, so rendering QA reads the same words as from Classic. Classic and
   Compact DOCX bytes are unchanged.
-- **Built-in PDF writer.** It still draws only the Classic look, and for
-  Modern also Classic's sizes. `builtInPdfDrawsTemplateLook` says which
-  templates it draws as designed. For any other template, an export without
-  the desktop's printer writes a `Template note:` line saying the PDF uses the
-  Classic layout.
+- **Built-in PDF writer.** It also uses the template's own profile. It draws
+  the name's alignment, fill colours for the name, contact line, headings and
+  role dates, the rule colour, justified body lines (word spacing), and the
+  context line slanted and greyed. Capitalised headings carry their written
+  text as `/ActualText`, which both PDF readers in `packages/rendering` use,
+  so rendering QA reads the same words as from Classic.
 
 The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
 and in the export payload as `renderingTemplate`. The rendering-QA report keeps

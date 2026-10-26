@@ -7,7 +7,6 @@ import { renderArtifact } from "@draft-loop/rendering";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
-import { builtInPdfTemplateNoteLine } from "./export-document.js";
 import {
   assertExportRenderingQa,
   buildExportRenderingQa,
@@ -267,7 +266,7 @@ describe("application export rendering QA", () => {
     }
   }, 30_000);
 
-  it("notes a built-in Modern PDF's Classic layout, but not a DOCX or a Classic PDF", async () => {
+  it("exports a built-in Modern PDF that passes rendering checks, with no template note", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-export-note-"));
     try {
       await mkdir(join(root, "evidence"), { recursive: true });
@@ -300,8 +299,9 @@ describe("application export rendering QA", () => {
         );
         return lines.filter((line) => line.startsWith("Template note: "));
       };
-      expect(await notesFor("pdf")).toEqual([builtInPdfTemplateNoteLine("modern")]);
-      expect(await notesFor("docx")).toEqual([]);
+      // Since #1791 the built-in writer draws Modern's own look, so no PDF says it looks Classic.
+      expect(await notesFor("pdf")).toEqual([]);
+      expect(await notesFor("pdf", "modern")).toEqual([]);
       expect(await notesFor("pdf", "classic")).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
