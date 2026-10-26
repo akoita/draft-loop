@@ -128,8 +128,9 @@ label:where(:not(.shared-screens *)) {
   margin-top: 1rem;
 }
 
+/* The shared screens size their own columns, as in a desktop window; this caps very wide screens. */
 .shell {
-  max-width: 72rem;
+  max-width: 120rem;
   margin: 0 auto;
   padding: 0 1rem 3rem;
 }
