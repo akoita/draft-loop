@@ -230,7 +230,9 @@ textarea.short:where(:not(.shared-screens *)) {
   min-height: 5rem;
 }
 
-form button[type="submit"] {
+/* The web's own forms only: in a shared dialog this margin pushed the submit button below its
+   neighbours, and the flex row stretched them to match (#1825). */
+form button[type="submit"]:where(:not(.button)) {
   margin-top: 1rem;
 }
 
