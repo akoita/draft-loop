@@ -178,13 +178,25 @@ for every platform:
 - The worker image keeps only the Linux build for the image's architecture:
   x64 for Cloud Run, or arm64 on an Apple-silicon machine.
 
+The worker image also carries the pinned default embedding model (Granite
+311m, about 350 MB) at `/app/models`, because the critic judges requirement
+coverage with it. Without it, a hosted run's relevance counts only word
+matches (#1806).
+
+- Its own build stage downloads the files from Hugging Face, reading only the
+  model manifest, so a code change does not download them again.
+- The install step checks each file's size and SHA-256 against the manifest,
+  so a bad download fails the build.
+- Each worker start logs the model's state as `embedding model`, with a
+  warning when it is not ready.
+
 | Image  | Before (2026-10-22) | After   | `node_modules` before → after |
 | ------ | ------------------- | ------- | ----------------------------- |
 | api    | 1.09 GB             | 630 MB  | 515 MB → 228 MB               |
 | worker | 1.09 GB             | 694 MB  | 515 MB → 272 MB               |
 
 Sizes are as `docker images` reports them; about 330 MB of each is the Node
-base image.
+base image. The embedding model adds about 350 MB to the worker image.
 
 They read their settings from the environment, so the same images run in a
 deployment with that deployment's values:
@@ -222,6 +234,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_RUNTIME_MEMBERS`            | migration job  | Cloud SQL IAM database users made members of the runtime role, comma-separated; unset locally |
 | `DRAFT_LOOP_CLOUD_SQL_INSTANCE`         | all            | A Cloud SQL connection name; turns on Google's connector, see below |
 | `DRAFT_LOOP_CLOUD_SQL_SOCKET_DIR`       | all            | The connector's socket directory, default `/tmp/cloudsql` |
+| `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`       | worker         | Where the embedding model is installed; the image sets `/app/models` |
 
 ## Cloud SQL
 

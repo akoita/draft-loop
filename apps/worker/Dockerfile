@@ -2,6 +2,14 @@
 # It runs the workspace's TypeScript sources with tsx, so the image needs no separate build step.
 # Cloud project identifiers, credentials and bucket names come from the runtime, never from here.
 
+# Model stage: the pinned default embedding model (about 350 MB), downloaded from only the manifest
+# so a code change does not download it again. The install step below verifies every file.
+FROM node:24.22.1-bookworm-slim AS embedding-model
+WORKDIR /download
+COPY packages/embeddings/src/model-manifest.ts packages/embeddings/src/
+COPY apps/worker/scripts/download-embedding-model.mjs apps/worker/scripts/
+RUN node apps/worker/scripts/download-embedding-model.mjs /download/files
+
 # Install stage: pnpm and its store stay here, out of the image.
 FROM node:24.22.1-bookworm-slim AS dependencies
 
@@ -22,10 +30,15 @@ RUN pnpm install --frozen-lockfile --prod --filter "@draft-loop/worker..." \
     && test -d "$runtime/linux/$arch" \
     && find "$runtime" -mindepth 1 -maxdepth 1 ! -name linux -exec rm -rf {} + \
     && find "$runtime/linux" -mindepth 1 -maxdepth 1 ! -name "$arch" -exec rm -rf {} +
+# The critic judges requirement coverage with this model (#1806); the install checks each file's
+# size and SHA-256 against the manifest, so a bad download fails the build.
+COPY --from=embedding-model /download/files /tmp/embedding-model
+RUN /app/node_modules/.bin/tsx apps/worker/src/install-embedding-model.ts /tmp/embedding-model /app/models
 
 FROM node:24.22.1-bookworm-slim
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    DRAFT_LOOP_EMBEDDING_MODEL_ROOT=/app/models
 COPY --from=dependencies /app /app
 
 USER node
