@@ -1,15 +1,21 @@
 import { createHash } from "node:crypto";
-import { lookup } from "node:dns/promises";
 import { type BigIntStats, constants } from "node:fs";
 import { type FileHandle, lstat, open, readdir, realpath } from "node:fs/promises";
-import { isIP } from "node:net";
 import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync } from "node:zlib";
 
 import { markDocxHeadings } from "./docx-headings.js";
 import { decodeHtmlEntities, markHtmlHeadings } from "./html-text.js";
 import { extractJobPostingText } from "./job-posting-json-ld.js";
+import { unsafeLiteralHostname } from "./network-address.js";
 import { extractPdfText } from "./pdf-text.js";
+import {
+  createPinnedUrlFetcher,
+  defaultUrlHostnameResolver,
+  UnsafeUrlAddressError,
+  type UrlFetcher,
+  type UrlHostnameResolver,
+} from "./pinned-url-fetcher.js";
 
 export {
   type CandidateEvidenceKindDetection,
@@ -219,14 +225,23 @@ export class DirectoryIngestionError extends Error {
   }
 }
 
-export type UrlFetcher = (input: string, init?: RequestInit) => Promise<Response>;
-export type UrlHostnameResolver = (hostname: string) => Promise<readonly string[]>;
+export {
+  createPinnedUrlFetcher,
+  type PinnedUrlFetcherOptions,
+  UnsafeUrlAddressError,
+  type UrlFetcher,
+  type UrlHostnameResolver,
+} from "./pinned-url-fetcher.js";
 
 export interface UrlIngestionOptions extends IngestionOptions {
   /** An explicit opt-out prevents the fetcher from being invoked. */
   readonly approved?: boolean;
   /** An optional approval gate for callers that need an asynchronous decision. */
   readonly approval?: boolean | (() => boolean | Promise<boolean>);
+  /**
+   * Replaces the default fetcher, which connects only to the address it checked. A replacement
+   * without `resolveHostname` is trusted to apply its own network policy.
+   */
   readonly fetcher?: UrlFetcher;
   /** Override DNS resolution in tests or a host-owned network policy. */
   readonly resolveHostname?: UrlHostnameResolver;
@@ -1328,105 +1343,6 @@ function urlIssue(
   return issue(code, sourcePath, messages[code]);
 }
 
-function ipv4Parts(hostname: string): readonly number[] | null {
-  const parts = hostname.split(".");
-  if (parts.length !== 4) return null;
-  const values = parts.map((part) => Number.parseInt(part, 10));
-  if (
-    values.some(
-      (value, index) =>
-        !Number.isInteger(value) || value < 0 || value > 255 || parts[index]?.length === 0,
-    )
-  ) {
-    return null;
-  }
-  return values;
-}
-
-function unsafeIpv4(parts: readonly number[]): boolean {
-  const [first = 0, second = 0, third = 0] = parts;
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 0 && third === 0) ||
-    (first === 192 && second === 168) ||
-    (first === 198 && second >= 18 && second <= 19) ||
-    (first === 198 && second === 51 && third === 100) ||
-    (first === 203 && second === 0 && third === 113) ||
-    first >= 224
-  );
-}
-
-function ipv6Parts(hostname: string): readonly number[] | null {
-  const value = hostname.replace(/^\[|\]$/gu, "").toLowerCase();
-  const halves = value.split("::");
-  if (halves.length > 2) return null;
-
-  const parseHalf = (half: string): number[] | null => {
-    if (half === "") return [];
-    const parts = half.split(":");
-    const result: number[] = [];
-    for (const part of parts) {
-      if (part.includes(".")) {
-        const ipv4 = ipv4Parts(part);
-        if (ipv4 === null || result.length + 2 > 8) return null;
-        result.push((ipv4[0] ?? 0) * 256 + (ipv4[1] ?? 0));
-        result.push((ipv4[2] ?? 0) * 256 + (ipv4[3] ?? 0));
-        continue;
-      }
-      if (!/^[0-9a-f]{1,4}$/u.test(part)) return null;
-      result.push(Number.parseInt(part, 16));
-    }
-    return result;
-  };
-
-  const left = parseHalf(halves[0] ?? "");
-  const right = halves.length === 2 ? parseHalf(halves[1] ?? "") : [];
-  if (left === null || right === null) return null;
-  const missing = halves.length === 2 ? 8 - left.length - right.length : 0;
-  if (missing < (halves.length === 2 ? 1 : 0) || left.length + right.length + missing !== 8) {
-    return null;
-  }
-  return [...left, ...new Array<number>(missing).fill(0), ...right];
-}
-
-function unsafeLiteralHostname(hostname: string): boolean {
-  const normalized = hostname.replace(/^\[|\]$/gu, "").toLowerCase();
-  if (normalized === "localhost" || normalized.endsWith(".localhost")) return true;
-
-  const kind = isIP(normalized);
-  if (kind === 4) {
-    const parts = ipv4Parts(normalized);
-    return parts === null || unsafeIpv4(parts);
-  }
-  if (kind !== 6) return false;
-
-  const parts = ipv6Parts(normalized);
-  if (parts === null) return true;
-  const first = parts[0] ?? 0;
-  const mapped = parts.slice(0, 6).every((part) => part === 0) && parts[5] === 0xffff;
-  if (mapped) {
-    const mappedIpv4 = [
-      (parts[6] ?? 0) >>> 8,
-      (parts[6] ?? 0) & 0xff,
-      (parts[7] ?? 0) >>> 8,
-      (parts[7] ?? 0) & 0xff,
-    ];
-    return unsafeIpv4(mappedIpv4);
-  }
-  return (
-    parts.every((part) => part === 0) ||
-    (parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1) ||
-    (first & 0xfe00) === 0xfc00 ||
-    (first & 0xffc0) === 0xfe80 ||
-    (first & 0xff00) === 0xff00
-  );
-}
-
 function parseSafeUrl(input: string): URL | null {
   let parsed: URL;
   try {
@@ -1555,17 +1471,9 @@ async function approvalAllowsUrlIngestion(options: UrlIngestionOptions): Promise
   return true;
 }
 
-const defaultUrlFetcher: UrlFetcher = (input, init) => globalThis.fetch(input, init);
-const defaultUrlHostnameResolver: UrlHostnameResolver = async (hostname) =>
-  (await lookup(hostname, { all: true })).map((address) => address.address);
-
-async function resolvedUrlIsSafe(
-  parsed: URL,
-  options: UrlIngestionOptions,
-  fetcher: UrlFetcher,
-): Promise<boolean> {
+async function resolvedUrlIsSafe(parsed: URL, options: UrlIngestionOptions): Promise<boolean> {
   if (unsafeLiteralHostname(parsed.hostname)) return false;
-  if (options.resolveHostname === undefined && fetcher !== defaultUrlFetcher) return true;
+  if (options.resolveHostname === undefined && options.fetcher !== undefined) return true;
   const resolver = options.resolveHostname ?? defaultUrlHostnameResolver;
   try {
     const addresses = await resolver(parsed.hostname);
@@ -1980,8 +1888,13 @@ export async function ingestUrl(
     maxExtractedCharacters,
     maxExtractedCharacters,
   );
-  const fetcher = options.fetcher ?? defaultUrlFetcher;
-  if (!(await resolvedUrlIsSafe(parsed, options, fetcher))) {
+  // The default fetcher checks the addresses again and connects only to one it checked (#1811).
+  const fetcher =
+    options.fetcher ??
+    createPinnedUrlFetcher(
+      options.resolveHostname === undefined ? {} : { resolveHostname: options.resolveHostname },
+    );
+  if (!(await resolvedUrlIsSafe(parsed, options))) {
     return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
   }
   let currentUrl = parsed;
@@ -2001,7 +1914,11 @@ export async function ingestUrl(
         source: null,
         issues: [
           urlIssue(
-            error instanceof UrlTimeoutError ? "fetch-timeout" : "fetch-failure",
+            error instanceof UrlTimeoutError
+              ? "fetch-timeout"
+              : error instanceof UnsafeUrlAddressError
+                ? "unsafe-url"
+                : "fetch-failure",
             originalUrl,
           ),
         ],
@@ -2014,13 +1931,14 @@ export async function ingestUrl(
       if (safeObservedUrl === null) {
         return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
       }
-      if (!(await resolvedUrlIsSafe(safeObservedUrl, options, fetcher))) {
+      if (!(await resolvedUrlIsSafe(safeObservedUrl, options))) {
         return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
       }
       currentUrl = safeObservedUrl;
     }
 
     if ([301, 302, 303, 307, 308].includes(response.status)) {
+      void response.body?.cancel().catch(() => undefined);
       if (redirects >= maxRedirects) {
         return { source: null, issues: [urlIssue("redirect-limit", originalUrl)] };
       }
@@ -2038,7 +1956,7 @@ export async function ingestUrl(
       if (safeRedirectUrl === null) {
         return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
       }
-      if (!(await resolvedUrlIsSafe(safeRedirectUrl, options, fetcher))) {
+      if (!(await resolvedUrlIsSafe(safeRedirectUrl, options))) {
         return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
       }
       currentUrl = safeRedirectUrl;
