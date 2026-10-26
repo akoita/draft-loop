@@ -81,9 +81,10 @@ export function ProfileGenerationAction({
   return (
     <div className="profile-generation-action">
       <label className="profile-approval-label">
+        {/* The approval a running generation was given stays shown until that generation ends. */}
         <input
           type="checkbox"
-          checked={providerTransmissionApproved}
+          checked={providerTransmissionApproved || generating}
           disabled={busy}
           onChange={(event) => onApprovalChange(event.target.checked)}
         />
