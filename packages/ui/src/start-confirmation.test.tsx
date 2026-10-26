@@ -15,6 +15,7 @@ import {
   type StartReviewAction,
   startConfirmationHandlers,
   startConfirmationSummary,
+  startModelPreset,
 } from "./start-confirmation.js";
 
 const sessions: ProviderRoutesView = {
@@ -293,6 +294,57 @@ describe("model profile tier and career profile", () => {
       modelProfiles: { author: { id: "standard-anthropic-author" }, critic: { id: "custom-x" } },
     });
     expect(summary.models.map((model) => model.tier)).toEqual(["Standard", null]);
+  });
+
+  it.each([
+    ["economy-anthropic-author", 2, "economy-openai-critic", 1, "Economy"],
+    ["economy-anthropic-author", 1, "standard-openai-critic", 2, "Balanced"],
+    ["standard-anthropic-author", 1, "standard-openai-critic", 2, "Standard"],
+  ])(
+    "names the %s@%i and %s@%i pair as the %s preset, once, with no tier per model",
+    (authorId, authorVersion, criticId, criticVersion, preset) => {
+      const modelProfiles = {
+        author: { id: authorId, version: authorVersion },
+        critic: { id: criticId, version: criticVersion },
+      };
+      const summary = startConfirmationSummary(liveState(), { action: start, modelProfiles });
+      expect(summary.preset).toBe(preset);
+      expect(summary.models.map((model) => model.tier)).toEqual([null, null]);
+      const html = renderToStaticMarkup(
+        <StartConfirmation
+          summary={summary}
+          dialogRef={createRef<HTMLDivElement>()}
+          onStart={() => undefined}
+          onCancel={() => undefined}
+        />,
+      );
+      expect(html).toContain(`<dt>Preset</dt><dd>${preset}</dd>`);
+      expect(html).toContain("Anthropic · claude-sonnet-4-5 · Claude session");
+    },
+  );
+
+  it("keeps the tier per model for a pair no preset covers, or an unknown version", () => {
+    expect(
+      startModelPreset({
+        author: { id: "standard-anthropic-author", version: 1 },
+        critic: { id: "economy-openai-critic", version: 1 },
+      }),
+    ).toBeNull();
+    expect(
+      startModelPreset({
+        author: { id: "economy-anthropic-author" },
+        critic: { id: "standard-openai-critic" },
+      }),
+    ).toBeNull();
+    const summary = startConfirmationSummary(liveState(), {
+      action: start,
+      modelProfiles: {
+        author: { id: "standard-anthropic-author", version: 1 },
+        critic: { id: "economy-openai-critic", version: 1 },
+      },
+    });
+    expect(summary.preset).toBeNull();
+    expect(summary.models.map((model) => model.tier)).toEqual(["Standard", "Economy"]);
   });
 
   it("shows the career profile version or that none is pinned, only when given", () => {
