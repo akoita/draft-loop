@@ -49,12 +49,14 @@ import {
   type CoverageJudgement,
   type CoverageJudgementRequest,
   type CoverageJudgementSummary,
+  criticReportedGapIds,
   judgedCoveredRequirementIds,
   type RequirementCoverageAssessment,
   type ValidationCategory,
   type ValidationIssue,
   validateDraftArtifact,
   withoutJudgedUncoveredFindings,
+  withWordMatchGapsConfirmed,
 } from "@draft-loop/validation";
 
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
@@ -2200,7 +2202,15 @@ export function createOrchestrationEngine(
     const settledEvaluation = consensus.evaluation;
     const updated = {
       ...snapshot,
-      findings: combined,
+      // The rounds stop as before; the findings the person reviews block on a token-match miss
+      // only when the critic also reports the gap (#1789).
+      findings: withWordMatchGapsConfirmed(
+        combined,
+        criticReportedGapIds(
+          execution.coverageJudgement?.assessments ?? [],
+          execution.output.findings,
+        ),
+      ),
       latestEvaluation: settledEvaluation,
       scoreHistory: [...snapshot.scoreHistory, evaluation.scoreVector],
       updatedAt: now,

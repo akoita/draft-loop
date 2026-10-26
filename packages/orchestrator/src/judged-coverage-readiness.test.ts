@@ -248,22 +248,46 @@ describe("judged coverage in readiness", () => {
 
     const result = await start();
 
-    expect(uncovered(result.findings)).toMatchObject([{ severity: "error" }]);
+    // An invalid verdict is no gap report, so the token-match miss stays a warning (#1789).
+    expect(uncovered(result.findings)).toMatchObject([{ severity: "warning" }]);
     const record = result.executionHistory.find((entry) => entry.step === "critic");
     expect(record?.coverageJudgement?.summary).toMatchObject({ satisfied: 0, invalid: 1 });
   });
 
   it.each([
-    ["judged not-satisfied", [{ findings: [], coverageJudgements: [verdict("not-satisfied")] }]],
-    ["left unjudged", [{ findings: [] }]],
-  ] satisfies readonly (readonly [string, readonly Critique[]])[])(
-    "keeps a requirement %s blocking",
-    async (_name, critiques) => {
+    [
+      "judged not-satisfied",
+      "error",
+      [{ findings: [], coverageJudgements: [verdict("not-satisfied")] }],
+    ],
+    [
+      "reported by the critic",
+      "error",
+      [
+        {
+          findings: [
+            {
+              id: "critic-gap",
+              code: "missing-requirement",
+              category: "coverage",
+              severity: "warning",
+              message: "TypeScript experience is not shown.",
+              requirementId: "requirement-1",
+            },
+          ],
+        },
+      ],
+    ],
+    // Token matching alone misses equivalent wording, so the finding only warns (#1789).
+    ["left unjudged", "warning", [{ findings: [] }]],
+  ] satisfies readonly (readonly [string, "error" | "warning", readonly Critique[]])[])(
+    "keeps a requirement %s uncovered, as an %s, and the draft not ready",
+    async (_name, severity, critiques) => {
       const { engine, start } = fixture({ critiques });
 
       const result = await start();
 
-      expect(uncovered(result.findings)).toMatchObject([{ severity: "error" }]);
+      expect(uncovered(result.findings)).toMatchObject([{ severity }]);
       expect(result.latestEvaluation?.ready).toBe(false);
       expect(result.latestEvaluation?.scoreVector.relevance).toBeLessThan(0.8);
       await expect(engine.approve("run-1")).rejects.toThrow(/not application-ready/iu);

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { judgedCoveredRequirementIds, withoutJudgedUncoveredFindings } from "./judged-coverage.js";
+import {
+  criticReportedGapIds,
+  judgedCoveredRequirementIds,
+  withoutJudgedUncoveredFindings,
+  withWordMatchGapsConfirmed,
+} from "./judged-coverage.js";
 import type { RequirementCoverageAssessment } from "./requirement-coverage-assessment.js";
 
 function assessment(
@@ -54,5 +59,42 @@ describe("withoutJudgedUncoveredFindings", () => {
       { code: "coverage-block-dropped", requirementId: "other", severity: "warning" },
     ];
     expect(withoutJudgedUncoveredFindings(dropped, ["judged"])).toEqual(dropped.slice(1));
+  });
+});
+
+describe("word-match coverage gaps", () => {
+  it("counts the critic's judged gaps and its own coverage findings as reported", () => {
+    expect(
+      criticReportedGapIds(
+        [
+          assessment("judged-gap", "uncovered", "judgement"),
+          assessment("lexical-gap", "uncovered", "lexical"),
+          assessment("covered", "covered", "judgement"),
+        ],
+        [
+          { category: "coverage", requirementId: "critic-gap" },
+          { category: "coverage" },
+          { category: "factuality", requirementId: "not-coverage" },
+        ],
+      ),
+    ).toEqual(["judged-gap", "critic-gap"]);
+  });
+
+  it("blocks on a word-match miss only when the critic confirms it, keeping other findings", () => {
+    const findings = [
+      { code: "uncovered-requirement", requirementId: "word-match-only", severity: "error" },
+      { code: "uncovered-requirement", requirementId: "confirmed", severity: "error" },
+      { code: "uncovered-requirement", requirementId: "minor", severity: "warning" },
+      { code: "uncovered-requirement", severity: "error" },
+      { code: "unsupported-claim", requirementId: "word-match-only", severity: "error" },
+    ] as const;
+
+    expect(withWordMatchGapsConfirmed(findings, ["confirmed"])).toEqual([
+      { code: "uncovered-requirement", requirementId: "word-match-only", severity: "warning" },
+      findings[1],
+      findings[2],
+      { code: "uncovered-requirement", severity: "warning" },
+      findings[4],
+    ]);
   });
 });

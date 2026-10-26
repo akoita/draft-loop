@@ -25,12 +25,14 @@ import {
   type ReadinessDimensionAgreement,
 } from "@draft-loop/schemas";
 import {
+  criticReportedGapIds,
   type DeterministicValidationContext,
   judgedCoveredRequirementIds,
   type RequirementCoverageAssessment,
   type ValidationIssue,
   validateDraftArtifact,
   withoutJudgedUncoveredFindings,
+  withWordMatchGapsConfirmed,
 } from "@draft-loop/validation";
 import { notBefore } from "./causal-timestamp.js";
 import type { CritiqueFinding, RunBudget } from "./index.js";
@@ -317,7 +319,10 @@ export function buildApplicationReadinessStoppingDecision(
     explicitGapRequirementIds,
   });
   const judgedIds = judgedCoveredRequirementIds(input.coverageAssessments ?? []);
-  const deterministicIssues = withoutJudgedUncoveredFindings(validation.issues, judgedIds);
+  const deterministicIssues = withWordMatchGapsConfirmed(
+    withoutJudgedUncoveredFindings(validation.issues, judgedIds),
+    criticReportedGapIds(input.coverageAssessments ?? [], input.critiqueFindings),
+  );
   const evaluation = readinessEvaluation(
     input.artifact,
     input.context,

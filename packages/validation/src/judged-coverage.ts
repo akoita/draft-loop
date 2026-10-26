@@ -34,3 +34,43 @@ export function withoutJudgedUncoveredFindings<
       ),
   );
 }
+
+/**
+ * Requirements the critic reported as a gap: a judged "uncovered" verdict, or a coverage finding
+ * of its own about the requirement.
+ */
+export function criticReportedGapIds(
+  assessments: readonly RequirementCoverageAssessment[],
+  critiqueFindings: readonly { readonly category: string; readonly requirementId?: string }[],
+): readonly string[] {
+  return [
+    ...assessments
+      .filter(({ status, basis }) => status === "uncovered" && basis === "judgement")
+      .map(({ requirementId }) => requirementId),
+    ...critiqueFindings
+      .filter(({ category }) => category === "coverage")
+      .flatMap(({ requirementId }) => (requirementId === undefined ? [] : [requirementId])),
+  ];
+}
+
+/**
+ * Token matching misses equivalent phrasing (#1789), so its miss of a critical requirement blocks
+ * only when the critic also reports the gap; otherwise the finding stays as a warning. Every other
+ * finding is kept unchanged.
+ */
+export function withWordMatchGapsConfirmed<
+  Finding extends {
+    readonly code: string;
+    readonly severity: "error" | "warning";
+    readonly requirementId?: string | undefined;
+  },
+>(findings: readonly Finding[], criticGapIds: readonly string[]): readonly Finding[] {
+  const confirmed = new Set(criticGapIds);
+  return findings.map((finding) =>
+    finding.code === "uncovered-requirement" &&
+    finding.severity === "error" &&
+    (finding.requirementId === undefined || !confirmed.has(finding.requirementId))
+      ? { ...finding, severity: "warning" as const }
+      : finding,
+  );
+}
