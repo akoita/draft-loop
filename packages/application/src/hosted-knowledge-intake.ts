@@ -138,7 +138,10 @@ function isText(bytes: Uint8Array): boolean {
  * service never parses an uploaded PDF or DOCX (ADR 0011, D11), so a file of the right kind that
  * cannot be read fails when a run extracts it.
  */
-function matchesMediaType(bytes: Uint8Array, mediaType: HostedKnowledgeSourceMediaType): boolean {
+export function matchesHostedSourceMediaType(
+  bytes: Uint8Array,
+  mediaType: HostedKnowledgeSourceMediaType,
+): boolean {
   switch (mediaType) {
     case "application/pdf":
       return startsWith(bytes, pdfSignature);
@@ -150,7 +153,7 @@ function matchesMediaType(bytes: Uint8Array, mediaType: HostedKnowledgeSourceMed
   }
 }
 
-function isHostedMediaType(value: string): value is HostedKnowledgeSourceMediaType {
+export function isHostedSourceMediaType(value: string): value is HostedKnowledgeSourceMediaType {
   return (hostedKnowledgeSourceMediaTypes as readonly string[]).includes(value);
 }
 
@@ -237,7 +240,7 @@ export function createHostedKnowledgeIntake(
     listSources,
     addFileSource: async (command) => {
       const { knowledgeBaseId, bytes } = command;
-      if (!isHostedMediaType(command.mediaType)) {
+      if (!isHostedSourceMediaType(command.mediaType)) {
         throw new HostedKnowledgeIntakeError(
           "unsupported_media_type",
           "Upload a PDF, DOCX, Markdown or plain text file.",
@@ -252,7 +255,7 @@ export function createHostedKnowledgeIntake(
           `The file is larger than the ${maxSourceBytes}-byte limit.`,
         );
       }
-      if (!matchesMediaType(bytes, command.mediaType)) {
+      if (!matchesHostedSourceMediaType(bytes, command.mediaType)) {
         throw new HostedKnowledgeIntakeError(
           "unsupported_media_type",
           "The file's content does not match its media type.",

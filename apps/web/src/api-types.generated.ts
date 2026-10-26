@@ -1578,4 +1578,16 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["OrganisationCredits"];
   };
+  "POST /v1/workspaces/{workspaceId}/applications/from-file": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query: {
+      readonly name: string;
+      readonly fileName: string;
+    };
+    readonly body: Blob;
+    readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain";
+    readonly response: ApiSchemas["Application"];
+  };
 }
