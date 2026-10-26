@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { type IngestionResult, ingestUrl } from "@draft-loop/ingestion";
 import { type BlobStoragePort, openSqliteStorage } from "@draft-loop/storage";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -155,6 +156,77 @@ async function liveBrief(options: { readonly kept?: string; readonly pasted?: st
     },
   };
 }
+
+describe("extracting a live hosted brief from its application's approved job page", () => {
+  const pageUrl = "https://jobs.example.test/platform-engineer";
+
+  /** An application created from an approved page, whose brief came from one fetch of it. */
+  async function pageBrief() {
+    const { service } = await liveBrief();
+    await service.createApplication?.({
+      root,
+      id: "app-page",
+      name: "Platform engineer by page",
+      jobSource: { kind: "approved-url", url: pageUrl, approved: true },
+    });
+    let fetched: IngestionResult | undefined;
+    const fetcher = vi.fn(
+      async () => new Response(jobText, { headers: { "content-type": "text/plain" } }),
+    );
+    const created = await service.createOpportunity({
+      root,
+      applicationId: "app-page",
+      sources: [
+        {
+          id: "posting",
+          kind: "approved-url",
+          classification: "job-posting",
+          url: pageUrl,
+          approved: true,
+        },
+      ],
+      ingestUrl: async (url, options) => {
+        fetched = await ingestUrl(url, { ...options, fetcher });
+        return fetched;
+      },
+    });
+    const provenance = fetched?.source?.url;
+    if (provenance === undefined) throw new Error("The page was not fetched.");
+    const extract = () =>
+      service.extractApplicationBrief?.({
+        root,
+        applicationId: "app-page",
+        briefId: created.brief.id,
+        expectedVersion: created.brief.version,
+        allowProviderData: true,
+      });
+    return { service, created, fetcher, provenance, extract };
+  }
+
+  it("extracts the text the page gave at that fetch, without fetching it again", async () => {
+    const { service, fetcher, provenance, extract } = await pageBrief();
+    await service.recordApplicationJobPage?.({
+      root,
+      applicationId: "app-page",
+      page: { text: jobText, finalUrl: provenance.finalUrl, fetchedAt: provenance.fetchedAt },
+    });
+
+    expect((await extract())?.outcome).toBe("extracted");
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("sends nothing before the page's text is kept, or for another fetch's text", async () => {
+    const { service, provenance, extract } = await pageBrief();
+    expect((await extract())?.outcome).toBe("job-text-changed");
+
+    await service.recordApplicationJobPage?.({
+      root,
+      applicationId: "app-page",
+      page: { text: jobText, finalUrl: provenance.finalUrl, fetchedAt: "2030-01-01T00:00:00.000Z" },
+    });
+    expect((await extract())?.outcome).toBe("job-text-changed");
+  });
+});
 
 describe("extracting a live hosted brief from its application's job text", () => {
   it("saves the extracted facts as the brief's next draft version", async () => {

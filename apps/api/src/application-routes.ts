@@ -5,6 +5,7 @@ import {
   runBudgetCeilingMessage,
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
+import type { UrlFetcher } from "@draft-loop/ingestion";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { opportunityDraftPatchSchema } from "@draft-loop/schemas/opportunity-draft-patch";
 import type { FastifyInstance } from "fastify";
@@ -16,6 +17,13 @@ import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import type { EntitlementGate } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
+import {
+  assertApprovedJobPage,
+  fetchApprovedJobPage,
+  jobPageFetch,
+  keepJobPage,
+  screenedSources,
+} from "./job-page-brief.js";
 import {
   applicationView,
   applicationViewSchema,
@@ -48,6 +56,8 @@ export interface ApplicationRoutesOptions {
   readonly entitlementGate?: EntitlementGate;
   /** The worker's extraction of live briefs; without it a live brief is left for the person. */
   readonly briefExtractions?: BriefExtractions;
+  /** Replaces the pinned job page fetcher, for tests; it must keep the same address checks. */
+  readonly jobPageFetcher?: UrlFetcher;
 }
 
 const identifierSchema = z
@@ -59,9 +69,22 @@ const opportunityParams = workspaceParams.extend({ briefId: identifierSchema });
 const applicationParams = workspaceParams.extend({ applicationId: applicationIdSchema });
 const runParams = workspaceParams.extend({ runId: identifierSchema });
 
-/** Pasted job text and candidate instructions only: no server file paths, and no URL fetching yet. */
+/**
+ * Pasted job text, candidate instructions, and the application's approved job page: never a server
+ * file path, and never a page the application was not created with.
+ */
 const maximumSourceCharacters = 64 * 1024;
 const opportunitySourceSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    id: identifierSchema,
+    kind: z.literal("approved-url"),
+    classification: z.literal("job-posting"),
+    capturedAt: z.iso.datetime().optional(),
+    url: z.url({ protocol: /^https$/u }),
+    approved: z
+      .literal(true)
+      .describe("The approval recorded with the application; the page is fetched once, now."),
+  }),
   z.strictObject({
     id: identifierSchema,
     kind: z.literal("pasted-content"),
@@ -91,6 +114,10 @@ type OpportunitySourceBody = z.infer<typeof opportunitySourceSchema>;
 /** Zod marks absent optional fields `undefined`; the service's inputs leave them out. */
 function toOpportunitySource(source: OpportunitySourceBody): OpportunitySourceInput {
   const capturedAt = source.capturedAt === undefined ? {} : { capturedAt: source.capturedAt };
+  if (source.kind === "approved-url") {
+    const { id, kind, classification, url, approved } = source;
+    return { id, kind, classification, url, approved, ...capturedAt };
+  }
   if (source.kind === "pasted-content") {
     const { id, kind, classification, content } = source;
     return { id, kind, classification, content, ...capturedAt };
@@ -194,7 +221,7 @@ export function registerApplicationRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, idempotency, enqueueRun, budgetCeiling, screening } = options;
-  const { entitlementGate, briefExtractions } = options;
+  const { entitlementGate, briefExtractions, jobPageFetcher } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId",
@@ -226,16 +253,30 @@ export function registerApplicationRoutes(
     },
     async (request, reply) => {
       const sources = request.body.sources.map(toOpportunitySource);
+      const { applicationId } = request.body;
+      const root = workspaceRoot(request.params.workspaceId);
+      // The application's approved job page is fetched once, now, and only that page (#1812).
+      const fetchesPage = await assertApprovedJobPage({ service, root, applicationId, sources });
+      const pageFetch = jobPageFetch(jobPageFetcher);
+      if (fetchesPage) await fetchApprovedJobPage(pageFetch, sources);
       const record = await service.createOpportunity({
-        root: workspaceRoot(request.params.workspaceId),
+        root,
         sources,
-        ...(request.body.applicationId === undefined
-          ? {}
-          : { applicationId: request.body.applicationId }),
+        ...(applicationId === undefined ? {} : { applicationId }),
+        ...(fetchesPage ? { ingestUrl: pageFetch.ingest } : {}),
       });
+      const page = pageFetch.page();
+      if (page !== undefined && applicationId !== undefined) {
+        // Kept before the extraction is queued, so the worker reads the text of this one fetch.
+        await keepJobPage(service, { root, applicationId, page });
+      }
       // After the brief is saved, so its source ids exist; a screener's failure is the result's
       // verdict, never this request's.
-      const screened = await screening?.screenOpportunity(request, record, sources);
+      const screened = await screening?.screenOpportunity(
+        request,
+        record,
+        screenedSources(sources, page),
+      );
       const extraction =
         briefExtractions === undefined
           ? undefined
@@ -243,7 +284,7 @@ export function registerApplicationRoutes(
               extractions: briefExtractions,
               workspaceId: request.params.workspaceId,
               workspace: await service.readWorkspace(workspaceRoot(request.params.workspaceId)),
-              applicationId: request.body.applicationId,
+              applicationId,
               record,
               screening: screened,
               log: request.log,

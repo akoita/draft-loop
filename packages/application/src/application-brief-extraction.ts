@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { expandLigatures } from "@draft-loop/ingestion";
 import type { OpportunityBriefSource } from "@draft-loop/schemas";
+import type { ApplicationJobSource } from "@draft-loop/schemas/application";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
@@ -49,17 +50,35 @@ function checksumOf(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-/** The brief's pasted job posting that the application's job text produced, if it still does. */
+/** The job text the application keeps: pasted text, or the text its job page gave when fetched. */
+function keptJobText(jobSource: ApplicationJobSource): string | undefined {
+  if (jobSource.kind === "stored-text") return jobSource.text;
+  return jobSource.kind === "approved-url" ? jobSource.page?.text : undefined;
+}
+
+/**
+ * The brief's job posting that the application's job text produced, if it still does: the pasted
+ * text with the same checksum, or the same fetch of the approved page (#1812).
+ */
 function jobPostingSource(
   sources: readonly OpportunityBriefSource[],
+  jobSource: ApplicationJobSource,
   checksum: string,
 ): OpportunityBriefSource | undefined {
-  return sources.find(
-    (source) =>
-      source.classification === "job-posting" &&
-      source.provenance.kind === "pasted-content" &&
-      source.provenance.checksum === checksum,
-  );
+  return sources.find(({ classification, provenance }) => {
+    if (classification !== "job-posting") return false;
+    if (provenance.kind === "pasted-content") {
+      return jobSource.kind === "stored-text" && provenance.checksum === checksum;
+    }
+    return (
+      provenance.kind === "approved-url" &&
+      jobSource.kind === "approved-url" &&
+      jobSource.page !== undefined &&
+      provenance.originalUrl === jobSource.url &&
+      (provenance.finalUrl ?? provenance.originalUrl) === jobSource.page.finalUrl &&
+      provenance.capturedAt === jobSource.page.fetchedAt
+    );
+  });
 }
 
 /**
@@ -92,10 +111,10 @@ export async function extractApplicationBrief(
     if (brief.version !== command.expectedVersion || brief.status !== "draft") {
       return { outcome: "brief-moved" };
     }
-    if (application.jobSource.kind !== "stored-text") return { outcome: "job-text-changed" };
-    const text = application.jobSource.text;
+    const text = keptJobText(application.jobSource);
+    if (text === undefined) return { outcome: "job-text-changed" };
     const checksum = checksumOf(text);
-    const source = jobPostingSource(brief.sources, checksum);
+    const source = jobPostingSource(brief.sources, application.jobSource, checksum);
     if (source === undefined) return { outcome: "job-text-changed" };
 
     const extractor = opportunityExtractionPortFor(config, {

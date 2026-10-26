@@ -10993,6 +10993,51 @@
                             "kind": {
                               "type": "string",
                               "enum": [
+                                "approved-url"
+                              ]
+                            },
+                            "classification": {
+                              "type": "string",
+                              "enum": [
+                                "job-posting"
+                              ]
+                            },
+                            "capturedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                            },
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "approved": {
+                              "type": "boolean",
+                              "description": "The approval recorded with the application; the page is fetched once, now.",
+                              "enum": [
+                                true
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "classification",
+                            "url",
+                            "approved"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
                                 "pasted-content"
                               ]
                             },
@@ -11972,8 +12017,8 @@
         }
       },
       "post": {
-        "summary": "Create a job application from a pasted job description",
-        "description": "Keeps the text with the application. Its job brief is then created from that text, as a separate step, so the requirements can be extracted and reviewed.",
+        "summary": "Create a job application from a pasted job description or an approved job page",
+        "description": "Keeps the text, or the job page address with the person's approval to fetch it, with the application. Nothing is fetched now. Its job brief is then created from that job, as a separate step, so the requirements can be extracted and reviewed; a job page is fetched once then.",
         "requestBody": {
           "required": true,
           "content": {
@@ -11987,15 +12032,27 @@
                     "maxLength": 120
                   },
                   "jobText": {
+                    "description": "The pasted job description, kept with the application.",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 200000,
-                    "description": "The pasted job description, kept with the application."
+                    "maxLength": 200000
+                  },
+                  "jobUrl": {
+                    "description": "A job page address, in place of pasted text. It is fetched only when requirements are extracted, never before.",
+                    "type": "string",
+                    "maxLength": 2048,
+                    "format": "uri"
+                  },
+                  "jobUrlApproved": {
+                    "description": "The person's approval to fetch jobUrl, kept with the application.",
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
                   }
                 },
                 "required": [
-                  "name",
-                  "jobText"
+                  "name"
                 ],
                 "additionalProperties": false
               }

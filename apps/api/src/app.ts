@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   type UsageLine,
 } from "@draft-loop/application";
+import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
@@ -102,6 +103,8 @@ export interface ApiOptions {
     readonly contentScreening?: HostedContentScreening;
     /** The worker's extraction of live briefs; without it a live brief is left for the person. */
     readonly briefExtractions?: BriefExtractions;
+    /** Replaces the pinned job page fetcher, for tests; it must keep the same address checks. */
+    readonly jobPageFetcher?: UrlFetcher;
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;
   };
@@ -358,6 +361,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(application.briefExtractions === undefined
         ? {}
         : { briefExtractions: application.briefExtractions }),
+      ...(application.jobPageFetcher === undefined
+        ? {}
+        : { jobPageFetcher: application.jobPageFetcher }),
     });
     registerProfileRoutes(app, {
       service: application.service,

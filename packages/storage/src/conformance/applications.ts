@@ -229,6 +229,52 @@ export const applicationsContracts: readonly StorageContract<ApplicationsStorage
     },
   },
   {
+    name: "applications: keeps an approved job page's fetched text, only for an approved URL",
+    check: async (storage) => {
+      await seedWorkspace(storage);
+      const { applications } = storage;
+      const url = "https://jobs.example.test/role";
+      await applications.insertApplication({
+        workspaceId,
+        id: "app-page",
+        name: "Acme",
+        jobSource: { kind: "approved-url", url, approved: true },
+        createdAt,
+      });
+      await applications.insertApplication({
+        workspaceId,
+        id: "app-file",
+        name: "Beta",
+        jobSource,
+        createdAt,
+      });
+      const fetchedAt = "2030-01-04T00:00:00.000Z";
+      const page = { text: "Platform Engineer", finalUrl: `${url}?ref=1`, fetchedAt };
+
+      const recorded = await applications.recordJobPage(workspaceId, "app-page", page, fetchedAt);
+
+      expect(recorded).toMatchObject({
+        jobSource: { kind: "approved-url", url, approved: true, page },
+        updatedAt: fetchedAt,
+      });
+      expect(await applications.getApplication(workspaceId, "app-page")).toEqual(recorded);
+      const again = { ...page, text: "Staff Platform Engineer" };
+      expect(
+        (await applications.recordJobPage(workspaceId, "app-page", again, fetchedAt)).jobSource,
+      ).toMatchObject({ page: again });
+      for (const [applicationId, value] of [
+        ["app-file", page],
+        ["missing", page],
+        ["app-page", { ...page, text: "  " }],
+        ["app-page", { ...page, finalUrl: "not a url" }],
+      ] as const) {
+        await expect(
+          applications.recordJobPage(workspaceId, applicationId, value, fetchedAt),
+        ).rejects.toBeInstanceOf(StorageValidationError);
+      }
+    },
+  },
+  {
     name: "applications: sets, replaces and clears an application's own model pair",
     check: async (storage) => {
       await seedWorkspace(storage);

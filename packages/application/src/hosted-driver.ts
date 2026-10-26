@@ -1,4 +1,5 @@
 import { extractApplicationBrief } from "./application-brief-extraction.js";
+import { recordApplicationJobPage } from "./application-job-page.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
@@ -126,6 +127,8 @@ export function createHostedApplicationDriver(
     // The worker's extraction of a live brief, over the job text the application's record keeps.
     extractApplicationBrief: (command) =>
       inHostedContext(() => extractApplicationBrief(command, options.local)),
+    // The text an approved job page gave, kept for that extraction so the page is fetched once.
+    recordApplicationJobPage: (command) => inHostedContext(() => recordApplicationJobPage(command)),
     // A hosted policy arrives as text: the server never reads a file the client names.
     configureWritingPolicy: (command, io) =>
       inHostedContext(async () => {

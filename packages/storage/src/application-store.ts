@@ -1,5 +1,6 @@
 import { defaultApplicationId, normalizeApplicationName } from "@draft-loop/domain/application";
 import {
+  type ApplicationJobPage,
   type ApplicationJobSource,
   type ApplicationModelProfiles,
   applicationIdSchema,
@@ -256,6 +257,16 @@ export interface ApplicationStoragePort extends ApplicationImportReadsPort {
     name: string,
     updatedAt: string,
   ) => Promise<void>;
+  /**
+   * Keeps the text an approved job page gave when it was fetched, replacing an earlier fetch's
+   * (#1812). Only a created application whose job is an approved URL has one.
+   */
+  readonly recordJobPage: (
+    workspaceId: string,
+    applicationId: string,
+    page: ApplicationJobPage,
+    updatedAt: string,
+  ) => Promise<ApplicationStoreRecord>;
   /** The name a person gave the default application, or `undefined` before they chose one. */
   readonly getDefaultApplicationName: (workspaceId: string) => Promise<string | undefined>;
   /** Sets a created application's model pair, or clears it with `null`. */
@@ -323,6 +334,23 @@ function text(row: Record<string, unknown>, column: string): string {
   const value = row[column];
   if (typeof value !== "string") throw new StorageValidationError(`Invalid stored ${column}`);
   return value;
+}
+
+/** The application's job source with the fetched page, refused unless it is an approved URL. */
+export function jobSourceWithPage(
+  record: ApplicationStoreRecord | undefined,
+  applicationId: string,
+  page: ApplicationJobPage,
+): ApplicationJobSource {
+  if (record === undefined) {
+    throw new StorageValidationError(`Application ${applicationId} was not found`);
+  }
+  if (record.jobSource.kind !== "approved-url") {
+    throw new StorageValidationError(`Application ${applicationId} has no approved job page`);
+  }
+  const parsed = applicationJobSourceSchema.safeParse({ ...record.jobSource, page });
+  if (!parsed.success) throw new StorageValidationError("Invalid job page");
+  return parsed.data;
 }
 
 export function applicationFromRow(row: Record<string, unknown>): ApplicationStoreRecord {
@@ -594,6 +622,27 @@ export function createApplicationStorage(
       if (changed.changes === 0) {
         throw new StorageValidationError(`Application ${applicationId} was not found`);
       }
+    },
+    recordJobPage: async (workspaceId, applicationId, page, updatedAt) => {
+      ensureOpen();
+      const current = database
+        .prepare(`${applicationSelect} WHERE workspace_id = ? AND application_id = ?`)
+        .get(workspaceId, applicationId);
+      const jobSource = jobSourceWithPage(
+        current === undefined ? undefined : applicationFromRow(current),
+        applicationId,
+        page,
+      );
+      database
+        .prepare(
+          "UPDATE applications SET job_source_json = ?, updated_at = ? WHERE workspace_id = ? AND application_id = ?",
+        )
+        .run(JSON.stringify(jobSource), updatedAt, workspaceId, applicationId);
+      return applicationFromRow(
+        database
+          .prepare(`${applicationSelect} WHERE workspace_id = ? AND application_id = ?`)
+          .get(workspaceId, applicationId) as NonNullable<typeof current>,
+      );
     },
     getDefaultApplicationName: async (workspaceId) => {
       ensureOpen();

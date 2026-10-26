@@ -29,15 +29,34 @@ const workspaceParams = z.strictObject({ workspaceId: identifierSchema });
 const applicationParams = workspaceParams.extend({ applicationId: applicationIdSchema });
 const notFound = apiError("not_found", "No such application.");
 
-const createApplicationBody = z.strictObject({
-  name: applicationNameSchema,
-  jobText: z
-    .string()
-    .trim()
-    .min(1)
-    .max(applicationPastedJobMaxLength)
-    .describe("The pasted job description, kept with the application."),
-});
+const createApplicationBody = z
+  .strictObject({
+    name: applicationNameSchema,
+    jobText: z
+      .string()
+      .trim()
+      .min(1)
+      .max(applicationPastedJobMaxLength)
+      .optional()
+      .describe("The pasted job description, kept with the application."),
+    jobUrl: z
+      .url({ protocol: /^https$/u })
+      .max(2_048)
+      .optional()
+      .describe(
+        "A job page address, in place of pasted text. It is fetched only when requirements are extracted, never before.",
+      ),
+    jobUrlApproved: z
+      .literal(true)
+      .optional()
+      .describe("The person's approval to fetch jobUrl, kept with the application."),
+  })
+  .refine((body) => (body.jobText === undefined) !== (body.jobUrl === undefined), {
+    message: "Give the pasted job text or a job page address.",
+  })
+  .refine((body) => (body.jobUrl === undefined) === (body.jobUrlApproved === undefined), {
+    message: "A job page address needs the person's approval to fetch it, and only then.",
+  });
 
 const updateApplicationBody = z
   .strictObject({
@@ -118,9 +137,9 @@ export function registerApplicationLifecycleRoutes(
     "/v1/workspaces/:workspaceId/applications",
     {
       schema: {
-        summary: "Create a job application from a pasted job description",
+        summary: "Create a job application from a pasted job description or an approved job page",
         description:
-          "Keeps the text with the application. Its job brief is then created from that text, as a separate step, so the requirements can be extracted and reviewed.",
+          "Keeps the text, or the job page address with the person's approval to fetch it, with the application. Nothing is fetched now. Its job brief is then created from that job, as a separate step, so the requirements can be extracted and reviewed; a job page is fetched once then.",
         params: workspaceParams,
         body: createApplicationBody,
         response: { 201: applicationViewSchema, ...errorResponses },
@@ -130,7 +149,10 @@ export function registerApplicationLifecycleRoutes(
       const created = await service.createApplication({
         root: workspaceRoot(request.params.workspaceId),
         name: request.body.name,
-        jobSource: { kind: "pasted-text", text: request.body.jobText },
+        jobSource:
+          request.body.jobUrl === undefined
+            ? { kind: "pasted-text", text: request.body.jobText ?? "" }
+            : { kind: "approved-url", url: request.body.jobUrl, approved: true },
       });
       return reply.code(201).send(applicationView(created));
     },
