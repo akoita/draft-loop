@@ -1,5 +1,4 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
-import { exportFileName } from "@draft-loop/ui/export-file-name";
 import { defaultExportTemplate } from "@draft-loop/ui/export-template";
 
 import { type ApiClient, ApiRequestError } from "./api-client.js";
@@ -109,7 +108,7 @@ export function createReviewActions(
           "GET /v1/workspaces/{workspaceId}/runs/{runId}/exports/{exportId}/content",
           { path: { ...path, exportId: exported.id } },
         );
-        download(bytes, exportFileName(exported));
+        download(bytes, exported.fileName);
         return;
       }
     }

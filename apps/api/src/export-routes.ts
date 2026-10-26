@@ -46,14 +46,30 @@ export const runExportSchema = z
     sizeBytes: z.number().int(),
     artifactVersion: z.number().int().optional(),
     templateId: z.string().optional(),
+    fileName: z
+      .string()
+      .describe("The name the document downloads under, from its application and day."),
   })
   .describe("Where the document is stored is never shown.")
   .meta({ id: "RunExport" });
 
 /** The client's view of an export: everything but where the service stored it. */
-export function runExportView(entry: RunExport): z.infer<typeof runExportSchema> {
+export function runExportView(
+  entry: RunExport,
+  applicationName: string | null,
+): z.infer<typeof runExportSchema> {
   const { location: _location, ...view } = entry;
-  return view;
+  return { ...view, fileName: exportFileName({ ...entry, applicationName }) };
+}
+
+/** The name of the application a run belongs to, which names its exported files. */
+export async function runApplicationName(
+  service: ApplicationService,
+  root: string,
+  runId: string,
+): Promise<string | null> {
+  const applications = (await service.listApplications?.({ root })) ?? [];
+  return applications.find(({ runs }) => runs.some(({ id }) => id === runId))?.name ?? null;
 }
 
 const errorResponses = {
@@ -103,7 +119,7 @@ export function registerExportRoutes(parent: FastifyInstance, options: ExportRou
           const exports = (await service.listRunExports?.({ root, runId })) ?? [];
           const entry = exports.find((candidate) => candidate.location === location);
           if (entry === undefined) throw new Error("The new export's record could not be read.");
-          return runExportView(entry);
+          return runExportView(entry, await runApplicationName(service, root, runId));
         },
       );
       return reply.code(201).send(created);
@@ -123,12 +139,11 @@ export function registerExportRoutes(parent: FastifyInstance, options: ExportRou
       },
     },
     async (request) => {
-      const exports =
-        (await service.listRunExports?.({
-          root: workspaceRoot(request.params.workspaceId),
-          runId: request.params.runId,
-        })) ?? [];
-      return { exports: exports.map(runExportView) };
+      const root = workspaceRoot(request.params.workspaceId);
+      const { runId } = request.params;
+      const exports = (await service.listRunExports?.({ root, runId })) ?? [];
+      const applicationName = await runApplicationName(service, root, runId);
+      return { exports: exports.map((entry) => runExportView(entry, applicationName)) };
     },
   );
 
@@ -150,15 +165,16 @@ export function registerExportRoutes(parent: FastifyInstance, options: ExportRou
       const { workspaceId, runId, exportId } = request.params;
       if (service.readRunExport === undefined)
         throw new Error("The hosted service cannot read exports.");
-      const { export: entry, content } = await service.readRunExport({
-        root: workspaceRoot(workspaceId),
-        runId,
-        exportId,
-      });
+      const root = workspaceRoot(workspaceId);
+      const { export: entry, content } = await service.readRunExport({ root, runId, exportId });
+      const applicationName = await runApplicationName(service, root, runId);
       return reply
         .code(200)
         .header("content-type", entry.mimeType)
-        .header("content-disposition", `attachment; filename="${exportFileName(entry)}"`)
+        .header(
+          "content-disposition",
+          `attachment; filename="${exportFileName({ ...entry, applicationName })}"`,
+        )
         .header("x-content-sha256", entry.checksum)
         .header("cache-control", "private, no-store")
         .send(Buffer.from(content));

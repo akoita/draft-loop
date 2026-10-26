@@ -67,7 +67,7 @@ describe("exports", () => {
       templateId: "modern",
     });
     const { location: _location, ...view } = docxExport;
-    expect(created.json()).toEqual(view);
+    expect(created.json()).toEqual({ ...view, fileName: "cv-2026-10-22-export-1.docx" });
     expect(created.body).not.toContain("/tenants/");
     expect(retried.json()).toEqual(created.json());
   });
@@ -140,6 +140,35 @@ describe("export downloads", () => {
     expect(response.headers["x-content-sha256"]).toBe(docxExport.checksum);
     expect(response.headers["cache-control"]).toBe("private, no-store");
     expect(new Uint8Array(response.rawPayload)).toEqual(content);
+  });
+
+  it("names the file after the run's application, in the download and the export view", async () => {
+    const listApplications = vi.fn(async () => [
+      { id: "default", name: "Original job", runs: [] },
+      { id: "app-2", name: "Example Ledger - Platform engineer", runs: [{ id: "run-1" }] },
+    ]);
+    const readRunExport = vi.fn(async () => ({ export: docxExport, content }));
+    const listRunExports = vi.fn(async () => [docxExport]);
+    await build({
+      readRunExport,
+      listRunExports,
+      listApplications: listApplications as unknown as ApplicationService["listApplications"],
+    });
+
+    const download = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1/exports/export-1/content",
+      headers: { authorization },
+    });
+    const listed = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/workspace-1/runs/run-1/exports",
+      headers: { authorization },
+    });
+
+    const fileName = "Example-Ledger-Platform-engineer-CV-2026-10-22.docx";
+    expect(download.headers["content-disposition"]).toBe(`attachment; filename="${fileName}"`);
+    expect(listed.json().exports[0].fileName).toBe(fileName);
   });
 
   it.each([
