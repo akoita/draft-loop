@@ -334,8 +334,8 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
 export interface DesktopApplicationCapabilities {
   readonly listApplications?: (workspaceId: string) => Promise<readonly ApplicationSummaryView[]>;
   /**
-   * False when the host cannot fetch a job page for the person, as on the hosted service, where
-   * that would be a new outbound boundary: New application then takes pasted text only.
+   * False when the host cannot fetch a job page for the person: New application then takes pasted
+   * text or a file only. Both the desktop and the hosted service fetch an approved page (#1813).
    */
   readonly jobPagesAllowed?: boolean;
   /**
@@ -608,8 +608,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ).applications,
         }
       : {}),
-    // A host that fetches no web page for the person cannot take a job by its page's address.
-    ...(capabilityPort.hasCapability("source.add-url") ? {} : { jobPagesAllowed: false }),
     ...(capabilityPort.hasCapability("application.create")
       ? {
           createApplication: async (workspaceId: string, name: string, job: NewApplicationJob) =>
