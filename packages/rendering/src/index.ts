@@ -31,7 +31,7 @@ import {
   resolveRenderingTemplate,
 } from "./layout-profile.js";
 import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
-import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { pdfActualTextLiteral, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
 import type { PrintedTextUnit } from "./print-html.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
@@ -444,11 +444,17 @@ function bytesForFormat(
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
   const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   if (format === "pdf") {
-    const profile = resolveRenderingProfile(options);
-    return buildPdf({ artifact, profile, documentTitle, generatedAt: options.generatedAt });
+    // The template's own metrics and look, as the DOCX draws them (#1791).
+    const template = resolveRenderingTemplate(options);
+    return buildPdf({
+      artifact,
+      profile: profileFromTemplate(template),
+      template,
+      documentTitle,
+      generatedAt: options.generatedAt,
+    });
   }
-  // The DOCX draws the template's own metrics and look (#1412); the built-in PDF writer draws the
-  // profile's layout only, see `builtInPdfDrawsTemplateLook`.
+  // The DOCX draws the template's own metrics and look (#1412).
   const template = resolveRenderingTemplate(options);
   return buildDocx({
     artifact,
@@ -505,7 +511,7 @@ function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
     const tag = pdfRunTag(prefix);
     const position = prefix.match(/1\s+0\s+0\s+1\s+([-0-9.]+)\s+([-0-9.]+)\s+Tm/u);
     runs.push({
-      text: decodePdfText(escaped),
+      text: decodePdfText(pdfActualTextLiteral(prefix) ?? escaped),
       fontNumber: font,
       x: Number(position?.[1]),
       y: Number(position?.[2]),
@@ -1173,6 +1179,5 @@ export {
   type RenderingLayoutProfile,
   renderingLayoutProfiles,
 } from "./layout-profile.js";
-export { builtInPdfDrawsTemplateLook } from "./pdf-document.js";
 export * from "./print-html.js";
 export * from "./templates.js";

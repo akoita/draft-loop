@@ -9,7 +9,7 @@ import {
 import { textWidthPt } from "./document-layout.js";
 import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
 import { decodePdfLiteralEscapes } from "./pdf-document.js";
-import { pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import { pdfActualTextLiteral, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 interface VisibleTextUnit {
@@ -382,8 +382,17 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
       clipped ||=
         x < x0 || y - fontSize < y0 || y + fontSize > y1 || x + width > x1 - rightInsetPt + 0.5;
       const lineStart = stream.lastIndexOf("\n", match.index ?? 0) + 1;
-      const tag = pdfRunTag(stream.slice(lineStart, match.index ?? 0));
-      runs.push({ text, fontNumber, x, y, tag });
+      const line = stream.slice(lineStart, match.index ?? 0);
+      const tag = pdfRunTag(line);
+      // A capitalised heading is measured as drawn but reads back as written.
+      const written = pdfActualTextLiteral(line);
+      runs.push({
+        text: written === undefined ? text : decodePdfLiteral(written),
+        fontNumber,
+        x,
+        y,
+        tag,
+      });
     }
     // A role date, a bold label and a compact list read back as the artifact's own blocks.
     const units: VisibleTextUnit[] = recoverPdfRuns(runs).map((run) => ({

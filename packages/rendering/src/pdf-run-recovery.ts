@@ -76,3 +76,11 @@ export function pdfRunTag(lineBeforeText: string): PdfTextRun["tag"] {
 export function tagPdfCommands(tag: "label" | "compact", commands: string): string {
   return `/DL${tag === "label" ? "Label" : "Compact"} BMC ${commands} EMC`;
 }
+
+/**
+ * The escaped `/ActualText` literal a line carries for the text command that follows it, when the
+ * drawn glyphs differ from the written text (a capitalised heading). Callers decode the escapes.
+ */
+export function pdfActualTextLiteral(lineBeforeText: string): string | undefined {
+  return /\/ActualText \(((?:\\.|[^()])*)\) >> BDC [^(]*$/u.exec(lineBeforeText)?.[1];
+}

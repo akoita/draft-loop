@@ -1,5 +1,4 @@
 import {
-  builtInPdfDrawsTemplateLook,
   estimateDocumentLength,
   getRenderingTemplate,
   type LengthPageTarget,
@@ -53,20 +52,6 @@ export async function readRunPageTarget(
 /** The template an export uses when none is named (#1364): Compact for a one-page run, else Modern. */
 export function defaultExportTemplateId(pageTarget: LengthPageTarget | undefined): string {
   return pageTarget === "one-page" ? "compact" : "modern";
-}
-
-/** Prefix of the io line a PDF export writes when the built-in writer cannot draw its template. */
-export const exportTemplateNotePrefix = "Template note: ";
-
-/**
- * The io line a PDF drawn without the desktop's printer writes when the built-in PDF writer cannot
- * draw the template's look (#1412), so a Modern PDF never silently looks Classic. Undefined when
- * the writer draws the template as designed.
- */
-export function builtInPdfTemplateNoteLine(templateId: string): string | undefined {
-  const template = getRenderingTemplate(templateId);
-  if (builtInPdfDrawsTemplateLook(template)) return undefined;
-  return `${exportTemplateNotePrefix}this PDF uses the Classic layout, because the ${template.displayName} look needs the desktop app's PDF printer. A ${template.displayName} DOCX has the full look.`;
 }
 
 /** The warning for a PDF that rendered past its page target, using the real page count. */

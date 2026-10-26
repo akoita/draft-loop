@@ -2,9 +2,7 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
-  builtInPdfDrawsTemplateLook,
   extractTextFromRenderedDocument,
-  getRenderingTemplate,
   inspectControlledDocument,
   type RenderedDocument,
   renderArtifact,
@@ -174,13 +172,5 @@ describe("Classic DOCX look", () => {
     expect(classic.styles).not.toContain("RoleContext");
     expect(classic.styles).not.toContain("<w:color ");
     expect(classic.document).not.toContain("RoleContext");
-  });
-});
-
-describe("built-in PDF writer and template looks", () => {
-  it("draws Classic and Compact as designed, but not Modern", () => {
-    expect(builtInPdfDrawsTemplateLook(getRenderingTemplate("classic"))).toBe(true);
-    expect(builtInPdfDrawsTemplateLook(getRenderingTemplate("compact"))).toBe(true);
-    expect(builtInPdfDrawsTemplateLook(getRenderingTemplate("modern"))).toBe(false);
   });
 });

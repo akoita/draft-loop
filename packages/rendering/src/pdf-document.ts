@@ -21,7 +21,9 @@ import { winAnsiCode, windows1252Characters } from "./winansi.js";
 
 /**
  * A dependency-free PDF of the same layout the DOCX uses: text in the profile's font (bold for the
- * title and headings), a rule under each heading, hanging bullets and the profile's A4 margins.
+ * title and headings), a rule under each heading, hanging bullets and the profile's A4 margins,
+ * drawn with the template's look (#1791): the name's alignment, heading case and colours, the
+ * rule's colour, accent-coloured dates, justified text and a slanted context line under a role.
  * Carlito is embedded in full as a TrueType simple font; Helvetica is the unembedded standard
  * font. Text is written in WinAnsi, so Latin accents and common punctuation survive; characters
  * outside it are written as "?" because neither font setup can draw them.
@@ -86,7 +88,55 @@ function fixed(value: number): string {
   return value.toFixed(4);
 }
 
-function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBlock[]) {
+/** What the template draws beyond the profile's metrics, as the print CSS and the DOCX draw it. */
+interface PdfLook {
+  readonly nameAlign: "center" | "left";
+  /** Fill colours as PDF `rg` operands; null draws in black. */
+  readonly nameColor: string | null;
+  readonly contactColor: string | null;
+  readonly accentColor: string | null;
+  /** The heading rule's stroke colour; null draws no rule. */
+  readonly ruleColor: string;
+  readonly rule: boolean;
+  readonly headingCaps: boolean;
+  readonly justify: boolean;
+  readonly italicContext: boolean;
+}
+
+function rgb(hex: string): string {
+  const value = Number.parseInt(hex.replace(/^#/u, ""), 16);
+  return [16, 8, 0].map((shift) => fixed(((value >> shift) & 0xff) / 255)).join(" ");
+}
+
+function pdfLook(template: RenderingTemplate | undefined): PdfLook {
+  const accent = template?.accentColor ?? null;
+  return {
+    nameAlign: template?.name.align ?? "center",
+    nameColor: accent === null ? null : rgb("#1b2329"),
+    contactColor: accent === null ? null : rgb("#3b4852"),
+    accentColor: accent === null ? null : rgb(accent),
+    ruleColor: rgb(template?.headings.ruleColor ?? "#94a3ad"),
+    rule: template?.headings.rule ?? true,
+    headingCaps: template?.headings.case === "uppercase",
+    justify: template?.body.align === "justify",
+    italicContext: template?.roles.contextStyle === "italic",
+  };
+}
+
+/** Uppercase drawn text keeps the text as written for extraction, as the DOCX `caps` does. */
+function actualText(drawn: string, written: string, commands: string): string {
+  return drawn === written
+    ? commands
+    : `/Span << /ActualText (${pdfLiteral(written)}) >> BDC ${commands} EMC`;
+}
+
+const contextSlant = 0.2;
+
+function pageCommands(
+  profile: RenderingLayoutProfile,
+  blocks: readonly LayoutBlock[],
+  look: PdfLook = pdfLook(undefined),
+) {
   const metrics = layoutMetrics(profile);
   const pageWidth = toPoints(profile.pageWidthMm);
   const pageHeight = toPoints(profile.pageHeightMm);
@@ -116,8 +166,31 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
     x: number,
     baseline: number,
     value: string,
-  ) =>
-    `BT /${font} ${size} Tf 1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm (${pdfLiteral(value)}) Tj ET`;
+    style: { readonly color?: string | null; readonly wordSpacing?: number } = {},
+  ) => {
+    const color = style.color === undefined || style.color === null ? "" : `${style.color} rg `;
+    const spacing =
+      style.wordSpacing === undefined || style.wordSpacing === 0
+        ? ""
+        : `${fixed(style.wordSpacing)} Tw `;
+    const run = `BT ${color}/${font} ${size} Tf ${spacing}1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm (${pdfLiteral(value)}) Tj ET`;
+    // Fill colour and word spacing outlive ET, so a styled run restores the state it changed.
+    return color === "" && spacing === "" ? run : `q ${run} Q`;
+  };
+  /** A line's left edge under the name's alignment. */
+  const aligned = (width: number): number =>
+    look.nameAlign === "left" ? left : Math.max(left, (left + right - width) / 2);
+  /** The word spacing that fills a justified line to `width`; the last line keeps its own. */
+  const justified = (line: string, x: number, isLast: boolean): number => {
+    if (!look.justify || isLast) return 0;
+    const spaces = line.split(" ").length - 1;
+    if (spaces === 0) return 0;
+    const extra = right - x - textWidthPt(line, body, false, font);
+    return extra > 0 ? extra / spaces : 0;
+  };
+  /** A slanted run about its own baseline, so its start stays where it is placed. */
+  const slanted = (baseline: number, commands: string): string =>
+    `q 1 0 ${fixed(contextSlant)} 1 ${fixed(-contextSlant * baseline)} 0 cm ${commands} Q`;
 
   blocks.forEach((block, index) => {
     const next = blocks[index + 1];
@@ -133,20 +206,40 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
       for (const line of wrapped) {
         if (y - metrics.titleLinePt < bottom && !atPageTop()) startPage();
         const width = textWidthPt(line, metrics.titleSizePt, true, font);
-        const x = Math.max(left, (left + right - width) / 2);
-        place(text("F2", metrics.titleSizePt, x, y - metrics.titleSizePt, line));
+        place(
+          text("F2", metrics.titleSizePt, aligned(width), y - metrics.titleSizePt, line, {
+            color: look.nameColor,
+          }),
+        );
         y -= metrics.titleLinePt;
       }
       y -= metrics.titleAfterPt;
       return;
     }
     if (block.kind === "contact") {
-      for (const line of blockLines(block, profile)) {
+      const lines = blockLines(block, profile);
+      // A one-line "Label: text" contact line keeps its bold label, as a body line does.
+      const labelled =
+        lines.length === 1
+          ? labelledLayout({ kind: "paragraph", text: block.text }, profile)
+          : null;
+      if (labelled !== null && labelled.laterLines.length === 0 && labelled.firstRest !== "") {
         if (y - bodyLine < bottom && !atPageTop()) startPage();
-        const width = textWidthPt(line, body, false, font);
-        const x = Math.max(left, (left + right - width) / 2);
-        place(text("F1", body, x, y - body, line));
+        const labelWidth = textWidthPt(labelled.label, body, true, font);
+        const gap = textWidthPt(" ", body, false, font);
+        const width = labelWidth + gap + textWidthPt(labelled.firstRest, body, false, font);
+        const x = aligned(width);
+        const color = { color: look.contactColor };
+        place(tagPdfCommands("label", text("F3", body, x, y - body, labelled.label, color)));
+        place(text("F1", body, x + labelWidth + gap, y - body, labelled.firstRest, color));
         y -= bodyLine;
+      } else {
+        for (const line of lines) {
+          if (y - bodyLine < bottom && !atPageTop()) startPage();
+          const width = textWidthPt(line, body, false, font);
+          place(text("F1", body, aligned(width), y - body, line, { color: look.contactColor }));
+          y -= bodyLine;
+        }
       }
       y -= metrics.contactAfterPt;
       return;
@@ -162,11 +255,20 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
       if (!atPageTop()) y -= metrics.headingBeforePt;
       const heading = profile.typography.headingFontSizePt;
       const baseline = y - heading;
-      place(text("F2", heading, left, baseline, block.text));
-      const ruleY = baseline - 3;
+      const drawn = look.headingCaps ? block.text.toLocaleUpperCase() : block.text;
       place(
-        `q 0.5 w 0.58 0.64 0.68 RG ${fixed(left)} ${fixed(ruleY)} m ${fixed(right)} ${fixed(ruleY)} l S Q`,
+        actualText(
+          drawn,
+          block.text,
+          text("F2", heading, left, baseline, drawn, { color: look.accentColor }),
+        ),
       );
+      const ruleY = baseline - 3;
+      if (look.rule) {
+        place(
+          `q 0.5 w ${look.ruleColor} RG ${fixed(left)} ${fixed(ruleY)} m ${fixed(right)} ${fixed(ruleY)} l S Q`,
+        );
+      }
       y -= headingLine + metrics.headingAfterPt;
       return;
     }
@@ -182,7 +284,8 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
         if (y - bodyLine < bottom && !atPageTop()) startPage();
         place(text("F3", body, left, y - body, line));
         if (date !== null && lineIndex === lines.length - 1) {
-          place(text("F1", body, right - textWidthPt(date, body, false, font), y - body, date));
+          const dateX = right - textWidthPt(date, body, false, font);
+          place(text("F1", body, dateX, y - body, date, { color: look.accentColor }));
         }
         y -= bodyLine;
       });
@@ -214,10 +317,13 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
               textX +
               textWidthPt(labelled.label, body, true, font) +
               textWidthPt(" ", body, false, font);
-            place(text("F1", body, restX, y - body, labelled.firstRest));
+            const wordSpacing = justified(labelled.firstRest, restX, lineCount === 1);
+            place(text("F1", body, restX, y - body, labelled.firstRest, { wordSpacing }));
           }
         } else {
-          place(text("F1", body, textX, y - body, labelled.laterLines[lineIndex - 1] ?? ""));
+          const line = labelled.laterLines[lineIndex - 1] ?? "";
+          const wordSpacing = justified(line, textX, lineIndex === lineCount - 1);
+          place(text("F1", body, textX, y - body, line, { wordSpacing }));
         }
         y -= bodyLine;
       }
@@ -225,14 +331,27 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
       return;
     }
     const lines = blockLines(block, profile);
+    // The line under a role header, as the print CSS slants it; the PDF embeds no italic face.
+    const context = look.italicContext && blocks[index - 1]?.kind === "role";
     lines.forEach((line, lineIndex) => {
       if (y - bodyLine < bottom && !atPageTop()) startPage();
+      const isLast = lineIndex === lines.length - 1;
       if (block.kind === "bullet") {
-        const value = lineIndex === 0 ? `${bulletPrefix}${line}` : line;
-        const x = lineIndex === 0 ? left : left + bulletTextOffset;
-        place(text("F1", body, x, y - body, value));
+        const x = left + bulletTextOffset;
+        const wordSpacing = justified(line, x, isLast);
+        if (lineIndex === 0 && wordSpacing === 0) {
+          place(text("F1", body, left, y - body, `${bulletPrefix}${line}`));
+        } else {
+          // Word spacing would also widen the gap after the bullet, so it is drawn on its own.
+          if (lineIndex === 0) place(text("F1", body, left, y - body, bulletPrefix));
+          place(text("F1", body, x, y - body, line, { wordSpacing }));
+        }
       } else {
-        place(text("F1", body, left, y - body, line));
+        const commands = text("F1", body, left, y - body, line, {
+          wordSpacing: justified(line, left, isLast),
+          ...(context ? { color: rgb("#4a5560") } : {}),
+        });
+        place(context ? slanted(y - body, commands) : commands);
       }
       y -= bodyLine;
     });
@@ -241,26 +360,11 @@ function pageCommands(profile: RenderingLayoutProfile, blocks: readonly LayoutBl
   return pages;
 }
 
-/**
- * Whether the built-in PDF writer draws a template's own look. It draws the layout of the
- * template's profile (centred name, grey-ruled headings as written, left-aligned text), so a
- * template with another look, such as Modern, needs the desktop's printer for a matching PDF.
- */
-export function builtInPdfDrawsTemplateLook(template: RenderingTemplate): boolean {
-  return (
-    template.name.align === "center" &&
-    template.headings.case === "as-written" &&
-    template.headings.rule &&
-    template.headings.ruleColor.toLowerCase() === "#94a3ad" &&
-    template.body.align === "left" &&
-    template.roles.contextStyle === "regular" &&
-    template.accentColor === null
-  );
-}
-
 export interface PdfRenderInput {
   readonly artifact: DraftArtifact;
   readonly profile: RenderingLayoutProfile;
+  /** The template whose look the PDF draws; without one it draws Classic's. */
+  readonly template?: RenderingTemplate;
   readonly documentTitle: string;
   readonly generatedAt: string | undefined;
 }
@@ -312,7 +416,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
   const { artifact, profile } = input;
   const pageWidth = toPoints(profile.pageWidthMm);
   const pageHeight = toPoints(profile.pageHeightMm);
-  const pages = pageCommands(profile, layoutBlocks(artifact, profile));
+  const pages = pageCommands(profile, layoutBlocks(artifact, profile), pdfLook(input.template));
 
   const objects: PdfObjectBody[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";

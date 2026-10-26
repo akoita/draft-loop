@@ -22,7 +22,6 @@ import type { BlobStoragePort, ClosableStoragePort, RunHistoryStorage } from "@d
 
 import { CliUserError } from "./cli-user-error.js";
 import {
-  builtInPdfTemplateNoteLine,
   defaultExportTemplateId,
   exportLengthWarningLine,
   parseExportFormat,
@@ -175,10 +174,6 @@ export async function exportApprovedRun(
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
     );
-    if (format === "pdf" && options.printPdf === undefined) {
-      const templateNote = builtInPdfTemplateNoteLine(rendered.metadata.renderingTemplate.id);
-      if (templateNote !== undefined) io.write(templateNote);
-    }
     const lengthWarning = await exportLengthWarningLine(storage, snapshot, qa.pageOverflow, {
       templateId: rendered.metadata.renderingTemplate.id,
       explicit: options.templateId !== undefined,
