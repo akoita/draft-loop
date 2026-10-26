@@ -1360,6 +1360,10 @@
           "isDefault": {
             "type": "boolean"
           },
+          "jobMissing": {
+            "type": "boolean",
+            "description": "True for the original application while its workspace has no job text."
+          },
           "archivedAt": {
             "anyOf": [
               {
@@ -1523,6 +1527,7 @@
           "nameChosen",
           "status",
           "isDefault",
+          "jobMissing",
           "archivedAt",
           "createdAt",
           "updatedAt",
@@ -6550,6 +6555,10 @@
           "isDefault": {
             "type": "boolean"
           },
+          "jobMissing": {
+            "type": "boolean",
+            "description": "True for the original application while its workspace has no job text."
+          },
           "archivedAt": {
             "anyOf": [
               {
@@ -6718,6 +6727,7 @@
           "nameChosen",
           "status",
           "isDefault",
+          "jobMissing",
           "archivedAt",
           "createdAt",
           "updatedAt",

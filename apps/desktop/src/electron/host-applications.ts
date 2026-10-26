@@ -30,6 +30,7 @@ export function projectApplication(view: ApplicationView): ApplicationSummaryVie
     jobSourceKind: view.jobSource.kind === "stored-text" ? "pasted-text" : view.jobSource.kind,
     status: view.status,
     isDefault: view.isDefault,
+    ...(view.jobMissing === true ? { jobMissing: true } : {}),
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
     runCount: view.runs.length,

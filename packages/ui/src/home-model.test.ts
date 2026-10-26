@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { ApplicationSummaryView } from "./application-contract.js";
+import {
+  type ApplicationSummaryView,
+  normalizeApplicationSummary,
+} from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import {
   applicationActivityText,
@@ -10,6 +13,7 @@ import {
   evidencePresentation,
   evidenceView,
   homeActionsBlockedReason,
+  homeApplications,
   homeView,
   isHomeView,
   loadHomeProfileStatus,
@@ -251,6 +255,19 @@ describe("application list wording", () => {
     ]);
     expect(onlyDefaultApplication([old])).toBe(true);
     expect(onlyDefaultApplication([old, recent])).toBe(false);
+  });
+
+  it("leaves out a jobless default application until it has a run, and keeps the flag across the bridge", () => {
+    const jobless = application({ id: "default", isDefault: true, jobMissing: true });
+    const own = application({ id: "app-2" });
+    expect(homeApplications([jobless, own])).toEqual([own]);
+    expect(homeApplications([{ ...jobless, runCount: 1 }])).toHaveLength(1);
+    expect(homeApplications([{ ...own, jobMissing: true }])).toHaveLength(1);
+    expect(normalizeApplicationSummary(jobless)).toMatchObject({ jobMissing: true });
+    expect(normalizeApplicationSummary({ ...jobless, jobMissing: false })).not.toHaveProperty(
+      "jobMissing",
+    );
+    expect(normalizeApplicationSummary({ ...jobless, jobMissing: "yes" })).toBeUndefined();
   });
 });
 

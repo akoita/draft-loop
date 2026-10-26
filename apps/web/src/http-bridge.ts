@@ -118,6 +118,7 @@ export function applicationSummary(application: Application): ApplicationSummary
     jobSourceKind: application.jobSourceKind,
     status: application.status as ApplicationSummaryView["status"],
     isDefault: application.isDefault,
+    ...(application.jobMissing ? { jobMissing: true } : {}),
     createdAt: application.createdAt,
     updatedAt: application.updatedAt,
     runCount: application.runs.length,

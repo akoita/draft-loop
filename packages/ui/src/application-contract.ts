@@ -26,6 +26,8 @@ export interface ApplicationSummaryView {
   readonly status: ApplicationStatus;
   /** True for the application a workspace without created applications is read as. */
   readonly isDefault: boolean;
+  /** True for the default application while its workspace has no job text; Home leaves it out. */
+  readonly jobMissing?: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly runCount: number;
@@ -238,6 +240,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "jobSourceKind",
   "status",
   "isDefault",
+  "jobMissing",
   "createdAt",
   "updatedAt",
   "runCount",
@@ -376,6 +379,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     jobSourceKind === undefined ||
     status === undefined ||
     typeof raw.isDefault !== "boolean" ||
+    (raw.jobMissing !== undefined && typeof raw.jobMissing !== "boolean") ||
     createdAt === undefined ||
     updatedAt === undefined ||
     runCount === undefined ||
@@ -395,6 +399,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     jobSourceKind,
     status,
     isDefault: raw.isDefault,
+    ...(raw.jobMissing === true ? { jobMissing: true } : {}),
     createdAt,
     updatedAt,
     runCount,

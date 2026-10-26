@@ -40,6 +40,7 @@ describe("pasted job", () => {
         nameChosen: false,
         status: "active",
         isDefault: true,
+        jobMissing: false,
         archivedAt: null,
         createdAt: "2026-10-23T00:00:00.000Z",
         updatedAt: "2026-10-23T00:00:00.000Z",

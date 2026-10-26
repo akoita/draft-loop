@@ -124,6 +124,17 @@ describe("workspace applications", () => {
     expect(only).toMatchObject({ id: "default", name: "Default application" });
   });
 
+  it("marks the default application's job as missing only when the job text is absent or blank", async () => {
+    const { root, service } = await workspace();
+    expect((await service.listApplications({ root }))[0]?.jobMissing).toBe(false);
+
+    await writeFile(join(root, "job.md"), "  \n", "utf8");
+    expect((await service.listApplications({ root }))[0]?.jobMissing).toBe(true);
+
+    await rm(join(root, "job.md"));
+    expect((await service.listApplications({ root }))[0]?.jobMissing).toBe(true);
+  });
+
   it("creates, lists and gets applications from pasted text, a file and an approved URL", async () => {
     const { root, service } = await workspace();
     await writeFile(join(root, "acme.md"), "Acme needs a staff engineer.\n", "utf8");

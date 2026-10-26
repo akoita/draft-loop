@@ -131,6 +131,38 @@ describe("Home dashboard", () => {
     expect(html).toContain("Applying for another role?");
   });
 
+  it("leaves out the original application while it has no job text and no runs", () => {
+    const empty = application({ name: "Default application", jobMissing: true });
+    const html = render({ applications: { status: "ready", applications: [empty] } });
+    expect(html).not.toContain("Original workspace job");
+    expect(html).not.toContain('class="application-card"');
+    expect(html).toContain("No applications yet.");
+    expect(html).not.toContain("Applying for another role?");
+
+    const withOwn = render({
+      applications: {
+        status: "ready",
+        applications: [empty, application({ id: "app-2", name: "Acme", isDefault: false })],
+      },
+    });
+    expect(withOwn).not.toContain("Original workspace job");
+    expect((withOwn.match(/class="application-card"/gu) ?? []).length).toBe(1);
+  });
+
+  it("keeps the original application once it has a job or a run", () => {
+    const withJob = render();
+    const withRun = render({
+      applications: {
+        status: "ready",
+        applications: [application({ jobMissing: true, runCount: 1, latestRunId: "run-1" })],
+      },
+    });
+    for (const html of [withJob, withRun]) {
+      expect(html).toContain("Original workspace job");
+      expect(html).not.toContain("No applications yet.");
+    }
+  });
+
   it("lists several applications by latest activity with status, activity and run count", () => {
     const html = render({
       applications: {
