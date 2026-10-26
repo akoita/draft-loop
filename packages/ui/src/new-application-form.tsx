@@ -3,9 +3,12 @@ import type { ApplicationSummaryView } from "./application-contract.js";
 import {
   emptyNewApplicationDraft,
   type NewApplicationDraft,
+  type NewApplicationJob,
   type NewApplicationJobKind,
+  newApplicationJobFileAccept,
   newApplicationJobInput,
   newApplicationProblem,
+  withChosenJobFile,
 } from "./new-application-model.js";
 import { useModalFocusTrap } from "./review.js";
 
@@ -23,8 +26,9 @@ export interface NewApplicationFormViewProps {
 }
 
 /**
- * Home's New application form: a name and the job, pasted or a job page the person approves
- * fetching. Everything else happens on the application screen's three steps.
+ * Home's New application form: a name and the job, pasted, a job page the person approves
+ * fetching, or an attached file whose text the host keeps (#1810). Everything else happens on the
+ * application screen's three steps.
  */
 export function NewApplicationFormView({
   draft,
@@ -81,16 +85,34 @@ export function NewApplicationFormView({
               onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
             />
           </label>
-          {jobPagesAllowed ? (
-            <fieldset className="model-editor-mode">
-              <legend>Job posting</legend>
-              <div className="view-toggle">
-                {kindButton("text", "Paste text")}
-                {kindButton("url", "Job page address")}
-              </div>
-            </fieldset>
-          ) : null}
-          {draft.jobKind === "text" ? (
+          <fieldset className="model-editor-mode">
+            <legend>Job posting</legend>
+            <div className="view-toggle">
+              {kindButton("text", "Paste text")}
+              {jobPagesAllowed ? kindButton("url", "Job page address") : null}
+              {kindButton("file", "Attach file")}
+            </div>
+          </fieldset>
+          {draft.jobKind === "file" ? (
+            <label className="new-application-field">
+              <span>Job description file</span>
+              <input
+                type="file"
+                accept={newApplicationJobFileAccept}
+                disabled={busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file === undefined) return;
+                  void withChosenJobFile(draft, file).then(onDraftChange);
+                }}
+              />
+              <span className="subtle">
+                {draft.jobFile === null
+                  ? "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
+                  : `${draft.jobFile.name} is ready. Only its text is kept, as if pasted.`}
+              </span>
+            </label>
+          ) : draft.jobKind === "text" ? (
             <label className="new-application-field">
               <span>Job description</span>
               <textarea
@@ -160,7 +182,7 @@ export function NewApplicationFormView({
 
 export type CreateApplication = (
   name: string,
-  job: string | { readonly url: string },
+  job: NewApplicationJob,
 ) => Promise<ApplicationSummaryView>;
 
 export type NewApplicationSubmission =
@@ -169,8 +191,8 @@ export type NewApplicationSubmission =
   | { readonly kind: "failed"; readonly message: string };
 
 /**
- * Creates the application from a valid draft: the trimmed name and the pasted text or approved
- * URL, as the application port takes them. An invalid draft calls nothing.
+ * Creates the application from a valid draft: the trimmed name and the pasted text, approved URL
+ * or attached file, as the application port takes them. An invalid draft calls nothing.
  */
 export async function submitNewApplication(
   draft: NewApplicationDraft,

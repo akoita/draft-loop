@@ -9,7 +9,14 @@ import { parseReviewedCanonicalCandidateProfileCatalogResult } from "./profile-c
 
 // -- The new application's name and job ------------------------------------------------------
 
-export type NewApplicationJobKind = "text" | "url";
+export type NewApplicationJobKind = "text" | "url" | "file";
+
+/** A job description file the person attached, read in the browser; never a path. */
+export interface NewApplicationJobFile {
+  readonly name: string;
+  readonly mediaType: string;
+  readonly bytes: Uint8Array;
+}
 
 export interface NewApplicationDraft {
   readonly name: string;
@@ -18,6 +25,10 @@ export interface NewApplicationDraft {
   readonly jobUrl: string;
   /** The person allowed DraftLoop to fetch the job page when requirements are extracted. */
   readonly urlApproved: boolean;
+  /** The attached file, once read; null before one is chosen. */
+  readonly jobFile: NewApplicationJobFile | null;
+  /** Why the chosen file was refused, such as its type or size; null otherwise. */
+  readonly jobFileProblem: string | null;
 }
 
 export const emptyNewApplicationDraft: NewApplicationDraft = Object.freeze({
@@ -26,7 +37,55 @@ export const emptyNewApplicationDraft: NewApplicationDraft = Object.freeze({
   jobText: "",
   jobUrl: "",
   urlApproved: false,
+  jobFile: null,
+  jobFileProblem: null,
 });
+
+/** The job description files both hosts read, as career evidence: by extension, then type. */
+const jobFileMediaTypes: Readonly<Record<string, string>> = Object.freeze({
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  md: "text/markdown",
+  markdown: "text/markdown",
+  txt: "text/plain",
+});
+
+/** The file input's `accept` list. */
+export const newApplicationJobFileAccept = Object.keys(jobFileMediaTypes)
+  .map((extension) => `.${extension}`)
+  .join(",");
+
+/** The largest job file taken, the career-evidence upload limit (10 MiB). */
+export const newApplicationJobFileMaxBytes = 10 * 1024 * 1024;
+
+export const newApplicationJobFileMessage = "Attach the job description file.";
+export const newApplicationJobFileTypeMessage = "Attach a PDF, DOCX, Markdown or plain text file.";
+export const newApplicationJobFileSizeMessage = "The file is larger than 10 MB.";
+
+/** The media type a job file is read as, from its name; undefined for any other file. */
+export function newApplicationJobFileMediaType(name: string): string | undefined {
+  const extension = name.toLowerCase().match(/\.([a-z]+)$/u)?.[1];
+  return extension === undefined ? undefined : jobFileMediaTypes[extension];
+}
+
+/**
+ * The draft after the person chose a file: its bytes read, or the reason it cannot be used. The
+ * size is checked before reading, so a large file is never read into memory.
+ */
+export async function withChosenJobFile(
+  draft: NewApplicationDraft,
+  file: Pick<File, "name" | "size" | "arrayBuffer">,
+): Promise<NewApplicationDraft> {
+  const mediaType = newApplicationJobFileMediaType(file.name);
+  if (mediaType === undefined) {
+    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileTypeMessage };
+  }
+  if (file.size > newApplicationJobFileMaxBytes) {
+    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileSizeMessage };
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return { ...draft, jobFile: { name: file.name, mediaType, bytes }, jobFileProblem: null };
+}
 
 export const newApplicationNameMessage = "Name the application, for example a company and role.";
 export const newApplicationJobTextMessage = "Paste the job description to work from.";
@@ -49,16 +108,24 @@ export function newApplicationProblem(draft: NewApplicationDraft): string | null
   if (draft.jobKind === "text") {
     return draft.jobText.trim() === "" ? newApplicationJobTextMessage : null;
   }
+  if (draft.jobKind === "file") {
+    return draft.jobFile === null ? (draft.jobFileProblem ?? newApplicationJobFileMessage) : null;
+  }
   if (!isWebAddress(draft.jobUrl)) return newApplicationJobUrlMessage;
   return draft.urlApproved ? null : newApplicationUrlApprovalMessage;
 }
 
-/** The job as the application port takes it: pasted text, or the approved URL. */
-export function newApplicationJobInput(
-  draft: NewApplicationDraft,
-): string | { readonly url: string } {
-  return draft.jobKind === "text" ? draft.jobText : { url: draft.jobUrl.trim() };
+/** The job as the application port takes it: pasted text, the approved URL, or the file. */
+export function newApplicationJobInput(draft: NewApplicationDraft): NewApplicationJob {
+  if (draft.jobKind === "file" && draft.jobFile !== null) return { file: draft.jobFile };
+  return draft.jobKind === "url" ? { url: draft.jobUrl.trim() } : draft.jobText;
 }
+
+/** A new application's job: pasted text, an approved job page, or an attached file. */
+export type NewApplicationJob =
+  | string
+  | { readonly url: string }
+  | { readonly file: NewApplicationJobFile };
 
 // -- Reviewed career profiles --------------------------------------------------------------
 

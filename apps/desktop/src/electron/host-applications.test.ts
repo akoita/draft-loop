@@ -119,6 +119,38 @@ describe("application commands in the native host", () => {
     expect((await listed(host, workspaceId)).applications).toHaveLength(1);
   });
 
+  it("keeps an attached job file's text as pasted text, and refuses a file that is not its type", async () => {
+    const { host, workspaceId } = await openHost();
+    const bytes = new TextEncoder().encode(jobText);
+    const created = await host.invoke({
+      type: "application.create",
+      input: {
+        workspaceId,
+        name: "Acme",
+        jobFile: { name: "role.md", mediaType: "text/markdown", bytes },
+      },
+    });
+    if (!created.ok) throw new Error(`Expected success: ${JSON.stringify(created)}`);
+    const application = (created.value as { application: ApplicationSummaryView }).application;
+    expect(application.jobSourceKind).toBe("pasted-text");
+    const job = await host.invoke({
+      type: "application.job",
+      input: { workspaceId, applicationId: application.id },
+    });
+    expect(job).toMatchObject({ ok: true, value: { origin: "pasted-text" } });
+    expect((job as { value: { text: string } }).value.text).toContain("Secret-job-marker");
+    const mismatched = await host.invoke({
+      type: "application.create",
+      input: {
+        workspaceId,
+        name: "Acme",
+        jobFile: { name: "role.pdf", mediaType: "application/pdf", bytes },
+      },
+    });
+    expect(mismatched).toMatchObject({ ok: false });
+    expect((await listed(host, workspaceId)).applications).toHaveLength(2);
+  });
+
   it("scopes review.load to an application and treats a created one as ready on its own job", async () => {
     const { host, workspaceId } = await openHost();
     const created = await createApplication(host, workspaceId, "Acme");

@@ -23,6 +23,7 @@ import {
   exportLengthWarningPrefix,
   importKnowledgeFileWithoutDuplicates,
   isLoopbackEndpoint,
+  jobDescriptionFileText,
   type OpportunityDraftPatch,
   type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -3576,6 +3577,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "application.create": {
           const workspace = workspaceFor(command.input.workspaceId);
+          const { jobFile, jobUrl } = command.input;
           return {
             ok: true,
             value: {
@@ -3584,9 +3586,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 service,
                 workspace.root,
                 command.input.name,
-                command.input.jobUrl === undefined
-                  ? { jobText: command.input.jobText ?? "" }
-                  : { jobUrl: command.input.jobUrl },
+                // An attached file is read here and kept as pasted text, never as a path (#1810).
+                jobFile !== undefined
+                  ? { jobText: await jobDescriptionFileText(jobFile) }
+                  : jobUrl === undefined
+                    ? { jobText: command.input.jobText ?? "" }
+                    : { jobUrl },
               ),
             },
           };

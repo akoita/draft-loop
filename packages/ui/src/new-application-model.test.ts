@@ -4,10 +4,13 @@ import {
   defaultReviewedProfile,
   emptyNewApplicationDraft,
   loadReviewedProfileChoices,
+  newApplicationJobFileMaxBytes,
+  newApplicationJobFileMediaType,
   newApplicationJobInput,
   newApplicationProblem,
   reviewedProfileKey,
   sortReviewedProfileChoices,
+  withChosenJobFile,
 } from "./new-application-model.js";
 
 const workspaceId = "workspace-1";
@@ -43,6 +46,47 @@ describe("the new application's name and job", () => {
         jobUrl: " https://jobs.example.test/1 ",
       }),
     ).toEqual({ url: "https://jobs.example.test/1" });
+  });
+
+  it("reads a job file's type from its name", () => {
+    expect(newApplicationJobFileMediaType("Role.PDF")).toBe("application/pdf");
+    expect(newApplicationJobFileMediaType("role.docx")).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    expect(newApplicationJobFileMediaType("role.markdown")).toBe("text/markdown");
+    expect(newApplicationJobFileMediaType("role.txt")).toBe("text/plain");
+    expect(newApplicationJobFileMediaType("role.html")).toBeUndefined();
+    expect(newApplicationJobFileMediaType("role")).toBeUndefined();
+  });
+
+  it("reads a chosen job file, and refuses another type or a large one without reading it", async () => {
+    const named = { ...emptyNewApplicationDraft, name: "Acme", jobKind: "file" as const };
+    expect(newApplicationProblem(named)).toMatch(/Attach the job description/u);
+    const text = new TextEncoder().encode("Platform Engineer");
+    const chosen = await withChosenJobFile(named, {
+      name: "role.txt",
+      size: text.byteLength,
+      arrayBuffer: async () => text.buffer as ArrayBuffer,
+    });
+    expect(chosen.jobFile).toEqual({ name: "role.txt", mediaType: "text/plain", bytes: text });
+    expect(newApplicationProblem(chosen)).toBeNull();
+    expect(newApplicationJobInput(chosen)).toEqual({ file: chosen.jobFile });
+
+    const read = vi.fn(async () => new ArrayBuffer(0));
+    const wrongType = await withChosenJobFile(chosen, {
+      name: "role.html",
+      size: 4,
+      arrayBuffer: read,
+    });
+    expect(wrongType.jobFile).toBeNull();
+    expect(newApplicationProblem(wrongType)).toMatch(/PDF, DOCX, Markdown or plain text/u);
+    const tooLarge = await withChosenJobFile(named, {
+      name: "role.pdf",
+      size: newApplicationJobFileMaxBytes + 1,
+      arrayBuffer: read,
+    });
+    expect(newApplicationProblem(tooLarge)).toMatch(/larger than 10 MB/u);
+    expect(read).not.toHaveBeenCalled();
   });
 });
 

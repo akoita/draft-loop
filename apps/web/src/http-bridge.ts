@@ -31,6 +31,7 @@ import {
 } from "./profile-bridge.js";
 import { createReviewActions, type DownloadFile } from "./review-actions.js";
 import { saveFile } from "./save-file.js";
+import { sourceMediaType } from "./sources-model.js";
 import { ownerWorkspaceId, ownerWorkspaceName } from "./workspace-model.js";
 
 /**
@@ -250,9 +251,26 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         };
       }
       case "application.create": {
-        const { workspaceId, name, jobText } = command.input;
+        const { workspaceId, name, jobText, jobFile } = command.input;
         if (command.input.jobUrl !== undefined) {
-          return refuse("The hosted service takes a job as pasted text only.");
+          return refuse("The hosted service takes a job as pasted text or a file only.");
+        }
+        if (jobFile !== undefined) {
+          const contentType = sourceMediaType(jobFile.name);
+          if (contentType === undefined) {
+            return refuse("Attach a PDF, DOCX, Markdown or plain text file.");
+          }
+          // The API reads the file's text and keeps it as pasted text; the file is not stored.
+          const created = await client.call(
+            "POST /v1/workspaces/{workspaceId}/applications/from-file",
+            {
+              path: { workspaceId },
+              query: { name, fileName: jobFile.name },
+              body: new Blob([new Uint8Array(jobFile.bytes)], { type: contentType }),
+              contentType,
+            },
+          );
+          return record(workspaceId, created);
         }
         if (jobText === undefined) return refuse("Paste the job description first.");
         const created = await client.call("POST /v1/workspaces/{workspaceId}/applications", {

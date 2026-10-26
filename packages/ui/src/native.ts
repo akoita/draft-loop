@@ -1,6 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
-
 import {
   type ApplicationJobResult,
   type BridgeCommand,
@@ -73,6 +72,7 @@ import {
   type ReviewAction,
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
+import type { NewApplicationJob } from "./new-application-model.js";
 import {
   parseRecentWorkspacesListResult,
   type RecentWorkspaceSummary,
@@ -339,13 +339,14 @@ export interface DesktopApplicationCapabilities {
    */
   readonly jobPagesAllowed?: boolean;
   /**
-   * Creates an application and resolves with its summary. The job is pasted text, or `{ url }`:
-   * a job page the person approved fetching, read only when requirements are extracted.
+   * Creates an application and resolves with its summary. The job is pasted text, `{ url }`: a
+   * job page the person approved fetching, read only when requirements are extracted, or
+   * `{ file }`: an attached file whose text the host keeps as if pasted.
    */
   readonly createApplication?: (
     workspaceId: string,
     name: string,
-    job: string | { readonly url: string },
+    job: NewApplicationJob,
   ) => Promise<ApplicationSummaryView>;
   /**
    * Imports another workspace as an application. The host shows the native folder picker, so the
@@ -611,11 +612,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     ...(capabilityPort.hasCapability("source.add-url") ? {} : { jobPagesAllowed: false }),
     ...(capabilityPort.hasCapability("application.create")
       ? {
-          createApplication: async (
-            workspaceId: string,
-            name: string,
-            job: string | { readonly url: string },
-          ) =>
+          createApplication: async (workspaceId: string, name: string, job: NewApplicationJob) =>
             unwrap(
               await capabilityPort.execute({
                 type: "application.create",
@@ -624,7 +621,9 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                   name,
                   ...(typeof job === "string"
                     ? { jobText: job }
-                    : { jobUrl: job.url, jobUrlApproved: true as const }),
+                    : "file" in job
+                      ? { jobFile: job.file }
+                      : { jobUrl: job.url, jobUrlApproved: true as const }),
                 },
               }),
             ).application,

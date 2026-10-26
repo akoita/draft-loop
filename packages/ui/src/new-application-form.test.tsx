@@ -90,13 +90,41 @@ describe("New application form", () => {
     expect(approved).not.toMatch(submitDisabled);
   });
 
-  it("takes pasted text only from a host that fetches no job page", () => {
+  it("offers pasted text and a file, but no job page, from a host that fetches none", () => {
     const html = renderToStaticMarkup(
       <NewApplicationFormView {...props} jobPagesAllowed={false} />,
     );
     expect(html).toContain("Paste the job description");
+    expect(html).toContain("Paste text");
+    expect(html).toContain("Attach file");
     expect(html).not.toContain("Job page address");
-    expect(html).not.toContain("Paste text");
+  });
+
+  it("takes an attached job file, and says why a chosen file was refused", () => {
+    const draft = { ...emptyNewApplicationDraft, name: "Acme", jobKind: "file" as const };
+    const html = renderToStaticMarkup(<NewApplicationFormView {...props} draft={draft} />);
+    expect(html).toContain('type="file"');
+    expect(html).toContain('accept=".pdf,.docx,.md,.markdown,.txt"');
+    expect(html).toContain("Attach the job description file.");
+    expect(html).toMatch(submitDisabled);
+    const refused = renderToStaticMarkup(
+      <NewApplicationFormView
+        {...props}
+        draft={{ ...draft, jobFileProblem: "Attach a PDF, DOCX, Markdown or plain text file." }}
+      />,
+    );
+    expect(refused).toContain("Attach a PDF, DOCX, Markdown or plain text file.");
+    const ready = renderToStaticMarkup(
+      <NewApplicationFormView
+        {...props}
+        draft={{
+          ...draft,
+          jobFile: { name: "role.md", mediaType: "text/markdown", bytes: Uint8Array.of(0x23) },
+        }}
+      />,
+    );
+    expect(ready).toContain("role.md is ready.");
+    expect(ready).not.toMatch(submitDisabled);
   });
 
   it("shows a creation failure inline and a busy state", () => {
@@ -138,6 +166,16 @@ describe("creating the application", () => {
       create,
     );
     expect(create).toHaveBeenCalledWith("Acme", { url: "https://jobs.example.test/1" });
+  });
+
+  it("hands the port the attached file", async () => {
+    const create = vi.fn<CreateApplication>(async () => application);
+    const file = { name: "role.txt", mediaType: "text/plain", bytes: Uint8Array.of(0x52) };
+    await submitNewApplication(
+      { ...emptyNewApplicationDraft, name: "Acme", jobKind: "file", jobFile: file },
+      create,
+    );
+    expect(create).toHaveBeenCalledWith("Acme", { file });
   });
 
   it("calls nothing for an invalid draft or an unapproved URL", async () => {
