@@ -367,6 +367,19 @@ export function applicationsByActivity(
     .map((entry) => entry.application);
 }
 
+/**
+ * The applications Home lists: the default one stays out while its workspace has no job text and
+ * it has no runs, as in a new hosted workspace, where it would be an empty card.
+ */
+export function homeApplications(
+  applications: readonly ApplicationSummaryView[],
+): readonly ApplicationSummaryView[] {
+  return applications.filter(
+    (application) =>
+      !(application.isDefault && application.jobMissing === true && application.runCount === 0),
+  );
+}
+
 /** True when the list holds nothing but the application a workspace is always read as. */
 export function onlyDefaultApplication(applications: readonly ApplicationSummaryView[]): boolean {
   return applications.every((application) => application.isDefault);

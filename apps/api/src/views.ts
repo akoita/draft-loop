@@ -82,6 +82,9 @@ export const applicationViewSchema = z
     nameChosen: z.boolean(),
     status: z.string(),
     isDefault: z.boolean(),
+    jobMissing: z
+      .boolean()
+      .describe("True for the original application while its workspace has no job text."),
     archivedAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -122,6 +125,7 @@ export function applicationView(view: ApplicationView): z.infer<typeof applicati
     nameChosen: view.nameChosen,
     status: view.status,
     isDefault: view.isDefault,
+    jobMissing: view.jobMissing === true,
     archivedAt: view.archivedAt,
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,

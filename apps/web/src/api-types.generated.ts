@@ -26,6 +26,7 @@ export interface ApiSchemas {
     readonly nameChosen: boolean;
     readonly status: string;
     readonly isDefault: boolean;
+    readonly jobMissing: boolean;
     readonly archivedAt: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;

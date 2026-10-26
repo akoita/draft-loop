@@ -47,6 +47,7 @@ import {
   type HomeProfileStatus,
   type HomeStatusPresentation,
   type HomeTone,
+  homeApplications,
   onlyDefaultApplication,
   profileGenerationPresentation,
   profileStatusPresentation,
@@ -454,7 +455,9 @@ function ApplicationsList({
       </p>
     );
   }
-  const { active, archived } = partitionApplications(applicationsByActivity(state.applications));
+  const { active, archived } = partitionApplications(
+    applicationsByActivity(homeApplications(state.applications)),
+  );
   const actionsFor = (application: ApplicationSummaryView): ApplicationCardActions => {
     const isArchived = application.archivedAt !== null;
     return {
@@ -493,7 +496,12 @@ function ApplicationsList({
           {active.map(card)}
         </ul>
       )}
-      {active.length === 0 && archived.length > 0 ? (
+      {active.length === 0 && archived.length === 0 ? (
+        <p className="empty-state home-empty-applications">
+          No applications yet. Start a new application for the job you are applying for. It uses
+          your career profile and evidence.
+        </p>
+      ) : active.length === 0 && archived.length > 0 ? (
         <p className="empty-state home-empty-applications">
           Every application is archived. Start a new application, or restore one below.
         </p>

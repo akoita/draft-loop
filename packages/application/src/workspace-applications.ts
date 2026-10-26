@@ -74,6 +74,8 @@ export interface ApplicationView extends Application {
   readonly modelProfiles: ApplicationModelProfiles | null;
   /** The run whose draft the person chose to approve and export; null uses the newest run. */
   readonly chosenRun: ApplicationChosenRun | null;
+  /** True for a default application whose workspace has no job text, such as a new hosted one. */
+  readonly jobMissing?: boolean;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -284,6 +286,7 @@ async function describeDefaultApplication(
     ? workspace.jobDescriptionPath
     : resolve(root, workspace.jobDescriptionPath);
   const jobText = await readFile(jobPath, "utf8").catch(() => undefined);
+  const jobMissing = (jobText ?? "").trim() === "";
   const jobTime = await stat(jobPath)
     .then((details) => details.birthtime.toISOString())
     .catch(() => undefined);
@@ -315,13 +318,17 @@ async function describeDefaultApplication(
       chosenRun: null,
       nameChosen: false,
       suggestedName: null,
+      jobMissing,
     };
   }
-  return describeApplication(storage.applications, workspace.id, base, {
-    nameChosen: chosenName !== undefined,
-    suggestedName:
-      chosenName === undefined ? await suggestFromBriefs(storage, workspace.id, base.name) : null,
-  });
+  return {
+    ...(await describeApplication(storage.applications, workspace.id, base, {
+      nameChosen: chosenName !== undefined,
+      suggestedName:
+        chosenName === undefined ? await suggestFromBriefs(storage, workspace.id, base.name) : null,
+    })),
+    jobMissing,
+  };
 }
 
 async function describeStoredApplication(
