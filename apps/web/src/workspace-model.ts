@@ -6,6 +6,9 @@ import type { ApiInput, ApiSchemas } from "./api-client.js";
  */
 export const ownerWorkspaceId = "owner";
 
+/** What the screens call that workspace, since its id names no one's job search. */
+export const ownerWorkspaceName = "Your workspace";
+
 export type Company = "anthropic" | "openai";
 
 /** The setup form as the owner types it; empty model ids leave the service's defaults. */

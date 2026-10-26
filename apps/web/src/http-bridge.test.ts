@@ -577,9 +577,14 @@ describe("the shared screens' commands over HTTP", () => {
       type: "review.load",
       input: { applicationId: "app-ledger" },
     });
-    await bridge.invoke({ type: "review.load", input: { workspaceId, runId: "run-1" } });
+    const owners = await bridge.invoke({
+      type: "review.load",
+      input: { workspaceId, runId: "run-1" },
+    });
 
+    // A candidate record keeps the server's name; the owner token's fixed workspace reads in words.
     expect(onScreen).toEqual({ ok: true, value: projected });
+    expect(owners).toEqual({ ok: true, value: { ...projected, workspaceName: "Your workspace" } });
     expect(calls).toEqual([
       {
         operation: "GET /v1/workspaces/{workspaceId}/review-state",
@@ -631,7 +636,10 @@ describe("the shared screens' commands over HTTP", () => {
       },
     });
 
-    expect(started).toEqual({ ok: true, value: projected });
+    expect(started).toEqual({
+      ok: true,
+      value: { ...projected, workspaceName: "Your workspace" },
+    });
     expect(calls.slice(1)).toEqual([
       {
         operation: "POST /v1/workspaces/{workspaceId}/runs",
