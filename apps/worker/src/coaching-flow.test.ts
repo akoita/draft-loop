@@ -27,11 +27,9 @@ import {
   consentHistory,
   createApiClient,
   createBriefBody,
-  defaultWorkspaceForm,
   recordIds,
   selectionRequest,
   startRunBody,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -289,11 +287,13 @@ describe.runIf(connectionString !== undefined)("a coaching firm's records and co
       const { workspaceId } = records[coach];
       await owner.call("PUT /v1/workspaces/{workspaceId}", {
         path: { workspaceId },
-        body: workspaceRequestBody({
-          ...defaultWorkspaceForm,
-          authorModel: "claude-sonnet-5-5",
-          criticModel: "gpt-6-luna",
-        }),
+        body: {
+          language: "en",
+          maxRounds: 2,
+          fixtureMode: false,
+          author: { company: "anthropic", model: "claude-sonnet-5-5" },
+          critic: { company: "openai", model: "gpt-6-luna" },
+        },
       });
       await owner.call(
         "PUT /v1/workspaces/{workspaceId}/members/{memberId}",

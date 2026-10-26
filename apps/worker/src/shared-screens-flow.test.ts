@@ -14,13 +14,7 @@ import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { loadCareerEvidenceStatus } from "@draft-loop/ui/career-evidence";
 import { addFirstCareerEvidence } from "@draft-loop/ui/career-evidence-setup";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
-import {
-  createApiClient,
-  createHttpBridge,
-  defaultWorkspaceForm,
-  ownerWorkspaceId,
-  workspaceRequestBody,
-} from "@draft-loop/web";
+import { createApiClient, createHttpBridge, ownerWorkspaceId } from "@draft-loop/web";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -111,7 +105,7 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       // The shell sets the workspace up first; the shared screens then open on it.
       await client.call("PUT /v1/workspaces/{workspaceId}", {
         path: { workspaceId: ownerWorkspaceId },
-        body: workspaceRequestBody({ ...defaultWorkspaceForm, fixtureMode: true }),
+        body: { language: "en", maxRounds: 2, fixtureMode: true },
       });
       const home = await port.load();
       expect(home).toMatchObject({ workspaceId: ownerWorkspaceId, runId: "pending" });

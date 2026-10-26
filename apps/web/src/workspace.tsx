@@ -1,4 +1,10 @@
-import { type FormEvent, useEffect, useState } from "react";
+import {
+  type WorkspaceSetupChoice,
+  type WorkspaceSetupPreset,
+  WorkspaceSetupScreen,
+  workspaceSetupPresets,
+} from "@draft-loop/ui/workspace-setup";
+import { useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
@@ -6,12 +12,10 @@ import { WritingPolicyStep } from "./policy.js";
 import { useRecordId } from "./record-context.js";
 import {
   type Company,
-  defaultWorkspaceForm,
   modelLabel,
+  routablePresets,
   samePairWarning,
-  type WorkspaceForm,
-  workspaceFormProblems,
-  workspaceRequestBody,
+  setupRequestBody,
 } from "./workspace-model.js";
 
 type Workspace = ApiSchemas["Workspace"];
@@ -32,8 +36,8 @@ export interface WorkspaceStepProps {
 export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
   const workspaceId = useRecordId();
   const [state, setState] = useState<WorkspaceState>({ kind: "loading" });
-  const [form, setForm] = useState<WorkspaceForm>(defaultWorkspaceForm);
-  const [problems, setProblems] = useState<string[]>([]);
+  const [presets, setPresets] = useState<readonly WorkspaceSetupPreset[]>(workspaceSetupPresets);
+  const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -55,20 +59,35 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
     };
   }, [client, onWorkspace, workspaceId]);
 
-  async function create() {
-    const found = workspaceFormProblems(form);
-    setProblems(found);
-    if (found.length > 0) return;
+  // Only the presets whose two models the service routes; all of them when it cannot say.
+  useEffect(() => {
+    if (state.kind !== "missing") return;
+    let current = true;
+    client.call("GET /v1/model-catalog", {}).then(
+      (catalog) => {
+        if (!current) return;
+        const routable = routablePresets(workspaceSetupPresets(), catalog.models);
+        if (routable.length > 0) setPresets(routable);
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [client, state.kind]);
+
+  async function create(choice: WorkspaceSetupChoice) {
+    setProblem(null);
     setBusy(true);
     try {
       const workspace = await client.call("PUT /v1/workspaces/{workspaceId}", {
         path: { workspaceId },
-        body: workspaceRequestBody(form),
+        body: setupRequestBody(choice),
       });
       setState({ kind: "ready", workspace });
       onWorkspace(workspace);
     } catch (error) {
-      setProblems([describeStartError(error)]);
+      setProblem(describeStartError(error));
     } finally {
       setBusy(false);
     }
@@ -92,13 +111,14 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
       );
     case "missing":
       return (
-        <WorkspaceSetupForm
-          form={form}
-          problems={problems}
-          busy={busy}
-          onChange={setForm}
-          onSubmit={() => void create()}
-        />
+        <div className="shared-screens">
+          <WorkspaceSetupScreen
+            presets={presets}
+            busy={busy}
+            problem={problem}
+            onCreate={(choice) => void create(choice)}
+          />
+        </div>
       );
   }
 }
@@ -128,126 +148,6 @@ export function WorkspaceSummary({ workspace }: { readonly workspace: Workspace 
         <dd>{workspace.fixtureMode ? "Fixture mode: no model calls" : "Live models"}</dd>
       </dl>
       {warning === undefined ? null : <p className="notice">{warning}</p>}
-    </section>
-  );
-}
-
-export interface WorkspaceSetupFormProps {
-  readonly form: WorkspaceForm;
-  readonly problems: readonly string[];
-  readonly busy: boolean;
-  readonly onChange: (form: WorkspaceForm) => void;
-  readonly onSubmit: () => void;
-}
-
-const companies: readonly { readonly id: Company; readonly label: string }[] = [
-  { id: "anthropic", label: "Anthropic" },
-  { id: "openai", label: "OpenAI" },
-];
-
-export function WorkspaceSetupForm({
-  form,
-  problems,
-  busy,
-  onChange,
-  onSubmit,
-}: WorkspaceSetupFormProps) {
-  const warning = samePairWarning(form.authorCompany, form.criticCompany);
-  const set = (patch: Partial<WorkspaceForm>) => onChange({ ...form, ...patch });
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onSubmit();
-  }
-
-  return (
-    <section className="panel">
-      <h2>Set up your workspace</h2>
-      <p>
-        The workspace holds your CV settings and the models that write and critique it. Leave a
-        model empty to use the service's default.
-      </p>
-      <form onSubmit={submit}>
-        <label htmlFor="workspace-language">CV language</label>
-        <input
-          id="workspace-language"
-          value={form.language}
-          onChange={(event) => set({ language: event.target.value })}
-        />
-        <label htmlFor="workspace-sections">Required sections, one per line</label>
-        <textarea
-          id="workspace-sections"
-          className="short"
-          value={form.requiredSections}
-          onChange={(event) => set({ requiredSections: event.target.value })}
-        />
-        <label htmlFor="workspace-rounds">Rounds at most</label>
-        <input
-          id="workspace-rounds"
-          inputMode="numeric"
-          value={form.maxRounds}
-          onChange={(event) => set({ maxRounds: event.target.value })}
-        />
-        <div className="pair">
-          <fieldset>
-            <legend>Author</legend>
-            <select
-              aria-label="Author company"
-              value={form.authorCompany}
-              onChange={(event) => set({ authorCompany: event.target.value as Company })}
-            >
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.label}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Author model"
-              placeholder="Service default"
-              value={form.authorModel}
-              onChange={(event) => set({ authorModel: event.target.value })}
-            />
-          </fieldset>
-          <fieldset>
-            <legend>Critic</legend>
-            <select
-              aria-label="Critic company"
-              value={form.criticCompany}
-              onChange={(event) => set({ criticCompany: event.target.value as Company })}
-            >
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.label}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Critic model"
-              placeholder="Service default"
-              value={form.criticModel}
-              onChange={(event) => set({ criticModel: event.target.value })}
-            />
-          </fieldset>
-        </div>
-        {warning === undefined ? null : <p className="notice">{warning}</p>}
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={form.fixtureMode}
-            onChange={(event) => set({ fixtureMode: event.target.checked })}
-          />
-          Fixture mode: runs use built-in fictional answers and call no model
-        </label>
-        {problems.map((problem) => (
-          <p key={problem} className="problem" role="alert">
-            {problem}
-          </p>
-        ))}
-        <button type="submit" disabled={busy}>
-          {busy ? "Creating…" : "Create workspace"}
-        </button>
-      </form>
     </section>
   );
 }

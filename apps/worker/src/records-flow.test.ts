@@ -17,6 +17,7 @@ import {
   type PostgresTenancy,
   type PostgresTenantDirectory,
 } from "@draft-loop/storage-postgres";
+import { workspaceSetupPresets } from "@draft-loop/ui/workspace-setup-model";
 import {
   type ApiClient,
   ApiRequestError,
@@ -28,14 +29,13 @@ import {
   createApiClient,
   createRecordMemory,
   currentRecordId,
-  defaultWorkspaceForm,
   deleteRecordRequest,
   deleteRefusal,
   newRecordIdProblem,
   recordIds,
+  setupRequestBody,
   unassignMemberRequest,
   withoutRecord,
-  workspaceRequestBody,
 } from "@draft-loop/web";
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -50,6 +50,13 @@ import {
   runtimeUrl,
   tenantKeyBlobs,
 } from "./hosted-test-support.js";
+
+/** The first-run screen's defaults: English, two rounds and the Balanced preset. */
+function balancedFirstRun() {
+  const preset = workspaceSetupPresets().find(({ id }) => id === "balanced");
+  if (preset === undefined) throw new Error("The Balanced preset is listed.");
+  return { language: "en", maxRounds: 2, preset };
+}
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -177,13 +184,13 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
       body: { email: people.member.email, role: "member" },
     });
 
-    // The owner names two records in the picker and sets each up in the Workspace step.
+    // The owner names two records in the picker and sets each up on the first-run screen.
     expect(await listed("owner")).toEqual([]);
     for (const recordId of ["candidate-ana", "candidate-ben"]) {
       expect(newRecordIdProblem(recordId, await listed("owner"))).toBeUndefined();
       await owner.call("PUT /v1/workspaces/{workspaceId}", {
         path: { workspaceId: recordId },
-        body: workspaceRequestBody({ ...defaultWorkspaceForm, fixtureMode: true }),
+        body: setupRequestBody({ ...balancedFirstRun(), fixtureMode: true }),
       });
     }
     expect(newRecordIdProblem("candidate-ana", await listed("owner"))).toContain("exists already");
@@ -237,7 +244,7 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
     // A record the member creates is theirs; once removed from the other, it is gone from the list.
     await member.call("PUT /v1/workspaces/{workspaceId}", {
       path: { workspaceId: "candidate-cy" },
-      body: workspaceRequestBody({ ...defaultWorkspaceForm, fixtureMode: true }),
+      body: setupRequestBody({ ...balancedFirstRun(), fixtureMode: true }),
     });
     await owner.call(
       "DELETE /v1/workspaces/{workspaceId}/members/{memberId}",

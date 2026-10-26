@@ -110,7 +110,7 @@ describe("run estimate", () => {
         plan: { allowed: false, code: "model_tier_not_in_plan", role: "author", tier: "premium" },
       }),
     ).toEqual([
-      "Your plan does not include premium models for the author. Choose another model in the Workspace step.",
+      "Your plan does not include premium models for the author. Choose another preset or model.",
     ]);
   });
 

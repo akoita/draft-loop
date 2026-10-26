@@ -24,6 +24,10 @@
       "import": "./src/start-checklist.tsx"
     },
     "./styles.css": "./src/styles.css",
+    "./workspace-setup": {
+      "types": "./src/workspace-setup.tsx",
+      "import": "./src/workspace-setup.tsx"
+    },
     "./*": {
       "types": "./src/*.ts",
       "import": "./src/*.ts"
