@@ -162,9 +162,13 @@ function reviewedBrief(application: Application) {
 /** Until the shared review reaches the web (sprint 1p), only a start goes through the screens. */
 
 /** The API's own source kinds; a URL, a file or a job file needs the desktop. */
+/**
+ * A source the hosted service takes as the screens send it. A job page comes only as the
+ * application's own job, under the approval kept with it, never as an address named here.
+ */
 function hostedSource(source: OpportunityCreateSource) {
   if (source.kind === "pasted-content" || source.kind === "candidate-input") return source;
-  return refuse("The hosted service takes a job as pasted text only.");
+  return refuse("The hosted service takes a job as the application's own job or pasted text.");
 }
 
 /**
@@ -251,9 +255,14 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         };
       }
       case "application.create": {
-        const { workspaceId, name, jobText, jobFile } = command.input;
-        if (command.input.jobUrl !== undefined) {
-          return refuse("The hosted service takes a job as pasted text or a file only.");
+        const { workspaceId, name, jobText, jobFile, jobUrl } = command.input;
+        if (jobUrl !== undefined) {
+          // The address and the person's approval are kept; the page is fetched at extraction.
+          const created = await client.call("POST /v1/workspaces/{workspaceId}/applications", {
+            path: { workspaceId },
+            body: { name, jobUrl, jobUrlApproved: true },
+          });
+          return record(workspaceId, created);
         }
         if (jobFile !== undefined) {
           const contentType = sourceMediaType(jobFile.name);
@@ -321,12 +330,24 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
             sources.push(hostedSource(source));
             continue;
           }
-          // The application's own job: the hosted service keeps pasted text in its record.
+          // The application's own job: the hosted service keeps pasted text in its record, or an
+          // approved job page that it fetches now, once.
           const scoped = await scopedApplication(workspaceId, applicationId);
           const job = await client.call(
             "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job",
             { path: { workspaceId, applicationId: scoped.id } },
           );
+          if (job.origin === "url" && job.url !== null) {
+            sources.push({
+              id: source.id,
+              kind: "approved-url" as const,
+              classification: "job-posting" as const,
+              url: job.url,
+              approved: true as const,
+              ...(source.capturedAt === undefined ? {} : { capturedAt: source.capturedAt }),
+            });
+            continue;
+          }
           if (job.text === null) return refuse("Paste this application's job description first.");
           sources.push({
             id: source.id,

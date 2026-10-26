@@ -110,7 +110,8 @@ describe.runIf(connectionString !== undefined)("shared screens on the hosted API
       const home = await port.load();
       expect(home).toMatchObject({ workspaceId: ownerWorkspaceId, runId: "pending" });
       expect(port.workspaceClosable).toBe(false);
-      expect(port.jobPagesAllowed).toBe(false);
+      // The hosted service fetches an approved job page too (#1813).
+      expect(port.jobPagesAllowed).toBeUndefined();
       expect(port.getCredentialStatus).toBeUndefined();
 
       // New application: a name and the pasted job, then its requirement step.

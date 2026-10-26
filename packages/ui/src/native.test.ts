@@ -264,7 +264,7 @@ describe("desktop native profile capabilities", () => {
     expect(bare.cancelOpportunityExtraction).toBeUndefined();
   });
 
-  it("allows a job page address only from a host that fetches web pages", () => {
+  it("allows a job page address on every host, which all fetch an approved page", () => {
     const state = createFixtureReviewState();
     const portWith = (capabilities: readonly string[]) =>
       createBridgeReviewPort(
@@ -275,7 +275,7 @@ describe("desktop native profile capabilities", () => {
       );
 
     expect(portWith(["review.load", "source.add-url"]).jobPagesAllowed).toBeUndefined();
-    expect(portWith(["review.load"]).jobPagesAllowed).toBe(false);
+    expect(portWith(["review.load"]).jobPagesAllowed).toBeUndefined();
   });
 
   it("keeps a workspace open on a host that neither opens nor creates one", () => {

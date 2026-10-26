@@ -158,7 +158,7 @@ describe("the shared screens' commands over HTTP", () => {
     expect(result.value.applications[0]).not.toHaveProperty("chosenRun");
   });
 
-  it("creates an application from pasted text, and refuses a job page address before any request", async () => {
+  it("creates an application from pasted text, or from a job page address with its approval", async () => {
     const { port, calls } = portOver({
       "POST /v1/workspaces/{workspaceId}/applications": () => ledgerApplication,
     });
@@ -181,15 +181,54 @@ describe("the shared screens' commands over HTTP", () => {
       ok: true,
       value: { workspaceId, application: { id: "app-ledger" } },
     });
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(calls[0]?.input).toMatchObject({
       body: { name: "Example Ledger", jobText: "Platform Engineer" },
     });
-    expect(address).toMatchObject({
-      ok: false,
-      error: {
-        code: "operation-failed",
-        message: "The hosted service takes a job as pasted text or a file only.",
+    expect(address).toMatchObject({ ok: true, value: { application: { id: "app-ledger" } } });
+    expect(calls[1]?.input).toMatchObject({
+      body: { name: "Example", jobUrl: "https://jobs.example.test/1", jobUrlApproved: true },
+    });
+  });
+
+  it("extracts an application's job page by its kept approval, never by an address it names", async () => {
+    const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => ledgerApplication,
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job": () => ({
+        origin: "url",
+        text: null,
+        url: "https://jobs.example.test/1",
+      }),
+      "POST /v1/workspaces/{workspaceId}/opportunities": () => {
+        throw new Error("stop after the request");
+      },
+    });
+
+    await port.execute({
+      type: "opportunity.create",
+      input: {
+        workspaceId,
+        applicationId: "app-ledger",
+        sources: [{ id: "job", kind: "workspace-job-description", classification: "job-posting" }],
+        providerTransmissionApproved: true,
+      },
+    });
+
+    const created = calls.find(
+      ({ operation }) => operation === "POST /v1/workspaces/{workspaceId}/opportunities",
+    );
+    expect(created?.input).toMatchObject({
+      body: {
+        applicationId: "app-ledger",
+        sources: [
+          {
+            id: "job",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: "https://jobs.example.test/1",
+            approved: true,
+          },
+        ],
       },
     });
   });

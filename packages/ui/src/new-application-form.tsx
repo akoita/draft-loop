@@ -18,7 +18,7 @@ export interface NewApplicationFormViewProps {
   /** Why the host refused to create the application, shown in the form. */
   readonly errorMessage: string | null;
   readonly dialogRef?: RefObject<HTMLDivElement | null>;
-  /** False hides the job page address, leaving pasted text only. */
+  /** False hides the job page address, leaving pasted text or a file. */
   readonly jobPagesAllowed?: boolean;
   readonly onDraftChange: (draft: NewApplicationDraft) => void;
   readonly onSubmit: () => void;
@@ -220,7 +220,7 @@ export interface NewApplicationDialogProps {
   /** Opens the created application; the dialog closes itself first. */
   readonly onCreated: (application: ApplicationSummaryView) => void;
   readonly onClose: () => void;
-  /** False offers pasted text only, for a host that fetches no job page. */
+  /** False offers pasted text or a file, for a host that fetches no job page. */
   readonly jobPagesAllowed?: boolean;
 }
 
