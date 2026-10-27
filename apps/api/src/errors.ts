@@ -1,5 +1,6 @@
 import {
   CliUserError,
+  ExportRenderingQaError,
   HostedKnowledgeIntakeError,
   type HostedKnowledgeIntakeErrorCode,
   opportunityBriefNotFoundErrorMessage,
@@ -322,6 +323,20 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // A workspace not created yet; its message names a storage path, so a fixed one replaces it.
   if (error instanceof WorkspaceNotFoundError) {
     void reply.code(404).send(apiError("not_found", "No such workspace."));
+    return;
+  }
+  // A refused export: the log names the failed checks so the cause can be found; the answer keeps
+  // the person's message, which names at most undrawable code points (#1828).
+  if (error instanceof ExportRenderingQaError) {
+    request.log.warn(
+      {
+        format: error.format,
+        failedChecks: error.failedChecks,
+        undrawableCharacters: error.undrawableCharacters,
+      },
+      "export refused by rendering checks",
+    );
+    void reply.code(422).send(apiError("rejected", error.message));
     return;
   }
   // The application service's user errors are its stable, user-facing refusals, as is a run's

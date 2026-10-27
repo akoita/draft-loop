@@ -925,6 +925,7 @@ export {
   previewEvidenceMode,
 } from "./evidence-mode-preview.js";
 export { exportLengthWarningPrefix } from "./export-document.js";
+export { ExportRenderingQaError, failedRenderingQaChecks } from "./export-qa.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./history-compaction.js";
 export {
