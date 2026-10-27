@@ -376,3 +376,30 @@ describe("opportunity.cancel bridge drift", () => {
     expect(bridgeCapabilities).toContain("opportunity.cancel");
   });
 });
+
+describe("the job step while a job page is read (#1836)", () => {
+  const renderPage = (phase: JobRequirementsPhase) =>
+    renderToStaticMarkup(
+      <JobRequirementsExtractionView
+        phase={phase}
+        writingModel={writingModel}
+        jobFromUrl
+        disabled={false}
+        onOpen={() => undefined}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+  it("says it is reading the page, not waiting for the model", () => {
+    const html = renderPage({ kind: "running" });
+    expect(html).toContain("<strong>Reading the job page…</strong>");
+    expect(html).toContain("DraftLoop is fetching the job page you approved.");
+    expect(html).not.toContain("Waiting for");
+  });
+
+  it("names the extraction once the page is read and extraction runs in the background", () => {
+    const html = renderPage({ kind: "running", background: true });
+    expect(html).toContain("<strong>Extracting requirements…</strong>");
+  });
+});

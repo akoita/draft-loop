@@ -3,8 +3,16 @@ import {
   CliUserError,
   type OpportunitySourceInput,
 } from "@draft-loop/application";
-import { type IngestionResult, ingestUrl, type UrlFetcher } from "@draft-loop/ingestion";
+import {
+  type IngestionIssueCode,
+  type IngestionResult,
+  ingestUrl,
+  type UrlFetcher,
+} from "@draft-loop/ingestion";
 import { applicationPastedJobMaxLength } from "@draft-loop/schemas/application";
+import type { FastifyBaseLogger } from "fastify";
+
+import { jobPageFetchRefusal, jobPageHost } from "./job-page-fetch-issue.js";
 
 type IngestUrl = typeof ingestUrl;
 
@@ -27,6 +35,8 @@ export interface JobPageFetch {
   readonly page: () =>
     | { readonly text: string; readonly finalUrl: string; readonly fetchedAt: string }
     | undefined;
+  /** The fetcher's first issue code once the fetch has ended, or undefined. */
+  readonly issueCode: () => IngestionIssueCode | undefined;
 }
 
 /**
@@ -91,6 +101,7 @@ export function jobPageFetch(fetcher?: UrlFetcher): JobPageFetch {
       if (provenance === undefined || text === "") return undefined;
       return { text, finalUrl: provenance.finalUrl, fetchedAt: provenance.fetchedAt };
     },
+    issueCode: () => result?.issues[0]?.code,
   };
 }
 
@@ -101,9 +112,11 @@ export function jobPageFetch(fetcher?: UrlFetcher): JobPageFetch {
 export async function fetchApprovedJobPage(
   pageFetch: JobPageFetch,
   sources: readonly OpportunitySourceInput[],
+  log?: Pick<FastifyBaseLogger, "warn">,
 ): Promise<void> {
   const source = sources.find((candidate) => candidate.kind === "approved-url");
   if (source === undefined) return;
+  const started = Date.now();
   // The options the brief's intake fetches a job posting with.
   await pageFetch.ingest(source.url, {
     preferJobPostingData: true,
@@ -111,9 +124,13 @@ export async function fetchApprovedJobPage(
     approval: true,
   });
   if (pageFetch.page() === undefined) {
-    throw new CliUserError(
-      "DraftLoop could not fetch this job page. Check the address, or paste the job text instead.",
+    // The issue code, host and duration only: never the path, the query or the page (#1836).
+    const issueCode = pageFetch.issueCode() ?? "empty-content";
+    log?.warn(
+      { issueCode, host: jobPageHost(source.url), durationMs: Date.now() - started },
+      "job page fetch failed",
     );
+    throw new CliUserError(jobPageFetchRefusal(issueCode));
   }
 }
 
