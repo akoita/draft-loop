@@ -219,6 +219,11 @@ The lines are content-free (ADR 0011, D16):
   `WARNING` line with the `format`, the `failedChecks` (such as
   `visible-content` or `page-target`) and, for a PDF, the
   `undrawableCharacters` as `U+XXXX` code points.
+- **Each job page that cannot be read** logs one `job page fetch failed`
+  `WARNING` line with the fetcher's `issueCode` (such as `fetch-failure`,
+  `unsafe-url` or `fetch-timeout`), the address's `host` and the
+  `durationMs`, never its path, query or text. The person sees a message that
+  matches the code.
 
 The run's failure keeps the same fields. The API returns the call as the run's
 `lastError.failedCall` and a rejection's stage and diagnostics beside it, so

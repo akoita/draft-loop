@@ -266,23 +266,27 @@ export function JobRequirementsExtractionView({
           </div>
         </section>
       );
-    case "running":
+    case "running": {
+      // A job page is read first, so the step names that wait rather than the model's (#1836).
+      const readingPage = jobFromUrl && !fixtureMode && phase.background !== true;
       return (
         <div className="job-extraction" role="status">
           <div className="profile-generation-progress-row">
             <span className="profile-generation-spinner" aria-hidden="true" />
-            <strong>Extracting requirements…</strong>
+            <strong>{readingPage ? "Reading the job page…" : "Extracting requirements…"}</strong>
           </div>
           <p className="setup-note">
             {fixtureMode
               ? "Splitting the job text with local fixtures. Nothing is sent to a provider."
               : phase.background === true
                 ? pendingExtractionNote
-                : onCancelExtraction === undefined
-                  ? // A host that cannot stop the request does not offer Cancel, so the note does
-                    // not promise it (#1832).
-                    `Waiting for ${providerName} (${modelName}). This can take a minute.`
-                  : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
+                : readingPage
+                  ? `DraftLoop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
+                  : onCancelExtraction === undefined
+                    ? // A host that cannot stop the request does not offer Cancel, so the note does
+                      // not promise it (#1832).
+                      `Waiting for ${providerName} (${modelName}). This can take a minute.`
+                    : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
           </p>
           {onCancelExtraction === undefined || phase.background === true ? null : (
             <button
@@ -297,6 +301,7 @@ export function JobRequirementsExtractionView({
           )}
         </div>
       );
+    }
     case "done":
       if (phase.summary.requirementCount === 0) {
         return (

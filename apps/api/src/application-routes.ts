@@ -258,7 +258,7 @@ export function registerApplicationRoutes(
       // The application's approved job page is fetched once, now, and only that page (#1812).
       const fetchesPage = await assertApprovedJobPage({ service, root, applicationId, sources });
       const pageFetch = jobPageFetch(jobPageFetcher);
-      if (fetchesPage) await fetchApprovedJobPage(pageFetch, sources);
+      if (fetchesPage) await fetchApprovedJobPage(pageFetch, sources, request.log);
       const record = await service.createOpportunity({
         root,
         sources,
