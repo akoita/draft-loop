@@ -75,6 +75,14 @@ export async function assertApprovedJobPage(input: {
 }
 
 /**
+ * How long the API waits for each hop of a job page. A deployment makes the hop through the
+ * separate page fetcher, which bounds the site itself at 15 s and answers its own `fetch-timeout`;
+ * the wait covers that and the fetcher's cold start, so a scaled-to-zero fetcher does not refuse
+ * the page (#1853).
+ */
+export const jobPageHopTimeoutMs = 25_000;
+
+/**
  * One fetch of an approved job page through the pinned fetcher (#1811), whose result both the
  * brief's provenance and the application's kept text come from.
  */
@@ -85,6 +93,7 @@ export function jobPageFetch(fetcher?: UrlFetcher): JobPageFetch {
     fetched ??= ingestUrl(url, {
       ...options,
       ...(fetcher === undefined ? {} : { fetcher }),
+      timeoutMs: jobPageHopTimeoutMs,
       maxExtractedCharacters: applicationPastedJobMaxLength,
     }).then((value) => {
       result = value;

@@ -539,7 +539,9 @@ The owner manages a workspace's job applications through the API
   `@draft-loop/ingestion`'s pinned fetcher). A deployment's API has no route
   to the internet, so it makes each hop through `apps/page-fetcher` when
   `DRAFT_LOOP_PAGE_FETCHER_URL` is set (#1837), and still checks every
-  redirect and bounds the page itself. A page it cannot read is refused
+  redirect and bounds the page itself. It waits 25 s for each hop, past the
+  fetcher's own 15 s limit on the site and its cold start (#1853), so a slow
+  site is reported by the fetcher's own timeout. A page it cannot read is refused
   with 422 before a brief is saved, and the brief records the original and
   final address and the fetch time. The page's text is kept with the
   application for the worker's extraction and screened like pasted job text
