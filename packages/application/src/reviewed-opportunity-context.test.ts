@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
+import {
+  reviewedOpportunityContext,
+  reviewedOpportunitySnapshotFields,
+} from "./reviewed-opportunity-context.js";
 
 const record = (overrides: Record<string, unknown> = {}) =>
   ({
@@ -52,6 +55,16 @@ describe("reviewed opportunity context", () => {
         priority: "medium",
       },
     ]);
+  });
+
+  it("weights relevance over the brief's own requirements, not its responsibilities (#1835)", () => {
+    const reviewed = reviewedOpportunityContext(record());
+    expect(reviewed.scoredRequirementIds).toEqual(["extraction-requirement-solidity"]);
+    expect(reviewedOpportunitySnapshotFields(reviewed)).toEqual({
+      opportunityBriefReference: reviewed.opportunityBriefReference,
+      scoredRequirementIds: ["extraction-requirement-solidity"],
+    });
+    expect(reviewedOpportunitySnapshotFields(undefined)).toEqual({});
   });
 
   it("leaves a responsibility that repeats a requirement's id or text to that requirement", () => {

@@ -1163,7 +1163,9 @@ states the source: "Requirements: reviewed opportunity brief ID vN (R
 requirements)" or "Requirements: job description (unreviewed source units)".
 A reviewed brief's responsibilities are checked like requirements, at medium
 priority after the extracted requirements, so coverage and critique ask for
-them and the preflight count includes them. A responsibility that repeats a
+them and the preflight count includes them. The relevance score is weighted
+over the brief's own requirements only, so an unmet responsibility shows in
+coverage without holding back approval. A responsibility that repeats a
 requirement's ID or wording is left to that requirement.
 
 `start` accepts each brief or candidate-profile ID and version only as a pair.

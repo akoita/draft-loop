@@ -1,4 +1,5 @@
 import { maximumCanonicalCandidateProfileIdLength } from "./canonical-candidate-profile.js";
+import { contextSnapshotReferences } from "./context-snapshot-references.js";
 import type { ModelSelection, ModelSelectionInput } from "./model-selection.js";
 import {
   maximumModelLineageLength,
@@ -1177,6 +1178,8 @@ export interface ContextSnapshot {
   readonly opportunityBriefReference?: OpportunityBriefReference;
   /** Optional exact reviewed canonical candidate-profile version bound to this run. */
   readonly candidateProfileReference?: CanonicalCandidateProfileReference;
+  /** The requirements the relevance score counts; absent counts every requirement (#1835). */
+  readonly scoredRequirementIds?: readonly string[];
   readonly profileId?: ProfileId;
 }
 
@@ -1342,6 +1345,7 @@ export interface ContextSnapshotInput {
   readonly opportunityBriefReference?: OpportunityBriefReferenceInput;
   /** Optional exact reviewed canonical candidate-profile version to bind to this run. */
   readonly candidateProfileReference?: CanonicalCandidateProfileReferenceInput;
+  readonly scoredRequirementIds?: readonly string[];
   readonly profileId?: string;
 }
 
@@ -3976,26 +3980,6 @@ function normalizeSelectionLifecycleRevision(
   };
 }
 
-function normalizeOpportunityBriefReference(
-  reference: OpportunityBriefReferenceInput,
-): OpportunityBriefReference {
-  return {
-    briefId: reference.briefId.trim(),
-    version: reference.version,
-    checksum: reference.checksum.toLowerCase(),
-  };
-}
-
-function normalizeCanonicalCandidateProfileReference(
-  reference: CanonicalCandidateProfileReferenceInput,
-): CanonicalCandidateProfileReference {
-  return {
-    profileId: reference.profileId.trim(),
-    version: reference.version,
-    checksum: reference.checksum.toLowerCase(),
-  };
-}
-
 export function createCandidateKnowledgeSelectionSnapshot(
   input: CandidateKnowledgeSelectionSnapshotInput,
 ): CandidateKnowledgeSelectionSnapshot {
@@ -4448,20 +4432,7 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
             input.candidateKnowledgeSelection,
           ),
         }),
-    ...(input.opportunityBriefReference === undefined
-      ? {}
-      : {
-          opportunityBriefReference: normalizeOpportunityBriefReference(
-            input.opportunityBriefReference,
-          ),
-        }),
-    ...(input.candidateProfileReference === undefined
-      ? {}
-      : {
-          candidateProfileReference: normalizeCanonicalCandidateProfileReference(
-            input.candidateProfileReference,
-          ),
-        }),
+    ...contextSnapshotReferences(input),
     ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),
   };
 

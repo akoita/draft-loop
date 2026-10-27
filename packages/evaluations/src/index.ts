@@ -35,6 +35,11 @@ export type ReadinessScoreHistory =
 
 export interface ReadinessEvaluationContext {
   readonly requirements: readonly Pick<JobRequirement, "id" | "text" | "priority">[];
+  /**
+   * The requirements the relevance score is weighted over, such as a reviewed brief's own
+   * requirements without its responsibilities (#1835). Absent, every requirement counts.
+   */
+  readonly scoredRequirementIds?: readonly string[];
   readonly outputConstraints: Pick<
     OutputConstraints,
     "requiredSections" | "maxWords" | "maxCharacters" | "maxLength"
@@ -161,6 +166,16 @@ function wordCount(value: string): number {
 
 function clampScore(value: number): number {
   return Math.min(1, Math.max(0, Number(value.toFixed(6))));
+}
+
+/** The requirements relevance counts; a list that names none of them counts them all. */
+function scoredRequirements(
+  context: ReadinessEvaluationContext,
+): ReadinessEvaluationContext["requirements"] {
+  if (context.scoredRequirementIds === undefined) return context.requirements;
+  const scored = new Set(context.scoredRequirementIds);
+  const kept = context.requirements.filter(({ id }) => scored.has(id));
+  return kept.length === 0 ? context.requirements : kept;
 }
 
 function weightedCoverage(
@@ -392,7 +407,7 @@ export function evaluateReadiness(
   ) as readonly ReadinessFinding[];
   const coverage = weightedCoverage(
     artifact,
-    context.requirements,
+    scoredRequirements(context),
     explicitGapIds,
     new Set(options.coveredRequirementIds ?? []),
   );
@@ -417,7 +432,7 @@ export function evaluateReadiness(
       rationale:
         coverage.judged === 0
           ? `${coverage.covered} of ${coverage.total} requirements matched by deterministic coverage within individual blocks`
-          : `${coverage.covered} of ${coverage.total} requirements covered: ${coverage.covered - coverage.judged} by deterministic coverage within individual blocks and ${coverage.judged} by critic judgement of semantic candidates`,
+          : `${coverage.covered} of ${coverage.total} requirements covered: ${coverage.covered - coverage.judged} by deterministic coverage within individual blocks and ${coverage.judged} by critic judgement`,
     },
     {
       dimension: "evidence",

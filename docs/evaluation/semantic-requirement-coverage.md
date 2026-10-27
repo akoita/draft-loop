@@ -121,9 +121,13 @@ The rules apply in order:
    unknown block makes the verdict invalid. `satisfied` becomes `covered` with
    basis `judgement`, and `not-satisfied` becomes `uncovered`. The instructions
    are versioned as `coverage-judgement-v2`.
-5. **No model, no change.** Without an installed embedding model, assessments
-   match today's behaviour, and the run says semantic candidates were not
-   available.
+5. **No model, no hints.** Without an installed embedding model, or when the
+   semantic step fails, the critic still judges every lexically uncovered
+   requirement, with no candidate blocks (#1835).
+6. **Relevance counts the reviewed brief's requirements.** A run from a
+   reviewed brief weights the relevance score over the brief's own
+   requirements. Its responsibilities are still assessed and judged, but do
+   not lower the score (#1835).
 
 This works across jobs and languages: it adds no job-specific vocabulary, and
 the cross-language case is handled by the multilingual embedder plus the judge.

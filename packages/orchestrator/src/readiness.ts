@@ -285,6 +285,9 @@ function readinessEvaluation(
     artifact,
     {
       requirements: [...context.requirements],
+      ...(context.scoredRequirementIds === undefined
+        ? {}
+        : { scoredRequirementIds: [...context.scoredRequirementIds] }),
       outputConstraints: {
         ...context.outputConstraints,
         requiredSections: [...context.outputConstraints.requiredSections],

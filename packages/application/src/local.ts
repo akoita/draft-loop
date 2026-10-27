@@ -113,7 +113,10 @@ import { createOpportunityPersistenceService } from "./opportunity-persistence.j
 import { modelFacingContext } from "./provider-context.js";
 import { createProviderCriticAgent } from "./provider-critic-agent.js";
 import { timestamp } from "./response-execution.js";
-import { reviewedOpportunityContext } from "./reviewed-opportunity-context.js";
+import {
+  reviewedOpportunityContext,
+  reviewedOpportunitySnapshotFields,
+} from "./reviewed-opportunity-context.js";
 import {
   type RunAgents,
   type RunRecorders,
@@ -1178,9 +1181,7 @@ async function prepareInputs(
       ) ?? []),
     ],
     modelConfiguration: modelConfiguration(config),
-    ...(reviewedOpportunity === undefined
-      ? {}
-      : { opportunityBriefReference: reviewedOpportunity.opportunityBriefReference }),
+    ...reviewedOpportunitySnapshotFields(reviewedOpportunity),
     ...(candidateProfileReference === undefined ? {} : { candidateProfileReference }),
     ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
