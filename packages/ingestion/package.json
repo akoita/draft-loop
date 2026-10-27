@@ -14,6 +14,10 @@
     "./content-screening-corpus": {
       "types": "./src/content-screening-corpus.ts",
       "import": "./src/content-screening-corpus.ts"
+    },
+    "./remote-url-fetcher": {
+      "types": "./src/remote-url-fetcher.ts",
+      "import": "./src/remote-url-fetcher.ts"
     }
   },
   "files": [

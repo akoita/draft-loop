@@ -43,6 +43,7 @@
     { "path": "./packages/review-state" },
     { "path": "./apps/api" },
     { "path": "./apps/worker" },
+    { "path": "./apps/page-fetcher" },
     { "path": "./apps/cli" },
     { "path": "./apps/desktop" },
     { "path": "./apps/web" }

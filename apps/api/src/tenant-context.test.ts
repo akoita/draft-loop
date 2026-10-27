@@ -137,6 +137,23 @@ describe("registerTenantApplications", () => {
     expect(lines.join("\n")).not.toContain("kept");
   });
 
+  it("gives every tenant the deployment's job page fetcher, and none when it has none", async () => {
+    const jobPageFetcher = async () => new Response("");
+    const server = Fastify();
+    app = server;
+    const application = registerTenantApplications(server, {
+      budgetCeiling,
+      applicationFor: fakeApplication,
+      jobPageFetcher,
+    });
+    expect(application.jobPageFetcher).toBe(jobPageFetcher);
+    const without = registerTenantApplications(Fastify(), {
+      budgetCeiling,
+      applicationFor: fakeApplication,
+    });
+    expect(without.jobPageFetcher).toBeUndefined();
+  });
+
   it("fails closed when a route runs without a tenant", async () => {
     const { server, application } = await tenantServer();
 

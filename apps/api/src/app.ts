@@ -103,7 +103,10 @@ export interface ApiOptions {
     readonly contentScreening?: HostedContentScreening;
     /** The worker's extraction of live briefs; without it a live brief is left for the person. */
     readonly briefExtractions?: BriefExtractions;
-    /** Replaces the pinned job page fetcher, for tests; it must keep the same address checks. */
+    /**
+     * Replaces the pinned job page fetcher, such as with the separate page fetcher; it must keep
+     * the same address checks.
+     */
     readonly jobPageFetcher?: UrlFetcher;
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;

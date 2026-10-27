@@ -1,6 +1,6 @@
 # The hosted service for local development and tests, with no cloud account and no provider
 # calls (ADR 0011, D15): Postgres, a Cloud Storage emulator, Keycloak, the API in owner and in
-# sign-in mode, and one worker. Start it with `pnpm server:up`; see
+# sign-in mode, the page fetcher and one worker. Start it with `pnpm server:up`; see
 # docs/operations/local-server-stack.md. Every credential here is a fixed local-only value; a
 # deployment takes its own from its secrets.
 name: draft-loop-server
@@ -119,6 +119,23 @@ services:
       DRAFT_LOOP_RUNTIME_ROLE: draft_loop_app
     restart: "no"
 
+  # Fetches approved job pages for the API, as in a deployment, where the API has no route to the
+  # internet. It holds no database and no secret; here it needs no identity token.
+  page-fetcher:
+    build:
+      context: .
+      dockerfile: apps/page-fetcher/Dockerfile
+    image: draft-loop-page-fetcher:local
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - --eval
+        - 'fetch("http://127.0.0.1:8080/healthz").then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))'
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   api:
     build:
       context: .
@@ -129,9 +146,12 @@ services:
         condition: service_completed_successfully
       gcs-setup:
         condition: service_completed_successfully
+      page-fetcher:
+        condition: service_healthy
     environment:
       <<: *hosted-environment
       DRAFT_LOOP_API_OWNER_TOKEN: local-stack-owner-token-not-a-secret
+      DRAFT_LOOP_PAGE_FETCHER_URL: http://page-fetcher:8080
     ports:
       - "127.0.0.1:58080:8080"
     healthcheck:
@@ -157,6 +177,7 @@ services:
     environment:
       <<: *hosted-environment
       DRAFT_LOOP_API_OWNER_TOKEN: local-stack-owner-token-not-a-secret
+      DRAFT_LOOP_PAGE_FETCHER_URL: http://page-fetcher:8080
       DRAFT_LOOP_AUTH_MODE: oidc
       DRAFT_LOOP_OIDC_ISSUER: http://127.0.0.1:58081/realms/draft-loop-local
       DRAFT_LOOP_OIDC_ALLOW_HTTP: "1"

@@ -1,0 +1,23 @@
+{
+  "name": "@draft-loop/page-fetcher",
+  "version": "0.8.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/page-fetcher.ts",
+      "import": "./src/page-fetcher.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@draft-loop/ingestion": "workspace:*",
+    "tsx": "4.23.12"
+  }
+}
