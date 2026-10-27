@@ -7,9 +7,11 @@ import { createProviderApplicationPlanner, runPlansApplication } from "./applica
 import { applicationPlanAuthorInstructions } from "./application-plan-prompts.js";
 import {
   authorPromptSupportsApplicationPlan,
+  authorPromptSupportsTargetedRevision,
   createAuthorAdjudicationPrompt,
 } from "./author-adjudication.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
+import { singleStatementInstructions } from "./author-fact-prompts.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
@@ -159,6 +161,25 @@ describe("author prompt cli-author-v14", () => {
     expect(v14.systemPrompt).toContain("about 6 to 9 bullets in total");
     expect(v14.systemPrompt).toContain("Keep every role's title, employer and dates either way");
     expect(v13.systemPrompt).not.toContain("Write to the page target");
+  });
+});
+
+describe("author prompt cli-author-v15", () => {
+  it("is v14 plus the single-statement guidance", () => {
+    const v14 = createAuthorAdjudicationPrompt("cli-author-v14", undefined);
+    const v15 = createAuthorAdjudicationPrompt("cli-author-v15", undefined);
+    expect(v15.systemPrompt).toBe(`${v14.systemPrompt}${singleStatementInstructions}`);
+    expect(v15.providerInput).toEqual(v14.providerInput);
+    expect(authorPromptSupportsApplicationPlan("cli-author-v15")).toBe(true);
+    expect(authorPromptSupportsTargetedRevision("cli-author-v15")).toBe(true);
+    expect(v15.systemPrompt).toContain("State each fact once.");
+    expect(v15.systemPrompt).toContain("never restates an experience bullet");
+    expect(v15.systemPrompt).toContain("groups evidence from across the candidate's roles");
+    expect(v15.systemPrompt).toContain(
+      "When findings include code repeated-fact, its message names each section",
+    );
+    expect(v15.systemPrompt).toContain("unless pendingAdjudication rejects that finding");
+    expect(v14.systemPrompt).not.toContain("State each fact once.");
   });
 });
 

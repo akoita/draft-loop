@@ -214,6 +214,39 @@ describe("provider author agent requirement coverage", () => {
   });
 });
 
+describe("provider author agent repeated facts", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  it("sends a v15 revision the repeated-fact findings with the guidance to act on them", async () => {
+    const v15Context = {
+      ...context,
+      modelConfiguration: { author: { promptTemplateVersion: "cli-author-v15" } },
+    } as unknown as ContextSnapshot;
+    const repeated = {
+      code: "repeated-fact",
+      category: "quality",
+      severity: "warning",
+      message:
+        "the same fact is stated in Summary and Experience; state it once, in the section where it fits best",
+      claimId: "claim-previous",
+      sectionId: "section-previous",
+    } as const;
+    // The patch the v15 revision tries first is refused, so the full revision follows.
+    const { author, requests } = agent([{ edits: [] }, proposal(acceptedText)], v15Context);
+    await author.execute({
+      ...request("run-repeated", { currentArtifact: previousArtifact() }),
+      round: 2,
+      findings: [repeated],
+    });
+
+    expect(requests.length).toBeGreaterThan(0);
+    for (const sent of requests) {
+      expect((sent.input as { readonly findings?: unknown }).findings).toEqual([repeated]);
+      expect(sent.systemPrompt).toContain("When findings include code repeated-fact");
+    }
+  });
+});
+
 describe("provider author agent revision", () => {
   beforeEach(() => resetAuthorRevisionMemoryForTests());
 

@@ -2,6 +2,7 @@ import type { AuthorRequest } from "@draft-loop/orchestrator";
 
 import { applicationPlanAuthorInstructions } from "./application-plan-prompts.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
+import { singleStatementInstructions } from "./author-fact-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import type { AuthorRevision } from "./author-revision-memory.js";
@@ -205,6 +206,15 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v15 states each fact once and acts on repeated-fact findings (#1860).
+  "cli-author-v15": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${structuredRoleInstructions}${pageTargetLengthInstructions}${singleStatementInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -214,7 +224,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v14" : "cli-critic-v5";
+  return role === "author" ? "cli-author-v15" : "cli-critic-v5";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -305,7 +315,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v11" ||
     authorPromptTemplateVersion === "cli-author-v12" ||
     authorPromptTemplateVersion === "cli-author-v13" ||
-    authorPromptTemplateVersion === "cli-author-v14";
+    authorPromptTemplateVersion === "cli-author-v14" ||
+    authorPromptTemplateVersion === "cli-author-v15";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt
