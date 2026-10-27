@@ -245,6 +245,24 @@ export function profileReferencesMatchPreflight(
   );
 }
 
+/**
+ * The preset whose models the workspace already runs, or `null`. A host that keeps no saved pair
+ * (the hosted service) still starts the model dialog on that preset rather than an empty custom
+ * pair (#1834).
+ */
+export function presetReferencesMatchingPreflight(
+  preflight: DesktopReviewState["providerTransmissionPreflight"],
+  catalog: readonly ModelProfileCatalogEntry[] = modelProfileCatalog,
+): ModelProfileReferences | null {
+  for (const preset of modelProfilePresets) {
+    const references = modelProfilePresetReferences(preset);
+    if (references !== null && profileReferencesMatchPreflight(references, preflight, catalog)) {
+      return references;
+    }
+  }
+  return null;
+}
+
 export function reviewActionWithModelProfiles(
   action: ReviewAction,
   refs: ModelProfileReferences | null,

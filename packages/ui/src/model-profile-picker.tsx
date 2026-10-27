@@ -21,6 +21,16 @@ interface ModelProfilePickerProps {
   readonly workspaceId: string;
   readonly generation: number;
   readonly applied: ModelProfileReferences | null;
+  /**
+   * The preset the workspace's models already match, the starting choice while nothing is
+   * applied (#1834).
+   */
+  readonly matching?: ModelProfileReferences | null;
+  /**
+   * The host fixes the sign-in (the hosted service): presets it cannot run and the notes about
+   * personal sessions and the legacy path are left out.
+   */
+  readonly signInFixed?: boolean;
   readonly pendingSelectionMessage?: string;
   /** Why a saved pair is not used, shown while nothing is applied. */
   readonly savedPairNotice?: string | null;
@@ -60,6 +70,13 @@ function draftReferences(selection: DraftSelection): ModelProfileReferences | nu
   };
 }
 
+function startingDraft(start: ModelProfileReferences | null): DraftSelection {
+  return {
+    author: start === null ? "" : referenceToken(start.author),
+    critic: start === null ? "" : referenceToken(start.critic),
+  };
+}
+
 function presetForReferences(references: ModelProfileReferences | null): string {
   if (references === null) return "";
   return (
@@ -74,6 +91,8 @@ export function ModelProfilePicker({
   workspaceId,
   generation,
   applied,
+  matching = null,
+  signInFixed = false,
   pendingSelectionMessage,
   savedPairNotice = null,
   support,
@@ -84,16 +103,8 @@ export function ModelProfilePicker({
   onRetrySupport,
   isContextCurrent,
 }: ModelProfilePickerProps) {
-  const [draft, setDraft] = useState<DraftSelection>(() => ({
-    author:
-      applied === null
-        ? ""
-        : referenceToken({ id: applied.author.id, version: applied.author.version }),
-    critic:
-      applied === null
-        ? ""
-        : referenceToken({ id: applied.critic.id, version: applied.critic.version }),
-  }));
+  const start = applied ?? matching;
+  const [draft, setDraft] = useState<DraftSelection>(() => startingDraft(start));
   const [customMode, setCustomMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -102,20 +113,13 @@ export function ModelProfilePicker({
   const supportResult = currentSupport?.status === "ready" ? currentSupport.result : undefined;
   const currentDraftReferences = useMemo(() => draftReferences(draft), [draft]);
 
+  // Keyed by the pair, not the object: the matching preset is worked out again on every render.
+  const startKey = JSON.stringify(startingDraft(start));
   useEffect(() => {
-    setDraft({
-      author:
-        applied === null
-          ? ""
-          : referenceToken({ id: applied.author.id, version: applied.author.version }),
-      critic:
-        applied === null
-          ? ""
-          : referenceToken({ id: applied.critic.id, version: applied.critic.version }),
-    });
+    setDraft(JSON.parse(startKey) as DraftSelection);
     setCustomMode(false);
     setError(null);
-  }, [applied]);
+  }, [startKey]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -208,19 +212,21 @@ export function ModelProfilePicker({
           </button>
         )}
       </div>
-      <details className="model-profile-picker-notice">
-        <summary>
-          <span className="model-profile-picker-notice-line">
-            Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.
-          </span>{" "}
-          <span className="model-profile-picker-notice-more">More</span>
-        </summary>
-        <p>
-          Quality for real CVs has not been validated for these presets, and account availability is
-          not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never
-          switches your sign-in automatically.
-        </p>
-      </details>
+      {signInFixed ? null : (
+        <details className="model-profile-picker-notice">
+          <summary>
+            <span className="model-profile-picker-notice-line">
+              Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.
+            </span>{" "}
+            <span className="model-profile-picker-notice-more">More</span>
+          </summary>
+          <p>
+            Quality for real CVs has not been validated for these presets, and account availability
+            is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop
+            never switches your sign-in automatically.
+          </p>
+        </details>
+      )}
       {supportMessage === null ? null : (
         <p className="model-profile-picker-status" role="status">
           {supportMessage}
@@ -241,11 +247,13 @@ export function ModelProfilePicker({
           {modelProfileNotSupportedMessage}
         </p>
       ) : null}
-      {applied === null ? (
+      {applied === null && (matching === null || pendingSelectionMessage !== undefined) ? (
         <div className="model-profile-picker-applied">
           <p>
             {pendingSelectionMessage ??
-              "Applied next-run selection: workspace model settings (legacy path)."}
+              (signInFixed
+                ? "New runs use the workspace's current models."
+                : "Applied next-run selection: workspace model settings (legacy path).")}
           </p>
           {savedPairNotice === null ? null : (
             <p className="model-profile-picker-status" role="status">
@@ -259,6 +267,7 @@ export function ModelProfilePicker({
         checkedValue={showCustom ? customPresetValue : matchedPresetId}
         disabled={disabled || saving}
         support={supportResult}
+        hideUnsupported={signInFixed}
         onSelect={onPresetChange}
       />
       {showCustom ? (
