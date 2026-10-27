@@ -61,6 +61,22 @@ export function revisionRequirementCoverage(input: {
   readonly round: number;
   readonly executionHistory: readonly CriticExecutionView[];
 }): readonly RevisionRequirementCoverage[] | undefined {
+  const assessments = previousRoundCoverageAssessments(input);
+  if (assessments === undefined) return undefined;
+  const projected = projectRevisionCoverage(assessments);
+  return projected.length === 0 ? undefined : projected;
+}
+
+/**
+ * Every coverage assessment of the previous round's latest completed critic execution of the same
+ * run and context, on any basis; `undefined` in round 1 or when that critic judged nothing.
+ */
+export function previousRoundCoverageAssessments(input: {
+  readonly runId: string;
+  readonly contextSnapshotId: string;
+  readonly round: number;
+  readonly executionHistory: readonly CriticExecutionView[];
+}): readonly RequirementCoverageAssessment[] | undefined {
   const revisedRound = input.round - 1;
   if (revisedRound < 1) return undefined;
   const latestCritique = input.executionHistory
@@ -73,8 +89,5 @@ export function revisionRequirementCoverage(input: {
         execution.status === "completed",
     )
     .at(-1);
-  const assessments = latestCritique?.coverageJudgement?.assessments;
-  if (assessments === undefined) return undefined;
-  const projected = projectRevisionCoverage(assessments);
-  return projected.length === 0 ? undefined : projected;
+  return latestCritique?.coverageJudgement?.assessments;
 }
