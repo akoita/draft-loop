@@ -19,6 +19,25 @@ describe("onnx runtime loader", () => {
     expect(loaded).toBe(runtime);
   });
 
+  it("turns off the runtime's telemetry before loading it (#1854)", async () => {
+    const runtime = { InferenceSession: {} } as unknown as OnnxRuntimeModule;
+    const previous = process.env.ORT_DISABLE_TELEMETRY;
+    delete process.env.ORT_DISABLE_TELEMETRY;
+    try {
+      let seen: string | undefined;
+      await loadOnnxRuntimeUncached({
+        importer: async () => {
+          seen = process.env.ORT_DISABLE_TELEMETRY;
+          return runtime;
+        },
+      });
+      expect(seen).toBe("1");
+    } finally {
+      if (previous === undefined) delete process.env.ORT_DISABLE_TELEMETRY;
+      else process.env.ORT_DISABLE_TELEMETRY = previous;
+    }
+  });
+
   it("falls back to the packaged resources copy when the import fails", async () => {
     const runtime = { InferenceSession: {} } as unknown as OnnxRuntimeModule;
     const requested: string[] = [];
