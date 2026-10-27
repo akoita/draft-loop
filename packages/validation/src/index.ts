@@ -11,6 +11,7 @@ import type {
 import { findBulletFragment } from "./bullet-fragment.js";
 import { findBulletSeries } from "./bullet-series.js";
 import { findCandidateNarration } from "./candidate-narration.js";
+import { findRepeatedFacts } from "./repeated-fact.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
@@ -77,6 +78,7 @@ export type DeterministicValidationCode =
   | "max-characters-exceeded"
   | "max-length-exceeded"
   | "duplicate-content"
+  | "repeated-fact"
   | "unsupported-claim"
   | "unsupported-quantification"
   | "inconsistent-date"
@@ -410,6 +412,35 @@ function freezeResult(issues: readonly ValidationIssue[]): ValidationResult {
   });
 }
 
+/** "Summary, Core areas and Experience" */
+function sectionList(titles: readonly string[]): string {
+  return titles.length <= 1
+    ? (titles[0] ?? "")
+    : `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) ?? ""}`;
+}
+
+/**
+ * One warning per fact the draft states in more than one section, naming each of them, so the
+ * critic and the next revision can keep the fact in one place.
+ */
+function addRepeatedFactFindings(artifact: DraftArtifact, issues: ValidationIssue[]): void {
+  const titles = new Map(artifact.sections.map(({ id, title }) => [id, title]));
+  for (const fact of findRepeatedFacts(artifact.claims)) {
+    const claimId = fact.claimIds[1] ?? fact.claimIds[0];
+    const claim = artifact.claims.find(({ id }) => id === claimId);
+    addIssue(issues, {
+      code: "repeated-fact",
+      category: "quality",
+      severity: "warning",
+      message: `the same fact is stated in ${sectionList(
+        fact.sectionIds.map((id) => titles.get(id) ?? id),
+      )}; state it once, in the section where it fits best`,
+      ...(claimId === undefined ? {} : { claimId }),
+      ...(claim === undefined ? {} : { sectionId: claim.sectionId }),
+    });
+  }
+}
+
 /**
  * Run local, deterministic checks over a schema-validated draft artifact.
  * Evidence excerpts are used only for matching; neither source text nor claim
@@ -573,6 +604,8 @@ export function validateDraftArtifact(
       seenClaims.add(normalized);
     }
   }
+
+  addRepeatedFactFindings(artifact, issues);
 
   for (const claim of artifact.claims) {
     if (!claim.substantive) {

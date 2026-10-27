@@ -779,6 +779,16 @@ Resumed v13 and earlier runs keep their exact prompt. When an export names no
 template, a one-page run is drawn with Compact and any other with Modern, so the
 layout matches the length the author wrote to.
 
+### Each fact stated once (#1859)
+
+Deterministic validation adds one `repeated-fact` quality warning per fact the
+draft states in more than one section, naming each section ("the same fact is
+stated in Summary, Core areas and Experience"). Two substantive claims in
+different sections state the same fact when the shorter one has at least four
+content words and the longer one holds at least 80% of them, after dropping
+function words and plural or verb endings. Exact copies stay with the existing
+duplicate claim check. The warning never blocks approval.
+
 ### Stop and pause on findings (#1113)
 
 The `stable-convergence` score-delta rule is unchanged and still stops a run
