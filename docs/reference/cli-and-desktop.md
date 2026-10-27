@@ -377,7 +377,7 @@ applications:
   shrinks an older, large history file; see
   [Compacting run history](#compacting-run-history).
 
-Choosing an application card opens that application.
+Each application card's **Open** button, or its name, opens that application.
 
 #### Profile freshness
 
@@ -644,7 +644,9 @@ pinned under it.
   draft, with where it came from: the workspace's job file, the pasted text, or
   the chosen file as it reads now. A job added from a web page shows the
   approved address instead, because only the requirements extracted from the
-  page are kept; the Coverage tab lists them.
+  page are kept; the Coverage tab lists them. The setup steps leave the screen
+  once a run starts, so **Read the job** above the draft opens this tab. A
+  different job needs a new application.
 - **Run state.** While a run executes, the side panel shows its progress,
   timeline and Stop. A paused or interrupted run keeps Resume in the side
   panel, and a shared-lineage warning stays there too. The footer mirrors the

@@ -195,6 +195,16 @@ describe("Home dashboard", () => {
     );
   });
 
+  it("gives each application card a visible Open button (#1832)", () => {
+    const html = render();
+    expect(html).toMatch(
+      /<button class="button button-primary" type="button" aria-label="Open Staff Platform Engineer">Open<\/button>/u,
+    );
+    expect((html.match(/>Open<\/button>/gu) ?? []).length).toBe(
+      (html.match(/class="application-card"/gu) ?? []).length,
+    );
+  });
+
   it("keeps the whole application name in the card's title for a clamped long name", () => {
     const name = "Senior Staff Machine Learning Platform Engineer, Applied Research Infrastructure";
     const html = render({

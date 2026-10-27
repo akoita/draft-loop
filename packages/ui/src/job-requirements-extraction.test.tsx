@@ -157,6 +157,9 @@ describe("Extract requirements card states", () => {
 
   it("hides Cancel when the host cannot cancel, and outside a running extraction", () => {
     expect(render({ kind: "running" })).not.toContain("Cancel extraction");
+    // Nor does the note promise a Cancel that is not there (#1832).
+    expect(render({ kind: "running" })).not.toContain("Cancel to stop");
+    expect(render({ kind: "running" }, false, () => undefined)).toContain("Cancel to stop");
     expect(render({ kind: "idle" }, false, () => undefined)).not.toContain("Cancel extraction");
     expect(render({ kind: "done", summary: summarizeJobRequirements(record()) })).not.toContain(
       "Cancel extraction",

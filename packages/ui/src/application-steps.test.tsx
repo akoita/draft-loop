@@ -401,6 +401,8 @@ describe("ReviewWorkspace as three steps", () => {
     it("keeps replacing the source under the disclosure", () => {
       const job = renderJob(true);
       const disclosure = job.slice(job.indexOf("<summary>Replace the job description</summary>"));
+      // Folded until asked: the address was given when the application was created (#1832).
+      expect(job).toContain('<details class="setup-details"><summary>Replace the job description');
       expect(disclosure).toContain("Replace job description");
       expect(disclosure).toContain('aria-label="Target job description URL"');
       expect(job.indexOf("<summary>Replace the job description</summary>")).toBeLessThan(
