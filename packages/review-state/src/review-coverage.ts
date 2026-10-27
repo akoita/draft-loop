@@ -2,6 +2,7 @@ import { currentRoundCoverageJudgement } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 
 import {
+  type CoverageRequirementKind,
   maximumCoverageRequirementTextLength,
   type ReviewCoverageView,
 } from "@draft-loop/ui/coverage-contract";
@@ -51,5 +52,36 @@ export function reviewCoverage(
         rationale: assessment.rationale,
       };
     }),
+  };
+}
+
+/**
+ * The review state with each coverage assessment marked as a requirement or a responsibility, as
+ * the run recorded them, so the panel can count the two apart. A run without a reviewed brief
+ * records no kinds and keeps its coverage as it was.
+ */
+export function withCoverageKinds<
+  State extends { readonly coverage?: ReviewCoverageView | null | undefined },
+>(
+  state: State,
+  requirements:
+    | readonly { readonly id: string; readonly kind?: CoverageRequirementKind }[]
+    | undefined,
+): State {
+  const kinds = new Map<string, CoverageRequirementKind>();
+  for (const { id, kind } of requirements ?? []) {
+    if (kind !== undefined) kinds.set(id, kind);
+  }
+  const coverage = state.coverage;
+  if (coverage === null || coverage === undefined || kinds.size === 0) return state;
+  return {
+    ...state,
+    coverage: {
+      ...coverage,
+      assessments: coverage.assessments.map((assessment) => {
+        const kind = kinds.get(assessment.requirementId);
+        return kind === undefined ? assessment : { ...assessment, kind };
+      }),
+    },
   };
 }

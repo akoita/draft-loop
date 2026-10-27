@@ -18,6 +18,7 @@ import {
   reviewState,
 } from "@draft-loop/review-state";
 import { createApplicationRunRowsReader } from "@draft-loop/review-state/application-runs";
+import { withCoverageKinds } from "@draft-loop/review-state/review-coverage";
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { newestApplicationRunId } from "@draft-loop/ui/application-run-order";
@@ -324,28 +325,31 @@ export function registerReviewStateRoutes(
       const requirementTexts = new Map((requirements ?? []).map(({ id, text }) => [id, text]));
       const details = await runDetails(root, snapshot.runId, requirementTexts);
       return reviewStateView(
-        reviewState(
-          descriptor,
-          snapshot,
-          independentReviewView(review?.independentReview ?? undefined),
-          recordedDecisions(review, workspaceId),
-          await newestExportName(root, snapshot.runId),
-          setup,
-          preflight,
-          // The worker retries a failed step itself (#1763), so the screen never offers it.
-          { running: executingRunStates.has(snapshot.state), retriedByHost: true },
-          undefined,
-          requirementTexts,
-          details.evidenceMode,
-          details.authorInput,
-          // The application's runs for the run list and the comparison, as the desktop lists them.
-          scope === undefined
-            ? null
-            : await applicationRunRows(
-                root,
-                scope,
-                newestApplicationRunId(scope.runs) ?? undefined,
-              ),
+        withCoverageKinds(
+          reviewState(
+            descriptor,
+            snapshot,
+            independentReviewView(review?.independentReview ?? undefined),
+            recordedDecisions(review, workspaceId),
+            await newestExportName(root, snapshot.runId),
+            setup,
+            preflight,
+            // The worker retries a failed step itself (#1763), so the screen never offers it.
+            { running: executingRunStates.has(snapshot.state), retriedByHost: true },
+            undefined,
+            requirementTexts,
+            details.evidenceMode,
+            details.authorInput,
+            // The application's runs for the run list and the comparison, as the desktop lists them.
+            scope === undefined
+              ? null
+              : await applicationRunRows(
+                  root,
+                  scope,
+                  newestApplicationRunId(scope.runs) ?? undefined,
+                ),
+          ),
+          requirements,
         ),
       );
     },

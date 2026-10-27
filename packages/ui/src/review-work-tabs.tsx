@@ -14,6 +14,7 @@
 import { type JSX, type KeyboardEvent, useCallback, useRef, useState } from "react";
 import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
+import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
 import {
   type DesktopReviewState,
   reviewFindingSummary,
@@ -111,10 +112,16 @@ export function coverageTally(coverage: ReviewCoverageView): CoverageTally {
   return { covered, total, notCovered: total - covered };
 }
 
-/** The folded coverage list in one line, e.g. "8 of 17 covered · 9 not covered". */
+/**
+ * The folded coverage list in one line, e.g. "8 of 17 covered · 9 not covered", or for a run that
+ * also checked the brief's responsibilities, "0 of 9 requirements covered · 2 of 4
+ * responsibilities covered".
+ */
 export function coverageCollapsedSummary(coverage: ReviewCoverageView): string {
   const { covered, total, notCovered } = coverageTally(coverage);
   if (total === 0) return "No requirements assessed";
+  const tallies = coverageKindTallies(coverage);
+  if (tallies !== null) return coverageKindsSummary(tallies);
   return notCovered === 0
     ? `${covered} of ${total} covered`
     : `${covered} of ${total} covered · ${notCovered} not covered`;
@@ -136,8 +143,20 @@ export function findingsTabLabel(needsAction: number): ReviewWorkTabLabel {
   };
 }
 
-/** "Coverage · 8/17", read as "Coverage, 8 of 17 covered". */
+/**
+ * "Coverage · 8/17", read as "Coverage, 8 of 17 covered"; with responsibilities, "Coverage ·
+ * 0/9 + 2/4", read as "Coverage, 0 of 9 requirements and 2 of 4 responsibilities covered".
+ */
 export function coverageTabLabel(coverage: ReviewCoverageView): ReviewWorkTabLabel {
+  const tallies = coverageKindTallies(coverage);
+  if (tallies !== null) {
+    const { requirements, responsibilities } = tallies;
+    return {
+      id: "coverage",
+      label: `Coverage · ${requirements.covered}/${requirements.total} + ${responsibilities.covered}/${responsibilities.total}`,
+      ariaLabel: `Coverage, ${requirements.covered} of ${requirements.total} requirements and ${responsibilities.covered} of ${responsibilities.total} responsibilities covered`,
+    };
+  }
   const { covered, total } = coverageTally(coverage);
   return {
     id: "coverage",

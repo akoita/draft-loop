@@ -2637,6 +2637,11 @@ export interface OpportunityLatestBrief {
   readonly requirementCount: number;
   readonly criticalCount: number;
   /**
+   * The responsibilities a run checks next to the requirements, as coverage counts them. Relevance
+   * is scored on the requirements alone. Absent from a host that predates the count.
+   */
+  readonly responsibilityCount?: number;
+  /**
    * The service's own extraction of this version, as the hosted worker runs it: pending while it
    * waits or runs, failed after its retries. Absent when none is outstanding, as on the desktop.
    */
@@ -2722,6 +2727,7 @@ const opportunityLatestResultKeys = resultKeys<OpportunityLatestBrief>()([
   "status",
   "requirementCount",
   "criticalCount",
+  "responsibilityCount",
   "extraction",
 ]);
 
@@ -8021,12 +8027,28 @@ function normalizeOpportunityRecordResult(value: unknown): OpportunityRecordResu
   };
 }
 
+function opportunityEntryCount(value: unknown): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value > maximumOpportunityCollectionEntries
+  ) {
+    return invalidInput();
+  }
+  return value;
+}
+
 function normalizeOpportunityLatestResult(value: unknown): OpportunityLatestResult {
   if (value === null) return null;
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, opportunityLatestResultKeys)) return invalidInput();
   const requirementCount = result.requirementCount;
   const criticalCount = result.criticalCount;
+  const responsibilityCount =
+    result.responsibilityCount === undefined
+      ? undefined
+      : opportunityEntryCount(result.responsibilityCount);
   if (
     typeof requirementCount !== "number" ||
     !Number.isSafeInteger(requirementCount) ||
@@ -8046,6 +8068,7 @@ function normalizeOpportunityLatestResult(value: unknown): OpportunityLatestResu
     status: enumValue(result.status, ["draft", "reviewed"] as const),
     requirementCount,
     criticalCount,
+    ...(responsibilityCount === undefined ? {} : { responsibilityCount }),
     ...(result.extraction === undefined
       ? {}
       : { extraction: enumValue(result.extraction, ["pending", "failed"] as const) }),

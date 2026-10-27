@@ -6,13 +6,15 @@ export interface ReviewedRequirementsSelection {
   readonly version: number;
   readonly requirementCount: number;
   readonly criticalCount: number;
+  /** The responsibilities the run checks next to the requirements; 0 when the host has no count. */
+  readonly responsibilityCount: number;
 }
 
 /** DOM id of the extraction control on setup card 01, so the start blocker can scroll to it. */
 export const jobRequirementsExtractionId = "job-requirements-extraction";
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+function plural(count: number, noun: string, nouns = `${noun}s`): string {
+  return `${count} ${count === 1 ? noun : nouns}`;
 }
 
 /**
@@ -39,12 +41,30 @@ export function reviewedRequirementsSelection(
     version: latest.version,
     requirementCount: latest.requirementCount,
     criticalCount: latest.criticalCount,
+    responsibilityCount: latest.responsibilityCount ?? 0,
   };
 }
 
-/** "Using reviewed requirements: brief v3 · 18 requirements · 4 critical" */
+/**
+ * "9 requirements · 4 responsibilities": what a run from this brief checks. Coverage counts both;
+ * relevance is scored on the requirements alone, so the two are never summed into one number.
+ */
+export function reviewedRequirementsCounts(
+  selection: Pick<ReviewedRequirementsSelection, "requirementCount" | "responsibilityCount">,
+): string {
+  const requirements = plural(selection.requirementCount, "requirement");
+  return selection.responsibilityCount === 0
+    ? requirements
+    : `${requirements} · ${plural(selection.responsibilityCount, "responsibility", "responsibilities")}`;
+}
+
+/** "Using reviewed requirements: brief v3 · 18 requirements · 4 critical · 5 responsibilities" */
 export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelection): string {
-  return `Using reviewed requirements: brief v${selection.version} · ${plural(selection.requirementCount, "requirement")} · ${selection.criticalCount} critical`;
+  const responsibilities =
+    selection.responsibilityCount === 0
+      ? ""
+      : ` · ${plural(selection.responsibilityCount, "responsibility", "responsibilities")}`;
+  return `Using reviewed requirements: brief v${selection.version} · ${plural(selection.requirementCount, "requirement")} · ${selection.criticalCount} critical${responsibilities}`;
 }
 
 export const rawJobDescriptionLabel =

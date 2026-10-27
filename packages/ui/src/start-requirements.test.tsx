@@ -54,6 +54,7 @@ describe("reviewed requirements selection", () => {
       version: 3,
       requirementCount: 18,
       criticalCount: 4,
+      responsibilityCount: 0,
     });
     expect(reviewedRequirementsLabel(selection as never)).toBe(
       "Using reviewed requirements: brief v3 · 18 requirements · 4 critical",

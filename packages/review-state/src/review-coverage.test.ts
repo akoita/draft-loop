@@ -1,7 +1,8 @@
 import type { RunSnapshot } from "@draft-loop/orchestrator";
+import type { ReviewCoverageView } from "@draft-loop/ui/coverage-contract";
 import { describe, expect, it } from "vitest";
 
-import { reviewCoverage } from "./review-coverage.js";
+import { reviewCoverage, withCoverageKinds } from "./review-coverage.js";
 
 const summary = { judged: 1, satisfied: 1, notSatisfied: 0, invalid: 0, unanswered: 0 };
 
@@ -100,5 +101,39 @@ describe("reviewCoverage", () => {
     expect(
       reviewCoverage(snapshot([execution({ ...judgement("judged") })]))?.assessments[0],
     ).not.toHaveProperty("requirementText");
+  });
+});
+
+describe("withCoverageKinds", () => {
+  const coverage: ReviewCoverageView = {
+    instructionsVersion: null,
+    summary,
+    assessments: ["req-1", "resp-1", "other"].map((requirementId) => ({
+      requirementId,
+      status: "covered" as const,
+      basis: "judgement" as const,
+      evidence: [],
+      rationale: "Fictional.",
+    })),
+  };
+
+  it("marks each assessment with the kind the run recorded", () => {
+    const state = withCoverageKinds({ coverage }, [
+      { id: "req-1", kind: "requirement" },
+      { id: "resp-1", kind: "responsibility" },
+    ]);
+    expect(state.coverage.assessments.map((assessment) => assessment.kind)).toEqual([
+      "requirement",
+      "responsibility",
+      undefined,
+    ]);
+  });
+
+  it("leaves coverage alone without kinds or coverage", () => {
+    const state = { coverage };
+    expect(withCoverageKinds(state, [{ id: "req-1" }])).toBe(state);
+    expect(withCoverageKinds(state, undefined)).toBe(state);
+    const empty = { coverage: null };
+    expect(withCoverageKinds(empty, [{ id: "req-1", kind: "requirement" }])).toBe(empty);
   });
 });

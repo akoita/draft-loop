@@ -27,6 +27,13 @@ export const coverageBases = [
 ] as const;
 export type CoverageBasis = (typeof coverageBases)[number];
 
+/**
+ * What a run checked: one of the brief's requirements, which relevance is scored on, or one of
+ * its responsibilities, which coverage checks beside them.
+ */
+export const coverageRequirementKinds = ["requirement", "responsibility"] as const;
+export type CoverageRequirementKind = (typeof coverageRequirementKinds)[number];
+
 export interface CoverageEvidenceView {
   /** A block of the draft the assessment cites. */
   readonly blockId: string;
@@ -36,6 +43,8 @@ export interface CoverageAssessmentView {
   readonly requirementId: string;
   /** The job requirement as the run recorded it; absent when the run's context has no text. */
   readonly requirementText?: string;
+  /** Requirement or responsibility; absent for a run that started without a reviewed brief. */
+  readonly kind?: CoverageRequirementKind;
   readonly status: CoverageStatus;
   readonly basis: CoverageBasis;
   readonly evidence: readonly CoverageEvidenceView[];
@@ -80,6 +89,7 @@ const summaryKeys = exactKeys<CoverageSummaryView>()([
 const assessmentKeys = exactKeys<CoverageAssessmentView>()([
   "requirementId",
   "requirementText",
+  "kind",
   "status",
   "basis",
   "evidence",
@@ -180,11 +190,13 @@ function normalizeAssessment(value: unknown): CoverageAssessmentView | undefined
     raw.requirementText === undefined
       ? undefined
       : plainText(raw.requirementText, maximumCoverageRequirementTextLength, true);
+  const kind = raw.kind === undefined ? undefined : oneOf(raw.kind, coverageRequirementKinds);
   const status = oneOf(raw.status, coverageStatuses);
   const basis = oneOf(raw.basis, coverageBases);
   const rationale = plainText(raw.rationale, maximumRationaleLength, true);
   if (
     requirementId === undefined ||
+    (raw.kind !== undefined && kind === undefined) ||
     status === undefined ||
     basis === undefined ||
     rationale === undefined ||
@@ -205,6 +217,7 @@ function normalizeAssessment(value: unknown): CoverageAssessmentView | undefined
   return {
     requirementId,
     ...(requirementText === undefined ? {} : { requirementText }),
+    ...(kind === undefined ? {} : { kind }),
     status,
     basis,
     evidence,

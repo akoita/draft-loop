@@ -6,7 +6,10 @@ import { presetDisplayName } from "./model-profile-presentation.js";
 import type { ProviderRoute } from "./provider-routes.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import type { StartEvidencePreview } from "./start-evidence-preview.js";
-import type { ReviewedRequirementsSelection } from "./start-requirements-model.js";
+import {
+  type ReviewedRequirementsSelection,
+  reviewedRequirementsCounts,
+} from "./start-requirements-model.js";
 
 /** The action a confirmed Start dispatches, unchanged from what the trigger would have sent. */
 export type StartReviewAction = Extract<ReviewAction, { readonly type: "start" }>;
@@ -138,7 +141,7 @@ function requirementsValue(state: DesktopReviewState, context: StartConfirmation
   if (context.action.requirementsSource === "job-description") return chosenRawJobDescriptionValue;
   const reviewed = context.reviewedRequirements;
   if (reviewed !== null && reviewed !== undefined) {
-    return `Reviewed brief v${reviewed.version} · ${plural(reviewed.requirementCount, "requirement")}`;
+    return `Reviewed brief v${reviewed.version} · ${reviewedRequirementsCounts(reviewed)}`;
   }
   const selected = state.setup.reviewedOpportunity;
   if (selected !== null && selected !== undefined) return `Reviewed brief v${selected.version}`;

@@ -169,6 +169,7 @@ describe("latest opportunity brief discovery", () => {
         status: "draft",
         requirementCount: 3,
         criticalCount: 2,
+        responsibilityCount: 0,
       },
     });
     expect(JSON.stringify(latest)).not.toContain("Private requirement text");
