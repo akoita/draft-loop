@@ -14,11 +14,12 @@ import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
 /*
  * Plans the critic's coverage judgements for a run (#961).
  *
- * With an installed local embedding model, requirement assessments gain semantic candidates, and
- * every lexically uncovered requirement, with or without candidates, is sent to the critic, which
- * judges it against the whole draft (#1208). Without a model, or on any failure, the
- * planner returns `undefined` and the run behaves as it does without semantic coverage. The
- * deterministic validation of the critic step passes no explicit gaps, so none are passed here.
+ * Every lexically uncovered requirement is sent to the critic, which judges it against the whole
+ * draft inside its existing call (#1208). With an installed local embedding model, the
+ * assessments also gain semantic candidates as hints. Without a model, or when the semantic step
+ * fails, the requests carry no candidates rather than disappearing, so a requirement met in other
+ * words is still found (#1835). The deterministic validation of the
+ * critic step passes no explicit gaps, so none are passed here.
  */
 
 type OpenEmbedderOptions = Pick<RunSemanticRetrievalOptions, "tier" | "modelRoot">;
@@ -50,26 +51,32 @@ export function createRunCoverageJudgementPlanner(
 
   return {
     plan: async ({ artifact, context, signal }) => {
+      const baseline = assessRequirementCoverage(context.requirements, artifact);
+      const lexical = { assessments: baseline, requests: coverageJudgementRequestsFrom(baseline) };
       const modelTier = await readTier();
-      if (modelTier === undefined) return undefined;
+      if (modelTier === undefined) return lexical;
       const opened = await open({
         tier: modelTier,
         modelRoot: options.modelRoot ?? runEmbeddingModelRoot(),
       });
-      if (!opened.ok) return undefined;
-      const baseline = assessRequirementCoverage(context.requirements, artifact);
-      const candidates = await attachSemanticCoverageCandidates({
-        assessments: baseline,
-        requirements: context.requirements,
-        artifact,
-        embedder: opened.embedder,
-        ...(options.floor === undefined ? {} : { floor: options.floor }),
-        ...(signal === undefined ? {} : { signal }),
-      });
-      return {
-        assessments: candidates.assessments,
-        requests: coverageJudgementRequestsFrom(candidates.assessments),
-      };
+      if (!opened.ok) return lexical;
+      try {
+        const candidates = await attachSemanticCoverageCandidates({
+          assessments: baseline,
+          requirements: context.requirements,
+          artifact,
+          embedder: opened.embedder,
+          ...(options.floor === undefined ? {} : { floor: options.floor }),
+          ...(signal === undefined ? {} : { signal }),
+        });
+        return {
+          assessments: candidates.assessments,
+          requests: coverageJudgementRequestsFrom(candidates.assessments),
+        };
+      } catch (error) {
+        if (signal?.aborted === true) throw error;
+        return lexical;
+      }
     },
   };
 }

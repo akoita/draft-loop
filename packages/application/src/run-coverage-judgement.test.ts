@@ -99,12 +99,32 @@ describe("run coverage judgement planner", () => {
     expect(plan?.requests).toEqual([{ requirementId: "r-orchestration", candidateBlockIds: [] }]);
   });
 
-  it("returns undefined when the model is not installed", async () => {
+  it("still asks the critic about each uncovered requirement when the model is not installed (#1835)", async () => {
     const root = await temporaryRoot();
     const modelRoot = join(root, "no-models");
     const planner = createRunCoverageJudgementPlanner({ root, modelRoot, floor });
 
-    await expect(planner.plan({ artifact, context })).resolves.toBeUndefined();
+    await expect(planner.plan({ artifact, context })).resolves.toEqual({
+      assessments: expect.any(Array),
+      requests: [{ requirementId: "r-orchestration", candidateBlockIds: [] }],
+    });
+  });
+
+  it("falls back to requests without candidates when the semantic step fails", async () => {
+    const root = await temporaryRoot();
+    const failing: TextEmbedder = {
+      ...fakeEmbedder(),
+      embed: async () => {
+        throw new Error("embedding failed");
+      },
+    };
+    const open = async () => ({ ok: true as const, embedder: failing });
+    const planner = createRunCoverageJudgementPlanner({ root, modelRoot: root, open, floor });
+
+    await expect(planner.plan({ artifact, context })).resolves.toEqual({
+      assessments: expect.any(Array),
+      requests: [{ requirementId: "r-orchestration", candidateBlockIds: [] }],
+    });
   });
 
   it("opens the model tier saved in the workspace retrieval mode, even when lexical", async () => {
@@ -115,7 +135,10 @@ describe("run coverage judgement planner", () => {
     const open = vi.fn(async () => ({ ok: false as const, reason: "model-absent" as const }));
     const planner = createRunCoverageJudgementPlanner({ root, modelRoot: "models", open });
 
-    await expect(planner.plan({ artifact, context })).resolves.toBeUndefined();
+    await expect(planner.plan({ artifact, context })).resolves.toEqual({
+      assessments: expect.any(Array),
+      requests: [{ requirementId: "r-orchestration", candidateBlockIds: [] }],
+    });
 
     expect(open).toHaveBeenCalledWith({ tier, modelRoot: "models" });
   });
@@ -135,14 +158,17 @@ describe("run coverage judgement planner", () => {
     }
   });
 
-  it("is unavailable, not failing, when the retrieval setting is unreadable", async () => {
+  it("plans without candidates, not failing, when the retrieval setting is unreadable", async () => {
     const root = await temporaryRoot();
     await mkdir(join(root, ".draft-loop"), { recursive: true });
     await writeFile(join(root, ".draft-loop", "retrieval-mode.json"), "{not json", "utf8");
     const open = vi.fn();
     const planner = createRunCoverageJudgementPlanner({ root, open });
 
-    await expect(planner.plan({ artifact, context })).resolves.toBeUndefined();
+    await expect(planner.plan({ artifact, context })).resolves.toEqual({
+      assessments: expect.any(Array),
+      requests: [{ requirementId: "r-orchestration", candidateBlockIds: [] }],
+    });
     expect(open).not.toHaveBeenCalled();
   });
 

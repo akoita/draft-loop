@@ -87,12 +87,27 @@ describe("judged requirement coverage in readiness", () => {
       "0 of 3 requirements matched by deterministic coverage within individual blocks",
     );
     expect(relevance({ round: 1, coveredRequirementIds: ["requirement-1"] }).rationale).toBe(
-      "1 of 3 requirements covered: 0 by deterministic coverage within individual blocks and 1 by critic judgement of semantic candidates",
+      "1 of 3 requirements covered: 0 by deterministic coverage within individual blocks and 1 by critic judgement",
     );
   });
 
   it("matches today's result when no requirement is listed", () => {
     expect(evaluateReadiness(artifact, context, { round: 1, coveredRequirementIds: [] })).toEqual(
+      evaluateReadiness(artifact, context, { round: 1 }),
+    );
+  });
+
+  it("weights relevance over the scored requirements only (#1835)", () => {
+    const scored = { ...context, scoredRequirementIds: ["requirement-1", "requirement-3"] };
+    const options = { round: 1, coveredRequirementIds: ["requirement-1", "requirement-3"] };
+    const score = evaluateReadiness(artifact, scored, options).scores.find(
+      ({ dimension }) => dimension === "relevance",
+    );
+    expect(score?.score).toBe(1);
+    expect(score?.rationale).toContain("2 of 2 requirements covered");
+    // A list that names none of the requirements counts them all.
+    const unknown = { ...context, scoredRequirementIds: ["unknown-requirement"] };
+    expect(evaluateReadiness(artifact, unknown, { round: 1 })).toEqual(
       evaluateReadiness(artifact, context, { round: 1 }),
     );
   });

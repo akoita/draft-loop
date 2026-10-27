@@ -15,6 +15,20 @@ export interface ReviewedOpportunityContext {
     readonly version: number;
     readonly checksum: string;
   };
+  /** The brief's own requirements: relevance is weighted over them, not its responsibilities. */
+  readonly scoredRequirementIds: readonly string[];
+}
+
+/** The context snapshot fields a reviewed brief binds to the run; none without a brief. */
+export function reviewedOpportunitySnapshotFields(
+  reviewed: ReviewedOpportunityContext | undefined,
+): Partial<Pick<ReviewedOpportunityContext, "opportunityBriefReference" | "scoredRequirementIds">> {
+  return reviewed === undefined
+    ? {}
+    : {
+        opportunityBriefReference: reviewed.opportunityBriefReference,
+        scoredRequirementIds: reviewed.scoredRequirementIds,
+      };
 }
 
 /**
@@ -84,6 +98,7 @@ export function reviewedOpportunityContext(
       version: brief.version,
       checksum: record.checksum,
     },
+    scoredRequirementIds: brief.requirements.map(({ id }) => id),
   };
 }
 
