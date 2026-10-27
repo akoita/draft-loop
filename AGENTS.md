@@ -102,6 +102,10 @@ recorded limit in the same change so the reduction cannot regress.
 - `apps/worker` executes queued runs through the same application contracts,
   resuming each run from its last saved step. It holds no domain logic, and
   the desktop and the CLI never depend on it.
+- `apps/page-fetcher` is the hosted service's only runtime that reaches
+  public web servers: it makes one hop of an approved job page's fetch for the
+  API and holds no database, secret or candidate material. It depends only on
+  `packages/ingestion`, and the desktop and the CLI never depend on it.
 - `apps/web` is the hosted service's browser screen over the HTTP API, typed
   from the API's OpenAPI document. It holds no domain logic and never imports
   `apps/api` or server packages; the API serves its built files.

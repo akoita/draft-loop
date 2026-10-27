@@ -4,6 +4,7 @@ import {
   defaultHostedKnowledgeSourceMaxBytes,
   type RunBudgetCeiling,
 } from "@draft-loop/application";
+import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
@@ -22,8 +23,8 @@ import type { Caller } from "./request-auth.js";
 export type ApiApplication = NonNullable<ApiOptions["application"]>;
 
 /**
- * One tenant's application: every route's dependencies, bound to that tenant's data. A test's job
- * page fetcher is not a tenant's: tenants use the pinned one.
+ * One tenant's application: every route's dependencies, bound to that tenant's data. The job page
+ * fetcher is not a tenant's but the deployment's, in `TenantApplications`.
  */
 export type TenantApplication = Required<
   Omit<
@@ -76,6 +77,11 @@ export interface TenantApplications {
    * organisation to hold a plan or a ledger.
    */
   readonly entitlementsFor?: TenantEntitlementsFor;
+  /**
+   * How every tenant's approved job pages are fetched, such as through the separate page fetcher;
+   * the pinned fetcher in this process when unset.
+   */
+  readonly jobPageFetcher?: UrlFetcher;
 }
 
 export const defaultTenantCacheSize = 100;
@@ -214,5 +220,6 @@ export function registerTenantApplications(
     briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
     // Nor does it derive career profiles there.
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
+    ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };
 }

@@ -1,7 +1,7 @@
 # Local server stack
 
 The client-server version runs locally with Docker Compose: Postgres 16 with
-`pgvector`, a Cloud Storage emulator, the API and one worker. It needs no cloud
+`pgvector`, a Cloud Storage emulator, the API, the page fetcher and one worker. It needs no cloud
 account and makes no provider calls (ADR 0011, D15). The desktop and the CLI do
 not use it.
 
@@ -141,6 +141,7 @@ serves it with hot reload and forwards `/v1` to the API at
 | `api`      | `apps/api/Dockerfile`, the `/v1` HTTP API and the web screen at `/` | `http://127.0.0.1:58080`                                |
 | `api-oidc` | The same image in `oidc` mode, signing members in through Keycloak | `http://127.0.0.1:58082`                                |
 | `keycloak` | `keycloak/keycloak:26.7.5` in development mode, with the fictional realm | `http://127.0.0.1:58081`                                |
+| `page-fetcher` | `apps/page-fetcher/Dockerfile`, fetches approved job pages for the API | none                                    |
 | `worker`   | `apps/worker/Dockerfile`, executes queued runs | none                                                    |
 
 - Every published port listens on `127.0.0.1` only. The Postgres port is
@@ -159,15 +160,19 @@ serves it with hot reload and forwards `/v1` to the API at
   `compose.yaml` is a fixed local-only value; the API's owner token is
   `local-stack-owner-token-not-a-secret`.
 - Data lives in the named volumes `postgres-data` and `gcs-data`.
+- The API fetches approved job pages through `page-fetcher`, as a deployment
+  does, where the API has no route to the internet. The fetcher holds no
+  database, secret or candidate material; locally it takes no identity token.
 
 ## Images
 
-Both images are built from the repository root on `node:24.22.1-bookworm-slim`.
+The images are built from the repository root on `node:24.22.1-bookworm-slim`.
 Each installs only its app's production dependency graph from the lockfile and
 runs the TypeScript sources with `tsx`, so there is no separate build step. The
 API image is the exception for its web screen: a separate stage builds
 `apps/web` with Vite and copies only the built files in. The worker image also
-runs the migration job (`src/migrate.ts`).
+runs the migration job (`src/migrate.ts`). The page fetcher's image holds only
+`@draft-loop/ingestion` and its dependencies.
 
 The install happens in a separate build stage, so pnpm and its store stay out
 of the images. The embedding runtime (`onnxruntime-node`) ships native binaries
@@ -210,7 +215,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket                                        |
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters; also the operator's credential, the only one `/v1/operator/*` routes accept in either mode |
-| `PORT`                                  | API            | Listening port, default 8080                                    |
+| `PORT`                                  | API, page fetcher | Listening port, default 8080                                 |
 | `DRAFT_LOOP_AUTH_MODE`                  | API, worker    | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens, resolves each to an organisation member through the tenant directory, and keeps the owner token for operators |
 | `DRAFT_LOOP_OIDC_ISSUER`                | API            | In `oidc` mode, the provider's issuer, an https URL matched exactly |
 | `DRAFT_LOOP_OIDC_AUDIENCE`              | API            | In `oidc` mode, the audience the API's tokens carry             |
@@ -219,6 +224,7 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_OIDC_ALLOW_HTTP`            | API            | `1` accepts plain-http provider addresses, for the local stack only |
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`           | API            | Largest candidate source upload, default 10485760 (10 MiB), at most 30 MiB |
 | `DRAFT_LOOP_WEB_ROOT`                   | API            | The built web screen's directory, served at `/`; the image sets it |
+| `DRAFT_LOOP_PAGE_FETCHER_URL`           | API            | The page fetcher's origin; approved job pages go through it, with a Google identity token over https. Unset, the API fetches them itself |
 | `DRAFT_LOOP_WORKER_JOB`                 | API            | The worker's Cloud Run job, `projects/<p>/locations/<l>/jobs/<j>`, started after each queued run; unset locally |
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA`        | API, worker    | `true` lets runs, and the API's model screener for candidate sources, send approved material to providers; default `false` |
 | `DRAFT_LOOP_SCREENING`                  | API, worker    | Injection screening at intake: `off`, `rules` (the default) or `rules+model`; another value is a startup error. `rules+model` needs the Vertex settings under [Model routes](#model-routes). Unless it is `off`, a run on material with no stored result is refused (API) or held (worker). Give the worker the API's value; the worker screens nothing itself |

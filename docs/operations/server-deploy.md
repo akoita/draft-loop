@@ -48,6 +48,7 @@ Latest, so it never takes that place from a desktop release.
 | Part       | Runs as                                     | Notes                                                                                                     |
 | ---------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | API        | Cloud Run service                           | Scales to zero; serves its Cloud Run address behind the owner token in phase 1, and the web screen at `/` |
+| Page fetcher | Cloud Run service, internal ingress       | Fetches approved job pages for the API; no database, secret or candidate material                       |
 | Worker     | Cloud Run job                               | Drains the queue, then exits (D4)                                                                         |
 | Migrations | Cloud Run job, from the worker image        | Runs before each deploy as the schema owner                                                               |
 | Database   | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only, backups and point-in-time recovery                                                       |
@@ -58,9 +59,15 @@ The owner opens the web screen at the API's address and signs in with the
 owner token from Secret Manager. The screen keeps the token in the browser tab
 until it closes; sign-in through the identity provider replaces it in phase 2.
 
-Each part has its own service account with only the access it needs. The
-worker may reach Google APIs and the OpenAI EU endpoint and nothing else; the
-API has no internet egress unless the model screener is on (see Settings).
+Each part has its own service account with only the access it needs:
+
+- **The worker** may reach Google APIs and the OpenAI EU endpoint and nothing
+  else.
+- **The API** has no internet egress. It reaches Google APIs and the page
+  fetcher, and the model screener when it is on (see Settings).
+- **The page fetcher** is the only part that reaches public web servers, on
+  port 443 only and never a private address. Its service account holds no
+  role, and only the API's identity may call it.
 
 ## Settings
 
@@ -83,6 +90,12 @@ sets them from its infrastructure. Unlike the local stack, it:
   `DRAFT_LOOP_REQUIRE_CONSENT=false` is also set;
 - gives the worker the same `DRAFT_LOOP_SCREENING` as the API, so a run on
   material with no stored screening result is held there as the API refuses it;
+- gives the API `DRAFT_LOOP_PAGE_FETCHER_URL`, the page fetcher's address, so
+  approved job pages go through it (#1837). Each call carries a Google identity
+  token for that address from the metadata server, which Cloud Run checks, so
+  no key exists. The fetcher makes one hop per call and returns redirects, so
+  the API's intake still checks every address, bounds the page and extracts
+  its text;
 - leaves `DRAFT_LOOP_SCREENING` at its default, `rules`, or sets `rules+model`
   on the API. The model screener calls Claude Haiku on the EU Vertex route with
   the API's own identity, so the API needs the Vertex settings, permission to
@@ -223,7 +236,8 @@ The lines are content-free (ADR 0011, D16):
   `WARNING` line with the fetcher's `issueCode` (such as `fetch-failure`,
   `unsafe-url` or `fetch-timeout`), the address's `host` and the
   `durationMs`, never its path, query or text. The person sees a message that
-  matches the code.
+  matches the code. The page fetcher logs one `page fetch` line per hop with
+  the same `host`, its `outcome` and the page's `status`.
 
 The run's failure keeps the same fields. The API returns the call as the run's
 `lastError.failedCall` and a rejection's stage and diagnostics beside it, so

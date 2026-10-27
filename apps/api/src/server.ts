@@ -12,6 +12,7 @@ import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
+import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
@@ -55,7 +56,14 @@ const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
   logger: cloudLoggingOptions(),
-  tenants: hosted.tenants,
+  tenants: {
+    ...hosted.tenants,
+    // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself
+    // has no route to the internet there.
+    ...(config.pageFetcherUrl === undefined
+      ? {}
+      : { jobPageFetcher: hostedJobPageFetcher({ endpoint: config.pageFetcherUrl }) }),
+  },
   ...(directory === undefined ? {} : { directory }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
 });

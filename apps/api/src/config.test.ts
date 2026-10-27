@@ -50,6 +50,27 @@ describe("readApiConfig", () => {
     ).toThrow(ApiConfigError);
   });
 
+  it("reads the page fetcher's origin, and refuses anything else", () => {
+    const read = (url: string) =>
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken, DRAFT_LOOP_PAGE_FETCHER_URL: url });
+    expect(read("https://page-fetcher.example.test").pageFetcherUrl).toBe(
+      "https://page-fetcher.example.test",
+    );
+    expect(read("http://page-fetcher:8080/").pageFetcherUrl).toBe("http://page-fetcher:8080/");
+    expect(
+      readApiConfig({ DRAFT_LOOP_API_OWNER_TOKEN: ownerToken }).pageFetcherUrl,
+    ).toBeUndefined();
+    for (const url of [
+      "page-fetcher:8080",
+      "ftp://page-fetcher.example.test",
+      "https://page-fetcher.example.test/v1/fetch",
+      "https://page-fetcher.example.test/?a=1",
+      "https://user:pass@page-fetcher.example.test",
+    ]) {
+      expect(() => read(url)).toThrow(ApiConfigError);
+    }
+  });
+
   it.each(["0", "65536", "80a", ""])("refuses port %j", (port) => {
     expect(() => readApiConfig({ PORT: port, DRAFT_LOOP_API_OWNER_TOKEN: ownerToken })).toThrow(
       ApiConfigError,

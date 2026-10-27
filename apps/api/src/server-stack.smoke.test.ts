@@ -7,6 +7,11 @@ import { describe, expect, it } from "vitest";
  * API only: nothing is seeded in the database or the bucket.
  */
 const apiUrl = process.env.DRAFT_LOOP_TEST_API_URL;
+/**
+ * A small public page the deployment's smoke reads as a job page; unset, that step is skipped. A
+ * deployment's API reaches the internet only through the page fetcher (#1837).
+ */
+const jobPageUrl = process.env.DRAFT_LOOP_TEST_JOB_PAGE_URL;
 
 const career =
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n";
@@ -17,7 +22,14 @@ interface ResponseBody {
   readonly runId: string;
   readonly state: string;
   readonly round: number;
-  readonly brief: { readonly id: string; readonly version: number };
+  readonly brief: {
+    readonly id: string;
+    readonly version: number;
+    readonly sources?: readonly {
+      readonly status: string;
+      readonly provenance?: { readonly kind: string };
+    }[];
+  };
   readonly run: { readonly state: string; readonly round: number };
   readonly draft: { readonly sections: readonly unknown[] } | null;
   readonly findings: readonly {
@@ -227,4 +239,36 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     });
     await approveAndDownload(begun.body.runId);
   }, 120_000);
+
+  it.runIf(jobPageUrl !== undefined)(
+    "reads an approved job page through the page fetcher",
+    async () => {
+      const application = await send("POST", `${workspacePath}/applications`, {
+        name: `Job page ${suffix}`,
+        jobUrl: jobPageUrl,
+        jobUrlApproved: true,
+      });
+      expect(application.status).toBe(201);
+      const created = await send("POST", `${workspacePath}/opportunities`, {
+        applicationId: application.body.id,
+        sources: [
+          {
+            id: "posting",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: jobPageUrl,
+            approved: true,
+          },
+        ],
+      });
+      expect(created.status).toBe(201);
+      expect(created.body.brief.sources).toEqual([
+        expect.objectContaining({
+          status: "available",
+          provenance: expect.objectContaining({ kind: "approved-url" }),
+        }),
+      ]);
+    },
+    60_000,
+  );
 });

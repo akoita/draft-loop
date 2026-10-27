@@ -16,6 +16,8 @@ import {
   type UrlFetcher,
   type UrlHostnameResolver,
 } from "./pinned-url-fetcher.js";
+import { RemoteFetchError } from "./remote-url-fetcher.js";
+import { maxUrlResponseBytes } from "./url-limits.js";
 
 export {
   type CandidateEvidenceKindDetection,
@@ -265,7 +267,6 @@ const maxBinaryBytes = 32 * 1024 * 1024;
 const maxExtractedCharacters = 2_000_000;
 const maxUrlRedirects = 5;
 const maxUrlTimeoutMs = 30_000;
-const maxUrlResponseBytes = 4 * 1024 * 1024;
 const maxDirectoryDepth = 32;
 const maxDirectoryScannedEntries = 1024;
 const maxDirectoryAcceptedFiles = 256;
@@ -1914,7 +1915,8 @@ export async function ingestUrl(
         source: null,
         issues: [
           urlIssue(
-            error instanceof UrlTimeoutError
+            error instanceof UrlTimeoutError ||
+              (error instanceof RemoteFetchError && error.code === "fetch-timeout")
               ? "fetch-timeout"
               : error instanceof UnsafeUrlAddressError
                 ? "unsafe-url"

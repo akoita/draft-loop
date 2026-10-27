@@ -22,6 +22,8 @@ export interface ApiConfig {
   readonly workerJob?: string;
   /** The built web screen's directory, served at `/`; the image sets it. */
   readonly webRoot?: string;
+  /** The separate page fetcher job pages are fetched through; the API fetches them itself when unset. */
+  readonly pageFetcherUrl?: string;
 }
 
 export class ApiConfigError extends Error {
@@ -54,6 +56,12 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
   if (webRoot !== "" && !isAbsolute(webRoot)) {
     throw new ApiConfigError("DRAFT_LOOP_WEB_ROOT must be an absolute directory path.");
   }
+  const pageFetcherUrl = env.DRAFT_LOOP_PAGE_FETCHER_URL ?? "";
+  if (pageFetcherUrl !== "" && !isServiceOrigin(pageFetcherUrl)) {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_PAGE_FETCHER_URL must be an http or https origin, with no path, query or credentials.",
+    );
+  }
   return {
     host: env.DRAFT_LOOP_API_HOST ?? "0.0.0.0",
     port,
@@ -61,7 +69,27 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
     auth: readAuthConfig(env),
     ...(workerJob === "" ? {} : { workerJob }),
     ...(webRoot === "" ? {} : { webRoot }),
+    ...(pageFetcherUrl === "" ? {} : { pageFetcherUrl }),
   };
+}
+
+/** An http or https origin such as `https://fetcher.example`, with at most a trailing slash. */
+function isServiceOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      url.username === "" &&
+      url.password === "" &&
+      url.pathname === "/" &&
+      url.search === "" &&
+      url.hash === "" &&
+      !value.endsWith("?") &&
+      !value.endsWith("#")
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** A client id or audience: printable, with no whitespace. */

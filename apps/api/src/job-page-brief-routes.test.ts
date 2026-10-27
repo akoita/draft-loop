@@ -9,7 +9,11 @@ import {
   type RecordApplicationJobPageCommand,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
-import { createPinnedUrlFetcher, type PinnedUrlFetcherOptions } from "@draft-loop/ingestion";
+import {
+  createPinnedUrlFetcher,
+  type PinnedUrlFetcherOptions,
+  type UrlFetcher,
+} from "@draft-loop/ingestion";
 import type { ApplicationJobSource } from "@draft-loop/schemas/application";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import type {
@@ -22,6 +26,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApi } from "./app.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const authorization = `Bearer ${ownerToken}`;
@@ -84,7 +89,9 @@ function scriptedScreening(): HostedContentScreening {
   };
 }
 
-async function api(options: { readonly addresses?: readonly string[] } = {}) {
+async function api(
+  options: { readonly addresses?: readonly string[]; readonly jobPageFetcher?: UrlFetcher } = {},
+) {
   let jobSource: ApplicationJobSource = { kind: "approved-url", url: pageUrl, approved: true };
   const briefs = new Map<string, OpportunityBriefVersionRecord>();
   const order: string[] = [];
@@ -162,7 +169,9 @@ async function api(options: { readonly addresses?: readonly string[] } = {}) {
       monthUsage: async () => [],
       contentScreening: scriptedScreening(),
       briefExtractions: extractions,
-      jobPageFetcher: createPinnedUrlFetcher({ resolveHostname, request: server.request }),
+      jobPageFetcher:
+        options.jobPageFetcher ??
+        createPinnedUrlFetcher({ resolveHostname, request: server.request }),
     },
   });
   const inject = app.inject.bind(app);
@@ -287,5 +296,72 @@ describe("an application from an approved job page", () => {
       await app?.close();
       app = undefined;
     }
+  });
+
+  it("fetches through the separate page fetcher with an identity token for its address", async () => {
+    const calls: { url: string; authorization: string | null; body?: string }[] = [];
+    const fetcherEndpoint = "https://page-fetcher.example.test";
+    const stub: typeof fetch = async (input, init) => {
+      const url = String(input);
+      const headers = new Headers(init?.headers);
+      if (url.startsWith("http://metadata.google.internal/")) {
+        expect(headers.get("Metadata-Flavor")).toBe("Google");
+        calls.push({ url, authorization: null });
+        return new Response("identity-token\n");
+      }
+      calls.push({
+        url,
+        authorization: headers.get("authorization"),
+        body: String(init?.body),
+      });
+      return new Response(fixturePage, {
+        headers: {
+          "draft-loop-upstream-status": "200",
+          "draft-loop-upstream-content-type": "text/html; charset=utf-8",
+        },
+      });
+    };
+    const { extract, recordApplicationJobPage, requests } = await api({
+      jobPageFetcher: hostedJobPageFetcher({ endpoint: fetcherEndpoint, fetch: stub }),
+    });
+
+    const created = await extract();
+
+    expect(created.status).toBe(201);
+    expect(requests).toEqual([]);
+    expect(calls).toEqual([
+      {
+        url: `http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=${encodeURIComponent(fetcherEndpoint)}`,
+        authorization: null,
+      },
+      {
+        url: `${fetcherEndpoint}/v1/fetch`,
+        authorization: "Bearer identity-token",
+        body: JSON.stringify({ url: pageUrl }),
+      },
+    ]);
+    expect(recordApplicationJobPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: expect.objectContaining({ text: expect.stringContaining("Example Ledger") }),
+      }),
+    );
+  });
+
+  it("refuses with the fetcher's reason when the page fetcher cannot read the page", async () => {
+    const { extract, recordApplicationJobPage } = await api({
+      jobPageFetcher: hostedJobPageFetcher({
+        endpoint: "http://page-fetcher:8080",
+        fetch: async (input) => {
+          expect(String(input)).toBe("http://page-fetcher:8080/v1/fetch");
+          return Response.json({ code: "unsafe-url" }, { status: 422 });
+        },
+      }),
+    });
+
+    const refused = await extract();
+
+    expect(refused.status).toBe(422);
+    expect(refused.body.error.message).toMatch(/only fetches public https pages/u);
+    expect(recordApplicationJobPage).not.toHaveBeenCalled();
   });
 });
