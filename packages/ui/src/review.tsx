@@ -1225,9 +1225,12 @@ export function ReviewWorkspace({
   const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
-  const findingDecisionsLocked = !approvalOpen || findingDecisionPending;
+  // An approved run shows its finding decisions as they were recorded; the host refuses new ones.
+  const findingDecisionsOpen =
+    approvalOpen && state.state !== "approved" && state.state !== "exported";
+  const findingDecisionsLocked = !findingDecisionsOpen || findingDecisionPending;
   const bulkDecisionAvailable =
-    approvalOpen &&
+    findingDecisionsOpen &&
     onBulkFindingDecision !== undefined &&
     findingFilter !== "resolved" &&
     filteredFindings.some(isUnresolvedFinding);
