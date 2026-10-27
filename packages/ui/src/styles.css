@@ -8994,3 +8994,50 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .workspace-setup-card > .button {
   justify-self: start;
 }
+
+/* Phones: the review is one full-width column (#1833). The rail becomes a bar across the top, the
+   page and the paper keep narrow margins, and the docked footer with its export spans the window. */
+@media (max-width: 640px) {
+  .app-frame {
+    flex-direction: column;
+  }
+
+  .side-rail {
+    flex-direction: row;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .rail-mark {
+    margin-bottom: 0;
+    margin-right: var(--space-2);
+  }
+
+  .main-column {
+    padding-inline: var(--space-3);
+  }
+
+  /* The run's facts go under its name rather than squeezing beside it. */
+  .spine {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "identity"
+      "meta"
+      "loop";
+  }
+
+  .spine-meta {
+    justify-content: flex-start;
+  }
+
+  .sheet {
+    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  }
+
+  .gate-action-bar {
+    left: 0;
+  }
+}
