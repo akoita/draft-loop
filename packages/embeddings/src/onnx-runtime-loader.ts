@@ -35,6 +35,15 @@ function defaultResourceLoader(resourcesPath: string): unknown {
 }
 
 /**
+ * Turns off onnxruntime's telemetry, which on Linux uploads usage events to
+ * Microsoft over HTTPS (#1854). The runtime reads this variable when it starts,
+ * so it is set before every load, on every host.
+ */
+function disableOnnxRuntimeTelemetry(): void {
+  process.env.ORT_DISABLE_TELEMETRY = "1";
+}
+
+/**
  * Loads `onnxruntime-node`, falling back to the copy that packaged desktop
  * builds ship under `process.resourcesPath` (the same way better-sqlite3 is
  * shipped). The result is not cached here; use `loadOnnxRuntime`.
@@ -42,6 +51,7 @@ function defaultResourceLoader(resourcesPath: string): unknown {
 export async function loadOnnxRuntimeUncached(
   options: OnnxRuntimeLoaderOptions = {},
 ): Promise<OnnxRuntimeModule> {
+  disableOnnxRuntimeTelemetry();
   const importer = options.importer ?? (() => import("onnxruntime-node"));
   try {
     return unwrap(await importer());
