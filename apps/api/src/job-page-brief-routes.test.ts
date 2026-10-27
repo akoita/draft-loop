@@ -367,6 +367,36 @@ describe("an application from an approved job page", () => {
     ]);
   });
 
+  it("waits past the page fetcher's own limit and a cold start for a slow hop (#1853)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let called: () => void = () => undefined;
+      const fetching = new Promise<void>((resolve) => {
+        called = resolve;
+      });
+      const { extract } = await api({
+        jobPageFetcher: () =>
+          new Promise((resolve) => {
+            setTimeout(
+              () =>
+                resolve(new Response(fixturePage, { headers: { "content-type": "text/html" } })),
+              14_000,
+            );
+            called();
+          }),
+      });
+
+      const pending = extract();
+      await fetching;
+      await vi.advanceTimersByTimeAsync(14_000);
+      const created = await pending;
+
+      expect(created.status, JSON.stringify(created.body)).toBe(201);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refuses with the fetcher's reason when the page fetcher cannot read the page", async () => {
     const { extract, recordApplicationJobPage } = await api({
       jobPageFetcher: hostedJobPageFetcher({
