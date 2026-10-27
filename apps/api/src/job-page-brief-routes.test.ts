@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { readFile } from "node:fs/promises";
 import type { IncomingMessage } from "node:http";
 import { Readable } from "node:stream";
 import {
@@ -345,6 +346,25 @@ describe("an application from an approved job page", () => {
         page: expect.objectContaining({ text: expect.stringContaining("Example Ledger") }),
       }),
     );
+  });
+
+  it("makes a brief from the deployment smoke's job page, served as plain text", async () => {
+    // The deploy smoke reads this file at the tagged commit through the real page fetcher.
+    const page = await readFile(new URL("../fixtures/smoke-job-page.txt", import.meta.url), "utf8");
+    const { extract } = await api({
+      jobPageFetcher: async () =>
+        new Response(page, { headers: { "content-type": "text/plain; charset=utf-8" } }),
+    });
+
+    const created = await extract();
+
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    expect(created.body.brief.sources).toEqual([
+      expect.objectContaining({
+        status: "available",
+        provenance: expect.objectContaining({ kind: "approved-url" }),
+      }),
+    ]);
   });
 
   it("refuses with the fetcher's reason when the page fetcher cannot read the page", async () => {

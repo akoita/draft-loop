@@ -8,8 +8,9 @@ import { describe, expect, it } from "vitest";
  */
 const apiUrl = process.env.DRAFT_LOOP_TEST_API_URL;
 /**
- * A small public page the deployment's smoke reads as a job page; unset, that step is skipped. A
- * deployment's API reaches the internet only through the page fetcher (#1837).
+ * A public job page the deployment's smoke reads; unset, that step is skipped. A deployment's API
+ * reaches the internet only through the page fetcher (#1837). The page needs enough job text for a
+ * brief, as `fixtures/smoke-job-page.txt` at the deployed commit has.
  */
 const jobPageUrl = process.env.DRAFT_LOOP_TEST_JOB_PAGE_URL;
 
@@ -261,7 +262,8 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
           },
         ],
       });
-      expect(created.status).toBe(201);
+      // The refusal's message names the cause: an unreachable page, or too little job text.
+      expect(created.status, JSON.stringify(created.body)).toBe(201);
       expect(created.body.brief.sources).toEqual([
         expect.objectContaining({
           status: "available",

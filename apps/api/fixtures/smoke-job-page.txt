@@ -1,0 +1,19 @@
+Platform Engineer at Example Ledger
+
+Example Ledger is a fictional company that keeps accounts for small cooperatives. This page is a
+synthetic job posting: the deployment smoke reads it through the page fetcher, as a person's
+approved job page is read.
+
+What you will do
+
+- Build and run the ledger's TypeScript services on a managed Kubernetes platform.
+- Own the deployment pipeline, its tests and its observability.
+- Keep the services' PostgreSQL schemas and migrations safe to roll out.
+
+What you bring
+
+- Five years of backend engineering with Node.js and PostgreSQL.
+- Experience operating services in production, including on-call.
+- Care for deterministic tests and clear written design notes.
+
+Location: remote within the European Union.

@@ -13,11 +13,14 @@ project id, service account, pool id or bucket name belongs here.
    the pull request that produced it. Server tags are independent of the
    desktop's `v*` tags, and `pnpm release:preflight` stays the rule for desktop
    releases only.
-2. **Staging.** The same run checks the gate, builds the API and worker images
-   from their Dockerfiles, pushes them by digest, runs the migration job and
+2. **Staging.** The same run checks the gate, builds the API, worker and page
+   fetcher images from their Dockerfiles, pushes them by digest, runs the migration job and
    deploys staging.
 3. **Smoke.** It runs the synthetic smoke (`pnpm test:server-smoke`, the same
-   one as on the local stack) against staging. A failure stops the release.
+   one as on the local stack) against staging. On a deployment it also reads a
+   job page through the page fetcher: the fictional posting in
+   `apps/api/fixtures/smoke-job-page.txt`, at the tag's commit. A failure stops
+   the release.
 4. **Release notes.** Once the smoke passes, the run publishes a GitHub Release
    for the tag (see [Server release notes](#server-release-notes)).
 5. **Production.** A second, manual run of the deploy workflow deploys the same
