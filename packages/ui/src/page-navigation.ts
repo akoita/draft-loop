@@ -37,6 +37,18 @@ export function pageKey(view: WorkspaceView): string {
   return view.kind === "application" ? `application:${view.applicationId}` : view.kind;
 }
 
+/**
+ * A page's error banner belongs to that page: moving to another page clears it, so a refused export
+ * no longer shows on Home (#1830). Staying on the page keeps it readable.
+ */
+export function pageErrorAfterMove(
+  error: string | null,
+  from: WorkspaceView,
+  to: WorkspaceView,
+): string | null {
+  return pageKey(from) === pageKey(to) ? error : null;
+}
+
 /** The page's name, as the location line and the Back action say it. */
 export function pageLabel(view: WorkspaceView): string {
   switch (view.kind) {

@@ -13,6 +13,7 @@ import {
   initialPageNavigation,
   navigateTo,
   type PageNavigation,
+  pageErrorAfterMove,
   pageHistoryLimit,
   pageKey,
   pageLabel,
@@ -116,5 +117,21 @@ describe("page navigation", () => {
     expect(pageLabel(evidenceView)).toBe("Career evidence");
     expect(pageLabel(profileView)).toBe("Career profile");
     expect(pageLabel(acme)).toBe("Acme — Backend Lead");
+  });
+});
+
+describe("a page's error banner (#1830)", () => {
+  const refused = "The PDF export failed rendering checks; no file was written.";
+
+  it("clears when the person leaves the page it came from", () => {
+    expect(pageErrorAfterMove(refused, acme, homeView)).toBeNull();
+    expect(pageErrorAfterMove(refused, acme, profileView)).toBeNull();
+    expect(pageErrorAfterMove(refused, acme, globex)).toBeNull();
+  });
+
+  it("stays while the person remains on the page", () => {
+    expect(pageErrorAfterMove(refused, acme, { ...acme, name: "Acme" })).toBe(refused);
+    expect(pageErrorAfterMove(refused, evidenceView, evidenceView)).toBe(refused);
+    expect(pageErrorAfterMove(null, acme, homeView)).toBeNull();
   });
 });

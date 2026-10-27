@@ -82,6 +82,7 @@ import {
   initialPageNavigation,
   navigateTo,
   type PageNavigation,
+  pageErrorAfterMove,
   pageKey,
   pageLabel,
   renameApplicationPage,
@@ -1742,9 +1743,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   };
 
-  const goHome = () => openPage(homeView);
-  const openProfileScreen = () => openPage(profileView);
-  const openEvidenceScreen = () => openPage(evidenceView);
+  const leaveFor = (to: WorkspaceView) => {
+    const from = navigationRef.current.view;
+    setImportError((current) => pageErrorAfterMove(current, from, to));
+    openPage(to);
+  };
+  const goHome = () => leaveFor(homeView);
+  const openProfileScreen = () => leaveFor(profileView);
+  const openEvidenceScreen = () => leaveFor(evidenceView);
 
   /**
    * Shows one application. The application the window still holds opens as it was left; any other
@@ -1821,7 +1827,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const target = backTarget(navigationRef.current);
     if (target === null) return;
     if (target.kind === "application") showApplication(target.applicationId, goBack);
-    else setNavigation(goBack);
+    else {
+      const from = navigationRef.current.view;
+      setImportError((current) => pageErrorAfterMove(current, from, target));
+      setNavigation(goBack);
+    }
   };
 
   /**
