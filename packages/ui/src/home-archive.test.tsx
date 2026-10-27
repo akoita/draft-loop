@@ -121,9 +121,12 @@ describe("Home: archiving and deleting applications", () => {
     expect(html).not.toContain('aria-label="Delete Ran"');
   });
 
-  it("offers no card actions when the host cannot archive or delete", () => {
+  it("offers only Open when the host cannot archive or delete", () => {
     const html = render([application()], {}, false);
-    expect(html).not.toContain("application-card-actions");
+    const actions = html.slice(html.indexOf('class="application-card-actions"'));
+    expect(actions).toContain(">Open</button>");
+    expect(actions).not.toContain("Archive");
+    expect(actions).not.toContain("Delete");
   });
 
   it("hides archived applications behind a toggle with their count", () => {

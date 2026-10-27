@@ -382,8 +382,17 @@ export function ApplicationCard({
             </button>
           </div>
         </fieldset>
-      ) : onArchive === undefined && onRequestDelete === undefined ? null : (
+      ) : (
         <div className="application-card-actions">
+          {/* The name opens the application too, but reads as a title; this says it out loud. */}
+          <button
+            className="button button-primary"
+            type="button"
+            aria-label={`Open ${application.name}`}
+            onClick={() => onOpen(application)}
+          >
+            Open
+          </button>
           {onArchive === undefined ? null : (
             <button
               className="button button-outline"

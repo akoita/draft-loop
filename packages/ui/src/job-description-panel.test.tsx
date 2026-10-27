@@ -96,5 +96,8 @@ describe("the Job tab", () => {
     const withoutTab = render(false);
     expect(withoutTab).not.toContain('id="job-panel"');
     expect(withoutTab).not.toContain('role="tablist"');
+    // The draft's toolbar says where the job went once the setup steps left the screen (#1832).
+    expect(withTab).toMatch(/class="button button-outline doc-toolbar-job"[^>]*>Read the job</u);
+    expect(withoutTab).not.toContain("Read the job");
   });
 });

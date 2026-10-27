@@ -278,7 +278,11 @@ export function JobRequirementsExtractionView({
               ? "Splitting the job text with local fixtures. Nothing is sent to a provider."
               : phase.background === true
                 ? pendingExtractionNote
-                : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
+                : onCancelExtraction === undefined
+                  ? // A host that cannot stop the request does not offer Cancel, so the note does
+                    // not promise it (#1832).
+                    `Waiting for ${providerName} (${modelName}). This can take a minute.`
+                  : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
           </p>
           {onCancelExtraction === undefined || phase.background === true ? null : (
             <button

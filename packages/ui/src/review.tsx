@@ -2992,6 +2992,18 @@ export function ReviewWorkspace({
                   <h2>Version {state.artifact.version}</h2>
                 </div>
               </div>
+              {/* The job inputs leave the screen once a run starts; the Job tab keeps the job
+                  beside the draft, and this says where it is (#1832). */}
+              {onReadJob === undefined ? null : (
+                <button
+                  className="button button-outline doc-toolbar-job"
+                  type="button"
+                  title="The job this draft is written for, under the Job tab. A different job needs a new application."
+                  onClick={() => selectWorkTab("job")}
+                >
+                  Read the job
+                </button>
+              )}
               <section className="retrieval-strip" aria-label="evidence retrieval status">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
                   <path
