@@ -8705,6 +8705,22 @@ body:has(.review-column) .workspace-activity {
   bottom: calc(5rem + var(--space-3));
 }
 
+/* The bar floats over the foot of the draft, so the draft keeps that much room below its last line
+   (#1831). On a phone the bar wraps to two rows. */
+body:has(.workspace-activity) {
+  --workspace-activity-room: calc(64px + var(--space-4));
+}
+
+body:has(.workspace-activity) .review-column > .claims-panel {
+  margin-top: var(--workspace-activity-room);
+}
+
+@media (max-width: 640px) {
+  body:has(.workspace-activity) {
+    --workspace-activity-room: calc(112px + var(--space-4));
+  }
+}
+
 /* Start confirmation: a short check of models, inputs and settings before a run begins. */
 .start-confirmation {
   display: grid;
