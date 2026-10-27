@@ -215,6 +215,10 @@ The lines are content-free (ADR 0011, D16):
   and the Retry-After seconds. When DraftLoop rejected the call's output, the
   line also names the `failureStage` and the diagnostic codes and field paths,
   never a value. A call the run retries is a `WARNING`, any other an `ERROR`.
+- **Each refused export** logs one `export refused by rendering checks`
+  `WARNING` line with the `format`, the `failedChecks` (such as
+  `visible-content` or `page-target`) and, for a PDF, the
+  `undrawableCharacters` as `U+XXXX` code points.
 
 The run's failure keeps the same fields. The API returns the call as the run's
 `lastError.failedCall` and a rejection's stage and diagnostics beside it, so

@@ -12,6 +12,7 @@ import {
   buildExportRenderingQa,
   ExportRenderingQaError,
   exportRenderingQaDecision,
+  failedRenderingQaChecks,
 } from "./export-qa.js";
 import { createLocalApplicationDriver } from "./local.js";
 
@@ -307,4 +308,68 @@ describe("application export rendering QA", () => {
       await rm(root, { recursive: true, force: true });
     }
   }, 30_000);
+});
+
+describe("naming why an export was refused (#1828)", () => {
+  it("names the failed checks and the characters the built-in PDF cannot draw", () => {
+    const artifact = sampleArtifact();
+    const [section] = artifact.sections;
+    const unicode = {
+      ...artifact,
+      sections: [
+        {
+          ...(section as NonNullable<typeof section>),
+          blocks: [
+            {
+              id: "summary-1",
+              type: "paragraph" as const,
+              text: "Cut latency − 40% → shipped ≥ 3 releases in Łódź.",
+              claimIds: [],
+            },
+          ],
+        },
+      ],
+    };
+    const rendered = renderArtifact(unicode, "pdf", { generatedAt });
+    let refusal: unknown;
+    try {
+      assertExportRenderingQa(unicode, rendered);
+    } catch (error) {
+      refusal = error;
+    }
+    expect(refusal).toBeInstanceOf(ExportRenderingQaError);
+    const error = refusal as ExportRenderingQaError;
+    expect(error.failedChecks).toContain("visible-content");
+    expect(error.undrawableCharacters).toEqual(["U+0141", "U+017A", "U+2192", "U+2212", "U+2265"]);
+    expect(error.message).toBe(
+      "The PDF export failed rendering checks; no file was written. The PDF cannot draw these characters: U+0141, U+017A, U+2192, U+2212, U+2265.",
+    );
+    // A code point names a character, never the text around it.
+    expect(error.message).not.toMatch(/latency|releases/u);
+  });
+
+  it("names a failed check for a refused DOCX without naming characters", () => {
+    const artifact = sampleArtifact();
+    const rendered = renderArtifact(artifact, "docx", { generatedAt });
+    const report = buildExportRenderingQa(artifact, rendered);
+    const failing = {
+      ...report,
+      passed: false,
+      activeContent: { ...report.activeContent, detected: true },
+    };
+    expect(failedRenderingQaChecks(failing)).toEqual(["active-content"]);
+    expect(() => exportRenderingQaDecision(failing)).toThrow(
+      "The DOCX export failed rendering checks; no file was written.",
+    );
+  });
+
+  it("names nothing for a report that passed", () => {
+    const artifact = sampleArtifact();
+    const report = buildExportRenderingQa(
+      artifact,
+      renderArtifact(artifact, "pdf", { generatedAt }),
+    );
+    expect(report.passed).toBe(true);
+    expect(failedRenderingQaChecks(report)).toEqual([]);
+  });
 });

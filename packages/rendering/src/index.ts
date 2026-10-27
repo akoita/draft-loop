@@ -1179,5 +1179,6 @@ export {
   type RenderingLayoutProfile,
   renderingLayoutProfiles,
 } from "./layout-profile.js";
+export * from "./pdf-coverage.js";
 export * from "./print-html.js";
 export * from "./templates.js";

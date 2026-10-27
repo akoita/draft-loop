@@ -4,7 +4,9 @@ import {
   type OutputFormat,
   type PrintedPdf,
   pdfPageCount,
+  pdfUndrawableCharacters,
   type RenderedDocument,
+  renderMarkdown,
   visibleContentSummary,
 } from "@draft-loop/rendering";
 import type { DraftArtifact, RenderingQaReport } from "@draft-loop/schemas";
@@ -28,12 +30,78 @@ export function buildExportRenderingQa(
   });
 }
 
-/** A bounded-QA refusal worded for a person; it names no path and no content. */
+/** What a refusal knows about its cause: check names and code points, never content. */
+export interface ExportRenderingQaFailure {
+  /** The failed checks, as `failedRenderingQaChecks` names them. */
+  readonly failedChecks?: readonly string[];
+  /** Characters the PDF cannot draw, as `U+XXXX` code points. */
+  readonly undrawableCharacters?: readonly string[];
+}
+
+/**
+ * A bounded-QA refusal worded for a person; it names no path and no content. It carries the
+ * failed checks for the host's log, and names the characters a PDF cannot draw, the one cause a
+ * person can act on (#1828).
+ */
 export class ExportRenderingQaError extends CliUserError {
-  constructor(format: string) {
-    super(`The ${format.toUpperCase()} export failed rendering checks; no file was written.`);
+  readonly format: string;
+  readonly failedChecks: readonly string[];
+  readonly undrawableCharacters: readonly string[];
+
+  constructor(format: string, failure: ExportRenderingQaFailure = {}) {
+    const undrawable = failure.undrawableCharacters ?? [];
+    super(
+      `The ${format.toUpperCase()} export failed rendering checks; no file was written.${
+        undrawable.length === 0
+          ? ""
+          : ` The PDF cannot draw these characters: ${undrawable.join(", ")}.`
+      }`,
+    );
     this.name = "ExportRenderingQaError";
+    this.format = format;
+    this.failedChecks = failure.failedChecks ?? [];
+    this.undrawableCharacters = undrawable;
   }
+}
+
+/**
+ * The names of the checks a QA report failed, for a log line: which comparison missed, never the
+ * text compared. An empty list means the report passed.
+ */
+export function failedRenderingQaChecks(report: RenderingQaReport): readonly string[] {
+  if (report.passed) return [];
+  const integrity = report.contentIntegrity;
+  const observation = report.viewerObservation;
+  const failed: string[] = [];
+  if (!report.complete) failed.push("viewer-observation-missing");
+  if (!integrity.visibleContentMatches) failed.push("visible-content");
+  if (!integrity.sectionOrderMatches) failed.push("section-order");
+  if (!integrity.blockOrderMatches) failed.push("block-order");
+  if (report.activeContent.detected) failed.push("active-content");
+  if (
+    report.rendered.format === "pdf" &&
+    (report.deterministicPageCount === null ||
+      report.deterministicPageCount > report.targetPageCount)
+  ) {
+    failed.push("page-target");
+  }
+  if (observation !== null) {
+    if (observation.renderedChecksum !== report.rendered.checksum) {
+      failed.push("viewer-document-checksum");
+    }
+    if (
+      observation.recoveredVisibleContentChecksum !== integrity.expectedVisibleContentChecksum ||
+      observation.recoveredVisibleContentCount !== integrity.expectedVisibleContentCount
+    ) {
+      failed.push("viewer-visible-content");
+    }
+    if (observation.recoveredVisibleContentOrder !== "preserved") failed.push("viewer-order");
+    if (observation.blankPageNumbers.length > 0) failed.push("blank-pages");
+    if (observation.overflowPageNumbers.length > 0) failed.push("overflow-pages");
+    if (observation.orphanSectionIds.length > 0) failed.push("orphan-sections");
+    if (observation.clippedText) failed.push("clipped-text");
+  }
+  return failed.length === 0 ? ["unnamed"] : failed;
 }
 
 /** A PDF whose only failed check is page fit: it ran past the layout profile's page target. */
@@ -82,7 +150,10 @@ function contentChecksFailed(report: RenderingQaReport): boolean {
  * Decide whether a QA report allows an export. A report that did not pass still allows a PDF whose
  * only miss is page fit, derived from the report alone; any other miss throws.
  */
-export function exportRenderingQaDecision(report: RenderingQaReport): ExportRenderingQaResult {
+export function exportRenderingQaDecision(
+  report: RenderingQaReport,
+  failure: Pick<ExportRenderingQaFailure, "undrawableCharacters"> = {},
+): ExportRenderingQaResult {
   if (report.passed) return { report };
   const pageCount = report.deterministicPageCount;
   if (
@@ -100,7 +171,10 @@ export function exportRenderingQaDecision(report: RenderingQaReport): ExportRend
       },
     };
   }
-  throw new ExportRenderingQaError(report.rendered.format);
+  throw new ExportRenderingQaError(report.rendered.format, {
+    failedChecks: failedRenderingQaChecks(report),
+    ...failure,
+  });
 }
 
 /**
@@ -111,7 +185,12 @@ export function assertExportRenderingQa(
   artifact: DraftArtifact,
   rendered: RenderedDocument,
 ): ExportRenderingQaResult {
-  return exportRenderingQaDecision(buildExportRenderingQa(artifact, rendered));
+  const report = buildExportRenderingQa(artifact, rendered);
+  // Only the built-in PDF writer has a fixed character set; a printed PDF draws what its fonts do.
+  if (report.passed || rendered.metadata.format !== "pdf") return exportRenderingQaDecision(report);
+  return exportRenderingQaDecision(report, {
+    undrawableCharacters: pdfUndrawableCharacters(renderMarkdown(artifact)),
+  });
 }
 
 /**
@@ -137,7 +216,9 @@ export function buildPrintedPdfRenderingQa(
   printed: PrintedPdf,
 ): RenderingQaReport {
   const pageCount = pdfPageCount(rendered.content);
-  if (pageCount === null) throw new ExportRenderingQaError("pdf");
+  if (pageCount === null) {
+    throw new ExportRenderingQaError("pdf", { failedChecks: ["page-count-unreadable"] });
+  }
   const summary = visibleContentSummary(printed.units);
   return buildRenderingQaReport({
     artifact,
