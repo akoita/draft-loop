@@ -845,8 +845,9 @@ an overflowing PDF is a deterministic QA failure signal.
 `standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
 leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins and 10 mm top and bottom margins,
 wrapped to the real line width. About 2,000 words of a typical CV fit on two
-pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full; the
-DOCX names Calibri with the same exact leading. Exports record the layout as
+pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full as a
+Unicode font, so any character Carlito has a glyph for is drawn and reads back
+as written; the DOCX names Calibri with the same exact leading. Exports record the layout as
 `cv-controlled-v4`, which adds role context lines, bold labels and compact
 lists. Records written as `cv-controlled-v3` (role headers), `cv-controlled-v2`
 (before role headers) or `cv-controlled-v1` (the earlier, looser layout) still

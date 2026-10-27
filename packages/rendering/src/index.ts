@@ -30,8 +30,14 @@ import {
   renderingLayoutProfiles,
   resolveRenderingTemplate,
 } from "./layout-profile.js";
-import { buildPdf, decodePdfLiteralEscapes } from "./pdf-document.js";
-import { pdfActualTextLiteral, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import {
+  buildPdf,
+  decodePdfActualText,
+  decodePdfShownText,
+  pdfFontUnicodeMaps,
+  pdfShownTextPattern,
+} from "./pdf-document.js";
+import { pdfActualTextOperand, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
 import type { PrintedTextUnit } from "./print-html.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
@@ -470,10 +476,6 @@ interface VisibleTextUnit {
   readonly kind: "heading" | "body";
 }
 
-function decodePdfText(value: string): string {
-  return decodePdfLiteralEscapes(value);
-}
-
 function decodeXmlText(value: string): string {
   return value
     .replaceAll("&lt;", "<")
@@ -497,12 +499,20 @@ function extractMarkdownUnits(raw: string): readonly VisibleTextUnit[] {
   return units;
 }
 
+/** A PDF's objects by number, read from its text; binary streams decode as noise and are skipped. */
+function pdfObjectsFromText(raw: string): ReadonlyMap<number, string> {
+  const objects = new Map<number, string>();
+  for (const match of raw.matchAll(/(?:^|\n)(\d+) 0 obj\n([\s\S]*?)\nendobj/gu)) {
+    objects.set(Number(match[1]), match[2] ?? "");
+  }
+  return objects;
+}
+
 function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
   const units: VisibleTextUnit[] = [];
   const runs: PdfTextRun[] = [];
-  const tjPattern = /\(((?:\\.|[^()])*)\)\s*Tj/gu;
-  for (const match of raw.matchAll(tjPattern)) {
-    const escaped = match[1] ?? "";
+  const fontMaps = pdfFontUnicodeMaps(pdfObjectsFromText(raw));
+  for (const match of raw.matchAll(pdfShownTextPattern)) {
     const start = match.index ?? 0;
     const lineStart = raw.lastIndexOf("\n", start) + 1;
     const prefix = raw.slice(lineStart, start);
@@ -510,8 +520,12 @@ function extractPdfUnits(raw: string): readonly VisibleTextUnit[] {
     const font = Number(prefix.match(/\/F(\d+)\s+[0-9.]+\s+Tf/u)?.[1]);
     const tag = pdfRunTag(prefix);
     const position = prefix.match(/1\s+0\s+0\s+1\s+([-0-9.]+)\s+([-0-9.]+)\s+Tm/u);
+    const written = pdfActualTextOperand(prefix);
     runs.push({
-      text: decodePdfText(pdfActualTextLiteral(prefix) ?? escaped),
+      text:
+        written === undefined
+          ? decodePdfShownText(match, fontMaps.get(`F${font}`))
+          : decodePdfActualText(written),
       fontNumber: font,
       x: Number(position?.[1]),
       y: Number(position?.[2]),
@@ -1180,5 +1194,6 @@ export {
   renderingLayoutProfiles,
 } from "./layout-profile.js";
 export * from "./pdf-coverage.js";
+export { type PdfTextRunRead, readPdfTextRuns } from "./pdf-document.js";
 export * from "./print-html.js";
 export * from "./templates.js";

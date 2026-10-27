@@ -20,7 +20,7 @@ import {
   renderHtml,
   renderingLayoutProfiles,
 } from "./index.js";
-import { decodePdfLiteralEscapes } from "./pdf-document.js";
+import { readPdfTextRuns } from "./pdf-document.js";
 import { isDateRange, splitRoleHeader } from "./role-header.js";
 import {
   fixtureGeneratedAt as generatedAt,
@@ -66,17 +66,19 @@ interface PdfRun {
 }
 
 function pdfRuns(content: Uint8Array): readonly PdfRun[] {
-  return [
-    ...pdfText(content).matchAll(
-      /BT \/(F\d) ([\d.]+) Tf 1 0 0 1 ([\d.]+) ([\d.]+) Tm \(((?:\\.|[^()])*)\) Tj ET/gu,
-    ),
-  ].map((match) => ({
-    font: match[1] ?? "",
-    size: Number(match[2]),
-    x: Number(match[3]),
-    y: Number(match[4]),
-    text: decodePdfLiteralEscapes(match[5] ?? ""),
-  }));
+  return readPdfTextRuns(content).flatMap((run) => {
+    const match = /BT \/(F\d) ([\d.]+) Tf 1 0 0 1 ([\d.]+) ([\d.]+) Tm/u.exec(run.line);
+    if (match === null) return [];
+    return [
+      {
+        font: match[1] ?? "",
+        size: Number(match[2]),
+        x: Number(match[3]),
+        y: Number(match[4]),
+        text: run.text,
+      },
+    ];
+  });
 }
 
 function qaPasses(artifact: DraftArtifact, format: "pdf" | "docx") {
@@ -271,7 +273,14 @@ describe("role headers in the PDF", () => {
   it("flags a role date that runs past the right margin", () => {
     const { rendered } = qaPasses(artifact, "pdf");
     const raw = pdfText(rendered.content);
-    const shifted = raw.replace(/(\/F1 9 Tf 1 0 0 1 )[\d.]+( [\d.]+ Tm \(Jun 2024)/u, "$1560$2");
+    const dateLine = readPdfTextRuns(rendered.content).find((run) =>
+      run.text.startsWith("Jun 2024"),
+    )?.line;
+    const shiftedLine = dateLine?.replace(/(\/F1 9 Tf 1 0 0 1 )[\d.]+( [\d.]+ Tm)/u, "$1560$2");
+    const shifted =
+      dateLine === undefined || shiftedLine === undefined
+        ? raw
+        : raw.replace(dateLine, shiftedLine);
     expect(shifted).not.toBe(raw);
     const bytes = Uint8Array.from(Buffer.from(shifted, "latin1"));
     const tampered = {

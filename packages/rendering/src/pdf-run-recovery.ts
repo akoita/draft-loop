@@ -78,9 +78,12 @@ export function tagPdfCommands(tag: "label" | "compact", commands: string): stri
 }
 
 /**
- * The escaped `/ActualText` literal a line carries for the text command that follows it, when the
- * drawn glyphs differ from the written text (a capitalised heading). Callers decode the escapes.
+ * The `/ActualText` operand a line carries for the text command that follows it, when the drawn
+ * glyphs differ from the written text (a capitalised heading, or a character drawn with another's
+ * glyph): a `(…)` literal or a `<FEFF…>` Unicode string, delimiters kept. Callers decode it.
  */
-export function pdfActualTextLiteral(lineBeforeText: string): string | undefined {
-  return /\/ActualText \(((?:\\.|[^()])*)\) >> BDC [^(]*$/u.exec(lineBeforeText)?.[1];
+export function pdfActualTextOperand(lineBeforeText: string): string | undefined {
+  return /\/ActualText (\((?:\\.|[^()])*\)|<[0-9A-Fa-f]*>) >> BDC [^(<[]*$/u.exec(
+    lineBeforeText,
+  )?.[1];
 }

@@ -9,6 +9,7 @@ import {
   buildRenderingQaReport,
   inspectControlledDocument,
   type OutputFormat,
+  readPdfTextRuns,
   renderArtifact,
   renderHtml,
   renderingLayoutProfiles,
@@ -60,10 +61,11 @@ interface PdfRun {
 }
 
 function pdfRuns(content: Uint8Array): PdfRun[] {
-  const raw = Buffer.from(content).toString("latin1");
-  return [
-    ...raw.matchAll(/^(?:\/(DL\w+) BMC )?BT \/(F\d) [\d.]+ Tf [^(]*\(((?:\\.|[^()])*)\) Tj ET/gmu),
-  ].map((match) => ({ marked: match[1] ?? null, font: match[2] ?? "", text: match[3] ?? "" }));
+  return readPdfTextRuns(content).map((run) => ({
+    marked: run.marked,
+    font: run.font,
+    text: run.text,
+  }));
 }
 
 function documentXml(content: Uint8Array): string {
@@ -318,8 +320,8 @@ describe("compact lists", () => {
     const pdf = qa(twenty, "pdf");
     const pdfRunsOut = pdfRuns(pdf.document.content);
     expect(pdfRunsOut.filter((run) => run.marked === "DLCompact")).toHaveLength(lineCount);
-    expect(pdfRunsOut.some((run) => run.text.includes("\\225"))).toBe(false);
-    expect(pdfRunsOut.some((run) => run.text.includes("Example Certificate 1 \\267 Example"))).toBe(
+    expect(pdfRunsOut.some((run) => run.text.includes("•"))).toBe(false);
+    expect(pdfRunsOut.some((run) => run.text.includes("Example Certificate 1 · Example"))).toBe(
       true,
     );
     expect(pdf.report.passed).toBe(true);

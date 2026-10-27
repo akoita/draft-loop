@@ -1,5 +1,6 @@
 import {
   buildRenderingQaReport,
+  builtInPdfFont,
   inspectControlledDocument,
   type OutputFormat,
   type PrintedPdf,
@@ -189,7 +190,10 @@ export function assertExportRenderingQa(
   // Only the built-in PDF writer has a fixed character set; a printed PDF draws what its fonts do.
   if (report.passed || rendered.metadata.format !== "pdf") return exportRenderingQaDecision(report);
   return exportRenderingQaDecision(report, {
-    undrawableCharacters: pdfUndrawableCharacters(renderMarkdown(artifact)),
+    undrawableCharacters: pdfUndrawableCharacters(
+      renderMarkdown(artifact),
+      builtInPdfFont(rendered.content),
+    ),
   });
 }
 
