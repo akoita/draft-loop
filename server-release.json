@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Re-walk follow-ups",
+  "releaseName": "Re-walk fixes and page fetcher",
   "stageIssue": 1359,
-  "milestone": 53,
-  "summary": "Hosted service, sprint 1t: follow-ups from the staging re-walk. The worker now carries the local embedding model, so a hosted run judges requirement coverage as the desktop does instead of falling back to word matches. The web takes a job as an uploaded file, whose text is extracted and the file dropped, or as a page address the person approves; the page is fetched once, at extraction, over a connection held to the address that was checked. The coverage message groups places by section, run details no longer report missing evidence for covered requirements, and the shared review screen uses wide screens and fits phone widths.",
-  "knownLimitations": "Staging only: production keeps its earlier images until the owner deploys this tag there. Staging runs behind the owner token, so sign-in, plans and credits, and record export and deletion are not exercised there until the identity provider is hosted. The cost of a complete cached run is still to measure (#1597)."
+  "milestone": 54,
+  "summary": "Hosted service, sprint 1u: fixes from the owner's second staging re-walk. Approved job page addresses now work on a deployment: a separate page fetcher, which holds no database, secret or candidate material, is the one hosted runtime that reaches public web pages, and the API, which has no route to the internet, still checks every redirect and extracts the text itself. A job page that cannot be read says why, and a refused export names the checks that failed. PDFs embed the Carlito font for Classic and Modern, an approved run shows its finding decisions without errors, the review screen fits phone widths and leaves room for the activity bar, the model dialog starts on the workspace's preset, and relevance is weighed over the reviewed brief's requirements with every gap judged.",
+  "knownLimitations": "Staging only: production keeps its earlier images until the owner deploys this tag there. Staging runs behind the owner token, so sign-in, plans and credits, and record export and deletion are not exercised there until the identity provider is hosted. The Compact template's PDF still uses Helvetica. The cost of a complete cached run is still to measure (#1597)."
 }

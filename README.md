@@ -118,13 +118,17 @@ pnpm validate
 ```
 
 The client-server version (Postgres, a Cloud Storage emulator, Keycloak, the
-API with its web screen, and one worker) runs locally with Docker Compose:
+API with its web screen, the page fetcher, and one worker) runs locally with
+Docker Compose:
 `pnpm server:up` starts it, and `pnpm server:test` runs the server suites and
 an end-to-end smoke against it.
 The API serves the web screen at `/`. Each candidate record opens on the
 desktop's own screens:
 
-- Home, a new application from a pasted job, and its requirements.
+- Home, a new application from a pasted job, a job file or an approved job
+  page address, and its requirements. A deployment's API has no route to the
+  internet, so a separate page fetcher, which holds no data or secrets, reads
+  the page.
 - Career evidence uploads and the reviewed career profile.
 - The run, its review and approval, and the CV the browser downloads.
 - The run details and the comparison between an application's runs.
