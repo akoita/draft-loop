@@ -35,6 +35,11 @@ import {
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
+import {
+  formatReadinessBlockerGroup,
+  groupReadinessBlockers,
+  type ReadinessBlockerGroup,
+} from "./readiness-blocker-groups.js";
 import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
 import {
   maximumRevisionDirectionLength,
@@ -88,6 +93,26 @@ export function compactReadinessBlocker(
     return `${blocker.dimension} ${percent(blocker.score)}${scored} (${percent(blocker.threshold)} needed)`;
   }
   const label = formatApprovalReadinessBlocker(blocker);
+  return `${label[0]?.toLowerCase() ?? ""}${label.slice(1)}`;
+}
+
+/** Every blocker for the footer line, identical ones counted once with the check they name. */
+export function compactReadinessBlockers(
+  blockers: readonly ApprovalReadinessBlocker[],
+  scope: string | null = null,
+): string[] {
+  return groupReadinessBlockers(blockers).map((group) =>
+    compactReadinessBlockerGroup(group, scope),
+  );
+}
+
+/** One group for the footer line: "6 validation checks failed: …" or a single compact blocker. */
+export function compactReadinessBlockerGroup(
+  group: ReadinessBlockerGroup,
+  scope: string | null = null,
+): string {
+  if (group.count === 1) return compactReadinessBlocker(group.blocker, scope);
+  const label = formatReadinessBlockerGroup(group);
   return `${label[0]?.toLowerCase() ?? ""}${label.slice(1)}`;
 }
 
@@ -173,9 +198,10 @@ export function footerBlocker(
   if (readiness?.applicationReady === false) {
     return {
       kind: "final-checks",
-      text: `Not ready: ${readiness.blockers
-        .map((blocker) => compactReadinessBlocker(blocker, relevanceScope(state.coverage)))
-        .join("; ")}${noRevision}`,
+      text: `Not ready: ${compactReadinessBlockers(
+        readiness.blockers,
+        relevanceScope(state.coverage),
+      ).join("; ")}${noRevision}`,
       tone: "warning",
     };
   }

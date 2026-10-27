@@ -19,11 +19,42 @@ export const approvalReadinessDimensions = [
   "credibility",
 ] as const;
 
+/**
+ * The deterministic checks a "deterministic-error" blocker can name, with the words the screens
+ * use for each. A check code outside this list crosses without a name.
+ */
+export const approvalReadinessCheckLabels = {
+  "uncovered-requirement": "requirement wording not found in the draft (word match)",
+  "explicit-gap": "requirement marked as a gap",
+  "unsupported-claim": "claim without evidence",
+  "unsupported-quantification": "number without evidence",
+  "duplicate-content": "repeated content",
+  "missing-required-section": "missing section",
+  "inconsistent-date": "inconsistent dates",
+  "coverage-block-dropped": "covered requirement lost in a revision",
+  "editorial-source-note": "copied source note",
+  "editorial-fragment": "sentence fragment",
+  "dense-bullet-series": "dense bullet series",
+  "max-words-exceeded": "too many words",
+  "max-length-exceeded": "too long",
+  "max-characters-exceeded": "too many characters",
+  "writing-policy-forbidden-term": "forbidden term (writing policy)",
+  "writing-policy-forbidden-character": "forbidden character (writing policy)",
+  "writing-policy-section-order": "section order (writing policy)",
+  "writing-policy-ascii-punctuation": "punctuation (writing policy)",
+} as const;
+export type ApprovalReadinessCheck = keyof typeof approvalReadinessCheckLabels;
+const approvalReadinessChecks = Object.keys(
+  approvalReadinessCheckLabels,
+) as readonly ApprovalReadinessCheck[];
+
 export type ApprovalReadinessBlockerCode = (typeof approvalReadinessBlockerCodes)[number];
 export type ApprovalReadinessDimension = (typeof approvalReadinessDimensions)[number];
 
 export interface ApprovalReadinessBlocker {
   readonly code: ApprovalReadinessBlockerCode;
+  /** The deterministic check that failed, for a "deterministic-error" blocker. */
+  readonly check?: ApprovalReadinessCheck;
   readonly dimension?: ApprovalReadinessDimension;
   readonly score?: number;
   readonly threshold?: number;
@@ -54,7 +85,7 @@ const readinessKeys = [
   "blockers",
   "overridden",
 ];
-const blockerKeys = ["code", "dimension", "score", "threshold"];
+const blockerKeys = ["code", "check", "dimension", "score", "threshold"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -99,6 +130,13 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     }
     const dimension = rawBlocker.dimension;
     if (dimension !== undefined && !isOneOf(dimension, approvalReadinessDimensions)) return null;
+    const check = rawBlocker.check;
+    if (
+      check !== undefined &&
+      (rawBlocker.code !== "deterministic-error" || !isOneOf(check, approvalReadinessChecks))
+    ) {
+      return null;
+    }
     const score = rawBlocker.score;
     const threshold = rawBlocker.threshold;
     if (rawBlocker.code === "unmet-rubric-threshold") {
@@ -115,6 +153,7 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     }
     blockers.push({
       code: rawBlocker.code,
+      ...(check === undefined ? {} : { check }),
       ...(dimension === undefined ? {} : { dimension }),
       ...(score === undefined ? {} : { score }),
       ...(threshold === undefined ? {} : { threshold }),
@@ -138,7 +177,10 @@ function matchingArtifact(
   return identity.id === artifact.id && identity.version === artifact.version;
 }
 
-/** Drops stale/malformed decisions and exposes only blocker codes and rubric numbers. */
+/**
+ * Drops stale/malformed decisions and exposes only blocker codes, the failed check's code, and
+ * rubric numbers.
+ */
 export function projectApprovalReadiness(
   decision: unknown,
   artifact: { readonly id: string; readonly version: number },
@@ -184,8 +226,12 @@ export function projectApprovalReadiness(
         threshold: result.threshold,
       });
     } else {
+      const check = rawBlocker.checkCode;
       blockers.push({
         code: rawBlocker.code,
+        ...(rawBlocker.code === "deterministic-error" && isOneOf(check, approvalReadinessChecks)
+          ? { check }
+          : {}),
         ...(dimension === undefined ? {} : { dimension }),
       });
     }
@@ -233,6 +279,9 @@ export function formatApprovalReadinessBlocker(blocker: ApprovalReadinessBlocker
     const dimension = `${blocker.dimension[0]?.toUpperCase() ?? ""}${blocker.dimension.slice(1)}`;
     return `${dimension} score ${(blocker.score * 100).toFixed(0)}%; ${(blocker.threshold * 100).toFixed(0)}% required`;
   }
+  if (blocker.code === "deterministic-error" && blocker.check !== undefined) {
+    return `Validation check failed: ${approvalReadinessCheckLabels[blocker.check]}`;
+  }
   const labels: Record<ApprovalReadinessBlockerCode, string> = {
     "incomplete-report-inputs": "Readiness report inputs are incomplete",
     "independent-review-incomplete": "Independent readiness review is incomplete",
@@ -246,4 +295,4 @@ export function formatApprovalReadinessBlocker(blocker: ApprovalReadinessBlocker
 }
 
 export const approvalReadinessGuidance =
-  "Accepting a finding records your decision but does not change coverage. A low score reflects this check, not a confirmed candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then request a revision when appropriate. If you have checked the draft and still want it, approve it with a recorded reason; the override stays in the run history.";
+  "Accepting or rejecting a finding records your decision but does not change the draft, so the check behind it stays unmet until a revision fixes it. A low score reflects this check, not a confirmed candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then request a revision when appropriate. If you have checked the draft and still want it, use Approve with override: it records your reason, and the override stays in the run history.";

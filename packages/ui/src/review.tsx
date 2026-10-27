@@ -19,11 +19,7 @@ import {
 } from "./application-steps.js";
 import { applicationStepStates, jobStepOffersExtraction } from "./application-steps-model.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
-import {
-  approvalReadinessForArtifact,
-  approvalReadinessGuidance,
-  formatApprovalReadinessBlocker,
-} from "./approval-readiness.js";
+import { approvalReadinessForArtifact, approvalReadinessGuidance } from "./approval-readiness.js";
 import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
@@ -59,6 +55,7 @@ import {
   findingAcceptGuardId,
   findingDecisionHintId,
 } from "./finding-decision-hint.js";
+import { findingProgressLine } from "./finding-progress.js";
 import { findingTitle } from "./finding-title.js";
 import {
   executionLine,
@@ -87,6 +84,7 @@ import {
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
+import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import {
   footerBlocker,
@@ -1207,6 +1205,8 @@ export function ReviewWorkspace({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
   const queueCounts = findingQueueCounts(state.findings);
+  // Whether a critique has judged the current draft; before it, there is nothing to resolve.
+  const critiqued = hasArtifact && state.reviewComplete;
   const { selected: chosenWorkTab, select: selectWorkTab } = useReviewWorkTab(
     defaultReviewWorkTab(queueCounts.needsAction),
   );
@@ -3403,12 +3403,13 @@ export function ReviewWorkspace({
                   <div>
                     <h2>Findings</h2>
                     <p className="finding-progress" role="status" aria-live="polite">
-                      {queueCounts.resolved} of {state.findings.length} resolved
-                      {queueCounts.needsAction === 0
-                        ? " · all findings resolved"
-                        : runInProgress
-                          ? ` · ${queueCounts.needsAction} open`
-                          : ` · ${queueCounts.needsAction} need action`}
+                      {findingProgressLine({
+                        resolved: queueCounts.resolved,
+                        total: state.findings.length,
+                        needsAction: queueCounts.needsAction,
+                        runInProgress,
+                        critiqued,
+                      })}
                     </p>
                     {runInProgress && queueCounts.needsAction > 0 ? (
                       <p className="setup-note">
@@ -3418,7 +3419,7 @@ export function ReviewWorkspace({
                     ) : null}
                   </div>
                   <span className="count-badge">
-                    {!hasArtifact
+                    {!hasArtifact || (!critiqued && state.findings.length === 0)
                       ? "Not evaluated"
                       : queueCounts.needsAction === 0
                         ? "All resolved"
@@ -3835,7 +3836,7 @@ export function ReviewWorkspace({
                 <div className="warning-copy">
                   <p>
                     Final CV checks block approval:{" "}
-                    {approvalReadiness.blockers.map(formatApprovalReadinessBlocker).join("; ")}.
+                    {formatReadinessBlockers(approvalReadiness.blockers).join("; ")}.
                   </p>
                   <p>{approvalReadinessGuidance}</p>
                 </div>

@@ -673,9 +673,14 @@ away.
 
 - **Approve artifact.** Disabled while a blocking finding is undecided, with
   the count above it, and while the final CV checks block approval, with their
-  reasons ("Not ready: …").
+  reasons ("Not ready: …"). Identical reasons are counted once and name their
+  check, for example "6 validation checks failed: requirement wording not
+  found in the draft (word match)" (#1858).
 - **Approve with override….** Offered when the final CV checks block approval.
-  It asks for a required reason and records it with the approval.
+  Accepting or rejecting a finding records a decision but does not change the
+  draft, so its check stays unmet until a revision fixes it; the override is
+  how you approve past it. It asks for a required reason and records it with
+  the approval.
 - **Request revision.** Sends the draft back to the author for another round.
   The optional **Directions for the author** field above it (up to 1,000
   characters) steers that round, for example "lead with tokenisation" or "drop

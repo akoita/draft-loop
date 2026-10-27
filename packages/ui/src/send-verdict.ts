@@ -1,5 +1,6 @@
-import { type ApprovalReadiness, formatApprovalReadinessBlocker } from "./approval-readiness.js";
+import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { ReviewFinding } from "./model.js";
+import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 
 /** The editorial warning codes `cli-critic-v4` and later report, in the order the verdict names them. */
 const editorialLabels = [
@@ -35,7 +36,7 @@ export function sendVerdict(input: {
     );
   }
   if (input.readiness?.applicationReady === false) {
-    reasons.push(...input.readiness.blockers.map(formatApprovalReadinessBlocker));
+    reasons.push(...formatReadinessBlockers(input.readiness.blockers));
   }
   for (const [code, label] of editorialLabels) {
     const count = input.warnings.filter((finding) => finding.code === code).length;
