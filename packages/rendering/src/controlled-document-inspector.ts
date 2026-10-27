@@ -8,8 +8,13 @@ import {
 
 import { textWidthPt } from "./document-layout.js";
 import { type RenderedDocument, renderingLayoutProfiles } from "./index.js";
-import { decodePdfLiteralEscapes } from "./pdf-document.js";
-import { pdfActualTextLiteral, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
+import {
+  decodePdfActualText,
+  decodePdfShownText,
+  pdfFontUnicodeMaps,
+  pdfShownTextPattern,
+} from "./pdf-document.js";
+import { pdfActualTextOperand, pdfRunTag, recoverPdfRuns } from "./pdf-run-recovery.js";
 import { docxParagraphUnits, type PdfTextRun } from "./role-header.js";
 
 interface VisibleTextUnit {
@@ -290,10 +295,6 @@ function observationForPages(
   return observation;
 }
 
-function decodePdfLiteral(value: string): string {
-  return decodePdfLiteralEscapes(value);
-}
-
 /**
  * How far in from the page's right edge text must stay: the profile's right margin, so a line
  * wider than the content box is flagged. An unknown profile falls back to the page edge.
@@ -333,6 +334,7 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
           .map(([id]) => id)
       : [...kids.matchAll(/(\d+)\s+0\s+R/gu)].map((match) => Number(match[1]));
   if (pageIds.length === 0) fail("controlled PDF contains no page objects");
+  const fontMaps = pdfFontUnicodeMaps(objects);
   const pages: InspectedPage[] = [];
   for (const pageId of pageIds) {
     const pageBody = objects.get(pageId);
@@ -360,9 +362,7 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
     if (stream === undefined) fail("controlled PDF page content stream is missing");
     const runs: PdfTextRun[] = [];
     let clipped = false;
-    for (const match of stream.matchAll(/\(((?:\\.|[^()])*)\)\s*Tj/gu)) {
-      const escaped = match[1] ?? "";
-      const text = decodePdfLiteral(escaped);
+    for (const match of stream.matchAll(pdfShownTextPattern)) {
       const prefix = stream.slice(0, match.index ?? 0);
       const fontSizes = [...prefix.matchAll(/\/F\d+\s+([-+]?\d+(?:\.\d+)?)\s+Tf/gu)];
       const fontNames = [...prefix.matchAll(/\/F(\d+)\s+[-+]?\d+(?:\.\d+)?\s+Tf/gu)];
@@ -377,6 +377,7 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
       // Titles and headings are the only F2 runs. Role headers use the same bold face under F3
       // and count as body text, so they are measured bold but are not section headings.
       const fontNumber = Number(fontNames.at(-1)?.[1]);
+      const text = decodePdfShownText(match, fontMaps.get(`F${fontNumber}`));
       const isBold = fontNumber === 2 || fontNumber === 3;
       const width = textWidthPt(text, fontSize, isBold, font);
       clipped ||=
@@ -385,9 +386,9 @@ function parsePdfPages(content: Uint8Array, rightInsetPt: number): readonly Insp
       const line = stream.slice(lineStart, match.index ?? 0);
       const tag = pdfRunTag(line);
       // A capitalised heading is measured as drawn but reads back as written.
-      const written = pdfActualTextLiteral(line);
+      const written = pdfActualTextOperand(line);
       runs.push({
-        text: written === undefined ? text : decodePdfLiteral(written),
+        text: written === undefined ? text : decodePdfActualText(written),
         fontNumber,
         x,
         y,

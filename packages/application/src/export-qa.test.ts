@@ -323,14 +323,18 @@ describe("naming why an export was refused (#1828)", () => {
             {
               id: "summary-1",
               type: "paragraph" as const,
-              text: "Cut latency − 40% → shipped ≥ 3 releases in Łódź.",
+              text: "Cut latency \u2212 40% \u2192 shipped \u2265 3 releases in \u0141\u00f3d\u017a.",
               claimIds: [],
             },
           ],
         },
       ],
     };
-    const rendered = renderArtifact(unicode, "pdf", { generatedAt });
+    // Compact draws in Helvetica, which holds WinAnsi only; Carlito draws these (#1829).
+    expect(() =>
+      assertExportRenderingQa(unicode, renderArtifact(unicode, "pdf", { generatedAt })),
+    ).not.toThrow();
+    const rendered = renderArtifact(unicode, "pdf", { generatedAt, templateId: "compact" });
     let refusal: unknown;
     try {
       assertExportRenderingQa(unicode, rendered);
@@ -346,6 +350,30 @@ describe("naming why an export was refused (#1828)", () => {
     );
     // A code point names a character, never the text around it.
     expect(error.message).not.toMatch(/latency|releases/u);
+  });
+
+  it("names a character Carlito has no glyph for", () => {
+    const artifact = sampleArtifact();
+    const [section] = artifact.sections;
+    const emoji = {
+      ...artifact,
+      sections: [
+        {
+          ...(section as NonNullable<typeof section>),
+          blocks: [
+            {
+              id: "summary-1",
+              type: "paragraph" as const,
+              text: "Shipped \u{1F680} on time.",
+              claimIds: [],
+            },
+          ],
+        },
+      ],
+    };
+    expect(() =>
+      assertExportRenderingQa(emoji, renderArtifact(emoji, "pdf", { generatedAt })),
+    ).toThrow("The PDF cannot draw these characters: U+1F680.");
   });
 
   it("names a failed check for a refused DOCX without naming characters", () => {

@@ -3,7 +3,12 @@ import { createHash } from "node:crypto";
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
-import { buildRenderingQaReport, inspectControlledDocument, renderArtifact } from "./index.js";
+import {
+  buildRenderingQaReport,
+  inspectControlledDocument,
+  readPdfTextRuns,
+  renderArtifact,
+} from "./index.js";
 
 const generatedAt = "2026-08-30T10:00:00.000Z";
 const checksum = (content: Uint8Array): string =>
@@ -149,11 +154,20 @@ describe("controlled document byte inspector", () => {
       }).passed,
     ).toBe(false);
 
+    // The text is drawn as glyph ids; swapping two runs' operands reorders what a viewer reads.
+    const operand = (text: string): string => {
+      const line = readPdfTextRuns(pdf.content).find((run) => run.text.endsWith(text))?.line ?? "";
+      return /<[0-9A-F]+> Tj/u.exec(line)?.[0] ?? "";
+    };
+    const first = operand("First milestone.");
+    const third = operand("Third milestone.");
+    expect(first).not.toBe("");
+    expect(third).not.toBe("");
     const original = new TextDecoder().decode(pdf.content);
     const reorderedPdf = original
-      .replace("(First milestone.)", "(XXXXXXXXXXXXXXXX)")
-      .replace("(Third milestone.)", "(First milestone.)")
-      .replace("(XXXXXXXXXXXXXXXX)", "(Third milestone.)");
+      .replace(first, "<placeholder> Tj")
+      .replace(third, first)
+      .replace("<placeholder> Tj", third);
     const reordered = withContent(pdf, new TextEncoder().encode(reorderedPdf));
     const reorderedReport = buildRenderingQaReport({
       artifact: sample,

@@ -14,8 +14,18 @@ import {
   wrapTextToWidth,
 } from "./document-layout.js";
 import type { RenderingLayoutProfile } from "./index.js";
-import { embeddedFontFlateBytes, embeddedPdfFonts } from "./pdf-fonts.js";
+import { type EmbeddedPdfFonts, embeddedFontFlateBytes, embeddedPdfFonts } from "./pdf-fonts.js";
 import { tagPdfCommands } from "./pdf-run-recovery.js";
+import {
+  createPdfGlyphEncoder,
+  decodeGlyphHex,
+  decodeUnicodeTextString,
+  embeddedFontDraws,
+  type PdfGlyphEncoder,
+  parseToUnicodeCMap,
+  pdfUnicodeTextString,
+  toUnicodeCMap,
+} from "./pdf-unicode-font.js";
 import type { EmbeddedFontData } from "./truetype-font.js";
 import { winAnsiCode, windows1252Characters } from "./winansi.js";
 
@@ -24,9 +34,10 @@ import { winAnsiCode, windows1252Characters } from "./winansi.js";
  * title and headings), a rule under each heading, hanging bullets and the profile's A4 margins,
  * drawn with the template's look (#1791): the name's alignment, heading case and colours, the
  * rule's colour, accent-coloured dates, justified text and a slanted context line under a role.
- * Carlito is embedded in full as a TrueType simple font; Helvetica is the unembedded standard
- * font. Text is written in WinAnsi, so Latin accents and common punctuation survive; characters
- * outside it are written as "?" because neither font setup can draw them.
+ * Carlito is embedded in full as a Unicode font: its text is written as glyph ids and read back
+ * through a ToUnicode map, so every character Carlito has a glyph for survives (#1829). Helvetica
+ * is the unembedded standard font, written in WinAnsi, so Latin accents and common punctuation
+ * survive there. A character the font cannot draw is written as "?" in either.
  */
 
 const pointsPerMillimeter = 72 / 25.4;
@@ -52,6 +63,14 @@ function pdfLiteral(value: string): string {
   return result;
 }
 
+/** A text string for the document's metadata: a literal when WinAnsi holds it, else Unicode. */
+function pdfTextString(value: string): string {
+  const text = value.normalize("NFC");
+  return [...text].every((character) => winAnsiCode(character) !== null)
+    ? `(${pdfLiteral(text)})`
+    : pdfUnicodeTextString(text);
+}
+
 /** Decode the escapes of one PDF literal string written in WinAnsi back to text. */
 export function decodePdfLiteralEscapes(value: string): string {
   return value.replace(/\\([0-7]{1,3}|[\s\S])/gu, (_, escaped: string) => {
@@ -74,6 +93,53 @@ export function decodePdfLiteralEscapes(value: string): string {
         return escaped;
     }
   });
+}
+
+/** The ToUnicode map of each font resource name (`F1`, …) of a PDF, by its objects. */
+export function pdfFontUnicodeMaps(
+  objects: ReadonlyMap<number, string>,
+): ReadonlyMap<string, ReadonlyMap<number, string>> {
+  const maps = new Map<string, ReadonlyMap<number, string>>();
+  for (const body of objects.values()) {
+    const resources = /\/Font\s*<<([^>]*)>>/u.exec(body)?.[1];
+    if (resources === undefined) continue;
+    for (const entry of resources.matchAll(/\/(F\d+)\s+(\d+)\s+0\s+R/gu)) {
+      const font = objects.get(Number(entry[2]));
+      const cmapId = font === undefined ? null : /\/ToUnicode\s+(\d+)\s+0\s+R/u.exec(font)?.[1];
+      if (cmapId === null || cmapId === undefined) continue;
+      const cmap = /\bstream\s*\r?\n([\s\S]*?)\r?\nendstream\b/u.exec(
+        objects.get(Number(cmapId)) ?? "",
+      )?.[1];
+      if (cmap !== undefined) maps.set(entry[1] ?? "", parseToUnicodeCMap(cmap));
+    }
+    break;
+  }
+  return maps;
+}
+
+/**
+ * One text-showing operand of our content streams, the way a viewer reads it: a WinAnsi literal,
+ * a hex string of glyph ids read through the font's ToUnicode map, or a `TJ` array of those.
+ */
+export const pdfShownTextPattern =
+  /(?:\(((?:\\.|[^()])*)\)\s*Tj|<([0-9A-Fa-f\s]*)>\s*Tj|\[((?:\s*(?:<[0-9A-Fa-f\s]*>|[-+]?\d+(?:\.\d+)?))*)\s*\]\s*TJ)/gu;
+
+/** The text of one `pdfShownTextPattern` match, read with the font it is shown in. */
+export function decodePdfShownText(
+  match: RegExpMatchArray,
+  map: ReadonlyMap<number, string> | undefined,
+): string {
+  if (match[1] !== undefined) return decodePdfLiteralEscapes(match[1]);
+  const glyphs =
+    match[2] ??
+    [...(match[3] ?? "").matchAll(/<([0-9A-Fa-f\s]*)>/gu)].map((part) => part[1]).join("");
+  return decodeGlyphHex(glyphs, map ?? new Map());
+}
+
+/** The text an `/ActualText` operand carries: a WinAnsi literal or a `<FEFF…>` Unicode string. */
+export function decodePdfActualText(operand: string): string {
+  if (operand.startsWith("(")) return decodePdfLiteralEscapes(operand.slice(1, -1));
+  return decodeUnicodeTextString(operand.slice(1, -1)) ?? "";
 }
 
 interface PlacedLine {
@@ -124,10 +190,33 @@ function pdfLook(template: RenderingTemplate | undefined): PdfLook {
 }
 
 /** Uppercase drawn text keeps the text as written for extraction, as the DOCX `caps` does. */
-function actualText(drawn: string, written: string, commands: string): string {
-  return drawn === written
-    ? commands
-    : `/Span << /ActualText (${pdfLiteral(written)}) >> BDC ${commands} EMC`;
+function actualText(written: string, commands: string, unicode = false): string {
+  const operand = unicode ? pdfUnicodeTextString(written) : `(${pdfLiteral(written)})`;
+  return `/Span << /ActualText ${operand} >> BDC ${commands} EMC`;
+}
+
+/** The faces a document draws in, with the glyphs each has written so far. */
+interface PdfGlyphFaces {
+  readonly regular: PdfGlyphEncoder;
+  readonly bold: PdfGlyphEncoder;
+  readonly fonts: EmbeddedPdfFonts;
+}
+
+/** A run's glyphs as a `Tj` operand, or a `TJ` array that widens each space by `spacing` em. */
+function glyphOperand(hex: string, spaceHex: string, spacingThousandths: number): string {
+  if (spacingThousandths === 0) return `<${hex}> Tj`;
+  const parts: string[] = [];
+  let current = "";
+  for (let index = 0; index < hex.length; index += 4) {
+    const glyph = hex.slice(index, index + 4);
+    current += glyph;
+    if (glyph === spaceHex) {
+      parts.push(`<${current}> ${fixed(-spacingThousandths)}`);
+      current = "";
+    }
+  }
+  if (current !== "") parts.push(`<${current}>`);
+  return `[${parts.join(" ")}] TJ`;
 }
 
 const contextSlant = 0.2;
@@ -136,6 +225,7 @@ function pageCommands(
   profile: RenderingLayoutProfile,
   blocks: readonly LayoutBlock[],
   look: PdfLook = pdfLook(undefined),
+  faces: PdfGlyphFaces | null = null,
 ) {
   const metrics = layoutMetrics(profile);
   const pageWidth = toPoints(profile.pageWidthMm);
@@ -166,16 +256,37 @@ function pageCommands(
     x: number,
     baseline: number,
     value: string,
-    style: { readonly color?: string | null; readonly wordSpacing?: number } = {},
+    style: {
+      readonly color?: string | null;
+      readonly wordSpacing?: number;
+      /** The text as written, when the drawn text differs from it (a capitalised heading). */
+      readonly written?: string;
+    } = {},
   ) => {
     const color = style.color === undefined || style.color === null ? "" : `${style.color} rg `;
-    const spacing =
-      style.wordSpacing === undefined || style.wordSpacing === 0
-        ? ""
-        : `${fixed(style.wordSpacing)} Tw `;
-    const run = `BT ${color}/${font} ${size} Tf ${spacing}1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm (${pdfLiteral(value)}) Tj ET`;
-    // Fill colour and word spacing outlive ET, so a styled run restores the state it changed.
-    return color === "" && spacing === "" ? run : `q ${run} Q`;
+    const wordSpacing = style.wordSpacing ?? 0;
+    if (faces === null) {
+      const spacing = wordSpacing === 0 ? "" : `${fixed(wordSpacing)} Tw `;
+      const run = `BT ${color}/${font} ${size} Tf ${spacing}1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm (${pdfLiteral(value)}) Tj ET`;
+      // Fill colour and word spacing outlive ET, so a styled run restores the state it changed.
+      const restored = color === "" && spacing === "" ? run : `q ${run} Q`;
+      return style.written === undefined || style.written === value
+        ? restored
+        : actualText(style.written, restored);
+    }
+    // Word spacing applies only to one-byte codes, so a glyph-id run widens its spaces in `TJ`.
+    const face = font === "F1" ? faces.regular : faces.bold;
+    const glyphs = face.encode(value);
+    const spaceHex = face.encode(" ").hex;
+    const operand = glyphOperand(glyphs.hex, spaceHex, (wordSpacing * 1000) / size);
+    const run = `BT ${color}/${font} ${size} Tf 1 0 0 1 ${fixed(x)} ${fixed(baseline)} Tm ${operand} ET`;
+    const restored = color === "" ? run : `q ${run} Q`;
+    const data = font === "F1" ? faces.fonts.regular : faces.fonts.bold;
+    const written =
+      style.written === undefined || style.written === value
+        ? glyphs.actualText
+        : drawableText(style.written, data);
+    return written === undefined ? restored : actualText(written, restored, true);
   };
   /** A line's left edge under the name's alignment. */
   const aligned = (width: number): number =>
@@ -257,11 +368,10 @@ function pageCommands(
       const baseline = y - heading;
       const drawn = look.headingCaps ? block.text.toLocaleUpperCase() : block.text;
       place(
-        actualText(
-          drawn,
-          block.text,
-          text("F2", heading, left, baseline, drawn, { color: look.accentColor }),
-        ),
+        text("F2", heading, left, baseline, drawn, {
+          color: look.accentColor,
+          written: block.text,
+        }),
       );
       const ruleY = baseline - 3;
       if (look.rule) {
@@ -396,48 +506,78 @@ function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
   return result;
 }
 
-function embeddedFontObjects(
-  descriptorId: number,
-  fileId: number,
+/** Text as a face reads it back: a character the font has no glyph for becomes "?". */
+function drawableText(text: string, data: EmbeddedFontData): string {
+  let result = "";
+  for (const character of text.normalize("NFC")) {
+    result += embeddedFontDraws(character, data) ? character : "?";
+  }
+  return result;
+}
+
+/** The five objects of one embedded face, at `firstId` to `firstId + 4`: Type0 font first. */
+function unicodeFontObjects(
+  firstId: number,
   data: EmbeddedFontData,
-): { readonly font: string; readonly descriptor: string; readonly file: Uint8Array } {
-  return {
-    font: `<< /Type /Font /Subtype /TrueType /BaseFont /${data.baseFont} /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [${data.widths.join(" ")}] /FontDescriptor ${descriptorId} 0 R >>`,
-    // Flags 32 is "nonsymbolic": the font is addressed through WinAnsi, not its own encoding.
-    descriptor: `<< /Type /FontDescriptor /FontName /${data.baseFont} /Flags 32 /FontBBox [${data.bbox.join(" ")}] /ItalicAngle ${data.italicAngle} /Ascent ${data.ascent} /Descent ${data.descent} /CapHeight ${data.capHeight} /StemV ${data.stemV} /FontFile2 ${fileId} 0 R >>`,
-    file: streamObject(
-      `/Filter /FlateDecode /Length1 ${data.length1}`,
-      embeddedFontFlateBytes(data),
-    ),
-  };
+  encoder: PdfGlyphEncoder,
+): readonly PdfObjectBody[] {
+  const [cidFontId, cmapId, descriptorId, fileId] = [1, 2, 3, 4].map((offset) => firstId + offset);
+  const glyphs = encoder.glyphs();
+  const widths = glyphs.map((glyph) => `${glyph.glyphId} [${glyph.width}]`).join(" ");
+  const cmap = toUnicodeCMap(glyphs);
+  return [
+    `<< /Type /Font /Subtype /Type0 /BaseFont /${data.baseFont} /Encoding /Identity-H /DescendantFonts [${cidFontId} 0 R] /ToUnicode ${cmapId} 0 R >>`,
+    `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /${data.baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${descriptorId} 0 R /W [${widths}] /CIDToGIDMap /Identity >>`,
+    // The CMap is ASCII, so its length in characters is its byte count.
+    `<< /Length ${cmap.length} >>\nstream\n${cmap}\nendstream`,
+    // Flags 32 is "nonsymbolic": the font draws the Latin text a CV holds.
+    `<< /Type /FontDescriptor /FontName /${data.baseFont} /Flags 32 /FontBBox [${data.bbox.join(" ")}] /ItalicAngle ${data.italicAngle} /Ascent ${data.ascent} /Descent ${data.descent} /CapHeight ${data.capHeight} /StemV ${data.stemV} /FontFile2 ${fileId} 0 R >>`,
+    streamObject(`/Filter /FlateDecode /Length1 ${data.length1}`, embeddedFontFlateBytes(data)),
+  ];
 }
 
 export function buildPdf(input: PdfRenderInput): Uint8Array {
   const { artifact, profile } = input;
   const pageWidth = toPoints(profile.pageWidthMm);
   const pageHeight = toPoints(profile.pageHeightMm);
-  const pages = pageCommands(profile, layoutBlocks(artifact, profile), pdfLook(input.template));
+  const embedded = embeddedPdfFonts(profilePdfFont(profile));
+  const faces =
+    embedded === null
+      ? null
+      : {
+          regular: createPdfGlyphEncoder(embedded.regular),
+          bold: createPdfGlyphEncoder(embedded.bold),
+          fonts: embedded,
+        };
+  const pages = pageCommands(
+    profile,
+    layoutBlocks(artifact, profile),
+    pdfLook(input.template),
+    faces,
+  );
 
   const objects: PdfObjectBody[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[2] = "";
-  const embedded = embeddedPdfFonts(profilePdfFont(profile));
-  if (embedded === null) {
+  if (embedded === null || faces === null) {
     objects[3] =
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
     objects[4] =
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
   } else {
     // F1 is object 3 and F2 is object 4; F3, the role-header bold, reuses object 4 so the bold
-    // font file is embedded once. Their descriptors and font files follow as 5 to 8.
-    const regular = embeddedFontObjects(5, 6, embedded.regular);
-    const bold = embeddedFontObjects(7, 8, embedded.bold);
-    objects[3] = regular.font;
-    objects[4] = bold.font;
-    objects[5] = regular.descriptor;
-    objects[6] = regular.file;
-    objects[7] = bold.descriptor;
-    objects[8] = bold.file;
+    // font file is embedded once. Each face's CID font, ToUnicode map, descriptor and font file
+    // follow: the regular's as 5 to 8, the bold's as 9 to 12.
+    const [regularFont, ...regularParts] = unicodeFontObjects(4, embedded.regular, faces.regular);
+    const [boldFont, ...boldParts] = unicodeFontObjects(8, embedded.bold, faces.bold);
+    objects[3] = regularFont ?? "";
+    objects[4] = boldFont ?? "";
+    regularParts.forEach((part, index) => {
+      objects[5 + index] = part;
+    });
+    boldParts.forEach((part, index) => {
+      objects[9 + index] = part;
+    });
   }
   const pageIds: number[] = [];
   for (const page of pages) {
@@ -457,7 +597,7 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
     ? input.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
     : "20260813120000";
   objects[infoId] =
-    `<< /Title (${pdfLiteral(input.documentTitle)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDate}Z) >>`;
+    `<< /Title ${pdfTextString(input.documentTitle)} /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDate}Z) >>`;
 
   // Built as byte chunks: font files are binary, so xref offsets must count bytes, not characters.
   const chunks: Uint8Array[] = [];
@@ -483,4 +623,45 @@ export function buildPdf(input: PdfRenderInput): Uint8Array {
   xref += `trailer\n<< /Size ${objects.length} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
   append(xref);
   return concatenate(chunks);
+}
+
+/** One text run of a PDF this writer made, as a viewer reads it. */
+export interface PdfTextRunRead {
+  /** The font resource it is shown in, such as `F1`. */
+  readonly font: string;
+  /** Our marked-content tag around it, such as `DLLabel`, or null. */
+  readonly marked: string | null;
+  /** The drawn text, read through the font's ToUnicode map (or WinAnsi). */
+  readonly text: string;
+  /** The `/ActualText` it carries, when the drawn text differs from the written one. */
+  readonly actualText: string | null;
+  /** Its content-stream line, for checks on how it is drawn. */
+  readonly line: string;
+}
+
+/** The text runs of a PDF this writer made, in content order, as a viewer reads them. */
+export function readPdfTextRuns(content: Uint8Array): readonly PdfTextRunRead[] {
+  const raw = new TextDecoder("latin1").decode(content);
+  const objects = new Map<number, string>();
+  for (const match of raw.matchAll(/\b(\d+)\s+0\s+obj\s*([\s\S]*?)\bendobj\b/gu)) {
+    objects.set(Number(match[1]), match[2] ?? "");
+  }
+  const maps = pdfFontUnicodeMaps(objects);
+  const runs: PdfTextRunRead[] = [];
+  for (const line of raw.split("\n")) {
+    for (const match of line.matchAll(pdfShownTextPattern)) {
+      const prefix = line.slice(0, match.index ?? 0);
+      const font = [...prefix.matchAll(/\/(F\d+)\s+[-+]?\d+(?:\.\d+)?\s+Tf/gu)].at(-1)?.[1];
+      if (font === undefined) continue;
+      const actual = /\/ActualText (\((?:\\.|[^()])*\)|<[0-9A-Fa-f]*>) >> BDC/u.exec(prefix)?.[1];
+      runs.push({
+        font,
+        marked: /^\/(DL\w+) BMC /u.exec(line)?.[1] ?? null,
+        text: decodePdfShownText(match, maps.get(font)),
+        actualText: actual === undefined ? null : decodePdfActualText(actual),
+        line,
+      });
+    }
+  }
+  return runs;
 }

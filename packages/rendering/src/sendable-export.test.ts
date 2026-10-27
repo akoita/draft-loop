@@ -10,6 +10,7 @@ import {
   estimateDocumentLength,
   extractTextFromRenderedDocument,
   inspectControlledDocument,
+  readPdfTextRuns,
   renderArtifact,
   renderingLayoutProfiles,
   textWidthPt,
@@ -253,8 +254,7 @@ describe("line wrapping fills the real content width", () => {
   it("draws the PDF with those lines, and the sample bullet no longer breaks at two-thirds", () => {
     const bullet = artifactWithBullet(longText);
     const pdf = renderArtifact(bullet, "pdf", { generatedAt });
-    const raw = new TextDecoder().decode(pdf.content);
-    const drawn = [...raw.matchAll(/\(([^)]*)\) Tj/gu)].map((match) => match[1] ?? "");
+    const drawn = readPdfTextRuns(pdf.content).map((run) => run.text);
     const bulletLines = drawn.filter((text) => !/^(Experience)$/u.test(text));
     const widest = Math.max(
       ...bulletLines.map((text) => textWidthPt(text, 10.5, false, profile.typography.pdfFont)),

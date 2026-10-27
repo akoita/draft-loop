@@ -1,5 +1,5 @@
 /**
- * A minimal, dependency-free TrueType reader for the few facts a PDF simple font needs: the
+ * A minimal, dependency-free TrueType reader for the few facts a PDF font needs: the glyph and
  * advance width of a code point (`cmap` format 4 plus `hmtx`) and the descriptor metrics (`head`,
  * `hhea`, `OS/2`, `post`). It reads only; it never subsets or rewrites a font.
  *
@@ -25,6 +25,8 @@ export interface TrueTypeFont {
   readonly advanceWidth1000: (codePoint: number) => number;
   /** True when the font has a glyph (not `.notdef`) for the code point. */
   readonly hasGlyph: (codePoint: number) => boolean;
+  /** The glyph id of a code point, 0 (`.notdef`) when the font has none. */
+  readonly glyphId: (codePoint: number) => number;
 }
 
 /**
@@ -133,5 +135,6 @@ export function parseTrueTypeFont(bytes: Uint8Array): TrueTypeFont {
     },
     advanceWidth1000: (codePoint) => scale(advanceOfGlyph(glyphOf(codePoint))),
     hasGlyph: (codePoint) => glyphOf(codePoint) !== 0,
+    glyphId: glyphOf,
   };
 }

@@ -6,9 +6,12 @@ import { describe, expect, it } from "vitest";
 import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
 import { blockLines, layoutBlocks, textWidthPt } from "./document-layout.js";
 import {
+  buildRenderingQaReport,
   extractTextFromRenderedDocument,
   inspectControlledDocument,
+  pdfUndrawableCharacters,
   type RenderedDocument,
+  readPdfTextRuns,
   renderArtifact,
   renderingLayoutProfiles,
 } from "./index.js";
@@ -54,17 +57,22 @@ describe("Carlito in the standard-two-page PDF", () => {
   const rendered = render("standard-two-page");
   const text = latin1(rendered.content);
 
-  it("embeds Regular as F1 and Bold as F2 as WinAnsi TrueType simple fonts", () => {
-    expect(text).toContain("/Subtype /TrueType /BaseFont /Carlito /Encoding /WinAnsiEncoding");
-    expect(text).toContain("/BaseFont /Carlito-Bold ");
-    expect(text).toContain("/FirstChar 32 /LastChar 255");
+  it("embeds Regular as F1 and Bold as F2 as Unicode fonts with ToUnicode maps", () => {
+    expect(text).toContain(
+      "/Subtype /Type0 /BaseFont /Carlito /Encoding /Identity-H /DescendantFonts [5 0 R] /ToUnicode 6 0 R",
+    );
+    expect(text).toContain("/Subtype /Type0 /BaseFont /Carlito-Bold /Encoding /Identity-H");
+    expect(text.match(/\/Subtype \/CIDFontType2 /gu)).toHaveLength(2);
+    expect(text.match(/\/CIDToGIDMap \/Identity/gu)).toHaveLength(2);
+    expect(text.match(/begincmap/gu)).toHaveLength(2);
+    expect(text).not.toContain("/WinAnsiEncoding");
     expect(text).not.toContain("/Helvetica");
     expect(text.match(/\/FontFile2 \d+ 0 R/gu)).toHaveLength(2);
     expect(text.match(/\/Filter \/FlateDecode \/Length1 \d+ \/Length \d+/gu)).toHaveLength(2);
     expect(text).toContain("/F1 3 0 R /F2 4 0 R");
   });
 
-  it("embeds the unmodified pinned fonts and writes the parser's widths", () => {
+  it("embeds the unmodified pinned fonts and writes the parser's widths for drawn glyphs", () => {
     const fontFiles = [...text.matchAll(/\/FontFile2 (\d+) 0 R/gu)].map((match) =>
       Number(match[1]),
     );
@@ -81,9 +89,76 @@ describe("Carlito in the standard-two-page PDF", () => {
         parsed.advanceWidth1000(winAnsiCodePoint(offset + 32)),
       );
       expect(widths).toEqual(data.widths);
-      expect(text).toContain(`/Widths [${widths.join(" ")}]`);
+      // Each drawn glyph's width is the parser's advance width for its character.
+      const space = parsed.glyphId(0x20);
+      const letterA = parsed.glyphId(0x61);
+      if (index === 0) {
+        expect(text).toContain(`${space} [${parsed.advanceWidth1000(0x20)}]`);
+        expect(text).toContain(`${letterA} [${parsed.advanceWidth1000(0x61)}]`);
+      }
       expect(embeddedFontFlateBytes(data).length).toBeLessThan(300_000);
     });
+  });
+
+  it("draws characters outside Windows-1252 and reads them back as written (#1829)", () => {
+    const [summary, ...rest] = cv.sections;
+    if (summary === undefined) throw new Error("fixture has no sections");
+    const written =
+      "Cut latency \u2212 40% \u2192 shipped \u2265 3 releases in \u0141\u00f3d\u017a, non\u2011stop.";
+    const unicode = {
+      ...cv,
+      sections: [
+        {
+          ...summary,
+          blocks: [{ id: "unicode-1", type: "paragraph" as const, text: written, claimIds: [] }],
+        },
+        ...rest,
+      ],
+    };
+    const pdf = renderArtifact(unicode, "pdf", options);
+    const runs = readPdfTextRuns(pdf.content);
+    const read = runs.map((run) => run.actualText ?? run.text).join(" ");
+    expect(read).toContain(
+      "\u2212 40% \u2192 shipped \u2265 3 releases in \u0141\u00f3d\u017a, non\u2011stop.",
+    );
+    expect(read).not.toContain("?");
+    const report = buildRenderingQaReport({
+      artifact: unicode,
+      rendered: pdf,
+      createdAt: fixtureGeneratedAt,
+      viewerObservation: inspectControlledDocument(pdf),
+    });
+    expect(report.contentIntegrity.visibleContentMatches).toBe(true);
+    expect(report.viewerObservation?.recoveredVisibleContentChecksum).toBe(
+      report.contentIntegrity.expectedVisibleContentChecksum,
+    );
+    expect(pdfUndrawableCharacters(written, "carlito")).toEqual([]);
+  });
+
+  it('draws a character Carlito has no glyph for as "?", so the check still refuses it', () => {
+    const [summary, ...rest] = cv.sections;
+    if (summary === undefined) throw new Error("fixture has no sections");
+    const written = "Shipped \u{1F680} on time.";
+    const missing = {
+      ...cv,
+      sections: [
+        {
+          ...summary,
+          blocks: [{ id: "missing-1", type: "paragraph" as const, text: written, claimIds: [] }],
+        },
+        ...rest,
+      ],
+    };
+    const pdf = renderArtifact(missing, "pdf", options);
+    expect(readPdfTextRuns(pdf.content).map((run) => run.text)).toContain("Shipped ? on time.");
+    const report = buildRenderingQaReport({
+      artifact: missing,
+      rendered: pdf,
+      createdAt: fixtureGeneratedAt,
+      viewerObservation: inspectControlledDocument(pdf),
+    });
+    expect(report.passed).toBe(false);
+    expect(pdfUndrawableCharacters(written, "carlito")).toEqual(["U+1F680"]);
   });
 
   it("describes the fonts with real descriptor metrics", () => {

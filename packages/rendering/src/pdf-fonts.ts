@@ -1,11 +1,11 @@
 import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
+import { unicodeTextUnits } from "./pdf-unicode-font.js";
 import type { EmbeddedFontData } from "./truetype-font.js";
-import { winAnsiCode } from "./winansi.js";
 
 /**
  * The PDF fonts a layout profile can ask for. Helvetica is one of the 14 standard fonts and
- * needs no embedding; Carlito (metric-compatible with Calibri) is embedded in full from the
- * vendored data module.
+ * needs no embedding, so it draws WinAnsi only; Carlito (metric-compatible with Calibri) is
+ * embedded in full from the vendored data module as a Unicode font (#1829).
  */
 export type PdfFontFamily = "helvetica" | "carlito";
 
@@ -26,12 +26,5 @@ export function embeddedFontFlateBytes(data: EmbeddedFontData): Uint8Array {
 
 /** Advance width of a text run in 1000-unit em space for an embedded font. */
 export function embeddedTextUnits(text: string, data: EmbeddedFontData): number {
-  const fallback = data.widths[0x3f - 32] ?? 500;
-  let units = 0;
-  for (const character of text.normalize("NFC")) {
-    const code = winAnsiCode(character);
-    if (code !== null) units += data.widths[code - 32] ?? fallback;
-    else units += /\s/u.test(character) ? (data.widths[0] ?? fallback) : fallback;
-  }
-  return units;
+  return unicodeTextUnits(text, data);
 }
