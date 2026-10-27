@@ -7,7 +7,10 @@ import {
   type ModelProfileSupportState,
   modelProfilePresetReferences,
   modelProfilePresets,
+  presetReferencesMatchingPreflight,
+  workspaceModelsForProfileReferences,
 } from "./model-profile-picker-state.js";
+import { isDevelopmentPreset } from "./model-profile-presentation.js";
 
 const economyPreset = modelProfilePresets.find((preset) => preset.id === "economy");
 if (economyPreset === undefined) throw new Error("The economy preset must be registered.");
@@ -213,5 +216,87 @@ describe("desktop model profile picker rendering", () => {
 
     expect(html).toMatch(/checked="" value="economy"/);
     expect(html).not.toContain("legacy path");
+  });
+});
+
+describe("the model dialog on a host with a fixed sign-in (#1834)", () => {
+  const developmentIds = new Set(
+    modelProfilePresets
+      .filter(isDevelopmentPreset)
+      .flatMap((preset) => [preset.author.id, preset.critic.id]),
+  );
+  // The hosted service runs every preset but the development ones.
+  const hosted: ModelProfileSupportState = {
+    status: "ready",
+    workspaceId: "workspace-1",
+    generation: 2,
+    result: {
+      ...apiKeySupport,
+      profiles: apiKeySupport.profiles.map((profile) => ({
+        ...profile,
+        supported: !developmentIds.has(profile.id),
+      })),
+    },
+  };
+  const balancedPreset = modelProfilePresets.find((preset) => preset.id === "balanced");
+  const balanced =
+    balancedPreset === undefined ? null : modelProfilePresetReferences(balancedPreset);
+  if (balanced === null) throw new Error("The balanced preset must resolve to profiles.");
+  const balancedModels = workspaceModelsForProfileReferences(balanced);
+  if (balancedModels === null) throw new Error("The balanced preset must map to models.");
+  const preflight = {
+    author: { company: balancedModels.authorCompany, model: balancedModels.authorModel },
+    critic: { company: balancedModels.criticCompany, model: balancedModels.criticModel },
+  } as Parameters<typeof presetReferencesMatchingPreflight>[0];
+
+  function renderHosted(matching: ModelProfileReferences | null): string {
+    return renderToStaticMarkup(
+      <ModelProfilePicker
+        workspaceId="workspace-1"
+        generation={2}
+        applied={null}
+        matching={matching}
+        signInFixed
+        support={hosted}
+        disabled={false}
+        onApply={async () => true}
+        onCancel={() => undefined}
+        onRetrySupport={() => undefined}
+        isContextCurrent={() => true}
+      />,
+    );
+  }
+
+  it("finds the preset the workspace's models already are", () => {
+    expect(presetReferencesMatchingPreflight(preflight)).toEqual(balanced);
+    expect(
+      presetReferencesMatchingPreflight({
+        ...preflight,
+        critic: { ...preflight.critic, model: "not-a-preset-model" },
+      }),
+    ).toBeNull();
+  });
+
+  it("starts on that preset instead of an empty custom pair", () => {
+    const html = renderHosted(balanced);
+    expect(html).toMatch(/checked="" value="balanced"/);
+    expect(html).not.toMatch(/checked="" value="custom"/);
+    expect(html).not.toContain("legacy path");
+  });
+
+  it("leaves out what the host cannot offer", () => {
+    const html = renderHosted(balanced);
+    expect(html).not.toContain("Not available with your current sign-in");
+    expect(html).not.toContain(">Development<");
+    expect(html).not.toContain("Codex");
+    const unmatched = renderHosted(null);
+    expect(unmatched).toContain("New runs use the workspace&#x27;s current models.");
+    expect(unmatched).not.toContain("legacy path");
+  });
+
+  it("keeps the desktop's notes and every preset when the sign-in can change", () => {
+    const html = renderPicker(supportState(true));
+    expect(html).toContain("Codex user sessions");
+    expect(html).toContain(">Development<");
   });
 });

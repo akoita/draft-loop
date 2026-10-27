@@ -48,6 +48,22 @@ interface ModelPresetCardsProps {
   readonly leading?: ReactNode;
   /** Whether the last card lets the person pick the writer and reviewer themselves. */
   readonly includeCustom?: boolean;
+  /**
+   * Leaves out the presets the host's sign-in cannot run. A host whose sign-in the person cannot
+   * change (the hosted service) offers only what it runs (#1834).
+   */
+  readonly hideUnsupported?: boolean;
+}
+
+function presetSupported(
+  preset: ModelProfilePreset,
+  support: ModelProfileSupportResult | undefined,
+): boolean {
+  return (
+    support === undefined ||
+    (modelProfileRouteIsSupported(preset.author, support) &&
+      modelProfileRouteIsSupported(preset.critic, support))
+  );
 }
 
 function PresetCard({
@@ -68,10 +84,7 @@ function PresetCard({
   const author = modelProfileEntryForReference(preset.author, "author");
   const critic = modelProfileEntryForReference(preset.critic, "critic");
   if (author === undefined || critic === undefined) return null;
-  const unsupported =
-    support !== undefined &&
-    (!modelProfileRouteIsSupported(preset.author, support) ||
-      !modelProfileRouteIsSupported(preset.critic, support));
+  const unsupported = !presetSupported(preset, support);
   const authorName = modelDisplayName(author.profile.modelId);
   const criticName = modelDisplayName(critic.profile.modelId);
   const unvalidated =
@@ -128,13 +141,17 @@ export function ModelPresetCards({
   legend = "Choose a model pair",
   leading = null,
   includeCustom = true,
+  hideUnsupported = false,
 }: ModelPresetCardsProps) {
+  const presets = hideUnsupported
+    ? modelProfilePresets.filter((preset) => presetSupported(preset, support))
+    : modelProfilePresets;
   return (
     <fieldset className="model-preset-cards">
       <legend>{legend}</legend>
       <div className="model-preset-card-grid">
         {leading}
-        {modelProfilePresets.map((preset) => (
+        {presets.map((preset) => (
           <PresetCard
             key={preset.id}
             preset={preset}

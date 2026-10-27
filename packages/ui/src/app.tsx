@@ -63,6 +63,7 @@ import {
   modelProfileSupportForContext,
   modelProfileSupportUnavailableMessage,
   modelProfileWarning,
+  presetReferencesMatchingPreflight,
   profileReferencesMatchPreflight,
   reviewActionWithModelProfiles,
   type SavedModelProfilesState,
@@ -2306,7 +2307,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         </p>
         <ModelEditorSummary
           {...workspacePairSides(state, loadedApplicationPair, selectedModelProfiles?.refs ?? null)}
-          applied={selectedModelProfiles?.refs ?? null}
+          // Models that match a preset are named after it, saved pair or not (#1834).
+          applied={
+            selectedModelProfiles?.refs ??
+            presetReferencesMatchingPreflight(state.providerTransmissionPreflight)
+          }
           support={
             readyModelProfileSupport?.status === "ready"
               ? readyModelProfileSupport.result
@@ -2344,6 +2349,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             workspaceId={state.workspaceId}
             generation={workspaceGeneration}
             applied={selectedModelProfiles?.refs ?? null}
+            matching={presetReferencesMatchingPreflight(state.providerTransmissionPreflight)}
+            signInFixed={activePort.setProviderAuthMode === undefined}
             savedPairNotice={modelProfileNotice}
             {...(modelEditorFromCreation
               ? {
