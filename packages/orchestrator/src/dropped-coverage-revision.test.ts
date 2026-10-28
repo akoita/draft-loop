@@ -200,3 +200,86 @@ describe("revision that drops a covering block", () => {
     expect(dropped(revised.findings)).toEqual([]);
   });
 });
+
+describe("revision that loses coverage the critic had found", () => {
+  /** A critic that finds requirement-1 covered in round 1 and judges it again in round 2. */
+  async function reviseAndCritique(roundTwoVerdict: "satisfied" | "not-satisfied") {
+    const critique = (round: number): Critique => ({
+      findings: [],
+      coverageJudgements: [
+        {
+          requirementId: "requirement-1",
+          verdict: round === 1 ? "satisfied" : roundTwoVerdict,
+          citedBlockIds: [`experience-block-${round}`],
+          rationale: "Fictional verdict for the test.",
+        },
+      ],
+    });
+    const engine = createOrchestrationEngine({
+      author: {
+        execute: vi.fn(async (request: { readonly round: number }) =>
+          execution(artifact(request.round, coveringText), "anthropic", "author-test"),
+        ),
+      },
+      critic: {
+        execute: vi.fn(async (request: { readonly round: number }) =>
+          execution(critique(request.round), "openai", "critic-test"),
+        ),
+      },
+      store: new InMemoryRunStore(),
+      now: () => timestamp,
+      coverageJudgement: {
+        plan: async ({ artifact: draft }: { readonly artifact: DraftArtifact }) => ({
+          assessments: plan.assessments.map((assessment) => ({
+            ...assessment,
+            evidence: [{ blockId: `experience-block-${draft.version}`, score: 0.8 }],
+          })),
+          requests: [
+            {
+              requirementId: "requirement-1",
+              candidateBlockIds: [`experience-block-${draft.version}`],
+            },
+          ],
+        }),
+      },
+    } as never);
+    const reviewed = await engine.start({
+      runId: "run-1",
+      workspace: createWorkspace("workspace-1"),
+      context,
+      budget: { maxRounds: 2 },
+    });
+    await engine.requestRevision("run-1");
+    const revised = await engine.resume("run-1", { context });
+    return { reviewed, revised };
+  }
+
+  const lost = (findings: readonly { readonly code: string }[]) =>
+    findings.filter((finding) => finding.code === "coverage-lost");
+
+  it("warns when the next critique no longer finds a covered requirement covered", async () => {
+    const { reviewed, revised } = await reviseAndCritique("not-satisfied");
+
+    expect(lost(reviewed.findings)).toEqual([]);
+    expect(revised.round).toBe(2);
+    // The covering text survived, so the revision-time check saw nothing to report.
+    expect(dropped(revised.findings)).toEqual([]);
+    expect(lost(revised.findings)).toEqual([
+      {
+        code: "coverage-lost",
+        category: "coverage",
+        severity: "warning",
+        message:
+          "This requirement was covered in the previous version but is not covered in this one; check that the revision still shows it.",
+        requirementId: "requirement-1",
+      },
+    ]);
+  });
+
+  it("says nothing while the requirement stays covered", async () => {
+    const { revised } = await reviseAndCritique("satisfied");
+
+    expect(revised.round).toBe(2);
+    expect(lost(revised.findings)).toEqual([]);
+  });
+});

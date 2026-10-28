@@ -96,6 +96,7 @@ import {
   attributeRevision,
   classifyRevisionFindings,
 } from "./finding-attribution.js";
+import { lostCoverageFindings } from "./lost-coverage.js";
 import {
   type ApprovedArtifactBinding,
   approvedArtifactBinding,
@@ -104,6 +105,7 @@ import {
   readinessOverrideRationale,
 } from "./readiness.js";
 import {
+  previousRoundCoverageAssessments,
   type RevisionRequirementCoverage,
   revisionRequirementCoverage,
 } from "./revision-coverage.js";
@@ -133,6 +135,7 @@ export {
   findingIdentity,
   normalizeFindingCode,
 } from "./finding-attribution.js";
+export { COVERAGE_LOST_CODE, lostCoverageFindings } from "./lost-coverage.js";
 export type { RevisionRequirementCoverage } from "./revision-coverage.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -2178,8 +2181,14 @@ export function createOrchestrationEngine(
       execution.coverageJudgement === undefined
         ? []
         : judgedCoveredRequirementIds(execution.coverageJudgement.assessments);
+    // A requirement the previous critique found covered that this one does not is announced (#1861).
+    const lostCoverage = lostCoverageFindings({
+      previous: previousRoundCoverageAssessments(snapshot),
+      current: execution.coverageJudgement?.assessments,
+      findings: snapshot.findings,
+    });
     const combined = withoutJudgedUncoveredFindings(
-      [...snapshot.findings, ...critiqueIssues, ...execution.output.findings],
+      [...snapshot.findings, ...critiqueIssues, ...execution.output.findings, ...lostCoverage],
       judgedIds,
     );
     const evaluation = evaluateReadiness(

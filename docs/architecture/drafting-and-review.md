@@ -220,6 +220,15 @@ warning naming the requirement id. Block ids change on every revision, so
 rewording a covering block also raises it; a later critic judgement that the
 requirement is covered clears the warning, as it clears the token-match miss.
 
+That check sees only blocks that disappear. A targeted patch keeps a replaced
+block's id, and word-match coverage cites no blocks, so a revision could still
+lose a covered requirement unannounced: the 0.6.2 walk went from 3 to 2 covered
+requirements with no finding (#1861). After each later critique the
+orchestrator therefore also compares the two rounds' verdicts. A requirement
+covered in the previous round, on any basis, that this round finds uncovered or
+only possibly covered gets a content-free `coverage-lost` warning naming its
+id, unless the revision already reported it as dropped.
+
 Critic template `cli-critic-v3` retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also
 asks the critic to compare explicit dated employment gaps in retrieved sources
