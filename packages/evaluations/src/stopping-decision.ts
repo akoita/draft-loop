@@ -405,6 +405,7 @@ export function evaluateApplicationReadinessStoppingDecision(
 
   const validation = validateDraftArtifact(artifact, input.deterministicValidationContext, {
     explicitGapRequirementIds: input.explicitGapRequirementIds ?? [],
+    approvalGate: true,
   });
   const deterministicChecks = projectDeterministicChecks(
     withoutJudgedUncoveredFindings(validation.issues, input.coveredRequirementIds ?? []),

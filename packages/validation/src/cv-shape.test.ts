@@ -1,3 +1,4 @@
+import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,6 +6,7 @@ import {
   MISSING_CV_HEADER_CODE,
   UNLABELLED_SKILLS_LINE_CODE,
 } from "./cv-shape.js";
+import { validateDraftArtifact } from "./index.js";
 
 type Section = Parameters<typeof findCvShapeIssues>[0]["sections"][number];
 
@@ -64,6 +66,7 @@ describe("CV shape checks", () => {
           "the CV header still shows [Your name]; replace it with the candidate's details before sending the CV",
         sectionId: "header",
         blockId: "header-block-0",
+        blocksApproval: true,
       },
       {
         code: MISSING_CV_HEADER_CODE,
@@ -71,6 +74,7 @@ describe("CV shape checks", () => {
           "the CV header still shows [Email], [Phone]; replace them with the candidate's details before sending the CV",
         sectionId: "header",
         blockId: "header-block-1",
+        blocksApproval: true,
       },
     ]);
   });
@@ -93,5 +97,43 @@ describe("CV shape checks", () => {
     ]);
     const allBare = section("skills", "skills", ["Python, PostgreSQL", "Terraform"]);
     expect(findCvShapeIssues({ sections: [header, experience, allBare] })).toEqual([]);
+  });
+});
+
+describe("a placeholder header at the approval gate", () => {
+  const artifact = {
+    schemaVersion: 1,
+    id: "artifact-1",
+    version: 1,
+    parentVersionId: null,
+    createdAt: "2026-10-28T10:00:00.000Z",
+    language: "en",
+    sections: [section("header", "header", ["[Your name] | [Email]"]), experience],
+    claims: [],
+    decisions: [],
+  } as unknown as DraftArtifact;
+  const context = { requirements: [], outputConstraints: { requiredSections: [] } };
+  const headerSeverity = (approvalGate: boolean) =>
+    validateDraftArtifact(artifact, context, { approvalGate }).issues.find(
+      ({ code }) => code === MISSING_CV_HEADER_CODE,
+    )?.severity;
+
+  it("blocks approval, and only warns while the loop runs", () => {
+    expect(headerSeverity(true)).toBe("error");
+    expect(headerSeverity(false)).toBe("warning");
+    expect(
+      validateDraftArtifact(artifact, context).issues.find(
+        ({ code }) => code === MISSING_CV_HEADER_CODE,
+      )?.severity,
+    ).toBe("warning");
+  });
+
+  it("still only warns about a CV with no header at all", () => {
+    const noHeader = { ...artifact, sections: [experience] } as unknown as DraftArtifact;
+    expect(
+      validateDraftArtifact(noHeader, context, { approvalGate: true }).issues.find(
+        ({ code }) => code === MISSING_CV_HEADER_CODE,
+      )?.severity,
+    ).toBe("warning");
   });
 });

@@ -2,8 +2,8 @@
  * Two shape checks on a finished CV that the 0.6.2 walk's export failed (#1862): it opened at
  * "Summary" with no name or contact header, and its Skills section mixed a bare list with
  * `Label: items` lines. A header that still shows placeholders such as `[Your name]` counts as
- * missing too (#1878). All are warnings: the draft can still be approved, but the reader is told
- * before it is sent.
+ * missing too (#1878). All are warnings while the loop runs. At the approval gate a placeholder
+ * header blocks (#1902), since the candidate can now replace the placeholders in the review.
  */
 
 import type { DraftArtifact } from "@draft-loop/schemas";
@@ -24,6 +24,8 @@ export interface CvShapeIssue {
   readonly message: string;
   readonly sectionId?: string;
   readonly blockId?: string;
+  /** A header that still shows placeholders: it blocks approval until edited or overridden. */
+  readonly blocksApproval?: boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ export function findCvShapeIssues(
       message: `the CV header still shows ${placeholders.join(", ")}; replace ${placeholders.length === 1 ? "it" : "them"} with the candidate's details before sending the CV`,
       sectionId: header.id,
       blockId: block.id,
+      blocksApproval: true,
     });
   }
   for (const section of artifact.sections) {
