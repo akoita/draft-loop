@@ -29,6 +29,11 @@ export function workspaceModelSettingsTransmissionPairChanged(
   );
 }
 
+/**
+ * True when a host kept the screen's own acknowledgement across a changed pair, which must be
+ * given again. A host that holds the consent itself (the hosted service: acknowledged, with no
+ * acknowledgement time) has nothing for the screen to repeat.
+ */
 export function workspaceModelSettingsNeedsFreshAcknowledgement(
   previous: DesktopReviewState["providerTransmissionPreflight"],
   next: DesktopReviewState["providerTransmissionPreflight"],
@@ -36,7 +41,8 @@ export function workspaceModelSettingsNeedsFreshAcknowledgement(
   return (
     workspaceModelSettingsTransmissionPairChanged(previous, next) &&
     next.required &&
-    next.acknowledged
+    next.acknowledged &&
+    next.acknowledgedAt !== null
   );
 }
 

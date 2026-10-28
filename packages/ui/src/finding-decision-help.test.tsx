@@ -140,7 +140,7 @@ describe("bulk decisions and word-match coverage warnings", () => {
 
   it("warns about word-match coverage warnings in the shown set", () => {
     expect(bulkWordMatchWarning(findings)).toBe(
-      "Includes 2 word-match coverage warnings; accepting them asks the author to add the job's wording.",
+      "Includes 2 word-match coverage findings; accepting them asks the author to add the job's wording.",
     );
     expect(bulkWordMatchWarning(findings.slice(0, 1))).toBeNull();
   });
@@ -155,7 +155,7 @@ describe("bulk decisions and word-match coverage warnings", () => {
     );
     expect(html).toContain("Apply to all 3 shown");
     expect(html).toContain(
-      `Includes 2 word-match coverage warnings; accepting them asks the author to add the job&#x27;s wording. ${BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.`,
+      `Includes 2 word-match coverage findings; accepting them asks the author to add the job&#x27;s wording. ${BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.`,
     );
     expect(html).not.toContain(BULK_ACCEPT_SKIPS_BLOCKING_NOTE);
   });

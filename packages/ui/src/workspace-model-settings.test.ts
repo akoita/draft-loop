@@ -4,6 +4,7 @@ import {
   workspaceModelSettingsBlocker,
   workspaceModelSettingsDraft,
   workspaceModelSettingsInput,
+  workspaceModelSettingsNeedsFreshAcknowledgement,
 } from "./workspace-model-settings.js";
 
 describe("desktop workspace model settings", () => {
@@ -105,5 +106,31 @@ describe("desktop workspace model settings", () => {
       "Name an author model and a critic model before saving model settings.",
     );
     expect(workspaceModelSettingsInput(draft, { status: "idle" })).toBeNull();
+  });
+  it("asks again for an acknowledgement the screen gave, not for consent the host holds", () => {
+    const preflight = createFixtureReviewState().providerTransmissionPreflight;
+    const previous = { ...preflight, required: true, acknowledged: true };
+    const changed = { ...previous, critic: { ...previous.critic, model: "gpt-6.1-terra" } };
+
+    // The desktop records when the screen acknowledged; a changed pair keeping it needs a new one.
+    expect(
+      workspaceModelSettingsNeedsFreshAcknowledgement(previous, {
+        ...changed,
+        acknowledgedAt: "2026-10-28T18:00:00.000Z",
+      }),
+    ).toBe(true);
+    // The hosted service holds the consent itself and records no screen acknowledgement.
+    expect(
+      workspaceModelSettingsNeedsFreshAcknowledgement(previous, {
+        ...changed,
+        acknowledgedAt: null,
+      }),
+    ).toBe(false);
+    expect(
+      workspaceModelSettingsNeedsFreshAcknowledgement(previous, {
+        ...previous,
+        acknowledgedAt: "2026-10-28T18:00:00.000Z",
+      }),
+    ).toBe(false);
   });
 });

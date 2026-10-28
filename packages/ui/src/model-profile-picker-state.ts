@@ -66,9 +66,12 @@ export class ModelProfileSaveError extends Error {
 
 /** What the dialog says when applying failed; only a failed save names its own reason. */
 export function modelProfileApplyErrorMessage(reason: unknown): string {
-  return reason instanceof ModelProfileSaveError
-    ? reason.message
-    : "The profile pair could not be applied. Your draft is unchanged.";
+  if (reason instanceof ModelProfileSaveError) return reason.message;
+  // A host's refusal (a run still executing, a pair it does not serve) says why in its own words.
+  if (reason instanceof Error && reason.name === "DesktopBridgeError" && reason.message !== "") {
+    return `The profile pair could not be applied: ${reason.message}`;
+  }
+  return "The profile pair could not be applied. Your draft is unchanged.";
 }
 
 export const noModelProfilesWarning =

@@ -54,9 +54,10 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("Illustrative public API token-cost scenario");
     expect(html).toContain("10,000 input and 1,000 output tokens per call");
     expect(html).toContain("2 author calls and 1 critic call");
-    expect(html).toContain("standard-anthropic-author@1");
+    expect(html).toContain("Author: Claude Opus 5.5");
     expect(html).toContain("$4/1M input · $20/1M output");
-    expect(html).toContain("standard-openai-critic@2");
+    expect(html).toContain("Critic: GPT-6.1 Sol");
+    expect(html).not.toContain("standard-anthropic-author@1");
     expect(html).toContain("$2/1M input · $10/1M output");
     expect(html).toContain("Official Anthropic model/pricing documentation");
     expect(html).toContain("Official OpenAI model/pricing documentation");
@@ -75,7 +76,7 @@ describe("desktop model profile API budget scenario", () => {
       },
       apiKeyModes,
     );
-    expect(html).toContain("economy-anthropic-author@2");
+    expect(html).toContain("Author: Claude Haiku 5.5");
     expect(html).toContain("anthropic/claude-haiku-5-5");
     expect(html).toContain("up to 100,000 input tokens per call");
     expect(html).toContain("Combined scenario estimate</dt><dd>$0.004500");
@@ -83,7 +84,7 @@ describe("desktop model profile API budget scenario", () => {
 
   it("labels the development GLM public rates as DeepInfra documentation", () => {
     const html = renderBudget(development, apiKeyModes);
-    expect(html).toContain("dev-deepinfra-glm-author@1");
+    expect(html).toContain("Author: GLM-5.3 Flash");
     expect(html).toContain("zai/zai-org/GLM-5.3-Flash");
     expect(html).toContain("$0.15/1M input · $0.5/1M output");
     expect(html).toContain("Official DeepInfra model/pricing documentation");
@@ -91,7 +92,7 @@ describe("desktop model profile API budget scenario", () => {
 
   it("labels the development Gemini public rates as Google documentation", () => {
     const html = renderBudget(geminiDevelopment, apiKeyModes);
-    expect(html).toContain("dev-google-gemini-author@2");
+    expect(html).toContain("Author: Gemini 3.8 Flash");
     expect(html).toContain("google/gemini-3.8-flash");
     expect(html).toContain("$0.75/1M input · $3.75/1M output");
     expect(html).toContain("Official Google model/pricing documentation");
@@ -99,16 +100,18 @@ describe("desktop model profile API budget scenario", () => {
 
   it("estimates the Balanced pair with Sonnet 5.5 and GPT-6.1 Sol rates", () => {
     const html = renderBudget(balanced, apiKeyModes);
-    expect(html).toContain("economy-anthropic-author@1");
+    // The heading names the model, not Balanced's historical "economy" profile id.
+    expect(html).toContain("Author: Claude Sonnet 5.5");
+    expect(html).not.toContain("economy-anthropic-author@1");
     expect(html).toContain("anthropic/claude-sonnet-5-5");
-    expect(html).toContain("standard-openai-critic@2");
+    expect(html).toContain("Critic: GPT-6.1 Sol");
     expect(html).toContain("$2/1M input · $10/1M output");
     expect(html).toContain("Combined scenario estimate</dt><dd>$");
   });
 
   it("labels the development Mistral public rates and estimates the pair", () => {
     const html = renderBudget(mistralDevelopment, apiKeyModes);
-    expect(html).toContain("dev-mistral-author@1");
+    expect(html).toContain("Author: Mistral Large 4 (preview)");
     expect(html).toContain("mistral/mistral-large-4");
     expect(html).toContain("$1.36/1M input · $4.18/1M output");
     expect(html).toContain("2026-10-08 · Official Mistral model/pricing documentation");
