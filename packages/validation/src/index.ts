@@ -8,7 +8,7 @@ import type {
   WritingPolicyRule,
 } from "@draft-loop/schemas";
 
-import { findBulletFragment } from "./bullet-fragment.js";
+import { bulletFragmentMessages, findBulletFragment } from "./bullet-fragment.js";
 import { findBulletSeries } from "./bullet-series.js";
 import { findCandidateNarration } from "./candidate-narration.js";
 import { findCvShapeIssues } from "./cv-shape.js";
@@ -542,10 +542,7 @@ export function validateDraftArtifact(
           code: "editorial-fragment",
           category: "quality",
           severity: "warning",
-          message:
-            fragment.reason === "lowercase-start"
-              ? `bullet starts mid-sentence, like a copied source fragment: "${fragment.quote}"`
-              : `bullet ends on a dangling connector, like a copied source fragment: "${fragment.quote}"`,
+          message: `${bulletFragmentMessages[fragment.reason]}: "${fragment.quote}"`,
           sectionId: section.id,
           blockId: block.id,
           location: writingPolicyLocation(block.text, fragment.start, fragment.end),

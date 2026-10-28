@@ -24,6 +24,21 @@ describe("findBulletFragment", () => {
     }
   });
 
+  it("flags separate statements joined by a semicolon and quotes the join", () => {
+    const text =
+      "Led the routing team of four engineers; shipped the new depot planner in two quarters.";
+    const fragment = findBulletFragment(text);
+    expect(fragment?.reason).toBe("semicolon-stitch");
+    expect(fragment?.quote).toContain(";");
+    expect(text.slice(fragment?.start, fragment?.end)).toBe(fragment?.quote);
+  });
+
+  it("accepts a semicolon that separates short list items", () => {
+    expect(
+      findBulletFragment("Owned Python; Go and Rust services for the billing platform."),
+    ).toBeUndefined();
+  });
+
   it("accepts a known lowercase name, a mixed-case token and a normal bullet", () => {
     for (const text of [
       "iOS release automation cut review time across three teams.",
@@ -89,6 +104,22 @@ describe("bullet fragment finding", () => {
         severity: "warning",
         sectionId: "section-core",
         blockId: "block-1",
+      }),
+    ]);
+  });
+
+  it("asks for one statement per bullet when a bullet stitches facts with a semicolon", () => {
+    const result = validateDraftArtifact(
+      artifactWith(
+        "bullet",
+        "Led the routing team of four engineers; shipped the new depot planner in two quarters.",
+      ),
+      context,
+    );
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: "editorial-fragment",
+        message: expect.stringMatching(/^bullet joins separate facts with a semicolon; .*"/u),
       }),
     ]);
   });

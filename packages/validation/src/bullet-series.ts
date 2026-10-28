@@ -75,7 +75,7 @@ export function findBulletSeries(blocks: readonly BulletSeriesBlock[]): BulletSe
           reason: "short-adjacent",
           blockId: first.id,
           message:
-            "short bullets sit on adjacent lines; bullet markers should be several lines apart, so merge short items into a fuller bullet or a paragraph",
+            "short bullets sit on adjacent lines; bullet markers should be several lines apart, so expand a short item into one complete statement of one achievement or move it into the context paragraph, and never join separate facts with semicolons",
         });
       }
     }

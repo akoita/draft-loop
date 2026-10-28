@@ -777,7 +777,11 @@ Resumed v12 and earlier runs keep their exact prompt. Deterministic validation
 adds a `dense-bullet-series` quality warning, one per run of consecutive bullets,
 anchored to its first block. It fires for more than 4 bullets in a row, a section
 of 4 or more one-line bullets, and adjacent bullets where either has under about
-30 words.
+30 words. Its message asks the author to expand a short item into one complete
+statement of one achievement, or move it into the context paragraph, and never
+to join separate facts with semicolons (#1874). A bullet that does join two
+statements of three or more words with a semicolon gets an `editorial-fragment`
+warning.
 
 ### Writing to the page target (#1364)
 
