@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v14`, which states and sends a
+New runs record author template `cli-author-v15`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v14 retain 32,768.
+v4 to v15 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -779,7 +779,7 @@ Resumed v13 and earlier runs keep their exact prompt. When an export names no
 template, a one-page run is drawn with Compact and any other with Modern, so the
 layout matches the length the author wrote to.
 
-### Each fact stated once (#1859)
+### Each fact stated once (#1859, #1860)
 
 Deterministic validation adds one `repeated-fact` quality warning per fact the
 draft states in more than one section, naming each section ("the same fact is
@@ -788,6 +788,19 @@ different sections state the same fact when the shorter one has at least four
 content words and the longer one holds at least 80% of them, after dropping
 function words and plural or verb endings. Exact copies stay with the existing
 duplicate claim check. The warning never blocks approval.
+
+Author `cli-author-v15` (#1860) is v14 plus guidance that gives each part of
+the CV its own job:
+
+- **Experience and Projects** carry the detail of each fact.
+- **Summary** condenses the candidate in new words and never restates a bullet.
+- **Core areas** group evidence from across roles under one theme the job asks
+  for; a theme with a single example is left to Experience.
+
+A revising author already receives the draft's findings. v15 tells it to keep a
+`repeated-fact` finding's fact in one section and remove or rewrite the other
+occurrences, unless the person rejected that finding in the adjudication plan.
+Resumed v14 and earlier runs keep their exact prompt.
 
 ### Stop and pause on findings (#1113)
 
