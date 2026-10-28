@@ -49,7 +49,7 @@ describe("model profile CLI commands", () => {
     {
       modelPreset: "balanced",
       author: { id: "economy-anthropic-author", version: 1 },
-      critic: { id: "standard-openai-critic", version: 2 },
+      critic: { id: "balanced-openai-critic", version: 1 },
     },
     {
       modelPreset: "standard",

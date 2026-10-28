@@ -10,6 +10,7 @@ const modelNames: Readonly<Record<string, string>> = {
   "gpt-5": "GPT-5",
   "gpt-6-sol": "GPT-6 Sol",
   "gpt-6.1-sol": "GPT-6.1 Sol",
+  "gpt-6.1-terra": "GPT-6.1 Terra",
   "gpt-6-astra": "GPT-6 Astra",
   "gpt-5.6-luna": "GPT-5.6 Luna",
   "zai-org/GLM-5.3-Flash": "GLM-5.3 Flash",

@@ -137,6 +137,17 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     maxInputTokens: 272000,
     reviewedAt: "2026-10-23",
   },
+  "balanced-openai-critic@1": {
+    sources: [openAIModelPage("gpt-6.1-terra")],
+    apiPricing: {
+      inputUsdPerMillion: 1,
+      outputUsdPerMillion: 5,
+      cacheReadUsdPerMillion: 0.05,
+      cacheWriteUsdPerMillion: 1.25,
+    },
+    maxInputTokens: 272000,
+    reviewedAt: "2026-10-28",
+  },
   "dev-deepinfra-glm-author@1": {
     sources: [deepInfraGlmModelApi, deepInfraGlmOverview],
     apiPricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.5 },
@@ -173,7 +184,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     label: "Balanced — unvalidated",
     tier: "standard",
     author: { id: "economy-anthropic-author", version: 1 },
-    critic: { id: "standard-openai-critic", version: 2 },
+    critic: { id: "balanced-openai-critic", version: 1 },
   },
   {
     id: "standard",

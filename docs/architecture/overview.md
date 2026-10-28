@@ -501,7 +501,7 @@ The owner sets up a hosted workspace through the API before any run:
   instead of being overwritten. `GET /v1/workspaces` lists the workspaces the
   caller can reach.
 - A side the request leaves out gets the hosted default, the Balanced preset:
-  Claude Sonnet 5.5 as the author and GPT-6.1 Sol as the critic. The desktop
+  Claude Sonnet 5.5 as the author and GPT-6.1 Terra as the critic. The desktop
   keeps the cheaper Economy pair as its own default.
 - `PATCH /v1/workspaces/:id/models` changes the author and critic for the
   next runs, Anthropic and OpenAI only. A pair from one lineage needs

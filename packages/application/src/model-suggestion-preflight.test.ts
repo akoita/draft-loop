@@ -76,11 +76,12 @@ describe("registry-derived model-suggestion preflight", () => {
     expect(plan.rows.map(({ provider, modelId, role }) => [provider, modelId, role])).toEqual([
       ["anthropic", "claude-haiku-5-5", "author"],
       ["openai", "gpt-6-luna", "critic"],
-      ["openai", "gpt-6.1-sol", "critic"],
       ["anthropic", "claude-opus-5-5", "author"],
+      ["openai", "gpt-6.1-sol", "critic"],
     ]);
-    // The opt-in Balanced author (Claude Sonnet 5.5) is outside the preflight cohort.
+    // The opt-in Balanced models (Claude Sonnet 5.5, GPT-6.1 Terra) are outside the preflight cohort.
     expect(plan.rows.some(({ modelId }) => modelId === "claude-sonnet-5-5")).toBe(false);
+    expect(plan.rows.some(({ modelId }) => modelId === "gpt-6.1-terra")).toBe(false);
     expect(plan.rows.every((row) => row.profileControls === false)).toBe(true);
     expect(
       plan.rows.filter((row) => row.provider === "openai").map((row) => row.generationCap),

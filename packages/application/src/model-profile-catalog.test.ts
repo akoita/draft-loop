@@ -19,8 +19,9 @@ describe("model profile catalog", () => {
       "economy-anthropic-author@2",
       "economy-openai-critic@1",
       "economy-anthropic-author@1",
-      "standard-openai-critic@2",
+      "balanced-openai-critic@1",
       "standard-anthropic-author@1",
+      "standard-openai-critic@2",
       "dev-deepinfra-glm-author@1",
       "dev-google-gemini-author@2",
       "dev-mistral-author@1",
@@ -31,6 +32,7 @@ describe("model profile catalog", () => {
       "economy-anthropic-author@2": 100000,
       "economy-openai-critic@1": 272000,
       "standard-openai-critic@2": 272000,
+      "balanced-openai-critic@1": 272000,
     };
     for (const entry of catalog) {
       expect(entry).toMatchObject({
@@ -52,6 +54,7 @@ describe("model profile catalog", () => {
         "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@1": "2026-10-23",
         "standard-openai-critic@2": "2026-10-23",
+        "balanced-openai-critic@1": "2026-10-28",
       };
       expect(entry.reviewedAt).toBe(
         reviewDates[`${entry.profile.id}@${entry.profile.version}`] ?? "2026-09-30",
@@ -69,8 +72,9 @@ describe("model profile catalog", () => {
       "economy-anthropic-author@2": [0.1, 0.5],
       "economy-openai-critic@1": [0.1, 0.5],
       "economy-anthropic-author@1": [2, 10],
-      "standard-openai-critic@2": [2, 10],
+      "balanced-openai-critic@1": [1, 5],
       "standard-anthropic-author@1": [4, 20],
+      "standard-openai-critic@2": [2, 10],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
       "dev-google-gemini-author@2": [0.75, 3.75],
       "dev-mistral-author@1": [1.36, 4.18],
@@ -88,6 +92,7 @@ describe("model profile catalog", () => {
       "standard-anthropic-author@1": [0.2, 8],
       "economy-openai-critic@1": [0.01, 0.125],
       "standard-openai-critic@2": [0.1, 2.5],
+      "balanced-openai-critic@1": [0.05, 1.25],
     });
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
@@ -111,6 +116,10 @@ describe("model profile catalog", () => {
     expect(byId.get("standard-openai-critic@2")?.sources).toEqual([
       "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
     ]);
+    expect(byId.get("balanced-openai-critic@1")).toMatchObject({
+      profile: { provider: "openai", modelId: "gpt-6.1-terra", roles: ["critic"] },
+      sources: ["https://developers.openai.com/api/docs/models/gpt-6.1-terra"],
+    });
     expect(byId.get("dev-deepinfra-glm-author@1")?.sources).toEqual([
       "https://deepinfra.com/zai-org/GLM-5.3-Flash/api",
       "https://deepinfra.com/blog/glm-5-3-flash-deepinfra",
@@ -166,7 +175,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(8);
+    expect(next).toHaveLength(9);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -202,7 +211,7 @@ describe("model profile catalog", () => {
         label: "Balanced — unvalidated",
         tier: "standard",
         author: { id: "economy-anthropic-author", version: 1 },
-        critic: { id: "standard-openai-critic", version: 2 },
+        critic: { id: "balanced-openai-critic", version: 1 },
       },
       {
         id: "standard",
