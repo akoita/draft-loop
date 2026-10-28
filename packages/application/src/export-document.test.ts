@@ -5,6 +5,7 @@ import {
   defaultExportTemplateId,
   exportLengthWarningLine,
   exportLengthWarningPrefix,
+  exportPlaceholderWarningLine,
   pageOverflowWarningLine,
   parseExportFormat,
 } from "./export-document.js";
@@ -151,5 +152,39 @@ describe("default export template", () => {
     expect(defaultExportTemplateId("one-page")).toBe("compact");
     expect(defaultExportTemplateId("two-page")).toBe("modern");
     expect(defaultExportTemplateId(undefined)).toBe("modern");
+  });
+});
+
+describe("export placeholder warning (#1878)", () => {
+  const header = (texts: readonly string[]) =>
+    ({
+      sections: [
+        {
+          id: "header",
+          title: "Header",
+          kind: "header",
+          order: 0,
+          blocks: texts.map((text, index) => ({
+            id: `block-${index}`,
+            type: "paragraph",
+            text,
+            claimIds: [],
+          })),
+        },
+      ],
+    }) as unknown as Pick<DraftArtifact, "sections">;
+
+  it("names each placeholder the header still shows, once", () => {
+    expect(
+      exportPlaceholderWarningLine(header(["[Your name]", "[Email] · [Phone] · [Email]"])),
+    ).toBe(
+      "Header warning: the CV header still shows [Your name], [Email], [Phone]; replace them with your details in the exported document before sending it.",
+    );
+  });
+
+  it("says nothing for a real header", () => {
+    expect(
+      exportPlaceholderWarningLine(header(["Alex Example", "alex@example.com"])),
+    ).toBeUndefined();
   });
 });

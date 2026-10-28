@@ -6,11 +6,32 @@ import {
   profileFromTemplate,
 } from "@draft-loop/rendering";
 import type { DraftArtifact } from "@draft-loop/schemas";
+import { cvHeaderPlaceholderSpans } from "@draft-loop/validation";
 
 import type { ExportPageOverflow } from "./export-qa.js";
 
 /** Prefix of the io line an export writes when the estimated length clearly exceeds the target. */
 export const exportLengthWarningPrefix = "Length warning: ";
+
+/**
+ * The io line an export writes when the CV header still shows placeholders such as `[Your name]`
+ * (#1878); undefined when it shows none. Review edits do not reach the exported file, so the
+ * person fills the placeholders in the document itself.
+ */
+export function exportPlaceholderWarningLine(
+  artifact: Pick<DraftArtifact, "sections">,
+): string | undefined {
+  const placeholders = new Set<string>();
+  for (const section of artifact.sections) {
+    if (section.kind !== "header") continue;
+    for (const { text } of section.blocks) {
+      for (const { start, end } of cvHeaderPlaceholderSpans(text))
+        placeholders.add(text.slice(start, end));
+    }
+  }
+  if (placeholders.size === 0) return undefined;
+  return `Header warning: the CV header still shows ${[...placeholders].join(", ")}; replace ${placeholders.size === 1 ? "it" : "them"} with your details in the exported document before sending it.`;
+}
 
 /** `md` is accepted as the short spelling of `markdown`; anything unsupported returns undefined. */
 export function parseExportFormat(input: string): OutputFormat | undefined {

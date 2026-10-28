@@ -849,7 +849,11 @@ not checked.
 
 - **`missing-cv-header`.** A CV with an experience section but no header, or an
   empty one, has no name or contact line. The evidence may not state them, so
-  the warning asks the candidate to add them before sending.
+  the warning asks the candidate to add them before sending. A header that
+  still shows v16's placeholders gets one warning per block naming them
+  (#1878), and the export prints a `Header warning:` line naming them too.
+  Review edits do not reach the exported file, so export does not refuse: the
+  candidate fills the placeholders in the exported document.
 - **`unlabelled-skills-line`.** In a Skills section that has `Label: items`
   lines, each line without a label is reported, so the section reads
   consistently.

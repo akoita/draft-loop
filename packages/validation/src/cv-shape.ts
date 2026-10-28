@@ -1,11 +1,14 @@
 /**
  * Two shape checks on a finished CV that the 0.6.2 walk's export failed (#1862): it opened at
  * "Summary" with no name or contact header, and its Skills section mixed a bare list with
- * `Label: items` lines. Both are warnings: the draft can still be approved, but the reader is told
+ * `Label: items` lines. A header that still shows placeholders such as `[Your name]` counts as
+ * missing too (#1878). All are warnings: the draft can still be approved, but the reader is told
  * before it is sent.
  */
 
 import type { DraftArtifact } from "@draft-loop/schemas";
+
+import { cvHeaderPlaceholderSpans } from "./cv-header-placeholders.js";
 
 export const MISSING_CV_HEADER_CODE = "missing-cv-header";
 export const UNLABELLED_SKILLS_LINE_CODE = "unlabelled-skills-line";
@@ -40,6 +43,21 @@ export function findCvShapeIssues(
       code: MISSING_CV_HEADER_CODE,
       message:
         "the CV has no name or contact header; the evidence may not state them, so add the candidate's name and contact line before sending it",
+    });
+  }
+  // A header of placeholders (#1875) still lacks the real name or contact details (#1878).
+  for (const block of header?.blocks ?? []) {
+    const placeholders = [
+      ...new Set(
+        cvHeaderPlaceholderSpans(block.text).map(({ start, end }) => block.text.slice(start, end)),
+      ),
+    ];
+    if (placeholders.length === 0 || header === undefined) continue;
+    issues.push({
+      code: MISSING_CV_HEADER_CODE,
+      message: `the CV header still shows ${placeholders.join(", ")}; replace ${placeholders.length === 1 ? "it" : "them"} with the candidate's details before sending the CV`,
+      sectionId: header.id,
+      blockId: block.id,
     });
   }
   for (const section of artifact.sections) {
