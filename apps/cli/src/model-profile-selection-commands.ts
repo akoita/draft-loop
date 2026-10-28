@@ -1,5 +1,9 @@
 import type { Command } from "commander";
-import { resolveModelProfileSelection } from "./model-profile-selection.js";
+import {
+  authorEffortHelp,
+  criticEffortHelp,
+  resolveModelProfileSelection,
+} from "./model-profile-selection.js";
 import {
   type ApplicationIo,
   describeModelProfileReferences,
@@ -13,6 +17,8 @@ interface SelectionOptions {
   readonly modelPreset?: string;
   readonly authorProfile?: string;
   readonly criticProfile?: string;
+  readonly authorEffort?: string;
+  readonly criticEffort?: string;
 }
 
 function writeSelection(
@@ -62,16 +68,20 @@ export function registerModelProfileSelectionCommands(
     .option("--model-preset <id>", "exact pair preset to apply")
     .option("--author-profile <id@version>", "exact registered author profile version")
     .option("--critic-profile <id@version>", "exact registered critic profile version")
+    .option("--author-effort <level>", authorEffortHelp)
+    .option("--critic-effort <level>", criticEffortHelp)
     .option("--json", "print machine-readable JSON")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. The pair must match the workspace's configured author and critic company and model. A run started with its own profile options still uses those. Resume keeps the profiles recorded in the run.\n",
+      "\nUse one --model-preset or both explicit profile options. A role without an effort option uses its profile's own reasoning level. The pair must match the workspace's configured author and critic company and model. A run started with its own profile options still uses those. Resume keeps the profiles recorded in the run.\n",
     )
     .action(async (workspace: string, options: SelectionOptions) => {
       const references = resolveModelProfileSelection({
         modelPreset: options.modelPreset,
         authorProfile: options.authorProfile,
         criticProfile: options.criticProfile,
+        authorEffort: options.authorEffort,
+        criticEffort: options.criticEffort,
       });
       if (references === undefined) {
         throw new Error(

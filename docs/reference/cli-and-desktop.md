@@ -43,6 +43,7 @@ pnpm --filter @draft-loop/cli start start ./workspace --model-preset development
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
   --critic-profile standard-openai-critic@2
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced --author-effort high
 ```
 
 `start` accepts either one pair preset or both exact `--author-profile` and
@@ -61,6 +62,12 @@ versions remain available for historical references but are not current
 choices. A pair passed to `start` is recorded on that run only. It does not
 change workspace model settings, transmission approval, or credentials. Resume
 uses the pair already recorded in run history.
+
+`--author-effort` and `--critic-effort` choose a reasoning level for that role,
+one of the `effortLevels` its profile lists in `model-profiles`. They need a
+preset or both profile options, and a role without one uses its profile's own
+level. A higher level usually costs more output tokens and can improve the
+draft or the review.
 
 ### Applied profile pair
 
@@ -86,7 +93,8 @@ pnpm --filter @draft-loop/cli start model-profiles applied ./workspace
 pnpm --filter @draft-loop/cli start model-profiles clear ./workspace
 ```
 
-- `apply` takes one preset or both exact references, and refuses a pair that is
+- `apply` takes one preset or both exact references, plus the same optional
+  `--author-effort` and `--critic-effort` as `start`, and refuses a pair that is
   not registered for its roles or whose company and model differ from the
   workspace's configured author and critic.
 - `start` without profile options uses the applied pair when it still matches

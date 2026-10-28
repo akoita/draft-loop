@@ -115,4 +115,38 @@ describe("model profile selection parsing", () => {
       expect(selected).toEqual({ author, critic });
     },
   );
+
+  it("adds a chosen reasoning level to a preset or explicit reference", () => {
+    expect(
+      resolveModelProfileSelection({ modelPreset: "standard", criticEffort: "medium" }),
+    ).toEqual({
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2, effort: "medium" },
+    });
+    expect(
+      resolveModelProfileSelection({
+        authorProfile: "standard-anthropic-author@1",
+        criticProfile: "standard-openai-critic@2",
+        authorEffort: "max",
+      }),
+    ).toEqual({
+      author: { id: "standard-anthropic-author", version: 1, effort: "max" },
+      critic: { id: "standard-openai-critic", version: 2 },
+    });
+  });
+
+  it.each([
+    { options: { authorEffort: "high" }, code: "effort-without-pair" },
+    { options: { modelPreset: "economy", authorEffort: "none" }, code: "unavailable-effort" },
+    {
+      options: {
+        authorProfile: "legacy-anthropic-author@1",
+        criticProfile: "legacy-openai-critic@1",
+        criticEffort: "high",
+      },
+      code: "unavailable-effort",
+    },
+  ] as const)("refuses a reasoning level it cannot apply: $code", ({ options, code }) => {
+    expect(() => resolveModelProfileSelection(options)).toThrow(expect.objectContaining({ code }));
+  });
 });

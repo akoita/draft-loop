@@ -96,7 +96,29 @@ describe("model-profiles applied, apply and clear", () => {
     });
   });
 
+  it("saves a preset with a chosen reasoning level for one role", async () => {
+    const h = harness();
+    await h.invoke(
+      "model-profiles",
+      "apply",
+      "workspace",
+      "--model-preset",
+      "standard",
+      "--author-effort",
+      "high",
+    );
+    expect(h.selection.save).toHaveBeenCalledWith({
+      root: expect.stringContaining("workspace"),
+      modelProfiles: {
+        author: { id: "standard-anthropic-author", version: 1, effort: "high" },
+        critic: { id: "standard-openai-critic", version: 2 },
+      },
+    });
+  });
+
   it.each([
+    [["apply", "workspace", "--author-effort", "high"]],
+    [["apply", "workspace", "--model-preset", "standard", "--critic-effort", "extreme"]],
     [["apply", "workspace"]],
     [["apply", "workspace", "--author-profile", "legacy-anthropic-author@1"]],
     [["apply", "workspace", "--model-preset", "standard", "--author-profile", "a@1"]],
