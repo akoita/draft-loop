@@ -954,6 +954,10 @@ parse.
 
 The layout reads structure from the blocks without editing their text:
 
+- **Headline.** A header's first block written as `Name | contact details`
+  draws the name alone at the name size and the rest as a contact line, when
+  the part before the first `|` reads as a name and the rest holds an email, a
+  phone number or a profile address (`header-lines.ts`, #1931).
 - **Role context.** In Experience and Projects, a paragraph with a ` | `
   segment is a role header when bullets or a plain paragraph follow it. A plain
   paragraph directly after it is a context line and stays regular. A paragraph

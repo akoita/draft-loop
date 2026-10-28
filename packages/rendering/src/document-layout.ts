@@ -1,6 +1,7 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 import { compactSeparator, findCompactRuns } from "./compact-list.js";
+import { headerLines } from "./header-lines.js";
 import {
   type InlineLabel,
   type LabelledLines,
@@ -72,7 +73,7 @@ function sectionsInOrder(artifact: DraftArtifact): readonly DraftArtifact["secti
 /**
  * The visible blocks of an artifact, in section order. A header section is the candidate's
  * headline and contact lines, so it draws without a section heading: its first block is the
- * title and the rest are contact lines. Nothing else about the artifact (ids, source references,
+ * title, split from contact details it carries, and the rest are contact lines. Nothing else about the artifact (ids, source references,
  * findings, comments) is carried into a block. The profile decides which runs of bullets fit on
  * one line and so become compact lists.
  */
@@ -83,9 +84,7 @@ export function layoutBlocks(
   const blocks: LayoutBlock[] = [];
   for (const section of sectionsInOrder(artifact)) {
     if (section.kind === "header") {
-      section.blocks.forEach((block, index) => {
-        blocks.push({ kind: index === 0 ? "title" : "contact", text: block.text });
-      });
+      blocks.push(...headerLines(section));
       continue;
     }
     blocks.push({ kind: "heading", text: section.title });

@@ -22,6 +22,7 @@ import {
 
 import { isTitleBlockSection } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
+import { headerLines } from "./header-lines.js";
 import { sectionBodyHtml } from "./html-blocks.js";
 import {
   layoutProfileIdForTemplate,
@@ -669,9 +670,9 @@ function expectedVisibleTextUnits(
   return orderedSections(artifact).flatMap((section) => {
     if (format !== "markdown" && isTitleBlockSection(section)) {
       // A header section is the headline and contact lines: the first block is the title.
-      return section.blocks.map((block, index) => ({
-        text: block.text,
-        kind: index === 0 ? ("heading" as const) : ("body" as const),
+      return headerLines(section).map((line) => ({
+        text: line.text,
+        kind: line.kind === "title" ? ("heading" as const) : ("body" as const),
       }));
     }
     const heading = includeHeading(section)
