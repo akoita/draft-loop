@@ -72,7 +72,10 @@ An explicit model or pair wins, and existing workspaces keep their stored models
 
 A workspace can keep an applied pair so that new runs do not start without
 profiles after a restart. The pair is stored as exact ids and versions in
-`.draft-loop/model-profile-selection.json`, with the time it was applied.
+`.draft-loop/model-profile-selection.json`, with the time it was applied. Each
+role may also store a chosen reasoning `effort` from the levels its profile
+allows; a role without one uses the profile's own level, and each run records
+the level it actually used in its profile snapshot.
 
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles apply ./workspace --model-preset development-gemini

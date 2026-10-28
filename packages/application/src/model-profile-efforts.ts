@@ -67,6 +67,20 @@ export function modelProfileEffortSource(
   return effortMetadata[`${profile.id}@${profile.version}`]?.source;
 }
 
+/**
+ * The profile a run uses at the chosen level: the profile itself when no level is chosen, a copy
+ * with that level when the profile allows it, and undefined when it does not.
+ */
+export function applyModelProfileEffort(
+  profile: ModelProfile,
+  effort: unknown,
+): ModelProfile | undefined {
+  if (effort === undefined) return profile;
+  if (!isChoosableModelProfileEffort(effort)) return undefined;
+  if (!allowedModelProfileEfforts(profile).includes(effort)) return undefined;
+  return { ...profile, runtime: { ...profile.runtime, effort } };
+}
+
 export function isChoosableModelProfileEffort(
   value: unknown,
 ): value is ChoosableModelProfileEffort {
