@@ -35,20 +35,36 @@ export function withoutJudgedUncoveredFindings<
   );
 }
 
+/** The critic's emphasis gap: a central theme the approved evidence does not support. */
+const emphasisGapCode = "emphasis-theme-gap";
+
+/**
+ * Emphasis advice (`emphasis-theme-buried`, `emphasis-order`, `emphasis-padding`) is reported in
+ * the coverage category but says the requirement is supported and should be moved or expanded, so
+ * it never confirms a gap (#1872). Only `emphasis-theme-gap` among the emphasis codes does.
+ */
+function isEmphasisMove(code: string | undefined): boolean {
+  return code?.startsWith("emphasis-") === true && code !== emphasisGapCode;
+}
+
 /**
  * Requirements the critic reported as a gap: a judged "uncovered" verdict, or a coverage finding
- * of its own about the requirement.
+ * of its own about the requirement that is not emphasis advice.
  */
 export function criticReportedGapIds(
   assessments: readonly RequirementCoverageAssessment[],
-  critiqueFindings: readonly { readonly category: string; readonly requirementId?: string }[],
+  critiqueFindings: readonly {
+    readonly category: string;
+    readonly code?: string;
+    readonly requirementId?: string;
+  }[],
 ): readonly string[] {
   return [
     ...assessments
       .filter(({ status, basis }) => status === "uncovered" && basis === "judgement")
       .map(({ requirementId }) => requirementId),
     ...critiqueFindings
-      .filter(({ category }) => category === "coverage")
+      .filter(({ category, code }) => category === "coverage" && !isEmphasisMove(code))
       .flatMap(({ requirementId }) => (requirementId === undefined ? [] : [requirementId])),
   ];
 }

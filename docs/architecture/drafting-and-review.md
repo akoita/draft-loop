@@ -229,6 +229,15 @@ covered in the previous round, on any basis, that this round finds uncovered or
 only possibly covered gets a content-free `coverage-lost` warning naming its
 id, unless the revision already reported it as dropped.
 
+A token-match miss on a critical requirement blocks approval only when the
+critic also reports the gap (#1789): a judged "uncovered" verdict, an
+`emphasis-theme-gap` finding, or a coverage finding of its own about the
+requirement. Emphasis advice (`emphasis-theme-buried`, `emphasis-order`,
+`emphasis-padding`) is reported as coverage too, but it says the requirement is
+supported and should move or grow, so it never confirms a gap; a walk run had a
+plainly covered requirement blocked that way (#1872). Otherwise the miss stays a
+warning.
+
 Critic template `cli-critic-v3` retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also
 asks the critic to compare explicit dated employment gaps in retrieved sources

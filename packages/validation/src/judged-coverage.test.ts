@@ -80,6 +80,35 @@ describe("word-match coverage gaps", () => {
     ).toEqual(["judged-gap", "critic-gap"]);
   });
 
+  it("does not count emphasis advice as a reported gap, but counts an emphasis gap (#1872)", () => {
+    expect(
+      criticReportedGapIds(
+        [],
+        [
+          { category: "coverage", code: "emphasis-theme-buried", requirementId: "buried" },
+          { category: "coverage", code: "emphasis-order", requirementId: "order" },
+          { category: "coverage", code: "emphasis-padding", requirementId: "padding" },
+          { category: "coverage", code: "emphasis-theme-gap", requirementId: "theme-gap" },
+          { category: "coverage", code: "uncovered-requirement", requirementId: "critic-gap" },
+        ],
+      ),
+    ).toEqual(["theme-gap", "critic-gap"]);
+  });
+
+  it("keeps a word-match miss a warning when the critic only advises emphasis on it", () => {
+    const findings = [
+      { code: "uncovered-requirement", requirementId: "coding-tools", severity: "error" },
+    ] as const;
+    const reported = criticReportedGapIds(
+      [],
+      [{ category: "coverage", code: "emphasis-theme-buried", requirementId: "coding-tools" }],
+    );
+
+    expect(withWordMatchGapsConfirmed(findings, reported)).toEqual([
+      { code: "uncovered-requirement", requirementId: "coding-tools", severity: "warning" },
+    ]);
+  });
+
   it("blocks on a word-match miss only when the critic confirms it, keeping other findings", () => {
     const findings = [
       { code: "uncovered-requirement", requirementId: "word-match-only", severity: "error" },
