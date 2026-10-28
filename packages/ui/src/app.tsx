@@ -40,6 +40,7 @@ import {
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import { KeptPage } from "./kept-page.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
+import { KNOWN_GAP_RATIONALE } from "./known-gaps.js";
 import type {
   CandidateProfileSelection,
   DesktopReviewState,
@@ -138,18 +139,24 @@ import { WritingPolicyEditAction } from "./writing-policy-editor.js";
 
 const runRefreshIntervalMs = 750;
 
-type DirectFindingDecision = Exclude<FindingDecision, "pending" | "overridden">;
+type BulkFindingDecision = Exclude<FindingDecision, "pending">;
 
 export async function dispatchFindingDecisions(
   state: DesktopReviewState,
   findingIds: readonly string[],
-  decision: DirectFindingDecision,
+  decision: BulkFindingDecision,
   dispatch: (state: DesktopReviewState, action: ReviewAction) => Promise<DesktopReviewState>,
   onProgress: (state: DesktopReviewState) => void = () => undefined,
+  rationale?: string,
 ): Promise<DesktopReviewState> {
   let next = state;
   for (const findingId of findingIds) {
-    next = await dispatch(next, { type: "finding-decision", findingId, decision });
+    next = await dispatch(next, {
+      type: "finding-decision",
+      findingId,
+      decision,
+      ...(rationale === undefined ? {} : { rationale }),
+    });
     onProgress(next);
   }
   return next;
@@ -1514,7 +1521,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   const onBulkFindingDecision = (
     findingIds: readonly string[],
-    decision: DirectFindingDecision,
+    decision: BulkFindingDecision,
+    rationale?: string,
   ) => {
     const firstFindingId = findingIds[0];
     if (state === null || firstFindingId === undefined) return;
@@ -1527,6 +1535,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       type: "finding-decision",
       findingId: firstFindingId,
       decision,
+      ...(rationale === undefined ? {} : { rationale }),
     };
     const started = reviewActionDispatcher.dispatch(pendingAction, async () => {
       try {
@@ -1548,6 +1557,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               setState(next);
             }
           },
+          rationale,
         );
       } catch (reason: unknown) {
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
@@ -2739,6 +2749,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         : { onSaveMarkdownFile: activePort.saveMarkdownFile })}
       exportsDownload={activePort.exportsDownload === true}
       onBulkFindingDecision={onBulkFindingDecision}
+      onMarkKnownGaps={(findingIds) =>
+        onBulkFindingDecision(findingIds, "overridden", KNOWN_GAP_RATIONALE)
+      }
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}
       pendingReviewAction={pendingReviewAction}

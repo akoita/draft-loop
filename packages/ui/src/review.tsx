@@ -69,6 +69,7 @@ import {
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
 } from "./job-requirements-extraction.js";
+import { MARK_KNOWN_GAPS_NOTE, markKnownGapsLabel, pendingConfirmedGapIds } from "./known-gaps.js";
 import {
   type DesktopReviewState,
   type ExportFormat,
@@ -192,6 +193,8 @@ interface ReviewWorkspaceProps {
     findingIds: readonly string[],
     decision: DirectFindingDecision,
   ) => void;
+  /** Overrides every listed confirmed coverage gap with the known-gap reason (#1873). */
+  readonly onMarkKnownGaps?: (findingIds: readonly string[]) => void;
   readonly pendingBulkFindingCount?: number | null;
   readonly pendingReviewAction?: PendingReviewAction | null;
   readonly onSelectFiles?: (
@@ -922,6 +925,7 @@ export function ReviewWorkspace({
   onChooseRun,
   initialRunComparison = null,
   onBulkFindingDecision,
+  onMarkKnownGaps,
   pendingBulkFindingCount = null,
   pendingReviewAction = null,
   onSelectFiles,
@@ -1239,6 +1243,11 @@ export function ReviewWorkspace({
     filteredFindings.filter(isUnresolvedFinding),
     decisionContext,
   );
+  const knownGapIds =
+    findingDecisionsOpen && onMarkKnownGaps !== undefined
+      ? pendingConfirmedGapIds(state.findings)
+      : [];
+  const knownGapsLabel = markKnownGapsLabel(knownGapIds.length);
   const previousNeedsActionCount = useRef(queueCounts.needsAction);
   const policyConfirmed =
     confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
@@ -3464,6 +3473,19 @@ export function ReviewWorkspace({
                     saved.
                   </p>
                 ) : null}
+                {knownGapsLabel === null || onMarkKnownGaps === undefined ? null : (
+                  <div className="finding-bulk-actions finding-known-gaps">
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      disabled={pendingReviewAction !== null}
+                      onClick={() => onMarkKnownGaps(knownGapIds)}
+                    >
+                      {knownGapsLabel}
+                    </button>
+                    <p className="finding-bulk-note">{MARK_KNOWN_GAPS_NOTE}</p>
+                  </div>
+                )}
                 {bulkDecisionAvailable ? (
                   <fieldset className="finding-bulk-actions">
                     <legend>

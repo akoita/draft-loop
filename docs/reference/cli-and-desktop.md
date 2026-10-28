@@ -640,6 +640,12 @@ pinned under it.
   **Reject**, **Defer** and **Override**, with keyboard shortcuts. Coverage is
   described under
   [Requirement coverage in run output](#requirement-coverage-in-run-output).
+- **Confirmed gaps.** A word-match miss the critic also reports as a gap is
+  titled "No evidence found for: …": the evidence does not cover it, so no
+  revision can. **Mark N confirmed gaps as known** overrides all of them with
+  the reason "Known gap: the approved evidence does not support this
+  requirement" and unblocks approval; each decision can be changed later
+  (#1873).
 - **Job tab.** Shows the application's job description, read-only, beside the
   draft, with where it came from: the workspace's job file, the pasted text, or
   the chosen file as it reads now. A job added from a web page shows the
