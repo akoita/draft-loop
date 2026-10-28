@@ -259,7 +259,7 @@ describe("starting a run in sign-in mode", () => {
     // Standard on both sides: base 1, three rounds span two blocks.
     expect(reserved).toMatchObject({
       credits: 2,
-      estimateVersion: 1,
+      estimateVersion: 2,
       caps: { maxConcurrent: null, maxPerDay: null },
     });
     expect(reserved.runId).toMatch(/^run-\d+-[0-9a-f]{8}$/u);
@@ -285,6 +285,18 @@ describe("starting a run in sign-in mode", () => {
     expect((await startRun(server, { body: { modelProfiles: premiumPair } })).status).toBe(201);
 
     expect(reserve.mock.calls[0]?.[0].credits).toBe(4);
+  });
+
+  it("prices a high reasoning level like a premium model and records rule v2", async () => {
+    const server = await api();
+    const standardPair = {
+      author: { id: "standard-anthropic-author", version: 1, effort: "high" },
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+
+    expect((await startRun(server, { body: { modelProfiles: standardPair } })).status).toBe(201);
+
+    expect(reserve.mock.calls[0]?.[0]).toMatchObject({ credits: 4, estimateVersion: 2 });
   });
 
   it("prices an application's own pair, whatever the request names", async () => {

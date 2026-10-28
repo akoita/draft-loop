@@ -126,7 +126,7 @@ export const syntheticCredits: ApiSchemas["MemberCredits"] = {
 export const syntheticEstimate: ApiSchemas["RunEstimate"] = {
   credits: 2,
   estimateVersion: 1,
-  basis: { base: 1, premium: false, roundBlocks: 1 },
+  basis: { base: 1, premium: false, highReasoning: false, roundBlocks: 1 },
   maxRounds: 4,
   authorTier: "standard",
   criticTier: "standard",

@@ -12,11 +12,49 @@ import {
 const tiers: readonly ModelProfileTier[] = ["economy", "standard", "premium"];
 
 describe("estimateRunCredits", () => {
-  it("is version 1", () => {
-    expect(runCreditEstimateVersion).toBe(1);
+  it("is version 2", () => {
+    expect(runCreditEstimateVersion).toBe(2);
     expect(
       estimateRunCredits({ authorTier: "economy", criticTier: "economy", maxRounds: 1 }).version,
-    ).toBe(1);
+    ).toBe(2);
+  });
+
+  it.each([
+    [undefined, undefined, 1],
+    ["low", "low", 1],
+    ["medium", "provider-default", 1],
+    ["high", undefined, 2],
+    [undefined, "xhigh", 2],
+    ["max", "high", 2],
+  ] as const)(
+    "prices an author at %s and a critic at %s reasoning on a standard pair at base %i",
+    (authorEffort, criticEffort, base) => {
+      const estimate = estimateRunCredits({
+        authorTier: "standard",
+        criticTier: "economy",
+        authorEffort,
+        criticEffort,
+        maxRounds: 3,
+      });
+      expect(estimate.basis).toEqual({
+        base,
+        premium: false,
+        highReasoning: base === 2,
+        roundBlocks: 2,
+      });
+      expect(estimate.credits).toBe(base * 2);
+    },
+  );
+
+  it("doubles a premium pair once, whatever its reasoning level", () => {
+    const estimate = estimateRunCredits({
+      authorTier: "premium",
+      criticTier: "standard",
+      authorEffort: "max",
+      maxRounds: 2,
+    });
+    expect(estimate.credits).toBe(2);
+    expect(estimate.basis).toMatchObject({ base: 2, premium: true, highReasoning: true });
   });
 
   it.each([
@@ -31,7 +69,12 @@ describe("estimateRunCredits", () => {
       for (const criticTier of ["economy", "standard"] as const) {
         const estimate = estimateRunCredits({ authorTier, criticTier, maxRounds });
         expect(estimate.credits).toBe(credits);
-        expect(estimate.basis).toEqual({ base: 1, premium: false, roundBlocks: credits });
+        expect(estimate.basis).toEqual({
+          base: 1,
+          premium: false,
+          highReasoning: false,
+          roundBlocks: credits,
+        });
       }
     }
   });
@@ -51,7 +94,12 @@ describe("estimateRunCredits", () => {
       ] as const) {
         const estimate = estimateRunCredits({ authorTier, criticTier, maxRounds });
         expect(estimate.credits).toBe(credits);
-        expect(estimate.basis).toEqual({ base: 2, premium: true, roundBlocks: credits / 2 });
+        expect(estimate.basis).toEqual({
+          base: 2,
+          premium: true,
+          highReasoning: false,
+          roundBlocks: credits / 2,
+        });
       }
     }
   });
@@ -76,7 +124,12 @@ describe("estimateRunCredits", () => {
       maxRounds: 4,
     });
     expect(Object.keys(estimate).sort()).toEqual(["basis", "credits", "version"]);
-    expect(Object.keys(estimate.basis).sort()).toEqual(["base", "premium", "roundBlocks"]);
+    expect(Object.keys(estimate.basis).sort()).toEqual([
+      "base",
+      "highReasoning",
+      "premium",
+      "roundBlocks",
+    ]);
   });
 
   it.each([0, -1, -2, 1.5, 2.0000001, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53])(
@@ -99,7 +152,7 @@ describe("resolveRunCreditTiers", () => {
       const preset = getModelProfilePreset(presetId);
       expect(
         resolveRunCreditTiers({ modelProfiles: { author: preset.author, critic: preset.critic } }),
-      ).toEqual({ status: "known", authorTier: expected[0], criticTier: expected[1] });
+      ).toMatchObject({ status: "known", authorTier: expected[0], criticTier: expected[1] });
     }
   });
 
@@ -110,9 +163,34 @@ describe("resolveRunCreditTiers", () => {
         critic: { id: "premium-openai-critic", version: 1 },
       },
     });
-    expect(result).toEqual({ status: "known", authorTier: "premium", criticTier: "premium" });
+    expect(result).toEqual({
+      status: "known",
+      authorTier: "premium",
+      criticTier: "premium",
+      authorEffort: "high",
+      criticEffort: "medium",
+    });
     if (result.status === "known") {
       expect(estimateRunCredits({ ...result, maxRounds: 3 }).credits).toBe(4);
+    }
+  });
+
+  it("reads each named profile's level: the chosen one, else its own", () => {
+    const result = resolveRunCreditTiers({
+      modelProfiles: {
+        author: { id: "economy-anthropic-author", version: 1, effort: "xhigh" },
+        critic: { id: "balanced-openai-critic", version: 1 },
+      },
+    });
+    expect(result).toEqual({
+      status: "known",
+      authorTier: "economy",
+      criticTier: "standard",
+      authorEffort: "xhigh",
+      criticEffort: "low",
+    });
+    if (result.status === "known") {
+      expect(estimateRunCredits({ ...result, maxRounds: 2 }).credits).toBe(2);
     }
   });
 
@@ -169,7 +247,7 @@ describe("resolveRunCreditTiers", () => {
           critic: { company: "openai", model: "gpt-6-luna" },
         },
       }),
-    ).toEqual({ status: "known", authorTier: "premium", criticTier: "premium" });
+    ).toMatchObject({ status: "known", authorTier: "premium", criticTier: "premium" });
   });
 
   it("reports a configured model no profile matches, or none at all", () => {

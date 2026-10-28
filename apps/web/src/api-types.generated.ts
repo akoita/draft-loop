@@ -583,6 +583,7 @@ export interface ApiSchemas {
     readonly basis: {
       readonly base: number;
       readonly premium: boolean;
+      readonly highReasoning: boolean;
       readonly roundBlocks: number;
     };
     readonly maxRounds: number;

@@ -314,7 +314,11 @@ The hosted service starts runs through a queue rather than in the request
   These answers carry codes, a role, a tier and numbers only. The tiers come
   from the application's own pair, else the request's `modelProfiles`, else the
   workspace's configured models, as `resolveRunCreditTiers` reads them, and the
-  estimate is `estimateRunCredits` at the workspace's round limit.
+  estimate is `estimateRunCredits` at the workspace's round limit. Rule v2
+  charges 1 credit per block of two rounds, doubled when a model is premium or
+  a named profile runs at a `high`, `xhigh` or `max` reasoning level; each
+  reservation records the rule version that priced it, so a v1 run keeps its
+  price.
 - The gate reserves the estimate before the run is saved. It picks the run id,
   reserves under the ledger's lock (credits and caps together, so concurrent
   starts cannot overspend), then passes the id to `begin` (`runId` on the

@@ -57,6 +57,8 @@ export async function priceRun(
     estimate: estimateRunCredits({
       authorTier: tiers.authorTier,
       criticTier: tiers.criticTier,
+      authorEffort: tiers.authorEffort,
+      criticEffort: tiers.criticEffort,
       maxRounds: request.workspace.maxRounds,
     }),
   };
