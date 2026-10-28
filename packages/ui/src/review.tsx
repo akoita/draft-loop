@@ -69,7 +69,12 @@ import {
   JobRequirementsExtraction,
   type JobRequirementsExtractionBinding,
 } from "./job-requirements-extraction.js";
-import { MARK_KNOWN_GAPS_NOTE, markKnownGapsLabel, pendingConfirmedGapIds } from "./known-gaps.js";
+import {
+  knownGapReadinessOverride,
+  MARK_KNOWN_GAPS_NOTE,
+  markKnownGapsLabel,
+  pendingConfirmedGapIds,
+} from "./known-gaps.js";
 import {
   type DesktopReviewState,
   type ExportFormat,
@@ -1020,13 +1025,23 @@ export function ReviewWorkspace({
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
   );
+  // Which draft lines this reviewer changed in this session. Session-local UI
+  // state: it says what a signature would cover, and is not part of the run.
+  const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Settled known gaps are the override for the word-match checks they fail (#1903), and edits
+  // change the version the host checks again at approval (#1902), so neither waits for a
+  // separate override.
+  const knownGapOverride = knownGapReadinessOverride(approvalReadiness, state.findings);
+  const editNote = approvalEditNote(state.artifact, editedBlockIds);
+  const readinessSettled =
+    approvalReadiness?.applicationReady !== false || knownGapOverride !== null || editNote !== null;
   const canApprove =
     approvalOpen &&
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
     blockingFindings.length === 0 &&
-    approvalReadiness?.applicationReady !== false;
+    readinessSettled;
   // Final CV checks are heuristics, so a person who has reviewed the draft can
   // approve past them with a recorded reason, as with blocking findings.
   const canOverrideReadiness =
@@ -1035,7 +1050,8 @@ export function ReviewWorkspace({
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
     blockingFindings.length === 0 &&
-    approvalReadiness?.applicationReady === false;
+    approvalReadiness?.applicationReady === false &&
+    knownGapOverride === null;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
@@ -1059,19 +1075,21 @@ export function ReviewWorkspace({
     ? (runStatusLine?.label ?? "")
     : !hasArtifact
       ? "No draft artifact available"
-      : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-        ? "Final CV checks block approval"
-        : roundLimitRecovery
-          ? "Round limit recovery required"
-          : !state.reviewComplete
-            ? (runStatusLine?.label ?? "")
-            : state.state === "provider-error"
-              ? "Provider recovery remains before approval"
-              : findingSummary.status === "blocked"
-                ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-                : findingSummary.status === "warnings"
-                  ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-                  : "No unresolved findings";
+      : knownGapOverride !== null && state.approval !== "approved"
+        ? "Final CV checks fail only on known gaps"
+        : approvalReadiness?.applicationReady === false && state.approval !== "approved"
+          ? "Final CV checks block approval"
+          : roundLimitRecovery
+            ? "Round limit recovery required"
+            : !state.reviewComplete
+              ? (runStatusLine?.label ?? "")
+              : state.state === "provider-error"
+                ? "Provider recovery remains before approval"
+                : findingSummary.status === "blocked"
+                  ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+                  : findingSummary.status === "warnings"
+                    ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+                    : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
   const [exportTemplate, setExportTemplate] = useExportTemplate(
@@ -1157,9 +1175,6 @@ export function ReviewWorkspace({
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [draftView, setDraftView] = useState<"changes" | "full">("changes");
   const [compareOpen, setCompareOpen] = useState(false);
-  // Which draft lines this reviewer changed in this session. Session-local UI
-  // state: it says what a signature would cover, and is not part of the run.
-  const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
   // The command palette: every action in this workspace reachable by name, with the reason
   // written on any action that cannot run yet.
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1198,8 +1213,12 @@ export function ReviewWorkspace({
   });
   const approveArtifact = useCallback((): void => {
     attemptApproval();
-    onAction({ type: "approve" });
-  }, [attemptApproval, onAction]);
+    onAction(
+      knownGapOverride === null
+        ? { type: "approve" }
+        : { type: "approve", readinessOverrideRationale: knownGapOverride },
+    );
+  }, [attemptApproval, knownGapOverride, onAction]);
   const locateDraftBlock = (blockId: string): void => {
     draftBlockShellRefs.current
       .get(blockId)
@@ -3874,6 +3893,11 @@ export function ReviewWorkspace({
                       ? `Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
                       : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
                 </p>
+              ) : knownGapOverride !== null && state.approval !== "approved" ? (
+                <p className="warning-copy">
+                  The final CV checks fail only on the gaps you marked as known. Approving records
+                  your reasons as the override.
+                </p>
               ) : approvalReadiness?.applicationReady === false && state.approval !== "approved" ? (
                 <div className="warning-copy">
                   <p>
@@ -3898,7 +3922,7 @@ export function ReviewWorkspace({
               )
             }
             conditions={gateConditions}
-            editNote={approvalEditNote(state.artifact, editedBlockIds)}
+            editNote={editNote}
             detailsOpen={gateDetailsOpen}
             onDetailsOpenChange={setGateDetailsOpen}
             recovery={

@@ -2596,10 +2596,14 @@ export function createOrchestrationEngine(
     if (edited !== null && !readinessDecision.applicationReady && overrideRationale === undefined)
       // The decision judges a version that exists only once approved, so nothing is saved.
       throw new RunTransitionError(
-        `The edited artifact is not application-ready (${readinessDecision.blockers
-          .map((blocker) => blocker.code)
-          .join(", ")}).`,
-        "readiness_blocked",
+        `Your edited draft still fails the final CV checks (${[
+          ...new Set(
+            readinessDecision.blockers.map((blocker) =>
+              blocker.code === "deterministic-error" ? blocker.checkCode : blocker.code,
+            ),
+          ),
+        ].join(", ")}). Change the edits, or approve with an override reason.`,
+        "edits_readiness_blocked",
       );
     const reviewed = {
       ...settledForTransition(snapshot, now),

@@ -664,8 +664,10 @@ pinned under it.
   titled "No evidence found for: …": the evidence does not cover it, so no
   revision can. **Mark N confirmed gaps as known** overrides all of them with
   the reason "Known gap: the approved evidence does not support this
-  requirement" and unblocks approval; each decision can be changed later
-  (#1873).
+  requirement"; each decision can be changed later (#1873). When the
+  word-match check behind these gaps is the only final check that fails,
+  **Approve** records the gaps' reasons as the override, with no separate
+  **Approve with override** step (#1903).
 - **Job tab.** Shows the application's job description, read-only, beside the
   draft, with where it came from: the workspace's job file, the pasted text, or
   the chosen file as it reads now. A job added from a web page shows the
@@ -1289,6 +1291,12 @@ Text you change in the review is part of what you approve. Approving makes the
 next version with your edits, runs the final checks again on it, and exports
 that version; the critic has not reviewed your wording. Edited lines keep an
 **edited** mark in the review, before and after approval.
+
+With edits, **Approve** stays available even when the final checks failed on
+the reviewed version, since your edits may fix them: replacing the header's
+placeholders such as `[Your name]`, which block approval (#1902), is the usual
+case. If the edited version still fails, nothing is saved and the error names
+the checks; change the edits or approve with an override.
 
 Once blocking findings are resolved, you can still approve a draft whose final
 checks fail. Type a reason and press Enter or choose **Approve with override**,

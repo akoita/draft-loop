@@ -45,4 +45,31 @@ describe("the candidate's edits at approval", () => {
       renderToStaticMarkup(<ReviewWorkspace state={fixture} onAction={() => undefined} />),
     ).not.toContain('<span class="block-edited-flag">edited</span>');
   });
+
+  it("lets Approve send the edits past checks that failed on the reviewed version", () => {
+    const blocked: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      findings: fixture.findings
+        .filter((finding) => finding.severity === "warning")
+        .map((finding) => ({ ...finding, decision: "accepted" as const })),
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        applicationReady: false,
+        blockers: [{ code: "deterministic-error", check: "missing-cv-header" }],
+      },
+    };
+    const approve = /title="Approve artifact \(Alt\+A\)" disabled=""/u;
+
+    expect(
+      renderToStaticMarkup(<ReviewWorkspace state={blocked} onAction={() => undefined} />),
+    ).toMatch(approve);
+    // The host checks the edited version again, so a fixed header no longer waits for an override.
+    expect(
+      renderToStaticMarkup(
+        <ReviewWorkspace state={withEditedFirstBlock(blocked)} onAction={() => undefined} />,
+      ),
+    ).not.toMatch(approve);
+  });
 });

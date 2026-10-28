@@ -2,7 +2,9 @@ export type RunTransitionErrorCode =
   /** The run's state, round or budget does not allow the action. */
   | "run_state_conflict"
   /** Approval needs a reason because the final CV checks fail. */
-  | "readiness_blocked";
+  | "readiness_blocked"
+  /** The candidate's review edits still fail the final CV checks; nothing was saved. */
+  | "edits_readiness_blocked";
 
 /**
  * A person's action on a run that the run cannot take as it stands, such as approving a run that
