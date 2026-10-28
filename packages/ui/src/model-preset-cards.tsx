@@ -40,6 +40,8 @@ export const unsupportedSignInBadge = "Not available with your current sign-in";
 interface ModelPresetCardsProps {
   readonly groupName: string;
   readonly checkedValue: string;
+  /** Chosen reasoning levels, such as "writer high", shown on the checked preset's card. */
+  readonly checkedNote?: string;
   readonly disabled: boolean;
   readonly support: ModelProfileSupportResult | undefined;
   readonly onSelect: (value: string) => void;
@@ -70,6 +72,7 @@ function PresetCard({
   preset,
   groupName,
   checked,
+  note,
   disabled,
   support,
   onSelect,
@@ -77,6 +80,7 @@ function PresetCard({
   readonly preset: ModelProfilePreset;
   readonly groupName: string;
   readonly checked: boolean;
+  readonly note: string;
   readonly disabled: boolean;
   readonly support: ModelProfileSupportResult | undefined;
   readonly onSelect: (value: string) => void;
@@ -100,7 +104,10 @@ function PresetCard({
         disabled={disabled}
         onChange={() => onSelect(preset.id)}
       />
-      <span className="model-preset-card-title">{presetDisplayName(preset.label)}</span>
+      <span className="model-preset-card-title">
+        {presetDisplayName(preset.label)}
+        {note === "" ? null : <span className="model-preset-card-note"> · {note}</span>}
+      </span>
       <span className="model-preset-card-line">
         <span aria-hidden="true">
           {authorName} → {criticName}
@@ -135,6 +142,7 @@ function PresetCard({
 export function ModelPresetCards({
   groupName,
   checkedValue,
+  checkedNote = "",
   disabled,
   support,
   onSelect,
@@ -157,6 +165,7 @@ export function ModelPresetCards({
             preset={preset}
             groupName={groupName}
             checked={checkedValue === preset.id}
+            note={checkedValue === preset.id ? checkedNote : ""}
             disabled={disabled}
             support={support}
             onSelect={onSelect}

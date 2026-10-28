@@ -1,4 +1,6 @@
 import {
+  type ChoosableModelProfileEffort,
+  isChoosableModelProfileEffort,
   listModelProfileCatalog,
   listModelProfilePresets,
   type ModelProfileCatalogEntry,
@@ -12,6 +14,7 @@ import type {
   WorkspaceConfigureModelsInput,
 } from "./bridge.js";
 import type { DesktopReviewState, ReviewAction } from "./model.js";
+import { effortDisplayName } from "./model-profile-presentation.js";
 
 export interface AppliedModelProfileSelection {
   readonly workspaceId: string;
@@ -149,6 +152,7 @@ export function modelProfilePresetReferences(
   return { author: { ...preset.author }, critic: { ...preset.critic } };
 }
 
+/** Whether two pairs name the same exact profiles, whatever reasoning levels they choose. */
 export function modelProfileReferencesEqual(
   left: ModelProfileReferences | null,
   right: ModelProfileReferences | null,
@@ -268,4 +272,53 @@ export function reviewActionWithModelProfiles(
   refs: ModelProfileReferences | null,
 ): ReviewAction {
   return action.type === "start" && refs !== null ? { ...action, modelProfiles: refs } : action;
+}
+
+/** Whether two pairs name the same exact profiles at the same chosen reasoning levels. */
+export function modelProfileSelectionsEqual(
+  left: ModelProfileReferences | null,
+  right: ModelProfileReferences | null,
+): boolean {
+  return (
+    modelProfileReferencesEqual(left, right) &&
+    left?.author.effort === right?.author.effort &&
+    left?.critic.effort === right?.critic.effort
+  );
+}
+
+/** A profile's own reasoning level and the levels a run may choose instead. */
+export function modelProfileEffortChoices(
+  reference: { readonly id: string; readonly version: number },
+  role: "author" | "critic",
+): {
+  readonly defaultEffort: ModelProfileCatalogEntry["profile"]["runtime"]["effort"];
+  readonly levels: readonly ChoosableModelProfileEffort[];
+} | null {
+  const entry = modelProfileEntryForReference(reference, role);
+  if (entry === undefined) return null;
+  return {
+    defaultEffort: entry.profile.runtime.effort,
+    levels: entry.effortLevels.filter(isChoosableModelProfileEffort),
+  };
+}
+
+/**
+ * The chosen levels that differ from each profile's own, such as "writer high", so a preset's name
+ * still says where the pair started; empty when both roles use their profile's level.
+ */
+export function modelProfileLevelSummary(references: ModelProfileReferences): string {
+  const parts = (["author", "critic"] as const).flatMap((role) => {
+    const effort = references[role].effort;
+    if (effort === undefined) return [];
+    return [
+      `${role === "author" ? "writer" : "reviewer"} ${effortDisplayName(effort).toLowerCase()}`,
+    ];
+  });
+  return parts.join(", ");
+}
+
+/** A pair's name with its chosen levels, such as "Balanced · writer high". */
+export function withModelProfileLevels(name: string, references: ModelProfileReferences): string {
+  const levels = modelProfileLevelSummary(references);
+  return levels === "" ? name : `${name} · ${levels}`;
 }

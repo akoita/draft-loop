@@ -5452,6 +5452,12 @@ input[type="text"].workspace-title-input {
   gap: var(--space-3);
 }
 
+/* The hint spans both reasoning selects. */
+.model-profile-picker-effort > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .model-profile-picker-side,
 .model-profile-picker-details {
   display: grid;
@@ -5626,6 +5632,11 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-sm);
   font-weight: 650;
   line-height: 1.3;
+}
+
+.model-preset-card-note {
+  color: var(--teal);
+  font-weight: 600;
 }
 
 .model-preset-card-line {

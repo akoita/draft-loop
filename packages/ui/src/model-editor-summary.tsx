@@ -7,6 +7,7 @@ import {
   modelProfilePresetReferences,
   modelProfilePresets,
   modelProfileReferencesEqual,
+  withModelProfileLevels,
 } from "./model-profile-picker-state.js";
 import {
   modelDisplayName,
@@ -24,13 +25,19 @@ export interface ModelEditorSummaryProps {
   readonly support: ModelProfileSupportResult | undefined;
 }
 
-/** The applied pair's name: a preset's, "Custom pair", or `null` when no pair is applied. */
+/**
+ * The applied pair's name: a preset's or "Custom pair", with any chosen reasoning levels, such as
+ * "Balanced · writer high"; `null` when no pair is applied.
+ */
 export function appliedPairName(applied: ModelProfileReferences | null): string | null {
   if (applied === null) return null;
   const preset = modelProfilePresets.find((candidate) =>
     modelProfileReferencesEqual(modelProfilePresetReferences(candidate), applied),
   );
-  return preset === undefined ? "Custom pair" : presetDisplayName(preset.label);
+  return withModelProfileLevels(
+    preset === undefined ? "Custom pair" : presetDisplayName(preset.label),
+    applied,
+  );
 }
 
 function sideModelName(

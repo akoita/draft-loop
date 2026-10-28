@@ -7,7 +7,7 @@ import {
 import {
   type AppliedModelProfileSelection,
   ModelProfileSaveError,
-  modelProfileReferencesEqual,
+  modelProfileSelectionsEqual,
   type SavedModelProfilesState,
   usableSavedModelProfiles,
 } from "./model-profile-picker-state.js";
@@ -70,7 +70,7 @@ export async function saveAppliedModelProfiles(
     throw new ModelProfileSaveError(reason instanceof Error ? reason.message : undefined);
   }
   if (
-    !modelProfileReferencesEqual(saved.modelProfiles, references) ||
+    !modelProfileSelectionsEqual(saved.modelProfiles, references) ||
     saved.ignoredReason !== null
   ) {
     throw new ModelProfileSaveError();

@@ -52,8 +52,10 @@ function scenarioInput(
     outputTokens: tokenCount(entry.outputTokens),
     calls: tokenCount(entry.calls),
   });
+  // List rates depend on the exact profiles only, not on a chosen reasoning level.
+  const exact = ({ id, version }: ModelProfileReferences["author"]) => ({ id, version });
   return {
-    profiles: references,
+    profiles: { author: exact(references.author), critic: exact(references.critic) },
     ...(authModes === undefined ? {} : { authModes }),
     author: scenario(values.author),
     critic: scenario(values.critic),

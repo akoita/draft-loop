@@ -38,8 +38,11 @@ export function resolveWorkspaceModelProfileSelection(
     throw new RunModelProfileSelectionError("workspace-mismatch");
   }
 
-  return {
-    author: { id: resolved.author.id, version: resolved.author.version },
-    critic: { id: resolved.critic.id, version: resolved.critic.version },
-  };
+  const chosen = references as ModelProfileReferences;
+  const side = (role: "author" | "critic") => ({
+    id: resolved[role].id,
+    version: resolved[role].version,
+    ...(chosen[role].effort === undefined ? {} : { effort: chosen[role].effort }),
+  });
+  return { author: side("author"), critic: side("critic") };
 }

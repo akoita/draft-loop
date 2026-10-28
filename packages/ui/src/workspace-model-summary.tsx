@@ -1,9 +1,11 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 
 import {
+  modelProfileLevelSummary,
   modelProfilePresetReferences,
   modelProfilePresets,
   modelProfileReferencesEqual,
+  withModelProfileLevels,
 } from "./model-profile-picker-state.js";
 import {
   modelDisplayName,
@@ -52,9 +54,12 @@ function appliedProfilesLine(applied: ModelProfileReferences) {
   const preset = modelProfilePresets.find((candidate) =>
     modelProfileReferencesEqual(modelProfilePresetReferences(candidate), applied),
   );
+  const levels = modelProfileLevelSummary(applied);
   if (preset !== undefined) {
     return (
-      <p className="workspace-model-summary-profiles">Preset: {presetDisplayName(preset.label)}</p>
+      <p className="workspace-model-summary-profiles">
+        Preset: {withModelProfileLevels(presetDisplayName(preset.label), applied)}
+      </p>
     );
   }
   return (
@@ -64,6 +69,7 @@ function appliedProfilesLine(applied: ModelProfileReferences) {
         {applied.author.id}@{applied.author.version} and {applied.critic.id}@
         {applied.critic.version}
       </code>
+      {levels === "" ? null : ` · ${levels}`}
     </p>
   );
 }
