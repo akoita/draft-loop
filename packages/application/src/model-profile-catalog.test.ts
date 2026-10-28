@@ -97,12 +97,14 @@ describe("model profile catalog", () => {
     expect(byId.get("economy-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
       "https://platform.claude.com/docs/en/about-claude/pricing",
+      "https://platform.claude.com/docs/en/build-with-claude/effort",
     ]);
     expect(byId.get("economy-anthropic-author@1")).toMatchObject({
       profile: { provider: "anthropic", modelId: "claude-sonnet-5-5", roles: ["author"] },
       sources: [
         "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
         "https://platform.claude.com/docs/en/about-claude/pricing",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
       ],
       apiPricing: { maxInputTokens: 1000000 },
     });
@@ -112,6 +114,7 @@ describe("model profile catalog", () => {
     expect(byId.get("standard-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/overview",
       "https://platform.claude.com/docs/en/about-claude/pricing",
+      "https://platform.claude.com/docs/en/build-with-claude/effort",
     ]);
     expect(byId.get("standard-openai-critic@2")?.sources).toEqual([
       "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
@@ -187,6 +190,7 @@ describe("model profile catalog", () => {
       sources: [
         "https://platform.claude.com/docs/en/about-claude/models/overview",
         "https://platform.claude.com/docs/en/about-claude/pricing",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
       ],
       apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5, maxInputTokens: 100000 },
     });

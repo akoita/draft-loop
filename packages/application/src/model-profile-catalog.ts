@@ -1,5 +1,13 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
+import { allowedModelProfileEfforts, modelProfileEffortSource } from "./model-profile-efforts.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
+
+export {
+  allowedModelProfileEfforts,
+  type ChoosableModelProfileEffort,
+  choosableModelProfileEfforts,
+  isChoosableModelProfileEffort,
+} from "./model-profile-efforts.js";
 
 export interface ModelProfileCatalogPricing {
   readonly inputUsdPerMillion: number;
@@ -19,6 +27,8 @@ export interface ModelProfileCatalogEntry {
   readonly qualityStatus: "unvalidated";
   readonly availabilityStatus: "not-checked";
   readonly apiPricing: ModelProfileCatalogPricing;
+  /** Reasoning levels a run may choose for this profile; the profile's own level is the default. */
+  readonly effortLevels: readonly ModelProfile["runtime"]["effort"][];
 }
 
 export type ModelProfilePresetId =
@@ -240,10 +250,14 @@ export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
     const profile = defaultModelProfileRegistry.resolve(id, version, role);
     const metadata = catalogMetadata[`${profile.id}@${profile.version}`];
     if (metadata === undefined) throw new ModelProfileCatalogError("missing-metadata");
+    const effortSource = modelProfileEffortSource(profile);
     return {
       profile,
       reviewedAt: metadata.reviewedAt ?? "2026-09-30",
-      sources: [...metadata.sources],
+      sources:
+        effortSource === undefined || metadata.sources.includes(effortSource)
+          ? [...metadata.sources]
+          : [...metadata.sources, effortSource],
       qualityStatus: "unvalidated",
       availabilityStatus: "not-checked",
       apiPricing: {
@@ -251,6 +265,7 @@ export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
         maxInputTokens: metadata.maxInputTokens ?? defaultMaxInputTokens,
         ...pricingScope,
       },
+      effortLevels: allowedModelProfileEfforts(profile),
     };
   });
 }
