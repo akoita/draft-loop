@@ -83,6 +83,7 @@ const artifact = {
       evidence: [{ sourcePath: "career.md", excerpt: "Built TypeScript services." }],
     },
   ],
+  decisions: [],
 };
 
 const snapshot = {

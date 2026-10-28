@@ -97,6 +97,8 @@ export interface ReviewBlock {
   readonly type: "paragraph" | "bullet";
   readonly text: string;
   readonly claimIds: readonly string[];
+  /** The text is the candidate's own: an edit recorded in the review or applied at approval. */
+  readonly edited?: boolean;
 }
 
 export interface ReviewSection {

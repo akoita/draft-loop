@@ -12,6 +12,20 @@ export const CANDIDATE_EDIT_VERSION_SUFFIX = "-candidate-edits";
 
 export const CANDIDATE_EDIT_RATIONALE = "The candidate edited this block in the review.";
 
+const CANDIDATE_EDIT_DECISION_PREFIX = "decision-candidate-edit-";
+
+/** The blocks whose text the candidate's review edits set in this version (#1901). */
+export function candidateEditedBlockIds(artifact: DraftArtifact): ReadonlySet<string> {
+  return new Set(
+    artifact.decisions
+      .filter(
+        (decision) =>
+          decision.type === "edit" && decision.id.startsWith(CANDIDATE_EDIT_DECISION_PREFIX),
+      )
+      .map((decision) => decision.id.slice(CANDIDATE_EDIT_DECISION_PREFIX.length)),
+  );
+}
+
 /**
  * The version the candidate approves when they edited blocks in the review (#1899): the reviewed
  * artifact with each edited block's text replaced and one `edit` decision per block. The critic
@@ -69,7 +83,7 @@ export function applyCandidateEdits(
     decisions: [
       ...artifact.decisions,
       ...[...replacements.keys()].map((blockId) => ({
-        id: `decision-candidate-edit-${blockId}`,
+        id: `${CANDIDATE_EDIT_DECISION_PREFIX}${blockId}`,
         type: "edit" as const,
         rationale: CANDIDATE_EDIT_RATIONALE,
         createdAt,

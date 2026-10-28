@@ -11,6 +11,7 @@ import type {
   WorkspaceDescriptor,
 } from "@draft-loop/application";
 import {
+  candidateEditedBlockIds,
   hasCompletedIndependentCritique,
   type RunSnapshot,
   retriesAutomatically,
@@ -208,11 +209,12 @@ function providerFailure(
   };
 }
 
-function reviewArtifact(
+export function reviewArtifact(
   artifact: RunSnapshot["artifact"],
   overrides: ReviewDecisions,
 ): ReviewArtifact {
   if (artifact === null) throw new Error("The run has no draft artifact yet.");
+  const approvedEdits = candidateEditedBlockIds(artifact);
   const sections: readonly ReviewSection[] = artifact.sections.map((section) => ({
     id: section.id,
     title: section.title,
@@ -222,6 +224,9 @@ function reviewArtifact(
       type: block.type,
       text: overrides.edits[block.id] ?? block.text,
       claimIds: [...block.claimIds],
+      ...(overrides.edits[block.id] !== undefined || approvedEdits.has(block.id)
+        ? { edited: true }
+        : {}),
     })),
   }));
   const claims: readonly ReviewClaim[] = artifact.claims.map((claim) => ({

@@ -6,6 +6,7 @@ import {
   applyCandidateEdits,
   CANDIDATE_EDIT_RATIONALE,
   CANDIDATE_EDIT_VERSION_SUFFIX,
+  candidateEditedBlockIds,
 } from "./candidate-edits.js";
 import {
   type AgentExecution,
@@ -169,6 +170,13 @@ describe("applyCandidateEdits", () => {
       },
     ]);
     expect(reviewed.sections[0]?.blocks[0]?.text).toBe(text);
+  });
+
+  it("names the blocks the edits set, and none in a version without edits", () => {
+    const edited = applyCandidateEdits(reviewed, [edit], editedAt);
+    if (edited === null) throw new Error("Expected an edited version.");
+    expect([...candidateEditedBlockIds(edited)]).toEqual(["summary-block-1"]);
+    expect(candidateEditedBlockIds(reviewed).size).toBe(0);
   });
 
   it("keeps the reviewed version when no edit changes any text", () => {
