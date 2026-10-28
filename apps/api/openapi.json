@@ -14244,7 +14244,7 @@
     "/v1/workspaces/{workspaceId}/runs/{runId}/approve": {
       "post": {
         "summary": "Approve the run's current draft",
-        "description": "Approves a run awaiting approval after its independent critic review. A blocking finding still pending, deferred or merely accepted answers 409 findings_unresolved, as on the desktop. When the final CV checks fail, it answers 409 readiness_blocked and the review's approvalCheck lists the blockers; approving past them needs readinessOverrideRationale.",
+        "description": "Approves a run awaiting approval after its independent critic review. The approved draft carries the block edits recorded against it, and the final CV checks run on that edited version. A blocking finding still pending, deferred or merely accepted answers 409 findings_unresolved, as on the desktop. When the final CV checks fail, it answers 409 readiness_blocked and the review's approvalCheck lists the blockers; approving past them needs readinessOverrideRationale.",
         "requestBody": {
           "required": true,
           "content": {
