@@ -912,6 +912,23 @@ these optional fields and fail closed at export until a new approval records
 them. Provider, CLI, and desktop presentation remain owned by their respective
 boundaries; export invokes the rendering-QA contract after this binding passes.
 
+### Review edits at approval (#1876)
+
+The candidate's review edits reach the approved and exported CV. `approve`
+takes the latest edit per block and, when any changes a block's text, builds
+one new artifact version from the reviewed one:
+
+- each edited block carries the new text, with one `edit` decision per block;
+- claims in an edited block keep their evidence links but drop to
+  `unverified`, and a block's only claim takes the new text;
+- final checks run again on that version, so a fixed placeholder clears its
+  check and a new unsupported figure blocks approval unless overridden.
+
+Approval binds that exact version and export renders it. A blocked approval
+with edits saves nothing, since the version exists only once approved. The
+critic does not review the edits; the current round's critique still counts as
+the review of the parent version.
+
 ### Rendering and rendering-QA boundary (#74)
 
 `packages/rendering` owns two controlled A4 layout profiles:
