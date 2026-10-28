@@ -61,7 +61,9 @@ These are configuration choices, not validated CV-quality rankings. Premium
 choices are deferred. Older exact profile versions remain available for
 compatibility with existing selections and saved runs. The Sonnet 5.5 profile,
 the economy author before Haiku 5.5, is reused as the Balanced author. GPT-6.1
-Terra is the Balanced reviewer at half of GPT-6.1 Sol's price (#1887).
+Terra is the Balanced reviewer at half of GPT-6.1 Sol's price (#1887). Each
+role's reasoning level can be raised or lowered within the levels its model
+allows, and runs record the level they used (milestone 57).
 
 Validation has two levels, and each claim applies only to the models that
 produced it:
@@ -2003,6 +2005,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-28 | Let each role choose a reasoning level from the levels its model allows, on the desktop, the web and the CLI ([milestone 57](https://github.com/akoita/draft-loop/milestone/57), #1891–#1898). A changed level keeps the preset's name, as "Balanced · writer high", and credit rule v2 doubles a hosted run's base for `high`, `xhigh` or `max`. | The price and quality trade-off of a level can be as large as a model change, so the person chooses it and every run records it. No paid run measured a level's cost yet, so the cost scenario only notes a raised level. |
 | 2026-10-28 | Made GPT-6.1 Terra the Balanced reviewer in place of GPT-6.1 Sol (#1887). Standard keeps Sol. | Balanced runs get about 10% cheaper: Terra costs half of Sol and is listed for OpenAI EU data residency. Quality stays unvalidated, and no paid run was made for the change. |
 | 2026-10-26 | Admitted client-server sprint 1t: follow-ups from the owner's re-walk ([milestone 53](https://github.com/akoita/draft-loop/milestone/53), #1806–#1808, #1794, #1775, and #1809–#1813 split from #1792 and #1793, rollup #1359). | The re-walk passed, but a hosted run's relevance stayed near 5% because the worker has no embedding model, the web takes a job only as pasted text, and the review screen wastes wide screens and overflows phones. |
 | 2026-10-26 | Admitted client-server sprint 1s: fixes from the owner's staging walk ([milestone 52](https://github.com/akoita/draft-loop/milestone/52), #1782–#1791, rollup #1359), ahead of the validation tests. | Walking staging as a new user, the owner hit a setup form unlike the desktop's, a Modern PDF that looked Classic, coverage errors for words the draft already covered and warnings repeated once per line. The validation tests would hit the same screens. |

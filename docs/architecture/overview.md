@@ -931,6 +931,13 @@ and critic; legacy workspaces without a CKB selection keep the earlier
 workspace evidence index. CKB selection remains explicit and path-free in run
 contexts.
 
+Each run records both roles' resolved model profiles, runtime controls
+included, in its context snapshot. A saved pair, an application's pair or a run
+start may choose a reasoning level per role from the levels the catalog lists
+for that exact profile version (`model-profile-efforts.ts`). The level is
+applied when the profile is resolved, so the snapshot holds the level the run
+actually used, resume reuses it, and the review screens read it from there.
+
 Before evidence reaches the author, bounded supplementary searches reserve
 content for required CV sections. If a search limit is reached without
 establishing section content, drafting fails visibly because the search cannot
