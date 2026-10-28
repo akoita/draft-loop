@@ -32,6 +32,7 @@ import type {
   WorkspaceHistoryStorage,
   WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
+import { approveWithReviewEdits, findingDecisionType } from "./approval-edits.js";
 import { assertRevisionDirection } from "./candidate-direction.js";
 import {
   candidateKnowledgeEvidenceChecksum,
@@ -1694,7 +1695,7 @@ export async function lifecycleRun(
         : action === "stop"
           ? await runEngine.stop(runId)
           : action === "approve"
-            ? await runEngine.approve(runId, options)
+            ? await approveWithReviewEdits(runEngine, storage, runId, options)
             : action === "revision"
               ? await runEngine.requestRevision(runId, options)
               : action === "recover-review"
@@ -1706,23 +1707,6 @@ export async function lifecycleRun(
     return snapshot;
   } finally {
     await storage.close();
-  }
-}
-
-function findingDecisionType(
-  decision: Extract<RecordReviewDecisionCommand, { readonly kind: "finding" }>["decision"],
-): "accept-finding" | "reject-finding" | "edit" {
-  switch (decision) {
-    case "accepted":
-      return "accept-finding";
-    case "rejected":
-      return "reject-finding";
-    case "deferred":
-      return "edit";
-    case "overridden":
-      return "reject-finding";
-    case "pending":
-      return "edit";
   }
 }
 

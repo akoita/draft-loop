@@ -3,11 +3,11 @@ import { resolve } from "node:path";
 import type { ContextSnapshot, IndependentReviewRecord } from "@draft-loop/domain";
 import { createStorageRunStore, type RunSnapshot, reviewFindingId } from "@draft-loop/orchestrator";
 import { contextSnapshotSchema, type DraftArtifact } from "@draft-loop/schemas";
-import type { DecisionRecord } from "@draft-loop/storage";
 
 import type { FindingDecision, RecordReviewDecisionCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
 import { storageFactory } from "./local-storage-factory.js";
+import { recordedChoices } from "./recorded-review-choices.js";
 import { RunActionError } from "./run-action-error.js";
 import { runRequirementTexts } from "./run-context-read.js";
 
@@ -95,47 +95,6 @@ export interface RunReview {
   readonly candidateDirection: string | null;
 }
 
-const findingDecisions: ReadonlySet<string> = new Set([
-  "pending",
-  "accepted",
-  "rejected",
-  "deferred",
-  "overridden",
-]);
-
-interface RecordedReviewChoices {
-  readonly decisions: ReadonlyMap<string, FindingDecision>;
-  readonly edits: ReadonlyMap<string, string>;
-}
-
-/** The candidate's latest decision per finding and edit per block, from the run's decisions. */
-function recordedChoices(records: readonly DecisionRecord[]): RecordedReviewChoices {
-  const decisions = new Map<string, FindingDecision>();
-  const edits = new Map<string, string>();
-  const ordered = [...records].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
-  for (const { payload } of ordered) {
-    if (typeof payload !== "object" || payload === null || Array.isArray(payload)) continue;
-    const { action, findingId, decision, blockId, replacementText } = payload as Readonly<
-      Record<string, unknown>
-    >;
-    if (
-      action === "finding-decision" &&
-      typeof findingId === "string" &&
-      typeof decision === "string" &&
-      findingDecisions.has(decision)
-    ) {
-      decisions.set(findingId, decision as FindingDecision);
-    }
-    if (
-      action === "edit-block" &&
-      typeof blockId === "string" &&
-      typeof replacementText === "string"
-    )
-      edits.set(blockId, replacementText);
-  }
-  return { decisions, edits };
-}
-
 function reviewDraft(artifact: DraftArtifact, edits: ReadonlyMap<string, string>): RunReviewDraft {
   return {
     id: artifact.id,
@@ -208,7 +167,10 @@ export async function readRunReview(command: RunReviewCommand): Promise<RunRevie
     const requirementTexts = new Map(
       context === undefined ? [] : runRequirementTexts(context).map(({ id, text }) => [id, text]),
     );
-    const { decisions, edits } = recordedChoices(await storage.listDecisions(snapshot.runId));
+    const { decisions, edits } = recordedChoices(
+      await storage.listDecisions(snapshot.runId),
+      snapshot.artifact?.id,
+    );
     const findings = snapshot.findings.map((finding, index): RunReviewFinding => {
       const id = reviewFindingId(snapshot, snapshot.artifact, index, finding.code);
       const requirementText =
