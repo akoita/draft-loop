@@ -24,6 +24,7 @@ import { CliUserError } from "./cli-user-error.js";
 import {
   defaultExportTemplateId,
   exportLengthWarningLine,
+  exportPlaceholderWarningLine,
   parseExportFormat,
   readRunPageTarget,
 } from "./export-document.js";
@@ -179,6 +180,8 @@ export async function exportApprovedRun(
       explicit: options.templateId !== undefined,
     });
     if (lengthWarning !== undefined) io.write(lengthWarning);
+    const placeholderWarning = exportPlaceholderWarningLine(snapshot.artifact);
+    if (placeholderWarning !== undefined) io.write(placeholderWarning);
     return outputPath;
   } finally {
     await storage.close();

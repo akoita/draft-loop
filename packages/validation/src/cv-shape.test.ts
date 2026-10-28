@@ -52,6 +52,29 @@ describe("CV shape checks", () => {
     ).toEqual([]);
   });
 
+  it("names the placeholders a header still shows", () => {
+    const header = section("header", "header", [
+      "[Your name]",
+      "Alex Example · [Email] · [Phone] · [Email]",
+    ]);
+    expect(findCvShapeIssues({ sections: [header, experience] })).toEqual([
+      {
+        code: MISSING_CV_HEADER_CODE,
+        message:
+          "the CV header still shows [Your name]; replace it with the candidate's details before sending the CV",
+        sectionId: "header",
+        blockId: "header-block-0",
+      },
+      {
+        code: MISSING_CV_HEADER_CODE,
+        message:
+          "the CV header still shows [Email], [Phone]; replace them with the candidate's details before sending the CV",
+        sectionId: "header",
+        blockId: "header-block-1",
+      },
+    ]);
+  });
+
   it("warns about each unlabelled Skills line next to labelled ones", () => {
     const skills = section("skills", "skills", [
       "Coding agents, OpenAPI",
