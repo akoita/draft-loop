@@ -79,6 +79,7 @@ import {
   isUnresolvedFinding,
   type ProviderFailureView,
   type ReviewAction,
+  type ReviewArtifact,
   type ReviewFinding,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
@@ -914,6 +915,22 @@ function sameMarginLayout(left: MarginNoteLayout | null, right: MarginNoteLayout
 function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
+}
+
+/**
+ * What approving does with the candidate's edits (#1901): it makes the next version carrying
+ * them, which the critic has not reviewed. Null without edits.
+ */
+export function approvalEditNote(
+  artifact: Pick<ReviewArtifact, "version" | "sections">,
+  editedThisSession: ReadonlySet<string>,
+): string | null {
+  const edited = new Set(editedThisSession);
+  for (const section of artifact.sections)
+    for (const block of section.blocks) if (block.edited === true) edited.add(block.id);
+  if (edited.size === 0) return null;
+  const edits = `your ${edited.size} edit${edited.size === 1 ? "" : "s"}`;
+  return `Approving makes v${artifact.version + 1} with ${edits}; the critic has not reviewed them.`;
 }
 
 export function ReviewWorkspace({
@@ -2055,7 +2072,7 @@ export function ReviewWorkspace({
     const sourceState = blockSourceState(block, claimById);
     const isLinked = linkedClaimId !== null && block.claimIds.includes(linkedClaimId);
     const isEditing = editingBlockId === block.id;
-    const isEdited = editedBlockIds.has(block.id);
+    const isEdited = editedBlockIds.has(block.id) || block.edited === true;
     const highlightClaim = () => setLinkedClaimId(block.claimIds[0] ?? null);
     const openLine = () => {
       highlightClaim();
@@ -3087,7 +3104,7 @@ export function ReviewWorkspace({
                   ? "This draft is approved and exported as it is."
                   : readOnly
                     ? "This run is read-only."
-                    : "Edits you make here are part of the artifact you approve."}
+                    : "Edits you make here are applied when you approve; the critic has not reviewed them."}
               </span>
             </div>
 
@@ -3881,11 +3898,7 @@ export function ReviewWorkspace({
               )
             }
             conditions={gateConditions}
-            editNote={
-              editedBlockIds.size > 0
-                ? `Approving signs v${state.artifact.version} including ${editedBlockIds.size} of your edit${editedBlockIds.size === 1 ? "" : "s"}.`
-                : null
-            }
+            editNote={approvalEditNote(state.artifact, editedBlockIds)}
             detailsOpen={gateDetailsOpen}
             onDetailsOpenChange={setGateDetailsOpen}
             recovery={

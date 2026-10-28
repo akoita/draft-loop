@@ -133,6 +133,7 @@ export {
   CANDIDATE_EDIT_RATIONALE,
   CANDIDATE_EDIT_VERSION_SUFFIX,
   type CandidateBlockEdit,
+  candidateEditedBlockIds,
 } from "./candidate-edits.js";
 export { COVERAGE_BLOCK_DROPPED_CODE, droppedCoverageFindings } from "./dropped-coverage.js";
 export {

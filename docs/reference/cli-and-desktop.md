@@ -1285,6 +1285,11 @@ critic's unresolved editorial warnings by kind: copied source notes or
 narration, fragments, negative asides, and job-relevant evidence left out.
 Editorial warnings alone never block approval.
 
+Text you change in the review is part of what you approve. Approving makes the
+next version with your edits, runs the final checks again on it, and exports
+that version; the critic has not reviewed your wording. Edited lines keep an
+**edited** mark in the review, before and after approval.
+
 Once blocking findings are resolved, you can still approve a draft whose final
 checks fail. Type a reason and press Enter or choose **Approve with override**,
 or run `draft-loop approve --override-final-checks "<reason>"`. The reason and the

@@ -1,7 +1,12 @@
 import { resolve } from "node:path";
 
 import type { ContextSnapshot, IndependentReviewRecord } from "@draft-loop/domain";
-import { createStorageRunStore, type RunSnapshot, reviewFindingId } from "@draft-loop/orchestrator";
+import {
+  candidateEditedBlockIds,
+  createStorageRunStore,
+  type RunSnapshot,
+  reviewFindingId,
+} from "@draft-loop/orchestrator";
 import { contextSnapshotSchema, type DraftArtifact } from "@draft-loop/schemas";
 
 import type { FindingDecision, RecordReviewDecisionCommand } from "./index.js";
@@ -21,6 +26,7 @@ export interface RunReviewBlock {
   readonly type: string;
   /** The candidate's latest edit of the block when there is one, else the author's text. */
   readonly text: string;
+  /** The text is the candidate's: an edit recorded in the review or applied at approval. */
   readonly edited: boolean;
   readonly claimIds: readonly string[];
 }
@@ -96,6 +102,7 @@ export interface RunReview {
 }
 
 function reviewDraft(artifact: DraftArtifact, edits: ReadonlyMap<string, string>): RunReviewDraft {
+  const approvedEdits = candidateEditedBlockIds(artifact);
   return {
     id: artifact.id,
     version: artifact.version,
@@ -112,7 +119,7 @@ function reviewDraft(artifact: DraftArtifact, edits: ReadonlyMap<string, string>
             id: block.id,
             type: block.type,
             text: edit ?? block.text,
-            edited: edit !== undefined,
+            edited: edit !== undefined || approvedEdits.has(block.id),
             claimIds: [...block.claimIds],
           };
         }),
