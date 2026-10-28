@@ -1,4 +1,5 @@
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
+import { cvHeaderPlaceholderSpans } from "@draft-loop/validation";
 
 import { coverJoiningGaps } from "./joining-words.js";
 import { skillCategoryPresentationPrefixTokenCount } from "./skill-category-labels.js";
@@ -44,6 +45,13 @@ export function uncoveredBlockTokens(
     if (presentation(line, section.title, section.kind))
       covered.fill(true, lineStart, lineStart + length);
     lineStart += length;
+  }
+  // A header placeholder such as "[Email]" marks a missing detail for the person to add (#1875).
+  if (section.kind === "header") {
+    for (const { start, end } of cvHeaderPlaceholderSpans(block.text)) {
+      const before = tokens(block.text.slice(0, start)).length;
+      covered.fill(true, before, before + tokens(block.text.slice(start, end)).length);
+    }
   }
   const categoryPrefixTokenCount = skillCategoryPresentationPrefixTokenCount(
     section.kind,

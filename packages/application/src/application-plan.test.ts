@@ -1,6 +1,7 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import type { ApplicationPlan } from "@draft-loop/schemas/application-plan";
+import { CV_HEADER_PLACEHOLDERS } from "@draft-loop/validation";
 import { describe, expect, it } from "vitest";
 
 import { createProviderApplicationPlanner, runPlansApplication } from "./application-plan-agent.js";
@@ -11,7 +12,10 @@ import {
   createAuthorAdjudicationPrompt,
 } from "./author-adjudication.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
-import { singleStatementInstructions } from "./author-fact-prompts.js";
+import {
+  coherentStatementInstructions,
+  singleStatementInstructions,
+} from "./author-fact-prompts.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
@@ -180,6 +184,26 @@ describe("author prompt cli-author-v15", () => {
     );
     expect(v15.systemPrompt).toContain("unless pendingAdjudication rejects that finding");
     expect(v14.systemPrompt).not.toContain("State each fact once.");
+  });
+});
+
+describe("author prompt cli-author-v16", () => {
+  it("is v15 plus one statement per bullet, a real summary and a placeholder header", () => {
+    const v15 = createAuthorAdjudicationPrompt("cli-author-v15", undefined);
+    const v16 = createAuthorAdjudicationPrompt("cli-author-v16", undefined);
+    expect(v16.systemPrompt).toBe(`${v15.systemPrompt}${coherentStatementInstructions}`);
+    expect(v16.providerInput).toEqual(v15.providerInput);
+    expect(authorPromptSupportsApplicationPlan("cli-author-v16")).toBe(true);
+    expect(authorPromptSupportsTargetedRevision("cli-author-v16")).toBe(true);
+    expect(v16.systemPrompt).toContain("Never join separate facts in one bullet with semicolons");
+    expect(v16.systemPrompt).toContain("Write the summary as 2 to 3 sentences");
+    expect(v16.systemPrompt).toContain("Keep each fact in the role or project where it happened");
+    expect(v16.systemPrompt).toContain("Every Core areas label names the content that follows it");
+    for (const placeholder of CV_HEADER_PLACEHOLDERS) {
+      expect(v16.systemPrompt).toContain(placeholder);
+    }
+    expect(v16.systemPrompt).toContain("never invent a value");
+    expect(v15.systemPrompt).not.toContain("[Your name]");
   });
 });
 

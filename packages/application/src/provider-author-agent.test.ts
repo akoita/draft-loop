@@ -247,6 +247,35 @@ describe("provider author agent repeated facts", () => {
   });
 });
 
+describe("provider author agent placeholder header", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  it("sends v16 and accepts a header of placeholders when the evidence names no one", async () => {
+    const v16Context = {
+      ...context,
+      modelConfiguration: { author: { promptTemplateVersion: "cli-author-v16" } },
+    } as unknown as ContextSnapshot;
+    const withHeader = {
+      sections: [
+        {
+          title: "Header",
+          kind: "header",
+          blocks: [
+            { type: "paragraph", text: "[Your name]\n[Email] · [Phone] · [City]", claims: [] },
+          ],
+        },
+        ...((proposal(acceptedText).sections as JsonObject[]) ?? []),
+      ],
+    } as JsonObject;
+    const { author, requests } = agent([withHeader], v16Context);
+    const { output: artifact } = await author.execute(request("run-placeholder-header"));
+
+    expect(requests[0]?.systemPrompt).toContain("[Your name], [Email], [Phone] and [City]");
+    expect(artifact.sections[0]).toMatchObject({ kind: "header" });
+    expect(artifact.sections[0]?.blocks[0]?.text).toContain("[Your name]");
+  });
+});
+
 describe("provider author agent revision", () => {
   beforeEach(() => resetAuthorRevisionMemoryForTests());
 

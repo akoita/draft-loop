@@ -32,6 +32,7 @@ export {
   maximumCoverageJudgementRationaleCharacters,
   maximumCoverageJudgementRequests,
 } from "./coverage-judgement.js";
+export { CV_HEADER_PLACEHOLDERS, cvHeaderPlaceholderSpans } from "./cv-header-placeholders.js";
 export {
   criticReportedGapIds,
   judgedCoveredRequirementIds,
