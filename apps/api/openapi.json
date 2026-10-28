@@ -3258,6 +3258,10 @@
               "premium": {
                 "type": "boolean"
               },
+              "highReasoning": {
+                "type": "boolean",
+                "description": "Whether a role runs at a high, extra high or max reasoning level (rule v2)."
+              },
               "roundBlocks": {
                 "type": "integer",
                 "minimum": -9007199254740991,
@@ -3267,6 +3271,7 @@
             "required": [
               "base",
               "premium",
+              "highReasoning",
               "roundBlocks"
             ]
           },
@@ -7859,6 +7864,10 @@
               "premium": {
                 "type": "boolean"
               },
+              "highReasoning": {
+                "type": "boolean",
+                "description": "Whether a role runs at a high, extra high or max reasoning level (rule v2)."
+              },
               "roundBlocks": {
                 "type": "integer",
                 "minimum": -9007199254740991,
@@ -7868,6 +7877,7 @@
             "required": [
               "base",
               "premium",
+              "highReasoning",
               "roundBlocks"
             ],
             "additionalProperties": false

@@ -337,8 +337,8 @@ describe("GET /v1/workspaces/:workspaceId/runs/estimate", () => {
       body: {
         // Standard on both sides: base 1, three rounds span two blocks.
         credits: 2,
-        estimateVersion: 1,
-        basis: { base: 1, premium: false, roundBlocks: 2 },
+        estimateVersion: 2,
+        basis: { base: 1, premium: false, highReasoning: false, roundBlocks: 2 },
         maxRounds: 3,
         authorTier: "standard",
         criticTier: "standard",
@@ -455,8 +455,8 @@ describe("GET /v1/workspaces/:workspaceId/runs/estimate", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       credits: 2,
-      estimateVersion: 1,
-      basis: { base: 1, premium: false, roundBlocks: 2 },
+      estimateVersion: 2,
+      basis: { base: 1, premium: false, highReasoning: false, roundBlocks: 2 },
       maxRounds: 3,
       authorTier: "standard",
       criticTier: "standard",

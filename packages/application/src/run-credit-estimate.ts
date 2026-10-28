@@ -1,13 +1,17 @@
 import type { AgentRole } from "@draft-loop/domain";
-import type { ModelProfileTier } from "@draft-loop/domain/model-profile";
+import type { ModelProfileEffort, ModelProfileTier } from "@draft-loop/domain/model-profile";
 import type { ModelProfileReferences } from "./model-profile-selection.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 
 /**
- * Credit estimate rule v1 (ADR 0011 D13). A reservation records this number so it stays
- * attributable to the rule that priced it when the rule changes.
+ * Credit estimate rule v2 (ADR 0011 D13): v1 priced by tier alone; v2 also doubles the base for a
+ * high reasoning level. A reservation records this number so it stays attributable to the rule
+ * that priced it when the rule changes.
  */
-export const runCreditEstimateVersion = 1;
+export const runCreditEstimateVersion = 2;
+
+/** The reasoning levels that cost as much as a premium model. */
+const highReasoningEfforts: readonly ModelProfileEffort[] = ["high", "xhigh", "max"];
 
 /** Rounds covered by the base price; every further block of this many rounds adds the base. */
 const roundsPerBlock = 2;
@@ -15,15 +19,22 @@ const roundsPerBlock = 2;
 export interface RunCreditEstimateInput {
   readonly authorTier: ModelProfileTier;
   readonly criticTier: ModelProfileTier;
+  /** The level each role runs at, when known; a missing level counts as not high. */
+  readonly authorEffort?: ModelProfileEffort | undefined;
+  readonly criticEffort?: ModelProfileEffort | undefined;
   /** The run's round limit: a positive integer. */
   readonly maxRounds: number;
 }
 
 /** How the estimate was priced: numbers and flags only, never material or model identities. */
 export interface RunCreditEstimateBasis {
-  /** 1 credit for an economy or standard pair, 2 when the author or critic is premium. */
+  /**
+   * 1 credit for an economy or standard pair, 2 when the author or critic is premium or runs at
+   * a high, extra high or max reasoning level.
+   */
   readonly base: number;
   readonly premium: boolean;
+  readonly highReasoning: boolean;
   /** Blocks of up to two rounds the limit spans (rounds 1-2 are block 1). */
   readonly roundBlocks: number;
 }
@@ -45,20 +56,23 @@ export class RunCreditEstimateError extends Error {
 
 /**
  * Prices a run before it starts, assuming it uses every allowed round: base 1 credit for up to
- * two rounds, doubled when the author or critic is premium, plus the base again for each further
- * block of two rounds. Throws `RunCreditEstimateError` for a round limit that is not a positive
+ * two rounds, doubled when the author or critic is premium or runs at a high reasoning level, plus
+ * the base again for each further block of two rounds. Throws `RunCreditEstimateError` for a round limit that is not a positive
  * safe integer.
  */
 export function estimateRunCredits(input: RunCreditEstimateInput): RunCreditEstimate {
   const { authorTier, criticTier, maxRounds } = input;
   if (!Number.isSafeInteger(maxRounds) || maxRounds <= 0) throw new RunCreditEstimateError();
   const premium = authorTier === "premium" || criticTier === "premium";
-  const base = premium ? 2 : 1;
+  const highReasoning = [input.authorEffort, input.criticEffort].some(
+    (effort) => effort !== undefined && highReasoningEfforts.includes(effort),
+  );
+  const base = premium || highReasoning ? 2 : 1;
   const roundBlocks = Math.ceil(maxRounds / roundsPerBlock);
   return {
     credits: base * roundBlocks,
     version: runCreditEstimateVersion,
-    basis: { base, premium, roundBlocks },
+    basis: { base, premium, highReasoning, roundBlocks },
   };
 }
 
@@ -75,6 +89,9 @@ export type RunCreditTiers =
       readonly status: "known";
       readonly authorTier: ModelProfileTier;
       readonly criticTier: ModelProfileTier;
+      /** A named profile's level: the chosen one, else its own; unknown without a named pair. */
+      readonly authorEffort?: ModelProfileEffort;
+      readonly criticEffort?: ModelProfileEffort;
     }
   | {
       readonly status: "unknown";
@@ -98,7 +115,7 @@ export interface RunCreditTierInput {
 }
 
 type RoleTier =
-  | { readonly tier: ModelProfileTier }
+  | { readonly tier: ModelProfileTier; readonly effort?: ModelProfileEffort }
   | { readonly reason: RunCreditTierUnknownReason };
 
 function resolveRoleTier(
@@ -109,7 +126,8 @@ function resolveRoleTier(
   const reference = input.modelProfiles?.[role];
   if (reference !== undefined) {
     try {
-      return { tier: registry.resolve(reference.id, reference.version, role).tier };
+      const profile = registry.resolve(reference.id, reference.version, role);
+      return { tier: profile.tier, effort: reference.effort ?? profile.runtime.effort };
     } catch {
       return { reason: "unknown-profile" };
     }
@@ -147,5 +165,11 @@ export function resolveRunCreditTiers(input: RunCreditTierInput): RunCreditTiers
   if ("reason" in author) return { status: "unknown", role: "author", reason: author.reason };
   const critic = resolveRoleTier("critic", input, registry);
   if ("reason" in critic) return { status: "unknown", role: "critic", reason: critic.reason };
-  return { status: "known", authorTier: author.tier, criticTier: critic.tier };
+  return {
+    status: "known",
+    authorTier: author.tier,
+    criticTier: critic.tier,
+    ...(author.effort === undefined ? {} : { authorEffort: author.effort }),
+    ...(critic.effort === undefined ? {} : { criticEffort: critic.effort }),
+  };
 }

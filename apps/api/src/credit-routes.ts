@@ -83,6 +83,9 @@ const runEstimateSchema = z
     basis: z.object({
       base: z.number().int(),
       premium: z.boolean(),
+      highReasoning: z
+        .boolean()
+        .describe("Whether a role runs at a high, extra high or max reasoning level (rule v2)."),
       roundBlocks: z.number().int(),
     }),
     maxRounds: z.number().int().describe("The workspace's round limit the estimate assumes."),
