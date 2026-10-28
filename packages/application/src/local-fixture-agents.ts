@@ -58,6 +58,7 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
   const source = context.evidenceManifest[0];
   if (source === undefined) throw new CliUserError("At least one evidence source is required.");
   const requirementText = context.requirements.map((requirement) => requirement.text).join("; ");
+  const headerSectionId = `header-${suffix}`;
   const summarySectionId = `summary-${suffix}`;
   const experienceSectionId = `experience-${suffix}`;
   const educationSectionId = `education-${suffix}`;
@@ -73,11 +74,32 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
     createdAt: notBefore(timestamp(), current?.createdAt),
     language: context.language,
     sections: [
+      // A complete CV opens with a name and contact header (#1862); the fixture names neither.
+      {
+        id: headerSectionId,
+        title: "Header",
+        kind: "header",
+        order: 0,
+        blocks: [
+          {
+            id: `header-name-${suffix}`,
+            type: "paragraph",
+            text: "Fixture candidate",
+            claimIds: [],
+          },
+          {
+            id: `header-contact-${suffix}`,
+            type: "paragraph",
+            text: "Contact details from candidate-provided materials",
+            claimIds: [],
+          },
+        ],
+      },
       {
         id: summarySectionId,
         title: "Summary",
         kind: "summary",
-        order: 0,
+        order: 1,
         blocks: [
           { id: summaryBlockId, type: "paragraph", text: summaryText, claimIds: [summaryClaimId] },
         ],
@@ -86,7 +108,7 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
         id: experienceSectionId,
         title: "Experience",
         kind: "experience",
-        order: 1,
+        order: 2,
         blocks: [
           {
             id: experienceBlockId,
@@ -100,7 +122,7 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
         id: educationSectionId,
         title: "Education",
         kind: "education",
-        order: 2,
+        order: 3,
         blocks: [
           {
             id: educationBlockId,
@@ -114,7 +136,7 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
         id: skillsSectionId,
         title: "Skills",
         kind: "skills",
-        order: 3,
+        order: 4,
         blocks: [
           {
             id: skillsBlockId,

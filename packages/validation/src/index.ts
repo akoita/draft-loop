@@ -11,6 +11,7 @@ import type {
 import { findBulletFragment } from "./bullet-fragment.js";
 import { findBulletSeries } from "./bullet-series.js";
 import { findCandidateNarration } from "./candidate-narration.js";
+import { findCvShapeIssues } from "./cv-shape.js";
 import { findRepeatedFacts } from "./repeated-fact.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
@@ -79,6 +80,8 @@ export type DeterministicValidationCode =
   | "max-length-exceeded"
   | "duplicate-content"
   | "repeated-fact"
+  | "missing-cv-header"
+  | "unlabelled-skills-line"
   | "unsupported-claim"
   | "unsupported-quantification"
   | "inconsistent-date"
@@ -606,6 +609,9 @@ export function validateDraftArtifact(
   }
 
   addRepeatedFactFindings(artifact, issues);
+  for (const issue of findCvShapeIssues(artifact)) {
+    addIssue(issues, { ...issue, category: "format", severity: "warning" });
+  }
 
   for (const claim of artifact.claims) {
     if (!claim.substantive) {

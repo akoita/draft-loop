@@ -811,6 +811,19 @@ A revising author already receives the draft's findings. v15 tells it to keep a
 occurrences, unless the person rejected that finding in the adjudication plan.
 Resumed v14 and earlier runs keep their exact prompt.
 
+### CV shape warnings (#1862)
+
+Two format warnings catch a CV that is not ready to send even when every claim
+is grounded. Neither blocks approval, and letters and application answers are
+not checked.
+
+- **`missing-cv-header`.** A CV with an experience section but no header, or an
+  empty one, has no name or contact line. The evidence may not state them, so
+  the warning asks the candidate to add them before sending.
+- **`unlabelled-skills-line`.** In a Skills section that has `Label: items`
+  lines, each line without a label is reported, so the section reads
+  consistently.
+
 ### Stop and pause on findings (#1113)
 
 The `stable-convergence` score-delta rule is unchanged and still stops a run
