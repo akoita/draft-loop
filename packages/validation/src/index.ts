@@ -137,6 +137,8 @@ export interface DeterministicValidationContext {
 
 export interface DeterministicValidationOptions {
   readonly explicitGapRequirementIds?: readonly string[];
+  /** The checks run at the approval gate, where a placeholder header is an error (#1902). */
+  readonly approvalGate?: boolean;
 }
 
 function normalizeText(value: string): string {
@@ -607,8 +609,12 @@ export function validateDraftArtifact(
   }
 
   addRepeatedFactFindings(artifact, issues);
-  for (const issue of findCvShapeIssues(artifact)) {
-    addIssue(issues, { ...issue, category: "format", severity: "warning" });
+  const approvalGate =
+    !Array.isArray(optionsOrGapIds) &&
+    (optionsOrGapIds as DeterministicValidationOptions).approvalGate === true;
+  for (const { blocksApproval, ...issue } of findCvShapeIssues(artifact)) {
+    const severity = approvalGate && blocksApproval === true ? "error" : "warning";
+    addIssue(issues, { ...issue, category: "format", severity });
   }
 
   for (const claim of artifact.claims) {

@@ -30,6 +30,7 @@ export const approvalReadinessCheckLabels = {
   "unsupported-quantification": "number without evidence",
   "duplicate-content": "repeated content",
   "missing-required-section": "missing section",
+  "missing-cv-header": "CV header still shows placeholders such as [Your name]",
   "inconsistent-date": "inconsistent dates",
   "coverage-block-dropped": "covered requirement lost in a revision",
   "editorial-source-note": "copied source note",

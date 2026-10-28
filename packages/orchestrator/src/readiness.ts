@@ -320,6 +320,7 @@ export function buildApplicationReadinessStoppingDecision(
   const explicitGapRequirementIds = input.explicitGapRequirementIds ?? [];
   const validation = validateDraftArtifact(input.artifact, validationContext, {
     explicitGapRequirementIds,
+    approvalGate: true,
   });
   const judgedIds = judgedCoveredRequirementIds(input.coverageAssessments ?? []);
   const deterministicIssues = withWordMatchGapsConfirmed(

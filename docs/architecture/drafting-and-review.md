@@ -843,17 +843,17 @@ Resumed v15 and earlier runs keep their exact prompt.
 
 ### CV shape warnings (#1862)
 
-Two format warnings catch a CV that is not ready to send even when every claim
-is grounded. Neither blocks approval, and letters and application answers are
-not checked.
+Two format checks catch a CV that is not ready to send even when every claim
+is grounded. Letters and application answers are not checked.
 
 - **`missing-cv-header`.** A CV with an experience section but no header, or an
   empty one, has no name or contact line. The evidence may not state them, so
-  the warning asks the candidate to add them before sending. A header that
-  still shows v16's placeholders gets one warning per block naming them
-  (#1878), and the export prints a `Header warning:` line naming them too.
-  Review edits do not reach the exported file, so export does not refuse: the
-  candidate fills the placeholders in the exported document.
+  a warning asks the candidate to add them before sending. A header that
+  still shows v16's placeholders gets one finding per block naming them
+  (#1878). During the loop it is a warning, since the author cannot know the
+  candidate's details; at approval it is an error (#1902), so the candidate
+  replaces the placeholders with a review edit or overrides with a reason.
+  The export still prints a `Header warning:` line for an overridden one.
 - **`unlabelled-skills-line`.** In a Skills section that has `Label: items`
   lines, each line without a label is reported, so the section reads
   consistently.

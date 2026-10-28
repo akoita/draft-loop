@@ -62,7 +62,21 @@ const context = createContextSnapshot({
   },
 });
 
-function artifact(createdAt: string): DraftArtifact {
+function artifact(createdAt: string, header?: string): DraftArtifact {
+  const headerSection =
+    header === undefined
+      ? []
+      : [
+          {
+            id: "header-1",
+            title: "Header",
+            kind: "header" as const,
+            order: 0,
+            blocks: [
+              { id: "header-block-1", type: "paragraph" as const, text: header, claimIds: [] },
+            ],
+          },
+        ];
   return {
     schemaVersion: 1,
     id: "artifact-1",
@@ -71,11 +85,12 @@ function artifact(createdAt: string): DraftArtifact {
     createdAt,
     language: "en",
     sections: [
+      ...headerSection,
       {
         id: "summary-1",
         title: "Summary",
         kind: "summary",
-        order: 0,
+        order: 1,
         blocks: [{ id: "summary-block-1", type: "paragraph", text, claimIds: ["claim-1"] }],
       },
     ],
@@ -111,11 +126,11 @@ function execution<T>(output: T, provider: string, modelId: string): AgentExecut
   };
 }
 
-function engine(store: InMemoryRunStore) {
+function engine(store: InMemoryRunStore, header?: string) {
   return createOrchestrationEngine({
     author: {
       execute: async () =>
-        execution(artifact(new Date().toISOString()), "anthropic", "author-test"),
+        execution(artifact(new Date().toISOString(), header), "anthropic", "author-test"),
     },
     critic: {
       execute: async () => execution<Critique>({ findings: [] }, "openai", "critic-test"),
@@ -261,5 +276,31 @@ describe("approval with the candidate's review edits", () => {
     expect(overridden.approvedArtifact?.readinessOverride?.rationale).toBe(
       "The figure comes from my own records.",
     );
+  });
+});
+
+describe("a placeholder header at approval", () => {
+  const placeholders = "[Your name] | [Email] | [Phone] | [City]";
+
+  it("blocks approval until the candidate replaces the placeholders in the review", async () => {
+    const store = new InMemoryRunStore();
+    await engine(store, placeholders).start({
+      runId: "run-1",
+      workspace: createWorkspace("workspace-1"),
+      context,
+      budget: { maxRounds: 3 },
+    });
+
+    const blocked = engine(store, placeholders).approve("run-1");
+    await expect(blocked).rejects.toMatchObject({ code: "readiness_blocked" });
+    expect((await store.loadRun("run-1"))?.readinessDecision?.blockers).toContainEqual(
+      expect.objectContaining({ code: "deterministic-error", checkCode: "missing-cv-header" }),
+    );
+
+    const approved = await engine(store, placeholders).approve("run-1", {
+      candidateEdits: [{ blockId: "header-block-1", text: "Alex Example | alex@example.com" }],
+    });
+    expect(approved.state).toBe("approved");
+    expect(approved.artifact?.sections[0]?.blocks[0]?.text).toBe("Alex Example | alex@example.com");
   });
 });
