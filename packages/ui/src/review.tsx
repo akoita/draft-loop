@@ -168,6 +168,7 @@ import {
   reviewedRequirementsSelection,
   startRequirementsChoice,
 } from "./start-requirements-model.js";
+import { submitOnEnter } from "./submit-on-enter.js";
 import { ThemeToggle } from "./theme.js";
 import { usageLimitText } from "./usage-limit.js";
 
@@ -3543,6 +3544,21 @@ export function ReviewWorkspace({
                       finding.id,
                     );
                     const rationale = overrideReasons[finding.id] ?? finding.rationale ?? "";
+                    const saveOverride = () => {
+                      const trimmedRationale = rationale.trim();
+                      if (findingDecisionsLocked || trimmedRationale === "") return;
+                      findingDecisionRequest.current = {
+                        findingId: finding.id,
+                        decision: "overridden",
+                      };
+                      onAction({
+                        type: "finding-decision",
+                        findingId: finding.id,
+                        decision: "overridden",
+                        rationale: trimmedRationale,
+                      });
+                      setOverrideEditingFindingId(null);
+                    };
 
                     return (
                       <article
@@ -3701,6 +3717,7 @@ export function ReviewWorkspace({
                                         [finding.id]: event.target.value,
                                       }))
                                     }
+                                    onKeyDown={submitOnEnter(saveOverride)}
                                     aria-label={`Override rationale for ${finding.code}`}
                                   />
                                 </label>
@@ -3724,21 +3741,7 @@ export function ReviewWorkspace({
                                     className="button button-primary"
                                     type="button"
                                     disabled={findingDecisionsLocked || rationale.trim() === ""}
-                                    onClick={() => {
-                                      const trimmedRationale = rationale.trim();
-                                      if (trimmedRationale === "") return;
-                                      findingDecisionRequest.current = {
-                                        findingId: finding.id,
-                                        decision: "overridden",
-                                      };
-                                      onAction({
-                                        type: "finding-decision",
-                                        findingId: finding.id,
-                                        decision: "overridden",
-                                        rationale: trimmedRationale,
-                                      });
-                                      setOverrideEditingFindingId(null);
-                                    }}
+                                    onClick={saveOverride}
                                   >
                                     Save override
                                   </button>

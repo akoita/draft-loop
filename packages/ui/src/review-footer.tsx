@@ -47,6 +47,7 @@ import {
 } from "./revision-direction.js";
 import type { SendVerdict } from "./send-verdict.js";
 import { CONSENSUS_READY_REASON, PERSISTING_FINDINGS_REASON } from "./stop-reason.js";
+import { submitOnEnter } from "./submit-on-enter.js";
 
 export type FooterBlockerKind =
   | "ready"
@@ -328,6 +329,55 @@ export const gateBarHeightVariable = "--gate-bar-height";
  * the footer is fixed to the window's bottom edge, and the page keeps this much room under its
  * last content so nothing stays hidden behind the bar.
  */
+type ApprovalOverride = NonNullable<ReviewFooterProps["override"]>;
+
+/** The reason field for approving past failing final CV checks; Enter approves like the button. */
+export function ApprovalOverrideEditor({ override }: { readonly override: ApprovalOverride }) {
+  const submit = () => {
+    const reason = override.reason.trim();
+    if (override.disabled || reason === "") return;
+    override.onSubmit(reason);
+  };
+  return (
+    <section
+      className="override-editor footer-override"
+      id={approvalOverrideFormId}
+      aria-label="Approve past final CV checks"
+    >
+      <label className="rationale-input-label">
+        <span>Reason for approving anyway (required)</span>
+        <input
+          className="rationale-input"
+          type="text"
+          maxLength={500}
+          value={override.reason}
+          disabled={override.disabled}
+          onChange={(event) => override.onReasonChange(event.target.value)}
+          onKeyDown={submitOnEnter(submit)}
+          aria-label="Reason for approving past final CV checks"
+        />
+      </label>
+      <div className="override-editor-actions">
+        <button
+          className="button button-quiet"
+          type="button"
+          onClick={() => override.onOpenChange(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={override.disabled || override.reason.trim() === ""}
+          onClick={submit}
+        >
+          Approve with override
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function usePublishedHeight(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const element = ref.current;
@@ -449,45 +499,7 @@ export function ReviewFooter({
               )}
             </div>
             {override === null || !override.open ? null : (
-              <section
-                className="override-editor footer-override"
-                id={approvalOverrideFormId}
-                aria-label="Approve past final CV checks"
-              >
-                <label className="rationale-input-label">
-                  <span>Reason for approving anyway (required)</span>
-                  <input
-                    className="rationale-input"
-                    type="text"
-                    maxLength={500}
-                    value={override.reason}
-                    disabled={override.disabled}
-                    onChange={(event) => override.onReasonChange(event.target.value)}
-                    aria-label="Reason for approving past final CV checks"
-                  />
-                </label>
-                <div className="override-editor-actions">
-                  <button
-                    className="button button-quiet"
-                    type="button"
-                    onClick={() => override.onOpenChange(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    disabled={override.disabled || override.reason.trim() === ""}
-                    onClick={() => {
-                      const reason = override.reason.trim();
-                      if (reason === "") return;
-                      override.onSubmit(reason);
-                    }}
-                  >
-                    Approve with override
-                  </button>
-                </div>
-              </section>
+              <ApprovalOverrideEditor override={override} />
             )}
             <div className="revision-request">
               {revision.unavailableReason == null ? (

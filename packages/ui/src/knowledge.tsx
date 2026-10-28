@@ -19,6 +19,7 @@ import {
   runKnowledgeIntake,
 } from "./knowledge-intake.js";
 import type { DesktopKnowledgeCapabilities } from "./native.js";
+import { submitOnEnter } from "./submit-on-enter.js";
 
 export interface KnowledgeWorkspaceProps {
   readonly workspaceId: string;
@@ -547,6 +548,9 @@ export function KnowledgeWorkspace({
           type="text"
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
+          onKeyDown={submitOnEnter(() => {
+            if (!controlsDisabled) createStore();
+          })}
           disabled={controlsDisabled}
         />
       </label>
@@ -581,6 +585,9 @@ export function KnowledgeWorkspace({
           value={baseName}
           maxLength={120}
           onChange={(event) => setBaseName(event.currentTarget.value)}
+          onKeyDown={submitOnEnter(() => {
+            if (!controlsDisabled) createKnowledgeBase();
+          })}
           disabled={controlsDisabled}
         />
       </label>
