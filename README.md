@@ -242,6 +242,12 @@ approving or exporting.
   unchanged. The labels
   do not establish provider availability or CV quality. See the
   [roadmap](docs/roadmap.md#model-strategy).
+- Each role's reasoning level can be chosen from the levels its model allows,
+  in the model editor or with `--author-effort` and `--critic-effort`. A preset
+  keeps its name with the change, such as "Balanced · writer high", and each
+  run records the level it used. A higher level usually costs more; on the
+  hosted service `high`, `xhigh` or `max` doubles a run's credits, like a
+  premium model.
 - The opt-in `development-glm` preset adds the Z.ai
   `zai-org/GLM-5.3-Flash` author through DeepInfra and keeps the GPT-6 Luna
   critic. It requires the dedicated `DEEPINFRA_API_KEY`; pricing metadata uses
