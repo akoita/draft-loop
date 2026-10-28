@@ -123,6 +123,22 @@ describe("the shared review screen's actions over HTTP", () => {
     });
   });
 
+  it("shows edits that still fail the final checks as an error, since nothing was saved", async () => {
+    const message =
+      "Your edited draft still fails the final CV checks (missing-cv-header). Change the edits, or approve with an override reason.";
+    const { dispatch } = portOver({
+      ...reviewState,
+      "POST /v1/workspaces/{workspaceId}/runs/{runId}/approve": () => {
+        throw new ApiRequestError(409, "edits_readiness_blocked", message);
+      },
+    });
+
+    await expect(dispatch({ type: "approve" })).resolves.toMatchObject({
+      ok: false,
+      error: { message },
+    });
+  });
+
   it("asks for another round with the person's direction, once per key", async () => {
     const { dispatch, calls } = portOver({
       ...reviewState,

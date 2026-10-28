@@ -5,6 +5,7 @@ import { findingTitle } from "./finding-title.js";
 import {
   isConfirmedCoverageGap,
   KNOWN_GAP_RATIONALE,
+  knownGapReadinessOverride,
   MARK_KNOWN_GAPS_NOTE,
   markKnownGapsLabel,
   pendingConfirmedGapIds,
@@ -101,5 +102,102 @@ describe("confirmed coverage gaps (#1873)", () => {
       "overridden",
       "overridden",
     ]);
+  });
+});
+
+describe("settled known gaps at approval (#1903)", () => {
+  const wordMatch = {
+    applicationReady: false,
+    blockers: [{ code: "deterministic-error", check: "uncovered-requirement" }],
+  } as const;
+  const known = { decision: "overridden", rationale: KNOWN_GAP_RATIONALE } as const;
+
+  it("turns the known-gap reasons into the readiness override", () => {
+    expect(knownGapReadinessOverride(wordMatch, [gap("a", known)])).toBe(KNOWN_GAP_RATIONALE);
+    expect(
+      knownGapReadinessOverride(wordMatch, [
+        gap("a", known),
+        gap("b", known),
+        gap("c", { decision: "rejected", rationale: "The job ad lists it as a nice-to-have." }),
+        gap("warning", { severity: "warning" }),
+      ]),
+    ).toBe(
+      `3 known gaps settled in review: ${KNOWN_GAP_RATIONALE}; The job ad lists it as a nice-to-have.`,
+    );
+    const long = knownGapReadinessOverride(wordMatch, [
+      gap("a", { decision: "overridden", rationale: "x".repeat(600) }),
+    ]);
+    expect(long).toHaveLength(500);
+    expect(long?.endsWith("…")).toBe(true);
+  });
+
+  it("still needs the override while another check fails or a gap is unsettled", () => {
+    const mixed = {
+      applicationReady: false,
+      blockers: [
+        ...wordMatch.blockers,
+        { code: "deterministic-error", check: "missing-cv-header" },
+      ],
+    } as const;
+    expect(knownGapReadinessOverride(mixed, [gap("a", known)])).toBeNull();
+    expect(
+      knownGapReadinessOverride(
+        { applicationReady: false, blockers: [{ code: "unmet-rubric-threshold" }] },
+        [gap("a", known)],
+      ),
+    ).toBeNull();
+    expect(knownGapReadinessOverride(wordMatch, [gap("a", known), gap("b")])).toBeNull();
+    expect(knownGapReadinessOverride(wordMatch, [gap("a", { decision: "accepted" })])).toBeNull();
+    expect(knownGapReadinessOverride(wordMatch, [])).toBeNull();
+  });
+
+  it("needs nothing when no final check fails", () => {
+    expect(knownGapReadinessOverride(null, [gap("a", known)])).toBeNull();
+    expect(
+      knownGapReadinessOverride({ applicationReady: true, blockers: [] }, [gap("a", known)]),
+    ).toBeNull();
+  });
+
+  it("lets Approve record the reasons without a separate override", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      findings: [gap("a", known), gap("b", known)],
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        ...wordMatch,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Approving records your reasons as the override.");
+    expect(html).not.toContain("Final CV checks block approval");
+    expect(html).not.toContain("Approve with override");
+    expect(html).toMatch(/title="Approve artifact \(Alt\+A\)"(?! disabled)/u);
+  });
+
+  it("keeps Approve disabled and the override offered when another check fails", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      findings: [gap("a", known)],
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        applicationReady: false,
+        blockers: [
+          { code: "deterministic-error", check: "uncovered-requirement" },
+          { code: "deterministic-error", check: "missing-cv-header" },
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Final CV checks block approval");
+    expect(html).toContain("Approve with override");
+    expect(html).toMatch(/title="Approve artifact \(Alt\+A\)" disabled=""/u);
   });
 });

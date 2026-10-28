@@ -925,7 +925,8 @@ one new artifact version from the reviewed one:
   check and a new unsupported figure blocks approval unless overridden.
 
 Approval binds that exact version and export renders it. A blocked approval
-with edits saves nothing, since the version exists only once approved. The
+with edits saves nothing, since the version exists only once approved, and
+fails with `edits_readiness_blocked` naming the checks. The
 critic does not review the edits; the current round's critique still counts as
 the review of the parent version.
 

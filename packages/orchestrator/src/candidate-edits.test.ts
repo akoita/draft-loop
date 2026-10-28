@@ -263,7 +263,10 @@ describe("approval with the candidate's review edits", () => {
 
     await expect(
       engine(store).approve("run-1", { candidateEdits: [unsupported] }),
-    ).rejects.toMatchObject({ code: "readiness_blocked" });
+    ).rejects.toMatchObject({
+      code: "edits_readiness_blocked",
+      message: expect.stringContaining("unsupported-quantification"),
+    });
     const stored = await store.loadRun("run-1");
     expect(stored?.state).toBe("awaiting-approval");
     expect(stored?.artifact).toEqual(snapshot.artifact);
