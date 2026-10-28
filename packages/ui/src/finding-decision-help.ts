@@ -18,7 +18,7 @@ export const ACCEPTED_WITHOUT_REVISION_NUDGE =
 
 export const COVERAGE_INFORMATION_NOTE = "Coverage verdicts inform you; they never block approval.";
 
-export const BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE = "Accept all skips word-match warnings";
+export const BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE = "Accept all skips word-match findings";
 
 /**
  * One plain line per decision saying what it does to the next revision and to
@@ -109,5 +109,5 @@ export function bulkBlockingSkipNote(
 export function bulkWordMatchWarning(shown: readonly ReviewFinding[]): string | null {
   const count = shown.filter(isWordMatchCoverageWarning).length;
   if (count === 0) return null;
-  return `Includes ${count} word-match coverage warning${count === 1 ? "" : "s"}; accepting them asks the author to add the job's wording.`;
+  return `Includes ${count} word-match coverage finding${count === 1 ? "" : "s"}; accepting them asks the author to add the job's wording.`;
 }

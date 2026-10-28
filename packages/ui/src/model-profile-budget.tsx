@@ -13,6 +13,7 @@ import type {
 } from "@draft-loop/application/model-profile-selection";
 import { useMemo, useState } from "react";
 import { modelProfileEffortRaised } from "./model-profile-picker-state.js";
+import { modelDisplayName } from "./model-profile-presentation.js";
 
 interface ModelProfileBudgetProps {
   readonly references: ModelProfileReferences;
@@ -134,7 +135,7 @@ function PublicRate({
   return (
     <div className="model-profile-budget-rate">
       <strong>
-        {profileRole === "author" ? "Author" : "Critic"}: {profile.id}@{profile.version}
+        {profileRole === "author" ? "Author" : "Critic"}: {modelDisplayName(profile.modelId)}
       </strong>
       <span>
         {profile.provider}/{profile.modelId}

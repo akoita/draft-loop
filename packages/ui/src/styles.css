@@ -3707,6 +3707,18 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-xs);
 }
 
+/* The known-gaps action is one long label, not one of three bulk choices: give it the full row
+   and let it wrap so it never overflows its box (#1873 re-walk). */
+.finding-known-gaps .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 30px;
+  padding: var(--space-1) var(--space-3);
+  white-space: normal;
+  text-align: left;
+}
+
 .finding-bulk-note {
   grid-column: 1 / -1;
   margin: 0;
