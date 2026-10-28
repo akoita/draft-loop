@@ -4,6 +4,7 @@ import type { RenderingTemplate } from "@draft-loop/schemas/rendering-template";
 
 import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
 import { isTitleBlockSection } from "./document-layout.js";
+import { headerLines } from "./header-lines.js";
 import { splitInlineLabel } from "./inline-label.js";
 import { embeddedFontFlateBytes } from "./pdf-fonts.js";
 import { isRoleContextLine, isRoleHeaderBlock, splitRoleHeader } from "./role-header.js";
@@ -103,11 +104,11 @@ function paragraphClass(section: DraftArtifact["sections"][number], index: numbe
 
 function sectionHtml(section: DraftArtifact["sections"][number]): string {
   if (isTitleBlockSection(section)) {
-    return `<header>${section.blocks
-      .map((block, index) =>
-        index === 0
-          ? unit("h1", "heading", "name", escapeHtml(block.text))
-          : unit("p", "body", "contact", escapeHtml(block.text)),
+    return `<header>${headerLines(section)
+      .map((line) =>
+        line.kind === "title"
+          ? unit("h1", "heading", "name", escapeHtml(line.text))
+          : unit("p", "body", "contact", escapeHtml(line.text)),
       )
       .join("")}</header>`;
   }
@@ -188,7 +189,8 @@ export function renderPrintHtml(artifact: DraftArtifact, options: PrintHtmlOptio
     .map(sectionHtml)
     .join("");
   const language = escapeHtml(artifact.language);
-  const name = artifact.sections.find(isTitleBlockSection)?.blocks[0]?.text;
+  const header = artifact.sections.find(isTitleBlockSection);
+  const name = header === undefined ? undefined : headerLines(header)[0]?.text;
   const title = escapeHtml(name === undefined ? "CV" : `${name}, CV`);
   return `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><title>${title}</title><style>${printCss(template)}</style></head><body><main>${body}</main></body></html>`;
 }
