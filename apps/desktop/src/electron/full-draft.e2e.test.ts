@@ -88,8 +88,8 @@ function openAiInput(parameters: OpenAIParameters): SerializedModelInput {
 function authorProposal(version: number, chunkId: string): JsonRecord {
   const summary =
     version === 1
-      ? "TypeScript engineer building local-first tools with deterministic testing."
-      : "TypeScript engineer improving local-first tools with deterministic testing after review.";
+      ? "TypeScript engineer focused on accessible, well-tested software."
+      : "TypeScript engineer focused on accessible, well-tested software, revised after review.";
   const experience =
     version === 1
       ? "Built local-first TypeScript tools with deterministic testing."
@@ -667,7 +667,7 @@ describe("full real-mode native host draft workflow", () => {
       const exportedContent = await readFile(exportPath, "utf8");
       expect(exportedContent).toContain("## Summary");
       expect(exportedContent).toContain("## Experience");
-      expect(exportedContent).toContain("improving local-first tools");
+      expect(exportedContent).toContain("revised after review");
 
       const finalRestart = createHost();
       await finalRestart.invoke({ type: "workspace.open", input: {} });

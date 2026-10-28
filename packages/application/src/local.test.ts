@@ -817,7 +817,9 @@ describe("local application driver", () => {
           excerpt: expect.any(String),
         });
       }
-      expect(recovered.findings).toMatchObject([
+      // The fixture states one fact in three sections, which validation reports (#1859).
+      const criticFindings = recovered.findings.filter(({ code }) => code !== "repeated-fact");
+      expect(criticFindings).toMatchObject([
         {
           id: "source-support-gap",
           code: "missing-cited-support",
@@ -840,7 +842,7 @@ describe("local application driver", () => {
           message: expect.stringContaining(`Cited source ${referenceIds?.[0]}`),
         },
       ]);
-      for (const finding of recovered.findings) {
+      for (const finding of criticFindings) {
         expect(finding.message).toContain(referenceIds?.[0]);
       }
       for (const input of [...authorInputs, ...criticInputs]) {
