@@ -317,10 +317,14 @@ function pageCommands(
       for (const line of wrapped) {
         if (y - metrics.titleLinePt < bottom && !atPageTop()) startPage();
         const width = textWidthPt(line, metrics.titleSizePt, true, font);
+        // Tagged so the lines of a wrapped title read back as the one block they are.
         place(
-          text("F2", metrics.titleSizePt, aligned(width), y - metrics.titleSizePt, line, {
-            color: look.nameColor,
-          }),
+          tagPdfCommands(
+            "title",
+            text("F2", metrics.titleSizePt, aligned(width), y - metrics.titleSizePt, line, {
+              color: look.nameColor,
+            }),
+          ),
         );
         y -= metrics.titleLinePt;
       }

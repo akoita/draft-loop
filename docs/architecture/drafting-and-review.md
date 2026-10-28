@@ -928,7 +928,9 @@ Approval binds that exact version and export renders it. A blocked approval
 with edits saves nothing, since the version exists only once approved, and
 fails with `edits_readiness_blocked` naming the checks. The
 critic does not review the edits; the current round's critique still counts as
-the review of the parent version.
+the review of the parent version. The edited version's finding ids are scoped
+to that parent, so the decisions recorded in the review still show after
+approval (#1929).
 
 ### Rendering and rendering-QA boundary (#74)
 
@@ -964,9 +966,10 @@ The layout reads structure from the blocks without editing their text:
   no bullet glyphs (`minCompactListItems` in `compact-list.ts`). Runs with a
   two-line bullet stay bullets.
 
-The PDF tags label and compact lines with marked content, and the DOCX uses a
-`CompactList` style, so the inspectors split a compact paragraph back into its
-bullets and rejoin labels. Content-integrity and block-order checks are
+The PDF tags label, compact and title lines with marked content, and the DOCX
+uses a `CompactList` style, so the inspectors split a compact paragraph back
+into its bullets, rejoin labels, and read a headline that wraps at the name
+size as one title (#1929). Content-integrity and block-order checks are
 unchanged.
 
 The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and

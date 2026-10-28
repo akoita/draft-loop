@@ -267,6 +267,34 @@ describe("application export rendering QA", () => {
     }
   }, 30_000);
 
+  it("passes a headline long enough to wrap at the name size (#1929)", () => {
+    const sample = sampleArtifact();
+    const artifact = {
+      ...sample,
+      sections: [
+        {
+          id: "header",
+          title: "Header",
+          kind: "header" as const,
+          order: 0,
+          blocks: [
+            {
+              id: "header-1",
+              type: "paragraph" as const,
+              text: "Alex Example | alex@example.test | +00 00 00 00 00 00 |Sample City",
+              claimIds: [],
+            },
+          ],
+        },
+        ...sample.sections.map((section) => ({ ...section, order: 1 })),
+      ],
+    };
+    for (const templateId of ["modern", "classic", "compact"]) {
+      const rendered = renderArtifact(artifact, "pdf", { generatedAt, templateId });
+      expect(assertExportRenderingQa(artifact, rendered).report.passed, templateId).toBe(true);
+    }
+  });
+
   it("exports a built-in Modern PDF that passes rendering checks, with no template note", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-export-note-"));
     try {

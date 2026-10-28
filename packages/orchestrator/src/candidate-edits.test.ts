@@ -8,6 +8,7 @@ import {
   CANDIDATE_EDIT_VERSION_SUFFIX,
   candidateEditedBlockIds,
 } from "./candidate-edits.js";
+import { reviewFindingId } from "./consensus-stop.js";
 import {
   type AgentExecution,
   assertExactApprovedArtifact,
@@ -208,6 +209,18 @@ describe("applyCandidateEdits", () => {
       editedAt,
     );
     expect(edited?.sections[0]?.blocks[0]?.text).toBe("TypeScript experience.");
+  });
+
+  it("keeps the reviewed draft's finding ids on the edited version, so decisions still match", () => {
+    const edited = applyCandidateEdits(reviewed, [edit], editedAt);
+    const run = { runId: "run-1", round: 1 };
+
+    expect(reviewFindingId(run, edited, 0, "uncovered-requirement")).toBe(
+      reviewFindingId(run, reviewed, 0, "uncovered-requirement"),
+    );
+    expect(
+      reviewFindingId(run, { ...reviewed, id: "artifact-2" }, 0, "uncovered-requirement"),
+    ).not.toBe(reviewFindingId(run, reviewed, 0, "uncovered-requirement"));
   });
 
   it("refuses an edit to a block the draft does not have, or one that empties a block", () => {

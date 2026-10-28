@@ -60,21 +60,44 @@ function splitCompactRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
   return result;
 }
 
-/** The visible runs of a PDF page as the artifact's blocks: dates, labels and compact lists. */
-export function recoverPdfRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
-  return splitCompactRuns(joinRoleDateRuns(joinLabelRuns(runs)));
+/**
+ * Join the tagged lines of a wrapped title back into one run. A long headline wraps at the name
+ * size, and each line would otherwise read back as a heading of its own (#1929).
+ */
+function joinTitleRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
+  const joined: PdfTextRun[] = [];
+  for (const run of runs) {
+    const previous = joined.at(-1);
+    if (run.tag === "title" && previous?.tag === "title") {
+      joined[joined.length - 1] = { ...previous, text: `${previous.text} ${run.text}` };
+    } else {
+      joined.push(run);
+    }
+  }
+  return joined.map((run) => (run.tag === "title" ? untagged(run) : run));
 }
+
+/**
+ * The visible runs of a PDF page as the artifact's blocks: the title, dates, labels and compact
+ * lists.
+ */
+export function recoverPdfRuns(runs: readonly PdfTextRun[]): readonly PdfTextRun[] {
+  return splitCompactRuns(joinRoleDateRuns(joinLabelRuns(joinTitleRuns(runs))));
+}
+
+const pdfRunTagNames = { label: "Label", compact: "Compact", title: "Title" } as const;
 
 /** The marked-content tag at the start of a content-stream line, when it carries one of ours. */
 export function pdfRunTag(lineBeforeText: string): PdfTextRun["tag"] {
-  const name = /^\/DL(Label|Compact) BMC /u.exec(lineBeforeText)?.[1];
+  const name = /^\/DL(Label|Compact|Title) BMC /u.exec(lineBeforeText)?.[1];
   if (name === "Label") return "label";
+  if (name === "Title") return "title";
   return name === "Compact" ? "compact" : undefined;
 }
 
 /** The content-stream wrapper that marks a text command with one of our tags. */
-export function tagPdfCommands(tag: "label" | "compact", commands: string): string {
-  return `/DL${tag === "label" ? "Label" : "Compact"} BMC ${commands} EMC`;
+export function tagPdfCommands(tag: NonNullable<PdfTextRun["tag"]>, commands: string): string {
+  return `/DL${pdfRunTagNames[tag]} BMC ${commands} EMC`;
 }
 
 /**

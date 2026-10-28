@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { ReadinessEvaluation, ReadinessFinding } from "@draft-loop/evaluations";
 import type { DraftArtifact, RevisionFindingClassification } from "@draft-loop/schemas";
 
+import { reviewedArtifactId } from "./candidate-edits.js";
 import { findingIdentity, targetOf } from "./finding-attribution.js";
 
 /*
@@ -34,15 +35,16 @@ export interface FindingDecisionEntry {
 /**
  * The id the review gives the finding at `index` of a round's findings: scoped to the reviewed
  * artifact so a decision never carries over to another draft. The desktop review and the
- * persisted finding decisions use this id.
+ * persisted finding decisions use this id. The version approved with the candidate's edits keeps
+ * the id of the draft the critic reviewed, so its decisions still show as made (#1929).
  */
 export function reviewFindingId(
   run: { readonly runId: string; readonly round: number },
-  artifact: Pick<DraftArtifact, "id"> | null,
+  artifact: (Pick<DraftArtifact, "id"> & Partial<Pick<DraftArtifact, "parentVersionId">>) | null,
   index: number,
   code: string,
 ): string {
-  const artifactIdentity = artifact?.id ?? `round-${run.round}`;
+  const artifactIdentity = artifact === null ? `round-${run.round}` : reviewedArtifactId(artifact);
   const scope = createHash("sha256").update(artifactIdentity).digest("hex").slice(0, 16);
   return `${run.runId}:finding:${scope}:${index}:${code}`;
 }
