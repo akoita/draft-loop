@@ -20,7 +20,12 @@ import {
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
-import { compactReadinessBlocker, type FooterBlocker } from "./review-footer.js";
+import { groupReadinessBlockers } from "./readiness-blocker-groups.js";
+import {
+  compactReadinessBlocker,
+  compactReadinessBlockerGroup,
+  type FooterBlocker,
+} from "./review-footer.js";
 import { reviewInProgress } from "./review-run-status.js";
 
 export type ReviewWorkTabId = "findings" | "coverage" | "job";
@@ -86,11 +91,16 @@ export function nextStepLine(
       return `Next: decide ${plural(revisionLeft ? undecided : blocking.length, "blocking finding")}`;
     }
     case "final-checks": {
-      const blockers = readiness?.blockers ?? [];
-      const first = blockers[0];
+      // Identical blockers count once, so "and N more" names distinct checks.
+      const groups = groupReadinessBlockers(readiness?.blockers ?? []);
+      const first = groups[0];
       if (first === undefined) return "Next: approve or override";
-      const more = blockers.length > 1 ? ` and ${blockers.length - 1} more` : "";
-      return `Next: approve or override (${shortReadinessBlocker(first)}${more})`;
+      const more = groups.length > 1 ? ` and ${groups.length - 1} more` : "";
+      const label =
+        first.count === 1
+          ? shortReadinessBlocker(first.blocker)
+          : compactReadinessBlockerGroup(first);
+      return `Next: approve or override (${label}${more})`;
     }
     case "ready":
       return blocker.tone === "safe" ? "Next: approve" : "Next: check the warnings, then approve";

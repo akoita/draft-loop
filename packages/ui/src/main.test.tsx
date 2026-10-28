@@ -433,7 +433,7 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Final CV checks block approval");
     expect(html).toContain("Relevance score 0%; 80% required");
     expect(html).toContain(
-      "Accepting a finding records your decision but does not change coverage.",
+      "Accepting or rejecting a finding records your decision but does not change the draft, so the check behind it stays unmet until a revision fixes it.",
     );
     expect(html).toContain("Final CV checks passed");
     expect(html).toMatch(/title="Approve artifact \(Alt\+A\)" disabled=""/u);
