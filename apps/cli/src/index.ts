@@ -21,7 +21,11 @@ import {
 } from "./evidence-kind-commands.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
 import { independentReviewLines } from "./independent-review.js";
-import { resolveModelProfileSelection } from "./model-profile-selection.js";
+import {
+  authorEffortHelp,
+  criticEffortHelp,
+  resolveModelProfileSelection,
+} from "./model-profile-selection.js";
 import { registerModelProfileSelectionCommands } from "./model-profile-selection-commands.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import { registerRetrievalModeCommands } from "./retrieval-mode-commands.js";
@@ -1622,6 +1626,8 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       "exact registered author profile version, including dev-deepinfra-glm-author@1 and dev-google-gemini-author@2 (uses GEMINI_API_KEY; dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs) and dev-mistral-author@1 (uses MISTRAL_API_KEY)",
     )
     .option("--critic-profile <id@version>", "exact registered critic profile version")
+    .option("--author-effort <level>", authorEffortHelp)
+    .option("--critic-effort <level>", criticEffortHelp)
     .option("--opportunity-brief-id <id>", "exact reviewed opportunity brief id")
     .option(
       "--opportunity-version <number>",
@@ -1646,7 +1652,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles here does not change workspace defaults (use `model-profiles apply` for that). Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated. Opt-in development Mistral: use --model-preset development-mistral (author dev-mistral-author@1, critic economy-openai-critic@1) or --author-profile dev-mistral-author@1 with an exact critic profile, and set MISTRAL_API_KEY; the model is in public preview and quality is unvalidated.\n",
+      "\nUse one --model-preset or both explicit profile options. --author-effort and --critic-effort pick a reasoning level the profile allows (see effortLevels in `model-profiles`). Exact profiles are pinned to this run; listing and selecting profiles here does not change workspace defaults (use `model-profiles apply` for that). Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated. Opt-in development Mistral: use --model-preset development-mistral (author dev-mistral-author@1, critic economy-openai-critic@1) or --author-profile dev-mistral-author@1 with an exact critic profile, and set MISTRAL_API_KEY; the model is in public preview and quality is unvalidated.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;
@@ -1673,6 +1679,8 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         modelPreset: options.modelPreset,
         authorProfile: options.authorProfile,
         criticProfile: options.criticProfile,
+        authorEffort: options.authorEffort,
+        criticEffort: options.criticEffort,
       });
       await service.start({
         root: workspaceRoot(workspace),

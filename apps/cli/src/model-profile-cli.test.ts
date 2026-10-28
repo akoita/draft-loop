@@ -88,6 +88,30 @@ describe("model profile CLI commands", () => {
     },
   );
 
+  it("forwards a chosen reasoning level with a preset's references", async () => {
+    const harness = createHarness();
+
+    await harness.invoke(
+      "start",
+      "workspace",
+      "--model-preset",
+      "balanced",
+      "--author-effort",
+      "high",
+    );
+
+    expect(harness.startCommands).toEqual([
+      {
+        root: expect.stringContaining("workspace"),
+        modelProfiles: {
+          author: { id: "economy-anthropic-author", version: 1, effort: "high" },
+          critic: { id: "balanced-openai-critic", version: 1 },
+        },
+        allowProviderData: false,
+      },
+    ]);
+  });
+
   it("forwards an exact explicit pair alongside existing start controls", async () => {
     const harness = createHarness();
 
@@ -178,6 +202,8 @@ describe("model profile CLI commands", () => {
     ["--author-profile", "legacy-openai-critic@1", "--critic-profile", "legacy-openai-critic@1"],
     ["--model-preset", "unknown-secret-preset"],
     ["--model-preset", "premium"],
+    ["--author-effort", "high"],
+    ["--model-preset", "economy", "--critic-effort", "none"],
   ] as const)("rejects invalid profile selection %j before calling start", async (...options) => {
     const harness = createHarness();
 
@@ -214,6 +240,8 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("MISTRAL_API_KEY");
     expect(startHelp).toContain("dev-mistral-author@1");
     expect(startHelp).toContain("pinned to this run");
+    expect(startHelp).toContain("--author-effort <level>");
+    expect(startHelp).toContain("--critic-effort <level>");
     expect(modelProfilesHelp).toContain("unvalidated");
     expect(modelProfilesHelp).toContain("availability has not been checked");
     expect(resumeHelp).not.toContain("--model-preset");

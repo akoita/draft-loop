@@ -4,6 +4,7 @@ import { defaultModelProfileRegistry } from "./model-profiles.js";
 
 export {
   allowedModelProfileEfforts,
+  applyModelProfileEffort,
   type ChoosableModelProfileEffort,
   choosableModelProfileEfforts,
   isChoosableModelProfileEffort,
