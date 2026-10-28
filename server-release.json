@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Re-walk fixes and page fetcher",
+  "releaseName": "Draft quality and clearer review",
   "stageIssue": 1359,
-  "milestone": 54,
-  "summary": "Hosted service, sprint 1u: fixes from the owner's second staging re-walk. Approved job page addresses now work on a deployment: a separate page fetcher, which holds no database, secret or candidate material, is the one hosted runtime that reaches public web pages, and the API, which has no route to the internet, still checks every redirect and extracts the text itself. A job page that cannot be read says why, and a refused export names the checks that failed. PDFs embed the Carlito font for Classic and Modern, an approved run shows its finding decisions without errors, the review screen fits phone widths and leaves room for the activity bar, the model dialog starts on the workspace's preset, and relevance is weighed over the reviewed brief's requirements with every gap judged.",
-  "knownLimitations": "Staging only: production keeps its earlier images until the owner deploys this tag there. Staging runs behind the owner token, so sign-in, plans and credits, and record export and deletion are not exercised there until the identity provider is hosted. The Compact template's PDF still uses Helvetica. The cost of a complete cached run is still to measure (#1597)."
+  "milestone": 55,
+  "summary": "Hosted service, sprint 1v: draft quality and a clearer review, from the owner's latest staging re-walk. The author's new prompt states each fact once: Experience carries the detail, the summary condenses it in new words, and Core areas group evidence across roles. Validation now flags the same fact repeated across sections, a CV without a name or contact header, and an unlabelled Skills line, and a revision that loses a covered requirement gets a warning. The review names a brief's requirements and responsibilities apart in the start dialog, the Coverage tab and the relevance line, and the \"Not ready\" reasons are grouped with counts and name the failed check.",
+  "knownLimitations": "Staging only: production keeps its earlier images until the owner deploys this tag there. Staging runs behind the owner token, so sign-in, plans and credits, and record export and deletion are not exercised there until the identity provider is hosted. The new author prompt has not had a paid run yet, so its effect on repetition is still to measure, as is the cost of a complete cached run (#1597). A word-match miss on a critical requirement still blocks approval until it is decided by hand."
 }
