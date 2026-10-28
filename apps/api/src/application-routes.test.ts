@@ -415,6 +415,30 @@ describe("runs", () => {
     expect(refused.json()).toMatchObject({ error: { code: "rejected" } });
   });
 
+  it("passes a chosen reasoning level to the run and refuses an unknown level", async () => {
+    const modelProfiles = {
+      author: { id: "standard-anthropic-author", version: 1, effort: "xhigh" },
+      critic: { id: "standard-openai-critic", version: 2, effort: "medium" },
+    };
+    const begin = vi.fn(async () => snapshot);
+    await build({ readWorkspace: async () => descriptor, begin }, async () => undefined);
+
+    const begun = await app.inject(beginRequest("key-00000007", { modelProfiles }));
+    const unknown = await app.inject(
+      beginRequest("key-00000008", {
+        modelProfiles: { ...modelProfiles, author: { ...modelProfiles.author, effort: "none" } },
+      }),
+    );
+
+    expect(begun.statusCode).toBe(201);
+    expect(begin).toHaveBeenCalledWith({
+      root: "/tenants/owner/workspaces/workspace-1",
+      modelProfiles,
+    });
+    expect(unknown.statusCode).toBe(400);
+    expect(begin).toHaveBeenCalledTimes(1);
+  });
+
   it("answers 503 when the queue fails, and a retry queues the saved run", async () => {
     const begin = vi.fn(async () => snapshot);
     const enqueueRun = vi

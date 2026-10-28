@@ -50,10 +50,12 @@ export interface ApiSchemas {
       readonly author: {
         readonly id: string;
         readonly version: number;
+        readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
       };
       readonly critic: {
         readonly id: string;
         readonly version: number;
+        readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
       };
     } | null;
   };
@@ -141,6 +143,8 @@ export interface ApiSchemas {
     readonly tier: "economy" | "standard" | "premium";
     readonly roles: readonly ("author" | "critic")[];
     readonly qualityStatus: "unvalidated";
+    readonly defaultEffort: "low" | "medium" | "high" | "xhigh" | "max" | "provider-default";
+    readonly effortLevels: readonly ("low" | "medium" | "high" | "xhigh" | "max")[];
     readonly pricing: {
       readonly inputUsdPerMillion: number;
       readonly outputUsdPerMillion: number;
@@ -1107,10 +1111,12 @@ export interface ApiOperations {
         readonly author: {
           readonly id: string;
           readonly version: number;
+          readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
         };
         readonly critic: {
           readonly id: string;
           readonly version: number;
+          readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
         };
       };
       readonly candidateProfile?: {
@@ -1247,10 +1253,12 @@ export interface ApiOperations {
         readonly author: {
           readonly id: string;
           readonly version: number;
+          readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
         };
         readonly critic: {
           readonly id: string;
           readonly version: number;
+          readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
         };
       } | null;
     };

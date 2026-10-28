@@ -508,9 +508,13 @@ The owner sets up a hosted workspace through the API before any run:
   `independenceOverrideRationale`, and a change while a run is executing
   answers 422; recorded runs keep the pair they ran with.
 - `GET /v1/model-catalog` lists the catalog's model profiles the gateway
-  serves, with their tier, roles and list prices, the presets whose author and
-  critic it both serves, and the default preset (`hosted-model-catalog.ts`).
-  Desktop-only companies and local models are left out.
+  serves, with their tier, roles, list prices, default reasoning level and the
+  levels a run may choose, the presets whose author and critic it both serves,
+  and the default preset (`hosted-model-catalog.ts`). Desktop-only companies
+  and local models are left out.
+- A model profile reference in a run start or an application's pair may carry
+  an `effort` the profile allows, and the application view returns it; an
+  unknown level answers 400 and a level the profile refuses answers 422.
 - `PUT /v1/workspaces/:id/writing-policy` sets the candidate's writing policy
   from its Markdown text, at most 64 KiB, as a new immutable version that the
   next runs follow and record. `GET` reads the active policy, and

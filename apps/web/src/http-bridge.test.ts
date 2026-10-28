@@ -71,6 +71,8 @@ const catalog: ApiSchemas["ModelCatalog"] = {
       tier: "economy",
       roles: ["author"],
       qualityStatus: "unvalidated",
+      defaultEffort: "low",
+      effortLevels: ["low", "medium", "high", "xhigh", "max"],
       pricing: {
         inputUsdPerMillion: 2,
         outputUsdPerMillion: 10,
@@ -87,6 +89,8 @@ const catalog: ApiSchemas["ModelCatalog"] = {
       tier: "standard",
       roles: ["critic"],
       qualityStatus: "unvalidated",
+      defaultEffort: "low",
+      effortLevels: ["low", "medium", "high", "xhigh", "max"],
       pricing: {
         inputUsdPerMillion: 2,
         outputUsdPerMillion: 10,
