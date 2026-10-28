@@ -2,7 +2,11 @@ import { writingPolicySectionOrderRuleId } from "@draft-loop/domain";
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
-import { type DeterministicValidationContext, validateDraftArtifact } from "./index.js";
+import {
+  type DeterministicValidationContext,
+  type ValidationIssue,
+  validateDraftArtifact,
+} from "./index.js";
 
 const evidence = (excerpt: string) => ({
   sourcePath: "/local/evidence.txt",
@@ -51,6 +55,11 @@ function artifactWithClaim(
     ],
     decisions: [],
   };
+}
+
+/** The ordered-section fixture is a CV without a header; cv-shape.test.ts covers that warning. */
+function withoutHeaderCheck(issues: readonly ValidationIssue[]): readonly ValidationIssue[] {
+  return issues.filter(({ code }) => code !== "missing-cv-header");
 }
 
 function artifactWithOrderedSections(): DraftArtifact {
@@ -241,7 +250,7 @@ describe("deterministic artifact validation", () => {
       }),
     );
 
-    expect(result.issues).toEqual([
+    expect(withoutHeaderCheck(result.issues)).toEqual([
       {
         code: "writing-policy-section-order",
         category: "format",
@@ -287,7 +296,7 @@ describe("deterministic artifact validation", () => {
       }),
     );
 
-    expect(result.issues).toEqual([]);
+    expect(withoutHeaderCheck(result.issues)).toEqual([]);
   });
 
   it("honors case-sensitive and whole-word term matching", () => {

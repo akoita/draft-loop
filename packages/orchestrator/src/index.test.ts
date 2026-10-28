@@ -408,6 +408,8 @@ describe("durable orchestration", () => {
       "writing-policy-forbidden-term",
       "writing-policy-forbidden-character",
       "writing-policy-forbidden-term",
+      // The fixture CV has no header (#1862).
+      "missing-cv-header",
     ]);
     expect(failed.findings[0]).toMatchObject({
       sectionId: "summary-1",

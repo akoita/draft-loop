@@ -817,8 +817,11 @@ describe("local application driver", () => {
           excerpt: expect.any(String),
         });
       }
-      // The fixture states one fact in three sections, which validation reports (#1859).
-      const criticFindings = recovered.findings.filter(({ code }) => code !== "repeated-fact");
+      // The fixture states one fact in three sections and has no header, which validation
+      // reports (#1859, #1862).
+      const criticFindings = recovered.findings.filter(
+        ({ code }) => code !== "repeated-fact" && code !== "missing-cv-header",
+      );
       expect(criticFindings).toMatchObject([
         {
           id: "source-support-gap",

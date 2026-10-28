@@ -94,8 +94,19 @@ function authorProposal(version: number, chunkId: string): JsonRecord {
     version === 1
       ? "Built local-first TypeScript tools with deterministic testing."
       : "Improved local-first TypeScript tools with deterministic testing through a reviewed revision.";
+  // A complete CV opens with a name and contact header (#1862); both are fictional.
+  const header = ["Alex Example", "alex@example.com"];
   return {
     sections: [
+      {
+        title: "Header",
+        kind: "header",
+        blocks: header.map((text) => ({
+          type: "paragraph",
+          text,
+          claims: [{ text, substantive: true, evidenceChunkIds: [chunkId] }],
+        })),
+      },
       {
         title: "Summary",
         kind: "summary",
@@ -253,7 +264,7 @@ describe("full real-mode native host draft workflow", () => {
     );
     await writeFile(
       candidatePath,
-      "Sanitized candidate evidence: Built TypeScript local-first tools with deterministic testing. Studied software engineering with a focus on testing and accessibility. Skills: TypeScript, Node.js, automated testing, accessibility, technical writing.\n",
+      "Sanitized candidate evidence: Alex Example, alex@example.com. Built TypeScript local-first tools with deterministic testing. Studied software engineering with a focus on testing and accessibility. Skills: TypeScript, Node.js, automated testing, accessibility, technical writing.\n",
       "utf8",
     );
 
@@ -520,6 +531,7 @@ describe("full real-mode native host draft workflow", () => {
         ],
       });
       expect(firstReview.artifact.sections.map((section) => section.title)).toEqual([
+        "Header",
         "Summary",
         "Experience",
         "Education",
@@ -567,6 +579,7 @@ describe("full real-mode native host draft workflow", () => {
         setup: { fixtureMode: false },
       });
       expect(finalReview.artifact.sections.map((section) => section.title)).toEqual([
+        "Header",
         "Summary",
         "Experience",
         "Education",

@@ -740,11 +740,13 @@ describe("engine classification of an adjudicated revision", () => {
     const critics = completed.executionHistory.filter(({ step }) => step === "critic");
     expect(critics[0]?.findingClassification).toBeUndefined();
     const classification = critics.at(-1)?.findingClassification;
-    expect(classification?.summary).toEqual({ resolved: 2, persisting: 1, new: 1 });
+    expect(classification?.summary).toEqual({ resolved: 2, persisting: 1, new: 2 });
     expect(
       byId(classification?.findings ?? []).map(({ status, findingId }) => [status, findingId]),
     ).toEqual([
       ["new", "critic:1:c-2"],
+      // The fixture CV has no header, which the deterministic checks now report (#1862).
+      ["new", "deterministic:0:missing-cv-header"],
       ["persisting", "f-experience"],
       ["resolved", "f-skills"],
       ["resolved", "f-summary"],
