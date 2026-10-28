@@ -145,8 +145,11 @@ export interface PdfTextRun {
   readonly fontNumber: number;
   readonly x: number;
   readonly y: number;
-  /** Marked-content tag the layout wrote around the run: an inline label or a compact list line. */
-  readonly tag?: "label" | "compact" | undefined;
+  /**
+   * Marked-content tag the layout wrote around the run: an inline label, a compact list line or a
+   * line of the title.
+   */
+  readonly tag?: "label" | "compact" | "title" | undefined;
 }
 
 /** The F3 resource is the role-header bold: the same face as F2, not a section heading. */

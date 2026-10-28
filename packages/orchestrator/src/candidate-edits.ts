@@ -10,6 +10,21 @@ export interface CandidateBlockEdit {
 /** The suffix of the version the candidate's review edits produce from the reviewed one. */
 export const CANDIDATE_EDIT_VERSION_SUFFIX = "-candidate-edits";
 
+/**
+ * The id of the draft the critic reviewed: the parent of a version the candidate's review edits
+ * produced, else the artifact's own id.
+ */
+export function reviewedArtifactId(
+  artifact: Pick<DraftArtifact, "id"> & Partial<Pick<DraftArtifact, "parentVersionId">>,
+): string {
+  const parent = artifact.parentVersionId;
+  return parent !== undefined &&
+    parent !== null &&
+    artifact.id === `${parent}${CANDIDATE_EDIT_VERSION_SUFFIX}`
+    ? parent
+    : artifact.id;
+}
+
 export const CANDIDATE_EDIT_RATIONALE = "The candidate edited this block in the review.";
 
 const CANDIDATE_EDIT_DECISION_PREFIX = "decision-candidate-edit-";
