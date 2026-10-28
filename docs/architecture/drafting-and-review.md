@@ -159,13 +159,13 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v15`, which states and sends a
+New runs record author template `cli-author-v16`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v15 retain 32,768.
+v4 to v16 retain 32,768.
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -823,6 +823,23 @@ A revising author already receives the draft's findings. v15 tells it to keep a
 `repeated-fact` finding's fact in one section and remove or rewrite the other
 occurrences, unless the person rejected that finding in the adjudication plan.
 Resumed v14 and earlier runs keep their exact prompt.
+
+Author `cli-author-v16` (#1875) is v15 plus guidance against the
+over-compression the 0.7.0 walk showed:
+
+- **One statement per bullet.** Each bullet states one achievement, and
+  separate facts are never joined with semicolons.
+- **Summary.** Two to three sentences: the role and level the evidence
+  supports, the strongest proof, and the candidate's focus.
+- **Facts stay in their role.** Core areas may name a theme Experience proves,
+  but a role's achievements and leadership stay in its entry, and each Core
+  areas label names the content it heads.
+- **Placeholder header.** When the evidence holds no name or contact details,
+  the header shows `[Your name]`, `[Email]`, `[Phone]` and `[City]` as
+  missing-data notices with no claims. Claim coverage accepts them only in a
+  header section, and no value is ever invented.
+
+Resumed v15 and earlier runs keep their exact prompt.
 
 ### CV shape warnings (#1862)
 

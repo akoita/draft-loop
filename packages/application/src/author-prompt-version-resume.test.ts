@@ -9,7 +9,10 @@ import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
-import { singleStatementInstructions } from "./author-fact-prompts.js";
+import {
+  coherentStatementInstructions,
+  singleStatementInstructions,
+} from "./author-fact-prompts.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
 import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
@@ -60,8 +63,9 @@ it.each([
   { recorded: "cli-author-v12", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v13", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v14", structuredGuidance: true, budget: 32_768, patchFirst: true },
+  { recorded: "cli-author-v15", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v15",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v16",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -233,11 +237,11 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v15");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v16");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v15", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v16", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[resumedCalls]).toContain(
         "Bullet markers should be several lines apart; never stack short bullets.",
@@ -246,8 +250,9 @@ it.each([
       expect(systemPrompts[resumedCalls]).toContain("never a fragment copied from a source");
       expect(systemPrompts[resumedCalls]).toContain(pageTargetLengthInstructions);
       expect(systemPrompts[resumedCalls]).toContain(singleStatementInstructions);
-      // A resumed earlier run keeps its exact prompt, without the v15 single-statement guidance.
-      expect(systemPrompts[0]).not.toContain("State each fact once.");
+      expect(systemPrompts[resumedCalls]).toContain(coherentStatementInstructions);
+      // A resumed earlier run keeps its exact prompt, without the v16 one-statement guidance.
+      expect(systemPrompts[0]).not.toContain(coherentStatementInstructions);
       expect(systemPrompts[resumedCalls]).toContain(structuredFieldInstruction);
       expect(systemPrompts[resumedCalls]).toContain(
         "word order or grouping may vary only when every whole-word component",

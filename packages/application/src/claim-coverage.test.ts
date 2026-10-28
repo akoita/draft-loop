@@ -175,3 +175,23 @@ describe("substantive block claim coverage", () => {
     }
   });
 });
+
+describe("header placeholders (#1875)", () => {
+  it("leaves visible header placeholders outside claims", () => {
+    expect(
+      claimCoverageIssues(proposal("[Your name]\n[Email] · [Phone] · [City]", [], true, "header")),
+    ).toEqual([]);
+    expect(
+      claimCoverageIssues(
+        proposal("Alex Rivera · [Email] · [Phone]", ["Alex Rivera"], true, "header"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("does not excuse placeholder text outside the header or other uncovered header words", () => {
+    expect(claimCoverageIssues(proposal("[Your name] led teams.", []))).toHaveLength(1);
+    expect(
+      claimCoverageIssues(proposal("[Your name] · Staff engineer", [], true, "header")),
+    ).toHaveLength(1);
+  });
+});
