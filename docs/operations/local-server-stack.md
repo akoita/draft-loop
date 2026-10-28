@@ -43,6 +43,11 @@ The API serves the owner's web screen (`apps/web`) at
 5. **Review:** decide the findings with their evidence, edit blocks, then
    approve or ask for another round, and export and download the CV.
 
+An open tab notices a new release: when it regains focus, and every five
+minutes, it compares the entry script named in the served `index.html` with
+the one it runs. When they differ it shows "A new version of DraftLoop is
+available" with a **Reload** button (#1904).
+
 Each consent panel shows the current state and its history, and withdraws a
 grant. A refused upload or run that lacks a consent points to the step that
 records it.

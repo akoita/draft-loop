@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { type ApiSchemas, createApiClient } from "./api-client.js";
 import { App } from "./app.js";
+import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
 import { createTokenStore } from "./session.js";
@@ -46,4 +47,11 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
 createApiClient({})
   .call("GET /v1/auth/config", {})
   .then(screenFor, () => <ServiceUnreachable />)
-  .then((screen) => root.render(<StrictMode>{screen}</StrictMode>));
+  .then((screen) =>
+    root.render(
+      <StrictMode>
+        <NewReleaseWatch />
+        {screen}
+      </StrictMode>,
+    ),
+  );
