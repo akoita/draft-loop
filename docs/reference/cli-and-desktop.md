@@ -1581,6 +1581,11 @@ The editor fits a 1280×800 window without scrolling:
   current sign-in** badges where they apply.
 - **Custom pair** is a card of the same size that reveals the exact author and
   critic profile selects.
+- **Writer reasoning** and **Reviewer reasoning** list the levels each selected
+  profile allows, with its own level marked as the default. Choosing a preset
+  or another profile resets the level. A changed level keeps the preset's name
+  and adds it, as in "Balanced · writer high", on the checked card, the summary
+  line and an application's pair.
 - **The quality and sign-in note** is one line, with the full text behind
   **More**.
 - **Cancel** and **Apply for future runs** sit in a bar pinned to the bottom of

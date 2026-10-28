@@ -6,6 +6,11 @@
  * ids. The runtime key lists are bound to the interfaces, so adding a field to one without the
  * other is a compile error rather than a validator that silently rejects real payloads.
  */
+
+import {
+  type ChoosableModelProfileEffort,
+  isChoosableModelProfileEffort,
+} from "@draft-loop/application/model-profile-catalog";
 import {
   type ApplicationJobSourceKind,
   type ApplicationStatus,
@@ -69,8 +74,15 @@ export const maximumChosenRunReasonLength = 500;
 
 /** Exact author and critic model profile references, as the model profile picker names them. */
 export interface ApplicationModelProfilesView {
-  readonly author: { readonly id: string; readonly version: number };
-  readonly critic: { readonly id: string; readonly version: number };
+  readonly author: ApplicationModelProfileReferenceView;
+  readonly critic: ApplicationModelProfileReferenceView;
+}
+
+/** One exact profile, with the reasoning level chosen for it when it is not the profile's own. */
+export interface ApplicationModelProfileReferenceView {
+  readonly id: string;
+  readonly version: number;
+  readonly effort?: ChoosableModelProfileEffort | undefined;
 }
 
 /** Sets the pair one application's new runs use, or clears it with `null`. */
@@ -210,7 +222,11 @@ export const applicationChooseRunKeys = exactKeys<ApplicationChooseRunInput>()([
 ]);
 const chosenRunKeys = exactKeys<ApplicationChosenRunView>()(["runId", "runNumber"]);
 const modelProfilesKeys = exactKeys<ApplicationModelProfilesView>()(["author", "critic"]);
-const modelProfileReferenceKeys = ["id", "version"] as const;
+const modelProfileReferenceKeys = exactKeys<ApplicationModelProfileReferenceView>()([
+  "id",
+  "version",
+  "effort",
+]);
 export const applicationDeleteKeys = exactKeys<ApplicationDeleteInput>()([
   "workspaceId",
   "applicationId",
@@ -329,7 +345,9 @@ export function normalizeApplicationModelProfiles(
     if (typeof ref.version !== "number" || !Number.isSafeInteger(ref.version) || ref.version < 1) {
       return undefined;
     }
-    return { id: ref.id, version: ref.version };
+    if (ref.effort === undefined) return { id: ref.id, version: ref.version };
+    if (!isChoosableModelProfileEffort(ref.effort)) return undefined;
+    return { id: ref.id, version: ref.version, effort: ref.effort };
   };
   const author = reference(raw.author);
   const critic = reference(raw.critic);

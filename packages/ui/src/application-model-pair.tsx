@@ -9,6 +9,7 @@ import {
   modelProfilePresetReferences,
   modelProfilePresets,
   modelProfileReferencesEqual,
+  withModelProfileLevels,
 } from "./model-profile-picker-state.js";
 import { modelDisplayName, presetDisplayName } from "./model-profile-presentation.js";
 
@@ -225,7 +226,10 @@ export function applicationPairLabel(pair: ApplicationModelProfilesView): string
   const preset = modelProfilePresets.find(
     (candidate) => candidate.id === applicationPairValue(pair),
   );
-  return preset === undefined
-    ? `Custom pair ${pair.author.id}@${pair.author.version} and ${pair.critic.id}@${pair.critic.version}`
-    : `Preset ${presetDisplayName(preset.label)}`;
+  return withModelProfileLevels(
+    preset === undefined
+      ? `Custom pair ${pair.author.id}@${pair.author.version} and ${pair.critic.id}@${pair.critic.version}`
+      : `Preset ${presetDisplayName(preset.label)}`,
+    pair,
+  );
 }

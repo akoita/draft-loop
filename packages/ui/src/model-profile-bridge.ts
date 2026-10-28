@@ -1,3 +1,4 @@
+import { isChoosableModelProfileEffort } from "@draft-loop/application/model-profile-catalog";
 import {
   listModelProfileRouteSupport,
   type ModelProfileReferences,
@@ -101,8 +102,11 @@ function mode(value: unknown): RunProviderAuthModeConfiguration["anthropic"] {
 export function parseModelProfileReferences(value: unknown): ModelProfileReferences {
   const refs = exactRecord(value, ["author", "critic"]);
   const parseReference = (reference: unknown) => {
-    const fields = exactRecord(reference, ["id", "version"]);
-    return { id: identifier(fields.id), version: safeVersion(fields.version) };
+    const fields = exactRecord(reference, ["id", "version", "effort"]);
+    const exact = { id: identifier(fields.id), version: safeVersion(fields.version) };
+    if (fields.effort === undefined) return exact;
+    if (!isChoosableModelProfileEffort(fields.effort)) return invalidInput();
+    return { ...exact, effort: fields.effort };
   };
   return { author: parseReference(refs.author), critic: parseReference(refs.critic) };
 }

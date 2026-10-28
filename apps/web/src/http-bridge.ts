@@ -110,6 +110,16 @@ function errorCode(status: number): BridgeErrorCode {
 
 type Application = ApiSchemas["Application"];
 
+/** An exact profile reference as the API takes it, keeping a chosen reasoning level. */
+function apiProfileReference(reference: {
+  readonly id: string;
+  readonly version: number;
+  readonly effort?: ApiSchemas["CatalogModel"]["effortLevels"][number] | undefined;
+}) {
+  const exact = { id: reference.id, version: reference.version };
+  return reference.effort === undefined ? exact : { ...exact, effort: reference.effort };
+}
+
 /** The API's application in the screens' summary, ordered as the desktop host orders runs. */
 export function applicationSummary(application: Application): ApplicationSummaryView {
   const chosenRun = chosenApplicationRun(application.runs, application.chosenRunId);
@@ -307,7 +317,18 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         const { workspaceId, applicationId, modelProfiles } = command.input;
         const updated = await client.call(
           "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/models",
-          { path: { workspaceId, applicationId }, body: { modelProfiles } },
+          {
+            path: { workspaceId, applicationId },
+            body: {
+              modelProfiles:
+                modelProfiles === null
+                  ? null
+                  : {
+                      author: apiProfileReference(modelProfiles.author),
+                      critic: apiProfileReference(modelProfiles.critic),
+                    },
+            },
+          },
         );
         return record(workspaceId, updated);
       }
@@ -597,8 +618,8 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
               ? {}
               : {
                   modelProfiles: {
-                    author: { id: modelProfiles.author.id, version: modelProfiles.author.version },
-                    critic: { id: modelProfiles.critic.id, version: modelProfiles.critic.version },
+                    author: apiProfileReference(modelProfiles.author),
+                    critic: apiProfileReference(modelProfiles.critic),
                   },
                 }),
           },

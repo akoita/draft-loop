@@ -53,3 +53,17 @@ export function formatUsdPerMillion(value: number): string {
 export function isDevelopmentPreset(preset: Pick<ModelProfilePreset, "id">): boolean {
   return preset.id.startsWith("development-");
 }
+
+const effortDisplayNames: Readonly<Record<string, string>> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra high",
+  max: "Max",
+  "provider-default": "Provider default",
+};
+
+/** A reasoning level's name for the screens, such as "Extra high" for `xhigh`. */
+export function effortDisplayName(effort: string): string {
+  return effortDisplayNames[effort] ?? effort;
+}

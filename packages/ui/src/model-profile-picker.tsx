@@ -9,13 +9,17 @@ import {
   modelProfileApplyDisabledMessage,
   modelProfileApplyErrorMessage,
   modelProfileCatalog,
+  modelProfileEffortChoices,
+  modelProfileLevelSummary,
   modelProfileNotSupportedMessage,
   modelProfilePresetReferences,
   modelProfilePresets,
   modelProfileReferencesEqual,
   modelProfileRouteIsSupported,
+  modelProfileSelectionsEqual,
   modelProfileSupportForContext,
 } from "./model-profile-picker-state.js";
+import { effortDisplayName } from "./model-profile-presentation.js";
 
 interface ModelProfilePickerProps {
   readonly workspaceId: string;
@@ -46,7 +50,12 @@ interface ModelProfilePickerProps {
 interface DraftSelection {
   readonly author: string;
   readonly critic: string;
+  /** A chosen reasoning level, or empty for the profile's own. */
+  readonly authorEffort: string;
+  readonly criticEffort: string;
 }
+
+const effortKeys = { author: "authorEffort", critic: "criticEffort" } as const;
 
 function referenceToken(reference: { readonly id: string; readonly version: number }): string {
   return JSON.stringify([reference.id, reference.version]);
@@ -64,16 +73,21 @@ function draftReferences(selection: DraftSelection): ModelProfileReferences | nu
     ({ profile }) => profileToken(profile) === selection.critic && profile.roles.includes("critic"),
   );
   if (author === undefined || critic === undefined) return null;
-  return {
-    author: { id: author.profile.id, version: author.profile.version },
-    critic: { id: critic.profile.id, version: critic.profile.version },
+  const side = (entry: typeof author, role: "author" | "critic") => {
+    const exact = { id: entry.profile.id, version: entry.profile.version };
+    const effort = selection[effortKeys[role]];
+    const level = modelProfileEffortChoices(exact, role)?.levels.find((item) => item === effort);
+    return level === undefined ? exact : { ...exact, effort: level };
   };
+  return { author: side(author, "author"), critic: side(critic, "critic") };
 }
 
 function startingDraft(start: ModelProfileReferences | null): DraftSelection {
   return {
     author: start === null ? "" : referenceToken(start.author),
     critic: start === null ? "" : referenceToken(start.critic),
+    authorEffort: start?.author.effort ?? "",
+    criticEffort: start?.critic.effort ?? "",
   };
 }
 
@@ -155,6 +169,8 @@ export function ModelProfilePicker({
     setDraft({
       author: referenceToken(references.author),
       critic: referenceToken(references.critic),
+      authorEffort: "",
+      criticEffort: "",
     });
     setError(null);
   };
@@ -265,6 +281,7 @@ export function ModelProfilePicker({
       <ModelPresetCards
         groupName={`model-preset-${workspaceId}`}
         checkedValue={showCustom ? customPresetValue : matchedPresetId}
+        checkedNote={selectedProfiles === null ? "" : modelProfileLevelSummary(selectedProfiles)}
         disabled={disabled || saving}
         support={supportResult}
         hideUnsupported={signInFixed}
@@ -286,7 +303,11 @@ export function ModelProfilePicker({
                     value={draft[role]}
                     disabled={disabled || saving}
                     onChange={(event) => {
-                      setDraft((current) => ({ ...current, [role]: event.target.value }));
+                      setDraft((current) => ({
+                        ...current,
+                        [role]: event.target.value,
+                        [effortKeys[role]]: "",
+                      }));
                       setError(null);
                     }}
                     aria-label={`${role === "author" ? "Author" : "Critic"} profile`}
@@ -322,8 +343,46 @@ export function ModelProfilePicker({
           })}
         </div>
       ) : null}
+      {selectedProfiles === null ? null : (
+        <div className="model-profile-picker-profile-pair model-profile-picker-effort">
+          {(["author", "critic"] as const).map((role) => {
+            const choices = modelProfileEffortChoices(selectedProfiles[role], role);
+            if (choices === null || choices.levels.length < 2) return null;
+            const label = role === "author" ? "Writer reasoning" : "Reviewer reasoning";
+            return (
+              <label className="model-profile-picker-field" key={role}>
+                <span>{label}</span>
+                <select
+                  value={selectedProfiles[role].effort ?? ""}
+                  disabled={disabled || saving}
+                  aria-label={label}
+                  onChange={(event) => {
+                    setDraft((current) => ({
+                      ...current,
+                      [effortKeys[role]]: event.target.value,
+                    }));
+                    setError(null);
+                  }}
+                >
+                  <option value="">{effortDisplayName(choices.defaultEffort)} (default)</option>
+                  {choices.levels
+                    .filter((level) => level !== choices.defaultEffort)
+                    .map((level) => (
+                      <option key={level} value={level}>
+                        {effortDisplayName(level)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            );
+          })}
+          <p className="model-profile-picker-status">
+            More reasoning usually costs more and can improve the draft or the review.
+          </p>
+        </div>
+      )}
       {selectedProfiles === null ||
-      modelProfileReferencesEqual(selectedProfiles, applied) ? null : (
+      modelProfileSelectionsEqual(selectedProfiles, applied) ? null : (
         <details className="model-profile-picker-more">
           <summary>Details</summary>
           <div className="model-profile-picker-profile-pair">
