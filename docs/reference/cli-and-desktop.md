@@ -1266,8 +1266,8 @@ narration, fragments, negative asides, and job-relevant evidence left out.
 Editorial warnings alone never block approval.
 
 Once blocking findings are resolved, you can still approve a draft whose final
-checks fail. Enter a reason and choose **Approve with override**, or run
-`draft-loop approve --override-final-checks "<reason>"`. The reason and the
+checks fail. Type a reason and press Enter or choose **Approve with override**,
+or run `draft-loop approve --override-final-checks "<reason>"`. The reason and the
 blocker codes it covers are bound to that exact artifact and recorded in the run
 history, and export accepts only that recorded override. This keeps a review
 finishable at the round limit, when **Request revision** is unavailable.

@@ -30,6 +30,7 @@ import {
   useProviderSignInReadiness,
 } from "./provider-sign-in-readiness.js";
 import { useModalFocusTrap } from "./review.js";
+import { submitOnEnter } from "./submit-on-enter.js";
 
 export { credentialProviderLabels, providerAuthModeLabels };
 
@@ -114,6 +115,9 @@ export function CredentialRow({
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => onChange(event.target.value)}
+          onKeyDown={submitOnEnter(() => {
+            if (value.trim() !== "") onSave();
+          })}
           aria-label={title}
         />
         <button
