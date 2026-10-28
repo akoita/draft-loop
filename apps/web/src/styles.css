@@ -221,7 +221,9 @@ label:where(:not(.shared-screens *)) {
   margin-top: 0.75rem;
 }
 
-fieldset {
+/* Scoped like the other element rules: a shared screen's fieldset keeps its own display, so
+   its `hidden` attribute still hides it (#1927). */
+fieldset:where(:not(.shared-screens *)) {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: grid;
