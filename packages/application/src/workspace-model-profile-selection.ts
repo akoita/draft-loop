@@ -2,8 +2,9 @@ import { resolve } from "node:path";
 import { z } from "zod";
 
 import { CliUserError } from "./cli-user-error.js";
-import type { ModelProfileReferences } from "./index.js";
+import type { ModelProfileReference, ModelProfileReferences } from "./index.js";
 import { readWorkspace } from "./local.js";
+import { applyModelProfileEffort, choosableModelProfileEfforts } from "./model-profile-efforts.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import { workspaceSettings } from "./workspace-settings.js";
 
@@ -21,6 +22,7 @@ export const workspaceModelProfileSelectionInvalidMessage =
 const referenceSchema = z.strictObject({
   id: z.string().min(1),
   version: z.number().int().positive().safe(),
+  effort: z.enum(choosableModelProfileEfforts).optional(),
 });
 
 const selectionFileSchema = z.strictObject({
@@ -65,17 +67,15 @@ export async function readWorkspaceModelProfileSelection(
   if (!result.success) throw new CliUserError(workspaceModelProfileSelectionInvalidMessage);
   const { author, critic } = result.data.modelProfiles;
   return {
-    modelProfiles: {
-      author: { id: author.id, version: author.version },
-      critic: { id: critic.id, version: critic.version },
-    },
+    modelProfiles: { author: exactReference(author), critic: exactReference(critic) },
     appliedAt: result.data.appliedAt,
   };
 }
 
 /**
  * Why a pair no longer fits the workspace, or undefined when it does. A pair fits when both
- * profiles are registered for their roles and name the company and model the workspace configures.
+ * profiles are registered for their roles, name the company and model the workspace configures,
+ * and allow any reasoning level the pair chooses.
  */
 export function describeModelProfileSelectionMismatch(
   configured: ConfiguredModelPair,
@@ -94,12 +94,24 @@ export function describeModelProfileSelectionMismatch(
     if (profile.provider !== model.company || profile.modelId !== model.model) {
       return `the ${role} profile ${reference.id}@${reference.version} is for ${profile.provider}/${profile.modelId} but the workspace ${role} is ${model.company}/${model.model}`;
     }
+    if (applyModelProfileEffort(profile, reference.effort) === undefined) {
+      return `the ${role} profile ${reference.id}@${reference.version} does not allow the reasoning level ${String(reference.effort)}`;
+    }
   }
   return undefined;
 }
 
-function referenceText(reference: { readonly id: string; readonly version: number }): string {
-  return `${reference.id}@${reference.version}`;
+function exactReference(reference: ModelProfileReference): ModelProfileReference {
+  return {
+    id: reference.id,
+    version: reference.version,
+    ...(reference.effort === undefined ? {} : { effort: reference.effort }),
+  };
+}
+
+function referenceText(reference: ModelProfileReference): string {
+  const level = reference.effort === undefined ? "" : ` (${reference.effort})`;
+  return `${reference.id}@${reference.version}${level}`;
 }
 
 /** Exact `author …; critic …` text for status lines. */
@@ -119,8 +131,8 @@ export async function saveWorkspaceModelProfileSelection(
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
   const exact: ModelProfileReferences = {
-    author: { id: references.author.id, version: references.author.version },
-    critic: { id: references.critic.id, version: references.critic.version },
+    author: exactReference(references.author),
+    critic: exactReference(references.critic),
   };
   const mismatch = describeModelProfileSelectionMismatch(
     {

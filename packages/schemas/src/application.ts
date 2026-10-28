@@ -58,6 +58,8 @@ const applicationModelProfileReferenceSchema = z
   .object({
     id: z.string().trim().min(1).max(200),
     version: z.number().int().positive(),
+    /** A chosen reasoning level; absent means the profile's own level. */
+    effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
   })
   .strict();
 

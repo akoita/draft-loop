@@ -23,6 +23,7 @@ import type {
   ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
 import { isMistralAuthorProfile } from "./mistral-development-profile.js";
+import { applyModelProfileEffort } from "./model-profile-efforts.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { requirementsSourcePreflightLine } from "./run-requirements-source.js";
@@ -190,7 +191,7 @@ function resolveOneProfile(
 ): ModelProfile {
   if (
     !isRecord(reference) ||
-    Object.keys(reference).some((key) => key !== "id" && key !== "version") ||
+    Object.keys(reference).some((key) => key !== "id" && key !== "version" && key !== "effort") ||
     typeof reference.id !== "string" ||
     !Number.isSafeInteger(reference.version) ||
     (reference.version as number) <= 0
@@ -210,7 +211,9 @@ function resolveOneProfile(
     ) {
       throw new RunModelProfileError();
     }
-    return parsed.data;
+    const chosen = applyModelProfileEffort(parsed.data, reference.effort);
+    if (chosen === undefined) throw new RunModelProfileError();
+    return chosen;
   } catch {
     throw new RunModelProfileError();
   }

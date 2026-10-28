@@ -32,6 +32,7 @@ import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
+import type { ChoosableModelProfileEffort } from "./model-profile-efforts.js";
 import type {
   OpportunityDraftPatch,
   OpportunityIntakeDependencies,
@@ -268,6 +269,8 @@ export interface StartRunCommand {
 export interface ModelProfileReference {
   readonly id: string;
   readonly version: number;
+  /** A reasoning level the profile allows; absent means the profile's own level. */
+  readonly effort?: ChoosableModelProfileEffort | undefined;
 }
 
 export interface ModelProfileReferences {

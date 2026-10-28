@@ -44,6 +44,7 @@ import { CliUserError } from "./cli-user-error.js";
 import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
 import { storageFactory } from "./local-storage-factory.js";
+import { applyModelProfileEffort } from "./model-profile-efforts.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
   type ImportApplicationCommand,
@@ -396,13 +397,20 @@ function validatedModelProfiles(
   if (!parsed.success) throw new CliUserError("The model pair is not a valid profile pair.");
   const providers = (["author", "critic"] as const).map((role) => {
     const reference = parsed.data[role];
+    let profile: ReturnType<ModelProfileRegistry["resolve"]>;
     try {
-      return registry.resolve(reference.id, reference.version, role).provider;
+      profile = registry.resolve(reference.id, reference.version, role);
     } catch {
       throw new CliUserError(
         `The ${role} profile ${reference.id}@${reference.version} is not a registered ${role} profile.`,
       );
     }
+    if (applyModelProfileEffort(profile, reference.effort) === undefined) {
+      throw new CliUserError(
+        `The ${role} profile ${reference.id}@${reference.version} does not allow the reasoning level ${reference.effort}.`,
+      );
+    }
+    return profile.provider;
   });
   if (providers[0] === providers[1]) {
     throw new CliUserError(
