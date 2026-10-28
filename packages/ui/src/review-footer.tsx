@@ -16,6 +16,7 @@ import {
   type ApprovalReadinessBlocker,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
+import { relevanceScope } from "./coverage-kinds.js";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import {
   type ExportTemplate,
@@ -68,15 +69,23 @@ function percent(value: number): string {
   return `${(value * 100).toFixed(0)}%`;
 }
 
-/** A final-check blocker short enough for the footer line, e.g. "relevance 22% (80% needed)". */
-export function compactReadinessBlocker(blocker: ApprovalReadinessBlocker): string {
+/**
+ * A final-check blocker short enough for the footer line, e.g. "relevance 22% (80% needed)". With
+ * `scope`, relevance says what it is scored on: "relevance 0% over 9 requirements, not the 4
+ * responsibilities (80% needed)".
+ */
+export function compactReadinessBlocker(
+  blocker: ApprovalReadinessBlocker,
+  scope: string | null = null,
+): string {
   if (
     blocker.code === "unmet-rubric-threshold" &&
     blocker.dimension !== undefined &&
     blocker.score !== undefined &&
     blocker.threshold !== undefined
   ) {
-    return `${blocker.dimension} ${percent(blocker.score)} (${percent(blocker.threshold)} needed)`;
+    const scored = blocker.dimension === "relevance" && scope !== null ? ` ${scope}` : "";
+    return `${blocker.dimension} ${percent(blocker.score)}${scored} (${percent(blocker.threshold)} needed)`;
   }
   const label = formatApprovalReadinessBlocker(blocker);
   return `${label[0]?.toLowerCase() ?? ""}${label.slice(1)}`;
@@ -164,7 +173,9 @@ export function footerBlocker(
   if (readiness?.applicationReady === false) {
     return {
       kind: "final-checks",
-      text: `Not ready: ${readiness.blockers.map(compactReadinessBlocker).join("; ")}${noRevision}`,
+      text: `Not ready: ${readiness.blockers
+        .map((blocker) => compactReadinessBlocker(blocker, relevanceScope(state.coverage)))
+        .join("; ")}${noRevision}`,
       tone: "warning",
     };
   }

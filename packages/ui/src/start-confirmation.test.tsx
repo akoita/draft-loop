@@ -181,11 +181,15 @@ describe("start confirmation summary", () => {
         version: 3,
         requirementCount: 18,
         criticalCount: 4,
+        responsibilityCount: 4,
       },
       candidateProfile: { version: 4 },
     });
     expect(reviewed.inputs).toEqual([
-      { label: "Requirements", value: "Reviewed brief v3 · 18 requirements" },
+      {
+        label: "Requirements",
+        value: "Reviewed brief v3 · 18 requirements · 4 responsibilities",
+      },
       { label: "Career profile", value: "v4" },
       { label: "Writing policy", value: "Active, policy-v2" },
     ]);
@@ -199,6 +203,7 @@ describe("start confirmation summary", () => {
         version: 3,
         requirementCount: 18,
         criticalCount: 4,
+        responsibilityCount: 0,
       },
       candidateProfile: null,
     });

@@ -10,6 +10,7 @@
  * record reads "not recorded".
  */
 import { meanReadinessScore } from "./application-run-list.js";
+import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
 import { type DesktopReviewState, isUnresolvedFinding } from "./model.js";
 import { coverageTally } from "./review-work-tabs.js";
 import { costNotRecorded, runCostLabel } from "./run-cost.js";
@@ -96,7 +97,9 @@ function readinessOf(state: RunState): string {
 function coverageOf(state: RunState): string {
   if (state.coverage === undefined || state.coverage === null) return notRecorded;
   const { covered, total } = coverageTally(state.coverage);
-  return total === 0 ? "none assessed" : `${covered} of ${total} covered`;
+  if (total === 0) return "none assessed";
+  const tallies = coverageKindTallies(state.coverage);
+  return tallies === null ? `${covered} of ${total} covered` : coverageKindsSummary(tallies);
 }
 
 function blockingOf(state: RunState): string {

@@ -1154,8 +1154,8 @@ first." A reviewed version is read-only; **Edit** and **Save as new draft**
 create a draft successor that must be reviewed again.
 
 When the latest brief is reviewed, the **Job & requirements** step shows
-"Using reviewed requirements: brief vN · R requirements · C critical" and
-starts the run with that exact version. **Use the raw job description instead**
+"Using reviewed requirements: brief vN · R requirements · C critical · P
+responsibilities" and starts the run with that exact version. **Use the raw job description instead**
 starts without the brief; the local parser, including its refusals, then
 applies. If the policy override selected for the run belongs to the reviewed
 brief, starting from the raw job description is refused. A run's preflight
@@ -1167,6 +1167,12 @@ them and the preflight count includes them. The relevance score is weighted
 over the brief's own requirements only, so an unmet responsibility shows in
 coverage without holding back approval. A responsibility that repeats a
 requirement's ID or wording is left to that requirement.
+
+The review screens keep the two kinds apart (#1857). The start dialog reads
+"Reviewed brief vN · R requirements · P responsibilities", the Coverage tab
+reads "Coverage · 0/9 + 2/4" with a tally line for each kind, a
+responsibility's row is tagged as one, and a relevance blocker says it is
+scored over the R requirements, not the P responsibilities.
 
 `start` accepts each brief or candidate-profile ID and version only as a pair.
 Each selected version must already be reviewed. DraftLoop verifies and pins

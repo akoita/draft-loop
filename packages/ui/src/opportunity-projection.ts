@@ -194,7 +194,7 @@ export function projectOpportunityRecord(
   };
 }
 
-/** The brief fields the latest-brief projection reads; it never touches requirement text. */
+/** The brief fields the latest-brief projection reads; text is only compared, never returned. */
 interface LatestBriefRecord {
   /** The service's extraction of this version, when a hosted worker still owes it. */
   readonly extraction?: "pending" | "failed";
@@ -202,13 +202,54 @@ interface LatestBriefRecord {
     readonly id: string;
     readonly version: number;
     readonly status: string;
-    readonly requirements: readonly { readonly priority: string }[];
+    readonly requirements: readonly BriefFact[];
+    readonly responsibilities?: readonly BriefFact[];
   };
 }
 
+/** A requirement or responsibility as the latest-brief projection reads it: id, text, priority. */
+interface BriefFact {
+  readonly id?: string;
+  readonly text?: string;
+  readonly priority?: string;
+}
+
+function comparableText(text: string | undefined): string | undefined {
+  return text?.trim().replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
+}
+
 /**
- * The content-free summary of a workspace's latest brief version: identity, review status and
- * requirement counts. This is what lets setup offer to resume a draft after the app restarts.
+ * How many responsibilities a run checks next to the requirements. A run checks each
+ * responsibility like a requirement, except one whose id or text repeats a requirement, which is
+ * left to that requirement; this counts them the same way, so setup and coverage agree.
+ */
+function checkedResponsibilityCount(
+  requirements: readonly BriefFact[],
+  responsibilities: readonly BriefFact[],
+): number {
+  const seenIds = new Set(requirements.map(({ id }) => id).filter((id) => id !== undefined));
+  const seenTexts = new Set(
+    requirements.map(({ text }) => comparableText(text)).filter((text) => text !== undefined),
+  );
+  let count = 0;
+  for (const { id, text } of responsibilities) {
+    const comparable = comparableText(text);
+    if (
+      (id !== undefined && seenIds.has(id)) ||
+      (comparable !== undefined && seenTexts.has(comparable))
+    ) {
+      continue;
+    }
+    if (id !== undefined) seenIds.add(id);
+    if (comparable !== undefined) seenTexts.add(comparable);
+    count += 1;
+  }
+  return count;
+}
+
+/**
+ * The content-free summary of a workspace's latest brief version: identity, review status,
+ * requirement counts and how many responsibilities a run would check beside them. This is what lets setup offer to resume a draft after the app restarts.
  */
 export function projectLatestOpportunity(
   workspaceId: string,
@@ -223,6 +264,10 @@ export function projectLatestOpportunity(
     requirementCount: brief.requirements.length,
     criticalCount: brief.requirements.filter((requirement) => requirement.priority === "critical")
       .length,
+    responsibilityCount: checkedResponsibilityCount(
+      brief.requirements,
+      brief.responsibilities ?? [],
+    ),
     ...(record.extraction === undefined ? {} : { extraction: record.extraction }),
   };
 }

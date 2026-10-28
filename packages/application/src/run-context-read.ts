@@ -43,11 +43,24 @@ export async function readRunContext(
 export interface RunRequirementText {
   readonly id: string;
   readonly text: string;
+  /**
+   * One of the reviewed brief's requirements, which relevance is scored on, or one of its
+   * responsibilities, which coverage checks beside them. Absent for a run without a reviewed brief.
+   */
+  readonly kind?: "requirement" | "responsibility";
 }
 
 /** The requirements a run's coverage was judged against, in their recorded order. */
 export function runRequirementTexts(
-  context: Pick<ContextSnapshot, "requirements">,
+  context: Pick<ContextSnapshot, "requirements" | "scoredRequirementIds">,
 ): readonly RunRequirementText[] {
-  return context.requirements.map(({ id, text }) => ({ id, text }));
+  const scored =
+    context.scoredRequirementIds === undefined ? undefined : new Set(context.scoredRequirementIds);
+  return context.requirements.map(({ id, text }) => ({
+    id,
+    text,
+    ...(scored === undefined
+      ? {}
+      : { kind: scored.has(id) ? ("requirement" as const) : ("responsibility" as const) }),
+  }));
 }

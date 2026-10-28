@@ -30,6 +30,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
   type ProviderUserSessionRunners,
+  type RunRequirementText,
   readLegacyEvidenceMigration,
   readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
@@ -72,6 +73,7 @@ import {
   runState,
 } from "@draft-loop/review-state";
 import { createApplicationRunRowsReader } from "@draft-loop/review-state/application-runs";
+import { withCoverageKinds } from "@draft-loop/review-state/review-coverage";
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import type { ApplicationRunRowView } from "@draft-loop/ui/application-run-list";
 import {
@@ -514,6 +516,13 @@ function fail(
 
 function overridesPath(root: string): string {
   return join(root, configDirectory, "review-overrides.json");
+}
+
+/** Each requirement's text by id, as the coverage panel and findings name them. */
+function requirementTextMap(
+  requirements: readonly RunRequirementText[],
+): ReadonlyMap<string, string> {
+  return new Map(requirements.map(({ id, text }) => [id, text]));
 }
 
 function sourceProvenancePath(root: string): string {
@@ -2054,13 +2063,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     runId: string,
     capability: BridgeCapability,
   ): Promise<ReadonlyMap<string, string>> {
-    if (service.readRunRequirements === undefined) return new Map();
+    return requirementTextMap(await requirementsForRun(workspace, runId, capability));
+  }
+
+  /** The requirements the run was judged against, with their kinds; empty when unreadable. */
+  async function requirementsForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<readonly RunRequirementText[]> {
+    if (service.readRunRequirements === undefined) return [];
     try {
-      const requirements = await service.readRunRequirements({ root: workspace.root, runId });
-      return new Map((requirements ?? []).map(({ id, text }) => [id, text]));
+      return (await service.readRunRequirements({ root: workspace.root, runId })) ?? [];
     } catch (error) {
       options.onError?.(error, capability);
-      return new Map();
+      return [];
     }
   }
 
@@ -3486,22 +3503,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
     // A started run is the application's new latest; any other action keeps the run on screen.
     const earlierRun = input.action.type === "start" ? null : earlierRunFor(scope, snapshot.runId);
-    const state = reviewState(
-      pairDescriptor,
-      snapshot,
-      await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
-      overrides,
-      exportPath ??
-        (await service.latestExportPath({ root: workspace.root, runId: snapshot.runId })),
-      setup,
-      preflight,
-      backgroundStatus(workspace, snapshot.runId),
-      await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
-      await requirementTextsForRun(workspace, snapshot.runId, "review.dispatch"),
-      await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
-      await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
-      await applicationRunsFor(workspace, scope, "review.dispatch"),
-      providerAuthModeConfiguration,
+    const requirements = await requirementsForRun(workspace, snapshot.runId, "review.dispatch");
+    const state = withCoverageKinds(
+      reviewState(
+        pairDescriptor,
+        snapshot,
+        await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
+        overrides,
+        exportPath ??
+          (await service.latestExportPath({ root: workspace.root, runId: snapshot.runId })),
+        setup,
+        preflight,
+        backgroundStatus(workspace, snapshot.runId),
+        await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
+        requirementTextMap(requirements),
+        await evidenceModeForRun(workspace, snapshot.runId, "review.dispatch"),
+        await authorInputForRun(workspace, snapshot.runId, "review.dispatch"),
+        await applicationRunsFor(workspace, scope, "review.dispatch"),
+        providerAuthModeConfiguration,
+      ),
+      requirements,
     );
     const dispatched = withEarlierRun(
       withRunApplicationPlan(
@@ -5262,21 +5283,25 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               ),
             };
           }
-          const loaded = reviewState(
-            pairDescriptor,
-            snapshot,
-            await independentReviewFor(workspace, snapshot.runId, "review.load"),
-            preferences,
-            await service.latestExportPath({ root: workspace.root, runId: snapshot.runId }),
-            setup,
-            preflight,
-            backgroundStatus(workspace, snapshot.runId),
-            await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
-            await requirementTextsForRun(workspace, snapshot.runId, "review.load"),
-            await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
-            await authorInputForRun(workspace, snapshot.runId, "review.load"),
-            await applicationRunsFor(workspace, scope, "review.load"),
-            providerAuthModeConfiguration,
+          const requirements = await requirementsForRun(workspace, snapshot.runId, "review.load");
+          const loaded = withCoverageKinds(
+            reviewState(
+              pairDescriptor,
+              snapshot,
+              await independentReviewFor(workspace, snapshot.runId, "review.load"),
+              preferences,
+              await service.latestExportPath({ root: workspace.root, runId: snapshot.runId }),
+              setup,
+              preflight,
+              backgroundStatus(workspace, snapshot.runId),
+              await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
+              requirementTextMap(requirements),
+              await evidenceModeForRun(workspace, snapshot.runId, "review.load"),
+              await authorInputForRun(workspace, snapshot.runId, "review.load"),
+              await applicationRunsFor(workspace, scope, "review.load"),
+              providerAuthModeConfiguration,
+            ),
+            requirements,
           );
           return {
             ok: true,

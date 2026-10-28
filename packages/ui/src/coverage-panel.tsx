@@ -1,6 +1,7 @@
 /**
  * The review panel's requirement coverage: one row per requirement with its status, how it was
- * assessed, the critic's rationale, and the draft blocks it cites.
+ * assessed, the critic's rationale, and the draft blocks it cites. A row the run checked from the
+ * brief's responsibilities says so, and the tally counts the two kinds apart.
  *
  * It renders the same application data the CLI `status` command prints. Status is spelled out in
  * words so it never rests on colour alone, and a cited block that exists in the draft becomes a
@@ -126,6 +127,9 @@ export function RequirementCoveragePanel({
                 <strong className="coverage-requirement">
                   {assessment.requirementText ?? assessment.requirementId}
                 </strong>
+                {assessment.kind === "responsibility" ? (
+                  <span className="status-tag coverage-kind">Responsibility</span>
+                ) : null}
                 <span className="status-tag coverage-status">
                   {coverageStatusLabels[assessment.status]}
                 </span>

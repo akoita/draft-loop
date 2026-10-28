@@ -432,6 +432,7 @@ describe("the shared screens' commands over HTTP", () => {
         status: "draft",
         requirementCount: 1,
         criticalCount: 1,
+        responsibilityCount: 1,
       },
     });
     expect(calls[1]?.input).toMatchObject({ path: { briefId: "brief-1" } });
