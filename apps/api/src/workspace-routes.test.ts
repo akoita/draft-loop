@@ -130,7 +130,7 @@ describe("workspace setup", () => {
       authorCompany: "anthropic",
       authorModel: "claude-sonnet-5-5",
       criticCompany: "openai",
-      criticModel: "gpt-6.1-sol",
+      criticModel: "gpt-6.1-terra",
     });
   });
 

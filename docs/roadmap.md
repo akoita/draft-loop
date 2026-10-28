@@ -44,9 +44,9 @@ the default pair is cross-company and provider/model identities are recorded.
 ### Model strategy
 
 Model choice balances capability, cost, and the amount of configuration the
-project can maintain. The current scope is three Anthropic authors and two OpenAI
-critics: Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and
-GPT-6.1 Sol, plus opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
+project can maintain. The current scope is three Anthropic authors and three OpenAI
+critics: Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna,
+GPT-6.1 Terra, and GPT-6.1 Sol, plus opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
 CV quality has not been validated for these choices.
 
 The current curated choices use three tiers:
@@ -54,13 +54,14 @@ The current curated choices use three tiers:
 | Tier | Pair | Purpose |
 | ---- | ---- | ------- |
 | **Economy** | Claude Haiku 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
-| **Balanced** | Claude Sonnet 5.5 + GPT-6.1 Sol | Middle-cost configuration |
+| **Balanced** | Claude Sonnet 5.5 + GPT-6.1 Terra | Middle-cost configuration |
 | **Standard** | Claude Opus 5.5 + GPT-6.1 Sol | Opt-in configuration for more demanding work |
 
 These are configuration choices, not validated CV-quality rankings. Premium
 choices are deferred. Older exact profile versions remain available for
 compatibility with existing selections and saved runs. The Sonnet 5.5 profile,
-the economy author before Haiku 5.5, is reused as the Balanced author.
+the economy author before Haiku 5.5, is reused as the Balanced author. GPT-6.1
+Terra is the Balanced reviewer at half of GPT-6.1 Sol's price (#1887).
 
 Validation has two levels, and each claim applies only to the models that
 produced it:
@@ -2002,6 +2003,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-28 | Made GPT-6.1 Terra the Balanced reviewer in place of GPT-6.1 Sol (#1887). Standard keeps Sol. | Balanced runs get about 10% cheaper: Terra costs half of Sol and is listed for OpenAI EU data residency. Quality stays unvalidated, and no paid run was made for the change. |
 | 2026-10-26 | Admitted client-server sprint 1t: follow-ups from the owner's re-walk ([milestone 53](https://github.com/akoita/draft-loop/milestone/53), #1806–#1808, #1794, #1775, and #1809–#1813 split from #1792 and #1793, rollup #1359). | The re-walk passed, but a hosted run's relevance stayed near 5% because the worker has no embedding model, the web takes a job only as pasted text, and the review screen wastes wide screens and overflows phones. |
 | 2026-10-26 | Admitted client-server sprint 1s: fixes from the owner's staging walk ([milestone 52](https://github.com/akoita/draft-loop/milestone/52), #1782–#1791, rollup #1359), ahead of the validation tests. | Walking staging as a new user, the owner hit a setup form unlike the desktop's, a Modern PDF that looked Classic, coverage errors for words the draft already covered and warnings repeated once per line. The validation tests would hit the same screens. |
 | 2026-10-25 | Admitted client-server sprint 1r: staging clean-up and web polish ([milestone 51](https://github.com/akoita/draft-loop/milestone/51), #1771–#1774, #1760, rollup #1359), ahead of the validation tests on staging. | The live run passed, but staging still holds old knowledge bases that no route could erase, and the walk found screens that hide what the person needs: a base they cannot name, ids in findings, blockers shown only after a refused approval and a profile generation that looks stuck. |

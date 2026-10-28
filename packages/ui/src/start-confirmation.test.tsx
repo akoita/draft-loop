@@ -303,7 +303,7 @@ describe("model profile tier and career profile", () => {
 
   it.each([
     ["economy-anthropic-author", 2, "economy-openai-critic", 1, "Economy"],
-    ["economy-anthropic-author", 1, "standard-openai-critic", 2, "Balanced"],
+    ["economy-anthropic-author", 1, "balanced-openai-critic", 1, "Balanced"],
     ["standard-anthropic-author", 1, "standard-openai-critic", 2, "Standard"],
   ])(
     "names the %s@%i and %s@%i pair as the %s preset, once, with no tier per model",

@@ -89,7 +89,7 @@ describe("hosted model catalog", () => {
     expect(catalog.presets.map(({ id }) => id)).toContain(catalog.defaultPresetId);
     expect(hostedDefaultModelPair()).toEqual({
       author: { company: "anthropic", model: "claude-sonnet-5-5" },
-      critic: { company: "openai", model: "gpt-6.1-sol" },
+      critic: { company: "openai", model: "gpt-6.1-terra" },
     });
   });
 });

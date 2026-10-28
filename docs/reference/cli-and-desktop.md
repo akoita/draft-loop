@@ -28,7 +28,7 @@ controls, or CV quality.
 
 The paid validation cohort remains limited to the required Economy and Standard
 Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in Balanced author (Claude Sonnet 5.5) and the DeepInfra GLM,
+The exact opt-in Balanced pair (Claude Sonnet 5.5 and GPT-6.1 Terra) and the DeepInfra GLM,
 Google Gemini, and Mistral development author profiles are omitted from this cohort; listing a development preset does not add a provider
 to release checks.
 
@@ -48,14 +48,14 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 `start` accepts either one pair preset or both exact `--author-profile` and
 `--critic-profile` references. Each reference uses `profile-id@version` and
 must support its selected role. Economy, balanced, and standard are unvalidated
-opt-in pairs; balanced pairs the Claude Sonnet 5.5 author with the GPT-6.1 Sol
+opt-in pairs; balanced pairs the Claude Sonnet 5.5 author with the GPT-6.1 Terra
 critic, between the cost of economy and standard. The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
 requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
 the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
 `GEMINI_API_KEY`. The separate `development-mistral` opt-in pair uses the Mistral
 Large 4 (public preview) author and the GPT-6 Luna critic; it requires
-`MISTRAL_API_KEY`. The active catalog contains eight unique exact
+`MISTRAL_API_KEY`. The active catalog contains nine unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
 choices. A pair passed to `start` is recorded on that run only. It does not
@@ -1619,7 +1619,7 @@ CLI-specific live availability for these suggestions has not been reverified. Ec
 balanced, and standard remain the curated pair presets, with a separate development GLM
 preset, a separate development Gemini preset, and a separate development
 Mistral preset. The active catalog lists
-Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
+Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Terra, GPT-6.1 Sol, GLM-5.3-Flash
 through DeepInfra, Gemini 3.8 Flash, and Mistral Large 4. GLM's standard uncached
 API rates are $0.15 per million input tokens and $0.50 per million output tokens,
 reviewed 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04; Mistral
@@ -1645,7 +1645,7 @@ regional, and subscription pricing are excluded. Haiku 5.5 sends no
 sampling parameters, thinking budget, or assistant prefill, which the model
 rejects, and the Claude session route reports an unrecognized model with a
 prompt to update the installed `claude` CLI. Sources are the official
-[Anthropic model overview], the [Claude models overview], the [Claude Sonnet 5.5 overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
+[Anthropic model overview], the [Claude models overview], the [Claude Sonnet 5.5 overview], official OpenAI pages for [GPT-6.1 Sol], [GPT-6.1 Terra] and [GPT-6 Luna], and the
 DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
 [Gemini API pricing] and [Gemini models] pages, and the Mistral [Mistral Large 4 model page].
 
@@ -1660,6 +1660,7 @@ not persisted run totals or invoice amounts.
 [Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
 [Claude Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
 [GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+[GPT-6.1 Terra]: https://developers.openai.com/api/docs/models/gpt-6.1-terra
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 [GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
