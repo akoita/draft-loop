@@ -1626,7 +1626,10 @@ reviewed 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04; Mistral
 Large 4's are $1.36 and $4.18, reviewed 2026-10-08, without Mistral's temporary
 launch discount, with the 1M-token context window from Mistral's model page.
 Quality is
-unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain
+unvalidated and account availability unchecked. Each current Anthropic and OpenAI
+profile also lists the reasoning levels it accepts, `low` to `max`, from the
+[Claude effort page] and each OpenAI model page; development profiles and
+historical versions keep their fixed level. Historical profile versions, including premium-tier entries, remain
 resolvable but are not offered as current suggestions or presets; this includes
 the Sonnet 5.5 economy author profile's earlier role as the economy author,
 so saved selections and runs still load. That profile is now offered again as the
@@ -1659,6 +1662,7 @@ not persisted run totals or invoice amounts.
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
 [Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
 [Claude Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+[Claude effort page]: https://platform.claude.com/docs/en/build-with-claude/effort
 [GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
 [GPT-6.1 Terra]: https://developers.openai.com/api/docs/models/gpt-6.1-terra
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
