@@ -59,8 +59,16 @@ describe("start confirmation summary", () => {
         model: "claude-sonnet-4-5",
         tier: null,
         route: "Claude session",
+        reasoning: null,
       },
-      { role: "Critic", company: "OpenAI", model: "gpt-5", tier: null, route: "ChatGPT session" },
+      {
+        role: "Critic",
+        company: "OpenAI",
+        model: "gpt-5",
+        tier: null,
+        route: "ChatGPT session",
+        reasoning: null,
+      },
     ]);
     expect(summary.sameCompanyWarning).toBeNull();
   });
@@ -324,7 +332,9 @@ describe("model profile tier and career profile", () => {
         />,
       );
       expect(html).toContain(`<dt>Preset</dt><dd>${preset}</dd>`);
-      expect(html).toContain("Anthropic · claude-sonnet-4-5 · Claude session");
+      expect(html).toMatch(
+        /Anthropic · claude-sonnet-4-5 · [A-Za-z ]+ reasoning \(default\) · Claude session/u,
+      );
     },
   );
 

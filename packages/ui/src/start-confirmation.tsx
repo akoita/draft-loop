@@ -1,8 +1,12 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { formatLimitDuration } from "./execution-limits.js";
 import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
-import { modelProfilePresets } from "./model-profile-picker-state.js";
-import { presetDisplayName } from "./model-profile-presentation.js";
+import {
+  modelProfileEntryForReference,
+  modelProfilePresets,
+  withModelProfileLevels,
+} from "./model-profile-picker-state.js";
+import { effortDisplayName, presetDisplayName } from "./model-profile-presentation.js";
 import type { ProviderRoute } from "./provider-routes.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import type { StartEvidencePreview } from "./start-evidence-preview.js";
@@ -22,6 +26,8 @@ export interface StartConfirmationModel {
   readonly tier: string | null;
   /** How the call is reached and billed, or `null` when the host did not say. */
   readonly route: string | null;
+  /** The reasoning level the run will use, such as "High reasoning", or `null` when unknown. */
+  readonly reasoning: string | null;
 }
 
 export interface StartConfirmationLine {
@@ -56,6 +62,8 @@ export type StartCandidateProfile = Pick<CandidateProfileSelection, "version">;
 export interface StartModelProfile {
   readonly id: string;
   readonly version?: number;
+  /** A chosen reasoning level; absent uses the profile's own. */
+  readonly effort?: string | undefined;
 }
 
 export interface StartModelProfiles {
@@ -242,13 +250,36 @@ function changedPairNote(state: DesktopReviewState): string | null {
   return `The last run on this application used ${latest.authorModel} → ${latest.criticModel}.`;
 }
 
+/**
+ * The level a role will run at: the chosen one, else its profile's own, as "High reasoning" or
+ * "Low reasoning (default)"; `null` without a known profile.
+ */
+export function startReasoningLevel(
+  profile: StartModelProfile | undefined,
+  role: "author" | "critic",
+): string | null {
+  if (profile === undefined) return null;
+  if (profile.effort !== undefined) return `${effortDisplayName(profile.effort)} reasoning`;
+  if (profile.version === undefined) return null;
+  const own = modelProfileEntryForReference({ id: profile.id, version: profile.version }, role)
+    ?.profile.runtime.effort;
+  return own === undefined ? null : `${effortDisplayName(own)} reasoning (default)`;
+}
+
 /** Everything the start confirmation shows, worked out from the review state alone. */
 export function startConfirmationSummary(
   state: DesktopReviewState,
   context: StartConfirmationContext,
 ): StartConfirmationSummary {
   const { author, critic } = state.providerTransmissionPreflight;
-  const preset = startModelPreset(context.modelProfiles);
+  const presetName = startModelPreset(context.modelProfiles);
+  const preset =
+    presetName === null || context.modelProfiles === undefined
+      ? presetName
+      : withModelProfileLevels(presetName, {
+          author: context.modelProfiles.author ?? {},
+          critic: context.modelProfiles.critic ?? {},
+        });
   const model = (
     role: "Author" | "Critic",
     identity: { readonly company: string; readonly model: string },
@@ -263,6 +294,10 @@ export function startConfirmationSummary(
           )
         : null,
     route: routeLabel(state, identity.company),
+    reasoning: startReasoningLevel(
+      role === "Author" ? context.modelProfiles?.author : context.modelProfiles?.critic,
+      role === "Author" ? "author" : "critic",
+    ),
   });
   const sameCompany = author.company.trim().toLowerCase() === critic.company.trim().toLowerCase();
   const inputs: StartConfirmationLine[] = [
@@ -393,7 +428,7 @@ export function StartConfirmation({
               <div key={model.role}>
                 <dt>{model.role}</dt>
                 <dd>
-                  {[model.company, model.model, model.tier, model.route]
+                  {[model.company, model.model, model.tier, model.reasoning, model.route]
                     .filter((part): part is string => part !== null)
                     .join(" · ")}
                 </dd>

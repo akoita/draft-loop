@@ -24,7 +24,7 @@ import {
   type RunWritingPolicyProjection,
   roundLimitRecoveryRequired,
 } from "./model.js";
-import { modelDisplayName } from "./model-profile-presentation.js";
+import { effortDisplayName, modelDisplayName } from "./model-profile-presentation.js";
 import { useModalFocusTrap } from "./review.js";
 import type { FooterBlocker } from "./review-footer.js";
 import { RunTimeline } from "./review-panels.js";
@@ -59,6 +59,9 @@ export function shortModelName(modelId: string): string {
 export interface RecordedRunModels {
   readonly author: string;
   readonly critic: string;
+  /** The reasoning level each role ran at, when the run used model profiles. */
+  readonly authorEffort?: string;
+  readonly criticEffort?: string;
 }
 
 /**
@@ -71,7 +74,12 @@ export function recordedRunModels(
 ): RecordedRunModels | null {
   const row = state.applicationRuns?.find((run) => run.runId === state.runId);
   if (row === undefined || (row.authorModel === "" && row.criticModel === "")) return null;
-  return { author: row.authorModel, critic: row.criticModel };
+  return {
+    author: row.authorModel,
+    critic: row.criticModel,
+    ...(row.authorEffort === undefined ? {} : { authorEffort: row.authorEffort }),
+    ...(row.criticEffort === undefined ? {} : { criticEffort: row.criticEffort }),
+  };
 }
 
 const modelsNotRecorded = "models not recorded";
@@ -277,6 +285,9 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
         <strong>
           {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.author)}
         </strong>
+        {recorded?.authorEffort === undefined ? null : (
+          <span>{effortDisplayName(recorded.authorEffort)} reasoning</span>
+        )}
         {state.providerExposure.independentReview === null ? null : (
           <span>claimed lineage {state.providerExposure.independentReview.authorLineage}</span>
         )}
@@ -286,6 +297,9 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
         <strong>
           {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.critic)}
         </strong>
+        {recorded?.criticEffort === undefined ? null : (
+          <span>{effortDisplayName(recorded.criticEffort)} reasoning</span>
+        )}
         {state.providerExposure.independentReview === null ? null : (
           <span>claimed lineage {state.providerExposure.independentReview.criticLineage}</span>
         )}

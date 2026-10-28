@@ -524,6 +524,13 @@ the reason, and has at most one primary action:
    refuses a start on a draft brief that did not ask for the raw job
    description.
 
+The start confirmation names each role's reasoning level, such as "High
+reasoning" or "Low reasoning (default)", and the preset with any changed level,
+such as "Balanced · writer high". The token-cost scenario in the model editor
+notes a level above the default, because that role then writes more output
+tokens than the scenario assumes; it shows no multiplier until real runs have
+measured one.
+
 The start confirmation also offers **Length**: **Writing policy** (the
 default, keeping the policy's page target), **One page** or **Two pages**.
 Choosing one page or two saves it as the writing policy's page target, as a new
@@ -634,7 +641,9 @@ pinned under it.
   the application plan, the event timeline once the run is not executing, and **Start a new review**.
   Both name the models the run on screen recorded, not the pair set for new
   runs, and say "models not recorded" when it recorded none. When the pair for
-  new runs differs, the drawer adds "New runs use: author → critic".
+  new runs differs, the drawer adds "New runs use: author → critic". A run that
+  used model profiles also shows each role's recorded reasoning level, such as
+  "High reasoning".
 - **Application plan.** Before the first draft, a run on the current author
   prompt plans the CV: the job's central themes in rank order, what the CV
   leads with, what it drops or compresses, and **Gaps**, the central themes your
