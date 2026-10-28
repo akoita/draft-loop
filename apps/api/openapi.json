@@ -1484,6 +1484,17 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "effort": {
+                        "description": "The chosen reasoning level; absent uses the profile's own level.",
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "medium",
+                          "high",
+                          "xhigh",
+                          "max"
+                        ]
                       }
                     },
                     "required": [
@@ -1501,6 +1512,17 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "effort": {
+                        "description": "The chosen reasoning level; absent uses the profile's own level.",
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "medium",
+                          "high",
+                          "xhigh",
+                          "max"
+                        ]
                       }
                     },
                     "required": [
@@ -3539,6 +3561,32 @@
             "type": "string",
             "const": "unvalidated"
           },
+          "defaultEffort": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "provider-default"
+            ],
+            "description": "The reasoning level a run uses when no level is chosen."
+          },
+          "effortLevels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            "description": "The reasoning levels a run may choose; empty when only the default is offered."
+          },
           "pricing": {
             "type": "object",
             "properties": {
@@ -3592,6 +3640,8 @@
           "tier",
           "roles",
           "qualityStatus",
+          "defaultEffort",
+          "effortLevels",
           "pricing"
         ]
       },
@@ -6681,6 +6731,17 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "effort": {
+                        "description": "The chosen reasoning level; absent uses the profile's own level.",
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "medium",
+                          "high",
+                          "xhigh",
+                          "max"
+                        ]
                       }
                     },
                     "required": [
@@ -6699,6 +6760,17 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "effort": {
+                        "description": "The chosen reasoning level; absent uses the profile's own level.",
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "medium",
+                          "high",
+                          "xhigh",
+                          "max"
+                        ]
                       }
                     },
                     "required": [
@@ -8097,6 +8169,32 @@
             "type": "string",
             "const": "unvalidated"
           },
+          "defaultEffort": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "provider-default"
+            ],
+            "description": "The reasoning level a run uses when no level is chosen."
+          },
+          "effortLevels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            "description": "The reasoning levels a run may choose; empty when only the default is offered."
+          },
           "pricing": {
             "type": "object",
             "properties": {
@@ -8151,6 +8249,8 @@
           "tier",
           "roles",
           "qualityStatus",
+          "defaultEffort",
+          "effortLevels",
           "pricing"
         ],
         "additionalProperties": false
@@ -12317,6 +12417,17 @@
                             "type": "integer",
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "effort": {
+                            "description": "A reasoning level the profile allows; without it the profile's own level.",
+                            "type": "string",
+                            "enum": [
+                              "low",
+                              "medium",
+                              "high",
+                              "xhigh",
+                              "max"
+                            ]
                           }
                         },
                         "required": [
@@ -12336,6 +12447,17 @@
                             "type": "integer",
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "effort": {
+                            "description": "A reasoning level the profile allows; without it the profile's own level.",
+                            "type": "string",
+                            "enum": [
+                              "low",
+                              "medium",
+                              "high",
+                              "xhigh",
+                              "max"
+                            ]
                           }
                         },
                         "required": [
@@ -13521,6 +13643,17 @@
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "effort": {
+                                "description": "A reasoning level the profile allows; without it the profile's own level.",
+                                "type": "string",
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high",
+                                  "xhigh",
+                                  "max"
+                                ]
                               }
                             },
                             "required": [
@@ -13541,6 +13674,17 @@
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "effort": {
+                                "description": "A reasoning level the profile allows; without it the profile's own level.",
+                                "type": "string",
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high",
+                                  "xhigh",
+                                  "max"
+                                ]
                               }
                             },
                             "required": [

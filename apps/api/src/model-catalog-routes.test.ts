@@ -15,6 +15,8 @@ interface Catalog {
     readonly company: string;
     readonly model: string;
     readonly roles: readonly string[];
+    readonly defaultEffort: string;
+    readonly effortLevels: readonly string[];
   }[];
   readonly presets: readonly {
     readonly id: string;
@@ -91,5 +93,21 @@ describe("hosted model catalog", () => {
       author: { company: "anthropic", model: "claude-sonnet-5-5" },
       critic: { company: "openai", model: "gpt-6.1-terra" },
     });
+  });
+
+  it("lists each model's default reasoning level and the levels a run may choose", async () => {
+    const catalog = await readCatalog();
+    const terra = catalog.models.find(({ model }) => model === "gpt-6.1-terra");
+
+    expect(terra).toMatchObject({
+      defaultEffort: "low",
+      effortLevels: ["low", "medium", "high", "xhigh", "max"],
+    });
+    for (const model of catalog.models) {
+      expect(model.effortLevels).not.toContain("provider-default");
+      if (model.defaultEffort !== "provider-default") {
+        expect(model.effortLevels).toContain(model.defaultEffort);
+      }
+    }
   });
 });

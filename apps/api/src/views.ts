@@ -3,6 +3,7 @@ import {
   runStepRoutes,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
+import { choosableModelProfileEfforts } from "@draft-loop/application/model-profile-catalog";
 import { type RunSnapshot, runFailureStages } from "@draft-loop/orchestrator";
 import { opportunityBriefSchema } from "@draft-loop/schemas";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
@@ -75,6 +76,15 @@ export function opportunityView(
   return { workspaceId: record.workspaceId, checksum: record.checksum, brief: record.brief };
 }
 
+const profileReferenceViewSchema = z.object({
+  id: z.string(),
+  version: z.number().int(),
+  effort: z
+    .enum(choosableModelProfileEfforts)
+    .optional()
+    .describe("The chosen reasoning level; absent uses the profile's own level."),
+});
+
 export const applicationViewSchema = z
   .object({
     id: z.string(),
@@ -110,8 +120,8 @@ export const applicationViewSchema = z
     exportCount: z.number().int(),
     modelProfiles: z
       .object({
-        author: z.object({ id: z.string(), version: z.number().int() }),
-        critic: z.object({ id: z.string(), version: z.number().int() }),
+        author: profileReferenceViewSchema,
+        critic: profileReferenceViewSchema,
       })
       .nullable()
       .describe("The application's own model pair; null uses the workspace's."),

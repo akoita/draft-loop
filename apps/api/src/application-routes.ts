@@ -5,6 +5,7 @@ import {
   runBudgetCeilingMessage,
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
+import { choosableModelProfileEfforts } from "@draft-loop/application/model-profile-catalog";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { opportunityDraftPatchSchema } from "@draft-loop/schemas/opportunity-draft-patch";
@@ -180,6 +181,10 @@ const versionQuery = z.strictObject({ version: z.coerce.number().int().positive(
 const modelProfileReference = z.strictObject({
   id: identifierSchema,
   version: z.number().int().positive(),
+  effort: z
+    .enum(choosableModelProfileEfforts)
+    .optional()
+    .describe("A reasoning level the profile allows; without it the profile's own level."),
 });
 
 const beginRunBody = z.strictObject({

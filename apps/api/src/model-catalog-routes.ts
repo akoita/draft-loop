@@ -1,3 +1,7 @@
+import {
+  choosableModelProfileEfforts,
+  isChoosableModelProfileEffort,
+} from "@draft-loop/application/model-profile-catalog";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -15,6 +19,12 @@ const catalogModelSchema = z
     tier: z.enum(["economy", "standard", "premium"]),
     roles: z.array(z.enum(["author", "critic"])),
     qualityStatus: z.literal("unvalidated"),
+    defaultEffort: z
+      .enum([...choosableModelProfileEfforts, "provider-default"])
+      .describe("The reasoning level a run uses when no level is chosen."),
+    effortLevels: z
+      .array(z.enum(choosableModelProfileEfforts))
+      .describe("The reasoning levels a run may choose; empty when only the default is offered."),
     pricing: z
       .object({
         inputUsdPerMillion: z.number(),
@@ -64,7 +74,7 @@ export function registerModelCatalogRoutes(parent: FastifyInstance): void {
     async () => {
       const catalog = hostedModelCatalog();
       return {
-        models: catalog.models.flatMap(({ profile, qualityStatus, apiPricing }) => {
+        models: catalog.models.flatMap(({ profile, qualityStatus, apiPricing, effortLevels }) => {
           const company: string = profile.provider;
           if (!isHostedCompany(company)) return [];
           return [
@@ -76,6 +86,8 @@ export function registerModelCatalogRoutes(parent: FastifyInstance): void {
               tier: profile.tier,
               roles: [...profile.roles],
               qualityStatus,
+              defaultEffort: profile.runtime.effort,
+              effortLevels: effortLevels.filter(isChoosableModelProfileEffort),
               pricing: {
                 inputUsdPerMillion: apiPricing.inputUsdPerMillion,
                 outputUsdPerMillion: apiPricing.outputUsdPerMillion,

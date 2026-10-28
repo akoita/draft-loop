@@ -4,6 +4,7 @@ import {
   CliUserError,
   maximumChosenRunReasonLength,
 } from "@draft-loop/application";
+import { choosableModelProfileEfforts } from "@draft-loop/application/model-profile-catalog";
 import {
   applicationIdSchema,
   applicationNameSchema,
@@ -70,6 +71,10 @@ const updateApplicationBody = z
 const modelProfileReference = z.strictObject({
   id: z.string().trim().min(1).max(200),
   version: z.number().int().positive(),
+  effort: z
+    .enum(choosableModelProfileEfforts)
+    .optional()
+    .describe("A reasoning level the profile allows; without it the profile's own level."),
 });
 const setModelsBody = z.strictObject({
   modelProfiles: z

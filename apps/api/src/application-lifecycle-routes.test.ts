@@ -1,5 +1,6 @@
 import type { ApplicationService, ApplicationView } from "@draft-loop/application";
 import { CliUserError } from "@draft-loop/application";
+import type { ApplicationModelProfiles } from "@draft-loop/schemas/application";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -197,6 +198,41 @@ describe("application lifecycle", () => {
     expect(set.json().modelProfiles).toEqual(pair);
     expect(cleared.json().modelProfiles).toBeNull();
     expect(refused.statusCode).toBe(422);
+  });
+
+  it("carries a chosen reasoning level both ways and refuses an unknown level", async () => {
+    const pair = {
+      author: { id: "standard-anthropic-author", version: 1, effort: "high" as const },
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+    const setApplicationModels = vi.fn(
+      async ({ modelProfiles }: { readonly modelProfiles: ApplicationModelProfiles | null }) => ({
+        ...created,
+        modelProfiles,
+      }),
+    );
+    await build({ getApplication: async () => created, setApplicationModels });
+
+    const set = await app.inject({
+      method: "PUT",
+      url: `${base}/app-platform/models`,
+      headers: { authorization },
+      payload: { modelProfiles: pair },
+    });
+    const unknown = await app.inject({
+      method: "PUT",
+      url: `${base}/app-platform/models`,
+      headers: { authorization },
+      payload: { modelProfiles: { ...pair, critic: { ...pair.critic, effort: "none" } } },
+    });
+
+    expect(set.statusCode).toBe(200);
+    expect(setApplicationModels).toHaveBeenCalledWith(
+      expect.objectContaining({ modelProfiles: pair }),
+    );
+    expect(set.json().modelProfiles).toEqual(pair);
+    expect(unknown.statusCode).toBe(400);
+    expect(setApplicationModels).toHaveBeenCalledTimes(1);
   });
 
   it("chooses an application's run with an optional reason", async () => {
