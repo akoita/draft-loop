@@ -76,6 +76,7 @@ import {
   type CandidateDirection,
   normalizeCandidateDirectionText,
 } from "./candidate-direction.js";
+import { applyCandidateEdits, type CandidateBlockEdit } from "./candidate-edits.js";
 import { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 import {
   assessConsensus,
@@ -127,6 +128,12 @@ export {
   needsApplicationPlan,
 } from "./application-plan.js";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
+export {
+  applyCandidateEdits,
+  CANDIDATE_EDIT_RATIONALE,
+  CANDIDATE_EDIT_VERSION_SUFFIX,
+  type CandidateBlockEdit,
+} from "./candidate-edits.js";
 export { COVERAGE_BLOCK_DROPPED_CODE, droppedCoverageFindings } from "./dropped-coverage.js";
 export {
   type AppliedRevisionEdit,
@@ -506,6 +513,11 @@ export interface ApproveOptions {
    * ignored when the checks pass and required to approve when they fail.
    */
   readonly readinessOverrideRationale?: string;
+  /**
+   * The candidate's review edits, latest per block. When any changes a block's text, approval
+   * binds a new version carrying them and re-runs the final checks on it (#1899).
+   */
+  readonly candidateEdits?: readonly CandidateBlockEdit[];
 }
 
 export interface OrchestrationEngine {
@@ -1595,7 +1607,8 @@ export function createOrchestrationEngine(
         : [],
     );
     // The artifact only changes when the round advances, so the latest critic
-    // execution of the current round reviewed exactly this artifact.
+    // execution of the current round reviewed exactly this artifact, or the parent
+    // of the version the candidate's review edits make at approval (#1899).
     const coverageAssessments = currentCritiques.at(-1)?.coverageJudgement?.assessments;
     const latestRevisionTrace = snapshot.adjudicationRuntime?.trace ?? undefined;
     return buildApplicationReadinessStoppingDecision({
@@ -2572,7 +2585,21 @@ export function createOrchestrationEngine(
       snapshot.artifact.createdAt,
       snapshot.adjudicationRuntime?.trace?.createdAt,
     );
-    const readinessDecision = currentReadinessDecision(snapshot, snapshot.artifact, context, now);
+    const edited = applyCandidateEdits(
+      snapshot.artifact,
+      approveOptions?.candidateEdits ?? [],
+      now,
+    );
+    const approvedVersion = edited ?? snapshot.artifact;
+    const readinessDecision = currentReadinessDecision(snapshot, approvedVersion, context, now);
+    if (edited !== null && !readinessDecision.applicationReady && overrideRationale === undefined)
+      // The decision judges a version that exists only once approved, so nothing is saved.
+      throw new RunTransitionError(
+        `The edited artifact is not application-ready (${readinessDecision.blockers
+          .map((blocker) => blocker.code)
+          .join(", ")}).`,
+        "readiness_blocked",
+      );
     const reviewed = {
       ...settledForTransition(snapshot, now),
       readinessDecision,
@@ -2593,8 +2620,9 @@ export function createOrchestrationEngine(
       state: "approved" as const,
       approval: "approved" as const,
       currentStep: null,
+      artifact: approvedVersion,
       approvedArtifact: {
-        ...approvedArtifactBinding(snapshot.artifact),
+        ...approvedArtifactBinding(approvedVersion),
         ...(readinessDecision.applicationReady || overrideRationale === undefined
           ? {}
           : {
