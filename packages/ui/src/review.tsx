@@ -23,6 +23,7 @@ import { approvalReadinessForArtifact, approvalReadinessGuidance } from "./appro
 import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
+import { savingEditsBlocker, useDraftEditBuffer } from "./draft-edit-buffer.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
 import { DraftWidthHandle, draftWidthStyle, useDraftWidth } from "./draft-width.js";
 import {
@@ -104,6 +105,7 @@ import {
   canStartNewReview,
   inProgressStatus,
   notIndexedRetrievalText,
+  reviewFinished,
   reviewInProgress,
   uncritiquedStatus,
 } from "./review-run-status.js";
@@ -1028,6 +1030,28 @@ export function ReviewWorkspace({
   // Which draft lines this reviewer changed in this session. Session-local UI
   // state: it says what a signature would cover, and is not part of the run.
   const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Edits apply at approval, so the draft locks once it is approved, and while a round runs the
+  // next version would replace them (#1925).
+  const draftEditable = !readOnly && !reviewFinished(state) && !reviewInProgress(state);
+  const savedBlockText = useMemo(
+    () =>
+      new Map(
+        state.artifact.sections.flatMap((section) =>
+          section.blocks.map((block) => [block.id, block.text] as const),
+        ),
+      ),
+    [state.artifact],
+  );
+  const saveBlockEdit = useCallback(
+    (blockId: string, text: string) => onAction({ type: "edit-block", blockId, text }),
+    [onAction],
+  );
+  const draftEdits = useDraftEditBuffer({
+    savedText: savedBlockText,
+    editable: draftEditable,
+    busy: pendingReviewAction !== null,
+    save: saveBlockEdit,
+  });
   // Settled known gaps are the override for the word-match checks they fail (#1903), and edits
   // change the version the host checks again at approval (#1902), so neither waits for a
   // separate override.
@@ -1041,7 +1065,8 @@ export function ReviewWorkspace({
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
     blockingFindings.length === 0 &&
-    readinessSettled;
+    readinessSettled &&
+    !draftEdits.unsaved;
   // Final CV checks are heuristics, so a person who has reviewed the draft can
   // approve past them with a recorded reason, as with blocking findings.
   const canOverrideReadiness =
@@ -1051,7 +1076,8 @@ export function ReviewWorkspace({
     state.reviewComplete &&
     blockingFindings.length === 0 &&
     approvalReadiness?.applicationReady === false &&
-    knownGapOverride === null;
+    knownGapOverride === null &&
+    !draftEdits.unsaved;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
@@ -1195,7 +1221,7 @@ export function ReviewWorkspace({
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
   const showChanges = hasPreviousArtifact && draftView === "changes";
-  const draftPaneMode = `${showChanges ? "redline · " : ""}${readOnly ? "read-only" : "editable"}`;
+  const draftPaneMode = `${showChanges ? "redline · " : ""}${draftEditable ? "editable" : "read-only"}`;
   const compareVisible = hasPreviousArtifact && compareOpen;
   const [compareSplit, setCompareSplit] = useCompareSplit();
   const sidePanel = useSidePanelWidth();
@@ -2121,7 +2147,7 @@ export function ReviewWorkspace({
           <BlockRedline
             previousText={pair.previousText}
             showChanges={showChanges}
-            text={block.text}
+            text={draftEdits.text(block.id, block.text)}
           />
         </div>
         {/* The whole line is the affordance. A real control carries the keyboard and pointer
@@ -2132,7 +2158,7 @@ export function ReviewWorkspace({
           type="button"
           aria-label={`Edit ${sectionTitle} text`}
           title={`Edit ${sectionTitle} text`}
-          hidden={isEditing || readOnly}
+          hidden={isEditing || !draftEditable}
           onClick={openLine}
           onFocus={openLine}
           onMouseEnter={highlightClaim}
@@ -2146,7 +2172,7 @@ export function ReviewWorkspace({
         <textarea
           aria-label={`Edit ${sectionTitle}`}
           hidden={!isEditing}
-          value={block.text}
+          value={draftEdits.text(block.id, block.text)}
           // One row is the floor; the layout effect grows it to its text.
           rows={1}
           ref={(element) => {
@@ -2157,6 +2183,7 @@ export function ReviewWorkspace({
           onBlur={() => {
             setLinkedClaimId(null);
             setEditingBlockId((current) => (current === block.id ? null : current));
+            draftEdits.settle(block.id);
           }}
           onMouseEnter={highlightClaim}
           onMouseLeave={() => setLinkedClaimId(null)}
@@ -2164,11 +2191,7 @@ export function ReviewWorkspace({
             setEditedBlockIds((current) =>
               current.has(block.id) ? current : new Set(current).add(block.id),
             );
-            onAction({
-              type: "edit-block",
-              blockId: block.id,
-              text: event.target.value,
-            });
+            draftEdits.change(block.id, event.target.value);
           }}
         />
       </div>
@@ -3123,7 +3146,11 @@ export function ReviewWorkspace({
                   ? "This draft is approved and exported as it is."
                   : readOnly
                     ? "This run is read-only."
-                    : "Edits you make here are applied when you approve; the critic has not reviewed them."}
+                    : state.approval === "approved"
+                      ? "This draft is approved; edits are closed."
+                      : !draftEditable
+                        ? "You can edit the draft once this round finishes."
+                        : "Edits you make here are applied when you approve; the critic has not reviewed them."}
               </span>
             </div>
 
@@ -3850,7 +3877,13 @@ export function ReviewWorkspace({
           {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
               however long the queue above them grows. */}
           <ReviewFooter
-            blocker={comparing ? comparingRunsBlocker : gateBlocker}
+            blocker={
+              comparing
+                ? comparingRunsBlocker
+                : draftEdits.unsaved && draftEditable
+                  ? savingEditsBlocker
+                  : gateBlocker
+            }
             readOnly={!approvalOpen}
             runningRound={
               comparing

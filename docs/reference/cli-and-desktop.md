@@ -1292,6 +1292,10 @@ next version with your edits, runs the final checks again on it, and exports
 that version; the critic has not reviewed your wording. Edited lines keep an
 **edited** mark in the review, before and after approval.
 
+Each line saves once you pause typing or leave it, and **Approve** waits while
+an edit is saving. Edit before you approve: the draft is read-only while a
+round runs and once it is approved (#1925).
+
 With edits, **Approve** stays available even when the final checks failed on
 the reviewed version, since your edits may fix them: replacing the header's
 placeholders such as `[Your name]`, which block approval (#1902), is the usual
