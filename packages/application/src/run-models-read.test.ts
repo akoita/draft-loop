@@ -40,6 +40,24 @@ describe("run models reader", () => {
     await expect(readRunModels({ root })).resolves.toEqual(models);
   });
 
+  it("reads the reasoning level each role ran at when the run used profiles", async () => {
+    const root = await workspace();
+    const service = createApplicationService(createLocalApplicationDriver());
+    const snapshot = await service.start(
+      {
+        root,
+        modelProfiles: {
+          author: { id: "economy-anthropic-author", version: 2, effort: "high" },
+          critic: { id: "economy-openai-critic", version: 1 },
+        },
+      },
+      { write: () => undefined },
+    );
+    const models = await service.readRunModels?.({ root, runId: snapshot.runId });
+    expect(models?.author.effort).toBe("high");
+    expect(models?.critic.effort).toBe("low");
+  });
+
   it("reads nothing for an unknown run or a workspace without history", async () => {
     const root = await workspace();
     await expect(readRunModels({ root, runId: "run-does-not-exist" })).resolves.toBeUndefined();

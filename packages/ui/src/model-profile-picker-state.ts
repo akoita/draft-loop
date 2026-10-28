@@ -274,6 +274,32 @@ export function reviewActionWithModelProfiles(
   return action.type === "start" && refs !== null ? { ...action, modelProfiles: refs } : action;
 }
 
+/** The reasoning level each role chose, if any. */
+export interface ChosenModelProfileLevels {
+  readonly author: { readonly effort?: string | undefined };
+  readonly critic: { readonly effort?: string | undefined };
+}
+
+const effortOrder: readonly string[] = ["low", "medium", "high", "xhigh", "max"];
+
+/**
+ * Whether a chosen level is above the profile's own, so the role writes more output tokens than a
+ * scenario at the default level assumes. A provider-default profile has no known order.
+ */
+export function modelProfileEffortRaised(
+  reference: {
+    readonly id: string;
+    readonly version: number;
+    readonly effort?: string | undefined;
+  },
+  role: "author" | "critic",
+): boolean {
+  if (reference.effort === undefined) return false;
+  const own = modelProfileEntryForReference(reference, role)?.profile.runtime.effort;
+  const ownRank = own === undefined ? -1 : effortOrder.indexOf(own);
+  return ownRank >= 0 && effortOrder.indexOf(reference.effort) > ownRank;
+}
+
 /** Whether two pairs name the same exact profiles at the same chosen reasoning levels. */
 export function modelProfileSelectionsEqual(
   left: ModelProfileReferences | null,
@@ -306,7 +332,7 @@ export function modelProfileEffortChoices(
  * The chosen levels that differ from each profile's own, such as "writer high", so a preset's name
  * still says where the pair started; empty when both roles use their profile's level.
  */
-export function modelProfileLevelSummary(references: ModelProfileReferences): string {
+export function modelProfileLevelSummary(references: ChosenModelProfileLevels): string {
   const parts = (["author", "critic"] as const).flatMap((role) => {
     const effort = references[role].effort;
     if (effort === undefined) return [];
@@ -318,7 +344,7 @@ export function modelProfileLevelSummary(references: ModelProfileReferences): st
 }
 
 /** A pair's name with its chosen levels, such as "Balanced · writer high". */
-export function withModelProfileLevels(name: string, references: ModelProfileReferences): string {
+export function withModelProfileLevels(name: string, references: ChosenModelProfileLevels): string {
   const levels = modelProfileLevelSummary(references);
   return levels === "" ? name : `${name} · ${levels}`;
 }

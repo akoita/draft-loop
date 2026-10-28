@@ -348,7 +348,7 @@ describe("review state", () => {
       readRunReview: async () => review,
       readRunRequirements: async () => [],
       readRunModels: async () => ({
-        author: { company: "anthropic", modelId: "synthetic-author" },
+        author: { company: "anthropic", modelId: "synthetic-author", effort: "high" },
         critic: { company: "openai", modelId: "synthetic-critic" },
       }),
       readRunEvidenceMode: async () => ({
@@ -373,6 +373,7 @@ describe("review state", () => {
         runId: "run-1",
         authorModel: "synthetic-author",
         criticModel: "synthetic-critic",
+        authorEffort: "high",
         latest: true,
       }),
       expect.objectContaining({ runId: "run-0", state: "stopped", latest: false, chosen: true }),

@@ -7,6 +7,7 @@
  * The runtime key list is bound to the interface, so adding a field to one without the other is
  * a compile error rather than a validator that silently rejects real payloads.
  */
+import { type ModelProfileEffort, modelProfileEfforts } from "@draft-loop/domain/model-profile";
 
 export interface ApplicationRunRowView {
   readonly runId: string;
@@ -15,6 +16,9 @@ export interface ApplicationRunRowView {
   readonly authorModel: string;
   /** The critic's model id, or an empty string when the run recorded no models. */
   readonly criticModel: string;
+  /** The reasoning level the author ran at, when the run used a model profile. */
+  readonly authorEffort?: ModelProfileEffort;
+  readonly criticEffort?: ModelProfileEffort;
   readonly round: number;
   readonly state: string;
   /** Mean of the latest readiness evaluation's dimension scores, 0 to 1; absent without one. */
@@ -38,6 +42,8 @@ export const applicationRunRowKeys = exactKeys<ApplicationRunRowView>()([
   "startedAt",
   "authorModel",
   "criticModel",
+  "authorEffort",
+  "criticEffort",
   "round",
   "state",
   "score",
@@ -70,6 +76,10 @@ function score(value: unknown): number | undefined {
     : undefined;
 }
 
+function effort(value: unknown): ModelProfileEffort | undefined {
+  return modelProfileEfforts.find((level) => level === value);
+}
+
 function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
@@ -85,6 +95,8 @@ function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
   const round = count(raw.round);
   const state = text(raw.state);
   const rowScore = raw.score === undefined ? undefined : score(raw.score);
+  const authorEffort = effort(raw.authorEffort);
+  const criticEffort = effort(raw.criticEffort);
   if (
     runId === undefined ||
     startedAt === undefined ||
@@ -93,6 +105,8 @@ function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
     round === undefined ||
     state === undefined ||
     (raw.score !== undefined && rowScore === undefined) ||
+    (raw.authorEffort !== undefined && authorEffort === undefined) ||
+    (raw.criticEffort !== undefined && criticEffort === undefined) ||
     typeof raw.latest !== "boolean" ||
     (raw.chosen !== undefined && typeof raw.chosen !== "boolean")
   ) {
@@ -103,6 +117,8 @@ function normalizeRow(value: unknown): ApplicationRunRowView | undefined {
     startedAt,
     authorModel,
     criticModel,
+    ...(authorEffort === undefined ? {} : { authorEffort }),
+    ...(criticEffort === undefined ? {} : { criticEffort }),
     round,
     state,
     ...(rowScore === undefined ? {} : { score: rowScore }),

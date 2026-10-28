@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import type { ModelProfileEffort } from "@draft-loop/domain/model-profile";
 
 import type { StatusCommand } from "./index.js";
 import { readWorkspace } from "./local.js";
@@ -9,6 +10,8 @@ import { readRunContext } from "./run-context-read.js";
 export interface RunModelIdentity {
   readonly company: string;
   readonly modelId: string;
+  /** The reasoning level the run used, when it ran with a model profile. */
+  readonly effort?: ModelProfileEffort;
 }
 
 /** The author and critic models a run was configured with, read from its context snapshot. */
@@ -31,8 +34,10 @@ export async function readRunModels(command: StatusCommand): Promise<RunModels |
   });
   if (context === undefined) return undefined;
   const { author, critic } = context.modelConfiguration;
-  return {
-    author: { company: author.company, modelId: author.modelId },
-    critic: { company: critic.company, modelId: critic.modelId },
+  const identity = (side: typeof author): RunModelIdentity => {
+    const effort = side.profile?.runtime.effort;
+    const model = { company: side.company, modelId: side.modelId };
+    return effort === undefined ? model : { ...model, effort };
   };
+  return { author: identity(author), critic: identity(critic) };
 }

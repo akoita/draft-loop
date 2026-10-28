@@ -74,6 +74,8 @@ export function createApplicationRunRowsReader(
       startedAt: snapshot.startedAt,
       authorModel: (runModels?.author.modelId ?? "").slice(0, maximumModelLength),
       criticModel: (runModels?.critic.modelId ?? "").slice(0, maximumModelLength),
+      ...(runModels?.author.effort === undefined ? {} : { authorEffort: runModels.author.effort }),
+      ...(runModels?.critic.effort === undefined ? {} : { criticEffort: runModels.critic.effort }),
       round: snapshot.round,
       state: snapshot.state,
       ...(score === undefined ? {} : { score }),

@@ -12,6 +12,7 @@ import type {
   RunProviderAuthModeConfiguration,
 } from "@draft-loop/application/model-profile-selection";
 import { useMemo, useState } from "react";
+import { modelProfileEffortRaised } from "./model-profile-picker-state.js";
 
 interface ModelProfileBudgetProps {
   readonly references: ModelProfileReferences;
@@ -246,6 +247,15 @@ export function ModelProfileBudget({
           </fieldset>
         ))}
       </div>
+      {(["author", "critic"] as const)
+        .filter((role) => modelProfileEffortRaised(references[role], role))
+        .map((role) => (
+          <p className="model-profile-budget-example" key={`${role}-effort`}>
+            The {role === "author" ? "writer" : "reviewer"}'s reasoning level is above its default,
+            so it writes more output tokens than this scenario assumes. Raise its output tokens to
+            match; no multiplier is shown until real runs have measured one.
+          </p>
+        ))}
       <p className="model-profile-budget-formula">
         Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000;
         author and critic are added together. The output allocation includes billable reasoning
