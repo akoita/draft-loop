@@ -946,7 +946,17 @@ export function WorkspaceSetupForm({
   );
 }
 
-export function App({ port }: { readonly port?: DesktopSetupPort }) {
+export function App({
+  port,
+  hostActions,
+}: {
+  readonly port?: DesktopSetupPort;
+  /**
+   * The host's own header actions, such as the web's sign-out, drawn where each screen's header
+   * puts its workspace actions, before Close workspace.
+   */
+  readonly hostActions?: ReactNode;
+}) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -2480,7 +2490,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       />
     );
 
-  const workspaceNavigationNode =
+  const closeWorkspaceNode =
     activePort.workspaceClosable === false ? null : (
       <WorkspaceNavigation
         closeDisabledReason={closeDisabledReason}
@@ -2489,6 +2499,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
         onConfirmClose={closeWorkspace}
       />
+    );
+  const workspaceNavigationNode =
+    hostActions === undefined ? (
+      closeWorkspaceNode
+    ) : (
+      <>
+        {hostActions}
+        {closeWorkspaceNode}
+      </>
     );
 
   const knowledgePanelFor = (embedded: boolean) => (
