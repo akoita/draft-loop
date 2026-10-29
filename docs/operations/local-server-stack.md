@@ -309,6 +309,20 @@ of the Vertex or Secret Manager settings above, which it refuses:
   the EU, under the operator's own provider terms.
 - A key file other users can read is refused; keep each one `chmod 600`. A
   provider with no file has no key, and a new file is read on the next call.
+
+Local models run beside either route on an OpenAI-compatible endpoint the
+deployment declares, such as Ollama or LM Studio:
+
+| Variable                          | Read by | Meaning                                                    |
+| --------------------------------- | ------- | ---------------------------------------------------------- |
+| `DRAFT_LOOP_LOCAL_MODELS`         | API     | Model names the endpoint serves, separated by commas       |
+| `DRAFT_LOOP_LOCAL_MODEL_ENDPOINT` | worker  | The endpoint, such as `http://host.docker.internal:11434/v1` |
+
+- The model catalog lists the names as `localModels`, and a workspace may pick
+  one as writer or reviewer. Any other local name is refused with
+  `model_not_offered`.
+- Every local call goes to the deployment's endpoint; a workspace never names
+  one. Local models are unpriced and have not passed the quality gate.
 - The API reads `DRAFT_LOOP_VERTEX_PROJECT_ID`, `DRAFT_LOOP_VERTEX_LOCATION` and
   `DRAFT_LOOP_VERTEX_PRICE_FACTOR` only with `DRAFT_LOOP_SCREENING=rules+model`,
   for the injection screener's Claude Haiku calls. It uses its own service

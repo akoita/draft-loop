@@ -3728,12 +3728,20 @@
           "defaultPresetId": {
             "type": "string",
             "description": "The preset a new workspace gets when it names no model."
+          },
+          "localModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Models on the deployment's own local endpoint, company `local`, for either role: unvalidated, unpriced and empty unless the deployment declares them."
           }
         },
         "required": [
           "models",
           "presets",
-          "defaultPresetId"
+          "defaultPresetId",
+          "localModels"
         ]
       },
       "PlanAssignmentInput": {
@@ -8346,12 +8354,20 @@
           "defaultPresetId": {
             "type": "string",
             "description": "The preset a new workspace gets when it names no model."
+          },
+          "localModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Models on the deployment's own local endpoint, company `local`, for either role: unvalidated, unpriced and empty unless the deployment declares them."
           }
         },
         "required": [
           "models",
           "presets",
-          "defaultPresetId"
+          "defaultPresetId",
+          "localModels"
         ],
         "additionalProperties": false
       },
@@ -10219,7 +10235,7 @@
       },
       "put": {
         "summary": "Create a workspace",
-        "description": "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service; a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+        "description": "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -10249,7 +10265,8 @@
                         "type": "string",
                         "enum": [
                           "anthropic",
-                          "openai"
+                          "openai",
+                          "local"
                         ]
                       },
                       "model": {
@@ -10270,7 +10287,8 @@
                         "type": "string",
                         "enum": [
                           "anthropic",
-                          "openai"
+                          "openai",
+                          "local"
                         ]
                       },
                       "model": {
@@ -10603,7 +10621,7 @@
     "/v1/workspaces/{workspaceId}/models": {
       "patch": {
         "summary": "Change a workspace's author and critic models",
-        "description": "Applies from the next run; recorded runs keep the pair they ran with. Only Anthropic and OpenAI models are routed. A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
+        "description": "Applies from the next run; recorded runs keep the pair they ran with. Anthropic and OpenAI models are routed, and local models only where the deployment lists them (else 422 model_not_offered). A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
         "requestBody": {
           "required": true,
           "content": {
@@ -10618,7 +10636,8 @@
                         "type": "string",
                         "enum": [
                           "anthropic",
-                          "openai"
+                          "openai",
+                          "local"
                         ]
                       },
                       "model": {
@@ -10639,7 +10658,8 @@
                         "type": "string",
                         "enum": [
                           "anthropic",
-                          "openai"
+                          "openai",
+                          "local"
                         ]
                       },
                       "model": {

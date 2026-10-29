@@ -11,6 +11,7 @@ import { Storage } from "@google-cloud/storage";
 import { readWorkerConfig } from "./config.js";
 import { embeddingModelReadiness } from "./embedding-model.js";
 import { failedCallLines } from "./failed-call-logging.js";
+import { withLocalModels } from "./local-models-config.js";
 import {
   errorFields,
   logLine,
@@ -37,6 +38,9 @@ if (config.modelRoutes !== undefined) {
   // Routes that process material outside the EU are deployment choices, so each start names them.
   console.info(logLine("INFO", "model routes", routeFields(config.modelRoutes)));
 }
+if (config.localModelEndpoint !== undefined) {
+  console.info(logLine("INFO", "local model endpoint", { endpoint: config.localModelEndpoint }));
+}
 // Without its embedding model the critic judges no requirement coverage, so each start names the
 // model's state (#1806).
 const embeddingModel = await embeddingModelReadiness(process.env);
@@ -59,8 +63,9 @@ const serviceFor = tenantServices({
   tenancy,
   blobsFor: (tenantId) => createGcsBlobStorage({ bucket, tenantId }),
   // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
-  // direct routes with keys from files, or none on the dev stack.
-  local: routeProviderOptions(config.modelRoutes),
+  // direct routes with keys from files, or none on the dev stack; local models go to the
+  // deployment's own endpoint.
+  local: withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint),
 });
 
 const workspaceRoot = (job: WorkspaceJob) =>

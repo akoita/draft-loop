@@ -8,6 +8,7 @@ import {
 import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
 import { WorkerConfigError } from "./config-error.js";
+import { readLocalModelEndpoint } from "./local-models-config.js";
 import { readModelRoutes, type WorkerModelRoutes } from "./route-config.js";
 
 export { WorkerConfigError } from "./config-error.js";
@@ -42,6 +43,8 @@ export interface WorkerConfig {
    * use fixtures and call no provider.
    */
   readonly modelRoutes?: WorkerModelRoutes;
+  /** The deployment's endpoint for `local` models; without it a local model's call is refused. */
+  readonly localModelEndpoint?: string;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
   /**
@@ -141,6 +144,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
   const modelRoutes = readModelRoutes(env);
+  const localModelEndpoint = readLocalModelEndpoint(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -152,6 +156,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     requireScreening: screeningRequired(env),
     budgetCeiling: readRunBudgetCeiling(env),
     ...(modelRoutes === undefined ? {} : { modelRoutes }),
+    ...(localModelEndpoint === undefined ? {} : { localModelEndpoint }),
     ...(readyFile === undefined ? {} : { readyFile }),
     mode: workerMode(env),
   };

@@ -11,12 +11,14 @@ import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
+import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
+const localModels = readLocalModels(process.env);
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
 const screening = contentScreeningSetup(readScreeningConfig(process.env));
@@ -66,6 +68,7 @@ const app = await buildApi({
   },
   ...(directory === undefined ? {} : { directory }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
+  ...(localModels.length === 0 ? {} : { localModels }),
 });
 
 // Cloud Run sends SIGTERM before stopping an instance; finish in-flight requests, then exit.

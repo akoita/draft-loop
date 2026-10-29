@@ -102,6 +102,7 @@ const catalog: ApiSchemas["ModelCatalog"] = {
   ],
   presets: [],
   defaultPresetId: "balanced",
+  localModels: ["qwen3:32b"],
 };
 
 type Handler = (input: Record<string, unknown>) => unknown;
@@ -581,7 +582,10 @@ describe("the shared screens' commands over HTTP", () => {
       ok: true,
       value: { provider: "anthropic", models: [{ id: "claude-sonnet-5-5" }] },
     });
-    expect(local).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    expect(local).toMatchObject({
+      ok: true,
+      value: { provider: "local", models: [{ id: "qwen3:32b" }] },
+    });
     expect(support).toEqual({
       ok: true,
       value: {
@@ -594,7 +598,7 @@ describe("the shared screens' commands over HTTP", () => {
       },
     });
     expect(independence).toMatchObject({ ok: true, value: { lineagesDistinct: true } });
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
   });
 
   it("passes an API refusal on with its message, and its own code to the shell", async () => {
@@ -826,6 +830,15 @@ describe("the shared screens' commands over HTTP", () => {
       },
     ]);
     expect(local).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+    // A local model with no address of its own runs on the service's endpoint.
+    await port.execute({
+      type: "workspace.configure-models",
+      input: { ...selection, authorCompany: "local", authorModel: "qwen3:32b" },
+    });
+    expect(calls.at(-1)?.input).toMatchObject({
+      body: { author: { company: "local", model: "qwen3:32b" } },
+    });
   });
 
   it("opens the policy editor on the saved policy, or on the template when none is saved", async () => {
