@@ -1,0 +1,198 @@
+# DraftLoop's hosted service on your own machine (ADR 0011, D15): the same API, worker, page fetcher
+# and Postgres as the cloud, with files on disk and your own provider keys. Every secret is random
+# and generated at first start; the API listens on 127.0.0.1 only. Start it with
+# `pnpm self-hosted:up`; see docs/operations/self-hosted.md. For development and tests, use the
+# repository's root compose.yaml instead.
+name: draft-loop-self-hosted
+
+# What the API and the worker share: the tenant, the files on disk, the provider routes and the
+# limits per run.
+x-service-environment: &service-environment
+  DRAFT_LOOP_DATABASE_NAME: draft_loop
+  DRAFT_LOOP_TENANT_ID: local
+  DRAFT_LOOP_BLOB_BACKEND: filesystem
+  DRAFT_LOOP_BLOB_ROOT: /var/lib/draft-loop/blobs
+  DRAFT_LOOP_MODEL_ROUTES: direct
+  DRAFT_LOOP_SECRETS_DIR: /run/draft-loop/provider-keys
+  DRAFT_LOOP_RUN_MAX_ROUNDS: ${DRAFT_LOOP_RUN_MAX_ROUNDS:-5}
+  DRAFT_LOOP_RUN_MAX_COST_USD: ${DRAFT_LOOP_RUN_MAX_COST_USD:-3}
+  DRAFT_LOOP_RUN_MAX_DURATION_MS: ${DRAFT_LOOP_RUN_MAX_DURATION_MS:-1800000}
+
+services:
+  # Creates the stack's secrets once, copies the provider keys from keys/ and prepares the file
+  # volume, before anything else starts.
+  init:
+    image: pgvector/pgvector:0.8.0-pg16
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/opt/draft-loop/prepare.sh"]
+    volumes:
+      - ./init:/opt/draft-loop:ro
+      - ./keys:/keys:ro
+      - secrets:/secrets
+      - postgres-secrets:/postgres-secrets
+      - provider-keys:/provider-keys
+      - blobs:/blobs
+    network_mode: none
+    restart: "no"
+
+  postgres:
+    # The same image as the CI `Server storage` job, with no published port.
+    image: pgvector/pgvector:0.8.0-pg16
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DB: draft_loop
+      POSTGRES_PASSWORD_FILE: /run/draft-loop/postgres-secrets/postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-secrets:/run/draft-loop/postgres-secrets:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "draft_loop"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  postgres-setup:
+    image: pgvector/pgvector:0.8.0-pg16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/opt/draft-loop/postgres-setup.sh"]
+    environment:
+      DRAFT_LOOP_DATABASE_NAME: draft_loop
+    volumes:
+      - ./init:/opt/draft-loop:ro
+      - secrets:/secrets:ro
+      - postgres-secrets:/postgres-secrets:ro
+    restart: "no"
+
+  # Runs the schema migrations on every start, then grants the runtime role table access only.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    image: draft-loop-worker:self-hosted
+    depends_on:
+      postgres-setup:
+        condition: service_completed_successfully
+    command:
+      - /bin/sh
+      - /opt/draft-loop/with-secrets.sh
+      - migrate
+      - /app/node_modules/.bin/tsx
+      - src/migrate.ts
+    environment:
+      DRAFT_LOOP_DATABASE_NAME: draft_loop
+      DRAFT_LOOP_RUNTIME_ROLE: draft_loop_app
+    volumes:
+      - ./init:/opt/draft-loop:ro
+      - postgres-secrets:/postgres-secrets:ro
+    restart: "no"
+
+  # Fetches approved job pages for the API; the only service that reaches public web servers. It
+  # holds no database, secret or candidate material.
+  page-fetcher:
+    build:
+      context: ../..
+      dockerfile: apps/page-fetcher/Dockerfile
+    image: draft-loop-page-fetcher:self-hosted
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - --eval
+        - 'fetch("http://127.0.0.1:8080/healthz").then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))'
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    image: draft-loop-api:self-hosted
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      page-fetcher:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - /opt/draft-loop/with-secrets.sh
+      - api
+      - /app/node_modules/.bin/tsx
+      - src/server.ts
+    environment:
+      <<: *service-environment
+      DRAFT_LOOP_PAGE_FETCHER_URL: http://page-fetcher:8080
+      # `rules` needs no provider; `rules+model` also asks Claude, with keys/anthropic_api_key.
+      DRAFT_LOOP_SCREENING: ${DRAFT_LOOP_SCREENING:-rules}
+      DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true"
+      # The local models this stack offers, separated by commas, such as `llama3.1:8b`.
+      DRAFT_LOOP_LOCAL_MODELS: ${DRAFT_LOOP_LOCAL_MODELS:-}
+    volumes:
+      - ./init:/opt/draft-loop:ro
+      - secrets:/secrets:ro
+      - provider-keys:/run/draft-loop/provider-keys:ro
+      - blobs:/var/lib/draft-loop/blobs
+    ports:
+      - "127.0.0.1:${DRAFT_LOOP_PORT:-8080}:8080"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - --eval
+        - 'fetch("http://127.0.0.1:8080/v1/health").then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))'
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    image: draft-loop-worker:self-hosted
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command:
+      - /bin/sh
+      - /opt/draft-loop/with-secrets.sh
+      - worker
+      - /app/node_modules/.bin/tsx
+      - src/main.ts
+    environment:
+      <<: *service-environment
+      DRAFT_LOOP_WORKER_READY_FILE: /tmp/draft-loop-worker.ready
+      # Your own stack, your own keys: the worker may send approved material to the providers.
+      DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true"
+      # Owner-mode runs carry no consent record, as on the development stack.
+      DRAFT_LOOP_REQUIRE_CONSENT: "false"
+      DRAFT_LOOP_OPENAI_ENDPOINT: ${DRAFT_LOOP_OPENAI_ENDPOINT:-global}
+      # Where the declared local models answer, such as Ollama at http://host.docker.internal:11434.
+      DRAFT_LOOP_LOCAL_MODEL_ENDPOINT: ${DRAFT_LOOP_LOCAL_MODEL_ENDPOINT:-}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./init:/opt/draft-loop:ro
+      - secrets:/secrets:ro
+      - provider-keys:/run/draft-loop/provider-keys:ro
+      - blobs:/var/lib/draft-loop/blobs
+    stop_grace_period: 10s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/draft-loop-worker.ready"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres-data:
+  secrets:
+  postgres-secrets:
+  provider-keys:
+  blobs:
