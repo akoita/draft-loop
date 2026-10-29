@@ -1,13 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
-import { createGcsBlobStorage } from "@draft-loop/storage-gcs";
 import {
   hostedWorkspaceReference,
   openPostgresTenancy,
   startConfiguredCloudSqlProxy,
 } from "@draft-loop/storage-postgres";
-import { Storage } from "@google-cloud/storage";
 
+import { openTenantBlobs } from "./blob-backend.js";
 import { readWorkerConfig } from "./config.js";
 import { embeddingModelReadiness } from "./embedding-model.js";
 import { failedCallLines } from "./failed-call-logging.js";
@@ -31,7 +30,8 @@ import {
 } from "./tenant-services.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
-// The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
+// The worker's entry point: one pool, blob backend and queue opened at startup, serving every
+// tenant.
 // Each job names its tenant, and the application is composed over that tenant's view of them.
 const config = readWorkerConfig(process.env);
 if (config.modelRoutes !== undefined) {
@@ -54,14 +54,10 @@ const tenancy = await openPostgresTenancy({
   connectionString: config.databaseUrl,
   schema: config.databaseSchema,
 });
-const bucket = new Storage(
-  config.gcsEndpoint === undefined
-    ? {}
-    : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
-).bucket(config.blobBucket);
+const blobs = openTenantBlobs(config.blobs);
 const serviceFor = tenantServices({
   tenancy,
-  blobsFor: (tenantId) => createGcsBlobStorage({ bucket, tenantId }),
+  blobsFor: blobs.storageFor,
   // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
   // direct routes with keys from files, or none on the dev stack; local models go to the
   // deployment's own endpoint.

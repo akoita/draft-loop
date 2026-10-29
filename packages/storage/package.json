@@ -83,6 +83,10 @@
       "types": "./src/storage-errors.ts",
       "import": "./src/storage-errors.ts"
     },
+    "./tenant-blobs": {
+      "types": "./src/tenant-directory-blobs.ts",
+      "import": "./src/tenant-directory-blobs.ts"
+    },
     "./history-records": {
       "types": "./src/history-record-rows.ts",
       "import": "./src/history-record-rows.ts"

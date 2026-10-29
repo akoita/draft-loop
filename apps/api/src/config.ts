@@ -4,7 +4,7 @@ import {
   DeploymentAuthModeConfigError,
   readDeploymentAuthMode,
 } from "@draft-loop/application";
-
+import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
 import { isCloudRunJobName } from "./worker-wake.js";
@@ -153,9 +153,8 @@ export interface HostedStorageConfig {
    * and optional in sign-in mode, where each member acts in their own organisation.
    */
   readonly tenantId?: string;
-  readonly blobBucket: string;
-  /** A Cloud Storage emulator, for the local stack only; unset in a deployment. */
-  readonly gcsEndpoint?: string;
+  /** Where the tenants' files live: Cloud Storage, or a directory on a self-hosted stack. */
+  readonly blobs: BlobBackendConfig;
   /** The largest candidate source file the API takes; intake's default when unset. */
   readonly maxSourceBytes?: number;
 }
@@ -203,15 +202,13 @@ export function readHostedStorageConfig(
   if (tenantId !== "" && !identifierPattern.test(tenantId)) {
     throw new ApiConfigError("DRAFT_LOOP_TENANT_ID must be a safe identifier.");
   }
-  const gcsEndpoint = env.DRAFT_LOOP_GCS_ENDPOINT ?? "";
   const maxSourceBytes = optionalSourceLimit(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
     ...(tenantId === "" ? {} : { tenantId }),
-    blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
-    ...(gcsEndpoint === "" ? {} : { gcsEndpoint }),
+    blobs: readBlobBackend(env),
     ...(maxSourceBytes === undefined ? {} : { maxSourceBytes }),
   };
 }

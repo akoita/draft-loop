@@ -153,11 +153,11 @@ describe("readHostedStorageConfig", () => {
       databaseSchema: "draft_loop",
       queueSchema: "draft_loop_queue",
       tenantId: "owner",
-      blobBucket: "draft-loop-local",
+      blobs: { kind: "gcs", bucket: "draft-loop-local" },
     });
     expect(
-      readHostedStorageConfig({ ...env, DRAFT_LOOP_GCS_ENDPOINT: "http://gcs:4443" }).gcsEndpoint,
-    ).toBe("http://gcs:4443");
+      readHostedStorageConfig({ ...env, DRAFT_LOOP_GCS_ENDPOINT: "http://gcs:4443" }).blobs,
+    ).toEqual({ kind: "gcs", bucket: "draft-loop-local", endpoint: "http://gcs:4443" });
     expect(
       readHostedStorageConfig({ ...env, DRAFT_LOOP_MAX_SOURCE_BYTES: "5242880" }).maxSourceBytes,
     ).toBe(5_242_880);

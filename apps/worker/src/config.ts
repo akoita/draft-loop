@@ -7,6 +7,7 @@ import {
 } from "@draft-loop/application";
 import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
+import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { WorkerConfigError } from "./config-error.js";
 import { readLocalModelEndpoint } from "./local-models-config.js";
 import { readModelRoutes, type WorkerModelRoutes } from "./route-config.js";
@@ -18,9 +19,8 @@ export interface WorkerConfig {
   readonly databaseUrl: string;
   readonly databaseSchema: string;
   readonly queueSchema: string;
-  readonly blobBucket: string;
-  /** A Cloud Storage emulator, for the local stack only; unset in a deployment. */
-  readonly gcsEndpoint?: string;
+  /** Where the tenants' files live: Cloud Storage, or a directory on a self-hosted stack. */
+  readonly blobs: BlobBackendConfig;
   /** Whether runs may send approved material to providers; off unless the deployment says so. */
   readonly allowProviderData: boolean;
   /**
@@ -141,7 +141,6 @@ function optional(env: NodeJS.ProcessEnv, name: string): string | undefined {
 export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const allow = flag(env, "DRAFT_LOOP_ALLOW_PROVIDER_DATA");
   const requireConsent = consentRequired(env);
-  const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
   const modelRoutes = readModelRoutes(env);
   const localModelEndpoint = readLocalModelEndpoint(env);
@@ -149,8 +148,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
     queueSchema: schemaName(env, "DRAFT_LOOP_QUEUE_SCHEMA", "draft_loop_queue"),
-    blobBucket: required(env, "DRAFT_LOOP_BLOB_BUCKET"),
-    ...(gcsEndpoint === undefined ? {} : { gcsEndpoint }),
+    blobs: readBlobBackend(env),
     allowProviderData: allow,
     requireConsent,
     requireScreening: screeningRequired(env),
