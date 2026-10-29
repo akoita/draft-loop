@@ -101,10 +101,13 @@ describe("readWorkerConfig", () => {
       DRAFT_LOOP_VERTEX_PROJECT_ID: "synthetic-project",
       DRAFT_LOOP_VERTEX_PRICE_FACTOR: "1.1",
       DRAFT_LOOP_OPENAI_KEY_SECRET: "projects/synthetic/secrets/openai-key/versions/latest",
-    }).modelGateway;
+    }).modelRoutes;
 
-    expect(readWorkerConfig(env).modelGateway).toBeUndefined();
-    expect(gateway).toMatchObject({ vertexProjectId: "synthetic-project", vertexLocation: "eu" });
+    expect(readWorkerConfig(env).modelRoutes).toBeUndefined();
+    expect(gateway).toMatchObject({
+      kind: "vertex",
+      gateway: { vertexProjectId: "synthetic-project", vertexLocation: "eu" },
+    });
   });
 
   it("reads drain mode with its idle time, a minute by default", () => {

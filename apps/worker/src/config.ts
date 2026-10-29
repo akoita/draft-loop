@@ -8,7 +8,7 @@ import {
 import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
 import { WorkerConfigError } from "./config-error.js";
-import { type ModelGatewayConfig, readModelGatewayConfig } from "./model-routes.js";
+import { readModelRoutes, type WorkerModelRoutes } from "./route-config.js";
 
 export { WorkerConfigError } from "./config-error.js";
 
@@ -37,8 +37,11 @@ export interface WorkerConfig {
   readonly requireScreening: boolean;
   /** The deployment's limit per run, re-checked before each run executes. */
   readonly budgetCeiling: RunBudgetCeiling;
-  /** The model routes; absent on the local stack, where runs use fixtures and call no provider. */
-  readonly modelGateway?: ModelGatewayConfig;
+  /**
+   * The model routes, `vertex` or the self-hosted `direct`; absent on the dev stack, where runs
+   * use fixtures and call no provider.
+   */
+  readonly modelRoutes?: WorkerModelRoutes;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
   /**
@@ -137,7 +140,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const requireConsent = consentRequired(env);
   const gcsEndpoint = optional(env, "DRAFT_LOOP_GCS_ENDPOINT");
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
-  const modelGateway = readModelGatewayConfig(env);
+  const modelRoutes = readModelRoutes(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -148,7 +151,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     requireConsent,
     requireScreening: screeningRequired(env),
     budgetCeiling: readRunBudgetCeiling(env),
-    ...(modelGateway === undefined ? {} : { modelGateway }),
+    ...(modelRoutes === undefined ? {} : { modelRoutes }),
     ...(readyFile === undefined ? {} : { readyFile }),
     mode: workerMode(env),
   };
