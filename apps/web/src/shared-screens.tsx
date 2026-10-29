@@ -1,7 +1,7 @@
 import { App } from "@draft-loop/ui/app";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import type { ApiClient, ApiRequestError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
@@ -11,6 +11,8 @@ export interface SharedScreensProps {
   readonly client: ApiClient;
   /** The candidate record's workspace the screens open on. */
   readonly workspaceId: string;
+  /** The web's own header actions, drawn where the desktop has Close workspace. */
+  readonly hostActions?: ReactNode;
 }
 
 /**
@@ -18,7 +20,7 @@ export interface SharedScreensProps {
  * requirement review, through the HTTP bridge. A refusal with its own code, such as a plan limit
  * or quarantined material, is explained above them in the shell's words.
  */
-export function SharedScreens({ client, workspaceId }: SharedScreensProps) {
+export function SharedScreens({ client, workspaceId, hostActions }: SharedScreensProps) {
   const [refusal, setRefusal] = useState<ApiRequestError | undefined>(undefined);
   const port = useMemo(
     () =>
@@ -39,7 +41,7 @@ export function SharedScreens({ client, workspaceId }: SharedScreensProps) {
         </div>
       )}
       <div className="shared-screens">
-        <App port={port} />
+        <App port={port} {...(hostActions === undefined ? {} : { hostActions })} />
       </div>
     </>
   );

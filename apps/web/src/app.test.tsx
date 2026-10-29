@@ -42,10 +42,14 @@ describe("web screen", () => {
     expect(html).toContain('role="status">The API refused the owner token. Sign in again.</p>');
   });
 
-  it("renders the shell header", () => {
+  it("puts the service status and sign-out in the page's actions, with no bar of its own", () => {
     const html = renderToStaticMarkup(<Shell client={unusedClient} onSignOut={() => {}} />);
 
-    expect(html).toContain("<h1>DraftLoop</h1>");
+    expect(html).not.toContain("<h1>DraftLoop</h1>");
+    expect(html).toMatch(
+      /<div class="page-actions"><span class="service-status service-checking" role="status">/u,
+    );
+    expect(html).toContain("Sign out</button></div>");
   });
 
   it("keeps the owner token's single workspace, with no record picker", () => {

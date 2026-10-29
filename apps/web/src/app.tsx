@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { BriefStep } from "./brief.js";
@@ -10,6 +10,15 @@ import { RunStep } from "./run.js";
 import { screenMemory } from "./screen-memory.js";
 import type { TokenStore } from "./session.js";
 import { SharedScreens } from "./shared-screens.js";
+import {
+  ConsentButton,
+  type Health,
+  PageActions,
+  ServiceDown,
+  ServiceStatus,
+  ShellActionsContext,
+  SignOutButton,
+} from "./shell-actions.js";
 import { SignIn } from "./sign-in.js";
 import { SourcesStep } from "./sources.js";
 import { WorkspaceStep } from "./workspace.js";
@@ -19,8 +28,6 @@ export interface AppProps {
   readonly tokens: TokenStore;
   readonly createClient: (token: string) => ApiClient;
 }
-
-type Health = "checking" | "serving" | "unreachable";
 
 /** The owner's web screen over the hosted API. */
 export function App({ tokens, createClient }: AppProps) {
@@ -109,29 +116,32 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
     };
   }, [client]);
 
+  const actions = (
+    <>
+      <ServiceStatus health={health} />
+      <SignOutButton onSignOut={onSignOut} />
+    </>
+  );
+  // The page opens on the shared screens' own header, as on the desktop: the shell's actions sit
+  // in it. Sign-in mode lists the records above the screens, so its actions stay at the top.
   return (
     <div className="shell">
-      <header className="shell-header">
-        <h1>DraftLoop</h1>
-        <p className={`health health-${health}`} role="status">
-          {health === "checking"
-            ? "Checking the service"
-            : health === "serving"
-              ? "Service is up"
-              : "The service cannot be reached"}
-        </p>
-        <button type="button" className="secondary" onClick={onSignOut}>
-          Sign out
-        </button>
-      </header>
+      {health === "unreachable" ? <ServiceDown /> : null}
       {mode === "sign-in" ? (
-        <Records client={client} memory={memory} onSwitch={() => screenMemory.forget()}>
-          {(recordId, onSaved) => (
-            <RecordSteps key={recordId} client={client} recordId={recordId} onSaved={onSaved} />
-          )}
-        </Records>
+        <>
+          <ShellActionsContext.Provider value={actions}>
+            <PageActions />
+          </ShellActionsContext.Provider>
+          <Records client={client} memory={memory} onSwitch={() => screenMemory.forget()}>
+            {(recordId, onSaved) => (
+              <RecordSteps key={recordId} client={client} recordId={recordId} onSaved={onSaved} />
+            )}
+          </Records>
+        </>
       ) : (
-        <RecordSteps client={client} recordId={ownerWorkspaceId} />
+        <ShellActionsContext.Provider value={actions}>
+          <RecordSteps client={client} recordId={ownerWorkspaceId} />
+        </ShellActionsContext.Provider>
       )}
     </div>
   );
@@ -154,13 +164,14 @@ export type RecordScreens = "shared" | "steps";
 /**
  * One candidate record: its workspace is set up first, then the shared screens open on it, from
  * Home to the run's review, approval and export. The earlier steps stay one click away for
- * consent, sensitivity rules and credits.
+ * consent, sensitivity rules and credits, from a button in the shared screens' header.
  */
 export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   const [screens, setScreens] = useState<RecordScreens>("shared");
   const [step, setStep] = useState<StepId>("workspace");
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
   const [brief, setBrief] = useState<Brief | undefined>(undefined);
+  const shellActions = useContext(ShellActionsContext);
   const onWorkspace = useCallback(
     (workspace: ApiSchemas["Workspace"]) => {
       setWorkspace(workspace);
@@ -173,6 +184,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   if (workspace === undefined) {
     return (
       <RecordContext.Provider value={recordId}>
+        <PageActions />
         <WorkspaceStep client={client} onWorkspace={onWorkspace} />
       </RecordContext.Provider>
     );
@@ -181,12 +193,16 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   if (screens === "shared") {
     return (
       <RecordContext.Provider value={recordId}>
-        <nav className="steps" aria-label="Screens">
-          <button type="button" className="step" onClick={() => setScreens("steps")}>
-            Consent, rules and credits
-          </button>
-        </nav>
-        <SharedScreens client={client} workspaceId={recordId} />
+        <SharedScreens
+          client={client}
+          workspaceId={recordId}
+          hostActions={
+            <>
+              <ConsentButton onOpen={() => setScreens("steps")} />
+              {shellActions}
+            </>
+          }
+        />
       </RecordContext.Provider>
     );
   }
@@ -208,6 +224,7 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
             {item.label}
           </button>
         ))}
+        <span className="steps-actions">{shellActions}</span>
       </nav>
       <main>
         {step === "workspace" ? (
