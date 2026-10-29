@@ -28,9 +28,9 @@ import {
   createApiClient,
   createBriefBody,
   createHttpBridge,
-  currentRunId,
   grantRequest,
   isGranted,
+  latestRunId,
   ownerWorkspaceId,
   readDefaultApplication,
   selectionRequest,
@@ -144,7 +144,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       });
       expect(created).toMatchObject({ fixtureMode: true });
 
-      // Sources step: the storage consent before the first upload.
+      // Career evidence: the storage consent before the first upload.
       const storageGrant = grantRequest("material-storage", { basis: "contract" });
       if ("problem" in storageGrant) throw new Error(storageGrant.problem);
       await client.call("POST /v1/workspaces/{workspaceId}/consents", {
@@ -152,7 +152,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
         body: storageGrant.body,
       });
 
-      // Sources step: a base, one uploaded file, and the selection.
+      // Career evidence: a base, one uploaded file, and the selection.
       const base = await client.call("POST /v1/knowledge-bases", {
         body: { displayName: "Career material" },
       });
@@ -175,7 +175,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
         body: selection.body,
       });
 
-      // Job brief step: paste, edit the requirements, mark the version reviewed.
+      // Job brief: paste, edit the requirements, mark the version reviewed.
       const pasted = await client.call("POST /v1/workspaces/{workspaceId}/opportunities", {
         path: workspace,
         body: createBriefBody(
@@ -208,7 +208,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       );
       expect(startProblem(reviewed.brief)).toBeUndefined();
 
-      // Run step: the transmission consent names the workspace's providers before the first run.
+      // Start: the transmission consent names the workspace's providers before the first run.
       const transmissionGrant = grantRequest("provider-transmission", {
         basis: "candidate-consent",
         providers: workspaceProviders(created),
@@ -228,7 +228,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       expect(isGranted(consents, "provider-transmission")).toBe(true);
       expect(consentSummary(consents, "provider-transmission")).toContain("Anthropic and OpenAI");
 
-      // Run step: start, let the worker draft, and stop polling at review.
+      // Run: start, let the worker draft, and stop polling at review.
       const begun = await client.call("POST /v1/workspaces/{workspaceId}/runs", {
         path: workspace,
         header: { "idempotency-key": randomUUID() },
@@ -238,7 +238,7 @@ describe.runIf(connectionString !== undefined)("web screen flow on Postgres", ()
       await drainQueue();
       // The default application lists the run, so a browser that remembers nothing finds it.
       const application = await readDefaultApplication(client);
-      expect(currentRunId(application, {})).toBe(begun.runId);
+      expect(application === undefined ? undefined : latestRunId(application)).toBe(begun.runId);
       const runPath = { ...workspace, runId: begun.runId };
       const drafted = await client.call("GET /v1/workspaces/{workspaceId}/runs/{runId}", {
         path: runPath,

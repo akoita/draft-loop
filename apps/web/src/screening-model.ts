@@ -81,14 +81,6 @@ export function screeningBadge(status: ScreeningStatus | undefined): Badge {
   }
 }
 
-/** The statuses of one brief's job sources. */
-export function briefStatuses(
-  statuses: readonly ScreeningStatus[],
-  briefId: string,
-): ScreeningStatus[] {
-  return statuses.filter((status) => status.kind === "job-source" && status.briefId === briefId);
-}
-
 /** The status of the uploaded version of one knowledge source, if it was screened. */
 export function sourceStatus(
   statuses: readonly ScreeningStatus[],

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import {
   balanceLine,
-  balanceWarning,
   creditCount,
   describeStartError,
   estimateLine,
@@ -37,7 +36,6 @@ describe("credit balance", () => {
     expect(balanceLine(syntheticCredits, "en-GB")).toBe(
       "38 of 50 credits left. The period ends on 24 Nov 2026.",
     );
-    expect(balanceWarning(syntheticCredits)).toBeUndefined();
   });
 
   it("names granted credits and a single credit", () => {
@@ -51,16 +49,9 @@ describe("credit balance", () => {
     expect(line).toContain("1 credit granted to you");
   });
 
-  it("warns at 80% and again when the credits are used up", () => {
-    const warned = { ...syntheticCredits, used: 40, remaining: 10, warning: true };
-    expect(balanceWarning(warned)).toContain("Most of this period's credits are used");
-    expect(balanceWarning({ ...warned, used: 50, remaining: 0 })).toContain("used up");
-  });
-
   it("says plainly that an unlimited plan has no limit", () => {
     const unlimited = { ...syntheticCredits, unlimited: true, allowance: null, remaining: null };
     expect(balanceLine(unlimited)).toBe("Your plan has unlimited credits.");
-    expect(balanceWarning(unlimited)).toBeUndefined();
   });
 
   it("is hidden when the route answers 404, as in owner-token mode", async () => {

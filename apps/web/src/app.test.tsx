@@ -59,6 +59,19 @@ describe("web screen", () => {
     expect(html).not.toContain("candidate records");
   });
 
+  it("has one flow, with no step navigation or consent-and-rules button", () => {
+    for (const mode of ["owner", "sign-in"] as const) {
+      const html = renderToStaticMarkup(
+        <Shell mode={mode} client={unusedClient} onSignOut={() => {}} />,
+      );
+
+      expect(html).not.toContain("Consent, rules");
+      expect(html).not.toContain('aria-label="Steps"');
+      for (const tab of ["Workspace", "Sources", "Job brief", "Run"])
+        expect(html).not.toContain(`>${tab}</button>`);
+    }
+  });
+
   it("reads the caller's candidate records first in sign-in mode", () => {
     const html = renderToStaticMarkup(
       <Shell mode="sign-in" client={unusedClient} onSignOut={() => {}} />,

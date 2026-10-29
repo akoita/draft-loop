@@ -190,12 +190,12 @@ const refusals: Readonly<Record<string, { kind: ConsentKind; message: string }>>
   storage_consent_required: {
     kind: "material-storage",
     message:
-      "The candidate's material cannot be stored yet. Record the basis for storing it in the Sources step, then upload again.",
+      "The candidate's material cannot be stored yet. Record the permission to store it on the Career evidence page, then upload again.",
   },
   transmission_consent_required: {
     kind: "provider-transmission",
     message:
-      "The candidate has not agreed to send their material to the model providers. Record their consent in the Run step, then try again.",
+      "The candidate has not agreed to send their material to the model providers. Record their consent in the Start dialog, then try again.",
   },
 };
 

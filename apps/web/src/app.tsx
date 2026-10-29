@@ -2,17 +2,12 @@ import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
-import { BriefStep } from "./brief.js";
-import type { Brief } from "./brief-model.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
-import { RunStep } from "./run.js";
-import { screenMemory } from "./screen-memory.js";
 import type { TokenStore } from "./session.js";
 import { SharedScreens } from "./shared-screens.js";
 import {
-  ConsentButton,
   type Health,
   PageActions,
   ServiceDown,
@@ -21,7 +16,6 @@ import {
   SignOutButton,
 } from "./shell-actions.js";
 import { SignIn } from "./sign-in.js";
-import { SourcesStep } from "./sources.js";
 import { HeaderCredits } from "./start-panels.js";
 import { webHostPanels } from "./web-host-panels.js";
 import { WorkspaceStep } from "./workspace.js";
@@ -92,19 +86,6 @@ export interface ShellProps {
   readonly memory?: RecordMemory;
 }
 
-/**
- * The earlier steps, in the order a run needs them. They keep what the shared screens do not show
- * yet: the workspace's settings, consent, sensitivity rules and the plan's credits.
- */
-export const steps = [
-  { id: "workspace", label: "Workspace" },
-  { id: "sources", label: "Sources" },
-  { id: "brief", label: "Job brief" },
-  { id: "run", label: "Run" },
-] as const;
-
-export type StepId = (typeof steps)[number]["id"];
-
 export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
 
@@ -135,9 +116,9 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
           <ShellActionsContext.Provider value={actions}>
             <PageActions />
           </ShellActionsContext.Provider>
-          <Records client={client} memory={memory} onSwitch={() => screenMemory.forget()}>
+          <Records client={client} memory={memory}>
             {(recordId, onSaved) => (
-              <RecordSteps
+              <RecordScreens
                 key={recordId}
                 client={client}
                 recordId={recordId}
@@ -149,14 +130,14 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
         </>
       ) : (
         <ShellActionsContext.Provider value={actions}>
-          <RecordSteps client={client} recordId={ownerWorkspaceId} />
+          <RecordScreens client={client} recordId={ownerWorkspaceId} />
         </ShellActionsContext.Provider>
       )}
     </div>
   );
 }
 
-export interface RecordStepsProps {
+export interface RecordScreensProps {
   readonly client: ApiClient;
   /** The workspace id of the candidate record every step works on. */
   readonly recordId: string;
@@ -167,21 +148,12 @@ export interface RecordStepsProps {
 }
 
 /**
- * Which screens show a set-up record: the desktop's shared screens, or the earlier steps, kept
- * for what the shared screens do not show yet.
+ * One candidate record: its workspace is read first, and a first run creates it on the shared
+ * setup screen. The shared screens then open on it, from Home to the run's review, approval and
+ * export, with the web's own panels (consent, credits, file checks, private sections) in them.
  */
-export type RecordScreens = "shared" | "steps";
-
-/**
- * One candidate record: its workspace is set up first, then the shared screens open on it, from
- * Home to the run's review, approval and export. The earlier steps stay one click away for
- * consent, sensitivity rules and credits, from a button in the shared screens' header.
- */
-export function RecordSteps({ client, recordId, onSaved, mode = "owner" }: RecordStepsProps) {
-  const [screens, setScreens] = useState<RecordScreens>("shared");
-  const [step, setStep] = useState<StepId>("workspace");
+export function RecordScreens({ client, recordId, onSaved, mode = "owner" }: RecordScreensProps) {
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
-  const [brief, setBrief] = useState<Brief | undefined>(undefined);
   const shellActions = useContext(ShellActionsContext);
   const onWorkspace = useCallback(
     (workspace: ApiSchemas["Workspace"]) => {
@@ -206,63 +178,20 @@ export function RecordSteps({ client, recordId, onSaved, mode = "owner" }: Recor
     );
   }
 
-  if (screens === "shared") {
-    return (
-      <RecordContext.Provider value={recordId}>
-        <HostPanelsContext.Provider value={hostPanels}>
-          <SharedScreens
-            client={client}
-            workspaceId={recordId}
-            hostActions={
-              <>
-                <HeaderCredits client={client} mode={mode} />
-                <ConsentButton onOpen={() => setScreens("steps")} />
-                {shellActions}
-              </>
-            }
-          />
-        </HostPanelsContext.Provider>
-      </RecordContext.Provider>
-    );
-  }
-
   return (
     <RecordContext.Provider value={recordId}>
-      <nav className="steps" aria-label="Steps">
-        <button type="button" className="step" onClick={() => setScreens("shared")}>
-          Home
-        </button>
-        {steps.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={item.id === step ? "step current" : "step"}
-            aria-current={item.id === step ? "step" : undefined}
-            onClick={() => setStep(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-        <span className="steps-actions">{shellActions}</span>
-      </nav>
-      <main>
-        {step === "workspace" ? (
-          <WorkspaceStep client={client} onWorkspace={onWorkspace} />
-        ) : step === "sources" ? (
-          <SourcesStep client={client} workspace={workspace} onWorkspace={onWorkspace} />
-        ) : step === "brief" ? (
-          <BriefStep client={client} onBrief={setBrief} />
-        ) : step === "run" ? (
-          <RunStep
-            client={client}
-            brief={brief}
-            workspace={workspace}
-            onRun={() => undefined}
-            // The run's review is on the shared screens.
-            onReview={() => setScreens("shared")}
-          />
-        ) : null}
-      </main>
+      <HostPanelsContext.Provider value={hostPanels}>
+        <SharedScreens
+          client={client}
+          workspaceId={recordId}
+          hostActions={
+            <>
+              <HeaderCredits client={client} mode={mode} />
+              {shellActions}
+            </>
+          }
+        />
+      </HostPanelsContext.Provider>
     </RecordContext.Provider>
   );
 }

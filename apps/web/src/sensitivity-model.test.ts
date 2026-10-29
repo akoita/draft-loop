@@ -1,25 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultRuleForm, describeRule, ruleRequest, ruleSentence } from "./sensitivity-model.js";
+import { defaultRuleForm, ruleRequest, ruleSentence } from "./sensitivity-model.js";
 
 describe("sensitivity rule model", () => {
-  it("describes a rule in one line", () => {
-    expect(
-      describeRule({
-        id: "notes",
-        tier: "never-share",
-        match: { kind: "heading-contains", text: "Private notes" },
-      }),
-    ).toBe('Never share · heading contains "Private notes"');
-    expect(
-      describeRule({
-        id: "salary",
-        tier: "sensitive",
-        match: { kind: "heading-path", path: ["Experience", "Salary"] },
-      }),
-    ).toBe("Sensitive · under Experience › Salary");
-  });
-
   it("reads each tier and match kind as a sentence", () => {
     const contains = { kind: "heading-contains", text: "Salary" } as const;
     const path = { kind: "heading-path", path: ["Health", "Notes"] } as const;

@@ -139,10 +139,8 @@ desktop's own screens:
   the credit balance.
 - The run details and the comparison between an application's runs.
 
-“Consent, rules and credits” sets up the workspace, records the candidate's
-consents, marks private sections and shows the credit balance. The web also
-shows each source's and job brief's injection screening status, and lets owners
-and admins release quarantined material with a reason. See the
+The web also shows each file's injection screening status, and lets owners and
+admins release quarantined material with a reason. See the
 [local server stack](docs/operations/local-server-stack.md).
 In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
 identity provider, and each organisation is its own tenant: its members see

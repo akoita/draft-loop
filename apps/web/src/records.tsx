@@ -32,9 +32,7 @@ type RecordsState =
 export interface RecordsProps {
   readonly client: ApiClient;
   readonly memory: RecordMemory;
-  /** Called when the person switches to another record, so the screen forgets the last one's work. */
-  readonly onSwitch?: () => void;
-  /** The steps for the chosen record; they call `onSaved` once they create or read the record. */
+  /** The screens for the chosen record; they call `onSaved` once they create or read the record. */
   readonly children: (recordId: string, onSaved: (recordId: string) => void) => ReactNode;
 }
 
@@ -42,7 +40,7 @@ export interface RecordsProps {
  * Sign-in mode: the candidate records the caller reaches, the one the screen works on, and who is
  * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under its new id.
  */
-export function Records({ client, memory, onSwitch, children }: RecordsProps) {
+export function Records({ client, memory, children }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
@@ -84,7 +82,6 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
   const choose = (recordId: string) => {
     if (recordId === chosen) return;
     memory.remember(recordId);
-    onSwitch?.();
     setDeleted(undefined);
     setChosen(recordId);
   };
@@ -93,7 +90,6 @@ export function Records({ client, memory, onSwitch, children }: RecordsProps) {
     const ids = withoutRecord(state.ids, recordId);
     const next = currentRecordId(ids, undefined);
     if (next !== undefined) memory.remember(next);
-    onSwitch?.();
     setState({ ...state, ids });
     setDeleted(recordId);
     setChosen(next);
@@ -143,7 +139,7 @@ export interface RecordPickerProps {
   readonly onChoose: (recordId: string) => void;
 }
 
-/** Chooses the record the steps work on, or names a new one. */
+/** Chooses the record the screens work on, or names a new one. */
 export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProps) {
   const [newId, setNewId] = useState("");
   const [problem, setProblem] = useState<string | undefined>(undefined);

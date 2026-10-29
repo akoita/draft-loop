@@ -2,29 +2,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CreditBalancePanel, RunEstimatePanel } from "./credits.js";
-import { RunPanel, type RunPanelProps } from "./run.js";
 import { syntheticCredits, syntheticEstimate } from "./test-fixtures.js";
 
-const runProps: RunPanelProps = {
-  run: undefined,
-  startProblem: undefined,
-  messages: [],
-  busy: false,
-  onStart: () => {},
-  onControl: () => {},
-  onReview: () => {},
-};
-
-describe("credit balance line", () => {
-  it("shows what is left, the allowance and the period end", () => {
+describe("credit balance chip", () => {
+  it("shows what is left, with the period end as its tooltip", () => {
     const html = renderToStaticMarkup(
       <CreditBalancePanel state={{ kind: "ready", credits: syntheticCredits }} locale="en-GB" />,
     );
-    expect(html).toContain("38 of 50 credits left. The period ends on 24 Nov 2026.");
-    expect(html).not.toContain("notice");
+    expect(html).toContain("38 of 50 credits left</span>");
+    expect(html).toContain("The period ends on 24 Nov 2026.");
+    expect(html).not.toContain("credit-chip-warning");
   });
 
-  it("adds the warning at 80% used", () => {
+  it("turns amber at 80% used", () => {
     const html = renderToStaticMarkup(
       <CreditBalancePanel
         state={{
@@ -33,9 +23,8 @@ describe("credit balance line", () => {
         }}
       />,
     );
-    expect(html).toContain("10 of 50 credits left.");
-    expect(html).toContain('class="notice"');
-    expect(html).toContain("Most of this period&#x27;s credits are used");
+    expect(html).toContain("10 of 50 credits left");
+    expect(html).toContain("credit-chip-warning");
   });
 
   it("says plainly that the plan is unlimited", () => {
@@ -47,22 +36,13 @@ describe("credit balance line", () => {
         }}
       />,
     );
-    expect(html).toContain("Your plan has unlimited credits.");
+    expect(html).toContain("Unlimited credits");
     expect(html).not.toContain(" of ");
   });
 
-  it("shows nothing while loading or in owner-token mode", () => {
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "loading" }} />)).toBe("");
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "hidden" }} />)).toBe("");
-  });
-
-  it("asks for a plan, or says the balance could not be read", () => {
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "no-plan" }} />)).toContain(
-      "no plan yet",
-    );
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "failed" }} />)).toContain(
-      "could not be read",
-    );
+  it("shows nothing while loading, in owner-token mode, without a plan or on a failure", () => {
+    for (const kind of ["loading", "hidden", "no-plan", "failed"] as const)
+      expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind }} />)).toBe("");
   });
 });
 
@@ -116,27 +96,5 @@ describe("run estimate", () => {
     expect(
       renderToStaticMarkup(<RunEstimatePanel state={{ kind: "failed", message: "Not priced." }} />),
     ).toContain("Not priced.");
-  });
-});
-
-describe("run step with credits", () => {
-  it("shows the balance above the run and the estimate before the start button", () => {
-    const html = renderToStaticMarkup(
-      <RunPanel {...runProps} credits={<p>Balance line</p>} estimate={<p>Estimate line</p>} />,
-    );
-    expect(html.indexOf("Balance line")).toBeGreaterThan(html.indexOf("<h2>Run</h2>"));
-    expect(html.indexOf("Estimate line")).toBeGreaterThan(-1);
-    expect(html.indexOf("Estimate line")).toBeLessThan(html.indexOf("Start a run"));
-  });
-
-  it("shows a plan refusal in place of generic error text", () => {
-    const html = renderToStaticMarkup(
-      <RunPanel
-        {...runProps}
-        messages={["This run needs 4 credits and you have 1 credit left."]}
-      />,
-    );
-    expect(html).toContain('role="alert"');
-    expect(html).toContain("This run needs 4 credits");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { routablePresets, samePairWarning, setupRequestBody } from "./workspace-model.js";
+import { routablePresets, setupRequestBody } from "./workspace-model.js";
 
 const balanced = {
   id: "balanced",
@@ -44,12 +44,5 @@ describe("first-run setup request", () => {
         ],
       ),
     ).toEqual([balanced]);
-  });
-});
-
-describe("model pair", () => {
-  it("warns only when both models come from one company", () => {
-    expect(samePairWarning("anthropic", "openai")).toBeUndefined();
-    expect(samePairWarning("openai", "openai")).toMatch(/same company/);
   });
 });

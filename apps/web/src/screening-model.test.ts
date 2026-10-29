@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import {
-  briefStatuses,
   canReleaseScreening,
   type QuarantinedMaterial,
   quarantinedStatus,
@@ -112,11 +111,6 @@ describe("screening badges", () => {
 
 describe("finding a status", () => {
   const statuses = [flaggedBrief, flaggedUpload];
-
-  it("finds a brief's job sources by the brief", () => {
-    expect(briefStatuses(statuses, "brief-1")).toEqual([flaggedBrief]);
-    expect(briefStatuses(statuses, "brief-2")).toEqual([]);
-  });
 
   it("finds a source by its base, id and uploaded version", () => {
     const source = { id: "source-1", knowledgeBaseId: "kb-1", versionId: "version-2" };
