@@ -108,9 +108,27 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
       }),
     );
     await tenantA.saveExecution(execution({ payload: { source: "phase-zero-cli" } }));
-    // Neither a failed attempt nor a call completed in another month counts.
+    // Neither an unbilled failed attempt nor a call completed in another month counts.
     await tenantA.saveExecution(
-      execution({ status: "failed", estimatedUsd: null, errorCode: "timeout" }),
+      execution({
+        status: "failed",
+        estimatedUsd: null,
+        errorCode: "timeout",
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      }),
+    );
+    // A failed attempt whose rejected response was billed counts (#1967).
+    await tenantA.saveExecution(
+      execution({
+        status: "failed",
+        estimatedUsd: 1,
+        errorCode: "invalid-response",
+        inputTokens: 1_000,
+        outputTokens: 500,
+        totalTokens: 1_500,
+      }),
     );
     await tenantA.saveExecution(execution({ completedAt: "2026-09-30T23:59:59.999Z" }));
     await tenantB.saveExecution(execution({ estimatedUsd: 9 }));
@@ -123,7 +141,7 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
     await schema?.drop();
   });
 
-  it("sums the tenant's completed calls in the month by company, model and route", async () => {
+  it("sums the tenant's billed calls in the month by company, model and route", async () => {
     expect(await tenantA.monthUsage("2026-10")).toEqual([
       {
         company: "anthropic",
@@ -139,10 +157,10 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
         company: "anthropic",
         model: "claude-sonnet-5-5",
         route: "vertex-ai",
-        calls: 3,
-        inputTokens: 400,
-        outputTokens: 150,
-        estimatedUsd: 0.75,
+        calls: 4,
+        inputTokens: 1_400,
+        outputTokens: 650,
+        estimatedUsd: 1.75,
         unpricedCalls: 1,
       },
       {

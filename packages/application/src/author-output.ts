@@ -13,6 +13,7 @@ import {
   ProviderAdapterError,
   type ProviderFailureStage,
   type ProviderValidationDiagnostic,
+  withBilledUsage,
 } from "@draft-loop/providers";
 import {
   type ArtifactEvidenceReference,
@@ -88,8 +89,10 @@ export function invalidAuthorProposalError(
   response: ModelResponse<JsonObject>,
   error: unknown,
 ): ProviderAdapterError {
+  // The provider billed the response even though it is rejected here (#1967).
+  const billed = { usage: response.usage, cost: response.cost };
   if (error instanceof ProviderAdapterError) {
-    return error;
+    return withBilledUsage(error, billed);
   }
   const failureStage = proposalFailureStage(error);
   const diagnosticCounts = proposalDiagnosticCounts(error);
@@ -103,6 +106,7 @@ export function invalidAuthorProposalError(
       failureStage,
       diagnostics: proposalDiagnostics(error),
       ...(diagnosticCounts.length === 0 ? {} : { diagnosticCounts }),
+      billed,
     },
   );
 }

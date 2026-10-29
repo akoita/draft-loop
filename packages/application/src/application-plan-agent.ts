@@ -72,6 +72,8 @@ function invalidPlan(response: ModelResponse<JsonObject>, message: string): Prov
   return new ProviderAdapterError(response.provider, "invalid-response", message, {
     retryable: true,
     ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
+    // The provider billed the response even though it is rejected here (#1967).
+    billed: { usage: response.usage, cost: response.cost },
   });
 }
 
