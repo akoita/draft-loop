@@ -66,6 +66,48 @@ interface RouteInput {
   readonly retry?: RetryOptions;
 }
 
+/** Builds the Anthropic route for one model: Vertex AI with its fallback, or the Claude API. */
+export type AnthropicRouteBuilder = (input: RouteInput) => RouteAdapter<JsonObject, JsonObject>;
+
+export interface DirectAnthropicRouteOptions {
+  /** Resolves the Claude API key at call time, so a rotated key takes effect without a restart. */
+  readonly resolveCredential: CredentialResolver;
+  /** A scripted direct-API client, for tests. */
+  readonly anthropicApiClient?: (apiKey: string) => AnthropicClient;
+}
+
+/**
+ * The Claude API itself, with the key resolved at each call: the hosted route's opt-in fallback,
+ * and the self-hosted `direct` route (ADR 0011, D5). It processes material outside the EU, so a
+ * deployment chooses it explicitly.
+ */
+export function createDirectAnthropicRoute(
+  options: DirectAnthropicRouteOptions,
+): AnthropicRouteBuilder {
+  const apiClient = options.anthropicApiClient ?? createAnthropicApiClient;
+  return (input) => ({
+    provider: "anthropic",
+    route: "anthropic-api",
+    execute: async (request) => {
+      const apiKey = await options.resolveCredential("anthropic");
+      if (apiKey === undefined || apiKey.trim() === "") {
+        throw new ProviderAdapterError(
+          "anthropic",
+          "authentication",
+          "The Claude API key is not configured.",
+          { retryable: false, route: "anthropic-api" },
+        );
+      }
+      return createAnthropicAdapter<JsonObject, JsonObject>(apiClient(apiKey), {
+        configuredModel: input.configuredModel,
+        ...(input.pricing === undefined ? {} : { pricing: input.pricing }),
+        ...(input.retry === undefined ? {} : { retry: input.retry }),
+        route: "anthropic-api",
+      }).execute(request);
+    },
+  });
+}
+
 /**
  * The hosted author's route: Claude on Vertex AI in an EU location and, only when the deployment
  * allows it, the direct Claude API as a recorded fallback. The Vertex client is built once, so
@@ -73,10 +115,15 @@ interface RouteInput {
  */
 export function createHostedAnthropicRoute(
   options: HostedAnthropicRouteOptions,
-): (input: RouteInput) => RouteAdapter<JsonObject, JsonObject> {
+): AnthropicRouteBuilder {
   const { locationPriceFactor, ...clientOptions } = options.vertex;
   const vertexClient = createVertexAnthropicClient(clientOptions);
-  const apiClient = options.anthropicApiClient ?? createAnthropicApiClient;
+  const direct = createDirectAnthropicRoute({
+    resolveCredential: options.resolveCredential,
+    ...(options.anthropicApiClient === undefined
+      ? {}
+      : { anthropicApiClient: options.anthropicApiClient }),
+  });
   return (input) => {
     const adapterOptions = {
       configuredModel: input.configuredModel,
@@ -88,25 +135,6 @@ export function createHostedAnthropicRoute(
       locationPriceFactor,
     });
     if (!options.anthropicFallback) return primary;
-    const fallback: RouteAdapter<JsonObject, JsonObject> = {
-      provider: "anthropic",
-      route: "anthropic-api",
-      execute: async (request) => {
-        const apiKey = await options.resolveCredential("anthropic");
-        if (apiKey === undefined || apiKey.trim() === "") {
-          throw new ProviderAdapterError(
-            "anthropic",
-            "authentication",
-            "The Claude API key for the fallback route is not configured.",
-            { retryable: false, route: "anthropic-api" },
-          );
-        }
-        return createAnthropicAdapter<JsonObject, JsonObject>(apiClient(apiKey), {
-          ...adapterOptions,
-          route: "anthropic-api",
-        }).execute(request);
-      },
-    };
-    return createRoutedAdapter({ primary, fallback });
+    return createRoutedAdapter({ primary, fallback: direct(input) });
   };
 }

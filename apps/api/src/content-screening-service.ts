@@ -6,7 +6,10 @@ import {
 } from "@draft-loop/application";
 import { createRuleContentScreener } from "@draft-loop/ingestion/content-screening-rules";
 import {
+  type AnthropicRouteBuilder,
   contentScreeningModelId,
+  createDirectAnthropicRoute,
+  createFileCredentialResolver,
   createHostedAnthropicRoute,
   createHostedContentScreener,
   type HostedContentScreenerOptions,
@@ -48,15 +51,23 @@ export function rulesScreeningSetup(): ContentScreeningSetup {
   return { mode: "rules", allowProviderData: false, rules: createRuleContentScreener() };
 }
 
-/**
- * The deployment's screening from its configuration. `rules+model` builds the EU Vertex route
- * once; Haiku 5.5's catalog rates price each call, and the route applies the location's factor.
- */
-export function contentScreeningSetup(config: ScreeningConfig): ContentScreeningSetup {
-  const rules = createRuleContentScreener();
-  const { mode, allowProviderData, model } = config;
-  if (model === undefined) return { mode, allowProviderData, rules };
-  const route = createHostedAnthropicRoute({
+/** The route the model screener calls, or none when the configuration names no model. */
+function screeningRoute(
+  config: ScreeningConfig,
+  dependencies: ScreeningRouteDependencies,
+): AnthropicRouteBuilder | undefined {
+  const { model, direct } = config;
+  if (direct !== undefined) {
+    // A self-hosted stack: the Claude API with the operator's key, read from its file per call.
+    return createDirectAnthropicRoute({
+      resolveCredential: createFileCredentialResolver({ directory: direct.secretsDirectory }),
+      ...(dependencies.anthropicApiClient === undefined
+        ? {}
+        : { anthropicApiClient: dependencies.anthropicApiClient }),
+    });
+  }
+  if (model === undefined) return undefined;
+  return createHostedAnthropicRoute({
     vertex: {
       projectId: model.vertexProjectId,
       location: model.vertexLocation,
@@ -66,6 +77,28 @@ export function contentScreeningSetup(config: ScreeningConfig): ContentScreening
     anthropicFallback: false,
     resolveCredential: async () => undefined,
   });
+}
+
+export interface ScreeningRouteDependencies {
+  /** A scripted Claude API client for the direct route, for tests. */
+  readonly anthropicApiClient?: Parameters<
+    typeof createDirectAnthropicRoute
+  >[0]["anthropicApiClient"];
+}
+
+/**
+ * The deployment's screening from its configuration. `rules+model` builds its route once: the EU
+ * Vertex route, whose location factor applies to each price, or the self-hosted Claude API route.
+ * Haiku 5.5's catalog rates price each call.
+ */
+export function contentScreeningSetup(
+  config: ScreeningConfig,
+  dependencies: ScreeningRouteDependencies = {},
+): ContentScreeningSetup {
+  const rules = createRuleContentScreener();
+  const { mode, allowProviderData } = config;
+  const route = screeningRoute(config, dependencies);
+  if (route === undefined) return { mode, allowProviderData, rules };
   const pricing = catalogModelPricing({
     company: "anthropic",
     modelId: contentScreeningModelId,

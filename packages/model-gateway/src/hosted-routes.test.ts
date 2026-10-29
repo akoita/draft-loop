@@ -2,6 +2,7 @@ import type { AnthropicClient } from "@draft-loop/providers";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createDirectAnthropicRoute,
   createHostedAnthropicRoute,
   createOpenAiClient,
   createOpenAiEuClient,
@@ -105,7 +106,39 @@ describe("hosted Anthropic route", () => {
   it("refuses the fallback when its key is missing", async () => {
     const { adapter, direct } = route(404, {});
 
-    await expect(adapter.execute(request)).rejects.toThrow("fallback route is not configured");
+    await expect(adapter.execute(request)).rejects.toThrow("The Claude API key is not configured.");
+    expect(direct.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("direct Anthropic route", () => {
+  it("calls the Claude API with the key resolved at each call, and names its route", async () => {
+    const direct = directClient();
+    const resolveCredential = vi.fn(async () => "synthetic-claude-key");
+    const adapter = createDirectAnthropicRoute({
+      resolveCredential,
+      anthropicApiClient: () => direct.client,
+    })({ configuredModel: model, pricing, retry: { maxRetries: 0 } });
+
+    const response = await adapter.execute(request);
+
+    expect(adapter).toMatchObject({ provider: "anthropic", route: "anthropic-api" });
+    expect(response.route).toBe("anthropic-api");
+    expect(response.routeFallback).toBeUndefined();
+    // List price, with no location factor.
+    expect(response.cost.estimatedUsd).toBeCloseTo(0.0105, 8);
+    expect(resolveCredential).toHaveBeenCalledWith("anthropic");
+    expect(direct.create).toHaveBeenCalledOnce();
+  });
+
+  it("refuses a call without a key, before reaching the API", async () => {
+    const direct = directClient();
+    const adapter = createDirectAnthropicRoute({
+      resolveCredential: async () => undefined,
+      anthropicApiClient: () => direct.client,
+    })({ configuredModel: model });
+
+    await expect(adapter.execute(request)).rejects.toThrow("The Claude API key is not configured.");
     expect(direct.create).not.toHaveBeenCalled();
   });
 });

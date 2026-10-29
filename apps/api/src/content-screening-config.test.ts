@@ -54,6 +54,43 @@ describe("readScreeningConfig", () => {
     );
   });
 
+  it("reads rules+model on the direct Claude API route of a self-hosted stack", () => {
+    expect(
+      readScreeningConfig({
+        DRAFT_LOOP_SCREENING: "rules+model",
+        DRAFT_LOOP_MODEL_ROUTES: "direct",
+      }),
+    ).toEqual({
+      mode: "rules+model",
+      allowProviderData: false,
+      direct: { secretsDirectory: "/run/secrets" },
+    });
+    expect(
+      readScreeningConfig({
+        DRAFT_LOOP_SCREENING: "rules+model",
+        DRAFT_LOOP_MODEL_ROUTES: "direct",
+        DRAFT_LOOP_SECRETS_DIR: "/srv/keys",
+      }).direct,
+    ).toEqual({ secretsDirectory: "/srv/keys" });
+    // Rules alone read no route at all.
+    expect(
+      readScreeningConfig({ DRAFT_LOOP_SCREENING: "rules", DRAFT_LOOP_MODEL_ROUTES: "direct" }),
+    ).toEqual({ mode: "rules", allowProviderData: false });
+  });
+
+  it.each([
+    ["a Vertex project", { DRAFT_LOOP_VERTEX_PROJECT_ID: "example-proj" }],
+    ["a relative key directory", { DRAFT_LOOP_SECRETS_DIR: "keys" }],
+  ])("refuses rules+model on the direct route with %s", (_label, env) => {
+    expect(() =>
+      readScreeningConfig({
+        DRAFT_LOOP_SCREENING: "rules+model",
+        DRAFT_LOOP_MODEL_ROUTES: "direct",
+        ...env,
+      }),
+    ).toThrow(ApiConfigError);
+  });
+
   it.each(["rules+models", "model", "on", "RULES", "true"])(
     "refuses the unknown mode %j instead of falling back",
     (mode) => {
