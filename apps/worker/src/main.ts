@@ -19,7 +19,7 @@ import {
   runCreditsMessage,
   runOutcomeFields,
 } from "./logging.js";
-import { workerProviderOptions } from "./model-routes.js";
+import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import {
@@ -33,14 +33,9 @@ import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 // The worker's entry point: one pool, bucket and queue opened at startup, serving every tenant.
 // Each job names its tenant, and the application is composed over that tenant's view of them.
 const config = readWorkerConfig(process.env);
-if (config.modelGateway !== undefined) {
+if (config.modelRoutes !== undefined) {
   // Routes that process material outside the EU are deployment choices, so each start names them.
-  console.info(
-    logLine("INFO", "model routes", {
-      openAiEndpoint: config.modelGateway.openAiEndpoint,
-      anthropicFallback: config.modelGateway.anthropicKeySecret !== undefined,
-    }),
-  );
+  console.info(logLine("INFO", "model routes", routeFields(config.modelRoutes)));
 }
 // Without its embedding model the critic judges no requirement coverage, so each start names the
 // model's state (#1806).
@@ -63,9 +58,9 @@ const bucket = new Storage(
 const serviceFor = tenantServices({
   tenancy,
   blobsFor: (tenantId) => createGcsBlobStorage({ bucket, tenantId }),
-  // Claude on Vertex AI and OpenAI's EU endpoint unless the deployment chose otherwise, keys
-  // from Secret Manager; none on the stack.
-  local: workerProviderOptions(config.modelGateway),
+  // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
+  // direct routes with keys from files, or none on the dev stack.
+  local: routeProviderOptions(config.modelRoutes),
 });
 
 const workspaceRoot = (job: WorkspaceJob) =>

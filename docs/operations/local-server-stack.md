@@ -294,6 +294,21 @@ from the deployment's configuration, never from this repository.
   every start.
 - Keys are read from Secret Manager at call time and kept in memory for five
   minutes.
+
+A self-hosted stack sets `DRAFT_LOOP_MODEL_ROUTES=direct` instead, with none
+of the Vertex or Secret Manager settings above, which it refuses:
+
+| Variable                     | Meaning                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `DRAFT_LOOP_MODEL_ROUTES`    | `vertex` (the default when a Vertex project is set) or `direct`                |
+| `DRAFT_LOOP_SECRETS_DIR`     | The directory holding `anthropic_api_key` and `openai_api_key`; `/run/secrets` |
+| `DRAFT_LOOP_OPENAI_ENDPOINT` | `global` (the default with `direct`) or `eu` for an EU-residency project       |
+
+- Claude runs through the Claude API with prompt caching, and the critic
+  through OpenAI, with the operator's own keys. Both process material outside
+  the EU, under the operator's own provider terms.
+- A key file other users can read is refused; keep each one `chmod 600`. A
+  provider with no file has no key, and a new file is read on the next call.
 - The API reads `DRAFT_LOOP_VERTEX_PROJECT_ID`, `DRAFT_LOOP_VERTEX_LOCATION` and
   `DRAFT_LOOP_VERTEX_PRICE_FACTOR` only with `DRAFT_LOOP_SCREENING=rules+model`,
   for the injection screener's Claude Haiku calls. It uses its own service
