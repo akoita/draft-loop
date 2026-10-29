@@ -120,6 +120,8 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
+  /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
+  readonly localModels?: readonly string[];
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
@@ -339,6 +341,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       budgetCeiling: application.budgetCeiling,
+      ...(options.localModels === undefined ? {} : { localModels: options.localModels }),
       ...(planLimits === undefined ? {} : { planLimits }),
       ...(knowledgeIntake === undefined || knowledgeStore === undefined
         ? {}
@@ -373,7 +376,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: application.workspaceRoot,
       derivations: application.profileDerivations ?? noProfileDerivations,
     });
-    registerModelCatalogRoutes(app);
+    registerModelCatalogRoutes(
+      app,
+      options.localModels === undefined ? {} : { localModels: options.localModels },
+    );
     registerApplicationLifecycleRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,

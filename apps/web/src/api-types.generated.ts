@@ -271,6 +271,7 @@ export interface ApiSchemas {
     readonly models: readonly (ApiSchemas["CatalogModel"])[];
     readonly presets: readonly (ApiSchemas["CatalogPreset"])[];
     readonly defaultPresetId: string;
+    readonly localModels: readonly (string)[];
   };
   "MonthUsage": {
     readonly calls: number;
@@ -828,11 +829,11 @@ export interface ApiOperations {
       readonly instructions?: string;
       readonly truthfulnessPolicy?: string;
       readonly author?: {
-        readonly company: "anthropic" | "openai";
+        readonly company: "anthropic" | "openai" | "local";
         readonly model: string;
       };
       readonly critic?: {
-        readonly company: "anthropic" | "openai";
+        readonly company: "anthropic" | "openai" | "local";
         readonly model: string;
       };
       readonly maxRounds?: number;
@@ -874,11 +875,11 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly author: {
-        readonly company: "anthropic" | "openai";
+        readonly company: "anthropic" | "openai" | "local";
         readonly model: string;
       };
       readonly critic: {
-        readonly company: "anthropic" | "openai";
+        readonly company: "anthropic" | "openai" | "local";
         readonly model: string;
       };
       readonly independenceOverrideRationale?: string;

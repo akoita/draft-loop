@@ -52,6 +52,11 @@ const modelCatalogSchema = z
     models: z.array(catalogModelSchema),
     presets: z.array(catalogPresetSchema),
     defaultPresetId: z.string().describe("The preset a new workspace gets when it names no model."),
+    localModels: z
+      .array(z.string())
+      .describe(
+        "Models on the deployment's own local endpoint, company `local`, for either role: unvalidated, unpriced and empty unless the deployment declares them.",
+      ),
   })
   .meta({ id: "ModelCatalog" });
 
@@ -60,7 +65,10 @@ const modelCatalogSchema = z
  * picker (ADR 0011, D9). It reads the same catalog as the desktop, narrowed to what the gateway
  * routes, so the picker never offers a model a run would refuse.
  */
-export function registerModelCatalogRoutes(parent: FastifyInstance): void {
+export function registerModelCatalogRoutes(
+  parent: FastifyInstance,
+  options: { readonly localModels?: readonly string[] } = {},
+): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
 
   app.get(
@@ -106,6 +114,7 @@ export function registerModelCatalogRoutes(parent: FastifyInstance): void {
           critic: { ...critic },
         })),
         defaultPresetId: catalog.defaultPresetId,
+        localModels: [...(options.localModels ?? [])],
       };
     },
   );

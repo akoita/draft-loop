@@ -97,10 +97,10 @@ const pick = ({ content, version, checksum }: ApiSchemas["WritingPolicy"]) => ({
   checksum,
 });
 
-const hostedCompany = (company: string): "anthropic" | "openai" =>
-  company === "anthropic" || company === "openai"
+const hostedCompany = (company: string): "anthropic" | "openai" | "local" =>
+  company === "anthropic" || company === "openai" || company === "local"
     ? company
-    : refuse("The hosted service runs Anthropic and OpenAI models only.");
+    : refuse("This service runs Anthropic, OpenAI and its own local models only.");
 
 function errorCode(status: number): BridgeErrorCode {
   if (status === 404) return "not-found";
@@ -487,15 +487,21 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       }
       case "models.list": {
         const { provider } = command.input;
-        if (provider !== "anthropic" && provider !== "openai") {
-          return refuse("The hosted service runs Anthropic and OpenAI models only.");
+        if (provider !== "anthropic" && provider !== "openai" && provider !== "local") {
+          return refuse("This service runs Anthropic, OpenAI and its own local models only.");
         }
         const catalog = await client.call("GET /v1/model-catalog", {});
-        const ids = [
-          ...new Set(
-            catalog.models.filter(({ company }) => company === provider).map(({ model }) => model),
-          ),
-        ];
+        // Local models are the ones the deployment declares on its own endpoint.
+        const ids =
+          provider === "local"
+            ? catalog.localModels
+            : [
+                ...new Set(
+                  catalog.models
+                    .filter(({ company }) => company === provider)
+                    .map(({ model }) => model),
+                ),
+              ];
         return {
           provider,
           models: ids.map((id) => ({ id })),
@@ -521,7 +527,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "workspace.configure-models": {
         const { workspaceId, independenceOverrideRationale } = command.input;
         if (command.input.localEndpoint !== undefined) {
-          return refuse("A local model server cannot be used on the hosted service.");
+          return refuse(
+            "Local models run on this service's own endpoint; leave the address empty.",
+          );
         }
         if (
           command.input.authorLineage !== undefined ||

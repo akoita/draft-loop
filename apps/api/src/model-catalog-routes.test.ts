@@ -24,13 +24,15 @@ interface Catalog {
     readonly critic: { readonly id: string; readonly version: number };
   }[];
   readonly defaultPresetId: string;
+  readonly localModels: readonly string[];
 }
 
 let app: FastifyInstance;
 
-async function readCatalog(): Promise<Catalog> {
+async function readCatalog(localModels?: readonly string[]): Promise<Catalog> {
   app = await buildApi({
     ownerToken,
+    ...(localModels === undefined ? {} : { localModels }),
     application: {
       service: {} as never,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -109,5 +111,14 @@ describe("hosted model catalog", () => {
         expect(model.effortLevels).toContain(model.defaultEffort);
       }
     }
+  });
+
+  it("lists no local model unless the deployment declares them", async () => {
+    expect((await readCatalog()).localModels).toEqual([]);
+    await app.close();
+
+    const catalog = await readCatalog(["qwen3:32b", "llama-4-scout"]);
+    expect(catalog.localModels).toEqual(["qwen3:32b", "llama-4-scout"]);
+    expect(catalog.models.map(({ company }) => company)).not.toContain("local");
   });
 });

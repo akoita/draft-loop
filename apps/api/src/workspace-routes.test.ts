@@ -44,9 +44,13 @@ const knowledgeIntake = {
     knowledgeBaseId === "base-empty" ? [] : [{ id: `${knowledgeBaseId}-source` }],
 } as unknown as HostedKnowledgeIntake;
 
-async function build(methods: Partial<ApplicationService>): Promise<void> {
+async function build(
+  methods: Partial<ApplicationService>,
+  localModels?: readonly string[],
+): Promise<void> {
   app = await buildApi({
     ownerToken,
+    ...(localModels === undefined ? {} : { localModels }),
     application: {
       service: methods as ApplicationService,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -159,8 +163,18 @@ describe("workspace setup", () => {
     expect(initialize).not.toHaveBeenCalled();
   });
 
+  it("refuses a local model the deployment does not declare, before saving anything", async () => {
+    const initialize = vi.fn(async () => descriptor);
+    await build({ readWorkspace: missing, initialize });
+
+    const response = await create({ author: { company: "local", model: "qwen3" } });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.code).toBe("model_not_offered");
+    expect(initialize).not.toHaveBeenCalled();
+  });
+
   it.each([
-    ["a local model", { author: { company: "local", model: "qwen3" } }],
     ["a provider the gateway does not route", { critic: { company: "mistral", model: "large" } }],
     ["a local endpoint", { localEndpoint: "http://127.0.0.1:8080" }],
     ["a job file path", { jobDescription: "/etc/passwd" }],
@@ -339,16 +353,42 @@ describe("workspace models", () => {
     );
   });
 
-  it("routes only Anthropic and OpenAI models, and never a local endpoint", async () => {
+  it("refuses a local model the deployment does not declare, and any endpoint", async () => {
     const reconfigureModels = vi.fn();
-    await build({ readWorkspace: async () => descriptor, reconfigureModels });
+    await build({ readWorkspace: async () => descriptor, reconfigureModels }, ["qwen3:32b"]);
 
     const local = await change({ ...pair, author: { company: "local", model: "llama-4" } });
     const endpoint = await change({ ...pair, localEndpoint: "http://127.0.0.1:11434" });
+    const unknown = await change({ ...pair, author: { company: "zai", model: "glm-5.3" } });
 
-    expect(local.statusCode).toBe(400);
+    expect(local.statusCode).toBe(422);
+    expect(local.json()).toMatchObject({ error: { code: "model_not_offered" } });
     expect(endpoint.statusCode).toBe(400);
+    expect(unknown.statusCode).toBe(400);
     expect(reconfigureModels).not.toHaveBeenCalled();
+  });
+
+  it("accepts a declared local model on either side, with no endpoint", async () => {
+    const localPair = {
+      author: { company: "local", model: "qwen3:32b" },
+      critic: { company: "openai", model: "gpt-6.1-terra" },
+    };
+    const reconfigureModels = vi.fn(async () => ({ ...descriptor, ...localPair }));
+    await build({ readWorkspace: async () => descriptor, reconfigureModels }, ["qwen3:32b"]);
+
+    const response = await change(localPair);
+
+    expect(response.statusCode).toBe(200);
+    expect(reconfigureModels).toHaveBeenCalledWith(
+      {
+        root,
+        authorCompany: "local",
+        authorModel: "qwen3:32b",
+        criticCompany: "openai",
+        criticModel: "gpt-6.1-terra",
+      },
+      expect.anything(),
+    );
   });
 
   it("answers 404 for an unknown workspace and the service's refusal as 422", async () => {

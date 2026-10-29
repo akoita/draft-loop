@@ -23,6 +23,8 @@ export interface WorkspaceRoutesOptions {
   readonly budgetCeiling: RunBudgetCeiling;
   /** Holds new candidate records to the plan; absent in owner-token mode, where nothing is limited. */
   readonly planLimits?: PlanLimits;
+  /** The models the deployment's local endpoint serves; none unless it declares them. */
+  readonly localModels?: readonly string[];
   /** The tenant's knowledge; without it workspaces cannot select any. */
   readonly knowledge?: {
     readonly intake: HostedKnowledgeIntake;
@@ -42,9 +44,12 @@ const identifierSchema = z
 
 const workspaceParams = z.strictObject({ workspaceId: identifierSchema });
 
-/** The companies the model gateway routes; local models and their endpoints are desktop-only. */
+/**
+ * The companies the server routes: `local` only for a model the deployment declares, on its own
+ * endpoint. A workspace never names an endpoint.
+ */
 const hostedModelSchema = z.strictObject({
-  company: z.enum(["anthropic", "openai"]),
+  company: z.enum(["anthropic", "openai", "local"]),
   model: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u, "must be a model id"),
 });
 
@@ -125,6 +130,21 @@ function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeW
   };
 }
 
+/** The side naming a local model the deployment does not serve, if any. */
+function undeclaredLocalModel(
+  sides: readonly (z.infer<typeof hostedModelSchema> | undefined)[],
+  localModels: readonly string[],
+): string | undefined {
+  return sides.find((side) => side?.company === "local" && !localModels.includes(side.model))
+    ?.model;
+}
+
+const localModelRefusal = (model: string) =>
+  apiError(
+    "model_not_offered",
+    `This service has no local model named ${model}; choose one from GET /v1/model-catalog.`,
+  );
+
 async function workspaceExists(service: ApplicationService, root: string): Promise<boolean> {
   try {
     await service.readWorkspace(root);
@@ -143,6 +163,7 @@ export function registerWorkspaceRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, budgetCeiling } = options;
+  const localModels = options.localModels ?? [];
 
   app.put(
     "/v1/workspaces/:workspaceId",
@@ -150,7 +171,7 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Create a workspace",
         description:
-          "Creates the workspace with its language, models, run limits and execution mode. Only Anthropic and OpenAI models are routed by the hosted service; a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+          "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         params: workspaceParams,
         body: createWorkspaceBody,
         response: {
@@ -165,6 +186,8 @@ export function registerWorkspaceRoutes(
     async (request, reply) => {
       const root = workspaceRoot(request.params.workspaceId);
       const { body } = request;
+      const undeclared = undeclaredLocalModel([body.author, body.critic], localModels);
+      if (undeclared !== undefined) return reply.code(422).send(localModelRefusal(undeclared));
       // Checked before anything is saved, so a workspace never exists that cannot begin a run.
       const violation = runBudgetCeilingViolation(
         {
@@ -197,7 +220,7 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Change a workspace's author and critic models",
         description:
-          "Applies from the next run; recorded runs keep the pair they ran with. Only Anthropic and OpenAI models are routed. A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
+          "Applies from the next run; recorded runs keep the pair they ran with. Anthropic and OpenAI models are routed, and local models only where the deployment lists them (else 422 model_not_offered). A pair from one lineage answers 422 unless a reason is given, and a change while a run is executing answers 422.",
         params: workspaceParams,
         body: changeModelsBody,
         response: {
@@ -214,6 +237,8 @@ export function registerWorkspaceRoutes(
         return reply.code(404).send(apiError("not_found", "No such workspace."));
       }
       const { author, critic, independenceOverrideRationale } = request.body;
+      const undeclared = undeclaredLocalModel([author, critic], localModels);
+      if (undeclared !== undefined) return reply.code(422).send(localModelRefusal(undeclared));
       const descriptor = await service.reconfigureModels(
         {
           root,
