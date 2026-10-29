@@ -1,10 +1,14 @@
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AnthropicClient } from "@draft-loop/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contentScreeningSetup } from "./content-screening-service.js";
+import {
+  contentScreeningSetup,
+  type ScreeningRouteDependencies,
+} from "./content-screening-service.js";
+
+type AnthropicClient = ReturnType<NonNullable<ScreeningRouteDependencies["anthropicApiClient"]>>;
 
 let secretsDirectory: string;
 
