@@ -7,6 +7,7 @@ import {
   careerProfileIntro,
 } from "./career-flow.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
+import { HostEvidenceAfter, HostEvidenceBefore } from "./host-panels.js";
 
 interface CareerPageFrameProps {
   readonly page: Extract<CareerFlowStep, "evidence" | "profile">;
@@ -85,6 +86,8 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly retrieval?: ReactNode;
   /** Why changes to the evidence wait for now, such as a profile generation running. */
   readonly lockedReason?: string | null;
+  /** Changes whenever the knowledge selection or its files change; the host's panels read again. */
+  readonly revision?: number;
 }
 
 /** The raw material the candidate provides. Manage evidence opens it. */
@@ -93,6 +96,7 @@ export function CareerEvidencePage({
   knowledge = null,
   retrieval = null,
   lockedReason = null,
+  revision = 0,
   ...frame
 }: CareerEvidencePageProps) {
   return (
@@ -107,9 +111,11 @@ export function CareerEvidencePage({
           {lockedReason}
         </p>
       )}
+      <HostEvidenceBefore />
       {card}
       {knowledge}
       {retrieval}
+      <HostEvidenceAfter revision={revision} />
     </CareerPageFrame>
   );
 }

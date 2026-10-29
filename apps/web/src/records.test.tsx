@@ -124,11 +124,11 @@ describe("record members", () => {
   it("reads the records before showing any step", () => {
     const html = renderToStaticMarkup(
       <Records client={unusedClient} memory={createRecordMemory(() => undefined)}>
-        {(recordId) => <p>steps for {recordId}</p>}
+        {(recordId) => <p>screens for {recordId}</p>}
       </Records>,
     );
 
     expect(html).toContain('role="status">Reading your candidate records…</p>');
-    expect(html).not.toContain("steps for");
+    expect(html).not.toContain("screens for");
   });
 });

@@ -46,7 +46,7 @@ describe("record export and deletion", () => {
       deleteRefusal(
         new ApiRequestError(409, "run_active", "A run is queued or running; stop it first."),
       ),
-    ).toMatch(/^Stop the run first\. .*in the Run step/u);
+    ).toMatch(/^Stop the run first\. .*in its review/u);
     expect(
       deleteRefusal(
         new ApiRequestError(403, "forbidden", "Only an organisation's owners and admins erase."),

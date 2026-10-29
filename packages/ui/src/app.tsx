@@ -2797,6 +2797,7 @@ export function App({
         ? {}
         : {
             headerNotice: applicationNameNudge(application),
+            startApplicationId: application.applicationId,
             ...(activePort.setApplicationModels === undefined ||
             applicationSummaries[application.applicationId]?.isDefault !== false
               ? {}
@@ -2970,6 +2971,7 @@ export function App({
           errorMessage={importError}
           back={pageBack}
           onOpenStep={flowStepHandlers}
+          revision={knowledgeRevision}
           lockedReason={
             profileGenerationForActiveWorkspace === null
               ? null

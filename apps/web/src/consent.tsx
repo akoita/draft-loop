@@ -27,10 +27,27 @@ export interface ConsentStepProps {
   readonly kind: ConsentKind;
   /** The workspace whose author and critic name the providers; the default pair until read. */
   readonly workspace: ApiSchemas["Workspace"] | undefined;
+  /** Once granted, read as one short line with a way to withdraw, for pages that only remind. */
+  readonly compact?: boolean;
+}
+
+export interface ConsentState {
+  /** The record's consents; undefined until read. */
+  readonly consents: Consents | undefined;
+  readonly messages: readonly string[];
+  readonly busy: boolean;
+  /** The providers runs send material to. */
+  readonly providers: readonly ConsentProvider[];
+  readonly grant: (input: Omit<GrantInput, "providers">) => void;
+  readonly withdraw: () => void;
 }
 
 /** Reads the candidate record's consents and records a grant or a withdrawal of one kind. */
-export function ConsentStep({ client, kind, workspace }: ConsentStepProps) {
+export function useConsents(
+  client: ApiClient,
+  kind: ConsentKind,
+  workspace: ApiSchemas["Workspace"] | undefined,
+): ConsentState {
   const workspaceId = useRecordId();
   const [consents, setConsents] = useState<Consents | undefined>(undefined);
   const [messages, setMessages] = useState<readonly string[]>([]);
@@ -71,6 +88,35 @@ export function ConsentStep({ client, kind, workspace }: ConsentStepProps) {
     }
   }
 
+  return {
+    consents,
+    messages,
+    busy,
+    providers,
+    grant: (input) => void record(grantRequest(kind, { ...input, providers })),
+    withdraw: () => {
+      if (consents !== undefined) void record(withdrawRequest(kind, consents));
+    },
+  };
+}
+
+/** Reads the candidate record's consents and records a grant or a withdrawal of one kind. */
+export function ConsentStep({ client, kind, workspace, compact }: ConsentStepProps) {
+  const state = useConsents(client, kind, workspace);
+  return <ConsentView kind={kind} state={state} {...(compact === undefined ? {} : { compact })} />;
+}
+
+/** One kind of consent over a state read by `useConsents`. */
+export function ConsentView({
+  kind,
+  state,
+  compact,
+}: {
+  readonly kind: ConsentKind;
+  readonly state: ConsentState;
+  readonly compact?: boolean;
+}) {
+  const { consents, messages, busy, providers } = state;
   if (consents === undefined)
     return messages.length === 0 ? (
       <p role="status">Reading the candidate's consents…</p>
@@ -85,8 +131,9 @@ export function ConsentStep({ client, kind, workspace }: ConsentStepProps) {
       providers={providers}
       messages={messages}
       busy={busy}
-      onGrant={(input) => void record(grantRequest(kind, { ...input, providers }))}
-      onWithdraw={() => void record(withdrawRequest(kind, consents))}
+      {...(compact === undefined ? {} : { compact })}
+      onGrant={state.grant}
+      onWithdraw={state.withdraw}
     />
   );
 }
@@ -114,11 +161,18 @@ export interface ConsentPanelProps {
   readonly onWithdraw: () => void;
   /** Dates in this locale; the browser's when left out. */
   readonly locale?: string;
+  /** Once granted, shows one short line and the withdrawal instead of the full panel. */
+  readonly compact?: boolean;
 }
 
 const titles: Readonly<Record<ConsentKind, string>> = {
   "material-storage": "Consent to store the candidate's material",
   "provider-transmission": "Consent to send material to model providers",
+};
+
+const compactTitles: Readonly<Record<ConsentKind, string>> = {
+  "material-storage": "Permission to store this material",
+  "provider-transmission": "Permission to send material to model providers",
 };
 
 const firstSteps: Readonly<Record<ConsentKind, string>> = {
@@ -128,15 +182,29 @@ const firstSteps: Readonly<Record<ConsentKind, string>> = {
 
 /** One kind of consent: what it covers, its current state, the form or withdrawal, and history. */
 export function ConsentPanel(props: ConsentPanelProps) {
-  const { kind, consents, providers, busy, locale } = props;
+  const { kind, consents, providers, busy, locale, compact } = props;
   const granted = isGranted(consents, kind);
   const history = consentHistory(consents, kind);
   const missing = kind === "provider-transmission" ? unconsentedProviders(consents, providers) : [];
   const headingId = `consent-${kind}`;
 
+  if (compact === true && granted && missing.length === 0)
+    return (
+      <section className="consent consent-compact" aria-labelledby={headingId}>
+        <p>
+          <strong id={headingId}>{compactTitles[kind]}</strong> ·{" "}
+          <span className="muted">{consentSummary(consents, kind, locale)}</span>{" "}
+          <button type="button" className="secondary" disabled={busy} onClick={props.onWithdraw}>
+            Withdraw consent
+          </button>
+        </p>
+        <Alerts messages={props.messages} />
+      </section>
+    );
+
   return (
     <section className="consent" aria-labelledby={headingId}>
-      <h3 id={headingId}>{titles[kind]}</h3>
+      <h3 id={headingId}>{compact === true ? compactTitles[kind] : titles[kind]}</h3>
       <p>
         {kind === "material-storage"
           ? "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."

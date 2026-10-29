@@ -41,7 +41,7 @@ export function deleteRecordRequest(
 /** What to say when the API refuses a deletion; a running record needs its run stopped first. */
 export function deleteRefusal(error: unknown): string {
   if (error instanceof ApiRequestError && error.code === "run_active")
-    return "Stop the run first. A run on this record is queued or running: pause it or stop it for good in the Run step, then delete the record.";
+    return "Stop the run first. A run on this record is queued or running: pause it or stop it for good in its review, then delete the record.";
   return describeError(error);
 }
 

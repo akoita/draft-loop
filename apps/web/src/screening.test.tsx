@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { type ApiClient, ApiRequestError } from "./api-client.js";
 import {
-  BriefScreening,
   QuarantineList,
   ReleaseDialog,
   type ReleaseDialogProps,
@@ -54,7 +53,7 @@ function note(status: ScreeningStatus | undefined, canRelease: boolean) {
   );
 }
 
-describe("screening badges on sources and briefs", () => {
+describe("screening badges on sources", () => {
   it("shows a quarantined flag as text with its signals, and offers owners a release", () => {
     const html = note(flagged, true);
 
@@ -79,18 +78,6 @@ describe("screening badges on sources and briefs", () => {
     expect(note(undefined, true)).toContain("screening-none");
     expect(note(undefined, true)).toContain("Not screened");
     expect(note(undefined, true)).not.toContain("<button");
-  });
-
-  it("shows the brief's status, or that it was not screened", () => {
-    const shown = renderToStaticMarkup(
-      <BriefScreening client={unusedClient} statuses={[flagged]} onReleased={() => {}} />,
-    );
-    const none = renderToStaticMarkup(
-      <BriefScreening client={unusedClient} statuses={[]} onReleased={() => {}} />,
-    );
-
-    expect(shown).toContain("Release the job brief");
-    expect(none).toContain("Not screened");
   });
 });
 

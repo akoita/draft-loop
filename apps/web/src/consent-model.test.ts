@@ -154,10 +154,10 @@ describe("consent refusals", () => {
     );
     expect(consentRefusal(storage)?.kind).toBe("material-storage");
     expect(describeActionError(storage)).toContain(
-      "Record the basis for storing it in the Sources step",
+      "Record the permission to store it on the Career evidence page",
     );
     expect(consentRefusal(transmission)?.kind).toBe("provider-transmission");
-    expect(describeActionError(transmission)).toContain("Record their consent in the Run step");
+    expect(describeActionError(transmission)).toContain("Record their consent in the Start dialog");
     const other = new ApiRequestError(409, "run_active", "A run is already active.");
     expect(consentRefusal(other)).toBeUndefined();
     expect(describeActionError(other)).toBe("A run is already active.");

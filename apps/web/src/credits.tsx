@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
+  balanceChip,
   balanceLine,
-  balanceWarning,
   type CreditsState,
   type EstimateState,
   estimateLine,
@@ -18,7 +18,7 @@ export interface CreditBalanceProps {
   readonly refresh: number;
 }
 
-/** Reads the organisation's credit balance; shows nothing in owner-token mode. */
+/** Reads the organisation's credit balance as a chip; shows nothing in owner-token mode. */
 export function CreditBalance({ client, refresh }: CreditBalanceProps) {
   const [state, setState] = useState<CreditsState>({ kind: "loading" });
 
@@ -42,28 +42,17 @@ export interface CreditBalancePanelProps {
   readonly locale?: string;
 }
 
-/** The balance line and the 80% warning. */
+/** The balance as a small chip, amber at 80% used; the full line is its tooltip. */
 export function CreditBalancePanel({ state, locale }: CreditBalancePanelProps) {
-  switch (state.kind) {
-    case "loading":
-    case "hidden":
-      return null;
-    case "failed":
-      return <p className="muted">The credit balance could not be read.</p>;
-    case "no-plan":
-      return (
-        <p className="notice">Your organisation has no plan yet. Ask the owner to choose one.</p>
-      );
-    case "ready": {
-      const warning = balanceWarning(state.credits);
-      return (
-        <div className="credits">
-          <p className="muted">{balanceLine(state.credits, locale)}</p>
-          {warning === undefined ? null : <p className="notice">{warning}</p>}
-        </div>
-      );
-    }
-  }
+  if (state.kind !== "ready") return null;
+  return (
+    <span
+      className={state.credits.warning ? "credit-chip credit-chip-warning" : "credit-chip"}
+      title={balanceLine(state.credits, locale)}
+    >
+      {balanceChip(state.credits)}
+    </span>
+  );
 }
 
 export interface RunEstimateProps {

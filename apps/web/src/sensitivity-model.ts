@@ -17,19 +17,21 @@ export const defaultRuleForm: RuleForm = {
   heading: "",
 };
 
-const tierLabels: Readonly<Record<RuleTier, string>> = {
-  "never-share": "Never share",
-  sensitive: "Sensitive",
-  normal: "Normal",
-};
-
-/** A rule as one line, such as `Never share · heading contains "Salary"`. */
-export function describeRule(rule: SensitivityRule): string {
-  const match =
+/**
+ * A rule as a sentence, such as `Never send sections whose heading contains "Salary"` or `Send only
+ * if the workspace allows: sections under Health › Notes`.
+ */
+export function ruleSentence(rule: SensitivityRule): string {
+  const lead: Readonly<Record<RuleTier, string>> = {
+    "never-share": "Never send",
+    sensitive: "Send only if the workspace allows:",
+    normal: "Always allow",
+  };
+  const sections =
     rule.match.kind === "heading-contains"
-      ? `heading contains "${rule.match.text}"`
-      : `under ${rule.match.path.join(" › ")}`;
-  return `${tierLabels[rule.tier]} · ${match}`;
+      ? `sections whose heading contains "${rule.match.text}"`
+      : `sections under ${rule.match.path.join(" › ")}`;
+  return `${lead[rule.tier]} ${sections}`;
 }
 
 type AddRuleBody = { tier: RuleTier; match: SensitivityRule["match"] };

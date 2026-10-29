@@ -13,6 +13,7 @@ import {
 } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeView, WorkspaceLocation } from "./home.js";
+import { HostPanelsContext } from "./host-panels.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ProfileWorkspace } from "./profile.js";
@@ -126,6 +127,46 @@ describe("Career evidence page", () => {
       <ReviewWorkspace state={state} onAction={noop} onSelectFiles={noop} onAddUrl={noop} />,
     );
     expect(application).not.toContain("<strong>Career evidence</strong>");
+  });
+
+  it("renders the host's panels around the evidence, and nothing extra without them", () => {
+    const seen: number[] = [];
+    const withPanels = renderToStaticMarkup(
+      <HostPanelsContext.Provider
+        value={{
+          evidenceBefore: <p>Host before</p>,
+          evidenceAfter: ({ revision }) => {
+            seen.push(revision);
+            return <p>Host after {revision}</p>;
+          },
+        }}
+      >
+        <CareerEvidencePage
+          {...frame}
+          revision={3}
+          card={<p>Evidence card</p>}
+          knowledge={knowledge}
+          retrieval={<p>Retrieval panel</p>}
+        />
+      </HostPanelsContext.Provider>,
+    );
+    expect(withPanels.indexOf("Host before")).toBeLessThan(withPanels.indexOf("Evidence card"));
+    expect(withPanels.indexOf("Retrieval panel")).toBeLessThan(withPanels.indexOf("Host after"));
+    expect(withPanels).toContain("Host before");
+    expect(withPanels).toContain("Host after 3");
+    expect(seen).toEqual([3]);
+
+    expect(
+      renderToStaticMarkup(
+        <HostPanelsContext.Provider value={{}}>
+          <CareerEvidencePage {...frame} card={<p>Evidence card</p>} knowledge={knowledge} />
+        </HostPanelsContext.Provider>,
+      ),
+    ).toBe(
+      renderToStaticMarkup(
+        <CareerEvidencePage {...frame} card={<p>Evidence card</p>} knowledge={knowledge} />,
+      ),
+    );
   });
 
   it("links to the profile page only when the host has a profile workflow", () => {

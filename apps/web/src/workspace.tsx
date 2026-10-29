@@ -8,19 +8,12 @@ import { useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
-import { WritingPolicyStep } from "./policy.js";
 import { useRecordId } from "./record-context.js";
-import {
-  type Company,
-  modelLabel,
-  routablePresets,
-  samePairWarning,
-  setupRequestBody,
-} from "./workspace-model.js";
+import { routablePresets, setupRequestBody } from "./workspace-model.js";
 
 type Workspace = ApiSchemas["Workspace"];
 
-type WorkspaceState =
+export type WorkspaceState =
   | { readonly kind: "loading" }
   | { readonly kind: "missing" }
   | { readonly kind: "ready"; readonly workspace: Workspace }
@@ -32,7 +25,7 @@ export interface WorkspaceStepProps {
   readonly onWorkspace: (workspace: Workspace) => void;
 }
 
-/** Reads the owner's workspace, and creates it on first use. */
+/** Reads the record's workspace and, on a first run, shows the shared setup screen to create it. */
 export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
   const workspaceId = useRecordId();
   const [state, setState] = useState<WorkspaceState>({ kind: "loading" });
@@ -93,6 +86,33 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
     }
   }
 
+  return (
+    <WorkspaceStepView
+      state={state}
+      presets={presets}
+      busy={busy}
+      problem={problem}
+      onCreate={(choice) => void create(choice)}
+    />
+  );
+}
+
+export interface WorkspaceStepViewProps {
+  readonly state: WorkspaceState;
+  readonly presets: readonly WorkspaceSetupPreset[];
+  readonly busy: boolean;
+  readonly problem: string | null;
+  readonly onCreate: (choice: WorkspaceSetupChoice) => void;
+}
+
+/** What the first run shows: the shared setup screen while the record has no workspace yet. */
+export function WorkspaceStepView({
+  state,
+  presets,
+  busy,
+  problem,
+  onCreate,
+}: WorkspaceStepViewProps) {
   switch (state.kind) {
     case "loading":
       return <p role="status">Reading your workspace…</p>;
@@ -103,12 +123,8 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
         </p>
       );
     case "ready":
-      return (
-        <>
-          <WorkspaceSummary workspace={state.workspace} />
-          <WritingPolicyStep client={client} />
-        </>
-      );
+      // The record opens on the shared screens as soon as its workspace is read.
+      return null;
     case "missing":
       return (
         <div className="shared-screens">
@@ -116,38 +132,9 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
             presets={presets}
             busy={busy}
             problem={problem}
-            onCreate={(choice) => void create(choice)}
+            onCreate={onCreate}
           />
         </div>
       );
   }
-}
-
-export function WorkspaceSummary({ workspace }: { readonly workspace: Workspace }) {
-  const warning = samePairWarning(
-    workspace.author.company as Company,
-    workspace.critic.company as Company,
-  );
-  return (
-    <section className="panel">
-      <h2>Workspace</h2>
-      <dl className="facts">
-        <dt>Language</dt>
-        <dd>{workspace.language}</dd>
-        <dt>Required sections</dt>
-        <dd>
-          {workspace.requiredSections.length === 0 ? "None" : workspace.requiredSections.join(", ")}
-        </dd>
-        <dt>Rounds at most</dt>
-        <dd>{workspace.maxRounds}</dd>
-        <dt>Author</dt>
-        <dd>{modelLabel(workspace.author)}</dd>
-        <dt>Critic</dt>
-        <dd>{modelLabel(workspace.critic)}</dd>
-        <dt>Mode</dt>
-        <dd>{workspace.fixtureMode ? "Fixture mode: no model calls" : "Live models"}</dd>
-      </dl>
-      {warning === undefined ? null : <p className="notice">{warning}</p>}
-    </section>
-  );
 }

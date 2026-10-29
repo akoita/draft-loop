@@ -90,31 +90,6 @@ export function ScreeningNote({ client, status, subject, onReleased }: Screening
   );
 }
 
-export interface BriefScreeningProps {
-  readonly client: ApiClient;
-  /** The statuses of the shown brief's job sources; none means it was not screened. */
-  readonly statuses: readonly ScreeningStatus[];
-  readonly onReleased: () => void;
-}
-
-/** The job brief's screening status, one line per screened source. */
-export function BriefScreening({ client, statuses, onReleased }: BriefScreeningProps) {
-  const shown = statuses.length === 0 ? [undefined] : statuses;
-  return (
-    <div className="screening-line">
-      {shown.map((status) => (
-        <ScreeningNote
-          key={status?.resultId ?? "none"}
-          client={client}
-          status={status}
-          subject="the job brief"
-          onReleased={onReleased}
-        />
-      ))}
-    </div>
-  );
-}
-
 interface ReleaseControlProps {
   readonly client: ApiClient;
   readonly resultId: string;
