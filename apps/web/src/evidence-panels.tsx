@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
 import { ConsentStep } from "./consent.js";
+import { PrivateSections } from "./private-sections.js";
 import { useRecordId } from "./record-context.js";
 import { ScreeningNote, useScreening } from "./screening.js";
 import { sourceStatus } from "./screening-model.js";
@@ -94,22 +95,21 @@ export function FileChecksPanel({
   );
 }
 
-export interface EvidenceFileChecksProps {
-  readonly client: ApiClient;
-  /** Changes when the shared page changes the knowledge selection or adds files. */
-  readonly revision: number;
+export interface SelectedBases {
+  /** The selected knowledge bases with their files; undefined until read. */
+  readonly groups: readonly FileGroup[] | undefined;
+  /** Why they could not be read, if they could not. */
+  readonly problem: string | undefined;
 }
 
 /**
- * The files of the record's selected knowledge bases with their screening chips. The selection is
- * read from the workspace each time `revision` changes, since the shared page saves it there.
+ * Reads the record's selected knowledge bases and their files, and again each time `revision`
+ * changes, since the shared page saves the selection and adds files.
  */
-export function EvidenceFileChecks({ client, revision }: EvidenceFileChecksProps) {
+export function useSelectedBases(client: ApiClient, revision: number): SelectedBases {
   const workspaceId = useRecordId();
   const [groups, setGroups] = useState<readonly FileGroup[] | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
-  const screening = useScreening(client);
-  const reloadScreening = screening.reload;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `revision` re-reads the files after the shared page changes the selection or adds files.
   useEffect(() => {
@@ -145,6 +145,20 @@ export function EvidenceFileChecks({ client, revision }: EvidenceFileChecksProps
     };
   }, [client, workspaceId, revision]);
 
+  return { groups, problem };
+}
+
+export interface EvidenceFileChecksProps extends SelectedBases {
+  readonly client: ApiClient;
+  /** Changes when the shared page changes the knowledge selection or adds files. */
+  readonly revision: number;
+}
+
+/** The selected bases' files with their screening chips; the statuses are read again per revision. */
+export function EvidenceFileChecks({ client, revision, groups, problem }: EvidenceFileChecksProps) {
+  const screening = useScreening(client);
+  const reloadScreening = screening.reload;
+
   // The screening statuses are read once on mount; a later revision reads them again.
   const firstRevision = useRef(revision);
   useEffect(() => {
@@ -174,9 +188,25 @@ export function EvidenceFileChecks({ client, revision }: EvidenceFileChecksProps
   );
 }
 
+/** The panels below the knowledge panel: file checks, then private sections, over one reading. */
+export function EvidenceSections({ client, revision }: EvidenceSectionsProps) {
+  const { groups, problem } = useSelectedBases(client, revision);
+  return (
+    <>
+      <EvidenceFileChecks client={client} revision={revision} groups={groups} problem={problem} />
+      <PrivateSections client={client} bases={groups?.map((group) => group.base)} />
+    </>
+  );
+}
+
+export interface EvidenceSectionsProps {
+  readonly client: ApiClient;
+  readonly revision: number;
+}
+
 /**
  * What the web adds to the shared Career evidence page: the storage permission above the evidence,
- * in sign-in mode only, and the files' screening checks below the knowledge panel.
+ * in sign-in mode only, and the files' screening checks and the private-section rules below the knowledge panel.
  */
 export function evidenceHostPanels(
   client: ApiClient,
@@ -187,6 +217,6 @@ export function evidenceHostPanels(
     ...(mode === "sign-in"
       ? { evidenceBefore: <StoragePermissionPanel client={client} workspace={workspace} /> }
       : {}),
-    evidenceAfter: ({ revision }) => <EvidenceFileChecks client={client} revision={revision} />,
+    evidenceAfter: ({ revision }) => <EvidenceSections client={client} revision={revision} />,
   };
 }

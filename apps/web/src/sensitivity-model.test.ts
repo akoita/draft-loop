@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultRuleForm, describeRule, ruleRequest } from "./sensitivity-model.js";
+import { defaultRuleForm, describeRule, ruleRequest, ruleSentence } from "./sensitivity-model.js";
 
 describe("sensitivity rule model", () => {
   it("describes a rule in one line", () => {
@@ -18,6 +18,27 @@ describe("sensitivity rule model", () => {
         match: { kind: "heading-path", path: ["Experience", "Salary"] },
       }),
     ).toBe("Sensitive · under Experience › Salary");
+  });
+
+  it("reads each tier and match kind as a sentence", () => {
+    const contains = { kind: "heading-contains", text: "Salary" } as const;
+    const path = { kind: "heading-path", path: ["Health", "Notes"] } as const;
+    const sentence = (
+      tier: "never-share" | "sensitive" | "normal",
+      match: typeof contains | typeof path,
+    ) => ruleSentence({ id: "rule", tier, match });
+
+    expect(sentence("never-share", contains)).toBe(
+      'Never send sections whose heading contains "Salary"',
+    );
+    expect(sentence("never-share", path)).toBe("Never send sections under Health › Notes");
+    expect(sentence("sensitive", contains)).toBe(
+      'Send only if the workspace allows: sections whose heading contains "Salary"',
+    );
+    expect(sentence("sensitive", path)).toBe(
+      "Send only if the workspace allows: sections under Health › Notes",
+    );
+    expect(sentence("normal", path)).toBe("Always allow sections under Health › Notes");
   });
 
   it("builds a heading-contains rule from trimmed text", () => {

@@ -32,6 +32,23 @@ export function describeRule(rule: SensitivityRule): string {
   return `${tierLabels[rule.tier]} · ${match}`;
 }
 
+/**
+ * A rule as a sentence, such as `Never send sections whose heading contains "Salary"` or `Send only
+ * if the workspace allows: sections under Health › Notes`.
+ */
+export function ruleSentence(rule: SensitivityRule): string {
+  const lead: Readonly<Record<RuleTier, string>> = {
+    "never-share": "Never send",
+    sensitive: "Send only if the workspace allows:",
+    normal: "Always allow",
+  };
+  const sections =
+    rule.match.kind === "heading-contains"
+      ? `sections whose heading contains "${rule.match.text}"`
+      : `sections under ${rule.match.path.join(" › ")}`;
+  return `${lead[rule.tier]} ${sections}`;
+}
+
 type AddRuleBody = { tier: RuleTier; match: SensitivityRule["match"] };
 
 /** The add-rule request, or what to fix first. */
