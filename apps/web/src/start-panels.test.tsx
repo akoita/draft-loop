@@ -4,11 +4,10 @@ import { describe, expect, it } from "vitest";
 import type { ApiClient } from "./api-client.js";
 import { type ConsentState, ConsentView } from "./consent.js";
 import { type Consents, transmissionBlockedReason } from "./consent-model.js";
-import { CreditBalancePanel, RunEstimatePanel } from "./credits.js";
+import { RunEstimatePanel } from "./credits.js";
 import { HeaderCredits } from "./start-panels.js";
 import {
   syntheticConsents,
-  syntheticCredits,
   syntheticEstimate,
   syntheticTransmissionGrant,
 } from "./test-fixtures.js";
@@ -94,28 +93,6 @@ describe("credits in sign-in mode", () => {
     );
 
     expect(html).toContain("credit");
-  });
-
-  it("shows the balance as a chip in the header, only when it is metered", () => {
-    const chip = renderToStaticMarkup(
-      <CreditBalancePanel state={{ kind: "ready", credits: syntheticCredits }} compact />,
-    );
-    expect(chip).toContain("credit-chip");
-    expect(chip).toContain("38 of 50 credits left");
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "hidden" }} compact />)).toBe(
-      "",
-    );
-    expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind: "failed" }} compact />)).toBe(
-      "",
-    );
-    expect(
-      renderToStaticMarkup(
-        <CreditBalancePanel
-          state={{ kind: "ready", credits: { ...syntheticCredits, warning: true } }}
-          compact
-        />,
-      ),
-    ).toContain("credit-chip-warning");
   });
 
   it("puts the chip in the header in sign-in mode only", () => {

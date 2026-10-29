@@ -17,21 +17,6 @@ export const defaultRuleForm: RuleForm = {
   heading: "",
 };
 
-const tierLabels: Readonly<Record<RuleTier, string>> = {
-  "never-share": "Never share",
-  sensitive: "Sensitive",
-  normal: "Normal",
-};
-
-/** A rule as one line, such as `Never share · heading contains "Salary"`. */
-export function describeRule(rule: SensitivityRule): string {
-  const match =
-    rule.match.kind === "heading-contains"
-      ? `heading contains "${rule.match.text}"`
-      : `under ${rule.match.path.join(" › ")}`;
-  return `${tierLabels[rule.tier]} · ${match}`;
-}
-
 /**
  * A rule as a sentence, such as `Never send sections whose heading contains "Salary"` or `Send only
  * if the workspace allows: sections under Health › Notes`.

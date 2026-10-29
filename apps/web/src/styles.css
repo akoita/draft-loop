@@ -150,21 +150,13 @@ label:where(:not(.shared-screens *)) {
 
 /* The shell's actions (#1933): in the shared screens' header, or right-aligned above a screen
    that has none. */
-.page-actions,
-.steps-actions {
+.page-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.page-actions {
   margin: 1rem 0;
-}
-
-.steps-actions {
-  margin-left: auto;
 }
 
 .service-status {
@@ -212,25 +204,6 @@ label:where(:not(.shared-screens *)) {
   border-bottom: 1px solid var(--red-line);
 }
 
-.steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1rem 0;
-}
-
-.step {
-  background: transparent;
-  color: var(--text-2);
-  border-color: var(--border);
-}
-
-.step.current {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: var(--teal-ink);
-}
-
 .panel:where(:not(.shared-screens *)) {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -242,20 +215,6 @@ label:where(:not(.shared-screens *)) {
 .panel h2:where(:not(.shared-screens *)) {
   margin-top: 0;
   font-size: 1.1rem;
-}
-
-.facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-}
-
-.facts dt {
-  color: var(--text-2);
-}
-
-.facts dd {
-  margin: 0;
 }
 
 .pair {
@@ -293,11 +252,6 @@ textarea.short:where(:not(.shared-screens *)) {
    neighbours, and the flex row stretched them to match (#1825). */
 form button[type="submit"]:where(:not(.button)) {
   margin-top: 1rem;
-}
-
-.base {
-  border-top: 1px solid var(--border);
-  padding: 0.75rem 0;
 }
 
 .sources {
@@ -360,38 +314,11 @@ form button[type="submit"]:where(:not(.button)) {
   margin-top: 1rem;
 }
 
-.requirements {
-  padding-left: 1.25rem;
-}
-
-.priority {
-  display: inline-block;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0 0.5rem;
-  color: var(--text-2);
-}
-
-.priority-critical {
-  color: var(--red);
-  border-color: var(--red);
-}
-
-.priority-high {
-  color: var(--amber);
-  border-color: var(--amber);
-}
-
 .screening-note {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-}
-
-.screening-line {
-  margin: 0.5rem 0;
 }
 
 .screening {
@@ -425,14 +352,6 @@ form button[type="submit"]:where(:not(.button)) {
   border: 2px solid var(--amber);
 }
 
-.quarantined {
-  padding-left: 1.25rem;
-}
-
-.quarantined li {
-  margin-bottom: 0.5rem;
-}
-
 .release-dialog {
   max-width: 32rem;
   width: calc(100% - 2rem);
@@ -448,23 +367,6 @@ form button[type="submit"]:where(:not(.button)) {
 
 .release-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
-}
-
-.requirement-row {
-  display: grid;
-  grid-template-columns: 8rem 1fr auto;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-@media (max-width: 40rem) {
-  .requirement-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.run-status {
-  font-weight: 600;
 }
 
 button.small:where(:not(.shared-screens *)) {

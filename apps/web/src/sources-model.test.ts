@@ -51,7 +51,7 @@ describe("source files", () => {
         "a.md",
         new ApiRequestError(409, "storage_consent_required", "Storage consent is required."),
       ),
-    ).toContain("a.md: The candidate's material cannot be stored yet. Record the basis");
+    ).toContain("a.md: The candidate's material cannot be stored yet. Record the permission");
   });
 
   it("formats sizes", () => {

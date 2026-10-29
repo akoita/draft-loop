@@ -6,6 +6,8 @@ import { type ReactNode, useMemo, useState } from "react";
 import type { ApiClient, ApiRequestError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { createHttpBridge } from "./http-bridge.js";
+import { QuarantineRefusalPanel } from "./screening.js";
+import { quarantineRefusal } from "./screening-model.js";
 
 export interface SharedScreensProps {
   readonly client: ApiClient;
@@ -33,16 +35,36 @@ export function SharedScreens({ client, workspaceId, hostActions }: SharedScreen
   return (
     <>
       {refusal === undefined ? null : (
-        <div className="notice" role="alert">
-          <p>{describeStartError(refusal)}</p>
-          <button type="button" className="secondary" onClick={() => setRefusal(undefined)}>
-            Dismiss
-          </button>
-        </div>
+        <RefusalNotice client={client} refusal={refusal} onDismiss={() => setRefusal(undefined)} />
       )}
       <div className="shared-screens">
         <App port={port} {...(hostActions === undefined ? {} : { hostActions })} />
       </div>
     </>
+  );
+}
+
+export interface RefusalNoticeProps {
+  readonly client: ApiClient;
+  readonly refusal: ApiRequestError;
+  readonly onDismiss: () => void;
+}
+
+/**
+ * Why a request was refused, in the shell's words. A start refused for quarantined material also
+ * lists what is held, with a release for owners and admins; once released, dismiss and start again.
+ */
+export function RefusalNotice({ client, refusal, onDismiss }: RefusalNoticeProps) {
+  const quarantine = quarantineRefusal(refusal);
+  return (
+    <div className="notice" role="alert">
+      <p>{describeStartError(refusal)}</p>
+      {quarantine === undefined ? null : (
+        <QuarantineRefusalPanel client={client} refusal={quarantine} />
+      )}
+      <button type="button" className="secondary" onClick={onDismiss}>
+        Dismiss
+      </button>
+    </div>
   );
 }

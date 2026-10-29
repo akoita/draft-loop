@@ -66,5 +66,5 @@ export function HeaderCredits({
   readonly client: ApiClient;
   readonly mode: "owner" | "sign-in";
 }) {
-  return mode === "sign-in" ? <CreditBalance client={client} refresh={0} compact /> : null;
+  return mode === "sign-in" ? <CreditBalance client={client} refresh={0} /> : null;
 }

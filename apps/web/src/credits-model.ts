@@ -88,14 +88,6 @@ export function balanceChip(credits: MemberCredits): string {
   return `${credits.remaining} of ${creditCount(credits.allowance)} left`;
 }
 
-/** The 80% warning, or `undefined` while the balance is below it. */
-export function balanceWarning(credits: MemberCredits): string | undefined {
-  if (!credits.warning) return undefined;
-  return credits.remaining === 0
-    ? "The credits are used up. New runs wait for the next period or a grant."
-    : "Most of this period's credits are used. Runs stop starting when they run out.";
-}
-
 /** The estimate beside the start button, such as `This run uses 2 credits`. */
 export function estimateLine(estimate: RunEstimate): string {
   return `This run uses ${creditCount(estimate.credits)}.`;

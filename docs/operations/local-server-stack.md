@@ -24,22 +24,23 @@ To also delete the stored data, run `docker compose down --volumes`.
 
 The API serves the owner's web screen (`apps/web`) at
 `http://127.0.0.1:58080/`. Sign in with the local owner token,
-`local-stack-owner-token-not-a-secret`, then go through its steps:
+`local-stack-owner-token-not-a-secret`, then use the desktop's own screens:
 
 1. **Set up:** the first visit shows the setup screen. Choose the CV language,
    the round limit and a model preset, and tick demo mode on the local stack,
    since it makes no provider calls. **Create workspace** opens Home, where
    **Edit policy** saves your writing policy; each save is a new version that
    the next runs follow.
-2. **Sources:** record the basis for storing the candidate's material, create
-   a knowledge base, upload PDF, DOCX, Markdown or text files, and tick the
-   bases runs use. Under each base, mark private Markdown sections by heading
-   as never-share or sensitive.
-3. **Job brief:** paste a job post, check and edit what was read, and mark the
-   version reviewed.
-4. **Run:** record the candidate's consent to send material to the
-   workspace's model providers, then start a run and follow it; the worker
-   drafts it to your review.
+2. **Career evidence:** upload PDF, DOCX, Markdown or text files into a
+   knowledge base and choose the bases runs use. Below them, **File checks**
+   shows each file's injection screening, and **Private sections** marks
+   Markdown sections by heading as never-send or only-if-allowed. In sign-in
+   mode the page first asks for the permission to store the material.
+3. **New application:** paste a job post, attach a job file or give an approved
+   page address, then check and review the requirements that were read.
+4. **Start:** in sign-in mode the dialog shows the run's credit cost and asks
+   for the candidate's consent to send material to the workspace's model
+   providers. Start the run and follow it; the worker drafts it to your review.
 5. **Review:** decide the findings with their evidence, edit blocks, then
    approve or ask for another round, and export and download the CV.
 
@@ -48,15 +49,15 @@ minutes, it compares the entry script named in the served `index.html` with
 the one it runs. When they differ it shows "A new version of DraftLoop is
 available" with a **Reload** button (#1904).
 
-Each consent panel shows the current state and its history, and withdraws a
-grant. A refused upload or run that lacks a consent points to the step that
-records it.
+Each consent shows as one line with its state and a way to withdraw it. A
+refused upload or run that lacks a consent points to the page that records it.
 
-Injection screening shows as a text badge beside each uploaded file and under
-the job brief's heading: screened clear, quarantined (flagged, with the signals
+Injection screening shows as a text badge beside each uploaded file under
+**File checks**: screened clear, quarantined (flagged, with the signals
 found in words, or not screened because a screener failed), released, or not
 screened when nothing was stored. A run that screening refuses (409
-`material_quarantined`) lists what is quarantined in the Run step. Owners and
+`material_quarantined`) is explained above the screens, listing the held material, and
+quarantined files also wait under **File checks**. Owners and
 admins, and the owner token, get a **Release** button for each piece; it opens
 a dialog that requires a reason of up to 500 characters. Members see the
 status and are told to ask an owner or admin.
@@ -71,7 +72,7 @@ they expire. An account that belongs to no organisation is told so and signed
 out at the provider.
 
 In `oidc` mode, owners and admins also see **Export or delete this record**
-above the steps; members do not. **Export everything** downloads the record's
+above the screens; members do not. **Export everything** downloads the record's
 archive, and **Delete record** erases the record for good once its id is typed
 back. A record with a queued or running run asks you to stop the run first.
 
