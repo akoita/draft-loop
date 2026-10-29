@@ -120,14 +120,16 @@ The rules apply in order:
    verdict cites one to three blocks that exist anywhere in the draft; an
    unknown block makes the verdict invalid. `satisfied` becomes `covered` with
    basis `judgement`, and `not-satisfied` becomes `uncovered`. The instructions
-   are versioned as `coverage-judgement-v2`.
+   are versioned as `coverage-judgement-v3`, which credits a block that shows
+   a behavioural or seniority requirement through concrete work (#1970).
 5. **No model, no hints.** Without an installed embedding model, or when the
    semantic step fails, the critic still judges every lexically uncovered
    requirement, with no candidate blocks (#1835).
 6. **Relevance counts the reviewed brief's requirements.** A run from a
    reviewed brief weights the relevance score over the brief's own
    requirements. Its responsibilities are still assessed and judged, but do
-   not lower the score (#1835).
+   not lower the score (#1835). Requirements weigh by priority: critical 2,
+   high 1.5, medium 1 and a nice-to-have (low) 0.5 (#1970).
 
 This works across jobs and languages: it adds no job-specific vocabulary, and
 the cross-language case is handled by the multilingual embedder plus the judge.

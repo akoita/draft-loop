@@ -188,7 +188,7 @@ describe("coverage judgement request rendering", () => {
     });
   });
 
-  it("sends a zero-candidate request with the v2 instructions", () => {
+  it("sends a zero-candidate request with the current instructions", () => {
     const base = createCriticAdjudicationPrompt("cli-critic-v3");
     const parts = criticCoverageJudgementParts(
       [{ requirementId: "req-1", candidateBlockIds: [] }],
@@ -201,9 +201,9 @@ describe("coverage judgement request rendering", () => {
         { requirementId: "req-1", requirement: "Led a platform team", candidates: [] },
       ],
     });
-    expect(parts.instructionsVersion).toBe("coverage-judgement-v2");
+    expect(parts.instructionsVersion).toBe("coverage-judgement-v3");
     expect(parts.systemPrompt(base)).toContain(
-      "Coverage judgement (coverage-judgement-v2): the input includes coverageJudgementRequests. For each item, decide whether the whole draft artifact in the input shows that the requirement is met",
+      "Coverage judgement (coverage-judgement-v3): the input includes coverageJudgementRequests. For each item, decide whether the whole draft artifact in the input shows that the requirement is met",
     );
     expect(parts.outputSchema).toBe(critiqueOutputSchemaWithCoverageJudgements);
   });
@@ -255,7 +255,7 @@ describe("critique parsing", () => {
     );
 
     expect(critique.coverageJudgements).toEqual([judgement]);
-    expect(critique.coverageJudgementInstructionsVersion).toBe("coverage-judgement-v2");
+    expect(critique.coverageJudgementInstructionsVersion).toBe("coverage-judgement-v3");
   });
 
   it("keeps an empty judgement list distinct from an absent one", () => {
