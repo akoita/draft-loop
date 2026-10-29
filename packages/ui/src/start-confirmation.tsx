@@ -1,6 +1,7 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { formatLimitDuration } from "./execution-limits.js";
 import { HostStartDialog } from "./host-panels.js";
+import { localWriterWarningFor } from "./local-writer-warning.js";
 import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
 import {
   modelProfileEntryForReference,
@@ -41,6 +42,8 @@ export interface StartConfirmationSummary {
   readonly preset: string | null;
   readonly models: readonly [StartConfirmationModel, StartConfirmationModel];
   readonly sameCompanyWarning: string | null;
+  /** Said when a local model writes, which no local model has passed the quality check for. */
+  readonly localWriterWarning: string | null;
   readonly inputs: readonly StartConfirmationLine[];
   readonly settings: readonly StartConfirmationLine[];
   readonly changedPairNote: string | null;
@@ -331,6 +334,7 @@ export function startConfirmationSummary(
     sameCompanyWarning: sameCompany
       ? `Author and critic are both from ${companyName(author.company)}, so the critique is not a cross-company check.`
       : null,
+    localWriterWarning: localWriterWarningFor(author.company),
     inputs,
     settings,
     changedPairNote: changedPairNote(state),
@@ -484,6 +488,11 @@ export function StartConfirmation({
               </div>
             ))}
           </dl>
+          {summary.localWriterWarning === null ? null : (
+            <p className="start-confirmation-warning" role="note">
+              {summary.localWriterWarning}
+            </p>
+          )}
           {summary.sameCompanyWarning === null ? null : (
             <p className="start-confirmation-warning" role="note">
               {summary.sameCompanyWarning}

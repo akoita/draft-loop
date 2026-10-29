@@ -41,6 +41,7 @@ import type { JobRequirementsExtractionBinding } from "./job-requirements-extrac
 import { KeptPage } from "./kept-page.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import { KNOWN_GAP_RATIONALE } from "./known-gaps.js";
+import { LocalWriterWarning } from "./local-writer-warning.js";
 import type {
   CandidateProfileSelection,
   DesktopReviewState,
@@ -855,6 +856,7 @@ export function WorkspaceSetupForm({
           onTypeOwnModel={() => onTypeOwnModel("critic")}
         />
       </div>
+      <LocalWriterWarning authorCompany={draft.authorCompany} />
       {requiresLocalEndpoint(draft) ? (
         <label className="setup-field">
           <span>Local model server</span>

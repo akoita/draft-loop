@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { HostPanelsContext } from "./host-panels.js";
+import { localWriterWarning } from "./local-writer-warning.js";
 import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
 import { ReviewWorkspace } from "./review.js";
@@ -107,6 +108,25 @@ describe("start confirmation summary", () => {
     expect(summary.sameCompanyWarning).toBe(
       "Author and critic are both from Anthropic, so the critique is not a cross-company check.",
     );
+  });
+
+  it("warns when a local model writes, but not when one reviews", () => {
+    const preflight = liveState().providerTransmissionPreflight;
+    const withPair = (author: string, critic: string) =>
+      startConfirmationSummary(
+        liveState({
+          providerTransmissionPreflight: {
+            ...preflight,
+            author: { ...preflight.author, company: author, model: "qwen3:32b" },
+            critic: { ...preflight.critic, company: critic },
+          },
+        }),
+        { action: start },
+      );
+
+    expect(withPair("local", "openai").localWriterWarning).toBe(localWriterWarning);
+    expect(withPair("anthropic", "local").localWriterWarning).toBeNull();
+    expect(startConfirmationSummary(liveState(), { action: start }).localWriterWarning).toBeNull();
   });
 
   it("notes the last run's pair only when it differs from the pair about to run", () => {
@@ -271,6 +291,25 @@ describe("start confirmation dialog", () => {
     expect(html).toContain("The last run on this application used claude-opus-4-1 → gpt-5.");
     expect(html).toContain("Run settings");
     expect(html).toContain("10 min per call");
+  });
+
+  it("shows the local writer warning as a note that does not block Start", () => {
+    const summary = {
+      ...startConfirmationSummary(liveState(), { action: start }),
+      localWriterWarning,
+    };
+    const html = renderToStaticMarkup(
+      <StartConfirmation
+        summary={summary}
+        dialogRef={createRef<HTMLDivElement>()}
+        onStart={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Local models have not passed DraftLoop&#x27;s quality check");
+    expect(html).toContain('role="note"');
+    expect(html).toContain(">Start</button>");
   });
 
   it("puts Start first so it takes the focus, then Change models and Cancel", () => {
