@@ -105,7 +105,7 @@ describe("model profile selection parsing", () => {
     },
     {
       modelPreset: "standard",
-      author: { id: "standard-anthropic-author", version: 1 },
+      author: { id: "standard-anthropic-author", version: 2 },
       critic: { id: "standard-openai-critic", version: 2 },
     },
   ] as const)(
@@ -120,17 +120,17 @@ describe("model profile selection parsing", () => {
     expect(
       resolveModelProfileSelection({ modelPreset: "standard", criticEffort: "medium" }),
     ).toEqual({
-      author: { id: "standard-anthropic-author", version: 1 },
+      author: { id: "standard-anthropic-author", version: 2 },
       critic: { id: "standard-openai-critic", version: 2, effort: "medium" },
     });
     expect(
       resolveModelProfileSelection({
-        authorProfile: "standard-anthropic-author@1",
+        authorProfile: "standard-anthropic-author@2",
         criticProfile: "standard-openai-critic@2",
         authorEffort: "max",
       }),
     ).toEqual({
-      author: { id: "standard-anthropic-author", version: 1, effort: "max" },
+      author: { id: "standard-anthropic-author", version: 2, effort: "max" },
       critic: { id: "standard-openai-critic", version: 2 },
     });
   });

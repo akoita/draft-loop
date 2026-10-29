@@ -14,7 +14,7 @@ import {
 import { createFixtureReviewState } from "./model.js";
 
 const standard = {
-  author: { id: "standard-anthropic-author", version: 1 },
+  author: { id: "standard-anthropic-author", version: 2 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy = {
@@ -41,7 +41,7 @@ describe("application model pair values", () => {
     const custom = { ...standard, critic: economy.critic };
     expect(applicationPairValue(custom)).toBe("");
     expect(applicationPairLabel(custom)).toBe(
-      "Custom pair standard-anthropic-author@1 and economy-openai-critic@1",
+      "Custom pair standard-anthropic-author@2 and economy-openai-critic@1",
     );
   });
 });

@@ -41,7 +41,7 @@ pnpm --filter @draft-loop/cli start start ./workspace --model-preset development
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-mistral
 pnpm --filter @draft-loop/cli start start ./workspace \
-  --author-profile standard-anthropic-author@1 \
+  --author-profile standard-anthropic-author@2 \
   --critic-profile standard-openai-critic@2
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced --author-effort high
 ```
@@ -87,7 +87,7 @@ the level it actually used in its profile snapshot.
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles apply ./workspace --model-preset development-gemini
 pnpm --filter @draft-loop/cli start model-profiles apply ./workspace \
-  --author-profile standard-anthropic-author@1 \
+  --author-profile standard-anthropic-author@2 \
   --critic-profile standard-openai-critic@2
 pnpm --filter @draft-loop/cli start model-profiles applied ./workspace
 pnpm --filter @draft-loop/cli start model-profiles clear ./workspace

@@ -123,15 +123,37 @@ describe("run model profile resolution", () => {
     profile({
       runtime: {
         effort: "provider-default",
-        maxOutputTokens: 32769,
+        maxOutputTokens: 128_001,
         thinking: { mode: "provider-default" },
       },
-      knownLimits: { maxOutputTokens: 64000 },
+      knownLimits: { maxOutputTokens: 200_000 },
     }),
   ])("rejects a profile whose provider route cannot enforce its declared controls", (invalid) => {
     const registry = registryFor(invalid);
     expect(() =>
       resolveRunModelProfiles(references(invalid.id, "test-critic"), registry, apiKeyRoutes),
+    ).toThrow(RunModelProfileError);
+  });
+
+  it("accepts an output budget up to the model's limit on the API, but not on a Claude session", () => {
+    const large = profile({
+      modelId: "claude-opus-5-5",
+      runtime: {
+        effort: "medium",
+        maxOutputTokens: 64000,
+        thinking: { mode: "provider-default" },
+      },
+    });
+    const registry = registryFor(large);
+
+    expect(
+      resolveRunModelProfiles(references(large.id, "test-critic"), registry, apiKeyRoutes).author,
+    ).toEqual(large);
+    expect(() =>
+      resolveRunModelProfiles(references(large.id, "test-critic"), registry, {
+        ...apiKeyRoutes,
+        anthropic: "user-session",
+      }),
     ).toThrow(RunModelProfileError);
   });
 

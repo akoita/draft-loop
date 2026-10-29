@@ -12,7 +12,7 @@ import {
 } from "./model-profile-budget.js";
 
 const standard: ModelProfileReferences = {
-  author: { id: "standard-anthropic-author", version: 1 },
+  author: { id: "standard-anthropic-author", version: 2 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const balanced: ModelProfileReferences = {
@@ -57,7 +57,7 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("Author: Claude Opus 5.5");
     expect(html).toContain("$4/1M input · $20/1M output");
     expect(html).toContain("Critic: GPT-6.1 Sol");
-    expect(html).not.toContain("standard-anthropic-author@1");
+    expect(html).not.toContain("standard-anthropic-author@2");
     expect(html).toContain("$2/1M input · $10/1M output");
     expect(html).toContain("Official Anthropic model/pricing documentation");
     expect(html).toContain("Official OpenAI model/pricing documentation");

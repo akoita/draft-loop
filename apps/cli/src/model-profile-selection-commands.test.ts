@@ -90,7 +90,7 @@ describe("model-profiles applied, apply and clear", () => {
     expect(h.selection.save).toHaveBeenCalledWith({
       root: expect.stringContaining("workspace"),
       modelProfiles: {
-        author: { id: "standard-anthropic-author", version: 1 },
+        author: { id: "standard-anthropic-author", version: 2 },
         critic: { id: "standard-openai-critic", version: 2 },
       },
     });
@@ -110,7 +110,7 @@ describe("model-profiles applied, apply and clear", () => {
     expect(h.selection.save).toHaveBeenCalledWith({
       root: expect.stringContaining("workspace"),
       modelProfiles: {
-        author: { id: "standard-anthropic-author", version: 1, effort: "high" },
+        author: { id: "standard-anthropic-author", version: 2, effort: "high" },
         critic: { id: "standard-openai-critic", version: 2 },
       },
     });

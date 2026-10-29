@@ -275,4 +275,20 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
   createGoogleGeminiAuthorProfile(1),
   createGoogleGeminiAuthorProfile(2),
   createMistralAuthorProfile(),
+  // Version 2 gives the draft room to finish: 4 of 7 Opus draft calls on a 2026-10-29 re-score
+  // stopped at version 1's 32,768-token cap, thinking included (#1966).
+  {
+    id: "standard-anthropic-author",
+    version: 2,
+    provider: "anthropic",
+    modelId: "claude-opus-5-5",
+    tier: "standard",
+    roles: ["author"],
+    runtime: {
+      effort: "medium",
+      maxOutputTokens: 64000,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
 ]);
