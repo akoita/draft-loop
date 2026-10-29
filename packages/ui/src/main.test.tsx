@@ -1434,6 +1434,21 @@ describe("desktop workspace setup", () => {
     criticModel: "gpt-5",
   };
 
+  it("warns under the models when a local model writes, not when it reviews", () => {
+    const localWriter = renderForm(
+      { ...named, authorCompany: "local", authorModel: "qwen3:32b" },
+      { status: "idle" },
+    );
+    const localReviewer = renderForm(
+      { ...named, criticCompany: "local", criticModel: "qwen3:32b" },
+      { status: "idle" },
+    );
+
+    expect(localWriter).toContain("Local models have not passed DraftLoop&#x27;s quality check");
+    expect(localReviewer).not.toContain("Local models have not passed");
+    expect(renderForm(named, { status: "idle" })).not.toContain("Local models have not passed");
+  });
+
   it("offers a company and a model for each side, and keeps the demo path", () => {
     const html = renderForm(initialWorkspaceSetupDraft, { status: "idle" });
 
