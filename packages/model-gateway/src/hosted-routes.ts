@@ -43,9 +43,21 @@ export function createOpenAiClient(apiKey: string, endpoint: OpenAiEndpoint): Op
   return new OpenAI({ apiKey, baseURL, maxRetries: 0 });
 }
 
-/** A direct Claude API client, used only for the opt-in fallback route. */
-export function createAnthropicApiClient(apiKey: string): AnthropicClient {
-  return streamingAnthropicClient(new Anthropic({ apiKey, maxRetries: 0 }));
+/**
+ * A direct Claude API client, for the opt-in fallback route and the self-hosted `direct` routes.
+ * Retries stay with the adapter; `fetch` replaces the transport, for tests.
+ */
+export function createAnthropicApiClient(
+  apiKey: string,
+  options: { readonly fetch?: typeof fetch } = {},
+): AnthropicClient {
+  return streamingAnthropicClient(
+    new Anthropic({
+      apiKey,
+      maxRetries: 0,
+      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+    }),
+  );
 }
 
 export interface HostedAnthropicRouteOptions {
