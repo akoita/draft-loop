@@ -4,6 +4,8 @@ The client-server version runs locally with Docker Compose: Postgres 16 with
 `pgvector`, a Cloud Storage emulator, the API, the page fetcher and one worker. It needs no cloud
 account and makes no provider calls (ADR 0011, D15). The desktop and the CLI do
 not use it.
+To run the service for real use on your own machine, use the
+[self-hosted server](self-hosted.md) instead.
 
 You need Docker with the Compose plugin, plus the repository's usual Node and
 pnpm versions.

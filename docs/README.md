@@ -22,6 +22,7 @@ contributors, maintainers, and operators to the current information they need.
 | Release DraftLoop | [Release procedure](operations/releasing.md) |
 | Follow the hosted version's design and phases | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md) |
 | Run the server's storage locally | [Local server stack](operations/local-server-stack.md) |
+| Run the hosted service on your own machine | [Self-hosted server](operations/self-hosted.md) |
 | Deploy the hosted service | [Server deploy](operations/server-deploy.md) |
 
 ## Document types

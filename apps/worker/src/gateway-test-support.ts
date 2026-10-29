@@ -1,9 +1,10 @@
+import { createAnthropicApiClient } from "@draft-loop/model-gateway";
 import type { OpenAIClient } from "@draft-loop/providers";
 
 import type { ModelRouteDependencies } from "./model-routes.js";
 
 /**
- * Scripted Vertex AI and OpenAI EU endpoints for the worker's tests: each answers a run's calls
+ * Scripted Vertex AI, Claude API and OpenAI endpoints for the worker's tests: each answers a run's calls
  * with schema-valid synthetic outputs that cite the evidence the request sent, and counts tokens
  * per call so a test can price them. Nothing here reaches the network.
  */
@@ -122,13 +123,17 @@ function vertexStream(modelId: string, output: unknown): string {
   return events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join("");
 }
 
-/** The author's calls on Vertex AI: the application plan, then the draft. */
-function scriptedVertexFetch(urls: string[], bodies: string[]): typeof fetch {
+/**
+ * The author's calls, the application plan then the draft, on Vertex AI or the Claude API: both
+ * take the same Messages body and stream the same events.
+ */
+function scriptedMessagesFetch(urls: string[], bodies: string[]): typeof fetch {
   return (async (input: string | URL | Request, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     urls.push(url);
     bodies.push(String(init?.body));
     const body = JSON.parse(String(init?.body)) as {
+      readonly model?: string;
       readonly messages: readonly {
         readonly content: string | readonly { readonly text: string }[];
       }[];
@@ -148,7 +153,8 @@ function scriptedVertexFetch(urls: string[], bodies: string[]): typeof fetch {
         : member === "application_plan";
     const answer = plans ? applicationPlan(evidenceId(request)) : draft(evidenceId(request));
     const output = member === undefined ? answer : { output: { [member]: answer } };
-    const modelId = /models\/([^:]+):/u.exec(url)?.[1] ?? "unknown";
+    // Vertex AI names the model in the URL, the Claude API in the body.
+    const modelId = /models\/([^:]+):/u.exec(url)?.[1] ?? body.model ?? "unknown";
     return new Response(vertexStream(modelId, output), {
       status: 200,
       headers: { "content-type": "text/event-stream", "request-id": "vertex-scripted" },
@@ -214,7 +220,7 @@ export function scriptedGateway(openAiKeySecret: string) {
           getRequestHeaders: async () => new Headers({ authorization: "Bearer synthetic-token" }),
         },
       } as never,
-      fetch: scriptedVertexFetch(vertexUrls, requestBodies),
+      fetch: scriptedMessagesFetch(vertexUrls, requestBodies),
     },
     openAiClient: (apiKey) => {
       openAiKeys.push(apiKey);
@@ -222,4 +228,26 @@ export function scriptedGateway(openAiKeySecret: string) {
     },
   };
   return { dependencies, vertexUrls, requestBodies, openAiOutputs, openAiKeys };
+}
+
+/** Route dependencies for the self-hosted `direct` routes: the Claude API and OpenAI, scripted. */
+export function scriptedDirectRoutes() {
+  const anthropicUrls: string[] = [];
+  const requestBodies: string[] = [];
+  const anthropicKeys: string[] = [];
+  const openAiOutputs: string[] = [];
+  const openAiKeys: string[] = [];
+  const dependencies: Pick<ModelRouteDependencies, "anthropicApiClient" | "openAiClient"> = {
+    anthropicApiClient: (apiKey) => {
+      anthropicKeys.push(apiKey);
+      return createAnthropicApiClient(apiKey, {
+        fetch: scriptedMessagesFetch(anthropicUrls, requestBodies),
+      });
+    },
+    openAiClient: (apiKey) => {
+      openAiKeys.push(apiKey);
+      return scriptedOpenAiClient(openAiOutputs, requestBodies) as never;
+    },
+  };
+  return { dependencies, anthropicUrls, anthropicKeys, requestBodies, openAiOutputs, openAiKeys };
 }

@@ -94,7 +94,7 @@ export function directProviderOptions(
     resolveCredential: createFileCredentialResolver({ directory: config.secretsDirectory }),
     providerClientFactories: {
       // No `anthropicRoute`: the application's API-key route runs, with its prompt cache.
-      anthropic: dependencies.anthropicApiClient ?? createAnthropicApiClient,
+      anthropic: dependencies.anthropicApiClient ?? ((apiKey) => createAnthropicApiClient(apiKey)),
       openai:
         dependencies.openAiClient ??
         ((apiKey: string) => createOpenAiClient(apiKey, config.openAiEndpoint)),

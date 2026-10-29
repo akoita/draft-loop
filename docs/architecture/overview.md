@@ -262,6 +262,10 @@ Storage sits behind ports, as ADR 0011 (D3, D15) requires:
   brief through the API only, begins a run and reads it back once the worker
   has drafted it; see the
   [local server stack](../operations/local-server-stack.md).
+- `deploy/local/compose.yaml` runs the same services for real use on one
+  machine: the `direct` model routes with the operator's key files or a local
+  model, files on disk and generated secrets; see the
+  [self-hosted server](../operations/self-hosted.md).
 
 The hosted service starts runs through a queue rather than in the request
 (ADR 0011, D4):

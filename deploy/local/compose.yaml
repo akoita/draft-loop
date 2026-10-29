@@ -173,7 +173,7 @@ services:
       # Owner-mode runs carry no consent record, as on the development stack.
       DRAFT_LOOP_REQUIRE_CONSENT: "false"
       DRAFT_LOOP_OPENAI_ENDPOINT: ${DRAFT_LOOP_OPENAI_ENDPOINT:-global}
-      # Where the declared local models answer, such as Ollama at http://host.docker.internal:11434.
+      # Where the declared local models answer, such as Ollama at http://host.docker.internal:11434/v1.
       DRAFT_LOOP_LOCAL_MODEL_ENDPOINT: ${DRAFT_LOOP_LOCAL_MODEL_ENDPOINT:-}
     extra_hosts:
       - host.docker.internal:host-gateway

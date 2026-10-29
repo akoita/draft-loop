@@ -153,6 +153,11 @@ runs both modes, with fictional users for sign-in.
 Its first phase ends with a run on the hosted service that matches the local
 draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 
+To run the hosted service for real on your own machine, with your own Claude
+and OpenAI keys or a local model and files on your disk, run
+`pnpm self-hosted:up`; see the [self-hosted server](docs/operations/self-hosted.md)
+guide.
+
 ### Local semantic retrieval model (optional)
 
 DraftLoop can use a pinned, local embedding model (Apache-2.0; Granite, about
@@ -285,7 +290,7 @@ approving or exporting.
 - [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
 - [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
-- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md) · [Local server stack](docs/operations/local-server-stack.md)
+- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md) · [Local server stack](docs/operations/local-server-stack.md) · [Self-hosted server](docs/operations/self-hosted.md)
 
 Human approval is mandatory before an artifact is exported. DraftLoop can help
 prepare a CV, but the candidate remains responsible for factual review, final
