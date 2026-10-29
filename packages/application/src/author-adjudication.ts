@@ -2,6 +2,7 @@ import type { AuthorRequest } from "@draft-loop/orchestrator";
 
 import { applicationPlanAuthorInstructions } from "./application-plan-prompts.js";
 import { fullerBulletInstructions } from "./author-bullet-prompts.js";
+import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
 import {
   coherentStatementInstructions,
   singleStatementInstructions,
@@ -14,8 +15,14 @@ import { structuredRoleInstructions } from "./author-structure-prompts.js";
 /** The per-generation output-token cap a prompt version states and sends. */
 export type AuthorOutputBudget = Readonly<{ readonly maxOutputTokens: number }>;
 
-function authorOutputBudgetInstructions({ maxOutputTokens }: AuthorOutputBudget): string {
-  return ` The maximum generated output for this request is ${maxOutputTokens} tokens, including JSON structure and claim text, not just visible CV prose. Return one compact JSON proposal matching the requested schema, without Markdown fences, commentary, or repeated copies of the proposal. Keep comfortably below the cap to leave room for structured-output overhead. Shorten wording and avoid redundant claims while preserving distinct supported facts, required sections, chronology, and evidence citations. These constraints apply on every attempt, including factuality corrections.`;
+const conciseBudgetWording =
+  "Shorten wording and avoid redundant claims while preserving distinct supported facts, required sections, chronology, and evidence citations.";
+
+function authorOutputBudgetInstructions(
+  { maxOutputTokens }: AuthorOutputBudget,
+  fullDraft: boolean,
+): string {
+  return ` The maximum generated output for this request is ${maxOutputTokens} tokens, including JSON structure and claim text, not just visible CV prose. Return one compact JSON proposal matching the requested schema, without Markdown fences, commentary, or repeated copies of the proposal. Keep comfortably below the cap to leave room for structured-output overhead. ${fullDraft ? fullDraftBudgetWording : conciseBudgetWording} These constraints apply on every attempt, including factuality corrections.`;
 }
 
 const authorSystemPrompt =
@@ -113,6 +120,8 @@ interface AuthorPromptTemplate {
   readonly revisesByPatch: boolean;
   /** Whether the version states, and so may be sent, the reviewed application plan. */
   readonly sendsApplicationPlan: boolean;
+  /** Whether the budget sentence asks for a full draft rather than shorter wording (v17). */
+  readonly fullDraftBudget: boolean;
 }
 
 function authorPromptTemplate(
@@ -122,6 +131,7 @@ function authorPromptTemplate(
   sendsCandidateDirection = false,
   revisesByPatch = false,
   sendsApplicationPlan = false,
+  fullDraftBudget = false,
 ): AuthorPromptTemplate {
   return Object.freeze({
     guidance,
@@ -130,6 +140,7 @@ function authorPromptTemplate(
     sendsCandidateDirection,
     revisesByPatch,
     sendsApplicationPlan,
+    fullDraftBudget,
   });
 }
 
@@ -227,6 +238,16 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v17 writes a full two-page CV, keeps accomplishments over wording and bans working notes (#1971).
+  "cli-author-v17": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${structuredRoleInstructions}${pageTargetLengthInstructions}${singleStatementInstructions}${coherentStatementInstructions}${fullDraftInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -236,7 +257,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v16" : "cli-critic-v5";
+  return role === "author" ? "cli-author-v17" : "cli-critic-v5";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -329,7 +350,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v13" ||
     authorPromptTemplateVersion === "cli-author-v14" ||
     authorPromptTemplateVersion === "cli-author-v15" ||
-    authorPromptTemplateVersion === "cli-author-v16";
+    authorPromptTemplateVersion === "cli-author-v16" ||
+    authorPromptTemplateVersion === "cli-author-v17";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt
@@ -337,7 +359,7 @@ export function createAuthorAdjudicationPrompt(
     : usesV5FactualityRules
       ? authorSystemPromptV5
       : authorSystemPrompt;
-  const shared = `${systemPrompt}${authorOutputBudgetInstructions(outputBudget)}${usesV5FactualityRules ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
+  const shared = `${systemPrompt}${authorOutputBudgetInstructions(outputBudget, template.fullDraftBudget)}${usesV5FactualityRules ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
   const revisionInstructions =
     revision === undefined
       ? ""

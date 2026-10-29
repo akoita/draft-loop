@@ -132,7 +132,7 @@ it("retains the exact per-generation cap and adjudication through a factuality r
   const author: UserSessionProcessRunner = vi.fn(async (_command, args, options) => {
     const input = JSON.parse(options.stdin) as Record<string, unknown>;
     const cap = Number(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
-    // New runs record cli-author-v16, whose budget is 32,768 tokens.
+    // New runs record cli-author-v17, whose budget is 32,768 tokens.
     expect(cap).toBe(32768);
     if ((args[args.indexOf("--system-prompt") + 1] ?? "").includes("targeted revision")) {
       // The round-2 revision first asks for a patch; an unusable one falls back to the full proposal.
@@ -155,7 +155,7 @@ it("retains the exact per-generation cap and adjudication through a factuality r
     expect(system).toContain(`maximum generated output for this request is ${cap} tokens`);
     expect(system).toContain("one compact JSON proposal");
     expect(system).toContain("including factuality corrections");
-    expect(system).toContain("required sections, chronology, and evidence citations");
+    expect(system).toContain("never drop distinct supported facts, job-relevant accomplishments");
     expect(system).toContain("never invent facts absent from supplied material");
     const evidence = input.retrievedEvidence as { id: string; text: string }[];
     expect(evidence.some((chunk) => chunk.text.includes("June 2005 to December 2006"))).toBe(true);
