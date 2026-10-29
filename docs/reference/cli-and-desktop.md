@@ -863,9 +863,10 @@ without a stored name shows its folder name.
 ## Autopilot
 
 By default a review pauses for you whenever the critic reports a blocking
-finding, so you decide each finding before the next revision. Autopilot is an
-off-by-default workspace setting that runs the author/critic/revise loop through
-to the workspace's maximum rounds instead. The author revises from every critic
+finding, so you decide each finding before the next revision. Autopilot is a
+workspace setting, off by default in the desktop and the CLI and on for a new
+hosted workspace, that runs the author/critic/revise loop through to the
+workspace's maximum rounds instead. The author revises from every critic
 finding, blocking or warning, on its own.
 
 An autopilot review still pauses early when:

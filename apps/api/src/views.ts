@@ -28,6 +28,11 @@ export const workspaceViewSchema = z
     author: modelSchema,
     critic: modelSchema,
     fixtureMode: z.boolean(),
+    autopilot: z
+      .boolean()
+      .describe(
+        "Whether a run keeps revising through blocking findings up to its round limit; on for a new workspace.",
+      ),
     knowledgeBaseIds: z
       .array(z.string())
       .describe("The knowledge bases the workspace's runs use; empty until one is selected."),
@@ -47,6 +52,7 @@ export function workspaceView(
     author: { company: descriptor.author.company, model: descriptor.author.model },
     critic: { company: descriptor.critic.company, model: descriptor.critic.model },
     fixtureMode: descriptor.fixtureMode,
+    autopilot: descriptor.autopilot === true,
     knowledgeBaseIds: (descriptor.candidateKnowledgeSelection ?? []).map(
       ({ knowledgeBaseId }) => knowledgeBaseId,
     ),

@@ -645,6 +645,10 @@
           "fixtureMode": {
             "type": "boolean"
           },
+          "autopilot": {
+            "type": "boolean",
+            "description": "Whether a run keeps revising through blocking findings up to its round limit; on for a new workspace."
+          },
           "knowledgeBaseIds": {
             "type": "array",
             "items": {
@@ -661,6 +665,7 @@
           "author",
           "critic",
           "fixtureMode",
+          "autopilot",
           "knowledgeBaseIds"
         ]
       },
@@ -5913,6 +5918,10 @@
           "fixtureMode": {
             "type": "boolean"
           },
+          "autopilot": {
+            "type": "boolean",
+            "description": "Whether a run keeps revising through blocking findings up to its round limit; on for a new workspace."
+          },
           "knowledgeBaseIds": {
             "type": "array",
             "items": {
@@ -5929,6 +5938,7 @@
           "author",
           "critic",
           "fixtureMode",
+          "autopilot",
           "knowledgeBaseIds"
         ],
         "additionalProperties": false
@@ -10732,6 +10742,74 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/autopilot": {
+      "put": {
+        "summary": "Turn a workspace's autopilot on or off",
+        "description": "With autopilot on, a run keeps revising through the critic's blocking findings up to its round limit and pauses early only when the draft is ready, a claim is disputed or a finding says the draft contradicts the candidate's materials. Applies from the next run action.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

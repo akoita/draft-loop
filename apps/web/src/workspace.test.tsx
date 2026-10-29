@@ -55,6 +55,7 @@ describe("first-run setup", () => {
           author: { company: "anthropic", model: "synthetic-author-1" },
           critic: { company: "openai", model: "synthetic-critic-1" },
           fixtureMode: true,
+          autopilot: true,
           knowledgeBaseIds: [],
         },
       },

@@ -520,6 +520,10 @@ The owner sets up a hosted workspace through the API before any run:
   next runs, Anthropic and OpenAI only. A pair from one lineage needs
   `independenceOverrideRationale`, and a change while a run is executing
   answers 422; recorded runs keep the pair they ran with.
+- A new hosted workspace has autopilot on unless the request turns it off, so
+  a run revises through the critic's blocking findings up to its round limit.
+  `PUT /v1/workspaces/:id/autopilot` turns it on or off from the next run
+  action, and the web screen's **Autopilot** checkbox calls it.
 - `GET /v1/model-catalog` lists the catalog's model profiles the gateway
   serves, with their tier, roles, list prices, default reasoning level and the
   levels a run may choose, the presets whose author and critic it both serves,

@@ -756,6 +756,7 @@ export interface ApiSchemas {
       readonly model: string;
     };
     readonly fixtureMode: boolean;
+    readonly autopilot: boolean;
     readonly knowledgeBaseIds: readonly (string)[];
   };
   "WorkspaceList": {
@@ -883,6 +884,15 @@ export interface ApiOperations {
         readonly model: string;
       };
       readonly independenceOverrideRationale?: string;
+    };
+    readonly response: ApiSchemas["Workspace"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/autopilot": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly enabled: boolean;
     };
     readonly response: ApiSchemas["Workspace"];
   };

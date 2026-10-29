@@ -787,6 +787,7 @@ describe("the shared screens' commands over HTTP", () => {
       author: { company: "openai", model: "gpt-6.1-sol" },
       critic: { company: "anthropic", model: "claude-sonnet-5-5" },
       fixtureMode: true,
+      autopilot: true,
       knowledgeBaseIds: [],
     } as ApiSchemas["Workspace"];
     const { port, calls } = portOver({
