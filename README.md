@@ -129,7 +129,9 @@ desktop's own screens:
   page address, and its requirements. A deployment's API has no route to the
   internet, so a separate page fetcher, which holds no data or secrets, reads
   the page.
-- Career evidence uploads and the reviewed career profile.
+- Career evidence uploads and the reviewed career profile. In sign-in mode the
+  evidence page also asks for the permission to store the material, and it
+  lists each file's screening check.
 - The run, its review and approval, and the CV the browser downloads.
 - The run details and the comparison between an application's runs.
 

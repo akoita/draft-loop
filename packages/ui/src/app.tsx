@@ -2970,6 +2970,7 @@ export function App({
           errorMessage={importError}
           back={pageBack}
           onOpenStep={flowStepHandlers}
+          revision={knowledgeRevision}
           lockedReason={
             profileGenerationForActiveWorkspace === null
               ? null

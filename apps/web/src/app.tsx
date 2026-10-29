@@ -1,8 +1,10 @@
+import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { BriefStep } from "./brief.js";
 import type { Brief } from "./brief-model.js";
+import { evidenceHostPanels } from "./evidence-panels.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -134,7 +136,13 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
           </ShellActionsContext.Provider>
           <Records client={client} memory={memory} onSwitch={() => screenMemory.forget()}>
             {(recordId, onSaved) => (
-              <RecordSteps key={recordId} client={client} recordId={recordId} onSaved={onSaved} />
+              <RecordSteps
+                key={recordId}
+                client={client}
+                recordId={recordId}
+                mode="sign-in"
+                onSaved={onSaved}
+              />
             )}
           </Records>
         </>
@@ -153,6 +161,8 @@ export interface RecordStepsProps {
   readonly recordId: string;
   /** Called with the record's id once the workspace is read or created. */
   readonly onSaved?: (recordId: string) => void;
+  /** Sign-in mode asks for the permission to store material, which only that mode enforces. */
+  readonly mode?: "owner" | "sign-in";
 }
 
 /**
@@ -166,7 +176,7 @@ export type RecordScreens = "shared" | "steps";
  * Home to the run's review, approval and export. The earlier steps stay one click away for
  * consent, sensitivity rules and credits, from a button in the shared screens' header.
  */
-export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
+export function RecordSteps({ client, recordId, onSaved, mode = "owner" }: RecordStepsProps) {
   const [screens, setScreens] = useState<RecordScreens>("shared");
   const [step, setStep] = useState<StepId>("workspace");
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
@@ -178,6 +188,11 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
       onSaved?.(workspace.id);
     },
     [onSaved],
+  );
+
+  const hostPanels = useMemo<HostPanels>(
+    () => evidenceHostPanels(client, mode, workspace),
+    [client, mode, workspace],
   );
 
   // A first run shows only the shared setup screen, then lands on Home.
@@ -193,16 +208,18 @@ export function RecordSteps({ client, recordId, onSaved }: RecordStepsProps) {
   if (screens === "shared") {
     return (
       <RecordContext.Provider value={recordId}>
-        <SharedScreens
-          client={client}
-          workspaceId={recordId}
-          hostActions={
-            <>
-              <ConsentButton onOpen={() => setScreens("steps")} />
-              {shellActions}
-            </>
-          }
-        />
+        <HostPanelsContext.Provider value={hostPanels}>
+          <SharedScreens
+            client={client}
+            workspaceId={recordId}
+            hostActions={
+              <>
+                <ConsentButton onOpen={() => setScreens("steps")} />
+                {shellActions}
+              </>
+            }
+          />
+        </HostPanelsContext.Provider>
       </RecordContext.Provider>
     );
   }
