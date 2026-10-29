@@ -13,6 +13,9 @@ RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 WORKDIR /app
 COPY . .
+# The build context keeps each file's mode from the clone, and a clone made under a strict umask
+# (077) would leave folders the image's `node` user cannot open. Every file is made readable.
+RUN chmod -R a+rX,go-w /app
 # Only the fetcher's production dependency graph, exactly as the lockfile pins it.
 RUN pnpm install --frozen-lockfile --prod --filter "@draft-loop/page-fetcher..."
 

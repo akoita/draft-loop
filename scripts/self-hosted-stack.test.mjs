@@ -69,4 +69,22 @@ describe("self-hosted stack", () => {
       ["*", "!.gitignore"],
     );
   });
+
+  it("keeps the key files out of the images", async () => {
+    const ignored = (await readFile(new URL("../.dockerignore", import.meta.url), "utf8")).split(
+      "\n",
+    );
+    assert.ok(ignored.includes("deploy"));
+    assert.ok(ignored.includes("**/.env"));
+  });
+
+  it("builds images the node user can read from any clone", async () => {
+    for (const app of ["api", "page-fetcher", "worker"]) {
+      const dockerfile = await readFile(
+        new URL(`../apps/${app}/Dockerfile`, import.meta.url),
+        "utf8",
+      );
+      assert.match(dockerfile, /COPY \. \.\n(?:#.*\n)*RUN chmod -R a\+rX,go-w \/app\n/u, app);
+    }
+  });
 });
