@@ -1,4 +1,3 @@
-import type { HostPanels } from "@draft-loop/ui/host-panels";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
@@ -202,21 +201,4 @@ export function EvidenceSections({ client, revision }: EvidenceSectionsProps) {
 export interface EvidenceSectionsProps {
   readonly client: ApiClient;
   readonly revision: number;
-}
-
-/**
- * What the web adds to the shared Career evidence page: the storage permission above the evidence,
- * in sign-in mode only, and the files' screening checks and the private-section rules below the knowledge panel.
- */
-export function evidenceHostPanels(
-  client: ApiClient,
-  mode: "owner" | "sign-in",
-  workspace: ApiSchemas["Workspace"] | undefined,
-): HostPanels {
-  return {
-    ...(mode === "sign-in"
-      ? { evidenceBefore: <StoragePermissionPanel client={client} workspace={workspace} /> }
-      : {}),
-    evidenceAfter: ({ revision }) => <EvidenceSections client={client} revision={revision} />,
-  };
 }

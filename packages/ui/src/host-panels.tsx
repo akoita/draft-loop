@@ -12,6 +12,19 @@ export interface HostPanels {
    * changes the knowledge selection or adds files, so the panel can read its data again.
    */
   readonly evidenceAfter?: (context: { readonly revision: number }) => ReactNode;
+  /**
+   * Shown in the Start confirmation above its buttons, such as a consent and the run's cost.
+   * `applicationId` is the application the run belongs to, when the screen knows it. While the
+   * panel holds a reason through `setBlockedReason`, Start stays disabled and shows it; pass
+   * `null` to lift it.
+   */
+  readonly startDialog?: (context: StartDialogContext) => ReactNode;
+}
+
+/** What the host's Start confirmation panel is given. */
+export interface StartDialogContext {
+  readonly applicationId: string | null;
+  readonly setBlockedReason: (reason: string | null) => void;
 }
 
 /** The host's panels; none until a host provides them. */
@@ -25,4 +38,9 @@ export function HostEvidenceBefore() {
 /** The host's panel below the Career evidence page's knowledge panel; nothing without one. */
 export function HostEvidenceAfter({ revision }: { readonly revision: number }) {
   return useContext(HostPanelsContext).evidenceAfter?.({ revision }) ?? null;
+}
+
+/** The host's panel in the Start confirmation; nothing without one. */
+export function HostStartDialog(context: StartDialogContext) {
+  return useContext(HostPanelsContext).startDialog?.(context) ?? null;
 }

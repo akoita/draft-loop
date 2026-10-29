@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
+import { HostPanelsContext } from "./host-panels.js";
 import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import type { ProviderRoutesView } from "./provider-routes.js";
 import { ReviewWorkspace } from "./review.js";
@@ -11,6 +12,7 @@ import {
   chosenRawJobDescriptionValue,
   jobTextRequirementsValue,
   modelProfileTier,
+  StartActions,
   StartConfirmation,
   type StartReviewAction,
   startConfirmationHandlers,
@@ -491,5 +493,63 @@ describe("provider routes over the bridge", () => {
       liveState({ providerRoutes: { ...sessions, mistral: "api-key" } as never }),
     );
     expect(extra.ok).toBe(false);
+  });
+});
+
+describe("start confirmation with a host panel", () => {
+  const dialog = () => (
+    <StartConfirmation
+      summary={startConfirmationSummary(liveState(), { action: start })}
+      dialogRef={createRef<HTMLDivElement>()}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+      applicationId="application-1"
+    />
+  );
+
+  it("shows the host's panel above the buttons and tells it the application", () => {
+    const html = renderToStaticMarkup(
+      <HostPanelsContext.Provider
+        value={{ startDialog: ({ applicationId }) => <p>Host panel for {applicationId}</p> }}
+      >
+        {dialog()}
+      </HostPanelsContext.Provider>,
+    );
+
+    expect(html).toContain("Host panel for application-1");
+    expect(html.indexOf("Host panel for")).toBeLessThan(html.indexOf("start-confirmation-actions"));
+    expect(html).not.toContain("disabled");
+  });
+
+  it("renders the same dialog without a provider as with empty panels", () => {
+    const plain = renderToStaticMarkup(dialog());
+
+    expect(
+      renderToStaticMarkup(
+        <HostPanelsContext.Provider value={{}}>{dialog()}</HostPanelsContext.Provider>,
+      ),
+    ).toBe(plain);
+    expect(plain).not.toContain("disabled");
+    expect(plain).not.toContain("start-confirmation-blocked");
+  });
+
+  it("holds Start and says why while the host blocks it", () => {
+    const blocked = renderToStaticMarkup(
+      <StartActions
+        blockedReason="Record the candidate's consent first."
+        onStart={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(blocked).toMatch(/<button[^>]*disabled=""[^>]*>Start<\/button>/u);
+    expect(blocked).toContain('aria-describedby="start-confirmation-blocked"');
+    expect(blocked).toContain("Record the candidate&#x27;s consent first.");
+
+    const open = renderToStaticMarkup(
+      <StartActions blockedReason={null} onStart={() => undefined} onCancel={() => undefined} />,
+    );
+    expect(open).not.toContain("disabled");
+    expect(open).not.toContain("start-confirmation-blocked");
   });
 });

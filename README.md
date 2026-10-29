@@ -133,7 +133,10 @@ desktop's own screens:
   evidence page also asks for the permission to store the material. In both
   modes it lists each file's screening check and edits the private-section
   rules of the selected knowledge bases.
-- The run, its review and approval, and the CV the browser downloads.
+- The run, its review and approval, and the CV the browser downloads. In
+  sign-in mode the Start dialog shows the run's credit cost and asks for the
+  candidate's consent to send material to the providers, and the header shows
+  the credit balance.
 - The run details and the comparison between an application's runs.
 
 “Consent, rules and credits” sets up the workspace, records the candidate's

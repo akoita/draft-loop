@@ -252,6 +252,8 @@ interface ReviewWorkspaceProps {
   readonly pageNavigation?: ReactNode;
   /** A notice under the run header, such as the request to name the application. */
   readonly headerNotice?: ReactNode;
+  /** The application a started run belongs to, told to the host's panel in the Start dialog. */
+  readonly startApplicationId?: string | null;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -971,6 +973,7 @@ export function ReviewWorkspace({
   providerSignInReadiness,
   setupSummary,
   modelPairChoice,
+  startApplicationId = null,
   pageNavigation,
   headerNotice,
 }: ReviewWorkspaceProps) {
@@ -2224,6 +2227,7 @@ export function ReviewWorkspace({
         onStart={onStart}
         onCancel={onCancel}
         changeModelsAction={modelSettingsAction}
+        applicationId={startApplicationId}
       />
     );
   };

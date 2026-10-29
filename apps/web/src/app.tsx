@@ -4,7 +4,6 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { BriefStep } from "./brief.js";
 import type { Brief } from "./brief-model.js";
-import { evidenceHostPanels } from "./evidence-panels.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -23,6 +22,8 @@ import {
 } from "./shell-actions.js";
 import { SignIn } from "./sign-in.js";
 import { SourcesStep } from "./sources.js";
+import { HeaderCredits } from "./start-panels.js";
+import { webHostPanels } from "./web-host-panels.js";
 import { WorkspaceStep } from "./workspace.js";
 import { ownerWorkspaceId } from "./workspace-model.js";
 
@@ -191,7 +192,7 @@ export function RecordSteps({ client, recordId, onSaved, mode = "owner" }: Recor
   );
 
   const hostPanels = useMemo<HostPanels>(
-    () => evidenceHostPanels(client, mode, workspace),
+    () => webHostPanels(client, mode, workspace),
     [client, mode, workspace],
   );
 
@@ -214,6 +215,7 @@ export function RecordSteps({ client, recordId, onSaved, mode = "owner" }: Recor
             workspaceId={recordId}
             hostActions={
               <>
+                <HeaderCredits client={client} mode={mode} />
                 <ConsentButton onOpen={() => setScreens("steps")} />
                 {shellActions}
               </>

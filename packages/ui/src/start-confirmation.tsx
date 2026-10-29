@@ -1,5 +1,6 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { formatLimitDuration } from "./execution-limits.js";
+import { HostStartDialog } from "./host-panels.js";
 import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
 import {
   modelProfileEntryForReference,
@@ -374,6 +375,8 @@ export interface StartConfirmationProps {
   readonly onCancel: () => void;
   /** The screen's existing "Change models" control, when it offers one. */
   readonly changeModelsAction?: ReactNode;
+  /** The application the run belongs to, passed to the host's panel in the dialog. */
+  readonly applicationId?: string | null;
 }
 
 function Lines({ lines }: { readonly lines: readonly StartConfirmationLine[] }) {
@@ -389,6 +392,50 @@ function Lines({ lines }: { readonly lines: readonly StartConfirmationLine[] }) 
   );
 }
 
+interface StartActionsProps {
+  /** Why Start waits, from the host's panel; `null` lets it start. */
+  readonly blockedReason: string | null;
+  readonly onStart: () => void;
+  readonly onCancel: () => void;
+  readonly changeModelsAction?: ReactNode;
+}
+
+/** Start, the screen's Change models control and Cancel; Start waits while the host blocks it. */
+export function StartActions({
+  blockedReason,
+  onStart,
+  onCancel,
+  changeModelsAction,
+}: StartActionsProps) {
+  return (
+    <div className="start-confirmation-actions">
+      <button
+        className="button button-primary"
+        type="button"
+        disabled={blockedReason !== null}
+        aria-describedby={blockedReason === null ? undefined : "start-confirmation-blocked"}
+        onClick={onStart}
+      >
+        Start
+      </button>
+      {blockedReason === null ? null : (
+        <p className="start-confirmation-note" id="start-confirmation-blocked" role="status">
+          {blockedReason}
+        </p>
+      )}
+      {changeModelsAction === undefined || changeModelsAction === null ? null : (
+        // The screen's own control opens the models dialog; this one closes first.
+        <span className="start-confirmation-change-models" onClickCapture={onCancel}>
+          {changeModelsAction}
+        </span>
+      )}
+      <button className="button button-quiet" type="button" onClick={onCancel}>
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 /**
  * The check a person makes before a run begins its provider calls. Start sends the trigger's own
  * action; Cancel sends nothing. Start comes first so it takes the focus, and Enter confirms.
@@ -399,8 +446,10 @@ export function StartConfirmation({
   onStart,
   onCancel,
   changeModelsAction,
+  applicationId = null,
 }: StartConfirmationProps) {
   const [length, setLength] = useState<StartLengthChoice>("policy");
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   return (
     <div className="modal-backdrop">
       <div
@@ -471,20 +520,13 @@ export function StartConfirmation({
             </p>
           </fieldset>
         </section>
-        <div className="start-confirmation-actions">
-          <button className="button button-primary" type="button" onClick={() => onStart(length)}>
-            Start
-          </button>
-          {changeModelsAction === undefined || changeModelsAction === null ? null : (
-            // The screen's own control opens the models dialog; this one closes first.
-            <span className="start-confirmation-change-models" onClickCapture={onCancel}>
-              {changeModelsAction}
-            </span>
-          )}
-          <button className="button button-quiet" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
+        <HostStartDialog applicationId={applicationId} setBlockedReason={setBlockedReason} />
+        <StartActions
+          blockedReason={blockedReason}
+          onStart={() => onStart(length)}
+          onCancel={onCancel}
+          changeModelsAction={changeModelsAction}
+        />
       </div>
     </div>
   );

@@ -129,6 +129,22 @@ export function unconsentedProviders(
   return providers.filter((provider) => !current.providers.includes(provider));
 }
 
+/**
+ * Why a run cannot start for lack of the candidate's consent to send material to the providers,
+ * or `null` once it covers every provider. Without a reading yet, Start waits.
+ */
+export function transmissionBlockedReason(
+  consents: Consents | undefined,
+  providers: readonly ConsentProvider[],
+): string | null {
+  if (consents === undefined) return "Checking the candidate's consent to send material…";
+  if (!isGranted(consents, "provider-transmission"))
+    return `Record the candidate's consent to send material to ${providerList(providers)} first.`;
+  const missing = unconsentedProviders(consents, providers);
+  if (missing.length === 0) return null;
+  return `The candidate's consent does not name ${providerList(missing)}. Withdraw it and record it again for ${providerList(providers)}.`;
+}
+
 /** A recording time as people read it, in UTC. */
 export function formatRecordedAt(recordedAt: string, locale?: string): string {
   const time = new Date(recordedAt).toLocaleString(locale, {

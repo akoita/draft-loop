@@ -2797,6 +2797,7 @@ export function App({
         ? {}
         : {
             headerNotice: applicationNameNudge(application),
+            startApplicationId: application.applicationId,
             ...(activePort.setApplicationModels === undefined ||
             applicationSummaries[application.applicationId]?.isDefault !== false
               ? {}
