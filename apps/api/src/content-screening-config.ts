@@ -1,11 +1,17 @@
-import { assertLocationPriceFactor, vertexEuLocation } from "@draft-loop/model-gateway";
+import { isAbsolute } from "node:path";
+import {
+  assertLocationPriceFactor,
+  defaultSecretsDirectory,
+  vertexEuLocation,
+} from "@draft-loop/model-gateway";
 
 import { ApiConfigError } from "./config.js";
 
 /**
  * How the API screens untrusted text for prompt injection at intake (ADR 0011, phase 2d).
  * `off` screens nothing, `rules` runs the deterministic rule screener, and `rules+model` adds
- * Claude Haiku on the hosted Vertex route. A run is refused on quarantined material in every
+ * Claude Haiku on the hosted Vertex route, or on the Claude API where the deployment's routes are
+ * `direct` (a self-hosted stack, ADR 0011, D15). A run is refused on quarantined material in every
  * mode, so `off` only stops new results from being stored.
  */
 export const screeningModes = ["off", "rules", "rules+model"] as const;
@@ -27,8 +33,16 @@ export interface ScreeningConfig {
    * reads a candidate source only when this is on and the record's consent names Anthropic.
    */
   readonly allowProviderData: boolean;
-  /** Present with `rules+model`. */
+  /** Present with `rules+model` on the Vertex routes. */
   readonly model?: ScreeningModelRoute;
+  /** Present with `rules+model` on the `direct` routes, in place of `model`. */
+  readonly direct?: ScreeningDirectRoute;
+}
+
+/** The Claude API route of a self-hosted stack, with its key in a file the API reads. */
+export interface ScreeningDirectRoute {
+  /** The directory holding `anthropic_api_key`, the same `DRAFT_LOOP_SECRETS_DIR` as the worker. */
+  readonly secretsDirectory: string;
 }
 
 function isScreeningMode(value: string): value is ScreeningMode {
@@ -64,10 +78,24 @@ function readModelRoute(env: NodeJS.ProcessEnv): ScreeningModelRoute {
   return { vertexProjectId, vertexLocation, vertexPriceFactor };
 }
 
+function readDirectRoute(env: NodeJS.ProcessEnv): ScreeningDirectRoute {
+  if ((env.DRAFT_LOOP_VERTEX_PROJECT_ID ?? "") !== "") {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_VERTEX_PROJECT_ID belongs to the vertex routes; remove it when DRAFT_LOOP_MODEL_ROUTES is direct.",
+    );
+  }
+  const secretsDirectory = env.DRAFT_LOOP_SECRETS_DIR || defaultSecretsDirectory;
+  if (!isAbsolute(secretsDirectory)) {
+    throw new ApiConfigError("DRAFT_LOOP_SECRETS_DIR must be an absolute path.");
+  }
+  return { secretsDirectory };
+}
+
 /**
  * Reads `DRAFT_LOOP_SCREENING` (default `rules`), the same in owner-token and sign-in mode. An
  * unknown value is a startup error, never a silent fallback to a weaker mode. `rules+model` needs
- * the Vertex project, location and price factor that the worker reads.
+ * the Vertex project, location and price factor that the worker reads, or, with
+ * `DRAFT_LOOP_MODEL_ROUTES=direct`, a Claude API key file in `DRAFT_LOOP_SECRETS_DIR`.
  */
 export function readScreeningConfig(env: NodeJS.ProcessEnv): ScreeningConfig {
   const value = env.DRAFT_LOOP_SCREENING ?? "";
@@ -79,6 +107,10 @@ export function readScreeningConfig(env: NodeJS.ProcessEnv): ScreeningConfig {
   return {
     mode,
     allowProviderData,
-    ...(mode === "rules+model" ? { model: readModelRoute(env) } : {}),
+    ...(mode !== "rules+model"
+      ? {}
+      : env.DRAFT_LOOP_MODEL_ROUTES === "direct"
+        ? { direct: readDirectRoute(env) }
+        : { model: readModelRoute(env) }),
   };
 }

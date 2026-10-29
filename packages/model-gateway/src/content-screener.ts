@@ -15,7 +15,7 @@ import {
 } from "@draft-loop/schemas/content-screening";
 import { z } from "zod";
 
-import type { createHostedAnthropicRoute } from "./hosted-routes.js";
+import type { AnthropicRouteBuilder } from "./hosted-routes.js";
 import type { RouteAdapter } from "./routed-adapter.js";
 
 /**
@@ -263,7 +263,7 @@ export interface HostedContentScreenerOptions extends Omit<ModelContentScreenerO
 
 /** The screener over the hosted Claude route: Vertex AI in an EU location, then any fallback. */
 export function createHostedContentScreener(
-  hostedRoute: ReturnType<typeof createHostedAnthropicRoute>,
+  hostedRoute: AnthropicRouteBuilder,
   options: HostedContentScreenerOptions,
 ): ModelContentScreener {
   const { pricing, retry, ...rest } = options;

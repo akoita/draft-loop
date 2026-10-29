@@ -327,6 +327,10 @@ deployment declares, such as Ollama or LM Studio:
   `DRAFT_LOOP_VERTEX_PRICE_FACTOR` only with `DRAFT_LOOP_SCREENING=rules+model`,
   for the injection screener's Claude Haiku calls. It uses its own service
   identity and has no direct Claude API fallback.
+- With `DRAFT_LOOP_MODEL_ROUTES=direct`, `rules+model` screens through the
+  Claude API instead, reading `anthropic_api_key` from `DRAFT_LOOP_SECRETS_DIR`.
+  A stack with no Claude key keeps `rules`, since a screener that cannot
+  answer leaves material quarantined.
 
 To check both routes by hand with synthetic data, set the same variables, sign
 in with an identity that may call Vertex AI and read the secrets, and run:
