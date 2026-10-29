@@ -81,6 +81,13 @@ export function balanceLine(credits: MemberCredits, locale?: string): string {
   return `${credits.remaining} of ${creditCount(credits.allowance)} left.${ends}${extra}`;
 }
 
+/** The balance as a few words for the header, such as `38 of 50 credits left`. */
+export function balanceChip(credits: MemberCredits): string {
+  if (credits.unlimited || credits.remaining === null || credits.allowance === null)
+    return "Unlimited credits";
+  return `${credits.remaining} of ${creditCount(credits.allowance)} left`;
+}
+
 /** The 80% warning, or `undefined` while the balance is below it. */
 export function balanceWarning(credits: MemberCredits): string | undefined {
   if (!credits.warning) return undefined;

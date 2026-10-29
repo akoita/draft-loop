@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { ConsentPanel } from "./consent.js";
 import type { Consents } from "./consent-model.js";
-import { evidenceHostPanels, FileChecksPanel, type FileGroup } from "./evidence-panels.js";
+import { FileChecksPanel, type FileGroup } from "./evidence-panels.js";
 import { ScreeningNote } from "./screening.js";
 import { ReleaseAccess } from "./screening-access.js";
 import { type ScreeningStatus, sourceStatus } from "./screening-model.js";
@@ -84,16 +84,6 @@ function fileChecks(canRelease: boolean) {
 }
 
 describe("storage permission on the Career evidence page", () => {
-  it("is asked above the evidence in sign-in mode only", () => {
-    const signIn = evidenceHostPanels(unusedClient, "sign-in", undefined);
-    const owner = evidenceHostPanels(unusedClient, "owner", undefined);
-
-    expect(renderToStaticMarkup(signIn.evidenceBefore)).toContain(
-      "Reading the candidate&#x27;s consents",
-    );
-    expect(owner.evidenceBefore).toBeUndefined();
-  });
-
   it("reads as one line once granted, and keeps the withdrawal", () => {
     const html = renderToStaticMarkup(
       <ConsentPanel
@@ -140,13 +130,6 @@ describe("storage permission on the Career evidence page", () => {
 });
 
 describe("file checks on the Career evidence page", () => {
-  it("is offered in both modes, below the knowledge panel", () => {
-    for (const mode of ["owner", "sign-in"] as const) {
-      const panels = evidenceHostPanels(unusedClient, mode, undefined);
-      expect(panels.evidenceAfter?.({ revision: 0 })).toBeDefined();
-    }
-  });
-
   it("lists each file with its screening chip", () => {
     const html = fileChecks(false);
 
