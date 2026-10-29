@@ -196,6 +196,15 @@ resumes rather than restarts.
   third-party proxy. It holds keys and identities, meters usage per tenant,
   enforces run budgets and picks the route. A fallback is never silent: it is
   recorded in run history. No outside proxy sees candidate material.
+- **Routes per deployment (decided 2026-10-29).** Each deployment names its
+  model routes in `DRAFT_LOOP_MODEL_ROUTES`:
+  - `vertex`, the cloud default: Claude on Vertex AI and OpenAI's EU
+    endpoint, keys from Secret Manager.
+  - `direct`: the Claude API and OpenAI with the operator's own keys, read
+    from local secret files. It is the self-hosted default (D15).
+  - Local models: an OpenAI-compatible endpoint the deployment declares, for
+    either role. A local writer carries a warning until a local model passes
+    the evaluation gate (D16).
 - **Platform keys by default:** the service calls Anthropic and OpenAI with
   its own keys, meters usage per tenant, and enforces per-tenant budgets.
   The run budget machinery already exists.
@@ -590,6 +599,10 @@ services in that region:
     storage port, standard OIDC sign-in and Terraform keep a move a
     migration, not a rewrite. Neither provider sells sign-in for app users,
     so identity (D6) stays a separate service either way.
+- **Self-hosted local target (decided 2026-10-28).** The same API, worker,
+  page fetcher and web screen also run on one machine with Docker Compose and
+  no cloud account (D15). Postgres stays Postgres, blobs live on disk, keys
+  come from local secret files and model routes are `direct` or local (D5).
 
 ### D15. Local-first and client-server evolve in parallel
 
@@ -609,6 +622,19 @@ the other, and neither may break the other.
   entitlements (D13).
 - **The bridge between versions** is the portable backup format (ADR 0007),
   used for import (D12). Changing it needs a version bump and a migration.
+
+**Desktop in maintenance mode (decided 2026-10-28).** The desktop keeps its
+fixes and whatever it gains from shared packages, but gets no features of its
+own. The web screen over the server is the main client.
+
+**Self-hosted local target (decided 2026-10-28).** The full local option is
+the server itself on the person's machine, not a second product: a separate
+Compose file with one API, one worker, the page fetcher and Postgres, bound
+to `127.0.0.1`, with passwords and the owner token generated on first start.
+It only adds adapters behind the existing ports: keys from local secret
+files, `direct` and local model routes (D5), and blobs on disk. Encryption at
+rest is the host's disk encryption. Built in sprint 1z (#1946–#1954); images,
+an install script, backups, a sign-in profile and desktop import (D12) follow.
 
 **Local development.** The desktop runs as today with `pnpm` scripts and no
 cloud account. The server stack runs locally with Docker Compose: Postgres
