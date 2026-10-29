@@ -53,6 +53,7 @@ export type FooterBlockerKind =
   | "ready"
   | "findings"
   | "final-checks"
+  | "edited-checks"
   | "approved"
   | "exported"
   | "no-artifact"
@@ -124,12 +125,14 @@ function plural(count: number, noun: string): string {
 /**
  * The footer's one-line blocker for the current draft. It reads the same decisions the gate
  * enforces: the draft, the run's progress, blocking findings, the final CV checks, and the send
- * verdict for a draft that can be approved.
+ * verdict for a draft that can be approved. `edited` says the candidate changed the draft: the
+ * final CV checks then describe the reviewed version, before the edits, and run again at approval.
  */
 export function footerBlocker(
   state: DesktopReviewState,
   readiness: ApprovalReadiness | null,
   verdict: SendVerdict | null,
+  edited = false,
 ): FooterBlocker {
   if (state.artifact.version <= 0) {
     return {
@@ -193,6 +196,18 @@ export function footerBlocker(
     return {
       kind: "findings",
       text: revisionLeft ? text : `${text} · ${ACCEPT_UNAVAILABLE_NOTE}`,
+      tone: "warning",
+    };
+  }
+  // The checks read the reviewed version; the edits make a new one, checked again at approval
+  // (#1902), so a filled-in header no longer reads as "still shows placeholders" (#1939).
+  if (readiness?.applicationReady === false && edited) {
+    return {
+      kind: "edited-checks",
+      text: `Approving checks your edits again · before them: ${compactReadinessBlockers(
+        readiness.blockers,
+        relevanceScope(state.coverage),
+      ).join("; ")}${noRevision}`,
       tone: "warning",
     };
   }

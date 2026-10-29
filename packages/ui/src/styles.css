@@ -742,6 +742,59 @@ input[type="checkbox"] {
   background-size: 2px 100%;
 }
 
+/* The round button that folds the side panel away (#1939). It sits on the panel's edge, over the
+   handle's line, at the height of the panel's first row; the shell is its positioning box. */
+.app-shell-resizable {
+  position: relative;
+}
+
+.side-panel-toggle {
+  position: absolute;
+  top: var(--space-3);
+  right: calc(var(--side-panel-width, var(--panel-width)) - 0.8125rem);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: 0 1px 3px rgba(15, 23, 33, 0.12);
+  cursor: pointer;
+}
+
+.side-panel-toggle:hover,
+.side-panel-toggle:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.side-panel-toggle svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Folded, the panel is a thin strip that keeps the button; the draft takes the rest. */
+.app-shell-side-collapsed {
+  --side-panel-collapsed-width: 2.25rem;
+  grid-template-columns: minmax(0, 1fr) 0 var(--side-panel-collapsed-width);
+}
+
+.app-shell-side-collapsed > .side-panel-toggle {
+  right: calc((var(--side-panel-collapsed-width) - 1.625rem) / 2);
+}
+
+/* Stacked, the panel follows the draft, so there is nothing to fold away. */
+@media (min-width: 1025px) {
+  .app-shell-side-collapsed > .side-panel-handle,
+  .app-shell-side-collapsed > .side-column > * {
+    display: none;
+  }
+}
+
 .main-column {
   position: relative;
   display: flex;
@@ -3593,25 +3646,19 @@ input[type="text"].workspace-title-input {
   margin-bottom: var(--space-3);
 }
 
-/* In the two-column desk the findings list scrolls on its own: the panel fills the side panel's
-   remaining height, its heading and filters stay put, and only the list moves. Stacked, the page
+/* In the two-column desk the side panel has one scroll, and the findings list flows in it: a
+   list scrolling inside that scroll ran its last cards out under the footer (#1939). The
+   heading and filters stay at the top while the cards move under them. Stacked, the page
    scrolls as a whole instead. */
 @media (min-width: 1025px) {
-  .side-scroll > .findings-panel:not([hidden]) {
-    display: flex;
-    flex: 1 0 18rem;
-    flex-direction: column;
-    min-height: 18rem;
-    padding-bottom: 0;
-  }
-
-  .side-scroll > .findings-panel:not([hidden]) > #findings-panel-body {
-    flex: 1 1 0;
-    min-height: 0;
-    margin: 0 calc(-1 * var(--space-5));
-    padding: 0 var(--space-5) var(--space-5);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+  .side-scroll > .findings-panel:not([hidden]) > .findings-queue-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-5)) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-4) var(--space-5) 0;
+    background: var(--surface);
   }
 }
 
@@ -4298,7 +4345,6 @@ input[type="text"].workspace-title-input {
   border-top: 1px solid var(--border);
   padding: var(--space-3) var(--space-5) var(--space-4);
   background: var(--surface);
-  box-shadow: 0 -12px 20px -18px rgba(15, 23, 33, 0.45);
 }
 
 .gate-action-bar .approval-actions {
@@ -7255,7 +7301,8 @@ input[type="text"].workspace-title-input {
     grid-template-columns: 1fr;
   }
 
-  .side-panel-handle {
+  .side-panel-handle,
+  .side-panel-toggle {
     display: none;
   }
 
@@ -7294,6 +7341,7 @@ input[type="text"].workspace-title-input {
     left: var(--rail-width);
     z-index: 3;
     max-height: 70vh;
+    box-shadow: 0 -12px 20px -18px rgba(15, 23, 33, 0.45);
   }
 
   .side-column:has(> .gate-action-bar) {

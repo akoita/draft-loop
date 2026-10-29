@@ -14,6 +14,10 @@
  *
  * The handle is keyboard-operable for the same reason the compare split is: arrow keys nudge
  * (Shift for a larger step), Home/End jump to the bounds, and a double-click restores the default.
+ *
+ * The panel also folds away to a thin strip, so the reader can give the draft the whole window
+ * (#1939). That choice is stored the same way, and anything that needs the panel, such as the
+ * rail's Findings button or a refused approval, opens it again.
  */
 import {
   type JSX,
@@ -26,6 +30,9 @@ import {
 
 /** `localStorage` key holding the side panel width in CSS pixels. */
 export const sidePanelWidthStorageKey = "draft-loop.review.sidePanelWidth";
+
+/** `localStorage` key holding "1" while the side panel is folded away. */
+export const sidePanelCollapsedStorageKey = "draft-loop.review.sidePanelCollapsed";
 
 /** The stylesheet's `--panel-width`: 430px, and 400px at or below the 1280px breakpoint. */
 export const defaultSidePanelWidth = 430;
@@ -109,6 +116,30 @@ export function writeStoredSidePanelWidth(
   }
 }
 
+/** Read whether the panel was folded away; a blocked store leaves it open. */
+export function readStoredSidePanelCollapsed(storage?: Pick<Storage, "getItem">): boolean {
+  if (storage === undefined) return false;
+  try {
+    return storage.getItem(sidePanelCollapsedStorageKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the folded panel, or forget it when the panel opens again. */
+export function writeStoredSidePanelCollapsed(
+  storage: Pick<Storage, "setItem" | "removeItem"> | undefined,
+  collapsed: boolean,
+): void {
+  if (storage === undefined) return;
+  try {
+    if (collapsed) storage.setItem(sidePanelCollapsedStorageKey, "1");
+    else storage.removeItem(sidePanelCollapsedStorageKey);
+  } catch {
+    // A blocked or full store costs the user persistence, not the session.
+  }
+}
+
 /**
  * The width a pointer asks for. The panel is the right-hand track, so its width is the distance
  * from the pointer to the layout's right edge. Pure, so the drag arithmetic is testable.
@@ -166,6 +197,9 @@ export interface SidePanelWidth {
   readonly viewportWidth: number;
   readonly choose: (next: number) => void;
   readonly reset: () => void;
+  /** True while the panel is folded away to a thin strip. */
+  readonly collapsed: boolean;
+  readonly setCollapsed: (collapsed: boolean) => void;
 }
 
 /** Hold the chosen width, persist every change, and re-clamp it when the window resizes. */
@@ -192,9 +226,54 @@ export function useSidePanelWidth(): SidePanelWidth {
     writeStoredSidePanelWidth(browserStorage(), null);
   }, []);
 
+  const [collapsed, setCollapsedState] = useState<boolean>(() =>
+    readStoredSidePanelCollapsed(browserStorage()),
+  );
+  const setCollapsed = useCallback((next: boolean) => {
+    setCollapsedState(next);
+    writeStoredSidePanelCollapsed(browserStorage(), next);
+  }, []);
+
   const width = stored === null ? null : clampSidePanelWidth(stored, viewportWidth);
   const reportedWidth = width ?? defaultSidePanelWidthFor(viewportWidth);
-  return { width, reportedWidth, viewportWidth, choose, reset };
+  return { width, reportedWidth, viewportWidth, choose, reset, collapsed, setCollapsed };
+}
+
+/**
+ * The round button on the panel's edge that folds the panel away or opens it again. It sits
+ * over the resize handle's line, so the two controls read as one edge.
+ */
+export function SidePanelToggle({
+  collapsed,
+  controls,
+  onToggle,
+}: {
+  readonly collapsed: boolean;
+  readonly controls: string;
+  readonly onToggle: () => void;
+}): JSX.Element {
+  const label = collapsed ? "Show side panel" : "Hide side panel";
+  return (
+    <button
+      type="button"
+      className="side-panel-toggle"
+      aria-expanded={!collapsed}
+      aria-controls={controls}
+      aria-label={label}
+      title={label}
+      onClick={onToggle}
+    >
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+        <path
+          d={collapsed ? "M10 3.5L5.5 8l4.5 4.5" : "M6 3.5L10.5 8 6 12.5"}
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
 }
 
 function releasePointer(event: ReactPointerEvent<HTMLDivElement>): void {

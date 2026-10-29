@@ -151,6 +151,14 @@ describe("nextStepLine", () => {
     ).toBe("Next: approve or override (relevance 22% and 1 more)");
   });
 
+  it("sends an edited draft to approval, where its checks run again (#1939)", () => {
+    const blocker = footerBlocker(reviewed, relevanceBlocked, null, true);
+    expect(nextStepLine(reviewed, blocker, relevanceBlocked)).toBe(
+      "Next: approve to check your edits",
+    );
+    expect(nextStepTarget(blocker)).toBe("approval-gate");
+  });
+
   it("asks for approval once nothing blocks it", () => {
     expect(next(reviewed, null, ready)).toEqual({ kind: "ready", line: "Next: approve" });
     expect(

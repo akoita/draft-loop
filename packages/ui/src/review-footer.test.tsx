@@ -198,6 +198,19 @@ describe("footerBlocker", () => {
     });
   });
 
+  it("says the edited draft's checks run again at approval, not that it still fails (#1939)", () => {
+    const header: ApprovalReadiness = {
+      ...relevanceBlocked,
+      blockers: [{ code: "deterministic-error", check: "missing-cv-header" }],
+    };
+    expect(footerBlocker(reviewed, header, null, true)).toEqual({
+      kind: "edited-checks",
+      text: "Approving checks your edits again · before them: validation check failed: CV header still shows placeholders such as [Your name]",
+      tone: "warning",
+    });
+    expect(footerBlocker(reviewed, header, null).kind).toBe("final-checks");
+  });
+
   it("shortens rubric blockers and lower-cases the others", () => {
     expect(compactReadinessBlocker(relevanceBlocker)).toBe("relevance 22% (80% needed)");
     expect(compactReadinessBlocker({ code: "disputed-dimension" })).toBe(
@@ -469,16 +482,14 @@ describe("the review footer in the workspace", () => {
       },
     };
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
-    const aside = /<aside class="side-column">.*<\/aside>/su.exec(html)?.[0] ?? "";
+    const aside = /<aside class="side-column"[^>]*>.*<\/aside>/su.exec(html)?.[0] ?? "";
     const footerAt = aside.indexOf('<section class="gate-action-bar"');
     const scrollArea = aside.slice(0, footerAt);
     const footer = aside.slice(footerAt);
 
     // The panel's content, tabs included, lives in its own scroll area; the footer is the
     // column's next child, so a taller footer shrinks that area instead of covering it.
-    expect(scrollArea.startsWith('<aside class="side-column"><div class="side-scroll">')).toBe(
-      true,
-    );
+    expect(scrollArea).toMatch(/^<aside class="side-column" id="[^"]+"><div class="side-scroll">/u);
     expect(scrollArea.endsWith("</div>")).toBe(true);
     expect(scrollArea).toContain('role="tablist"');
     expect(footer).not.toContain('role="tablist"');
@@ -521,5 +532,18 @@ describe("revisionUnavailableReason", () => {
     expect(html).not.toContain('title="Approve artifact (Alt+A)"');
     expect(html).not.toContain('title="Request revision (Alt+R)"');
     expect(html).toMatch(/class="button button-primary"[^>]*aria-keyshortcuts="Alt\+E"/u);
+  });
+});
+
+describe("an action's error on the review screen", () => {
+  it("shows once, in the footer beside the buttons, not also at the top (#1939)", () => {
+    const message = "Your edited draft still fails the final CV checks (missing section).";
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={reviewed} onAction={noop} errorMessage={message} />,
+    );
+    expect(html.split(message)).toHaveLength(2);
+    expect(html).toContain(
+      `<div class="error-banner approval-action-error" role="alert"><p>${message}</p></div>`,
+    );
   });
 });

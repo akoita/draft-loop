@@ -103,7 +103,7 @@ function outsideDrawer(html: string): string {
 }
 
 function sidePanelOf(html: string): string {
-  return html.slice(html.indexOf('<aside class="side-column">'));
+  return html.slice(html.indexOf('<aside class="side-column"'));
 }
 
 describe("runDetailsSummary", () => {
