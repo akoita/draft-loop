@@ -16,7 +16,7 @@ describe("readWorkerConfig", () => {
       databaseUrl: env.DRAFT_LOOP_DATABASE_URL,
       databaseSchema: "draft_loop",
       queueSchema: "draft_loop_queue",
-      blobBucket: "draft-loop-local",
+      blobs: { kind: "gcs", bucket: "draft-loop-local" },
       allowProviderData: false,
       requireConsent: false,
       requireScreening: true,

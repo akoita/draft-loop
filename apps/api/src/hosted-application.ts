@@ -9,11 +9,6 @@ import {
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import {
-  createGcsBlobErasure,
-  createGcsBlobStorage,
-  gcsTenantPrefix,
-} from "@draft-loop/storage-gcs";
-import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
@@ -22,8 +17,8 @@ import {
   type PostgresTenancy,
   type PostgresTenantStorage,
 } from "@draft-loop/storage-postgres";
-import { Storage } from "@google-cloud/storage";
 
+import { openTenantBlobs } from "./blob-backend.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { HostedStorageConfig } from "./config.js";
 import {
@@ -148,11 +143,12 @@ export function hostedEntitlementsFor(tenancy: PostgresTenancy): TenantEntitleme
 }
 
 /**
- * Opens what every tenant's application shares: one Postgres pool, one run queue and one Cloud
- * Storage bucket (ADR 0011, D3). Each tenant's application is composed on its first request over
- * the pool set to that tenant and the bucket under that tenant's prefix. Credentials come from the
- * runtime: the database URL from a secret and Cloud Storage from the service account, or the
- * emulator on the local stack. It holds no provider credential: only the worker calls models.
+ * Opens what every tenant's application shares: one Postgres pool, one run queue and one blob
+ * backend, a Cloud Storage bucket or a self-hosted directory (ADR 0011, D3 and D15). Each tenant's
+ * application is composed on its first request over the pool set to that tenant and the files
+ * under that tenant's prefix. Credentials come from the runtime: the database URL from a secret
+ * and Cloud Storage from the service account, or the emulator on the dev stack. It holds no
+ * provider credential: only the worker calls models.
  */
 export async function openHostedTenants(
   config: HostedStorageConfig,
@@ -172,11 +168,7 @@ export async function openHostedTenants(
       connectionString: config.databaseUrl,
       schema: config.queueSchema,
     });
-    const bucket = new Storage(
-      config.gcsEndpoint === undefined
-        ? {}
-        : { apiEndpoint: config.gcsEndpoint, projectId: "draft-loop-local" },
-    ).bucket(config.blobBucket);
+    const blobs = openTenantBlobs(config.blobs);
     return {
       tenants: {
         budgetCeiling,
@@ -186,16 +178,16 @@ export async function openHostedTenants(
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
-          blobs: createGcsBlobErasure({ bucket, tenantId }),
+          blobs: blobs.erasureFor(tenantId),
           organisation: tenancy.forTenant(tenantId).organisationErasure,
-          objectPrefix: gcsTenantPrefix(tenantId),
+          objectPrefix: blobs.prefixFor(tenantId),
         }),
         operatorFor: hostedOperatorFor(tenancy),
         entitlementsFor: hostedEntitlementsFor(tenancy),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
-            blobs: createGcsBlobStorage({ bucket, tenantId }),
+            blobs: blobs.storageFor(tenantId),
             tenantId,
             budgetCeiling,
             enqueueRun: enqueueThenWake(

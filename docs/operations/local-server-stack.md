@@ -218,8 +218,10 @@ deployment with that deployment's values:
 | `DRAFT_LOOP_DATABASE_SCHEMA`            | all            | Storage schema, default `draft_loop`                            |
 | `DRAFT_LOOP_QUEUE_SCHEMA`               | all            | Run queue schema, default `draft_loop_queue`                    |
 | `DRAFT_LOOP_TENANT_ID`                  | API            | The tenant the owner token acts in: required in `owner` mode, optional in `oidc` mode; the worker takes each job's own |
-| `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket                                        |
+| `DRAFT_LOOP_BLOB_BACKEND`               | API, worker    | `gcs` (the default) or `filesystem` for a self-hosted stack     |
+| `DRAFT_LOOP_BLOB_BUCKET`                | API, worker    | The Cloud Storage bucket, with `gcs`                            |
 | `DRAFT_LOOP_GCS_ENDPOINT`               | API, worker    | An emulator; unset in a deployment                              |
+| `DRAFT_LOOP_BLOB_ROOT`                  | API, worker    | With `filesystem`, the absolute directory holding the files under the same `tenants/<id>/` keys; the host disk's encryption protects them |
 | `DRAFT_LOOP_API_OWNER_TOKEN`            | API            | The owner's bearer token, at least 32 characters; also the operator's credential, the only one `/v1/operator/*` routes accept in either mode |
 | `PORT`                                  | API, page fetcher | Listening port, default 8080                                 |
 | `DRAFT_LOOP_AUTH_MODE`                  | API, worker    | `owner` (the default) accepts only the owner token; `oidc` accepts the identity provider's access tokens, resolves each to an organisation member through the tenant directory, and keeps the owner token for operators |
