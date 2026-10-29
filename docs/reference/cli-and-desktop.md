@@ -660,6 +660,14 @@ pinned under it.
   **Reject**, **Defer** and **Override**, with keyboard shortcuts. Coverage is
   described under
   [Requirement coverage in run output](#requirement-coverage-in-run-output).
+  The panel scrolls as one, with the findings heading and filters held at its
+  top.
+- **Folding the side panel.** Besides dragging its edge to resize it, the round
+  button on that edge folds the panel to a thin strip, so the draft has the
+  window; the same button opens it again, and the choice is remembered. The
+  rail's Findings button, a request to see the approval gate and a refused
+  approval or export open the panel again. A window too narrow for two columns
+  stacks the panel under the draft instead (#1939).
 - **Confirmed gaps.** A word-match miss the critic also reports as a gap is
   titled "No evidence found for: …": the evidence does not cover it, so no
   revision can. **Mark N confirmed gaps as known** overrides all of them with
@@ -1299,8 +1307,10 @@ round runs and once it is approved (#1925).
 With edits, **Approve** stays available even when the final checks failed on
 the reviewed version, since your edits may fix them: replacing the header's
 placeholders such as `[Your name]`, which block approval (#1902), is the usual
-case. If the edited version still fails, nothing is saved and the error names
-the checks; change the edits or approve with an override.
+case. Until then the footer reads "Approving checks your edits again", followed
+by what failed before them, rather than "Not ready". If the edited version
+still fails, nothing is saved and the footer names the checks once; change the
+edits or approve with an override (#1939).
 
 Once blocking findings are resolved, you can still approve a draft whose final
 checks fail. Type a reason and press Enter or choose **Approve with override**,

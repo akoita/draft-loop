@@ -102,6 +102,8 @@ export function nextStepLine(
           : compactReadinessBlockerGroup(first);
       return `Next: approve or override (${label}${more})`;
     }
+    case "edited-checks":
+      return "Next: approve to check your edits";
     case "ready":
       return blocker.tone === "safe" ? "Next: approve" : "Next: check the warnings, then approve";
   }
@@ -197,7 +199,7 @@ export type NextStepTarget = "findings" | "approval-gate";
 
 export function nextStepTarget(blocker: FooterBlocker): NextStepTarget | null {
   if (blocker.kind === "findings") return "findings";
-  if (blocker.kind === "final-checks") return "approval-gate";
+  if (blocker.kind === "final-checks" || blocker.kind === "edited-checks") return "approval-gate";
   return null;
 }
 

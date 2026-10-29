@@ -142,7 +142,7 @@ import {
 import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
-import { SidePanelHandle, useSidePanelWidth } from "./side-panel-width.js";
+import { SidePanelHandle, SidePanelToggle, useSidePanelWidth } from "./side-panel-width.js";
 import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
 import {
   type StartActionId,
@@ -1083,8 +1083,13 @@ export function ReviewWorkspace({
     !draftEdits.unsaved;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
+  // An action's error shows once: in the footer, beside the buttons that act, or at the top
+  // while a provider failure's Retry is there (#1939).
   const approvalExportErrorVisible =
-    errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
+    errorMessage !== undefined &&
+    errorMessage !== null &&
+    state.state !== "collecting" &&
+    state.state !== "provider-error";
   const runInProgress = reviewInProgress(state);
   // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
   const verdict =
@@ -1107,7 +1112,9 @@ export function ReviewWorkspace({
       : knownGapOverride !== null && state.approval !== "approved"
         ? "Final CV checks fail only on known gaps"
         : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-          ? "Final CV checks block approval"
+          ? editNote !== null
+            ? "Final CV checks run again on your edits"
+            : "Final CV checks block approval"
           : roundLimitRecovery
             ? "Round limit recovery required"
             : !state.reviewComplete
@@ -1155,9 +1162,16 @@ export function ReviewWorkspace({
       setRevisionDirectionDraft({ key: revisionDirectionKey, text: "" }),
     );
   }, [directionsUnavailable, onAction, revisionDirection, revisionDirectionKey, state]);
+  const sidePanel = useSidePanelWidth();
+  const { setCollapsed: setSidePanelCollapsed } = sidePanel;
   const showRunPanel = useCallback((): void => {
+    if (sidePanel.collapsed) {
+      setSidePanelCollapsed(false);
+      paletteFocusRequest.current = runPanelRef.current;
+      return;
+    }
     runPanelRef.current?.scrollIntoView({ block: "nearest" });
-  }, []);
+  }, [sidePanel.collapsed, setSidePanelCollapsed]);
   // The side panel may be scrolled down to the findings; once the requested round runs, bring
   // Run progress back into view.
   useEffect(() => {
@@ -1227,12 +1241,19 @@ export function ReviewWorkspace({
   const draftPaneMode = `${showChanges ? "redline · " : ""}${draftEditable ? "editable" : "read-only"}`;
   const compareVisible = hasPreviousArtifact && compareOpen;
   const [compareSplit, setCompareSplit] = useCompareSplit();
-  const sidePanel = useSidePanelWidth();
   const draftWidth = useDraftWidth();
   const { collapsed: collapsedPanels, toggle: togglePanel } = useCollapsedReviewPanels();
   // The footer's Details hold the checklist; a refused approval opens them.
   const [gateDetailsOpen, setGateDetailsOpen] = useState(false);
-  const expandGate = useCallback(() => setGateDetailsOpen(true), []);
+  // The gate lives in the side panel, so revealing it opens a folded panel too.
+  const expandGate = useCallback(() => {
+    setGateDetailsOpen(true);
+    setSidePanelCollapsed(false);
+  }, [setSidePanelCollapsed]);
+  // A refused approval or export explains itself in the footer, so a folded panel opens to show it.
+  useEffect(() => {
+    if (approvalExportErrorVisible) setSidePanelCollapsed(false);
+  }, [approvalExportErrorVisible, setSidePanelCollapsed]);
   const [readinessOverrideOpen, setReadinessOverrideOpen] = useState(false);
   const { revealGate: revealApprovalGate, attemptApproval } = useApprovalGateFocus({
     state,
@@ -1535,6 +1556,7 @@ export function ReviewWorkspace({
   const [runDetailsOpen, setRunDetailsOpen] = useState(false);
   const runDetailsButtonRef = useRef<HTMLButtonElement>(null);
   const runDetailsId = `${useId()}-run-details`;
+  const sidePanelId = `${useId()}-side-panel`;
   const openRunDetails = useCallback(() => setRunDetailsOpen(true), []);
   const closeRunDetails = useCallback(() => setRunDetailsOpen(false), []);
 
@@ -1589,12 +1611,14 @@ export function ReviewWorkspace({
     setPaletteOpen(true);
   }, []);
 
-  // The rail's Findings button: under the Coverage tab the queue appears on the next render,
-  // where the palette's focus effect lands; otherwise it is already on screen.
-  const gateBlocker = footerBlocker(state, approvalReadiness, verdict);
+  // The rail's Findings button: in a folded side panel or under the Coverage tab the queue
+  // appears on the next render, where the palette's focus effect lands; otherwise it is already
+  // on screen.
+  const gateBlocker = footerBlocker(state, approvalReadiness, verdict, editNote !== null);
   const openFindings = (): void => {
     const queue = findingQueueRef.current;
-    if (findingsCollapsed) {
+    if (sidePanel.collapsed) setSidePanelCollapsed(false);
+    if (findingsCollapsed || sidePanel.collapsed) {
       paletteFocusRequest.current = queue;
       expandFindings();
       return;
@@ -2826,7 +2850,7 @@ export function ReviewWorkspace({
     <div className="app-frame">
       <SideRail onOpenSources={openTraceability} onOpenFindings={openFindings} />
       <main
-        className={`app-shell app-shell-resizable${comparing ? " app-shell-comparing" : ""}`}
+        className={`app-shell app-shell-resizable${comparing ? " app-shell-comparing" : sidePanel.collapsed ? " app-shell-side-collapsed" : ""}`}
         style={
           sidePanel.width === null
             ? undefined
@@ -2923,7 +2947,7 @@ export function ReviewWorkspace({
 
           {state.state === "stopped" && !readOnly ? (setupSummary ?? profilePanel) : null}
 
-          {errorMessage ? (
+          {errorMessage && !approvalExportErrorVisible ? (
             <div className="error-banner" role="alert">
               <p>{errorMessage}</p>
             </div>
@@ -3027,15 +3051,20 @@ export function ReviewWorkspace({
                   ? "Complete or recover the author step before reviewing findings or approving an artifact."
                   : roundLimitRecovery
                     ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
-                    : approvalReadiness?.applicationReady === false && state.approval !== "approved"
-                      ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
-                      : !state.reviewComplete
-                        ? runStatusLine?.detail
-                        : findingSummary.status === "blocked"
-                          ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-                          : findingSummary.status === "warnings"
-                            ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                            : "All findings have a recorded decision."}
+                    : approvalReadiness?.applicationReady === false &&
+                        state.approval !== "approved" &&
+                        editNote !== null
+                      ? "The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason."
+                      : approvalReadiness?.applicationReady === false &&
+                          state.approval !== "approved"
+                        ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
+                        : !state.reviewComplete
+                          ? runStatusLine?.detail
+                          : findingSummary.status === "blocked"
+                            ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                            : findingSummary.status === "warnings"
+                              ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                              : "All findings have a recorded decision."}
             </span>
           </section>
 
@@ -3360,7 +3389,14 @@ export function ReviewWorkspace({
           onWidthChange={sidePanel.choose}
           onReset={sidePanel.reset}
         />
-        <aside className="side-column">
+        {comparing ? null : (
+          <SidePanelToggle
+            collapsed={sidePanel.collapsed}
+            controls={sidePanelId}
+            onToggle={() => setSidePanelCollapsed(!sidePanel.collapsed)}
+          />
+        )}
+        <aside className="side-column" id={sidePanelId}>
           {/* The panel scrolls above the footer, never under it: a growing footer shrinks this
               area instead of covering its tabs. */}
           <div className="side-scroll" hidden={comparing}>
@@ -3934,6 +3970,14 @@ export function ReviewWorkspace({
                 <p className="warning-copy">
                   The final CV checks fail only on the gaps you marked as known. Approving records
                   your reasons as the override.
+                </p>
+              ) : approvalReadiness?.applicationReady === false &&
+                editNote !== null &&
+                state.approval !== "approved" ? (
+                <p className="warning-copy">
+                  Before your edits, the final CV checks failed:{" "}
+                  {formatReadinessBlockers(approvalReadiness.blockers).join("; ")}. Approving checks
+                  the edited version again; a check that still fails then needs an override.
                 </p>
               ) : approvalReadiness?.applicationReady === false && state.approval !== "approved" ? (
                 <div className="warning-copy">

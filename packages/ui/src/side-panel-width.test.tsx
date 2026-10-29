@@ -12,12 +12,16 @@ import {
   minimumSidePanelWidth,
   nextSidePanelWidthForKey,
   parseSidePanelWidth,
+  readStoredSidePanelCollapsed,
   readStoredSidePanelWidth,
   SidePanelHandle,
+  SidePanelToggle,
+  sidePanelCollapsedStorageKey,
   sidePanelWidthFromPointer,
   sidePanelWidthLargeStep,
   sidePanelWidthStep,
   sidePanelWidthStorageKey,
+  writeStoredSidePanelCollapsed,
   writeStoredSidePanelWidth,
 } from "./side-panel-width.js";
 
@@ -160,5 +164,62 @@ describe("side panel width", () => {
     );
     expect(html).toContain('style="--side-panel-width:520px"');
     expect(html).toContain('aria-valuenow="520"');
+  });
+});
+
+describe("folding the side panel away (#1939)", () => {
+  it("stores the folded panel, forgets it when opened, and survives a blocked store", () => {
+    const storage = memoryStorage();
+    expect(readStoredSidePanelCollapsed(storage)).toBe(false);
+    writeStoredSidePanelCollapsed(storage, true);
+    expect(storage.values.get(sidePanelCollapsedStorageKey)).toBe("1");
+    expect(readStoredSidePanelCollapsed(storage)).toBe(true);
+    writeStoredSidePanelCollapsed(storage, false);
+    expect(storage.values.has(sidePanelCollapsedStorageKey)).toBe(false);
+    const blocked = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+      removeItem: () => {
+        throw new Error("blocked");
+      },
+    };
+    expect(readStoredSidePanelCollapsed(blocked)).toBe(false);
+    expect(() => writeStoredSidePanelCollapsed(blocked, true)).not.toThrow();
+  });
+
+  it("labels the edge button by what it does and the panel it controls", () => {
+    const open = renderToStaticMarkup(
+      <SidePanelToggle collapsed={false} controls="panel" onToggle={() => undefined} />,
+    );
+    expect(open).toContain('aria-label="Hide side panel"');
+    expect(open).toContain('aria-expanded="true"');
+    expect(open).toContain('aria-controls="panel"');
+    const folded = renderToStaticMarkup(
+      <SidePanelToggle collapsed={true} controls="panel" onToggle={() => undefined} />,
+    );
+    expect(folded).toContain('aria-label="Show side panel"');
+    expect(folded).toContain('aria-expanded="false"');
+  });
+
+  it("opens the review desk with the panel folded when the reader left it so", () => {
+    vi.stubGlobal("localStorage", memoryStorage({ [sidePanelCollapsedStorageKey]: "1" }));
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={createFixtureReviewState()} onAction={() => undefined} />,
+    );
+    expect(html).toContain('class="app-shell app-shell-resizable app-shell-side-collapsed"');
+    expect(html).toContain('aria-label="Show side panel"');
+  });
+
+  it("keeps the panel open on a fresh desk", () => {
+    vi.stubGlobal("localStorage", memoryStorage());
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={createFixtureReviewState()} onAction={() => undefined} />,
+    );
+    expect(html).not.toContain("app-shell-side-collapsed");
+    expect(html).toContain('aria-label="Hide side panel"');
   });
 });
