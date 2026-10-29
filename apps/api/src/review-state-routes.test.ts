@@ -184,6 +184,7 @@ const baseMethods: Partial<ApplicationService> = {
   readRunEvidenceMode: async () => undefined,
   readRunAuthorInput: async () => undefined,
   readRunModels: async () => undefined,
+  readRunWritingPolicy: async () => undefined,
 };
 
 /** What the shared screens make of a response: the port validates every field it reads. */
@@ -383,6 +384,38 @@ describe("review state", () => {
       effectiveMode: "retrieval",
       fallbackReason: "budget-exceeded",
     });
+    await expect(throughPort(state)).resolves.toMatchObject({ ok: true });
+  });
+
+  it("shows the writing policy the run used, as metadata only (#1968)", async () => {
+    const effective = {
+      checksum: "c".repeat(64),
+      version: "policy-3",
+      schemaVersion: 1,
+      createdAt: at,
+      priorChecksum: null,
+    };
+    await build({
+      status: async () => snapshot,
+      readRunReview: async () => review,
+      readRunRequirements: async () => [],
+      readRunWritingPolicy: async () => ({
+        effective: { ...effective, policy: { rules: ["never shown"] } },
+        lineage: { kind: "workspace" },
+        base: effective,
+      }),
+    } as Partial<ApplicationService>);
+
+    const response = await app.inject({ method: "GET", url, headers: { authorization } });
+
+    expect(response.statusCode).toBe(200);
+    const state = response.json();
+    expect(state.writingPolicy).toEqual({
+      effective,
+      lineage: { kind: "workspace" },
+      base: effective,
+    });
+    expect(response.body).not.toContain("never shown");
     await expect(throughPort(state)).resolves.toMatchObject({ ok: true });
   });
 
