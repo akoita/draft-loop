@@ -1,6 +1,6 @@
 # Manual parity
 
-**Status:** Observations recorded for references A and E; references B to D unscored<br>
+**Status:** Observations recorded for references A, E and F to I; references B to D unscored<br>
 **Issue:** [#870](https://github.com/akoita/draft-loop/issues/870), part of
 [#869](https://github.com/akoita/draft-loop/issues/869)
 
@@ -11,7 +11,7 @@ loop produced for the same job post, and records the scores.
 
 ## Reference set
 
-Five private reference applications, each a job post plus the CV the manual
+Nine private reference applications, each a job post plus the CV the manual
 loop produced from the same career source:
 
 | Ref | Role family                           |
@@ -21,6 +21,10 @@ loop produced from the same career source:
 | C   | Individual-contributor engineering    |
 | D   | Engineering leadership                |
 | E   | Individual-contributor engineering    |
+| F   | Individual-contributor engineering    |
+| G   | Individual-contributor engineering    |
+| H   | Individual-contributor engineering    |
+| I   | Individual-contributor engineering    |
 
 The job posts, reference CVs, drafts and accomplishment lists stay in a
 private local folder outside the repository. This page carries scores and
@@ -52,6 +56,13 @@ later drafts are scored against the same list.
 | 2026-10-11 | E   | Development author (Mistral Large 4) and economy critic (GPT-6 Luna), full-source mode (all 282 eligible chunks), 3 rounds | 20 / 22 (91%) | 12 / 17 (71%) / 14 / 17 (82%)    | 0     | Markdown only; headline and contact header present | Not recorded         |
 | 2026-10-14 | E   | Standard pair (Claude Opus 5.5 author, GPT-6.1 Sol critic), full-source mode (282 of 282 chunks, 0 of 764 profile facts), author prompt v7, coverage judgement v1, 3 rounds | 19 / 22 (86%) | 11 / 17 (65%) / 14 / 17 (82%)    | 0     | Markdown only; headline, contact header and core areas present | Not recorded         |
 | 2026-10-14 | E   | As above with coverage judgement v2 (every uncovered requirement judged against the whole draft, #1209) | 18 / 22 (82%) | 11 / 17 (65%) / 14 / 17 (82%)    | 0     | Markdown only; headline, contact header and core areas present | Not recorded         |
+| 2026-10-29 | F   | Balanced pair (Claude Sonnet 5.5 author, GPT-6.1 Terra critic), self-hosted stack, author prompt v16, 1 round | 20 / 34 (59%) | 11 / 13 / 11 / 13                | 0     | Shorter than the reference                   | Not recorded         |
+| 2026-10-29 | G   | As F, Balanced pair                                                                 | 14 / 34 (41%) | 9 / 12 / 11 / 12                 | 0     | Shorter than the reference                   | Not recorded         |
+| 2026-10-29 | H   | As F, Balanced pair                                                                 | 17 / 40 (43%) | 9 / 15 / 11 / 15                 | 0     | Shorter than the reference                   | Not recorded         |
+| 2026-10-29 | I   | As F, Balanced pair                                                                 | 16 / 38 (42%) | 14 / 19 / 16 / 19                | 0     | Shorter than the reference                   | Not recorded         |
+| 2026-10-29 | F   | Standard pair (Claude Opus 5.5 author, GPT-6.1 Sol critic), otherwise as above       | 25 / 34 (74%) | 11 / 13 / 11 / 13                | 0     | About the reference length                   | Not recorded         |
+| 2026-10-29 | G   | As F, Standard pair                                                                 | 20 / 34 (59%) | 11 / 12 / 11 / 12                | 0     | About the reference length; passes every check | Not recorded       |
+| 2026-10-29 | H   | As F, Standard pair; the critic stopped on spent OpenAI credit                      | 24 / 40 (60%) | 10 / 15 / 11 / 15                | 0     | About the reference length                   | Not recorded         |
 
 ### Baseline observations, reference A
 
@@ -126,3 +137,36 @@ frozen in the private folder.
   confirms whether recall and requirement coverage rise. Model choice is not
   the limiting factor: the economy draft recalled as much, and its defects are
   what the editorial critic already catches.
+
+### Observation, references F to I (2026-10-29, #1307)
+
+References F to I are four recent individual-contributor engineering
+applications. Their accomplishment lists (34 to 40 items) and per-draft
+verdicts are frozen in the private folder. Each reference CV was written from
+an earlier version of the same career source, so recall may read high.
+
+- **The default Balanced draft is not sendable.** It recalled 41 to 59% of the
+  accomplishments in 763 to 1,291 words, against 1,540 to 1,656 for the
+  reference CVs. It matched the reference's requirement coverage on one
+  reference only. Every run stopped after round 1 on blocking findings,
+  because the hosted service did not keep autopilot.
+- **The Standard draft is close.** At about the reference length it recalled
+  59 to 74% and matched the reference's coverage on two references. Reference
+  G passed every final check. Reference I produced no draft.
+- **Opus ran out of room.** Four of seven Opus draft calls stopped at the
+  profile's 32,768-token output cap. The worker retried them, and the run's
+  recorded cost left those billed calls out.
+- **The relevance gate was too strict.** Drafts scored 0.31 to 0.57 against
+  the 0.80 threshold. The coverage judge was harsher than the scorer on 14
+  requirements across six drafts, all with evidence in the draft and most of
+  them behavioural or seniority requirements.
+- **Writing defects remain.** Copied working notes in the third person, a
+  negative aside, fragment bullets and a repeated sentence.
+- **Stage decision:** a quality sprint
+  ([milestone 61](https://github.com/akoita/draft-loop/milestone/61)) gives
+  Opus a 64,000-token cap (#1966), counts billed failed calls (#1967), keeps
+  autopilot on hosted runs (#1969), judges demonstrated behaviour as coverage
+  (#1970) and asks the author for a full first draft (#1971). References F to
+  I are scored again on both pairs after it. The exit bar is unchanged: three
+  of four references at 85% recall or more, coverage at least the
+  reference's, no leaks.
