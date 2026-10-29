@@ -7,6 +7,10 @@
       "types": "./src/app.tsx",
       "import": "./src/app.tsx"
     },
+    "./host-panels": {
+      "types": "./src/host-panels.tsx",
+      "import": "./src/host-panels.tsx"
+    },
     "./job-requirements-extraction": {
       "types": "./src/job-requirements-extraction.tsx",
       "import": "./src/job-requirements-extraction.tsx"
