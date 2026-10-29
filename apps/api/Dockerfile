@@ -13,6 +13,9 @@ RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 WORKDIR /app
 COPY . .
+# The build context keeps each file's mode from the clone, and a clone made under a strict umask
+# (077) would leave folders the image's `node` user cannot open. Every file is made readable.
+RUN chmod -R a+rX,go-w /app
 # Only the api's production dependency graph, exactly as the lockfile pins it. The api never
 # embeds text (runs and their retrieval belong to the worker), and the embedding runtime loads only
 # on demand, so its native binaries, most of the graph's size, are left out.

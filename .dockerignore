@@ -9,9 +9,11 @@
 .claude
 .codex
 .entire
-.env
-.env.*
+**/.env
+**/.env.*
 **/*.sqlite
 **/*.log
 data
 docs
+# The self-hosted stack's key files and settings; its scripts are mounted, never copied.
+deploy
