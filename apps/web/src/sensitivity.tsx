@@ -14,8 +14,22 @@ export interface SensitivityRulesStepProps {
   readonly knowledgeBaseId: string;
 }
 
-/** A knowledge base's sensitivity rules: read, add and remove, each change a new version. */
-export function SensitivityRulesStep({ client, knowledgeBaseId }: SensitivityRulesStepProps) {
+export interface SensitivityRulesState {
+  /** The base's rules; undefined until read. */
+  readonly rules: readonly SensitivityRule[] | undefined;
+  readonly form: RuleForm;
+  readonly problems: readonly string[];
+  readonly busy: boolean;
+  readonly setForm: (form: RuleForm) => void;
+  readonly add: () => Promise<void>;
+  readonly remove: (ruleId: string) => Promise<boolean>;
+}
+
+/** Reads a knowledge base's sensitivity rules, and adds or removes one, each a new version. */
+export function useSensitivityRules(
+  client: ApiClient,
+  knowledgeBaseId: string,
+): SensitivityRulesState {
   const [rules, setRules] = useState<readonly SensitivityRule[] | undefined>(undefined);
   const [form, setForm] = useState<RuleForm>(defaultRuleForm);
   const [problems, setProblems] = useState<readonly string[]>([]);
@@ -71,6 +85,16 @@ export function SensitivityRulesStep({ client, knowledgeBaseId }: SensitivityRul
         path: { knowledgeBaseId, ruleId },
       }),
     );
+
+  return { rules, form, problems, busy, setForm, add, remove };
+}
+
+/** A knowledge base's sensitivity rules: read, add and remove, each change a new version. */
+export function SensitivityRulesStep({ client, knowledgeBaseId }: SensitivityRulesStepProps) {
+  const { rules, form, problems, busy, setForm, add, remove } = useSensitivityRules(
+    client,
+    knowledgeBaseId,
+  );
 
   return (
     <SensitivityRulesPanel
