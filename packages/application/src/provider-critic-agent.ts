@@ -2,6 +2,7 @@ import type { ContextSnapshot } from "@draft-loop/domain";
 import type { CriticAgent } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 
+import { guardCallCost } from "./call-cost-guard.js";
 import { withCandidateDirection } from "./candidate-direction.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
@@ -52,6 +53,7 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       candidateDirection,
       applicationPlan,
       retrievedEvidence = [],
+      remainingCostUsd,
       signal,
     }) => {
       const judgementFor = (requests: typeof coverageJudgementRequests) =>
@@ -110,7 +112,10 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
         dataPolicy: deps.dataPolicy(deps.criticCompany),
         ...(signal === undefined ? {} : { signal }),
       };
-      const adapter = await deps.createAdapter(deps.criticCompany, deps.criticModel, "critic");
+      const adapter = guardCallCost(
+        await deps.createAdapter(deps.criticCompany, deps.criticModel, "critic"),
+        remainingCostUsd,
+      );
       const response = await adapter.execute(request);
       try {
         // A critique that judged no coverage still returns the shared format's empty list.

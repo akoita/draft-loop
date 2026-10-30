@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type AgentExecution,
   type AuthorRequest,
+  CallCostBudgetError,
   type CoverageJudgementPlan,
   type CoverageJudgementPlanner,
   type Critique,
@@ -1560,6 +1561,39 @@ describe("durable orchestration", () => {
     expect(author).not.toHaveBeenCalled();
     expect(critic).not.toHaveBeenCalled();
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("budget.exhausted");
+  });
+
+  it("stops before a call whose worst cost would pass the remaining budget, billing nothing", async () => {
+    const { engine, author, critic } = engineFixture({
+      critic: async (request) => {
+        const { remainingCostUsd } = request as { readonly remainingCostUsd?: number };
+        throw new CallCostBudgetError(2.5, remainingCostUsd ?? Number.NaN);
+      },
+    });
+
+    const result = await engine.start(request({ budget: { maxRounds: 3, maxCostUsd: 3 } }));
+
+    expect(author.mock.calls[0]?.[0]).toMatchObject({ remainingCostUsd: 3 });
+    expect(critic.mock.calls[0]?.[0]).toMatchObject({ remainingCostUsd: 2.99 });
+    expect(result.state).toBe("awaiting-approval");
+    expect(result.totalCostUsd).toBe(0.01);
+    expect(result.executionHistory.map(({ step, status }) => [step, status])).toEqual([
+      ["author", "completed"],
+    ]);
+    expect(
+      (await engine.events("run-1")).find((event) => event.type === "budget.exhausted")?.details,
+    ).toEqual({
+      reason:
+        "maximum cost budget exhausted: the next call could cost up to $2.50 and $2.99 remains",
+    });
+  });
+
+  it("sends no remaining budget to an agent of a run without a cost limit", async () => {
+    const { engine, author } = engineFixture();
+
+    await engine.start(request({ budget: { maxRounds: 1 } }));
+
+    expect(author.mock.calls[0]?.[0]).not.toHaveProperty("remainingCostUsd");
   });
 
   it("stops a cost-capped run after a metered call whose cost could not be estimated", async () => {

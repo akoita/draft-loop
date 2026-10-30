@@ -8,6 +8,7 @@ import {
   isApplicationPlanComplete,
 } from "@draft-loop/schemas/application-plan";
 
+import { remainingCostField } from "./call-cost-budget.js";
 import type { AgentExecution, RunSnapshot } from "./index.js";
 
 /*
@@ -22,6 +23,8 @@ export interface ApplicationPlanRequest {
   readonly runId: string;
   readonly context: ContextSnapshot;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  /** What the run may still spend; the planner refuses a call whose worst cost would pass it. */
+  readonly remainingCostUsd?: number;
   readonly signal?: AbortSignal;
 }
 
@@ -155,7 +158,11 @@ export async function advanceApplicationPlan(
   if (state === null) {
     const stopped = exhaustedBeforeCall();
     if (stopped !== undefined) return stopped;
-    const execution = await input.planner.plan({ ...common, executionId: executionId("plan") });
+    const execution = await input.planner.plan({
+      ...common,
+      ...remainingCostField(snapshot),
+      executionId: executionId("plan"),
+    });
     state = {
       schemaVersion: 1,
       plan: execution.output,
@@ -172,6 +179,7 @@ export async function advanceApplicationPlan(
     try {
       execution = await input.planner.review({
         ...common,
+        ...remainingCostField(snapshot),
         executionId: executionId("review"),
         plan: state.plan,
       });
@@ -191,6 +199,7 @@ export async function advanceApplicationPlan(
     if (stopped !== undefined) return stopped;
     const execution = await input.planner.revise({
       ...common,
+      ...remainingCostField(snapshot),
       executionId: executionId("revision"),
       plan: state.plan,
       review,

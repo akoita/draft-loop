@@ -483,6 +483,13 @@ the ceiling answers 422 `budget_above_ceiling` and names the limit to change,
 and the worker re-checks each run's saved budget before it executes, so a
 lowered ceiling also holds for runs already queued.
 
+A cost limit is checked before each priced call, not only between steps. The
+orchestrator passes each agent what the run may still spend, and the agent
+estimates the call's worst cost: its prompt size at the input rate plus its
+whole output budget at the output rate. A call that could pass the limit is
+never sent, and the run stops as budget-exhausted with the estimate in the
+reason and nothing billed (`packages/application/src/call-cost-guard.ts`).
+
 A cost limit holds only while every call is priced. When a call on a metered
 route returns no cost estimate, a run with a cost limit stops as
 budget-exhausted. Subscription sessions, local models and fixtures are
