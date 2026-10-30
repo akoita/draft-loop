@@ -23,6 +23,8 @@ describe("model profile reasoning levels", () => {
       "balanced-openai-critic@1": all,
       "standard-anthropic-author@2": all,
       "standard-openai-critic@2": all,
+      "standard-anthropic-critic@1": all,
+      "balanced-anthropic-critic@1": all,
       "dev-deepinfra-glm-author@1": ["low"],
       "dev-google-gemini-author@2": ["low"],
       "dev-mistral-author@1": ["provider-default"],

@@ -36,6 +36,8 @@ export type ModelProfilePresetId =
   | "economy"
   | "balanced"
   | "standard"
+  | "balanced-anthropic"
+  | "standard-anthropic"
   | "development-glm"
   | "development-gemini"
   | "development-mistral";
@@ -171,6 +173,28 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     maxInputTokens: 272000,
     reviewedAt: "2026-10-28",
   },
+  "balanced-anthropic-critic@1": {
+    sources: [anthropicSonnet55Overview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 2,
+      outputUsdPerMillion: 10,
+      cacheReadUsdPerMillion: 0.2,
+      cacheWriteUsdPerMillion: 4,
+    },
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-10-30",
+  },
+  "standard-anthropic-critic@1": {
+    sources: [anthropicOverview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 4,
+      outputUsdPerMillion: 20,
+      cacheReadUsdPerMillion: 0.2,
+      cacheWriteUsdPerMillion: 8,
+    },
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-10-30",
+  },
   "dev-deepinfra-glm-author@1": {
     sources: [deepInfraGlmModelApi, deepInfraGlmOverview],
     apiPricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.5 },
@@ -215,6 +239,21 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     tier: "standard",
     author: { id: "standard-anthropic-author", version: 2 },
     critic: { id: "standard-openai-critic", version: 2 },
+  },
+  // Anthropic only, for when no OpenAI budget is available: a different Claude model reviews.
+  {
+    id: "balanced-anthropic",
+    label: "Balanced, Anthropic only — unvalidated",
+    tier: "standard",
+    author: { id: "economy-anthropic-author", version: 1 },
+    critic: { id: "standard-anthropic-critic", version: 1 },
+  },
+  {
+    id: "standard-anthropic",
+    label: "Standard, Anthropic only — unvalidated",
+    tier: "standard",
+    author: { id: "standard-anthropic-author", version: 2 },
+    critic: { id: "balanced-anthropic-critic", version: 1 },
   },
   {
     id: "development-glm",
