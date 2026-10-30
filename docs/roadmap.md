@@ -1952,15 +1952,46 @@ visible retention/deletion controls with opt-in content-free diagnostics.
 workspace history, and pass supported-platform acceptance with known
 limitations.
 
+### Later — Interview preparation
+
+The career record can serve the interview as well as the CV
+([#1995](https://github.com/akoita/draft-loop/issues/1995)). It starts after
+Local-first final (#1309) and is shaped with the guided career interview
+(#1030), which shares its debrief and voice parts:
+
+- **Usage level.** Each fact or section says where it may be used: CV,
+  interview only, or never said. This is separate from the tiers that control
+  what reaches a provider.
+- **Agent channel first.** An approved-facts read tool on the local MCP
+  server (#1403) lets a candidate prepare inside Claude or another agent. It
+  needs an amendment to ADR 0011 D17, because today's tools cover CV runs only.
+- **Then DraftLoop's own steps.** Questions from the job post, the claim check
+  run on written answers, debriefs saved as candidate-provided evidence after
+  approval, rehearsal, and answers to recurring application questions.
+
+A no-code test before two real interviews decides whether the rollup is
+admitted.
+
 ### Later — Controlled expansion
 
-Cover letters, application answers, multilingual templates, portfolio imports,
-encrypted sync, and coach review remain gated by the CV workflow. Additional
-providers, including local models, are integrated only after the main CV use
-cases work with the Anthropic and OpenAI reference pair, and each gets its
-own model profiles. Cloud accounts, shared workspaces, external tools, and
-application submission each require a separate architecture and threat-model
-decision.
+Cover letters, multilingual templates, encrypted sync, and coach review remain
+gated by the CV workflow. Application answers move to Interview preparation.
+Two items have their own rollups:
+
+- **Freelance mission dossiers**
+  ([#1996](https://github.com/akoita/draft-loop/issues/1996)): skills dossiers
+  for consultants from the same engine, admitted only after a no-code market
+  test and the run cost target (#1597).
+- **Pull requests as evidence**
+  ([#1997](https://github.com/akoita/draft-loop/issues/1997)): the first
+  portfolio import, from a file the candidate exports, defaulting to the
+  `sensitive` tier.
+
+Additional providers, including local models, are integrated only after the
+main CV use cases work with the Anthropic and OpenAI reference pair, and each
+gets its own model profiles. Cloud accounts, shared workspaces, external tools,
+and application submission each require a separate architecture and
+threat-model decision.
 
 ## Explicitly deferred
 
@@ -2012,6 +2043,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-30 | Added Interview preparation as a later stage (#1995) and gave freelance mission dossiers (#1996) and pull requests as evidence (#1997) their own rollups under Controlled expansion. Interview-loop measurement and claim checking needed no new work: the parity scoring and the reviewer already cover them. | The career record gets a second use without a new product. Nothing moves ahead of Local-first final (#1309); each rollup starts with a no-code test. |
 | 2026-10-28 | Admitted client-server sprint 1x: the candidate's review edits reach the approved and exported CV ([milestone 58](https://github.com/akoita/draft-loop/milestone/58), #1899–#1905, rollup #1876). Approval builds the next version from the latest edit of each block and runs the final checks on it; the critic does not review the edits. | The 0.8.0 re-walk found that edits in the review never reached the export, so a header filled in by hand still exported with placeholders. Header placeholders block approval again now that an edit can fix them. |
 | 2026-10-29 | Admitted client-server sprint 1z: the server on your own machine ([milestone 60](https://github.com/akoita/draft-loop/milestone/60), #1946–#1954). The same API, worker, page fetcher and web screen run on one machine with Docker Compose, the operator's own keys or a local model, and files on disk (ADR 0011, D5, D14, D15). A local model may write the CV, with a warning until one passes the evaluation gate. | The owner put the desktop in maintenance mode on 2026-10-28 and still wants a full local option. The server already ran locally except for model calls, keys and blob storage. The sign-in tests wait on hosted Keycloak and the cost check on a paid run, so neither can start first. |
 | 2026-10-29 | Admitted client-server sprint 1y: one web flow ([milestone 59](https://github.com/akoita/draft-loop/milestone/59), #1935–#1938). The web's interim Workspace, Sources, Job brief and Run tabs go; the hosted-only controls move into the shared screens through optional host panels the desktop does not provide. | The owner could not follow the tabs, which repeated Home and kept a job brief no application used. With the desktop in maintenance mode, the web is the main screen. |
