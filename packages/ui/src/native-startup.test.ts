@@ -54,7 +54,7 @@ describe("desktop renderer startup", () => {
   });
 
   it("uses the Electron user-agent marker only to suppress fixture fallback", () => {
-    expect(isElectronRendererRuntime("Mozilla/5.0 Electron/44.9.3")).toBe(true);
+    expect(isElectronRendererRuntime("Mozilla/5.0 Electron/44.10.0")).toBe(true);
     expect(isElectronRendererRuntime("Mozilla/5.0 Chrome/140.0.0.0")).toBe(false);
     expect(isElectronRendererRuntime(undefined)).toBe(false);
   });
