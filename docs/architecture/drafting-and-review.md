@@ -730,8 +730,11 @@ The plan holds short user-visible text and ids, no reasoning, and no facts of
 its own. Validation (`validateApplicationPlan` in
 `packages/schemas/src/application-plan.ts`) rejects an evidence id the request's
 approved evidence lacks, an unknown requirement id, and a core area that serves
-a gap; a rejected plan fails the step as an invalid response, which can be
-retried. Evidence is sent under the same short aliases as drafting.
+a gap. A rejected first plan fails the step as an invalid response, which can be
+retried, and names the failed checks as codes and paths. A rejected revision
+does not: the plan is guidance, so the reviewed plan stands and the revision's
+step record keeps the failed checks (`rejectedDiagnostics`). Evidence is sent
+under the same short aliases as drafting.
 
 `packages/orchestrator/src/application-plan.ts` runs the step through the
 `ApplicationPlanner` port; `packages/application/src/application-plan-agent.ts`

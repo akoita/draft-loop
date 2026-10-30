@@ -28,6 +28,11 @@ export interface ApplicationPlanRequest {
   readonly signal?: AbortSignal;
 }
 
+/** Which plan checks a rejected revision failed, as content-free codes and paths. */
+export interface PlanRevisionOutcome {
+  readonly rejectedDiagnostics?: readonly { readonly code: string; readonly path: string }[];
+}
+
 /** Provider-independent port for the plan step; the application implements it with real models. */
 export interface ApplicationPlanner {
   /** Whether a run with this context plans; runs on earlier author prompts do not. */
@@ -36,12 +41,16 @@ export interface ApplicationPlanner {
   readonly review: (
     request: ApplicationPlanRequest & { readonly plan: ApplicationPlan },
   ) => Promise<AgentExecution<ApplicationPlanReview>>;
+  /**
+   * A revision the plan checks reject returns the reviewed plan with `rejectedDiagnostics`, since
+   * the plan is guidance and an invalid revision should not end the run.
+   */
   readonly revise: (
     request: ApplicationPlanRequest & {
       readonly plan: ApplicationPlan;
       readonly review: ApplicationPlanReview;
     },
-  ) => Promise<AgentExecution<ApplicationPlan>>;
+  ) => Promise<AgentExecution<ApplicationPlan> & PlanRevisionOutcome>;
   /** Keeps the plan in run history; a failure is dropped and never fails the run. */
   readonly record?: (runId: string, state: ApplicationPlanState) => Promise<void>;
 }
@@ -80,7 +89,7 @@ export function needsApplicationPlan(
 
 function stepRecord(
   step: ApplicationPlanStepName,
-  execution: AgentExecution<unknown>,
+  execution: AgentExecution<unknown> & PlanRevisionOutcome,
 ): ApplicationPlanStepRecord {
   return {
     step,
@@ -91,6 +100,9 @@ function stepRecord(
     outputTokens: execution.outputTokens,
     estimatedUsd: execution.estimatedUsd,
     completedAt: execution.completedAt,
+    ...(execution.rejectedDiagnostics === undefined || execution.rejectedDiagnostics.length === 0
+      ? {}
+      : { rejectedDiagnostics: execution.rejectedDiagnostics.slice(0, 10) }),
   };
 }
 

@@ -1,6 +1,6 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
-import type { ApplicationPlan } from "@draft-loop/schemas/application-plan";
+import type { ApplicationPlan, ApplicationPlanReview } from "@draft-loop/schemas/application-plan";
 import { CV_HEADER_PLACEHOLDERS } from "@draft-loop/validation";
 import { describe, expect, it } from "vitest";
 
@@ -364,6 +364,47 @@ describe("provider application planner", () => {
       code: "invalid-response",
       diagnostics: [{ code: "custom", path: "points" }],
     });
+  });
+
+  it("names the failed checks when a first plan is rejected, without its text", async () => {
+    const tooFewThemes = aliased({ ...plan, themes: plan.themes.slice(0, 1) } as ApplicationPlan);
+    const { planner, context } = plannerWith([tooFewThemes]);
+    const rejected = await planner.plan(request(context)).catch((error: unknown) => error);
+    expect(rejected).toMatchObject({
+      code: "invalid-response",
+      diagnostics: expect.arrayContaining([expect.objectContaining({ path: "themes" })]),
+    });
+    expect(JSON.stringify(rejected)).not.toContain("Tokenisation");
+  });
+
+  it("keeps the reviewed plan when a revision breaks the plan's checks, naming them", async () => {
+    const review: ApplicationPlanReview = {
+      verdict: "revise",
+      points: [{ text: "Lead with the gap.", themeRank: 2 }],
+    };
+    const tooFewThemes = aliased({ ...plan, themes: plan.themes.slice(0, 1) } as ApplicationPlan);
+    const { planner, context } = plannerWith([tooFewThemes]);
+
+    const execution = await planner.revise({ ...request(context), plan, review });
+
+    expect(execution.output).toEqual(plan);
+    expect(execution.estimatedUsd).not.toBeNull();
+    expect(execution.rejectedDiagnostics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "themes" })]),
+    );
+  });
+
+  it("takes a valid revision as returned, with no rejected checks", async () => {
+    const review: ApplicationPlanReview = {
+      verdict: "revise",
+      points: [{ text: "Tighten.", themeRank: null }],
+    };
+    const { planner, context } = plannerWith([aliased(plan)]);
+
+    const execution = await planner.revise({ ...request(context), plan, review });
+
+    expect(execution.output).toEqual(plan);
+    expect(execution).not.toHaveProperty("rejectedDiagnostics");
   });
 
   it("plans only for runs recorded on an author prompt that states the plan", () => {
