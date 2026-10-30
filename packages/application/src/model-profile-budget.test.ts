@@ -64,9 +64,9 @@ describe("model profile public API scenario estimates", () => {
     ).toEqual({ status: "available", authorUsd: 0, criticUsd: 0, totalUsd: 0 });
     expect(estimateModelProfileApiScenario(scenario(economy))).toMatchObject({
       status: "available",
-      authorUsd: 0.003,
+      authorUsd: 0.015,
       criticUsd: 0.0015,
-      totalUsd: expect.closeTo(0.0045, 10),
+      totalUsd: expect.closeTo(0.0165, 10),
     });
   });
 
@@ -89,20 +89,15 @@ describe("model profile public API scenario estimates", () => {
     }
   });
 
-  it("keeps Haiku 5.5 estimates known up to 100K input tokens and unknown beyond", () => {
+  it("prices every Haiku 5.5 call at its above-100K rate so long prompts stay known", () => {
     const haiku = scenario(economy);
     expect(
       estimateModelProfileApiScenario({
         ...haiku,
-        author: { inputTokens: 100_000, outputTokens: 32_768, calls: 1 },
+        author: { inputTokens: 175_000, outputTokens: 20_000, calls: 1 },
+        critic: { inputTokens: 0, outputTokens: 0, calls: 0 },
       }),
-    ).toMatchObject({ status: "available" });
-    expect(
-      estimateModelProfileApiScenario({
-        ...haiku,
-        author: { inputTokens: 100_001, outputTokens: 0, calls: 1 },
-      }),
-    ).toEqual({ status: "unavailable", reason: "unsupported-pricing-limit" });
+    ).toMatchObject({ status: "available", authorUsd: expect.closeTo(0.1375, 10) });
   });
 
   it("estimates the Balanced pair at Sonnet 5.5 and GPT-6.1 Sol rates", () => {

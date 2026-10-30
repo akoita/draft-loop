@@ -31,7 +31,7 @@ describe("model profile catalog", () => {
     const inputCaps: Record<string, number> = {
       "standard-anthropic-author@2": 1000000,
       "economy-anthropic-author@1": 1000000,
-      "economy-anthropic-author@2": 100000,
+      "economy-anthropic-author@2": 1000000,
       "economy-openai-critic@1": 272000,
       "standard-openai-critic@2": 272000,
       "balanced-openai-critic@1": 272000,
@@ -54,7 +54,7 @@ describe("model profile catalog", () => {
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
         "economy-anthropic-author@1": "2026-10-23",
-        "economy-anthropic-author@2": "2026-10-23",
+        "economy-anthropic-author@2": "2026-10-30",
         "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@2": "2026-10-23",
         "standard-openai-critic@2": "2026-10-23",
@@ -75,7 +75,7 @@ describe("model profile catalog", () => {
         ]),
       ),
     ).toEqual({
-      "economy-anthropic-author@2": [0.1, 0.5],
+      "economy-anthropic-author@2": [0.5, 2.5],
       "economy-openai-critic@1": [0.1, 0.5],
       "economy-anthropic-author@1": [2, 10],
       "balanced-openai-critic@1": [1, 5],
@@ -95,7 +95,7 @@ describe("model profile catalog", () => {
         ]),
       ),
     ).toMatchObject({
-      "economy-anthropic-author@2": [0.01, 0.2],
+      "economy-anthropic-author@2": [0.05, 1],
       "economy-anthropic-author@1": [0.2, 4],
       "standard-anthropic-author@2": [0.2, 8],
       "standard-anthropic-critic@1": [0.2, 8],
@@ -202,7 +202,7 @@ describe("model profile catalog", () => {
         "https://platform.claude.com/docs/en/about-claude/pricing",
         "https://platform.claude.com/docs/en/build-with-claude/effort",
       ],
-      apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5, maxInputTokens: 100000 },
+      apiPricing: { inputUsdPerMillion: 0.5, outputUsdPerMillion: 2.5, maxInputTokens: 1000000 },
     });
     expect(
       defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author").roles,

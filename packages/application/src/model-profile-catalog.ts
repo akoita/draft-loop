@@ -141,15 +141,18 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "economy-anthropic-author@2": {
     sources: [anthropicModelsOverview, anthropicPricing],
+    // Haiku 5.5 bills prompts above 100K tokens at $0.50/$2.50 instead of $0.10/$0.50. A run's
+    // full-source prompts pass 100K, so every call is priced at the higher card: an upper bound
+    // for a shorter prompt, never an unpriced call. Cache rates keep the 0.1x read and 2x
+    // one-hour write multipliers.
     apiPricing: {
-      inputUsdPerMillion: 0.1,
-      outputUsdPerMillion: 0.5,
-      cacheReadUsdPerMillion: 0.01,
-      cacheWriteUsdPerMillion: 0.2,
+      inputUsdPerMillion: 0.5,
+      outputUsdPerMillion: 2.5,
+      cacheReadUsdPerMillion: 0.05,
+      cacheWriteUsdPerMillion: 1,
     },
-    // Haiku 5.5 bills prompts above 100K tokens at a higher rate card that is not modeled.
-    maxInputTokens: 100000,
-    reviewedAt: "2026-10-23",
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-10-30",
   },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],

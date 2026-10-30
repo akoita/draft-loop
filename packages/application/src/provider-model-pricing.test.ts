@@ -41,7 +41,7 @@ describe("catalog model pricing", () => {
     const profile = defaultModelProfileRegistry.resolve("economy-anthropic-author", 2, "author");
     expect(
       catalogModelPricing({ ...selection(profile.provider, profile.modelId), profile }),
-    ).toMatchObject({ inputUsdPerMillionTokens: 0.1, maxInputTokens: 100000 });
+    ).toMatchObject({ inputUsdPerMillionTokens: 0.5, maxInputTokens: 1000000 });
   });
 
   it("prices Claude prompt-cache reads and one-hour writes from the catalog", () => {

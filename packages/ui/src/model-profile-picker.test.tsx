@@ -106,14 +106,14 @@ describe("desktop model profile picker rendering", () => {
     expect(cards).toContain("Google + OpenAI");
     expect(cards).toContain("Mistral + OpenAI");
     expect(cards).toContain(
-      "Writer $0.10 / $0.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
+      "Writer $0.50 / $2.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
     );
     expect(cards).toContain("Writer $0.75 / $3.75");
     expect(cards).toContain("Writer $1.36 / $4.18");
     // Compact cards: an arrow and one short price line on screen, the full wording for assistive tech.
     expect(cards).toContain('<span aria-hidden="true">Claude Haiku 5.5 → GPT-6 Luna</span>');
     expect(cards).toContain(
-      '<span aria-hidden="true">$0.10/$0.50 · $0.10/$0.50 per M tokens</span><span class="sr-only">Writer $0.10 / $0.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)</span>',
+      '<span aria-hidden="true">$0.50/$2.50 · $0.10/$0.50 per M tokens</span><span class="sr-only">Writer $0.50 / $2.50 · Reviewer $0.10 / $0.50 per million tokens (input / output)</span>',
     );
     expect(cards).toContain(
       'title="Writer $4 / $20 · Reviewer $2 / $10 per million tokens (input / output)"',
