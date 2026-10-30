@@ -597,10 +597,11 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         const { workspaceId, action, applicationId, runId } = command.input;
         if (action.type !== "start") {
           await reviewAction(workspaceId, runId, action);
-          // The run as the server now holds it, decisions and edits included.
+          // The run as the server now holds it, decisions and edits included; before the first
+          // run, the start state.
           return reviewState(workspaceId, {
             ...(applicationId === undefined ? {} : { applicationId }),
-            runId,
+            ...(runId === "pending" ? {} : { runId }),
           });
         }
         if (action.pageTarget !== undefined) {

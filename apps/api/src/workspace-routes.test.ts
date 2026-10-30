@@ -104,6 +104,7 @@ describe("workspace setup", () => {
       maxCostUsd: 1.5,
       requiredSections: ["Experience"],
       fixtureMode: false,
+      autopilot: true,
     });
     // The path's id, never the driver's own: clients address the workspace by it.
     expect(response.json()).toEqual({
@@ -114,6 +115,7 @@ describe("workspace setup", () => {
       author: { company: "anthropic", model: "claude-sonnet-5-5" },
       critic: { company: "openai", model: "gpt-6-luna" },
       fixtureMode: false,
+      autopilot: false,
       knowledgeBaseIds: [],
     });
     expect(response.body).not.toContain("/tenants/");
@@ -135,7 +137,58 @@ describe("workspace setup", () => {
       authorModel: "claude-sonnet-5-5",
       criticCompany: "openai",
       criticModel: "gpt-6.1-terra",
+      autopilot: true,
     });
+  });
+
+  it("creates a workspace with autopilot off when the body asks for it", async () => {
+    const initialize = vi.fn(async (_command: InitializeWorkspaceCommand) => descriptor);
+    await build({ readWorkspace: missing, initialize });
+
+    await create({ autopilot: false });
+
+    expect(initialize.mock.calls[0]?.[0]).toMatchObject({ autopilot: false });
+  });
+
+  it("turns a workspace's autopilot on or off (#1969)", async () => {
+    const configureAutopilot = vi.fn(async ({ enabled }: { enabled: boolean }) => ({
+      ...descriptor,
+      ...(enabled ? { autopilot: true as const } : {}),
+    }));
+    await build({ readWorkspace: async () => descriptor, configureAutopilot });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/autopilot",
+      headers: { authorization },
+      payload: { enabled: true },
+    });
+    const refused = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/autopilot",
+      headers: { authorization },
+      payload: { enabled: "yes" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(configureAutopilot).toHaveBeenCalledWith({ root, enabled: true }, expect.anything());
+    expect(response.json()).toMatchObject({ id: "workspace-1", autopilot: true });
+    expect(refused.statusCode).toBe(400);
+  });
+
+  it("answers 404 when turning autopilot on for a workspace that does not exist", async () => {
+    const configureAutopilot = vi.fn();
+    await build({ readWorkspace: missing, configureAutopilot });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/autopilot",
+      headers: { authorization },
+      payload: { enabled: false },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(configureAutopilot).not.toHaveBeenCalled();
   });
 
   it("fills only the side a request leaves out with the hosted default", async () => {

@@ -331,6 +331,20 @@ describe("hosted application driver", () => {
     await expect(access("/tenants")).rejects.toThrow();
   }, 120_000);
 
+  it("keeps the workspace's autopilot in the hosted settings for its next runs (#1969)", async () => {
+    const { service } = await begunRun();
+
+    const on = await service.configureAutopilot?.({ root: workspace, enabled: true }, silent);
+    const read = await service.readWorkspace(workspace);
+    const off = await service.configureAutopilot?.({ root: workspace, enabled: false }, silent);
+
+    expect(on?.autopilot).toBe(true);
+    expect(read.autopilot).toBe(true);
+    expect(off?.autopilot).not.toBe(true);
+    expect((await service.readWorkspace(workspace)).autopilot).not.toBe(true);
+    await expect(access("/tenants")).rejects.toThrow();
+  }, 120_000);
+
   it("refuses a hosted writing policy named by a file path", async () => {
     const { service } = await begunRun();
 

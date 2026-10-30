@@ -86,6 +86,8 @@ const changeModelsBody = z.strictObject({
     .describe("Required only when the author and critic descend from the same weights."),
 });
 
+const autopilotBody = z.strictObject({ enabled: z.boolean() });
+
 const knowledgeSelectionBody = z
   .strictObject({
     knowledgeBaseIds: z
@@ -122,6 +124,9 @@ function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeW
     jobDescription: "job.md",
     sources: "sources",
     maxRounds: defaultMaxRounds,
+    // A hosted run revises through the critic's blocking findings up to its round limit, as the
+    // round limit promises, and still pauses for a disputed claim (#1969).
+    autopilot: true,
     ...Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined)),
     authorCompany: author.company,
     authorModel: author.model,
@@ -250,6 +255,34 @@ export function registerWorkspaceRoutes(
         },
         silent,
       );
+      return workspaceView(request.params.workspaceId, descriptor);
+    },
+  );
+
+  app.put(
+    "/v1/workspaces/:workspaceId/autopilot",
+    {
+      schema: {
+        summary: "Turn a workspace's autopilot on or off",
+        description:
+          "With autopilot on, a run keeps revising through the critic's blocking findings up to its round limit and pauses early only when the draft is ready, a claim is disputed or a finding says the draft contradicts the candidate's materials. Applies from the next run action.",
+        params: workspaceParams,
+        body: autopilotBody,
+        response: { 200: workspaceViewSchema, 400: apiErrorSchema, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const root = workspaceRoot(request.params.workspaceId);
+      if (!(await workspaceExists(service, root))) {
+        return reply.code(404).send(apiError("not_found", "No such workspace."));
+      }
+      const descriptor = await service.configureAutopilot?.(
+        { root, enabled: request.body.enabled },
+        silent,
+      );
+      if (descriptor === undefined) {
+        return reply.code(404).send(apiError("not_found", "No such workspace."));
+      }
       return workspaceView(request.params.workspaceId, descriptor);
     },
   );

@@ -21,6 +21,14 @@ export function createReviewActions(
   download: DownloadFile,
 ) {
   return async (workspaceId: string, runId: string, action: ReviewAction): Promise<void> => {
+    // Autopilot is the workspace's setting, so it changes before the first run too (#1969).
+    if (action.type === "set-autopilot") {
+      await client.call("PUT /v1/workspaces/{workspaceId}/autopilot", {
+        path: { workspaceId },
+        body: { enabled: action.enabled },
+      });
+      return;
+    }
     if (runId === "pending") return refuse("Start a run first.");
     const path = { workspaceId, runId };
     switch (action.type) {
@@ -82,8 +90,6 @@ export function createReviewActions(
         // The server refuses a provider call without the candidate's recorded consent, so its
         // preflight already reads as acknowledged and there is nothing more to record.
         return;
-      case "set-autopilot":
-        return refuse("Autopilot is not available on the hosted service yet.");
       case "recover-to-review":
       case "recover-round-limit":
         return refuse(

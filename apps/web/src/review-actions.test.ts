@@ -29,10 +29,10 @@ function portOver(handlers: Readonly<Record<string, Handler>>) {
     idempotencyKey: () => "review-key-01",
     download: (bytes, fileName) => downloads.push({ bytes, fileName }),
   });
-  const dispatch = (action: Record<string, unknown>) =>
+  const dispatch = (action: Record<string, unknown>, onRun = runId) =>
     bridge.invoke({
       type: "review.dispatch",
-      input: { workspaceId, runId, applicationId: "app-ledger", action },
+      input: { workspaceId, runId: onRun, applicationId: "app-ledger", action },
     } as never);
   return { dispatch, calls, downloads };
 }
@@ -256,11 +256,47 @@ describe("the shared review screen's actions over HTTP", () => {
     expect(downloads).toEqual([]);
   });
 
+  it("turns the workspace's autopilot on, then reads the run again (#1969)", async () => {
+    const { dispatch, calls } = portOver({
+      ...reviewState,
+      "PUT /v1/workspaces/{workspaceId}/autopilot": () => ({}),
+    });
+
+    expect(await dispatch({ type: "set-autopilot", enabled: true })).toEqual({
+      ok: true,
+      value: shown,
+    });
+
+    expect(calls).toEqual([
+      {
+        operation: "PUT /v1/workspaces/{workspaceId}/autopilot",
+        input: { path: { workspaceId }, body: { enabled: true } },
+      },
+      reload,
+    ]);
+  });
+
+  it("turns autopilot off before the first run and reads the start state again", async () => {
+    const { dispatch, calls } = portOver({
+      ...reviewState,
+      "PUT /v1/workspaces/{workspaceId}/autopilot": () => ({}),
+    });
+
+    await dispatch({ type: "set-autopilot", enabled: false }, "pending");
+
+    expect(calls).toEqual([
+      {
+        operation: "PUT /v1/workspaces/{workspaceId}/autopilot",
+        input: { path: { workspaceId }, body: { enabled: false } },
+      },
+      { ...reload, input: { path: { workspaceId }, query: { applicationId: "app-ledger" } } },
+    ]);
+  });
+
   it("refuses what the hosted service does not do yet, calling nothing", async () => {
     const { dispatch, calls } = portOver(reviewState);
 
     const refusals = await Promise.all([
-      dispatch({ type: "set-autopilot", enabled: true }),
       dispatch({ type: "recover-to-review" }),
       dispatch({ type: "recover-round-limit" }),
     ]);
