@@ -515,7 +515,9 @@ The owner sets up a hosted workspace through the API before any run:
   caller can reach.
 - A side the request leaves out gets the hosted default, the Balanced preset:
   Claude Sonnet 5.5 as the author and GPT-6.1 Terra as the critic. The desktop
-  keeps the cheaper Economy pair as its own default.
+  keeps the cheaper Economy pair as its own default. The Anthropic-only
+  presets (`balanced-anthropic`, `standard-anthropic`) keep a different Claude
+  model on each side, so their lineages differ and need no override.
 - `PATCH /v1/workspaces/:id/models` changes the author and critic for the
   next runs, Anthropic and OpenAI only. A pair from one lineage needs
   `independenceOverrideRationale`, and a change while a run is executing

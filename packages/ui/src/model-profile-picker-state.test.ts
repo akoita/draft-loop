@@ -66,6 +66,8 @@ describe("desktop model profile picker state", () => {
       "economy",
       "balanced",
       "standard",
+      "balanced-anthropic",
+      "standard-anthropic",
       "development-glm",
       "development-gemini",
       "development-mistral",

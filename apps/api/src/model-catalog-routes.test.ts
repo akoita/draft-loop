@@ -72,17 +72,25 @@ describe("hosted model catalog", () => {
     }
   });
 
-  it("offers the cross-company presets, each naming a served author and critic", async () => {
+  it("offers the served presets, each with a different model reviewing", async () => {
     const catalog = await readCatalog();
     const served = new Map(catalog.models.map((model) => [`${model.id}@${model.version}`, model]));
 
-    expect(catalog.presets.map(({ id }) => id)).toEqual(["economy", "balanced", "standard"]);
+    expect(catalog.presets.map(({ id }) => id)).toEqual([
+      "economy",
+      "balanced",
+      "standard",
+      "balanced-anthropic",
+      "standard-anthropic",
+    ]);
     for (const preset of catalog.presets) {
       const author = served.get(`${preset.author.id}@${preset.author.version}`);
       const critic = served.get(`${preset.critic.id}@${preset.critic.version}`);
       expect(author?.roles).toContain("author");
       expect(critic?.roles).toContain("critic");
-      expect(author?.company).not.toBe(critic?.company);
+      expect(author?.model).not.toBe(critic?.model);
+      // Only the Anthropic-only presets keep one company on both sides.
+      if (!preset.id.endsWith("-anthropic")) expect(author?.company).not.toBe(critic?.company);
     }
   });
 

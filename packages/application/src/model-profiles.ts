@@ -291,4 +291,34 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     },
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
   },
+  // Claude reviewers for the Anthropic-only presets, chosen 2026-10-30 when no OpenAI budget was
+  // available. Each preset pairs a different Claude model on each side, so the lineages differ.
+  {
+    id: "balanced-anthropic-critic",
+    version: 1,
+    provider: "anthropic",
+    modelId: "claude-sonnet-5-5",
+    tier: "standard",
+    roles: ["critic"],
+    runtime: {
+      effort: "low",
+      maxOutputTokens: 32768,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
+  {
+    id: "standard-anthropic-critic",
+    version: 1,
+    provider: "anthropic",
+    modelId: "claude-opus-5-5",
+    tier: "standard",
+    roles: ["critic"],
+    runtime: {
+      effort: "low",
+      maxOutputTokens: 32768,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
 ]);

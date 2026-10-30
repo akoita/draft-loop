@@ -80,6 +80,13 @@ The evaluation proceeds **step by step**:
 2. Validate quality on the standard pair (Opus 5.5 and GPT-6.1 Sol).
 3. Reconsider premium choices only after the current curated choices are validated.
 
+Two opt-in Anthropic-only presets keep runs possible without an OpenAI budget:
+`balanced-anthropic` (Sonnet 5.5 author, Opus 5.5 critic) and
+`standard-anthropic` (Opus 5.5 author, Sonnet 5.5 critic). A different Claude
+model reviews, so the lineages differ, but the critic shares the author's
+company. The owner chose them on 2026-10-30 for the F–I re-score; whether one
+becomes the hosted default waits on those scores.
+
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
 with the reference pair.

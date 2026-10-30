@@ -123,12 +123,17 @@ function profileReference(profile: ModelProfile): ModelSuggestionProfileReferenc
   return { id: profile.id, version: profile.version };
 }
 
-/** Opt-in Balanced models: the preflight cohort stays the economy and standard presets. */
-function isBalancedOptInProfile(profile: ModelProfile): boolean {
-  return (
-    (profile.id === "economy-anthropic-author" || profile.id === "balanced-openai-critic") &&
-    profile.version === 1
-  );
+/** Opt-in profiles of the Balanced and Anthropic-only presets, outside the preflight cohort. */
+const optInProfileIds = new Set([
+  "economy-anthropic-author",
+  "balanced-openai-critic",
+  "balanced-anthropic-critic",
+  "standard-anthropic-critic",
+]);
+
+/** Opt-in models: the preflight cohort stays the economy and standard presets. */
+function isOptInProfile(profile: ModelProfile): boolean {
+  return optInProfileIds.has(profile.id) && profile.version === 1;
 }
 
 function presetRequiredReferences(presets: readonly ModelProfilePreset[]): Set<string> {
@@ -203,7 +208,7 @@ export function buildModelSuggestionPreflightPlan(
     ) {
       continue;
     }
-    if (isRecord(profile) && isBalancedOptInProfile(profile)) continue;
+    if (isRecord(profile) && isOptInProfile(profile)) continue;
     if (
       !isRecord(profile) ||
       (profile.provider !== "anthropic" && profile.provider !== "openai") ||

@@ -1619,7 +1619,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option(
       "--model-preset <id>",
-      "exact pair preset; economy, balanced and standard are unvalidated; development-glm uses DEEPINFRA_API_KEY, development-gemini uses GEMINI_API_KEY and development-mistral uses MISTRAL_API_KEY, all unvalidated",
+      "exact pair preset; economy, balanced and standard are unvalidated; balanced-anthropic and standard-anthropic use Claude on both sides with a different reviewing model, unvalidated; development-glm uses DEEPINFRA_API_KEY, development-gemini uses GEMINI_API_KEY and development-mistral uses MISTRAL_API_KEY, all unvalidated",
     )
     .option(
       "--author-profile <id@version>",

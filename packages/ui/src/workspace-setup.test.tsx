@@ -8,12 +8,19 @@ import {
 } from "./workspace-setup.js";
 
 describe("first-run workspace setup", () => {
-  it("offers the cross-company presets without the development ones", () => {
+  it("offers the Anthropic author presets without the development ones", () => {
     const presets = workspaceSetupPresets();
-    expect(presets.map(({ id }) => id)).toEqual(["economy", "balanced", "standard"]);
+    expect(presets.map(({ id }) => id)).toEqual([
+      "economy",
+      "balanced",
+      "standard",
+      "balanced-anthropic",
+      "standard-anthropic",
+    ]);
     for (const preset of presets) {
       expect(preset.author.company).toBe("anthropic");
-      expect(preset.critic.company).toBe("openai");
+      expect(preset.critic.company).toBe(preset.id.endsWith("-anthropic") ? "anthropic" : "openai");
+      expect(preset.critic.model).not.toBe(preset.author.model);
       expect(preset.label).not.toMatch(/unvalidated/u);
     }
   });

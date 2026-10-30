@@ -33,7 +33,8 @@ describe("registered model suggestions", () => {
           registeredForRole: true,
           label: "Economy tier · Author profile · registered for Author",
         }),
-        expect.objectContaining({ modelId: "claude-opus-5-5", roles: ["author"] }),
+        // Opus 5.5 also reviews in the Anthropic-only Balanced preset.
+        expect.objectContaining({ modelId: "claude-opus-5-5", roles: ["author", "critic"] }),
         expect.objectContaining({ modelId: "claude-fable-5-1", roles: ["author"] }),
       ]),
     );

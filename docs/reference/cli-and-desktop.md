@@ -28,7 +28,8 @@ controls, or CV quality.
 
 The paid validation cohort remains limited to the required Economy and Standard
 Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in Balanced pair (Claude Sonnet 5.5 and GPT-6.1 Terra) and the DeepInfra GLM,
+The exact opt-in Balanced pair (Claude Sonnet 5.5 and GPT-6.1 Terra), the two Claude reviewer
+profiles of the Anthropic-only presets, and the DeepInfra GLM,
 Google Gemini, and Mistral development author profiles are omitted from this cohort; listing a development preset does not add a provider
 to release checks.
 
@@ -37,6 +38,8 @@ pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced-anthropic
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard-anthropic
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-mistral
@@ -50,13 +53,23 @@ pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced --
 `--critic-profile` references. Each reference uses `profile-id@version` and
 must support its selected role. Economy, balanced, and standard are unvalidated
 opt-in pairs; balanced pairs the Claude Sonnet 5.5 author with the GPT-6.1 Terra
-critic, between the cost of economy and standard. The separate `development-glm` opt-in pair uses the Z.ai
+critic, between the cost of economy and standard.
+
+The `balanced-anthropic` and `standard-anthropic` opt-in pairs use Claude on
+both sides, for a deployment without an OpenAI budget. A different Claude model
+reviews each draft, so the lineages still differ: `balanced-anthropic` pairs the
+Sonnet 5.5 author with an Opus 5.5 critic (`standard-anthropic-critic@1`), and
+`standard-anthropic` pairs the Opus 5.5 author with a Sonnet 5.5 critic
+(`balanced-anthropic-critic@1`). Both critics run at low effort. They need only
+an Anthropic key, and their quality is unvalidated.
+
+The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
 requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
 the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
 `GEMINI_API_KEY`. The separate `development-mistral` opt-in pair uses the Mistral
 Large 4 (public preview) author and the GPT-6 Luna critic; it requires
-`MISTRAL_API_KEY`. The active catalog contains nine unique exact
+`MISTRAL_API_KEY`. The active catalog contains eleven unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
 choices. A pair passed to `start` is recorded on that run only. It does not

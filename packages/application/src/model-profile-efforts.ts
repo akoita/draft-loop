@@ -39,6 +39,14 @@ const effortMetadata: Readonly<Record<string, EffortMetadata>> = {
     levels: allLevels,
     source: claudeEffortPage,
   },
+  "balanced-anthropic-critic@1": {
+    levels: allLevels,
+    source: claudeEffortPage,
+  },
+  "standard-anthropic-critic@1": {
+    levels: allLevels,
+    source: claudeEffortPage,
+  },
   "economy-openai-critic@1": {
     levels: allLevels,
     source: openAIModelPage("gpt-6-luna"),
