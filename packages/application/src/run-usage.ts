@@ -84,14 +84,17 @@ const usageLine = (call: MeteredCall): UsageLine => ({
 });
 
 /**
- * A run's usage from its completed calls: its executions and the application plan step's calls,
- * which the plan records apart. A failed attempt records no usage.
+ * A run's usage from its billed calls: its executions and the application plan step's calls,
+ * which the plan records apart. A failed attempt counts only when the provider billed a response
+ * it rejected (#1967); one that failed before any response records no tokens.
  */
 export function runUsage(
   run: Pick<RunSnapshot, "executionHistory" | "applicationPlan">,
 ): UsageSummary {
   return summarizeUsage([
-    ...run.executionHistory.filter((record) => record.status === "completed").map(usageLine),
+    ...run.executionHistory
+      .filter((record) => record.status === "completed" || record.totalTokens > 0)
+      .map(usageLine),
     ...(run.applicationPlan?.steps ?? []).map(usageLine),
   ]);
 }

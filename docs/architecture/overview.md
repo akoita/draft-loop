@@ -488,9 +488,14 @@ route returns no cost estimate, a run with a cost limit stops as
 budget-exhausted. Subscription sessions, local models and fixtures are
 unmetered and exempt.
 
+A failed attempt counts too when the provider billed it. A response the adapter
+or the application rejects, such as a draft stopped at its output cap, keeps
+its tokens and cost on the failed execution and in the run's total, so the
+cost limit and the usage reads see what was spent.
+
 The owner reads usage from the API, in counts and amounts only:
 
-- `GET /v1/workspaces/:id/runs/:runId/usage` sums one run's completed calls by
+- `GET /v1/workspaces/:id/runs/:runId/usage` sums one run's billed calls by
   company, model and route: calls, input and output tokens, and estimated
   cost. It counts the application plan's calls, which the plan step records
   apart from the run's executions.

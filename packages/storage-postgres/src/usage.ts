@@ -1,6 +1,6 @@
 import type { SqlSession } from "./sql-client.js";
 
-/** One company, model and route's completed calls in a month: counts and amounts only. */
+/** One company, model and route's billed calls in a month: counts and amounts only. */
 export interface MonthUsageRow {
   readonly company: string;
   readonly model: string;
@@ -33,7 +33,7 @@ export function createUsageReads(client: SqlSession) {
                   input_tokens::bigint AS input_tokens, output_tokens::bigint AS output_tokens,
                   estimated_usd
              FROM executions
-            WHERE status = 'completed' AND left(completed_at, 7) = $1
+            WHERE (status = 'completed' OR total_tokens > 0) AND left(completed_at, 7) = $1
            UNION ALL
            SELECT step->>'provider', step->>'modelId', step->>'route',
                   (step->>'inputTokens')::bigint, (step->>'outputTokens')::bigint,

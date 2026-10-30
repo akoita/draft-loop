@@ -97,9 +97,12 @@ export function invalidCritiqueError(response: ModelResponse<JsonObject>): Provi
     response.provider,
     "invalid-response",
     "The critic returned invalid structured findings.",
-    response.providerRequestId === null
-      ? { retryable: true }
-      : { retryable: true, requestId: response.providerRequestId },
+    {
+      retryable: true,
+      ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
+      // The provider billed the response even though it is rejected here (#1967).
+      billed: { usage: response.usage, cost: response.cost },
+    },
   );
 }
 

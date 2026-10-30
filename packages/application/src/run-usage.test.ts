@@ -26,7 +26,13 @@ describe("runUsage", () => {
         call({ estimatedUsd: 0.2 }),
         call({ estimatedUsd: null }),
         call({ provider: "openai", modelId: "gpt-6-luna", route: "openai-api", step: "critic" }),
-        call({ status: "failed", estimatedUsd: null, inputTokens: 0, outputTokens: 0 }),
+        call({
+          status: "failed",
+          estimatedUsd: null,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+        }),
       ],
     });
 
@@ -58,6 +64,29 @@ describe("runUsage", () => {
           unpricedCalls: 0,
         },
       ],
+    });
+  });
+
+  it("counts a failed attempt whose rejected response was billed (#1967)", () => {
+    const usage = runUsage({
+      executionHistory: [
+        call({}),
+        call({
+          status: "failed",
+          inputTokens: 174_000,
+          outputTokens: 32_768,
+          totalTokens: 206_768,
+          estimatedUsd: 1.1,
+        }),
+      ],
+    });
+
+    expect(usage).toMatchObject({
+      calls: 2,
+      inputTokens: 174_100,
+      outputTokens: 32_818,
+      estimatedUsd: 1.2,
+      unpricedCalls: 0,
     });
   });
 

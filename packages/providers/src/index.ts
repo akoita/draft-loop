@@ -9,6 +9,7 @@ import {
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { anthropicPromptLayout, anthropicSharedOutput } from "./anthropic-prompt-cache.js";
 import { anthropicUsage } from "./anthropic-usage.js";
+import { addBilledUsage } from "./billed-usage.js";
 import { openAIPromptLayout } from "./openai-prompt-cache.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
@@ -146,6 +147,12 @@ export interface ModelUsage {
   readonly reasoningOutputTokens?: number;
 }
 
+/** What the provider billed for calls whose response was rejected, so a run's cost still counts it. */
+export interface BilledUsage {
+  readonly usage: ModelUsage;
+  readonly cost: ModelCost;
+}
+
 export interface ModelResponse<Output extends JsonValue = JsonValue> {
   readonly output: Output;
   readonly contextSnapshotId: string;
@@ -204,6 +211,8 @@ export interface ProviderErrorMetadata {
   readonly diagnostics?: readonly ProviderValidationDiagnostic[];
   /** Exact, content-free issue counts per diagnostic code across the whole rejection. */
   readonly diagnosticCounts?: readonly ProviderDiagnosticCount[];
+  /** The usage of billed responses this failure rejected, including earlier retried attempts. */
+  readonly billed?: BilledUsage;
 }
 
 export interface ProviderValidationDiagnostic {
@@ -238,6 +247,8 @@ export class ProviderAdapterError extends Error {
   readonly rateLimit: ProviderRateLimit | null;
   /** The provider's Retry-After in whole seconds, uncapped, unlike `retryAfterMs`. */
   readonly retryAfterSeconds: number | null;
+  /** What the provider billed for the rejected responses, when it answered at all (#1967). */
+  readonly billed: BilledUsage | null;
   readonly metadata: ProviderErrorMetadata;
 
   constructor(
@@ -258,6 +269,7 @@ export class ProviderAdapterError extends Error {
       readonly providerErrorCode?: string;
       readonly rateLimit?: ProviderRateLimit;
       readonly retryAfterSeconds?: number;
+      readonly billed?: BilledUsage;
     } = {},
   ) {
     super(message);
@@ -277,6 +289,7 @@ export class ProviderAdapterError extends Error {
     this.providerErrorCode = safeProviderErrorToken(options.providerErrorCode) ?? null;
     this.rateLimit = isProviderRateLimit(options.rateLimit) ? options.rateLimit : null;
     this.retryAfterSeconds = safeRetryAfterSeconds(options.retryAfterSeconds) ?? null;
+    this.billed = options.billed ?? null;
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
@@ -287,6 +300,7 @@ export class ProviderAdapterError extends Error {
       ...(options.diagnosticCounts === undefined
         ? {}
         : { diagnosticCounts: options.diagnosticCounts }),
+      ...(options.billed === undefined ? {} : { billed: options.billed }),
     };
   }
 }
@@ -397,23 +411,43 @@ function parseRetryAfterMs(details: ProviderErrorLike): number | undefined {
   return sanitizeRetryAfterMs(timestamp - Date.now());
 }
 
+/** The same error with some of its options replaced, keeping its stack. */
+function rebuildProviderError(
+  error: ProviderAdapterError,
+  overrides: { readonly route?: ProviderRoute; readonly billed?: BilledUsage },
+): ProviderAdapterError {
+  const rebuilt = new ProviderAdapterError(error.provider, error.code, error.message, {
+    ...error.metadata,
+    retryable: error.retryable,
+    ...(error.route === null ? {} : { route: error.route }),
+    ...(error.providerErrorType === null ? {} : { providerErrorType: error.providerErrorType }),
+    ...(error.providerErrorCode === null ? {} : { providerErrorCode: error.providerErrorCode }),
+    ...(error.rateLimit === null ? {} : { rateLimit: error.rateLimit }),
+    ...(error.retryAfterSeconds === null ? {} : { retryAfterSeconds: error.retryAfterSeconds }),
+    ...overrides,
+  });
+  if (error.stack !== undefined) rebuilt.stack = error.stack;
+  return rebuilt;
+}
+
 /** The same error, naming the route its call went to unless it already names one. */
 function withProviderRoute(
   error: ProviderAdapterError,
   route: ProviderRoute,
 ): ProviderAdapterError {
-  if (error.route !== null) return error;
-  const routed = new ProviderAdapterError(error.provider, error.code, error.message, {
-    ...error.metadata,
-    retryable: error.retryable,
-    route,
-    ...(error.providerErrorType === null ? {} : { providerErrorType: error.providerErrorType }),
-    ...(error.providerErrorCode === null ? {} : { providerErrorCode: error.providerErrorCode }),
-    ...(error.rateLimit === null ? {} : { rateLimit: error.rateLimit }),
-    ...(error.retryAfterSeconds === null ? {} : { retryAfterSeconds: error.retryAfterSeconds }),
-  });
-  if (error.stack !== undefined) routed.stack = error.stack;
-  return routed;
+  return error.route !== null ? error : rebuildProviderError(error, { route });
+}
+
+/**
+ * The same error carrying what the provider billed for the responses it rejected, added to any
+ * billed usage it already carries. A failure before any response returns the error unchanged.
+ */
+export function withBilledUsage(
+  error: ProviderAdapterError,
+  billed: BilledUsage | undefined,
+): ProviderAdapterError {
+  if (billed === undefined) return error;
+  return rebuildProviderError(error, { billed: addBilledUsage(error.billed ?? undefined, billed) });
 }
 
 /**
@@ -826,7 +860,10 @@ export class AnthropicAdapter<
       },
     };
 
+    // Retried attempts were billed too; their usage joins the response or the final failure.
+    let earlier: BilledUsage | undefined;
     return executeWithRetry(async () => {
+      let billed: BilledUsage | undefined;
       try {
         const responsePromise = this.client.messages.create(
           parameters,
@@ -837,6 +874,7 @@ export class AnthropicAdapter<
             ? await responsePromise.withResponse()
             : { data: await responsePromise, request_id: null };
         const message = anthropicMessageData(response.data);
+        billed = accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing);
         if (message.stop_reason !== "end_turn") {
           throw anthropicStopReasonError(message.stop_reason);
         }
@@ -866,7 +904,7 @@ export class AnthropicAdapter<
             },
           );
         }
-        const accounting = accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing);
+        const accounting = addBilledUsage(earlier, billed);
         const elapsedMs = Date.now() - startTime;
         request.onProgress?.({
           stage: "completed",
@@ -885,7 +923,12 @@ export class AnthropicAdapter<
           ...accounting,
         };
       } catch (error) {
-        throw normalizeProviderError(this.provider, error, this.route);
+        const failure = withBilledUsage(
+          normalizeProviderError(this.provider, error, this.route),
+          addBilledUsage(earlier, billed),
+        );
+        earlier = failure.billed ?? undefined;
+        throw failure;
       }
     }, this.retry);
   }
@@ -963,14 +1006,18 @@ export class OpenAIAdapter<
       },
     };
 
+    // Retried attempts were billed too; their usage joins the response or the final failure.
+    let earlier: BilledUsage | undefined;
     return executeWithRetry(async () => {
+      let billed: BilledUsage | undefined;
       try {
         const response = await this.client.responses.create(
           parameters,
           ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
         );
+        billed = accountOpenAIUsage(response.usage, this.pricing);
         const output = parseJson<Output>(this.provider, response.output_text, "output_text");
-        const accounting = accountOpenAIUsage(response.usage, this.pricing);
+        const accounting = addBilledUsage(earlier, billed);
         const elapsedMs = Date.now() - startTime;
         request.onProgress?.({
           stage: "completed",
@@ -989,7 +1036,12 @@ export class OpenAIAdapter<
           ...accounting,
         };
       } catch (error) {
-        throw normalizeProviderError(this.provider, error, this.route);
+        const failure = withBilledUsage(
+          normalizeProviderError(this.provider, error, this.route),
+          addBilledUsage(earlier, billed),
+        );
+        earlier = failure.billed ?? undefined;
+        throw failure;
       }
     }, this.retry);
   }
@@ -1141,6 +1193,7 @@ export function createLocalModelAdapter<
 
 /** Checking a hosted API key through the model lookup endpoint, before any billed call. */
 export * from "./api-key-check.js";
+export { addBilledUsage } from "./billed-usage.js";
 export * from "./deepinfra-glm.js";
 /**
  * Model discovery: which model ids a configured credential can actually reach.

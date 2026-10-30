@@ -91,6 +91,7 @@ import {
   inspectDurationAccounting,
   settleDurationAccounting,
 } from "./duration-accounting.js";
+import { failedAttemptCost } from "./failed-attempt-cost.js";
 import { type FailedProviderCall, failedProviderCall } from "./failed-provider-call.js";
 import {
   type AppliedRevisionEdit,
@@ -2089,6 +2090,8 @@ export function createOrchestrationEngine(
       const failedCall = failedProviderCall(error, roleFailure);
       const failure: RunError = { ...roleFailure, step, failedCall };
       if (failure.code === "usage-limit") return pauseForUsageLimit(snapshot, failure, failureNow);
+      // A rejected response was still billed; the run's cost and its cost limit count it.
+      const billedCost = failedAttemptCost(error);
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -2099,10 +2102,11 @@ export function createOrchestrationEngine(
         provider: failure.provider,
         modelId: failure.modelId,
         providerRequestId: failure.providerRequestId,
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        estimatedUsd: null,
+        ...billedCost,
+        // A billed call names its endpoint, so usage reports group it with completed calls.
+        ...(billedCost.totalTokens === 0 || failedCall.route === undefined
+          ? {}
+          : { route: failedCall.route }),
         completedAt: clock(),
         errorCode: failure.code,
         attempt,
@@ -2115,6 +2119,7 @@ export function createOrchestrationEngine(
         {
           ...snapshot,
           executionHistory: [...snapshot.executionHistory, failedExecution],
+          totalCostUsd: snapshot.totalCostUsd + (billedCost.estimatedUsd ?? 0),
         },
         failure,
         failureNow,
