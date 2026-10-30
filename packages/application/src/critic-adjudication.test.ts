@@ -133,14 +133,15 @@ describe("coverage judgement instructions", () => {
     const base = createCriticAdjudicationPrompt("cli-critic-v3");
     const prompt = withCoverageJudgementInstructions(base);
 
-    expect(coverageJudgementInstructionsVersion).toBe("coverage-judgement-v2");
-    expect(prompt.startsWith(`${base}\n\nCoverage judgement (coverage-judgement-v2):`)).toBe(true);
+    expect(coverageJudgementInstructionsVersion).toBe("coverage-judgement-v3");
+    expect(prompt.startsWith(`${base}\n\nCoverage judgement (coverage-judgement-v3):`)).toBe(true);
+    // Demonstrated behaviour counts; shared words alone still do not (#1970).
+    expect(prompt).toContain("describes concrete work that demonstrates it");
+    expect(prompt).toContain("merely share words or a topic");
     expect(prompt).toContain("coverageJudgementRequests");
     expect(prompt).toContain("the whole draft artifact in the input");
     expect(prompt).toContain("candidate blocks are only hints and may be empty");
-    expect(prompt).toContain(
-      "Return `satisfied` only when some artifact block states the requirement",
-    );
+    expect(prompt).toContain("Return `satisfied` when some artifact block states the requirement");
     expect(prompt).toContain("from anywhere in the artifact");
     expect(prompt).not.toContain("Cite only candidate block ids");
     expect(prompt).toContain(

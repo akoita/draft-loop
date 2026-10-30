@@ -72,6 +72,23 @@ describe("judged requirement coverage in readiness", () => {
     expect(relevance({ round: 1, coveredRequirementIds: ["unknown-requirement"] }).score).toBe(0);
   });
 
+  it("weighs a nice-to-have at half a medium requirement (#1970)", () => {
+    const withNiceToHave: ReadinessEvaluationContext = {
+      ...context,
+      requirements: [
+        ...context.requirements,
+        { id: "requirement-4", text: "Rust side projects", priority: "low" },
+      ],
+    };
+    const score = evaluateReadiness(artifact, withNiceToHave, {
+      round: 1,
+      coveredRequirementIds: ["requirement-1", "requirement-2", "requirement-3"],
+    }).scores.find((candidate) => candidate.dimension === "relevance")?.score;
+
+    // 4.5 of 5: missing the nice-to-have costs a tenth, not the 18% a medium one would.
+    expect(score).toBe(0.9);
+  });
+
   it("does not count a listed requirement that is an explicit gap", () => {
     const score = relevance({
       round: 1,

@@ -178,6 +178,17 @@ function scoredRequirements(
   return kept.length === 0 ? context.requirements : kept;
 }
 
+/**
+ * How much each priority counts toward relevance. A nice-to-have (`low`) counts half a
+ * `medium`, so a draft that leaves one out is not held back as if it missed a core skill (#1970).
+ */
+const requirementWeight: Readonly<Record<string, number>> = {
+  critical: 2,
+  high: 1.5,
+  medium: 1,
+  low: 0.5,
+};
+
 function weightedCoverage(
   artifact: DraftArtifact,
   requirements: ReadinessEvaluationContext["requirements"],
@@ -194,8 +205,7 @@ function weightedCoverage(
   let covered = 0;
   let judged = 0;
   for (const requirement of requirements) {
-    const weight =
-      requirement.priority === "critical" ? 2 : requirement.priority === "high" ? 1.5 : 1;
+    const weight = requirementWeight[requirement.priority] ?? 1;
     totalWeight += weight;
     if (explicitGapIds.has(requirement.id)) continue;
     const lexical = isRequirementCoveredByBlock(requirement, artifact);
