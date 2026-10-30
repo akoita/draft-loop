@@ -4,6 +4,7 @@ import type {
   ApplicationService,
   ApplicationView,
   HostedKnowledgeIntake,
+  RunWritingPolicyProjection as RecordedRunWritingPolicy,
   RunReview,
   WorkspaceDescriptor,
   WritingPolicyVersionView,
@@ -28,6 +29,7 @@ import type {
   OpportunityBriefSelection,
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
+  RunWritingPolicyProjection,
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "@draft-loop/ui/model";
@@ -156,6 +158,27 @@ const policyMetadata = (view: WritingPolicyVersionView): WritingPolicyVersionMet
   priorChecksum: view.priorChecksum,
 });
 
+/** The policy a run recorded, as metadata only: identities and lineage, never its content. */
+const runPolicyView = (recorded: RecordedRunWritingPolicy): RunWritingPolicyProjection => ({
+  effective: policyMetadata(recorded.effective),
+  lineage:
+    recorded.lineage.kind === "workspace"
+      ? { kind: "workspace" }
+      : {
+          kind: "opportunity-override",
+          base: {
+            version: recorded.lineage.base.version,
+            checksum: recorded.lineage.base.checksum,
+          },
+          override: {
+            version: recorded.lineage.override.version,
+            checksum: recorded.lineage.override.checksum,
+          },
+        },
+  ...(recorded.base === undefined ? {} : { base: policyMetadata(recorded.base) }),
+  ...(recorded.override === undefined ? {} : { override: policyMetadata(recorded.override) }),
+});
+
 /** The application's newest brief, when its latest version is reviewed. */
 function reviewedBrief(application: ApplicationView | undefined): OpportunityBriefSelection | null {
   const newest = [...(application?.briefs ?? [])].sort((left, right) =>
@@ -198,10 +221,14 @@ export function registerReviewStateRoutes(
   ): Promise<{
     readonly evidenceMode: RunEvidenceModeView | null;
     readonly authorInput: RunAuthorInputView | null;
+    readonly writingPolicy: RunWritingPolicyProjection | undefined;
   }> => {
     const mode = await service.readRunEvidenceMode?.({ root, runId });
     const input = await service.readRunAuthorInput?.({ root, runId });
+    // The policy the run used, so its details never read "no policy" when one applied (#1968).
+    const policy = await service.readRunWritingPolicy?.({ root, runId });
     return {
+      writingPolicy: policy === undefined ? undefined : runPolicyView(policy),
       evidenceMode: mode === undefined ? null : (normalizeRunEvidenceMode(mode) ?? null),
       authorInput:
         input === undefined ? null : (runAuthorInputView(input, requirementTexts) ?? null),
@@ -336,7 +363,7 @@ export function registerReviewStateRoutes(
             preflight,
             // The worker retries a failed step itself (#1763), so the screen never offers it.
             { running: executingRunStates.has(snapshot.state), retriedByHost: true },
-            undefined,
+            details.writingPolicy,
             requirementTexts,
             details.evidenceMode,
             details.authorInput,
