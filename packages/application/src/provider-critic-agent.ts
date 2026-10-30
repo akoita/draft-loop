@@ -93,7 +93,13 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
             runId,
             round,
             executionId,
-            artifact: providerArtifactInput.modelFacingArtifactWithEvidenceTable(artifact, context),
+            artifact: criticPrompt.criticReadsCompactEvidenceTable(promptVersion)
+              ? providerArtifactInput.modelFacingArtifactWithCompactEvidenceTable(
+                  artifact,
+                  context,
+                  retrievedEvidence,
+                )
+              : providerArtifactInput.modelFacingArtifactWithEvidenceTable(artifact, context),
             deterministicFindings,
             ...judgement.input,
           }),

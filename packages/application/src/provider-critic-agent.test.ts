@@ -11,6 +11,11 @@ import { createProviderCriticAgent } from "./provider-critic-agent.js";
 vi.mock("./provider-artifact-input.js", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   modelFacingArtifactWithEvidenceTable: (artifact: DraftArtifact) => artifact,
+  modelFacingArtifactWithCompactEvidenceTable: (
+    artifact: DraftArtifact,
+    _context: unknown,
+    retrievedEvidence: readonly { readonly id: string }[],
+  ) => ({ ...artifact, compactFor: retrievedEvidence.map(({ id }) => id) }),
 }));
 
 const evidence: readonly ScoredEvidenceChunk[] = [0, 1].map((ordinal) => ({
@@ -45,10 +50,10 @@ const artifact = {
 } as unknown as DraftArtifact;
 
 /** Records each request and answers with the shared format's output, coverage list included. */
-function recordingCritic(requests: ModelRequest<JsonObject>[]) {
+function recordingCritic(requests: ModelRequest<JsonObject>[], runContext = context) {
   return createProviderCriticAgent({
-    context,
-    promptContext: context,
+    context: runContext,
+    promptContext: runContext,
     dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
     criticCompany: "openai",
     criticModel: "c",
@@ -106,5 +111,24 @@ describe("provider critic agent", () => {
 
     // The shared format's empty coverage list is not recorded for a critique that judged none.
     expect(first.output).not.toHaveProperty("coverageJudgements");
+  });
+
+  it("sends the compact evidence table from critic v6 on, citing retrieved chunks (#1986)", async () => {
+    const v6 = {
+      ...context,
+      modelConfiguration: {
+        ...context.modelConfiguration,
+        critic: { ...context.modelConfiguration.critic, promptTemplateVersion: "cli-critic-v6" },
+      },
+    } as ContextSnapshot;
+    const requests: ModelRequest<JsonObject>[] = [];
+    await recordingCritic(requests, v6).execute(critique(1) as never);
+    await recordingCritic(requests).execute(critique(1) as never);
+
+    const [compact, full] = requests;
+    expect(compact?.input.artifact).toMatchObject({ compactFor: ["chunk-0", "chunk-1"] });
+    expect(compact?.systemPrompt).toContain("reference-table-v2");
+    expect(full?.input.artifact).not.toHaveProperty("compactFor");
+    expect(full?.systemPrompt).not.toContain("reference-table-v2");
   });
 });
