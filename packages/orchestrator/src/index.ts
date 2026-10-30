@@ -71,6 +71,7 @@ import {
   buildAuthorRetryCorrections,
 } from "./author-retry-feedback.js";
 import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
+import { callCostBudgetReason, remainingCostField } from "./call-cost-budget.js";
 import {
   activeCandidateDirection,
   type CandidateDirection,
@@ -248,6 +249,8 @@ export interface AuthorRequest {
   /** On a revision, the critic's judged coverage of the draft being revised; never empty. */
   readonly requirementCoverage?: readonly RevisionRequirementCoverage[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  /** What the run may still spend; the agent refuses a call whose worst cost would pass it. */
+  readonly remainingCostUsd?: number;
   readonly signal?: AbortSignal;
 }
 
@@ -265,6 +268,8 @@ export interface CriticRequest {
   /** The reviewed application plan, the source of the job's central themes for the emphasis review. */
   readonly applicationPlan?: ApplicationPlan;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  /** What the run may still spend; the agent refuses a call whose worst cost would pass it. */
+  readonly remainingCostUsd?: number;
   readonly signal?: AbortSignal;
 }
 
@@ -1954,6 +1959,7 @@ export function createOrchestrationEngine(
                 ? {}
                 : { coverageJudgementRequests: coverageRequests.requests }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
+              ...remainingCostField(snapshot),
               ...(signal === undefined ? {} : { signal }),
             })
           : await options.author.execute({
@@ -1969,6 +1975,7 @@ export function createOrchestrationEngine(
               ...(retryFeedback === undefined ? {} : { retryFeedback }),
               ...(requirementCoverage === undefined ? {} : { requirementCoverage }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
+              ...remainingCostField(snapshot),
               ...(signal === undefined ? {} : { signal }),
             });
       const adjudicatedRevisionTrace =
@@ -2070,6 +2077,9 @@ export function createOrchestrationEngine(
       // fails after it was saved, let the caller retry/resume and reuse that
       // execution instead of attempting to overwrite it with a failed row.
       if (completedExecutionSaved) throw error;
+      // A call refused before it started billed nothing: the run stops on its budget.
+      const refusedForCost = callCostBudgetReason(error);
+      if (refusedForCost !== undefined) return exhaust(snapshot, refusedForCost, clock());
       const failureNow = clock();
       // A failed plan review names the critic's model but stays a failure of this author step.
       const roleFailure = providerFailure(
@@ -2908,6 +2918,7 @@ export interface OrchestrationPort {
 export * from "./adjudication.js";
 export * from "./automatic-retry.js";
 export * from "./autopilot.js";
+export * from "./call-cost-budget.js";
 export * from "./candidate-direction.js";
 export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 export * from "./consensus-stop.js";

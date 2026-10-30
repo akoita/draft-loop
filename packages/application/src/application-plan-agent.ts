@@ -36,6 +36,7 @@ import {
   authorRunPrefix,
   runStableInputMembers,
 } from "./author-run-prefix.js";
+import { guardCallCost } from "./call-cost-guard.js";
 import { responseExecution } from "./response-execution.js";
 
 /**
@@ -109,7 +110,10 @@ export function createProviderApplicationPlanner(
     }
     const identity = role === "author" ? deps.author : deps.critic;
     const aliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
-    const adapter = await deps.createAdapter(identity.company, identity.modelId, role);
+    const adapter = guardCallCost(
+      await deps.createAdapter(identity.company, identity.modelId, role),
+      request.remainingCostUsd,
+    );
     const model = request.context.modelConfiguration[role];
     const callInput = { runId: request.runId, executionId: request.executionId, ...extraInput };
     const toModel = (input: object) =>

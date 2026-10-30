@@ -739,7 +739,8 @@ implements it with the run's author and critic models. Each call is persisted
 on the run snapshot (`applicationPlan`) when it completes, so a resumed run
 continues mid-plan without repeating a call, and its cost is added to the run
 cost, which the cost budget is checked against before each call and before
-the draft. Runs on earlier templates do not plan and resume unchanged, and
+the draft. Each call also receives what the run may still spend, so a call
+whose estimated worst cost would pass the limit is refused before it is sent. Runs on earlier templates do not plan and resume unchanged, and
 `applicationPlan: false` in the run options turns the step off for tests.
 
 The reviewed plan goes to the author as guidance on every round: `cli-author-v11`

@@ -24,6 +24,7 @@ import {
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
 import { authorRunOutputSchemas, runStableInputMembers } from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
+import { guardCallCost } from "./call-cost-guard.js";
 import {
   evidenceReferenceTableInstructions,
   modelFacingArtifactWithEvidenceTable,
@@ -91,6 +92,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       applicationPlan,
       requirementCoverage,
       retrievedEvidence = [],
+      remainingCostUsd,
       signal,
     }) => {
       const achievementPlan = createRequirementAchievementPlan(
@@ -121,7 +123,10 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       const maxOutputTokens = context.modelConfiguration.author.profile?.runtime.maxOutputTokens;
       const groundingGuide = createAuthorGroundingGuide(retrievedEvidence);
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
-      const adapter = await deps.createAdapter(deps.authorCompany, deps.authorModel, "author");
+      const adapter = guardCallCost(
+        await deps.createAdapter(deps.authorCompany, deps.authorModel, "author"),
+        remainingCostUsd,
+      );
       const callAuthor = async (
         authorPrompt: AuthorAdjudicationPrompt,
         outputSchema: JsonObject,
