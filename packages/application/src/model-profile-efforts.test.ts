@@ -21,7 +21,7 @@ describe("model profile reasoning levels", () => {
       "economy-openai-critic@1": all,
       "economy-anthropic-author@1": all,
       "balanced-openai-critic@1": all,
-      "standard-anthropic-author@1": all,
+      "standard-anthropic-author@2": all,
       "standard-openai-critic@2": all,
       "dev-deepinfra-glm-author@1": ["low"],
       "dev-google-gemini-author@2": ["low"],
@@ -49,7 +49,7 @@ describe("model profile reasoning levels", () => {
         entry,
       ]),
     );
-    expect(byId.get("standard-anthropic-author@1")?.sources).toContain(
+    expect(byId.get("standard-anthropic-author@2")?.sources).toContain(
       "https://platform.claude.com/docs/en/build-with-claude/effort",
     );
     expect(byId.get("balanced-openai-critic@1")?.sources).toEqual([

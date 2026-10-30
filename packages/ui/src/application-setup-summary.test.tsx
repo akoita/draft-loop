@@ -92,7 +92,7 @@ describe("ApplicationSetupSummaryView", () => {
       <ApplicationSetupSummaryView
         {...summaryProps({
           applicationPair: {
-            author: { id: "standard-anthropic-author", version: 1 },
+            author: { id: "standard-anthropic-author", version: 2 },
             critic: { id: "standard-openai-critic", version: 2 },
           },
         })}

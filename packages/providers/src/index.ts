@@ -111,7 +111,11 @@ export interface ModelRequest<Input extends JsonValue = JsonValue> {
 }
 
 const defaultMaxOutputTokens = 4096;
-const maximumMaxOutputTokens = 32_768;
+/**
+ * The largest output budget any supported model accepts. A profile's own budget stays within its
+ * model's known limit, and every Claude client streams, so a long draft hits no request timeout.
+ */
+const maximumMaxOutputTokens = 128_000;
 
 function resolveMaxOutputTokens(provider: ProviderId, value: number | undefined): number {
   const resolved = value ?? defaultMaxOutputTokens;

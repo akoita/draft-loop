@@ -8,7 +8,7 @@ import { listModelProfileCatalog } from "./model-profile-catalog.js";
 
 const apiKeyModes = { anthropic: "api-key", openai: "api-key" } as const;
 const standard: ModelProfileReferences = {
-  author: { id: "standard-anthropic-author", version: 1 },
+  author: { id: "standard-anthropic-author", version: 2 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy: ModelProfileReferences = {
@@ -75,12 +75,12 @@ describe("model profile public API scenario estimates", () => {
     expect(
       estimateModelProfileApiScenario({
         ...boundary,
-        author: { inputTokens: 967_232, outputTokens: 32_768, calls: 1 },
+        author: { inputTokens: 936_000, outputTokens: 64_000, calls: 1 },
       }),
     ).toMatchObject({ status: "available" });
     for (const author of [
       { inputTokens: 1_000_001, outputTokens: 0, calls: 1 },
-      { inputTokens: 0, outputTokens: 32_769, calls: 1 },
+      { inputTokens: 0, outputTokens: 64_001, calls: 1 },
     ]) {
       expect(estimateModelProfileApiScenario({ ...boundary, author })).toEqual({
         status: "unavailable",

@@ -513,6 +513,32 @@ describe("provider-neutral model adapters", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("accepts an output budget up to the largest model limit and refuses one above it", async () => {
+    const response = {
+      content: [{ type: "text", text: '{"answer":"yes"}' }],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 11, output_tokens: 7 },
+    };
+    const budgets: number[] = [];
+    const create = vi.fn<AnthropicClient["messages"]["create"]>((params) => {
+      budgets.push(params.max_tokens);
+      return Object.assign(Promise.resolve(response), {
+        withResponse: async () => ({ data: response, request_id: null }),
+      }) as ReturnType<AnthropicClient["messages"]["create"]>;
+    });
+    const adapter = new AnthropicAdapter({ messages: { create } }, { configuredModel: model });
+
+    await expect(adapter.execute(request({ maxOutputTokens: 64_000 }))).resolves.toMatchObject({
+      output: { answer: "yes" },
+    });
+    await expect(adapter.execute(request({ maxOutputTokens: 128_001 }))).rejects.toMatchObject({
+      code: "invalid-request",
+      diagnostics: [{ code: "invalid_output_token_budget", path: "maxOutputTokens" }],
+    });
+    expect(budgets).toEqual([64_000]);
+  });
+
   it("requires acknowledgement before sending sensitive data", async () => {
     const create = vi.fn<AnthropicClient["messages"]["create"]>();
     const client: AnthropicClient = { messages: { create } };

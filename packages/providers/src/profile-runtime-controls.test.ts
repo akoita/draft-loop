@@ -304,8 +304,8 @@ describe("profile runtime controls at provider adapters", () => {
   it("keeps the adapter output safety ceiling for otherwise valid profiles", async () => {
     const selected = selection(
       profile("anthropic", "author", {
-        maxOutputTokens: 32769,
-        knownMaxOutputTokens: 65536,
+        maxOutputTokens: 128_001,
+        knownMaxOutputTokens: 131072,
       }),
     );
     const fixture = anthropicFixture();

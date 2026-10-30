@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(15);
+    expect(profiles).toHaveLength(16);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
@@ -261,6 +261,11 @@ describe("model profile registry", () => {
     expect(defaultModelProfileRegistry.resolve("dev-mistral-author", 1, "author")).toEqual(
       profiles[14],
     );
+    expect(profiles[15]).toEqual({
+      ...profiles[2],
+      version: 2,
+      runtime: { ...profiles[2]?.runtime, maxOutputTokens: 64000 },
+    });
     expect(defaultModelProfileRegistry.resolve("dev-google-gemini-author", 1, "author")).toEqual(
       profiles[12],
     );

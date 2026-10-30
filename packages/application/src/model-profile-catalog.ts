@@ -99,6 +99,18 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     maxInputTokens: 1000000,
     reviewedAt: "2026-10-23",
   },
+  "standard-anthropic-author@2": {
+    sources: [anthropicOverview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 4,
+      outputUsdPerMillion: 20,
+      cacheReadUsdPerMillion: 0.2,
+      cacheWriteUsdPerMillion: 8,
+    },
+    // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-10-23",
+  },
   // OpenAI reports cache writes on every call that fills its prompt cache, so a critic without a
   // cache-write rate leaves those calls unpriced, which stops a run with a cost limit.
   "economy-openai-critic@1": {
@@ -201,7 +213,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "standard",
     label: "Standard — unvalidated",
     tier: "standard",
-    author: { id: "standard-anthropic-author", version: 1 },
+    author: { id: "standard-anthropic-author", version: 2 },
     critic: { id: "standard-openai-critic", version: 2 },
   },
   {

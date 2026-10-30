@@ -130,14 +130,20 @@ export interface ResolvedRunModelProfiles {
   readonly critic: ModelProfile;
 }
 
-const maximumProfileOutputTokens = 32_768;
+/** The largest output budget the provider adapters accept; a profile also stays within its model. */
+const maximumProfileOutputTokens = 128_000;
+/** The Claude CLI session's own output cap, below the API's. */
+const maximumUserSessionOutputTokens = 32_768;
 const verifiedSonnet45ModelIds = new Set(["claude-sonnet-4-5", "claude-sonnet-4-5-20250929"]);
 
 export function validateProfileRoute(
   profile: ModelProfile,
   authModes: RunProviderAuthModeConfiguration,
 ): void {
-  if (profile.runtime.maxOutputTokens > maximumProfileOutputTokens) {
+  if (
+    profile.runtime.maxOutputTokens > maximumProfileOutputTokens ||
+    profile.runtime.maxOutputTokens > profile.knownLimits.maxOutputTokens
+  ) {
     throw new RunModelProfileError();
   }
   if (profile.provider === "zai") {
@@ -170,6 +176,9 @@ export function validateProfileRoute(
     throw new RunModelProfileError();
   }
   if (profile.provider === "anthropic" && authModes.anthropic === "user-session") {
+    if (profile.runtime.maxOutputTokens > maximumUserSessionOutputTokens) {
+      throw new RunModelProfileError();
+    }
     const verifiedSonnet45 = verifiedSonnet45ModelIds.has(profile.modelId);
     if (
       (profile.runtime.thinking.mode !== "provider-default" && !verifiedSonnet45) ||
