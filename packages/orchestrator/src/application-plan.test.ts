@@ -141,6 +141,8 @@ function harness(options: {
   readonly maxCostUsd?: number;
   /** The plan call is served by a metered route that could not price it. */
   readonly unpricedPlan?: boolean;
+  /** The revision broke the plan's checks, so the planner returns the reviewed plan. */
+  readonly rejectRevision?: boolean;
 }) {
   const calls: string[] = [];
   const authorRequests: AuthorRequest[] = [];
@@ -165,7 +167,12 @@ function harness(options: {
     },
     revise: async () => {
       calls.push("revise");
-      return execution(plan("Tokenisation first"), "anthropic", "author-test");
+      return options.rejectRevision === true
+        ? {
+            ...execution(plan("Payments first"), "anthropic", "author-test"),
+            rejectedDiagnostics: [{ code: "too_small", path: "themes" }],
+          }
+        : execution(plan("Tokenisation first"), "anthropic", "author-test");
     },
   };
   const engine = createOrchestrationEngine({
@@ -222,6 +229,18 @@ describe("application plan step", () => {
       "review",
       "revision",
     ]);
+  });
+
+  it("drafts from the reviewed plan when the revision broke its checks, recording which", async () => {
+    const { calls, start, authorRequests } = harness({ review: revise, rejectRevision: true });
+    const snapshot = await start();
+    expect(calls.slice(0, 4)).toEqual(["plan", "review", "revise", "draft"]);
+    expect(authorRequests[0]?.applicationPlan?.themes[0]?.title).toBe("Payments first");
+    expect(snapshot.applicationPlan?.steps[2]).toMatchObject({
+      step: "revision",
+      rejectedDiagnostics: [{ code: "too_small", path: "themes" }],
+    });
+    expect(snapshot.applicationPlan?.steps[0]).not.toHaveProperty("rejectedDiagnostics");
   });
 
   it("counts the plan step's cost in the run cost", async () => {

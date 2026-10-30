@@ -128,6 +128,7 @@ export {
   type ApplicationPlanRequest,
   advanceApplicationPlan,
   needsApplicationPlan,
+  type PlanRevisionOutcome,
 } from "./application-plan.js";
 export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
 export {

@@ -129,6 +129,15 @@ export const applicationPlanStepRecordSchema = z.strictObject({
   outputTokens: z.number().int().nonnegative(),
   estimatedUsd: z.number().nonnegative().nullable(),
   completedAt: nonEmptyString,
+  /**
+   * On a revision the plan checks rejected, which checks failed: issue codes and paths, never
+   * text. The reviewed plan then stands as the revision.
+   */
+  rejectedDiagnostics: z
+    .array(z.strictObject({ code: nonEmptyString, path: z.string() }))
+    .min(1)
+    .max(10)
+    .optional(),
 });
 export type ApplicationPlanStepRecord = z.infer<typeof applicationPlanStepRecordSchema>;
 

@@ -162,20 +162,37 @@ export function createProviderApplicationPlanner(
       requirementIds: references(request).requirementIds,
     }) as JsonObject;
 
+  /** The plan, or the content-free diagnostics of the checks it failed. */
+  const checkPlan = (
+    output: JsonObject,
+    request: ApplicationPlanRequest,
+  ):
+    | { readonly plan: ApplicationPlan }
+    | { readonly message: string; readonly diagnostics: ProviderValidationDiagnostic[] } => {
+    const parsed = applicationPlanSchema.safeParse(output);
+    if (!parsed.success) {
+      return {
+        message: "The author returned an invalid plan.",
+        diagnostics: planReviewDiagnostics(parsed.error.issues),
+      };
+    }
+    const issues = validateApplicationPlan(parsed.data, references(request));
+    if (issues.length > 0) {
+      return {
+        message: "The author returned a plan that cites unknown or unsupported items.",
+        diagnostics: issues.slice(0, 10).map(({ code, path }) => ({ code, path })),
+      };
+    }
+    return { plan: parsed.data };
+  };
   const parsePlan = (
     response: ModelResponse<JsonObject>,
     output: JsonObject,
     request: ApplicationPlanRequest,
   ): ApplicationPlan => {
-    const parsed = applicationPlanSchema.safeParse(output);
-    if (!parsed.success) throw invalidPlan(response, "The author returned an invalid plan.");
-    if (validateApplicationPlan(parsed.data, references(request)).length > 0) {
-      throw invalidPlan(
-        response,
-        "The author returned a plan that cites unknown or unsupported items.",
-      );
-    }
-    return parsed.data;
+    const checked = checkPlan(output, request);
+    if ("plan" in checked) return checked.plan;
+    throw invalidPlan(response, checked.message, checked.diagnostics);
   };
 
   return {
@@ -229,7 +246,14 @@ export function createProviderApplicationPlanner(
         planSchema(request),
         "application_plan",
       );
-      return responseExecution(response, parsePlan(response, output, request));
+      const checked = checkPlan(output, request);
+      if ("plan" in checked) return responseExecution(response, checked.plan);
+      // The plan is guidance: a revision that breaks its limits keeps the reviewed plan and
+      // records which checks failed, instead of ending the run (r4, 2026-10-30).
+      return {
+        ...responseExecution(response, request.plan),
+        rejectedDiagnostics: checked.diagnostics,
+      };
     },
     ...(deps.record === undefined ? {} : { record: deps.record }),
   };
