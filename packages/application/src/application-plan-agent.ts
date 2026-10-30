@@ -5,6 +5,7 @@ import {
   type ModelRequest,
   type ModelResponse,
   ProviderAdapterError,
+  type ProviderValidationDiagnostic,
 } from "@draft-loop/providers";
 import {
   type ApplicationPlan,
@@ -24,6 +25,10 @@ import {
   applicationPlanRevisionSystemPrompt,
   applicationPlanSystemPrompt,
 } from "./application-plan-prompts.js";
+import {
+  normalizeApplicationPlanReviewOutput,
+  planReviewDiagnostics,
+} from "./application-plan-review-output.js";
 import { authorPromptSupportsApplicationPlan } from "./author-adjudication.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
 import {
@@ -68,9 +73,14 @@ export function runPlansApplication(context: Pick<ContextSnapshot, "modelConfigu
   }
 }
 
-function invalidPlan(response: ModelResponse<JsonObject>, message: string): ProviderAdapterError {
+function invalidPlan(
+  response: ModelResponse<JsonObject>,
+  message: string,
+  diagnostics: readonly ProviderValidationDiagnostic[] = [],
+): ProviderAdapterError {
   return new ProviderAdapterError(response.provider, "invalid-response", message, {
     retryable: true,
+    ...(diagnostics.length === 0 ? {} : { diagnostics }),
     ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
     // The provider billed the response even though it is rejected here (#1967).
     billed: { usage: response.usage, cost: response.cost },
@@ -186,9 +196,23 @@ export function createProviderApplicationPlanner(
         () => applicationPlanReviewJsonSchema as JsonObject,
         "application_plan_review",
       );
-      const parsed = applicationPlanReviewSchema.safeParse(output);
-      if (!parsed.success || validateApplicationPlanReview(parsed.data, request.plan).length > 0) {
-        throw invalidPlan(response, "The critic returned an invalid plan review.");
+      const parsed = applicationPlanReviewSchema.safeParse(
+        normalizeApplicationPlanReviewOutput(output, request.plan),
+      );
+      if (!parsed.success) {
+        throw invalidPlan(
+          response,
+          "The critic returned an invalid plan review.",
+          planReviewDiagnostics(parsed.error.issues),
+        );
+      }
+      const issues = validateApplicationPlanReview(parsed.data, request.plan);
+      if (issues.length > 0) {
+        throw invalidPlan(
+          response,
+          "The critic returned an invalid plan review.",
+          issues.map(({ code, path }) => ({ code, path })),
+        );
       }
       return responseExecution<ApplicationPlanReview>(response, parsed.data);
     },
