@@ -17,7 +17,7 @@ function reviewsEmphasis(criticPromptTemplateVersion: string): boolean {
 
 /**
  * Give the critic the run's reviewed application plan as the theme source of its emphasis review
- * (#1304). Only a critic prompt version that carries the emphasis review (`cli-critic-v5`) is
+ * (#1304). Only a critic prompt version that carries the emphasis review (`cli-critic-v5` and later) is
  * given the plan; every other version, and a run without a plan, is returned untouched.
  */
 export function withApplicationPlan(

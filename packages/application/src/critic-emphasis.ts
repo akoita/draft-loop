@@ -1,5 +1,5 @@
 /**
- * The strategic emphasis review that `cli-critic-v5` adds: does the CV make the strongest case
+ * The strategic emphasis review that `cli-critic-v5` adds (and later versions keep): does the CV make the strongest case
  * for this job? The critic compares the job's central themes with what the draft leads with,
  * expands and compresses, and names one concrete move per finding.
  */

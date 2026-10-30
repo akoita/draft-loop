@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   evidenceReferenceTableInstructions,
+  modelFacingArtifactWithCompactEvidenceTable,
   modelFacingArtifactWithEvidenceTable,
 } from "./provider-artifact-input.js";
 import { modelFacingArtifact } from "./provider-context.js";
@@ -174,5 +175,38 @@ describe("provider artifact evidence reference table", () => {
       Array.from({ length: 5 }, (_, index) => `evidence-reference-${index + 1}`),
     );
     expect(JSON.stringify(projected)).not.toContain("/fictional/local/");
+  });
+});
+
+describe("compact evidence reference table (#1986)", () => {
+  it("cites a retrieved chunk by id instead of repeating its text, and keeps other excerpts", () => {
+    const references = largeReferences().slice(0, 3);
+    const artifact = fixtureArtifact(references.map((reference) => [reference]));
+    const context = contextWithManifest(
+      references.map(({ sourcePath, sourceChecksum }) => ({
+        path: sourcePath,
+        checksum: sourceChecksum ?? "",
+      })),
+    );
+    // The first two excerpts are whole retrieved chunks; the third is not retrieved.
+    const retrievedEvidence = references
+      .slice(0, 2)
+      .map(({ excerpt }, index) => ({ id: `chunk-${index + 1}`, text: excerpt }));
+
+    const full = modelFacingArtifactWithEvidenceTable(artifact, context);
+    const compact = modelFacingArtifactWithCompactEvidenceTable(
+      artifact,
+      context,
+      retrievedEvidence,
+    );
+
+    expect(compact.evidenceEncoding).toBe("reference-table-v2");
+    expect(compact.claims).toEqual(full.claims);
+    const entries = Object.values(compact.evidenceReferences);
+    expect(
+      entries.map((entry) => ("excerpt" in entry ? "excerpt" : entry.retrievedEvidenceChunkId)),
+    ).toEqual(["chunk-1", "chunk-2", "excerpt"]);
+    expect(entries[0]).toMatchObject({ locator: references[0]?.locator });
+    expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length / 2);
   });
 });

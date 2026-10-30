@@ -4,7 +4,10 @@ import {
 } from "@draft-loop/validation";
 
 import { emphasisReviewInstructions } from "./critic-emphasis.js";
-import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
+import {
+  compactEvidenceReferenceTableInstructions,
+  evidenceReferenceTableInstructions,
+} from "./provider-artifact-input.js";
 
 export const maximumCritiqueFindings = 16;
 export const maximumCritiqueMessageCharacters = 400;
@@ -57,7 +60,16 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   if (templateVersion === "cli-critic-v5") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV5}${editorialReviewInstructions}${emphasisReviewInstructions}${outputInstructions}\n\n${evidenceReferenceTableInstructions}`;
   }
+  // v6 reads the compact evidence table, which cites retrieved chunks by id (#1986).
+  if (templateVersion === "cli-critic-v6") {
+    return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV5}${editorialReviewInstructions}${emphasisReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
+  }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
+}
+
+/** Whether a critic prompt version reads the compact evidence table. */
+export function criticReadsCompactEvidenceTable(templateVersion: string): boolean {
+  return templateVersion === "cli-critic-v6";
 }
 
 export const create = createCriticAdjudicationPrompt;

@@ -267,7 +267,11 @@ offending text and name its section:
 It never asks for content the evidence does not support. Resumed v3 runs keep
 the v3 prompt.
 
-New runs record critic template `cli-critic-v5`: v4 plus a job emphasis review.
+Critic template `cli-critic-v5` is v4 plus a job emphasis review. New runs
+record `cli-critic-v6`, which keeps v5's review and reads a compact evidence
+table (`reference-table-v2`): a claim's evidence that is a retrieved chunk's
+whole text is cited by that chunk's ID instead of repeated. A full-source
+critique therefore no longer sends the source twice (#1986).
 The critic compares the job's central themes, from its requirements and
 responsibilities weighted by priority and repetition, with what the draft leads
 with, expands and compresses. Each finding is a `coverage` finding that names

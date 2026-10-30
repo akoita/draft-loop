@@ -33,7 +33,10 @@ import {
   opportunityBriefNotFoundErrorMessage,
   opportunityBriefVersionStaleErrorMessage,
 } from "./opportunity-persistence.js";
-import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
+import {
+  compactEvidenceReferenceTableInstructions,
+  evidenceReferenceTableInstructions,
+} from "./provider-artifact-input.js";
 import { writeWorkspaceEvidenceMode } from "./workspace-evidence-mode.js";
 
 interface JsonRecord {
@@ -793,8 +796,12 @@ describe("local application driver", () => {
       );
       expect(criticInputs).toHaveLength(1);
       expect(criticInputs[0]).not.toHaveProperty("retryFeedback");
-      for (const systemPrompt of [...authorSystemPrompts, ...criticSystemPrompts]) {
+      for (const systemPrompt of authorSystemPrompts) {
         expect(systemPrompt).toContain(evidenceReferenceTableInstructions);
+      }
+      // From critic v6 on, the critic reads the compact table that cites retrieved chunks (#1986).
+      for (const systemPrompt of criticSystemPrompts) {
+        expect(systemPrompt).toContain(compactEvidenceReferenceTableInstructions);
       }
       expect(criticSystemPrompts[0]).toContain(
         "Review every substantive artifact claim against the source excerpts",
@@ -803,7 +810,7 @@ describe("local application driver", () => {
         "Do not rely on a hardcoded technology vocabulary, external verification, or web research.",
       );
       const criticArtifact = criticInputs[0]?.artifact as JsonRecord | undefined;
-      expect(criticArtifact).toMatchObject({ evidenceEncoding: "reference-table-v1" });
+      expect(criticArtifact).toMatchObject({ evidenceEncoding: "reference-table-v2" });
       expect(criticArtifact).toHaveProperty("evidenceReferences");
       const criticClaims = criticArtifact?.claims as readonly JsonRecord[] | undefined;
       expect(criticClaims?.[0]).toHaveProperty("evidenceReferenceIds");
@@ -811,11 +818,16 @@ describe("local application driver", () => {
       const referenceIds = criticClaims?.[0]?.evidenceReferenceIds as readonly string[] | undefined;
       const referenceTable = criticArtifact?.evidenceReferences as JsonRecord | undefined;
       expect(referenceIds?.length).toBeGreaterThan(0);
+      // Each cited excerpt is a whole retrieved chunk, so the table cites it by id.
+      const retrievedIds = (
+        (criticInputs[0]?.retrievedEvidence ?? []) as readonly JsonRecord[]
+      ).map(({ id }) => id);
       for (const referenceId of referenceIds ?? []) {
-        expect(referenceTable?.[referenceId]).toMatchObject({
-          sourcePath: "evidence-source-1",
-          excerpt: expect.any(String),
-        });
+        expect(referenceTable?.[referenceId]).toMatchObject({ sourcePath: "evidence-source-1" });
+        expect(referenceTable?.[referenceId]).not.toHaveProperty("excerpt");
+        expect(retrievedIds).toContain(
+          (referenceTable?.[referenceId] as JsonRecord | undefined)?.retrievedEvidenceChunkId,
+        );
       }
       // The fixture states one fact in three sections and has no header, which validation
       // reports (#1859, #1862).
