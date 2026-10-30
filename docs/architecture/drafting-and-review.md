@@ -159,13 +159,14 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v16`, which states and sends a
+New runs record author template `cli-author-v17`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v16 retain 32,768.
+v4 to v17 retain 32,768. A model profile with a larger output cap, such as the
+Standard author's 64,000 tokens, states and sends its own cap instead (#1966).
 
 Author v6 asks for concise professional body prose: a coherent summary and
 accomplishment bullets that group related supported facts instead of repeating
@@ -840,6 +841,23 @@ over-compression the 0.7.0 walk showed:
   header section, and no value is ever invented.
 
 Resumed v15 and earlier runs keep their exact prompt.
+
+Author `cli-author-v17` (#1971) is v16 plus guidance for a full first draft. On
+the 2026-10-29 re-score, v16 drafts were shorter than the candidates' own CVs
+and recalled under 60% of their accomplishments, and the output-budget sentence
+asked for shorter wording.
+
+- **Full two-page length.** With a two-page or no page target, about 16 to 20
+  bullets and roughly 1,400 to 1,700 words, the upper end of the counts above.
+  The one-page counts are unchanged.
+- **Accomplishments over wording.** When the evidence holds more job-relevant
+  achievements than fit, the author keeps the achievements and cuts detail.
+- **Only CV text.** No copied working notes, reviewer comments or third-person
+  narration, no statement about work not done, and no repeated sentence.
+- **Budget sentence.** It asks the author to avoid redundancy but never to drop
+  supported accomplishments to save tokens.
+
+Resumed v16 and earlier runs keep their exact prompt.
 
 ### CV shape warnings (#1862)
 

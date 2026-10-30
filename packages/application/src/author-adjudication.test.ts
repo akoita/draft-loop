@@ -13,6 +13,7 @@ import {
   createAuthorAdjudicationPrompt,
   promptTemplateVersion,
 } from "./author-adjudication.js";
+import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 
 const authorVersion = promptTemplateVersion("author");
@@ -291,8 +292,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v13 for new author runs and v5 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v16");
+  it("records v17 for new author runs and v5 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v17");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v5");
   });
 
@@ -672,6 +673,28 @@ describe("author prompt template versions", () => {
     );
     expect(() => createAuthorAdjudicationPrompt("constructor", undefined)).toThrow(
       "Unsupported author prompt template version",
+    );
+  });
+});
+
+describe("author prompt cli-author-v17 (#1971)", () => {
+  it("adds the full-draft guidance to v16 and stops asking for shorter wording", () => {
+    const v16 = createAuthorAdjudicationPrompt("cli-author-v16", undefined).systemPrompt;
+    const v17 = createAuthorAdjudicationPrompt("cli-author-v17", undefined).systemPrompt;
+
+    expect(v17).toContain(fullDraftInstructions);
+    expect(v17).toContain(fullDraftBudgetWording);
+    expect(v17).toContain("about 16 to 20 bullets and roughly 1,400 to 1,700 words");
+    expect(v17).toContain("never copy working notes");
+    expect(v17).not.toContain("Shorten wording");
+    expect(v16).toContain("Shorten wording and avoid redundant claims");
+    expect(v16).not.toContain(fullDraftInstructions);
+    // Apart from the budget sentence, v17 is v16 with the full-draft guidance appended.
+    expect(v17.replace(fullDraftBudgetWording, "").replace(fullDraftInstructions, "")).toBe(
+      v16.replace(
+        "Shorten wording and avoid redundant claims while preserving distinct supported facts, required sections, chronology, and evidence citations.",
+        "",
+      ),
     );
   });
 });

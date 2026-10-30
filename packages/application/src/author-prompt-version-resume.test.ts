@@ -9,6 +9,7 @@ import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import { fullDraftInstructions } from "./author-completeness-prompts.js";
 import {
   coherentStatementInstructions,
   singleStatementInstructions,
@@ -64,8 +65,9 @@ it.each([
   { recorded: "cli-author-v13", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v14", structuredGuidance: true, budget: 32_768, patchFirst: true },
   { recorded: "cli-author-v15", structuredGuidance: true, budget: 32_768, patchFirst: true },
+  { recorded: "cli-author-v16", structuredGuidance: true, budget: 32_768, patchFirst: true },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v16",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v17",
   async ({ recorded, structuredGuidance, budget, patchFirst }) => {
     const resumedCalls = patchFirst === true ? 3 : 2;
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
@@ -237,11 +239,11 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v16");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v17");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v5");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v16", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v17", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[resumedCalls]).toContain(
         "Bullet markers should be several lines apart; never stack short bullets.",
@@ -251,8 +253,10 @@ it.each([
       expect(systemPrompts[resumedCalls]).toContain(pageTargetLengthInstructions);
       expect(systemPrompts[resumedCalls]).toContain(singleStatementInstructions);
       expect(systemPrompts[resumedCalls]).toContain(coherentStatementInstructions);
-      // A resumed earlier run keeps its exact prompt, without the v16 one-statement guidance.
-      expect(systemPrompts[0]).not.toContain(coherentStatementInstructions);
+      expect(systemPrompts[resumedCalls]).toContain(fullDraftInstructions);
+      // A resumed earlier run keeps its exact prompt, without the v17 full-draft guidance.
+      expect(systemPrompts[0]).not.toContain(fullDraftInstructions);
+      expect(systemPrompts[0]).toContain("Shorten wording and avoid redundant claims");
       expect(systemPrompts[resumedCalls]).toContain(structuredFieldInstruction);
       expect(systemPrompts[resumedCalls]).toContain(
         "word order or grouping may vary only when every whole-word component",
