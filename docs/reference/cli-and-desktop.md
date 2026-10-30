@@ -1706,9 +1706,10 @@ endpoints remain free-text because there are no local server profile IDs.
 
 Catalog price metadata covers the standard text API at up to 200,000 input
 tokens by default. Claude Opus 5.5 and Sonnet 5.5 bill their whole 1,000,000-token
-window at standard rates, so their cap is 1,000,000. Claude Haiku 5.5 is capped at
-100,000 and the OpenAI critics at 272,000. Higher rates for longer prompts are not
-modeled, so a prompt above its cap leaves the estimate unknown. The Claude authors and the OpenAI critics also carry cache-read and
+window at standard rates, so their cap is 1,000,000. Claude Haiku 5.5 bills a prompt
+above 100,000 tokens at a higher rate, which DraftLoop applies to every Haiku call:
+an upper bound for a shorter prompt, with a 1,000,000 cap. The OpenAI critics are
+capped at 272,000, and a prompt above its cap leaves the estimate unknown. The Claude authors and the OpenAI critics also carry cache-read and
 cache-write rates, since both providers report cache writes. Tool, batch,
 regional, and subscription pricing are excluded. Haiku 5.5 sends no
 sampling parameters, thinking budget, or assistant prefill, which the model
