@@ -337,6 +337,35 @@ describe("provider application planner", () => {
     expect(JSON.stringify(requests[0]?.input)).toContain("applicationPlan");
   });
 
+  it("brings a long or over-full critic review within the schema's limits (#1983)", async () => {
+    const long = `${"Lead with the platform migration and its measured outcome ".repeat(6)}end`;
+    const points = [
+      { text: long, themeRank: 1 },
+      { text: "Rank two is a gap.", themeRank: 9 },
+      { text: "   ", themeRank: null },
+      ...Array.from({ length: 5 }, (_, index) => ({ text: `Point ${index}`, themeRank: null })),
+    ];
+    const { planner, context } = plannerWith([{ verdict: "revise", points }]);
+    const execution = await planner.review({ ...request(context), plan });
+    const reviewed = execution.output.points;
+    expect(reviewed).toHaveLength(5);
+    expect(reviewed[0]?.text.length).toBeLessThanOrEqual(240);
+    expect(reviewed[0]?.text.endsWith("…")).toBe(true);
+    expect(reviewed[1]).toEqual({ text: "Rank two is a gap.", themeRank: null });
+    expect(reviewed.some(({ text }) => text.trim() === "")).toBe(false);
+  });
+
+  it("names the schema issue when a review still fails, without its text", async () => {
+    const { planner, context } = plannerWith([{ verdict: "revise", points: [] }]);
+    const rejected = await planner
+      .review({ ...request(context), plan })
+      .catch((error: unknown) => error);
+    expect(rejected).toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "custom", path: "points" }],
+    });
+  });
+
   it("plans only for runs recorded on an author prompt that states the plan", () => {
     const of = (version: string) =>
       ({ modelConfiguration: { author: { promptTemplateVersion: version } } }) as never;
