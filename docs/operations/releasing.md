@@ -130,6 +130,11 @@ enabled. Its default mixed route is Anthropic API-key mode with OpenAI
 user-session mode; the provider-specific environment variables below remain
 available as explicit local overrides.
 
+The synthetic candidate is too thin to pass the application-readiness checks,
+so the live gate approves past them with a recorded synthetic rationale, as a
+person would, and its sanitized report marks `readinessOverridden`. The gate
+proves the provider, approval, and export path; it does not judge CV quality.
+
 Inspect the exact bounded request and current registry-derived plan without
 creating provider adapters or resolving credentials:
 

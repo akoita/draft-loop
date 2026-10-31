@@ -63,6 +63,8 @@ export interface LiveProviderE2EReport {
     readonly hasExperience: boolean;
     readonly hasEvidenceLinkedClaims: boolean;
     readonly approved: boolean;
+    /** True when the gate approved past failing application-readiness checks. */
+    readonly readinessOverridden: boolean;
     readonly exported: boolean;
     readonly exportExists: boolean;
   };
@@ -105,6 +107,15 @@ async function invoke<Value>(
     throw new LiveProviderE2EError(`Live provider E2E ${step} failed (${result.error.code}).`);
   }
   return result.value as Value;
+}
+
+const syntheticReadinessOverride =
+  "Synthetic release gate: verifies the provider, approval, and export path, not CV quality.";
+
+function readinessBlockerSummary(state: ReviewStateResult): string {
+  const blockers = state.approvalReadiness?.blockers ?? [];
+  if (blockers.length === 0) return "";
+  return ` (readiness blockers: ${[...new Set(blockers.map((blocker) => blocker.code))].join(", ")})`;
 }
 
 function requireCondition(condition: boolean, message: string): asserts condition {
@@ -242,6 +253,7 @@ function createReport(
       hasExperience: hasLiveE2EArtifactSection(state.artifact.sections, "Experience"),
       hasEvidenceLinkedClaims: evidenceLinkedClaims.length > 0,
       approved: state.approval === "approved",
+      readinessOverridden: state.approvalReadiness?.overridden === true,
       exported: state.state === "exported",
       exportExists,
     },
@@ -457,7 +469,7 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
     "projected findings did not receive the synthetic gate decisions",
   );
 
-  const approved = await invoke<ReviewStateResult>(
+  let approved = await invoke<ReviewStateResult>(
     options.host,
     {
       type: "review.dispatch",
@@ -465,9 +477,26 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
     },
     "final approval",
   );
+  // The synthetic candidate is too thin to pass the application-readiness
+  // checks. The gate proves the provider, approval, and export path, so it
+  // approves past those checks the way a person would: with a recorded reason.
+  if (approved.approval !== "approved" && approved.approvalReadiness?.applicationReady === false) {
+    approved = await invoke<ReviewStateResult>(
+      options.host,
+      {
+        type: "review.dispatch",
+        input: {
+          workspaceId,
+          runId: completed.runId,
+          action: { type: "approve", readinessOverrideRationale: syntheticReadinessOverride },
+        },
+      },
+      "final approval with readiness override",
+    );
+  }
   requireCondition(
     approved.state === "approved" && approved.approval === "approved",
-    "approval was not persisted",
+    `approval was not persisted${readinessBlockerSummary(approved)}`,
   );
 
   const exported = await invoke<ReviewStateResult>(
