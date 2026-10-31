@@ -151,6 +151,7 @@ import {
   assertModelCompaniesMatch,
   assertWorkspaceModelPairing,
 } from "./workspace-model-pairing.js";
+import { configureWorkspaceRunBudget } from "./workspace-run-budget.js";
 import { workspaceSettings } from "./workspace-settings.js";
 import { managedWritingPolicy, writingPolicyFromCommand } from "./writing-policy-file.js";
 
@@ -2132,32 +2133,31 @@ export function createLocalApplicationDriver(
       ? {}
       : { localClaudeCategoryCaptureParent: options.localClaudeCategoryCaptureParent }),
   };
+  const settingDeps = { readWorkspace, saveWorkspaceConfig };
+  /** The descriptor of a workspace after a change to its configuration. */
+  const described = async (root: string, config: Promise<WorkspaceConfig>) =>
+    workspaceDescriptor(resolve(root), await config);
   const driver: ApplicationDriver = {
-    initialize: async (command, io) =>
-      await workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
-    readWorkspace: async (root) => workspaceDescriptor(resolve(root), await readWorkspace(root)),
+    initialize: async (command, io) => described(command.root, initWorkspace(command, io)),
+    readWorkspace: async (root) => described(root, readWorkspace(root)),
     reconfigureModels: async (command, io) =>
-      await workspaceDescriptor(
-        resolve(command.root),
-        await reconfigureWorkspaceModels(command.root, command, io),
+      described(command.root, reconfigureWorkspaceModels(command.root, command, io)),
+    configureAutopilot: async ({ root, ...command }, io) =>
+      described(
+        root,
+        configureWorkspaceAutopilot(resolve(root), { root, ...command }, settingDeps, io),
       ),
-    configureAutopilot: async (command, io) => {
-      const root = resolve(command.root);
-      const deps = { readWorkspace, saveWorkspaceConfig };
-      return workspaceDescriptor(root, await configureWorkspaceAutopilot(root, command, deps, io));
-    },
+    configureRunBudget: async ({ root, ...command }, io) =>
+      described(
+        root,
+        configureWorkspaceRunBudget(resolve(root), { root, ...command }, settingDeps, io),
+      ),
     configureWritingPolicy: async (command, io) =>
-      await workspaceDescriptor(
-        resolve(command.root),
-        await configureWorkspaceWritingPolicy(command, io),
-      ),
+      described(command.root, configureWorkspaceWritingPolicy(command, io)),
     getWritingPolicy: async (command) => getWorkspaceWritingPolicy(command),
     listWritingPolicyVersions: async (command) => listWorkspaceWritingPolicyVersions(command),
     configureKnowledgeSelection: async (command, io) =>
-      workspaceDescriptor(
-        resolve(command.root),
-        await configureWorkspaceKnowledgeSelection(command, io),
-      ),
+      described(command.root, configureWorkspaceKnowledgeSelection(command, io)),
     begin: async (command, io) =>
       beginRun(command.root, projectStartRunOptions(command, runProviderOptions), io),
     start: async (command, io) =>

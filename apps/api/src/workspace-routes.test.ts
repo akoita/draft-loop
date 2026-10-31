@@ -112,6 +112,8 @@ describe("workspace setup", () => {
       language: "fr",
       requiredSections: ["Experience"],
       maxRounds: 2,
+      maxCostUsd: 1.5,
+      maxDurationMs: 600_000,
       author: { company: "anthropic", model: "claude-sonnet-5-5" },
       critic: { company: "openai", model: "gpt-6-luna" },
       fixtureMode: false,
@@ -174,6 +176,61 @@ describe("workspace setup", () => {
     expect(configureAutopilot).toHaveBeenCalledWith({ root, enabled: true }, expect.anything());
     expect(response.json()).toMatchObject({ id: "workspace-1", autopilot: true });
     expect(refused.statusCode).toBe(400);
+  });
+
+  it("replaces a workspace's run budget within the ceiling (#1993)", async () => {
+    const configureRunBudget = vi.fn(async (command: { maxCostUsd?: number }) => ({
+      ...descriptor,
+      maxRounds: 2,
+      ...(command.maxCostUsd === undefined ? {} : { maxCostUsd: command.maxCostUsd }),
+    }));
+    await build({ readWorkspace: async () => descriptor, configureRunBudget });
+
+    const lowered = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/budget",
+      headers: { authorization },
+      payload: { maxCostUsd: 2 },
+    });
+    const aboveCeiling = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/budget",
+      headers: { authorization },
+      payload: { maxCostUsd: 4 },
+    });
+    const malformed = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/budget",
+      headers: { authorization },
+      payload: { maxRounds: 0 },
+    });
+
+    expect(lowered.statusCode).toBe(200);
+    // A limit left out takes the ceiling's value, so the stored budget always fits a run.
+    expect(configureRunBudget).toHaveBeenCalledWith(
+      { root, maxRounds: 2, maxCostUsd: 2, maxDurationMs: 1_800_000 },
+      expect.anything(),
+    );
+    expect(lowered.json()).toMatchObject({ id: "workspace-1", maxRounds: 2, maxCostUsd: 2 });
+    expect(aboveCeiling.statusCode).toBe(422);
+    expect(aboveCeiling.json()).toMatchObject({ error: { code: "budget_above_ceiling" } });
+    expect(malformed.statusCode).toBe(400);
+    expect(configureRunBudget).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers 404 when setting the budget of a workspace that does not exist", async () => {
+    const configureRunBudget = vi.fn();
+    await build({ readWorkspace: missing, configureRunBudget });
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/budget",
+      headers: { authorization },
+      payload: { maxCostUsd: 2 },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(configureRunBudget).not.toHaveBeenCalled();
   });
 
   it("answers 404 when turning autopilot on for a workspace that does not exist", async () => {

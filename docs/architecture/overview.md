@@ -533,6 +533,12 @@ The owner sets up a hosted workspace through the API before any run:
   a run revises through the critic's blocking findings up to its round limit.
   `PUT /v1/workspaces/:id/autopilot` turns it on or off from the next run
   action, and the web screen's **Autopilot** checkbox calls it.
+- `PUT /v1/workspaces/:id/budget` replaces the round, cost and duration
+  limits the workspace's next runs get, checked against the deployment's
+  ceiling like creation; a limit left out falls back to the ceiling. It is
+  the way out when the ceiling drops below a budget stored at creation, which
+  would otherwise refuse every new run with `budget_above_ceiling` (#1993).
+  The workspace view shows the stored cost and duration limits.
 - `GET /v1/model-catalog` lists the catalog's model profiles the gateway
   serves, with their tier, roles, list prices, default reasoning level and the
   levels a run may choose, the presets whose author and critic it both serves,

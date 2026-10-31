@@ -144,6 +144,14 @@ export interface ConfigureAutopilotCommand {
   readonly enabled: boolean;
 }
 
+/** The run budget a workspace gives its next runs; a limit left out falls back to the ceiling. */
+export interface ConfigureRunBudgetCommand {
+  readonly root: string;
+  readonly maxRounds: number;
+  readonly maxCostUsd?: number;
+  readonly maxDurationMs?: number;
+}
+
 export interface ConfigureWritingPolicyCommand {
   readonly root: string;
   /** Local Markdown or text file deliberately selected by the candidate. */
@@ -479,6 +487,11 @@ export interface ApplicationDriver {
     command: ConfigureAutopilotCommand,
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
+  /** Replace the run budget; applies from the next run. Recorded runs keep theirs (#1993). */
+  readonly configureRunBudget?: (
+    command: ConfigureRunBudgetCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
   /** Import and activate an explicitly selected local writing-policy file. */
   readonly configureWritingPolicy: (
     command: ConfigureWritingPolicyCommand,
@@ -703,6 +716,15 @@ export function createApplicationService(driver: ApplicationDriver): Application
         throw new Error("This application driver cannot configure autopilot.");
       }
       return driver.configureAutopilot(
+        { ...command, root: requireRoot(command.root) },
+        normalizeIo(io),
+      );
+    },
+    configureRunBudget: async (command, io) => {
+      if (driver.configureRunBudget === undefined) {
+        throw new Error("This application driver cannot configure the run budget.");
+      }
+      return driver.configureRunBudget(
         { ...command, root: requireRoot(command.root) },
         normalizeIo(io),
       );

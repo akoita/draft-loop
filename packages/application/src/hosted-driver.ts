@@ -36,6 +36,7 @@ export const hostedDriverMethods = [
   "readWorkspace",
   "reconfigureModels",
   "configureAutopilot",
+  "configureRunBudget",
   "configureWritingPolicy",
   "getWritingPolicy",
   "listWritingPolicyVersions",

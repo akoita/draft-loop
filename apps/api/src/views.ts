@@ -25,6 +25,15 @@ export const workspaceViewSchema = z
     language: z.string(),
     requiredSections: z.array(z.string()),
     maxRounds: z.number().int(),
+    maxCostUsd: z
+      .number()
+      .optional()
+      .describe("The run cost limit in US dollars; absent when the deployment's ceiling applies."),
+    maxDurationMs: z
+      .number()
+      .int()
+      .optional()
+      .describe("The run duration limit; absent when the deployment's ceiling applies."),
     author: modelSchema,
     critic: modelSchema,
     fixtureMode: z.boolean(),
@@ -49,6 +58,8 @@ export function workspaceView(
     language: descriptor.language,
     requiredSections: [...descriptor.requiredSections],
     maxRounds: descriptor.maxRounds,
+    ...(descriptor.maxCostUsd === undefined ? {} : { maxCostUsd: descriptor.maxCostUsd }),
+    ...(descriptor.maxDurationMs === undefined ? {} : { maxDurationMs: descriptor.maxDurationMs }),
     author: { company: descriptor.author.company, model: descriptor.author.model },
     critic: { company: descriptor.critic.company, model: descriptor.critic.model },
     fixtureMode: descriptor.fixtureMode,
