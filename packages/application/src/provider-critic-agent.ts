@@ -12,8 +12,13 @@ import {
   invalidCritiqueError,
   parseCritique,
 } from "./critic-critique-contract.js";
+import {
+  criticCallInstructions,
+  criticRunOutputSchemas,
+  criticRunPrefix,
+  criticStableInputMembers,
+} from "./critic-run-prefix.js";
 import * as providerArtifactInput from "./provider-artifact-input.js";
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
 import { criticOutputBudget } from "./run-model-profiles.js";
 
@@ -34,9 +39,6 @@ export interface ProviderCriticAgentDependencies {
   /** Build the user-facing error raised when no candidate evidence was retrieved. */
   readonly userError: (message: string) => Error;
 }
-
-/** The leading critic input members every critique of a run repeats: context to achievement plan. */
-const criticStableInputMembers = 3;
 
 /** The provider-backed critic: independent review of one draft against the retrieved evidence. */
 export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies): CriticAgent {
@@ -68,30 +70,32 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       const judgement = judgementFor(coverageJudgementRequests);
       const judgesCoverage = judgement.instructionsVersion !== undefined;
       const basePrompt = criticPrompt.create(promptVersion);
-      const achievementPlan = createRequirementAchievementPlan(
-        context.requirements,
+      const prefix = criticRunPrefix(
+        context,
+        deps.promptContext,
         retrievedEvidence,
+        applicationPlan !== undefined,
       );
-      if (achievementPlan.status === "no-evidence") {
+      if (prefix.input.achievementPlan.status === "no-evidence") {
         throw deps.userError("Critique requires retrieved candidate evidence.");
       }
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
         systemPrompt: judgement.systemPrompt(basePrompt),
-        // Every critique of a run sends the same instructions, output format and leading input,
-        // so a provider's prompt cache written by the first critique is read by the later ones.
-        // Coverage-judgement instructions vary by round, so they follow the cached prefix.
+        // Every critic call of a run, the plan review included, sends the same instructions,
+        // output format and leading input, so a provider's prompt cache written by the first call
+        // is read by the later ones. Coverage-judgement and candidate-direction instructions vary
+        // by round, so they follow the cached prefix (#1986).
         promptCache: {
-          systemPrompt: judgementFor(undefined).systemPrompt(basePrompt),
-          callInstructions: judgesCoverage ? criticPrompt.coverageJudgementInstructions : "",
+          systemPrompt: prefix.systemPrompt,
+          callInstructions: criticCallInstructions(judgesCoverage, candidateDirection),
           stableInputMembers: criticStableInputMembers,
+          outputSchemas: criticRunOutputSchemas(),
         },
         input: JSON.parse(
           JSON.stringify({
-            context: deps.promptContext,
-            retrievedEvidence,
-            achievementPlan,
+            ...prefix.input,
             runId,
             round,
             executionId,

@@ -121,7 +121,7 @@ describe("author run prefix", () => {
     }
   });
 
-  it("leaves the critic's plan review without the author's prefix", async () => {
+  it("gives the critic's plan review the critiques' prefix, not the author's", async () => {
     const requests: ModelRequest<JsonObject>[] = [];
     const planner = createProviderApplicationPlanner({
       promptContext: context,
@@ -141,10 +141,12 @@ describe("author run prefix", () => {
         plan,
       }),
     ).rejects.toThrow("recorded");
-    expect(requests[0]?.promptCache).toBeUndefined();
-    expect(Object.keys(requests[0]?.input ?? {}).slice(0, 2)).toEqual([
+    expect(requests[0]?.promptCache?.systemPrompt).toContain("independent DraftLoop critic");
+    expect(requests[0]?.promptCache?.systemPrompt).not.toContain("DraftLoop CV author");
+    expect(Object.keys(requests[0]?.input ?? {}).slice(0, 3)).toEqual([
       "context",
       "retrievedEvidence",
+      "achievementPlan",
     ]);
   });
 });

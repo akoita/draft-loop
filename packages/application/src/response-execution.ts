@@ -16,6 +16,13 @@ export function responseExecution<T>(
     inputTokens: response.usage.inputTokens,
     outputTokens: response.usage.outputTokens,
     totalTokens: response.usage.totalTokens,
+    // Cache reads and writes let a run's record show what its calls read back (#1986).
+    ...(response.usage.cachedInputTokens === undefined
+      ? {}
+      : { cachedInputTokens: response.usage.cachedInputTokens }),
+    ...(response.usage.cacheWriteInputTokens === undefined
+      ? {}
+      : { cacheWriteInputTokens: response.usage.cacheWriteInputTokens }),
     estimatedUsd: response.cost.estimatedUsd,
     completedAt: timestamp(),
   };

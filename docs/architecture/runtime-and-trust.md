@@ -304,20 +304,25 @@ uncached input, and a later call reads it only if it repeats that whole prompt.
 The OpenAI adapter therefore turns it off and caches only through an explicit
 breakpoint, keyed on the context snapshot.
 
-- **Critiques** carry that breakpoint, or the Claude layout on a Claude critic. Every
-  critique of a run sends the same system instructions, output format and
-  leading input members (context, retrieved evidence and achievement plan), so
-  the first critique writes the prefix and later rounds read it.
-- **Coverage-judgement instructions** vary by round, so they follow the
-  breakpoint. Every critique asks for the format with coverage judgements, and
-  the empty list of a critique that judged none is dropped.
-- **The plan review** caches nothing.
+- **Critic calls** carry that breakpoint, or the Claude layout on a Claude
+  critic. The plan review and every critique of a run send the same critic
+  instructions, output format and leading input members (context, retrieved
+  evidence and achievement plan), so the plan review writes the prefix and
+  every critique of the run reads it. The review cites evidence by the ids the
+  critiques use, not by the author's short aliases, so the prefixes match.
+- **Coverage-judgement and candidate-direction instructions** vary by round,
+  so they follow the breakpoint. Every critic call asks for one format with a
+  member per critic output (plan review and critique with coverage
+  judgements); the adapter hands back the member the call named, and the
+  empty coverage list of a critique that judged none is dropped.
 
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
 cached and cache-write counts, and the estimated cost prices each at its own
 rate: the catalog records Claude's cache-read and one-hour cache-write rates.
-Run history persists only the totals.
+Run history records the cache-read and cache-write counts beside each
+execution's totals, and on each call of the plan step, so a parity run can
+report what its calls read back instead of inferring it from cost.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not

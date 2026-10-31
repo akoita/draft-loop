@@ -8,6 +8,7 @@ import {
   isApplicationPlanComplete,
 } from "@draft-loop/schemas/application-plan";
 
+import { cacheTokens } from "./cache-tokens.js";
 import { remainingCostField } from "./call-cost-budget.js";
 import type { AgentExecution, RunSnapshot } from "./index.js";
 
@@ -98,6 +99,7 @@ function stepRecord(
     ...(execution.route === undefined ? {} : { route: execution.route }),
     inputTokens: execution.inputTokens,
     outputTokens: execution.outputTokens,
+    ...cacheTokens(execution),
     estimatedUsd: execution.estimatedUsd,
     completedAt: execution.completedAt,
     ...(execution.rejectedDiagnostics === undefined || execution.rejectedDiagnostics.length === 0

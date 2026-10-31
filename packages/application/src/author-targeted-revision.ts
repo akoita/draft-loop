@@ -1,6 +1,6 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AppliedRevisionEdit } from "@draft-loop/orchestrator";
-import type { JsonObject, ModelResponse } from "@draft-loop/providers";
+import { addBilledUsage, type JsonObject, type ModelResponse } from "@draft-loop/providers";
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 import { buildGroundedAuthorArtifact } from "./author-output.js";
@@ -64,14 +64,13 @@ export function withAddedUsage(
   earlier: ModelResponse<JsonObject> | undefined,
 ): ModelResponse<JsonObject> {
   if (earlier === undefined) return response;
+  const { usage } = addBilledUsage(
+    { usage: earlier.usage, cost: earlier.cost },
+    { usage: response.usage, cost: response.cost },
+  );
   return {
     ...response,
-    usage: {
-      ...response.usage,
-      inputTokens: response.usage.inputTokens + earlier.usage.inputTokens,
-      outputTokens: response.usage.outputTokens + earlier.usage.outputTokens,
-      totalTokens: response.usage.totalTokens + earlier.usage.totalTokens,
-    },
+    usage,
     cost: {
       estimatedUsd:
         response.cost.estimatedUsd === null || earlier.cost.estimatedUsd === null
