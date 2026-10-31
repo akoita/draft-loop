@@ -105,6 +105,7 @@ function liveState(): ReviewStateResult {
 function createStubHost(
   paths: StubPaths,
   failWithProviderError = false,
+  readinessBlocked = false,
 ): {
   readonly host: NativeHost;
   readonly commands: BridgeCommand[];
@@ -212,7 +213,39 @@ function createStubHost(
             };
             break;
           case "approve":
-            state = { ...state, state: "approved", approval: "approved" };
+            if (readinessBlocked && action.readinessOverrideRationale === undefined) {
+              state = {
+                ...state,
+                approvalReadiness: {
+                  artifactId: state.artifact.id,
+                  artifactVersion: state.artifact.version,
+                  applicationReady: false,
+                  blockers: [
+                    {
+                      code: "unmet-rubric-threshold",
+                      dimension: "evidence",
+                      score: 2,
+                      threshold: 3,
+                    },
+                    {
+                      code: "unmet-rubric-threshold",
+                      dimension: "relevance",
+                      score: 2,
+                      threshold: 3,
+                    },
+                  ],
+                },
+              };
+              break;
+            }
+            state = {
+              ...state,
+              state: "approved",
+              approval: "approved",
+              ...(state.approvalReadiness
+                ? { approvalReadiness: { ...state.approvalReadiness, overridden: true as const } }
+                : {}),
+            };
             break;
           case "export":
             await writeFile(paths.export, "# Synthetic approved export\n", "utf8");
@@ -354,6 +387,83 @@ describe("live provider E2E runner", () => {
       ]);
     } finally {
       fetchSpy.mockRestore();
+      await rm(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it("approves past failing readiness checks with a recorded synthetic rationale", async () => {
+    const paths = await createPaths();
+    const { host, commands } = createStubHost(paths, false, true);
+    try {
+      await runLiveProviderE2E({
+        host,
+        workspaceRoot: paths.workspace,
+        jobPath: paths.job,
+        candidatePath: paths.candidate,
+        evidencePath: paths.report,
+        timeoutMs: 1_000,
+        pollIntervalMs: 1,
+      });
+
+      const approvals = commands.flatMap((command) =>
+        command.type === "review.dispatch" && command.input.action.type === "approve"
+          ? [command.input.action]
+          : [],
+      );
+      expect(approvals).toEqual([
+        { type: "approve" },
+        {
+          type: "approve",
+          readinessOverrideRationale: expect.stringContaining("Synthetic release gate"),
+        },
+      ]);
+      const report = JSON.parse(await readFile(paths.report, "utf8")) as {
+        readonly checks: Readonly<Record<string, boolean>>;
+      };
+      expect(report.checks.approved).toBe(true);
+      expect(report.checks.readinessOverridden).toBe(true);
+      expect(report.checks.exported).toBe(true);
+    } finally {
+      await rm(paths.root, { recursive: true, force: true });
+    }
+  });
+
+  it("names the readiness blockers when approval is still refused", async () => {
+    const paths = await createPaths();
+    const { host } = createStubHost(paths, false, true);
+    const refusingHost: NativeHost = {
+      ...host,
+      invoke: async (value) => {
+        const command = value as BridgeCommand;
+        if (
+          command.type === "review.dispatch" &&
+          command.input.action.type === "approve" &&
+          command.input.action.readinessOverrideRationale !== undefined
+        ) {
+          return host.invoke({
+            ...command,
+            input: { ...command.input, action: { type: "approve" } },
+          });
+        }
+        return host.invoke(value);
+      },
+    };
+    try {
+      const failure = await runLiveProviderE2E({
+        host: refusingHost,
+        workspaceRoot: paths.workspace,
+        jobPath: paths.job,
+        candidatePath: paths.candidate,
+        evidencePath: paths.report,
+        timeoutMs: 1_000,
+        pollIntervalMs: 1,
+      }).catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure instanceof Error ? failure.message : "").toBe(
+        "Live provider E2E approval was not persisted (readiness blockers: unmet-rubric-threshold).",
+      );
+      await expect(stat(paths.report)).rejects.toThrow();
+    } finally {
       await rm(paths.root, { recursive: true, force: true });
     }
   });
