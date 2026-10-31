@@ -63,6 +63,10 @@ later drafts are scored against the same list.
 | 2026-10-29 | F   | Standard pair (Claude Opus 5.5 author, GPT-6.1 Sol critic), otherwise as above       | 25 / 34 (74%) | 11 / 13 / 11 / 13                | 0     | About the reference length                   | Not recorded         |
 | 2026-10-29 | G   | As F, Standard pair                                                                 | 20 / 34 (59%) | 11 / 12 / 11 / 12                | 0     | About the reference length; passes every check | Not recorded       |
 | 2026-10-29 | H   | As F, Standard pair; the critic stopped on spent OpenAI credit                      | 24 / 40 (60%) | 10 / 15 / 11 / 15                | 0     | About the reference length                   | Not recorded         |
+| 2026-10-30 | F   | Anthropic-only Standard pair (Claude Opus 5.5 author, Claude Sonnet 5.5 critic), self-hosted stack, author prompt v16, critic v5 | 28 / 34 (82%) | 11 / 13 / 11 / 13                | 0     | About the reference length                   | Not recorded         |
+| 2026-10-30 | F   | Anthropic-only Balanced pair (Claude Sonnet 5.5 author, Claude Opus 5.5 critic), otherwise as above; the budget ended the run before round 2 | 24 / 34 (71%) | 11 / 13 / 11 / 13 | 0     | About the reference length                   | Not recorded         |
+| 2026-10-30 | F   | Claude Haiku 5.5 author and Claude Sonnet 5.5 critic, self-hosted stack, 1 round, US$2 limit | 9 / 34 (26%)  | 8 / 13 / 11 / 13                 | 0     | 495 words against 1,615                      | Not recorded         |
+| 2026-10-30 | G   | Anthropic-only Standard pair (Claude Opus 5.5 author, Claude Sonnet 5.5 critic v6), self-hosted stack, ready after round 1, US$4 limit | 19 / 34 (56%) | 11 / 12 / 11 / 12                | 0     | 1,931 words against 1,540; passes every check | Not recorded        |
 
 ### Baseline observations, reference A
 
@@ -170,3 +174,41 @@ an earlier version of the same career source, so recall may read high.
   I are scored again on both pairs after it. The exit bar is unchanged: three
   of four references at 85% recall or more, coverage at least the
   reference's, no leaks.
+
+### Observation, Anthropic-only pairs on F and G (2026-10-30, #1307)
+
+The OpenAI budget ran out on 2026-10-30, so the re-score after the quality
+sprint used the Anthropic-only presets (`standard-anthropic`,
+`balanced-anthropic`) and, as a cheaper probe, a Haiku 5.5 author. Scores
+are content-free; the drafts and verdicts are frozen in the private folder.
+
+- **The Opus author is the only one near the bar.** On F it recalled 82%
+  with coverage equal to the reference and no leaks, the best draft recorded
+  so far. On G it recalled 56% in one round and still passed every final
+  check with coverage equal to the reference. The misses on G concentrate in
+  one project's product and payments detail that the reference CV states.
+- **A cheaper author does not work.** The Haiku 5.5 draft recalled 26% in
+  495 words, below the reference on coverage, for US$1.45. The Sonnet 5.5
+  author with an Opus critic recalled 71% on F, but each Opus critique of the
+  full source cost US$1.3 to US$1.9, and the US$3 limit ended every Balanced
+  run before round 2.
+- **The first Anthropic-only batch lost three references to defects, not to
+  quality.** The Sonnet critic's plan reviews ran past the schema's length
+  and count limits and were rejected locally (#1983, fixed by #1984); the run
+  limit was checked only after each call, so a run could overshoot it by a
+  dollar (#1985, fixed by #1992); and the critique sent the whole source
+  twice (#1986, item 1 fixed by #1987). A Haiku run then failed at the plan
+  revision when the revised plan broke the plan's checks (fixed by #1994).
+- **Cost per call on G, Opus author and Sonnet critic, one round, US$3.59:**
+  plan US$1.41, plan review US$0.28, plan revision US$0.10, draft US$0.77,
+  critique US$1.02. The plan call carries the one-hour cache write of the
+  whole source, and the revision and draft read it; the critique wrote a
+  cache of its own that nothing read. The run is above the US$3 pricing
+  assumption (#1597).
+- **Stage decision:** recall, not safety or format, is what keeps the exit
+  (#1309) out of reach, and the Opus author is the only candidate for it.
+  Before another paid run: diagnose the G misses from the saved run data
+  (whether the plan's themes and cited evidence name the missed items, or the
+  draft left them out), and let the plan review write the critic's cache so
+  every critique reads it (#1986). Then one Standard run on G measures recall
+  and the US$3 gate together.
