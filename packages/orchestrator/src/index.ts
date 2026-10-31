@@ -108,6 +108,7 @@ import {
   buildApplicationReadinessStoppingDecision,
   readinessOverrideRationale,
 } from "./readiness.js";
+import { type RetrievedEvidenceRef, retrievedEvidenceRefs } from "./retrieved-evidence-refs.js";
 import {
   previousRoundCoverageAssessments,
   type RevisionRequirementCoverage,
@@ -148,6 +149,7 @@ export {
   normalizeFindingCode,
 } from "./finding-attribution.js";
 export { COVERAGE_LOST_CODE, lostCoverageFindings } from "./lost-coverage.js";
+export { type RetrievedEvidenceRef, retrievedEvidenceRefs } from "./retrieved-evidence-refs.js";
 export type { RevisionRequirementCoverage } from "./revision-coverage.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -311,6 +313,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly cacheWriteInputTokens?: number;
   readonly estimatedUsd: number | null;
   readonly completedAt: string;
+  /** The retrieved chunks the call was sent, by source and line range; absent without retrieval. */
+  readonly retrievedEvidence?: readonly RetrievedEvidenceRef[];
   readonly errorCode?: string;
   readonly attempt?: number;
   readonly maxAttempts?: number;
@@ -2044,6 +2048,7 @@ export function createOrchestrationEngine(
         ...cacheTokens(execution),
         estimatedUsd: execution.estimatedUsd,
         completedAt: execution.completedAt,
+        ...retrievedEvidenceRefs(retrievedEvidence),
         attempt,
         maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
         retryable: false,

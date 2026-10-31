@@ -324,6 +324,13 @@ Run history records the cache-read and cache-write counts beside each
 execution's totals, and on each call of the plan step, so a parity run can
 report what its calls read back instead of inferring it from cost.
 
+Each completed author and critic execution also records the retrieved evidence
+it was sent as content-free references (source id, line range, rank; never the
+text), so a recall miss can be traced to retrieval or to the author from the
+saved run alone. `evidenceUsage` in `packages/evaluations` compares a draft's
+claims with those references: chunks sent, chunks cited, uncited ranks, and
+claims outside the retrieved set.
+
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not
 integrated or outcome-validated merely because contracts and tests exist; the
