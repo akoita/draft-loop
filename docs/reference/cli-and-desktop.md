@@ -2167,6 +2167,13 @@ status, the basis (`matching wording`, `strict rule`, `semantic candidate (needs
 judgement)`, or `critic judgement`), the rationale, and the cited block ids.
 Requirement and block text is never printed.
 
+`evidence-usage [workspace] [--run-id <id>] [--json]` reads the saved run and
+prints, for each completed author or revision call that recorded the evidence
+it was sent, the chunks sent, the chunks a claim cites, the uncited ranks, and
+the claims outside the retrieved evidence or without evidence. It prints no
+content: counts, ranks and ids only. Runs recorded before the retrieved
+references were kept show no calls.
+
 ```text
 Requirement coverage (round 1):
   [covered] req-1 — critic judgement — The block shows production Kubernetes work.

@@ -191,6 +191,8 @@ pnpm --filter @draft-loop/cli start retrieval mode ./workspace [lexical|semantic
 When the critic judges requirement coverage, run output prints a
 `Coverage judgement:` summary and `status` lists each requirement's assessment;
 see [Requirement coverage in run output](docs/reference/cli-and-desktop.md#requirement-coverage-in-run-output).
+`evidence-usage` shows, for each author call of a saved run, how many retrieved
+chunks it was sent and how many its draft cites, as counts and ranks only.
 
 ## Technology and architecture
 
