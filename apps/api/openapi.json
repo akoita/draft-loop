@@ -718,13 +718,9 @@
                 "type": "string"
               },
               "reviewedAt": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "sources": {
@@ -1370,13 +1366,9 @@
             "description": "True for the original application while its workspace has no job text."
           },
           "archivedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "createdAt": {
@@ -1440,13 +1432,9 @@
             }
           },
           "chosenRunId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "jobSourceKind": {
@@ -1459,15 +1447,11 @@
             "description": "Where the job came from; a hosted application's pasted text is kept with it."
           },
           "suggestedName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "A name read from the newest brief's role and employer, until one is chosen."
+            "description": "A name read from the newest brief's role and employer, until one is chosen.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "exportCount": {
             "type": "integer",
@@ -1676,13 +1660,9 @@
                     "type": "boolean"
                   },
                   "usageLimitResetsAt": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "failedCall": {
@@ -1702,15 +1682,11 @@
                         "type": "string"
                       },
                       "route": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "The endpoint the call went to, such as `vertex-ai`."
+                        "description": "The endpoint the call went to, such as `vertex-ai`.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "status": {
                         "anyOf": [
@@ -1726,35 +1702,23 @@
                         "description": "The HTTP status the provider answered with."
                       },
                       "providerErrorType": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
+                        "type": [
+                          "string",
+                          "null"
                         ]
                       },
                       "providerErrorCode": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
+                        "type": [
+                          "string",
+                          "null"
                         ]
                       },
                       "rateLimit": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens."
+                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "retryAfterSeconds": {
                         "anyOf": [
@@ -1886,25 +1850,17 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The approved job page, only for a job added by address."
+            "description": "The approved job page, only for a job added by address.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1933,13 +1889,9 @@
                   "type": "string"
                 },
                 "reviewedAt": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
+                  "type": [
+                    "string",
+                    "null"
                   ]
                 }
               },
@@ -2231,13 +2183,9 @@
                                     ]
                                   },
                                   "knowledgeBaseArchivedAt": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
+                                    "type": [
+                                      "string",
+                                      "null"
                                     ]
                                   },
                                   "versionId": {
@@ -2256,13 +2204,9 @@
                                     "type": "boolean"
                                   },
                                   "originBoundAt": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
+                                    "type": [
+                                      "string",
+                                      "null"
                                     ]
                                   },
                                   "observation": {
@@ -2299,13 +2243,9 @@
                                             ]
                                           },
                                           "lastRefreshedAt": {
-                                            "anyOf": [
-                                              {
-                                                "type": "string"
-                                              },
-                                              {
-                                                "type": "null"
-                                              }
+                                            "type": [
+                                              "string",
+                                              "null"
                                             ]
                                           },
                                           "stale": {
@@ -2352,13 +2292,9 @@
                                     ]
                                   },
                                   "provenanceFetchedAt": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
+                                    "type": [
+                                      "string",
+                                      "null"
                                     ]
                                   },
                                   "directory": {
@@ -3148,26 +3084,18 @@
             "description": "What a member needs of the plan; a null limit is unlimited."
           },
           "periodStart": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The UTC date the credit period began, YYYY-MM-DD."
+            "description": "The UTC date the credit period began, YYYY-MM-DD.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "periodEnd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The UTC date the period ends, exclusive."
+            "description": "The UTC date the period ends, exclusive.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "unlimited": {
             "type": "boolean",
@@ -3456,13 +3384,9 @@
             "type": "string"
           },
           "archivedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           }
         },
@@ -3607,23 +3531,15 @@
                 "type": "number"
               },
               "cacheReadUsdPerMillion": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "number",
+                  "null"
                 ]
               },
               "cacheWriteUsdPerMillion": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "number",
+                  "null"
                 ]
               },
               "maxInputTokens": {
@@ -3767,7 +3683,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -3808,7 +3724,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -3820,7 +3736,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -3832,7 +3748,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -3898,25 +3814,17 @@
         "type": "object",
         "properties": {
           "periodStart": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "periodEnd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Exclusive."
+            "description": "Exclusive.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "allowance": {
             "type": "integer",
@@ -3971,7 +3879,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -4012,7 +3920,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -4024,7 +3932,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -4036,7 +3944,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -4156,7 +4064,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -4197,7 +4105,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -4209,7 +4117,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -4221,7 +4129,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -4842,13 +4750,9 @@
             "description": "What the last approval attempt found; approving past blockers needs a rationale."
           },
           "candidateDirection": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           }
         },
@@ -4970,13 +4874,9 @@
             "description": "The rule list's version; 0 before any rule is saved."
           },
           "createdAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "rules": {
@@ -5003,15 +4903,11 @@
             "type": "string"
           },
           "route": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Null for calls recorded before routes were."
+            "description": "Null for calls recorded before routes were.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "calls": {
             "type": "integer",
@@ -5164,15 +5060,11 @@
             "type": "string"
           },
           "priorChecksum": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The version this one replaced, if any."
+            "description": "The version this one replaced, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -5196,15 +5088,11 @@
             "type": "string"
           },
           "priorChecksum": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The version this one replaced, if any."
+            "description": "The version this one replaced, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "content": {
             "type": "string",
@@ -5992,13 +5880,9 @@
                 "type": "string"
               },
               "reviewedAt": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "sources": {
@@ -6633,13 +6517,9 @@
             "description": "True for the original application while its workspace has no job text."
           },
           "archivedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "createdAt": {
@@ -6705,13 +6585,9 @@
             }
           },
           "chosenRunId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "jobSourceKind": {
@@ -6724,15 +6600,11 @@
             "description": "Where the job came from; a hosted application's pasted text is kept with it."
           },
           "suggestedName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "A name read from the newest brief's role and employer, until one is chosen."
+            "description": "A name read from the newest brief's role and employer, until one is chosen.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "exportCount": {
             "type": "integer",
@@ -6947,13 +6819,9 @@
                     "type": "boolean"
                   },
                   "usageLimitResetsAt": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "failedCall": {
@@ -6973,15 +6841,11 @@
                         "type": "string"
                       },
                       "route": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "The endpoint the call went to, such as `vertex-ai`."
+                        "description": "The endpoint the call went to, such as `vertex-ai`.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "status": {
                         "anyOf": [
@@ -6997,35 +6861,23 @@
                         "description": "The HTTP status the provider answered with."
                       },
                       "providerErrorType": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
+                        "type": [
+                          "string",
+                          "null"
                         ]
                       },
                       "providerErrorCode": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
+                        "type": [
+                          "string",
+                          "null"
                         ]
                       },
                       "rateLimit": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens."
+                        "description": "On a 429, the limit that ran out: requests, tokens, input or output tokens.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "retryAfterSeconds": {
                         "anyOf": [
@@ -7162,25 +7014,17 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The approved job page, only for a job added by address."
+            "description": "The approved job page, only for a job added by address.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -7210,13 +7054,9 @@
                   "type": "string"
                 },
                 "reviewedAt": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
+                  "type": [
+                    "string",
+                    "null"
                   ]
                 }
               },
@@ -7766,26 +7606,18 @@
             "description": "What a member needs of the plan; a null limit is unlimited."
           },
           "periodStart": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The UTC date the credit period began, YYYY-MM-DD."
+            "description": "The UTC date the credit period began, YYYY-MM-DD.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "periodEnd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The UTC date the period ends, exclusive."
+            "description": "The UTC date the period ends, exclusive.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "unlimited": {
             "type": "boolean",
@@ -8080,13 +7912,9 @@
             "type": "string"
           },
           "archivedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           }
         },
@@ -8233,23 +8061,15 @@
                 "type": "number"
               },
               "cacheReadUsdPerMillion": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "number",
+                  "null"
                 ]
               },
               "cacheWriteUsdPerMillion": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "number",
+                  "null"
                 ]
               },
               "maxInputTokens": {
@@ -8399,7 +8219,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8440,7 +8260,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8452,7 +8272,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8464,7 +8284,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8531,25 +8351,17 @@
         "type": "object",
         "properties": {
           "periodStart": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "periodEnd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Exclusive."
+            "description": "Exclusive.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "allowance": {
             "type": "integer",
@@ -8605,7 +8417,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8646,7 +8458,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8658,7 +8470,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8670,7 +8482,7 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": -9007199254740991,
+                    "minimum": 0,
                     "maximum": 9007199254740991
                   },
                   {
@@ -8793,7 +8605,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -8834,7 +8646,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -8846,7 +8658,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -8858,7 +8670,7 @@
                     "anyOf": [
                       {
                         "type": "integer",
-                        "minimum": -9007199254740991,
+                        "minimum": 0,
                         "maximum": 9007199254740991
                       },
                       {
@@ -9500,13 +9312,9 @@
             "description": "What the last approval attempt found; approving past blockers needs a rationale."
           },
           "candidateDirection": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           }
         },
@@ -9630,13 +9438,9 @@
             "description": "The rule list's version; 0 before any rule is saved."
           },
           "createdAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "string",
+              "null"
             ]
           },
           "rules": {
@@ -9664,15 +9468,11 @@
             "type": "string"
           },
           "route": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Null for calls recorded before routes were."
+            "description": "Null for calls recorded before routes were.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "calls": {
             "type": "integer",
@@ -9828,15 +9628,11 @@
             "type": "string"
           },
           "priorChecksum": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The version this one replaced, if any."
+            "description": "The version this one replaced, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -9861,15 +9657,11 @@
             "type": "string"
           },
           "priorChecksum": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The version this one replaced, if any."
+            "description": "The version this one replaced, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "content": {
             "type": "string",
@@ -11213,7 +11005,7 @@
                             "capturedAt": {
                               "type": "string",
                               "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                             },
                             "url": {
                               "type": "string",
@@ -11260,7 +11052,7 @@
                             "capturedAt": {
                               "type": "string",
                               "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                             },
                             "content": {
                               "type": "string",
@@ -11298,7 +11090,7 @@
                             "capturedAt": {
                               "type": "string",
                               "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                             },
                             "content": {
                               "type": "string",
@@ -16578,7 +16370,7 @@
                         "anyOf": [
                           {
                             "type": "integer",
-                            "minimum": -9007199254740991,
+                            "minimum": 0,
                             "maximum": 9007199254740991
                           },
                           {
@@ -16619,7 +16411,7 @@
                         "anyOf": [
                           {
                             "type": "integer",
-                            "minimum": -9007199254740991,
+                            "minimum": 0,
                             "maximum": 9007199254740991
                           },
                           {
@@ -16631,7 +16423,7 @@
                         "anyOf": [
                           {
                             "type": "integer",
-                            "minimum": -9007199254740991,
+                            "minimum": 0,
                             "maximum": 9007199254740991
                           },
                           {
@@ -16643,7 +16435,7 @@
                         "anyOf": [
                           {
                             "type": "integer",
-                            "minimum": -9007199254740991,
+                            "minimum": 0,
                             "maximum": 9007199254740991
                           },
                           {

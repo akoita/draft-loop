@@ -34,11 +34,11 @@
     "@fastify/static": "10.1.6",
     "@fastify/swagger": "9.9.0",
     "@google-cloud/storage": "8.3.0",
-    "fastify": "5.12.5",
+    "fastify": "5.12.7",
     "fastify-type-provider-zod": "7.0.0",
     "jose": "6.2.12",
     "tsx": "4.23.12",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "openapi-types": "12.1.3"
