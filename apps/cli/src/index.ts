@@ -20,6 +20,7 @@ import {
   sourceEvidenceKindListings,
 } from "./evidence-kind-commands.js";
 import { registerEvidenceModeCommands } from "./evidence-mode-commands.js";
+import { evidenceUsageLines } from "./evidence-usage-lines.js";
 import { independentReviewLines } from "./independent-review.js";
 import {
   authorEffortHelp,
@@ -1769,6 +1770,30 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       const readRunPolicy = requireWritingPolicyApi(service.readRunWritingPolicy, "run reads");
       writeRunWritingPolicy(io, await readRunPolicy(statusCommand));
       await writeIndependentReview(statusCommand);
+    });
+
+  command
+    .command("evidence-usage")
+    .description(
+      "Show which retrieved evidence each author call cited, as counts and ranks; prints no content",
+    )
+    .argument("[workspace]", "workspace directory", ".")
+    .option("--run-id <id>", "run id to inspect (default: the workspace's latest run)")
+    .option("--json", "print machine-readable JSON")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const read = service.readRunEvidenceUsage;
+      if (read === undefined) {
+        throw new Error("Evidence usage is unsupported by this application service.");
+      }
+      const usage = await read({
+        root: workspaceRoot(workspace),
+        ...(options.runId === undefined ? {} : { runId: options.runId as string }),
+      });
+      if (options.json === true) {
+        io.write(JSON.stringify(usage ?? null, null, 2));
+        return;
+      }
+      for (const line of evidenceUsageLines(usage)) io.write(line);
     });
 
   const policy = command

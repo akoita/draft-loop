@@ -71,6 +71,7 @@ export const hostedDriverMethods = [
   "readRunAuthorInput",
   "readRunApplicationPlan",
   "readRunModels",
+  "readRunEvidenceUsage",
   "recordReviewDecision",
   "lifecycle",
   "export",

@@ -12,7 +12,10 @@ export interface EvidenceUsageRef {
 }
 
 export interface EvidenceUsageClaim {
-  readonly evidence: readonly { readonly sourcePath: string; readonly locator?: string }[];
+  readonly evidence: readonly {
+    readonly sourcePath: string;
+    readonly locator?: string | undefined;
+  }[];
 }
 
 export interface EvidenceUsageReport {

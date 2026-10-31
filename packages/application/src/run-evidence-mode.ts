@@ -7,6 +7,7 @@ import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
 import { readRunApplicationPlan } from "./run-application-plan-read.js";
 import { readRunAuthorInput } from "./run-author-input-read.js";
+import { readRunEvidenceUsage } from "./run-evidence-usage.js";
 import { openRunHistory } from "./run-history-read.js";
 import { readRunInputs } from "./run-inputs-read.js";
 import { readRunModels } from "./run-models-read.js";
@@ -94,6 +95,7 @@ export function withRunHistoryReaders(
     readRunApplicationPlan: async (command) => readRunApplicationPlan(command),
     readRunAuthorInput: async (command) => readRunAuthorInput(command),
     readRunModels: async (command) => readRunModels(command),
+    readRunEvidenceUsage: async (command) => readRunEvidenceUsage(command),
     readRunInputs: async (command) => readRunInputs(command),
   };
 }

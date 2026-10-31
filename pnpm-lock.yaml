@@ -324,6 +324,9 @@ importers:
       '@draft-loop/embeddings':
         specifier: workspace:*
         version: link:../embeddings
+      '@draft-loop/evaluations':
+        specifier: workspace:*
+        version: link:../evaluations
       '@draft-loop/ingestion':
         specifier: workspace:*
         version: link:../ingestion

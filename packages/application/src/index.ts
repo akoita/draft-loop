@@ -42,6 +42,7 @@ import type { RunApplicationPlan } from "./run-application-plan.js";
 import type { RunAuthorInput } from "./run-author-input.js";
 import type { RunRequirementText } from "./run-context-read.js";
 import type { RunEvidenceMode } from "./run-evidence-mode.js";
+import type { RunEvidenceUsage } from "./run-evidence-usage.js";
 import type {
   RunExport,
   RunExportContent,
@@ -600,6 +601,8 @@ export interface ApplicationDriver {
   ) => Promise<RunApplicationPlan | undefined>;
   /** The author and critic models a run was configured with; `undefined` without a context. */
   readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
+  /** Which retrieved evidence each author call cited, from the saved run alone (#2010). */
+  readonly readRunEvidenceUsage?: (command: StatusCommand) => Promise<RunEvidenceUsage | undefined>;
   /**
    * The requirements brief and career profile version a run recorded when it started;
    * `undefined` without a context.
@@ -830,6 +833,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunModels === undefined
         ? undefined
         : driver.readRunModels({ ...command, root: requireRoot(command.root) }),
+    readRunEvidenceUsage: async (command) =>
+      driver.readRunEvidenceUsage === undefined
+        ? undefined
+        : driver.readRunEvidenceUsage({ ...command, root: requireRoot(command.root) }),
     readRunInputs: async (command) =>
       driver.readRunInputs === undefined
         ? undefined
@@ -995,6 +1002,12 @@ export {
   type RunEvidenceMode,
   readRunEvidenceMode,
 } from "./run-evidence-mode.js";
+export {
+  type RunEvidenceUsage,
+  type RunEvidenceUsageCall,
+  readRunEvidenceUsage,
+  runEvidenceUsage,
+} from "./run-evidence-usage.js";
 export {
   hostedExportPath,
   listRunExports,
