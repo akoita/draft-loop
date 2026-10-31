@@ -1,10 +1,11 @@
 /**
- * The run's stop reason in plain words (#1113, #1110).
+ * The run's stop reason in plain words (#1113, #1110, #2013).
  *
  * Two sources say why the loop stopped. The evaluation's `stopReason` names the two pauses the
  * orchestrator decides from the findings (consensus, a persisting finding), and the stopping
  * decision the run records on arrival names the rest: ready, stable scores, the round limit, the
- * budget, a stop by the person. The decision reaches the screens as the approval readiness.
+ * budget, a stop by the person. The decision reaches the screens as the approval readiness, on
+ * which the host also marks autopilot's conflict pause.
  */
 
 import type { ApprovalReadiness, ApprovalReadinessStopReason } from "./approval-readiness.js";
@@ -19,6 +20,8 @@ export const ROUND_LIMIT_REASON = "Stopped: the round limit was reached — rais
 export const BUDGET_REASON =
   "Stopped: the run reached its cost or time limit — raise it for a new run";
 export const CANCELLED_REASON = "Stopped: you stopped the run";
+export const AUTOPILOT_CONFLICT_REASON =
+  "Paused: autopilot found a conflict only you can settle — a disputed claim or a factuality finding";
 
 const decisionReasons: Readonly<Record<ApprovalReadinessStopReason, string | null>> = {
   "application-ready": APPLICATION_READY_REASON,
@@ -26,6 +29,7 @@ const decisionReasons: Readonly<Record<ApprovalReadinessStopReason, string | nul
   "max-rounds": ROUND_LIMIT_REASON,
   "budget-exhausted": BUDGET_REASON,
   cancelled: CANCELLED_REASON,
+  "autopilot-conflict": AUTOPILOT_CONFLICT_REASON,
   continue: null,
 };
 

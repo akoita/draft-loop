@@ -892,6 +892,9 @@ An autopilot review still pauses early when:
 - a provider or validation error stops a step, as without autopilot.
 
 The last round always ends in review, and approval and export stay with you.
+**Run details** says which of these stopped the run; a pause on a disputed
+claim or a factuality finding reads "Paused: autopilot found a conflict only
+you can settle".
 
 Turn it on in the desktop with the **Autopilot** checkbox in an application's Review step
 or in **Run progress** (in **Run details** once the run stops executing). In the CLI, pass `--autopilot` to `init`, or switch an

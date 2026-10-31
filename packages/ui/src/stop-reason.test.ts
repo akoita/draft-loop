@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { approvalReadinessStopReasons } from "./approval-readiness.js";
 import {
   APPLICATION_READY_REASON,
+  AUTOPILOT_CONFLICT_REASON,
   BUDGET_REASON,
   CANCELLED_REASON,
   CONSENSUS_READY_REASON,
@@ -24,12 +25,13 @@ describe("plainStopReason (#1110)", () => {
       "application-ready": APPLICATION_READY_REASON,
       "stable-convergence": STABLE_SCORES_REASON,
       "max-rounds": ROUND_LIMIT_REASON,
+      "autopilot-conflict": AUTOPILOT_CONFLICT_REASON,
       "budget-exhausted": BUDGET_REASON,
       cancelled: CANCELLED_REASON,
       continue: null,
     });
     for (const sentence of Object.values(worded)) {
-      if (sentence !== null) expect(sentence).toMatch(/^Stopped: /u);
+      if (sentence !== null) expect(sentence).toMatch(/^(?:Stopped|Paused): /u);
     }
   });
 
@@ -39,6 +41,15 @@ describe("plainStopReason (#1110)", () => {
     );
     expect(plainStopReason("persisting-findings", { stopReason: "application-ready" })).toBe(
       PERSISTING_FINDINGS_REASON,
+    );
+  });
+
+  it("words autopilot's conflict pause over the evaluation's continuable reasons (#2013)", () => {
+    expect(plainStopReason("blocked-findings", { stopReason: "autopilot-conflict" })).toBe(
+      AUTOPILOT_CONFLICT_REASON,
+    );
+    expect(plainStopReason("stable-convergence", { stopReason: "autopilot-conflict" })).toBe(
+      AUTOPILOT_CONFLICT_REASON,
     );
   });
 

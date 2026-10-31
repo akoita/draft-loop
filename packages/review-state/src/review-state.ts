@@ -41,6 +41,7 @@ import { providerSessionModelFeedback } from "@draft-loop/ui/provider-session-mo
 import type { RunAuthorInputView } from "@draft-loop/ui/run-author-input";
 import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
 
+import { withAutopilotPause } from "./autopilot-pause.js";
 import { executionCallLimitMs } from "./execution-call-limit.js";
 import { groupRepeatedWarnings } from "./finding-groups.js";
 import { readableFindingMessage } from "./finding-message.js";
@@ -410,10 +411,9 @@ export function reviewState(
     execution: reviewExecution(descriptor, snapshot, background, providerAuthModeConfiguration),
     round: snapshot.round,
     approval: snapshot.approval,
-    approvalReadiness: projectApprovalReadiness(
-      snapshot.readinessDecision,
-      artifact,
-      snapshot.approvedArtifact,
+    approvalReadiness: withAutopilotPause(
+      projectApprovalReadiness(snapshot.readinessDecision, artifact, snapshot.approvedArtifact),
+      snapshot,
     ),
     reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,

@@ -2609,6 +2609,7 @@ describe("autopilot", () => {
     const result = await engine.start(request());
 
     expect(result.latestEvaluation?.stopReason).toBe("ready");
+    expect(result.autopilotPause).toBeNull();
   });
 
   it("pauses on a blocking factuality finding before the round limit", async () => {
@@ -2624,6 +2625,7 @@ describe("autopilot", () => {
       to: "awaiting-approval",
       reason: "autopilot-conflict",
     });
+    expect(result.autopilotPause).toBe("conflict");
   });
 
   it("pauses on a disputed claim", async () => {

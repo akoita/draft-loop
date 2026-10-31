@@ -445,6 +445,12 @@ export interface RunSnapshot {
   readonly adjudicationRuntime?: AdjudicationRuntimeState | null;
   /** Optional for snapshots written before approval readiness was persisted. */
   readonly readinessDecision?: ApplicationReadinessStoppingDecision | null;
+  /**
+   * Why autopilot paused the run at this arrival at approval: a conflict only the person can
+   * settle (a disputed claim or a blocking factuality finding). Null when the run arrived for
+   * another reason; absent on snapshots written before it was kept (#2013).
+   */
+  readonly autopilotPause?: "conflict" | null;
   /** Exact content binding for the artifact approved by the human. */
   readonly approvedArtifact?: ApprovedArtifactBinding | null;
   /** The candidate's direction for the round in `candidateDirection.round`; absent without one. */
@@ -1676,6 +1682,7 @@ export function createOrchestrationEngine(
       currentStep: null,
       approval: "pending" as const,
       readinessDecision: await arrivalReadinessDecision(settled, now),
+      autopilotPause: reason === "autopilot-conflict" ? ("conflict" as const) : null,
       updatedAt: now,
       lastError: null,
     };
