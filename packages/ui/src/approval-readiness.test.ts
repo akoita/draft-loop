@@ -69,6 +69,36 @@ describe("application approval readiness projection", () => {
     ).toBeNull();
   });
 
+  it("carries the decision's stop reason across the bridge and refuses one outside the list (#1110)", () => {
+    expect(
+      projectApprovalReadiness(
+        decision({ applicationReady: true, blockers: [], stopReason: "max-rounds" }),
+        artifact,
+      ),
+    ).toEqual({
+      artifactId: "artifact-1",
+      artifactVersion: 2,
+      applicationReady: true,
+      blockers: [],
+      stopReason: "max-rounds",
+    });
+    expect(
+      projectApprovalReadiness(decision({ stopReason: "wandered-off" }), artifact),
+    ).not.toHaveProperty("stopReason");
+    const ready = {
+      artifactId: "artifact-1",
+      artifactVersion: 2,
+      applicationReady: true,
+      blockers: [],
+    };
+    expect(normalizeApprovalReadiness({ ...ready, stopReason: "cancelled" })).toEqual({
+      ...ready,
+      stopReason: "cancelled",
+    });
+    expect(normalizeApprovalReadiness({ ...ready, stopReason: "wandered-off" })).toBeNull();
+    expect(normalizeApprovalReadiness(ready)).not.toHaveProperty("stopReason");
+  });
+
   it("preserves ready decisions and rejects malformed or inconsistent renderer projections", () => {
     expect(
       projectApprovalReadiness(decision({ applicationReady: true, blockers: [] }), artifact),

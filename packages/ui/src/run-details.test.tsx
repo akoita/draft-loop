@@ -352,6 +352,27 @@ describe("RunDetailsDrawer", () => {
     expect(renderDrawer(withReason("blocked-findings"))).not.toContain("Paused:");
   });
 
+  it("states why the loop stopped from the recorded decision: limits, budget, a stop (#1110)", () => {
+    const stoppedFor = (stopReason: "max-rounds" | "budget-exhausted" | "cancelled") =>
+      renderDrawer({
+        ...fixture,
+        state: "awaiting-approval",
+        evaluation: { ...fixture.evaluation, stopReason: "blocked-findings" },
+        approvalReadiness: {
+          artifactId: fixture.artifact?.id ?? "artifact",
+          artifactVersion: fixture.artifact?.version ?? 1,
+          applicationReady: true,
+          blockers: [],
+          stopReason,
+        },
+      });
+    expect(stoppedFor("max-rounds")).toContain("Stopped: the round limit was reached");
+    expect(stoppedFor("budget-exhausted")).toContain(
+      "Stopped: the run reached its cost or time limit",
+    );
+    expect(stoppedFor("cancelled")).toContain("Stopped: you stopped the run");
+  });
+
   it("leaves the timeline to the side panel while the run executes", () => {
     const html = renderDrawer(running);
     expect(html).not.toContain('<ol class="event-list">');

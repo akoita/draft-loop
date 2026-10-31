@@ -530,7 +530,9 @@ export function RunDetailsDrawer({
   const runInProgress = reviewInProgress(state);
   const runFinished = reviewFinished(state);
   const startable = start !== null && canStartNewReview(state);
-  const stopReason = runInProgress ? null : plainStopReason(state.evaluation.stopReason);
+  const stopReason = runInProgress
+    ? null
+    : plainStopReason(state.evaluation.stopReason, state.approvalReadiness ?? null);
 
   return (
     <div className="run-details-layer" hidden={!open}>

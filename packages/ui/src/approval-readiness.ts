@@ -49,6 +49,17 @@ const approvalReadinessChecks = Object.keys(
   approvalReadinessCheckLabels,
 ) as readonly ApprovalReadinessCheck[];
 
+/** Why the loop stopped, as the stopping decision records it (#1110). */
+export const approvalReadinessStopReasons = [
+  "application-ready",
+  "stable-convergence",
+  "max-rounds",
+  "budget-exhausted",
+  "cancelled",
+  "continue",
+] as const;
+export type ApprovalReadinessStopReason = (typeof approvalReadinessStopReasons)[number];
+
 export type ApprovalReadinessBlockerCode = (typeof approvalReadinessBlockerCodes)[number];
 export type ApprovalReadinessDimension = (typeof approvalReadinessDimensions)[number];
 
@@ -68,6 +79,8 @@ export interface ApprovalReadiness {
   readonly blockers: readonly ApprovalReadinessBlocker[];
   /** True when a person approved this artifact past these failing checks. */
   readonly overridden?: true;
+  /** The decision's stop reason; absent on a decision recorded before it crossed the bridge. */
+  readonly stopReason?: ApprovalReadinessStopReason;
 }
 
 export function approvalReadinessForArtifact(
@@ -85,6 +98,7 @@ const readinessKeys = [
   "applicationReady",
   "blockers",
   "overridden",
+  "stopReason",
 ];
 const blockerKeys = ["code", "check", "dimension", "score", "threshold"];
 
@@ -115,7 +129,8 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     typeof value.applicationReady !== "boolean" ||
     !Array.isArray(value.blockers) ||
     value.blockers.length > 100 ||
-    (value.overridden !== undefined && (value.overridden !== true || value.applicationReady))
+    (value.overridden !== undefined && (value.overridden !== true || value.applicationReady)) ||
+    (value.stopReason !== undefined && !isOneOf(value.stopReason, approvalReadinessStopReasons))
   ) {
     return null;
   }
@@ -167,6 +182,7 @@ export function normalizeApprovalReadiness(value: unknown): ApprovalReadiness | 
     applicationReady: value.applicationReady,
     blockers,
     ...(value.overridden === true ? { overridden: true as const } : {}),
+    ...(value.stopReason === undefined ? {} : { stopReason: value.stopReason }),
   };
 }
 
@@ -247,6 +263,9 @@ export function projectApprovalReadiness(
     applicationReady: decision.applicationReady,
     blockers,
     ...(overridden ? { overridden: true } : {}),
+    ...(isOneOf(decision.stopReason, approvalReadinessStopReasons)
+      ? { stopReason: decision.stopReason }
+      : {}),
   });
 }
 
