@@ -88,6 +88,13 @@ const changeModelsBody = z.strictObject({
 
 const autopilotBody = z.strictObject({ enabled: z.boolean() });
 
+/** The run limits a workspace gives its next runs; one left out falls back to the ceiling. */
+const runBudgetBody = z.strictObject({
+  maxRounds: z.number().int().positive().optional(),
+  maxCostUsd: z.number().positive().optional(),
+  maxDurationMs: z.number().int().positive().optional(),
+});
+
 const knowledgeSelectionBody = z
   .strictObject({
     knowledgeBaseIds: z
@@ -280,6 +287,48 @@ export function registerWorkspaceRoutes(
         { root, enabled: request.body.enabled },
         silent,
       );
+      if (descriptor === undefined) {
+        return reply.code(404).send(apiError("not_found", "No such workspace."));
+      }
+      return workspaceView(request.params.workspaceId, descriptor);
+    },
+  );
+
+  app.put(
+    "/v1/workspaces/:workspaceId/budget",
+    {
+      schema: {
+        summary: "Replace a workspace's run budget",
+        description:
+          "Sets the round, cost and duration limits the workspace's next runs get, checked against the deployment's ceiling like creation (422 budget_above_ceiling). A limit left out falls back to the ceiling. Use it when the deployment's ceiling drops below a budget the workspace stored at creation, which would otherwise refuse every new run. Recorded runs keep the budget they ran with.",
+        params: workspaceParams,
+        body: runBudgetBody,
+        response: {
+          200: workspaceViewSchema,
+          400: apiErrorSchema,
+          404: apiErrorSchema,
+          422: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const root = workspaceRoot(request.params.workspaceId);
+      const { body } = request;
+      const budget = {
+        maxRounds: body.maxRounds ?? defaultMaxRounds,
+        maxCostUsd: body.maxCostUsd ?? budgetCeiling.maxCostUsd,
+        maxDurationMs: body.maxDurationMs ?? budgetCeiling.maxDurationMs,
+      };
+      const violation = runBudgetCeilingViolation(budget, budgetCeiling);
+      if (violation !== undefined) {
+        return reply
+          .code(422)
+          .send(apiError("budget_above_ceiling", runBudgetCeilingMessage(violation)));
+      }
+      if (!(await workspaceExists(service, root))) {
+        return reply.code(404).send(apiError("not_found", "No such workspace."));
+      }
+      const descriptor = await service.configureRunBudget?.({ root, ...budget }, silent);
       if (descriptor === undefined) {
         return reply.code(404).send(apiError("not_found", "No such workspace."));
       }

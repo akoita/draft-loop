@@ -143,6 +143,8 @@ describe("workspaces", () => {
       language: "en",
       requiredSections: ["Experience"],
       maxRounds: 3,
+      maxCostUsd: 2,
+      maxDurationMs: 600_000,
       author: { company: "anthropic", model: "claude-haiku-5-5" },
       critic: { company: "openai", model: "gpt-6-luna" },
       fixtureMode: true,
@@ -475,6 +477,33 @@ describe("runs", () => {
     expect(response.json().error.message).toContain(limit);
     expect(begin).not.toHaveBeenCalled();
     expect(enqueueRun).not.toHaveBeenCalled();
+  });
+
+  it("starts a run again once the stored budget is lowered under a dropped ceiling (#1993)", async () => {
+    // Created under a higher ceiling: the stored cost limit now sits above the deployment's US$3.
+    let stored = { ...descriptor, maxCostUsd: 3.5 };
+    const begin = vi.fn(async () => snapshot);
+    const configureRunBudget = vi.fn(async (command: { maxCostUsd?: number }) => {
+      stored = { ...stored, maxCostUsd: command.maxCostUsd ?? 3 };
+      return stored;
+    });
+    await build({ readWorkspace: async () => stored, begin, configureRunBudget });
+
+    const refused = await app.inject(beginRequest("key-00000005"));
+    const lowered = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/workspace-1/budget",
+      headers: { authorization },
+      payload: { maxRounds: 3, maxCostUsd: 2, maxDurationMs: 600_000 },
+    });
+    const started = await app.inject(beginRequest("key-00000006"));
+
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().error.code).toBe("budget_above_ceiling");
+    expect(lowered.statusCode).toBe(200);
+    expect(lowered.json().maxCostUsd).toBe(2);
+    expect(started.statusCode).toBe(201);
+    expect(begin).toHaveBeenCalledTimes(1);
   });
 
   it("refuses a reused key with another request, and a missing key", async () => {

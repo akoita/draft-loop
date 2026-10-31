@@ -747,6 +747,8 @@ export interface ApiSchemas {
     readonly language: string;
     readonly requiredSections: readonly (string)[];
     readonly maxRounds: number;
+    readonly maxCostUsd?: number;
+    readonly maxDurationMs?: number;
     readonly author: {
       readonly company: string;
       readonly model: string;
@@ -893,6 +895,17 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly enabled: boolean;
+    };
+    readonly response: ApiSchemas["Workspace"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/budget": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly maxRounds?: number;
+      readonly maxCostUsd?: number;
+      readonly maxDurationMs?: number;
     };
     readonly response: ApiSchemas["Workspace"];
   };
