@@ -22,7 +22,7 @@
     "@draft-loop/schemas": "workspace:*",
     "@google-cloud/secret-manager": "7.1.1",
     "openai": "7.23.0",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@draft-loop/application": "workspace:*",
