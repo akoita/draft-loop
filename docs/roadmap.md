@@ -1948,6 +1948,11 @@ recovery, rollback, package diagnostics, accessibility review, ATS and
 cross-viewer DOCX/PDF compatibility, dependency and supply-chain checks, and
 visible retention/deletion controls with opt-in content-free diagnostics.
 
+The hosted service also needs its legal pack before other users join: privacy
+policy, terms, legal notice, record of processing and impact assessment.
+Drafts for lawyer review are in [docs/legal](legal/README.md) (#2003); the
+open questions listed there go to the lawyer before phase 2.
+
 **Exit criterion:** Signed releases upgrade and roll back repeatably, preserve
 workspace history, and pass supported-platform acceptance with known
 limitations.
