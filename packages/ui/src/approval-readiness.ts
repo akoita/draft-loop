@@ -49,13 +49,17 @@ const approvalReadinessChecks = Object.keys(
   approvalReadinessCheckLabels,
 ) as readonly ApprovalReadinessCheck[];
 
-/** Why the loop stopped, as the stopping decision records it (#1110). */
+/**
+ * Why the loop stopped, as the stopping decision records it (#1110), plus autopilot's conflict
+ * pause, which the host marks from the run snapshot (#2013).
+ */
 export const approvalReadinessStopReasons = [
   "application-ready",
   "stable-convergence",
   "max-rounds",
   "budget-exhausted",
   "cancelled",
+  "autopilot-conflict",
   "continue",
 ] as const;
 export type ApprovalReadinessStopReason = (typeof approvalReadinessStopReasons)[number];

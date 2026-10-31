@@ -95,6 +95,10 @@ describe("application approval readiness projection", () => {
       ...ready,
       stopReason: "cancelled",
     });
+    expect(normalizeApprovalReadiness({ ...ready, stopReason: "autopilot-conflict" })).toEqual({
+      ...ready,
+      stopReason: "autopilot-conflict",
+    });
     expect(normalizeApprovalReadiness({ ...ready, stopReason: "wandered-off" })).toBeNull();
     expect(normalizeApprovalReadiness(ready)).not.toHaveProperty("stopReason");
   });
