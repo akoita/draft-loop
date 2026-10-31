@@ -910,8 +910,11 @@ recorded finding decisions (`RunStore.listFindingDecisions`), and
 finding id so a decision can be matched to it. Identities use positional block keys, so inserting a block
 can turn one finding into a resolved-plus-new pair. That near-miss does not
 match and never pauses. Round, cost and time limits apply as before. The final
-reason is stored on `latestEvaluation.stopReason`, and the desktop words it in
-plain language.
+reason is stored on `latestEvaluation.stopReason` for the finding-based pauses
+and on the stopping decision's `stopReason` for the rest (ready, stable scores,
+round limit, budget, a stop by the person). The decision's reason crosses to
+the shared screens on the approval readiness, and the run details drawer words
+every reason in plain language (`packages/ui/src/stop-reason.ts`).
 
 ### Application-readiness stopping decision boundary
 
