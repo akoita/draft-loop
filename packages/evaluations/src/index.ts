@@ -10,6 +10,7 @@ import {
 
 import { isRequirementCoveredByBlock } from "@draft-loop/validation";
 
+export * from "./evidence-usage.js";
 export * from "./pilot.js";
 export * from "./pilot-comparison-gate.js";
 export * from "./readiness-report.js";

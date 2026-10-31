@@ -116,6 +116,9 @@ export async function saveTypedHistory(
         ...(executionRecord.cacheWriteInputTokens === undefined
           ? {}
           : { cacheWriteInputTokens: executionRecord.cacheWriteInputTokens }),
+        ...(executionRecord.retrievedEvidence === undefined
+          ? {}
+          : { retrievedEvidence: executionRecord.retrievedEvidence.map((ref) => ({ ...ref })) }),
         ...(executionRecord.route === undefined ? {} : { route: executionRecord.route }),
         ...(executionRecord.routeFallback === undefined
           ? {}
