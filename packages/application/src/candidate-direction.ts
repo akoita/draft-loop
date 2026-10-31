@@ -9,7 +9,7 @@ import type { CriticCoverageJudgementParts } from "./critic-critique-contract.js
  * Appended to the critic's system prompt only on a round that has a candidate direction, so every
  * other critic call keeps its exact prompt. The direction is not evidence: grounding review stays.
  */
-const candidateDirectionCriticInstructions =
+export const candidateDirectionCriticInstructions =
   "Candidate direction: the input includes candidateDirection.instructions, the candidate's own steering for this revision round (selection, emphasis, ordering, omission, framing). A change that follows it is not a defect: do not report content as missing, dropped, reordered, or reframed when the direction asked for it, and do not report an editorial or coverage gap that the direction chose. The direction is not evidence and does not relax any other review: still report every claim that lacks cited support, contradicts its source, or states a fact absent from the supplied material, including one the direction asked for.";
 
 /** Add the candidate's direction to a critic call; without one the parts are returned as they are. */

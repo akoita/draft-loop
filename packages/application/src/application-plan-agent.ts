@@ -37,6 +37,11 @@ import {
   runStableInputMembers,
 } from "./author-run-prefix.js";
 import { guardCallCost } from "./call-cost-guard.js";
+import {
+  criticRunOutputSchemas,
+  criticRunPrefix,
+  criticStableInputMembers,
+} from "./critic-run-prefix.js";
 import { responseExecution } from "./response-execution.js";
 
 /**
@@ -109,47 +114,56 @@ export function createProviderApplicationPlanner(
       throw deps.userError("Planning requires retrieved candidate evidence.");
     }
     const identity = role === "author" ? deps.author : deps.critic;
-    const aliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
     const adapter = guardCallCost(
       await deps.createAdapter(identity.company, identity.modelId, role),
       request.remainingCostUsd,
     );
     const model = request.context.modelConfiguration[role];
     const callInput = { runId: request.runId, executionId: request.executionId, ...extraInput };
-    const toModel = (input: object) =>
-      aliases.toModel(JSON.parse(JSON.stringify(input)) as JsonObject);
+    // The author's plan calls lead with the drafting calls' run prefix and the critic's review
+    // leads with the critiques' run prefix, each with its own instructions after it, so every
+    // call of a role shares one cached prefix across the run. The author's calls send evidence
+    // under short aliases and map them back; the critic's calls use the ids the critiques use,
+    // so the review and the critiques share one cached prefix.
+    const aliases =
+      role === "author"
+        ? createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id))
+        : undefined;
+    const toModel = (input: object) => {
+      const json = JSON.parse(JSON.stringify(input)) as JsonObject;
+      return aliases === undefined ? json : aliases.toModel(json);
+    };
     const prefix =
       role === "author"
         ? authorRunPrefix(request.context, deps.promptContext, retrievedEvidence)
-        : undefined;
+        : criticRunPrefix(request.context, deps.promptContext, retrievedEvidence, true);
+    const aliasNames = aliases?.aliases ?? [];
     const modelRequest: ModelRequest<JsonObject> = {
       contextSnapshotId: request.context.id,
       model,
-      // The author's plan calls lead with the drafting calls' run prefix and put their own
-      // instructions after it, so every author call of the run shares one cached prefix.
-      ...(prefix === undefined
-        ? {
-            systemPrompt,
-            input: toModel({ context: deps.promptContext, retrievedEvidence, ...callInput }),
-          }
-        : {
-            systemPrompt: `${prefix.systemPrompt}\n\n${systemPrompt}`,
-            promptCache: {
-              systemPrompt: prefix.systemPrompt,
-              callInstructions: systemPrompt,
-              stableInputMembers: runStableInputMembers,
-              outputSchemas: authorRunOutputSchemas(request.context, aliases.aliases),
-            },
-            input: toModel({ ...prefix.input, ...callInput }),
-          }),
-      outputSchema: outputSchema(aliases.aliases),
+      systemPrompt: `${prefix.systemPrompt}\n\n${systemPrompt}`,
+      promptCache: {
+        systemPrompt: prefix.systemPrompt,
+        callInstructions: systemPrompt,
+        stableInputMembers: role === "author" ? runStableInputMembers : criticStableInputMembers,
+        outputSchemas:
+          role === "author"
+            ? authorRunOutputSchemas(request.context, aliasNames)
+            : criticRunOutputSchemas(),
+      },
+      input: toModel({ ...prefix.input, ...callInput }),
+      outputSchema: outputSchema(aliasNames),
       outputName,
       maxOutputTokens: model.profile?.runtime.maxOutputTokens ?? planOutputTokens,
       dataPolicy: deps.dataPolicy(identity.company),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
     };
     const response = await adapter.execute(modelRequest);
-    return { response, output: aliases.fromModel(response.output), retrievedEvidence };
+    return {
+      response,
+      output: aliases === undefined ? response.output : aliases.fromModel(response.output),
+      retrievedEvidence,
+    };
   };
 
   const references = (request: ApplicationPlanRequest) => ({

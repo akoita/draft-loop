@@ -110,6 +110,12 @@ export async function saveTypedHistory(
       output: executionRecord.output === undefined ? null : asJsonObject(executionRecord.output),
       payload: {
         source: "phase-zero-cli",
+        ...(executionRecord.cachedInputTokens === undefined
+          ? {}
+          : { cachedInputTokens: executionRecord.cachedInputTokens }),
+        ...(executionRecord.cacheWriteInputTokens === undefined
+          ? {}
+          : { cacheWriteInputTokens: executionRecord.cacheWriteInputTokens }),
         ...(executionRecord.route === undefined ? {} : { route: executionRecord.route }),
         ...(executionRecord.routeFallback === undefined
           ? {}

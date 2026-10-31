@@ -127,6 +127,9 @@ export const applicationPlanStepRecordSchema = z.strictObject({
   route: nonEmptyString.optional(),
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
+  /** Prompt-cache reads and writes the provider reported (#1986); absent when it reported none. */
+  cachedInputTokens: z.number().int().nonnegative().optional(),
+  cacheWriteInputTokens: z.number().int().nonnegative().optional(),
   estimatedUsd: z.number().nonnegative().nullable(),
   completedAt: nonEmptyString,
   /**

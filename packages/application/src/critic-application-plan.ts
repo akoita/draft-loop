@@ -5,7 +5,7 @@ import type { CriticCoverageJudgementParts } from "./critic-critique-contract.js
 import { emphasisThemeSourceInstructions, withPlanThemeSource } from "./critic-emphasis.js";
 
 /** Whether the critic prompt version reviews emphasis, and so has a theme source to replace. */
-function reviewsEmphasis(criticPromptTemplateVersion: string): boolean {
+export function reviewsEmphasis(criticPromptTemplateVersion: string): boolean {
   try {
     return createCriticAdjudicationPrompt(criticPromptTemplateVersion).includes(
       emphasisThemeSourceInstructions,

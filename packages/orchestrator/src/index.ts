@@ -71,6 +71,7 @@ import {
   buildAuthorRetryCorrections,
 } from "./author-retry-feedback.js";
 import { autopilotConflicts, autopilotDecision } from "./autopilot.js";
+import { cacheTokens } from "./cache-tokens.js";
 import { callCostBudgetReason, remainingCostField } from "./call-cost-budget.js";
 import {
   activeCandidateDirection,
@@ -214,6 +215,10 @@ export interface AgentExecution<T> {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly totalTokens: number;
+  /** Input tokens the provider read from its prompt cache; absent when the provider reports none. */
+  readonly cachedInputTokens?: number;
+  /** Input tokens the provider wrote to its prompt cache; absent when the provider reports none. */
+  readonly cacheWriteInputTokens?: number;
   readonly estimatedUsd: number | null;
   readonly completedAt: string;
   /**
@@ -301,6 +306,9 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly totalTokens: number;
+  /** Prompt-cache reads and writes of a completed call (#1986); absent on runs that predate them. */
+  readonly cachedInputTokens?: number;
+  readonly cacheWriteInputTokens?: number;
   readonly estimatedUsd: number | null;
   readonly completedAt: string;
   readonly errorCode?: string;
@@ -2033,6 +2041,7 @@ export function createOrchestrationEngine(
         inputTokens: execution.inputTokens,
         outputTokens: execution.outputTokens,
         totalTokens: execution.totalTokens,
+        ...cacheTokens(execution),
         estimatedUsd: execution.estimatedUsd,
         completedAt: execution.completedAt,
         attempt,

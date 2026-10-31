@@ -147,10 +147,23 @@ function localCompletion(output: JsonRecord, id: string): unknown {
 function anthropicCritiqueClient(findings: readonly JsonRecord[]): AnthropicClient {
   return {
     messages: {
-      create: () => {
+      create: (input) => {
+        // A cached critic request asks for the run's shared output format, one member per output.
+        const shared = (input as { readonly output_config?: { readonly format?: unknown } })
+          .output_config?.format;
+        const critique = { findings, coverageJudgements: [] };
         const response = {
           id: "anthropic-critic-1",
-          content: [{ type: "text", text: JSON.stringify({ findings }) }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                JSON.stringify(shared).includes('"anyOf"')
+                  ? { output: { draft_critique: critique } }
+                  : { findings },
+              ),
+            },
+          ],
           model: "claude-sonnet-4-5",
           stop_reason: "end_turn",
           usage: { input_tokens: 90, output_tokens: 20 },
@@ -1020,7 +1033,15 @@ describe("local application driver", () => {
           criticInputs.push(leading);
           const response = {
             id: "anthropic-policy-critic",
-            content: [{ type: "text", text: JSON.stringify({ findings: [] }) }],
+            // The run's shared output format: one member per critic output.
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  output: { draft_critique: { findings: [], coverageJudgements: [] } },
+                }),
+              },
+            ],
             model: "claude-sonnet-4-5",
             stop_reason: "end_turn",
             usage: { input_tokens: 90, output_tokens: 20 },
