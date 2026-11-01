@@ -53,13 +53,13 @@ describe("model profile catalog", () => {
         "dev-deepinfra-glm-author@1": "2026-10-02",
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
-        "economy-anthropic-author@1": "2026-10-23",
+        "economy-anthropic-author@1": "2026-11-01",
         "economy-anthropic-author@2": "2026-10-30",
         "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@2": "2026-10-23",
         "standard-openai-critic@2": "2026-10-23",
         "balanced-openai-critic@1": "2026-10-28",
-        "balanced-anthropic-critic@1": "2026-10-30",
+        "balanced-anthropic-critic@1": "2026-11-01",
         "standard-anthropic-critic@1": "2026-10-30",
       };
       expect(entry.reviewedAt).toBe(
@@ -96,10 +96,10 @@ describe("model profile catalog", () => {
       ),
     ).toMatchObject({
       "economy-anthropic-author@2": [0.05, 1],
-      "economy-anthropic-author@1": [0.2, 4],
+      "economy-anthropic-author@1": [0.1, 4],
       "standard-anthropic-author@2": [0.2, 8],
       "standard-anthropic-critic@1": [0.2, 8],
-      "balanced-anthropic-critic@1": [0.2, 4],
+      "balanced-anthropic-critic@1": [0.1, 4],
       "economy-openai-critic@1": [0.01, 0.125],
       "standard-openai-critic@2": [0.1, 2.5],
       "balanced-openai-critic@1": [0.05, 1.25],

@@ -248,10 +248,12 @@ describe("runs with a pinned reviewed profile", () => {
           },
           factRankingMode: "lexical",
         });
+        // The trace keeps the real source id; the author saw the run-local alias instead.
+        expect(fact?.sourceId).toBe("S1");
         expect(trace?.selectedItems[0]).toEqual({
           itemId: expect.stringMatching(new RegExp(`^${profileFactEvidenceIdPrefix}`)),
           origin: "profile-fact",
-          sourceId: fact?.sourceId,
+          sourceId: expect.stringMatching(/^ckb-source-[0-9a-f]{32}$/u),
         });
         expect(trace?.selectedItems.slice(1).map(({ origin }) => origin)).toContain(
           "knowledge-chunk",
