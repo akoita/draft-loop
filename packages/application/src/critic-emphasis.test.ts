@@ -27,11 +27,11 @@ function emphasisFinding(overrides: Record<string, unknown>): JsonObject {
 }
 
 describe("critic prompt v5", () => {
-  it("keeps v4 unchanged, and new runs record its v6 successor", () => {
+  it("keeps v4 unchanged, and new runs record its v7 successor", () => {
     const v4 = createCriticAdjudicationPrompt("cli-critic-v4");
     const v5 = createCriticAdjudicationPrompt("cli-critic-v5");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v6");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v7");
     expect(v4).not.toContain("emphasis");
     expect(v4).toContain("This source-to-CV completeness check and the editorial missing-evidence");
     expect(v5).not.toBe(v4);

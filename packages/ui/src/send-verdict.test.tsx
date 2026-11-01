@@ -37,6 +37,7 @@ describe("send verdict", () => {
         finding("editorial-source-note"),
         finding("editorial-source-note"),
         finding("editorial-missing-evidence"),
+        finding("coverage-omitted-accomplishment"),
         finding("coverage-gap"),
       ],
       readiness: notReady,
@@ -50,6 +51,7 @@ describe("send verdict", () => {
         "Relevance score 37%; 80% required",
         "copied source notes or narration (2)",
         "job-relevant evidence left out (1)",
+        "supported accomplishments left out (1)",
       ],
     });
   });

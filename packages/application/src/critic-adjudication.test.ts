@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   coverageJudgementInstructionsVersion,
   createCriticAdjudicationPrompt,
+  criticReadsCompactEvidenceTable,
   maximumCritiqueFindings,
   maximumCritiqueMessageCharacters,
   withCoverageJudgementInstructions,
@@ -113,8 +114,8 @@ describe("critic prompt versions", () => {
   });
 
   it("rejects unsupported recorded critic templates", () => {
-    expect(() => createCriticAdjudicationPrompt("cli-critic-v7")).toThrow(
-      'Unsupported critic prompt template version "cli-critic-v7".',
+    expect(() => createCriticAdjudicationPrompt("cli-critic-v8")).toThrow(
+      'Unsupported critic prompt template version "cli-critic-v8".',
     );
   });
 
@@ -125,6 +126,8 @@ describe("critic prompt versions", () => {
       v5.replace(evidenceReferenceTableInstructions, ""),
     );
     expect(v6).toContain("retrievedEvidenceChunkId");
+    expect(criticReadsCompactEvidenceTable("cli-critic-v5")).toBe(false);
+    expect(criticReadsCompactEvidenceTable("cli-critic-v6")).toBe(true);
   });
 });
 

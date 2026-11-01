@@ -2,12 +2,16 @@ import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { ReviewFinding } from "./model.js";
 import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 
-/** The editorial warning codes `cli-critic-v4` and later report, in the order the verdict names them. */
+/**
+ * The editorial warning codes `cli-critic-v4` and later report, and the omission warning of
+ * `cli-critic-v7`, in the order the verdict names them.
+ */
 const editorialLabels = [
   ["editorial-source-note", "copied source notes or narration"],
   ["editorial-fragment", "fragments"],
   ["editorial-negative-aside", "negative asides"],
   ["editorial-missing-evidence", "job-relevant evidence left out"],
+  ["coverage-omitted-accomplishment", "supported accomplishments left out"],
 ] as const;
 
 export interface SendVerdict {

@@ -4,6 +4,7 @@ import {
 } from "@draft-loop/validation";
 
 import { emphasisReviewInstructions } from "./critic-emphasis.js";
+import { omissionReviewInstructions } from "./critic-omission.js";
 import {
   compactEvidenceReferenceTableInstructions,
   evidenceReferenceTableInstructions,
@@ -35,6 +36,11 @@ const explicitEmploymentGapReviewInstructionsV5 = explicitEmploymentGapReviewIns
   "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
   "This source-to-CV completeness check, the editorial missing-evidence check and the job emphasis review are the only uses of uncited retrievedEvidence;",
 );
+// v7 adds an omission review, which reads retrievedEvidence for what the draft left out (#2026).
+const explicitEmploymentGapReviewInstructionsV7 = explicitEmploymentGapReviewInstructions.replace(
+  "This source-to-CV completeness check is the only use of uncited retrievedEvidence;",
+  "This source-to-CV completeness check, the editorial missing-evidence check, the job emphasis review and the omission review are the only uses of uncited retrievedEvidence;",
+);
 const editorialReviewInstructions =
   " Also review the CV as an editor deciding whether it is ready to send. Report each of these as a quality warning whose message quotes the exact offending text (at most 80 characters) and names its section: a copied source note, meta-commentary about sources, documents, repositories or the job search, or third-person narration about the candidate (code editorial-source-note); a sentence fragment, or evidence quotes stitched together with semicolons instead of written as a sentence (code editorial-fragment); a negative aside that undercuts an accomplishment instead of stating a real limit once in the candidate's voice (code editorial-negative-aside). Then compare the job's requirements with retrievedEvidence: when a retrieved chunk clearly supports a requirement or responsibility the CV does not show, report a quality warning naming the requirement and the retrievedEvidence ID (code editorial-missing-evidence). Do not report wording preferences, and never ask for content the evidence does not support.";
 
@@ -64,12 +70,21 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   if (templateVersion === "cli-critic-v6") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV5}${editorialReviewInstructions}${emphasisReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
   }
+  // v7 keeps v6 and adds the omission review after the emphasis review (#2026).
+  if (templateVersion === "cli-critic-v7") {
+    return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV7}${editorialReviewInstructions}${emphasisReviewInstructions}${omissionReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
+  }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }
 
+const compactEvidenceTableVersions: ReadonlySet<string> = new Set([
+  "cli-critic-v6",
+  "cli-critic-v7",
+]);
+
 /** Whether a critic prompt version reads the compact evidence table. */
 export function criticReadsCompactEvidenceTable(templateVersion: string): boolean {
-  return templateVersion === "cli-critic-v6";
+  return compactEvidenceTableVersions.has(templateVersion);
 }
 
 export const create = createCriticAdjudicationPrompt;

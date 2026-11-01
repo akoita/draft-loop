@@ -267,11 +267,11 @@ offending text and name its section:
 It never asks for content the evidence does not support. Resumed v3 runs keep
 the v3 prompt.
 
-Critic template `cli-critic-v5` is v4 plus a job emphasis review. New runs
-record `cli-critic-v6`, which keeps v5's review and reads a compact evidence
-table (`reference-table-v2`): a claim's evidence that is a retrieved chunk's
-whole text is cited by that chunk's ID instead of repeated. A full-source
-critique therefore no longer sends the source twice (#1986).
+Critic template `cli-critic-v5` is v4 plus a job emphasis review.
+`cli-critic-v6` keeps v5's review and reads a compact evidence table
+(`reference-table-v2`): a claim's evidence that is a retrieved chunk's whole
+text is cited by that chunk's ID instead of repeated. A full-source critique
+therefore no longer sends the source twice (#1986).
 The critic compares the job's central themes, from its requirements and
 responsibilities weighted by priority and repetition, with what the draft leads
 with, expands and compresses. Each finding is a `coverage` finding that names
@@ -292,6 +292,27 @@ the author like any critic finding, through the adjudicated revision, so an
 accepted move is still bounded by the grounding rules. The theme source is one
 replaceable sentence in `critic-emphasis.ts`, where the application plan will
 feed the critic. Resumed v4 runs keep the v4 prompt.
+
+New runs record `cli-critic-v7`, which is v6 plus an omission review (#2026).
+On the 2026-10-30 run of private reference G, the critic accepted a one-round
+draft that recalled 19 of 34 reference accomplishments: the claim review checks
+what the draft says and the emphasis review what it leads with, and nothing
+asked what it dropped. The critic now compares the whole CV with the retrieved
+evidence, role by role, and reports each supported accomplishment that serves a
+central theme (the plan's themes, or the requirements without a plan) and that
+the CV leaves out or reduces to a bare mention as a `coverage` finding with
+code `coverage-omitted-accomplishment`: a short quote in the evidence's words,
+the chunk ID, the role or project, the theme or requirement served, and one
+move, including the descriptive detail to shorten when the CV is already at its
+length target. It is an error when the accomplishment proves a supported
+central theme or a critical or high requirement, otherwise a warning, with at
+most five per critique; the critique contract keeps at most three of them
+blocking. A blocking omission makes the round revise instead of ending ready,
+and one the author does not fix within a revision pauses the run as a
+persisting finding rather than looping. The review never asks for what the
+plan cuts, what the job does not ask for, or what the evidence does not state,
+and the web verdict names open omission warnings as "supported accomplishments
+left out". Resumed v6 runs keep the v6 prompt.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited
