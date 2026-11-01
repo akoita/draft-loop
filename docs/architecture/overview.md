@@ -485,10 +485,13 @@ lowered ceiling also holds for runs already queued.
 
 A cost limit is checked before each priced call, not only between steps. The
 orchestrator passes each agent what the run may still spend, and the agent
-estimates the call's worst cost: its prompt size at the input rate plus its
-whole output budget at the output rate. A call that could pass the limit is
-never sent, and the run stops as budget-exhausted with the estimate in the
-reason and nothing billed (`packages/application/src/call-cost-guard.ts`).
+estimates the call's worst cost: its prompt size at the input rate, with the
+prefix a declared prompt cache serves at the cache-read rate, plus its whole
+output budget at the output rate. A call that could pass the limit is never
+sent, and the run stops as budget-exhausted with the estimate in the reason
+and nothing billed (`packages/application/src/call-cost-guard.ts`). A cache
+the provider has let expire costs more than the estimate; the limit, checked
+again after the call, still stops the run.
 
 A cost limit holds only while every call is priced. When a call on a metered
 route returns no cost estimate, a run with a cost limit stops as

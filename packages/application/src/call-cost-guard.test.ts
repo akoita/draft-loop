@@ -47,6 +47,32 @@ describe("call cost guard", () => {
     );
   });
 
+  it("prices the prefix a declared prompt cache serves at the cache-read rate", () => {
+    // Opus 5.5 cache read: $0.20 per million tokens. The system prompt and the first two input
+    // members (3,000 characters: 1,000 tokens) are the cached prefix; the third member and the
+    // output schema (3,000 characters) are not.
+    const request: ModelRequest<JsonObject> = {
+      ...modelRequest(),
+      systemPrompt: "s".repeat(2975),
+      input: { a: "a".repeat(5), b: "b".repeat(5), c: "c".repeat(2991) },
+      promptCache: {
+        systemPrompt: "s".repeat(2975),
+        callInstructions: "",
+        stableInputMembers: 2,
+      },
+    };
+
+    // 1,000 × $0.20 + 1,000 × $4 + 10,000 × $20 per million tokens.
+    expect(worstCallCostUsd(request)).toBeCloseTo(0.2042, 10);
+    // A layout that names more stable members than the input has caches nothing.
+    expect(
+      worstCallCostUsd({
+        ...request,
+        promptCache: { ...request.promptCache, stableInputMembers: 4 } as never,
+      }),
+    ).toBeCloseTo(0.208, 10);
+  });
+
   it("never sends a call whose worst cost would pass the remaining budget", async () => {
     const adapter = scriptedAdapter(0.1);
     const guarded = guardCallCost(adapter, 0.2);
