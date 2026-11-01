@@ -296,7 +296,7 @@ accepted move is still bounded by the grounding rules. The theme source is one
 replaceable sentence in `critic-emphasis.ts`, where the application plan will
 feed the critic. Resumed v4 runs keep the v4 prompt.
 
-New runs record `cli-critic-v7`, which is v6 plus an omission review (#2026).
+`cli-critic-v7` is v6 plus an omission review (#2026).
 On the 2026-10-30 run of private reference G, the critic accepted a one-round
 draft that recalled 19 of 34 reference accomplishments: the claim review checks
 what the draft says and the emphasis review what it leads with, and nothing
@@ -316,6 +316,19 @@ persisting finding rather than looping. The review never asks for what the
 plan cuts, what the job does not ask for, or what the evidence does not state,
 and the web verdict names open omission warnings as "supported accomplishments
 left out". Resumed v6 runs keep the v6 prompt.
+
+New runs record `cli-critic-v8`, which is v7 with a focused omission review
+(#2031). On the 2026-11-01 run of reference G, v7's one-pass comparison of the
+whole CV with 316 chunks reported one omission, as a warning, while the draft
+left out 13 reference accomplishments; 10 of them were stated in chunks the
+plan's own themes cite and cited by the author without their substance, so
+nothing blocked and round 2 never ran. v8 narrows the candidates to the chunks
+`applicationPlan.themes` cite (the chunks the achievement plan names on a run
+without a plan) and asks the critic, chunk by chunk, to list each stated
+accomplishment and decide whether the CV states it, mentions it only, or
+leaves it out: a citation is not a statement. Findings, severities and the
+blocking cap are v7's, with at most eight omissions per critique. Resumed v7
+runs keep the v7 prompt.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited

@@ -10,8 +10,10 @@ import { parseCritique } from "./critic-critique-contract.js";
 import { emphasisReviewInstructions, emphasisThemeBuriedCode } from "./critic-emphasis.js";
 import {
   capBlockingOmissions,
+  focusedOmissionReviewInstructions,
   isOmissionFindingCode,
   maximumBlockingOmissionFindings,
+  maximumFocusedOmissionFindings,
   maximumOmissionFindings,
   omissionReviewInstructions,
   omittedAccomplishmentCode,
@@ -29,12 +31,43 @@ function omissionFinding(overrides: Record<string, unknown>): JsonObject {
   } as JsonObject;
 }
 
+describe("critic prompt v8", () => {
+  it("keeps v7 unchanged and swaps only the omission review, which new runs record (#2031)", () => {
+    const v7 = createCriticAdjudicationPrompt("cli-critic-v7");
+    const v8 = createCriticAdjudicationPrompt("cli-critic-v8");
+
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v8");
+    expect(v8.replace(focusedOmissionReviewInstructions, omissionReviewInstructions)).toBe(v7);
+    expect(v7).not.toContain("chunk by chunk");
+    expect(criticReadsCompactEvidenceTable("cli-critic-v8")).toBe(true);
+  });
+
+  it("names the candidate chunks, asks for an enumeration per chunk and keeps the rules", () => {
+    const v8 = createCriticAdjudicationPrompt("cli-critic-v8");
+
+    expect(v8).toContain(
+      "The candidate chunks are the retrievedEvidence chunks that applicationPlan.themes cite in evidenceChunkIds when the input carries the plan, otherwise the chunks achievementPlan names.",
+    );
+    expect(v8).toContain(
+      "list every accomplishment it states with its scope, method or result, and decide for each whether the CV states it with that substance, mentions it only, or leaves it out",
+    );
+    expect(v8).toContain("A citation is not a statement");
+    expect(v8).toContain(`code ${omittedAccomplishmentCode}`);
+    expect(v8).toContain("(at most 80 characters)");
+    expect(v8).toContain("a plan theme with gap false");
+    expect(v8).toContain(`Report at most ${maximumFocusedOmissionFindings} omission findings`);
+    expect(maximumFocusedOmissionFindings).toBe(8);
+    expect(maximumFocusedOmissionFindings).toBeGreaterThan(maximumOmissionFindings);
+    expect(v8).toContain("Never report what applicationPlan.cuts drops or compresses");
+    expect(v8).toContain("not also as editorial-missing-evidence or as an emphasis finding");
+  });
+});
+
 describe("critic prompt v7", () => {
   it("keeps v6 unchanged and adds only the omission review, which new runs record (#2026)", () => {
     const v6 = createCriticAdjudicationPrompt("cli-critic-v6");
     const v7 = createCriticAdjudicationPrompt("cli-critic-v7");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v7");
     expect(v6).not.toContain(omittedAccomplishmentCode);
     expect(
       v7
