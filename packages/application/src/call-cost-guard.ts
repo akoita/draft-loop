@@ -14,9 +14,26 @@ interface ModelExecutor {
   readonly execute: (request: ModelRequest<JsonObject>) => Promise<ModelResponse<JsonObject>>;
 }
 
+/** The characters of the prefix a provider's prompt cache serves, when the request declares one. */
+function cachedPrefixCharacters(request: ModelRequest<JsonObject>): number {
+  const layout = request.promptCache;
+  if (layout === undefined) return 0;
+  const members = Object.entries(request.input);
+  if (layout.stableInputMembers < 1 || layout.stableInputMembers > members.length) return 0;
+  const stable = Object.fromEntries(members.slice(0, layout.stableInputMembers));
+  return layout.systemPrompt.length + JSON.stringify(stable).length;
+}
+
 /**
  * A call's estimated worst cost before it is sent (#1985): its prompt size at the input rate,
  * plus its whole output budget at the output rate. Undefined when the model has no catalog price.
+ *
+ * The prefix a declared prompt cache serves is priced at the cache-read rate instead: the run's
+ * first call of that role writes it, so pricing it at the input rate on every later call refused
+ * calls the run could afford (the critique's retry on the 2026-11-01 run of private reference G,
+ * estimated at $0.81 with $0.45 left and a cached career source). A write of an expired cache
+ * costs more than this estimate; the run's cost limit, checked after each call, still stops it
+ * (#2028).
  */
 export function worstCallCostUsd(request: ModelRequest<JsonObject>): number | undefined {
   const pricing = catalogModelPricing(request.model);
@@ -25,10 +42,13 @@ export function worstCallCostUsd(request: ModelRequest<JsonObject>): number | un
     request.systemPrompt.length +
     JSON.stringify(request.input).length +
     JSON.stringify(request.outputSchema).length;
-  const inputTokens = Math.ceil(promptCharacters / estimateCharactersPerToken);
+  const cachedCharacters = Math.min(cachedPrefixCharacters(request), promptCharacters);
+  const cachedTokens = Math.ceil(cachedCharacters / estimateCharactersPerToken);
+  const inputTokens = Math.ceil((promptCharacters - cachedCharacters) / estimateCharactersPerToken);
   const outputTokens = request.maxOutputTokens ?? defaultMaxOutputTokens;
   return (
-    (inputTokens * pricing.inputUsdPerMillionTokens +
+    (cachedTokens * (pricing.cachedInputUsdPerMillionTokens ?? pricing.inputUsdPerMillionTokens) +
+      inputTokens * pricing.inputUsdPerMillionTokens +
       outputTokens * pricing.outputUsdPerMillionTokens) /
     1_000_000
   );

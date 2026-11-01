@@ -269,9 +269,10 @@ the v3 prompt.
 
 Critic template `cli-critic-v5` is v4 plus a job emphasis review.
 `cli-critic-v6` keeps v5's review and reads a compact evidence table
-(`reference-table-v2`): a claim's evidence that is a retrieved chunk's whole
-text is cited by that chunk's ID instead of repeated. A full-source critique
-therefore no longer sends the source twice (#1986).
+(`reference-table-v2`): a claim's evidence found in a retrieved chunk is cited
+by that chunk's ID and the claim's line locator instead of repeated, when it
+is the chunk's whole text or at least 40 characters with a locator. A
+full-source critique therefore no longer sends the source twice (#1986).
 The critic compares the job's central themes, from its requirements and
 responsibilities weighted by priority and repetition, with what the draft leads
 with, expands and compresses. Each finding is a `coverage` finding that names

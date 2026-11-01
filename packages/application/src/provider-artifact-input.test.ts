@@ -3,7 +3,9 @@ import { type DraftArtifact, draftArtifactSchema } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
+  compactEvidenceReferenceTableInstructions,
   evidenceReferenceTableInstructions,
+  minimumCompactedExcerptCharacters,
   modelFacingArtifactWithCompactEvidenceTable,
   modelFacingArtifactWithEvidenceTable,
 } from "./provider-artifact-input.js";
@@ -208,5 +210,38 @@ describe("compact evidence reference table (#1986)", () => {
     ).toEqual(["chunk-1", "chunk-2", "excerpt"]);
     expect(entries[0]).toMatchObject({ locator: references[0]?.locator });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length / 2);
+  });
+
+  it("cites the chunk an excerpt with a locator is found in, and keeps the locator", () => {
+    const chunk = { id: "chunk-1", text: `Lead.\n${"m".repeat(200)}\n${"n".repeat(200)}\nTail.` };
+    const inside = { ...required(largeReferences()[0]), excerpt: "m".repeat(200) };
+    const references: EvidenceReference[] = [
+      { ...inside, locator: "line:2" },
+      { ...inside, locator: undefined } as unknown as EvidenceReference,
+      { ...inside, locator: "line:3", excerpt: "n".repeat(39) },
+      { ...inside, locator: "line:4", excerpt: "Not in any retrieved chunk, so it stays." },
+    ];
+    const artifact = fixtureArtifact(references.map((reference) => [reference]));
+    const context = contextWithManifest([
+      { path: inside.sourcePath, checksum: inside.sourceChecksum ?? "" },
+    ]);
+
+    const compact = modelFacingArtifactWithCompactEvidenceTable(artifact, context, [chunk]);
+
+    const entries = Object.values(compact.evidenceReferences);
+    expect(entries).toHaveLength(4);
+    expect(entries[0]).toEqual({
+      sourcePath: "evidence-source-1",
+      sourceChecksum: inside.sourceChecksum,
+      locator: "line:2",
+      retrievedEvidenceChunkId: "chunk-1",
+    });
+    // Without a locator the critic could not tell which lines were cited; a short excerpt is
+    // cheaper than the lookup; an excerpt no chunk holds has nowhere to point.
+    expect(entries.slice(1).every((entry) => "excerpt" in entry)).toBe(true);
+    expect(compactEvidenceReferenceTableInstructions).toContain(
+      "the chunk's text at the entry's locator",
+    );
+    expect(minimumCompactedExcerptCharacters).toBe(40);
   });
 });
