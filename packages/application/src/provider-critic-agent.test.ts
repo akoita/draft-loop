@@ -1,10 +1,14 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
 
 import { coverageJudgementInstructions } from "./critic-adjudication.js";
 import { critiqueOutputSchemaWithCoverageJudgements } from "./critic-critique-contract.js";
+import { omittedAccomplishmentCode } from "./critic-omission.js";
+import { omissionCheckOutputSchema, omissionCheckSystemPrompt } from "./critic-omission-check.js";
+import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { createProviderCriticAgent } from "./provider-critic-agent.js";
 
 // The model-facing artifact projection is covered elsewhere; here only the request layout matters.
@@ -130,5 +134,197 @@ describe("provider critic agent", () => {
     expect(compact?.systemPrompt).toContain("reference-table-v2");
     expect(full?.input.artifact).not.toHaveProperty("compactFor");
     expect(full?.systemPrompt).not.toContain("reference-table-v2");
+  });
+
+  describe("omission check (critic v9, #2039)", () => {
+    const v9 = {
+      ...context,
+      modelConfiguration: {
+        ...context.modelConfiguration,
+        critic: { ...context.modelConfiguration.critic, promptTemplateVersion: "cli-critic-v9" },
+      },
+    } as ContextSnapshot;
+    const plan = {
+      themes: [
+        {
+          title: "TypeScript tooling",
+          rationale: "Central.",
+          requirementIds: ["requirement"],
+          evidenceChunkIds: ["chunk-1"],
+          gap: false,
+        },
+      ],
+      leads: { summaryAngle: "Tooling", coreAreas: [{ text: "Tools", themeRank: 1 }] },
+      cuts: [],
+    };
+    const omission = {
+      chunkId: "chunk-1",
+      themeId: "theme-1",
+      accomplishment: "Built TypeScript tools in 2021",
+      role: "Engineer",
+      status: "left-out",
+      move: "Add it to the experience section.",
+    };
+    const response = (output: JsonObject, estimatedUsd: number | null, inputTokens: number) =>
+      ({
+        output,
+        provider: "openai",
+        modelId: "c",
+        usage: {
+          inputTokens,
+          outputTokens: 10,
+          totalTokens: inputTokens + 10,
+          cachedInputTokens: 5,
+        },
+        cost: { estimatedUsd },
+      }) as unknown as ModelResponse<JsonObject>;
+
+    /** Answers the check with one omission and the critique with the given findings. */
+    function twoCallCritic(
+      requests: ModelRequest<JsonObject>[],
+      findings: readonly JsonObject[],
+      remainingCostUsd?: number,
+    ) {
+      const critic = createProviderCriticAgent({
+        context: v9,
+        promptContext: v9,
+        dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+        criticCompany: "openai",
+        criticModel: "c",
+        userError: (message) => new Error(message),
+        createAdapter: async () => ({
+          execute: async (request: ModelRequest<JsonObject>) => {
+            requests.push(request);
+            return request.outputName === "omission_check"
+              ? response({ omissions: [omission] }, 0.1, 100)
+              : response({ findings, coverageJudgements: [] }, 0.5, 1000);
+          },
+        }),
+      });
+      return critic.execute({
+        ...critique(1),
+        applicationPlan: plan,
+        ...(remainingCostUsd === undefined ? {} : { remainingCostUsd }),
+      } as never);
+    }
+
+    it("asks the check first, with the CV text and the theme chunks only, then the critique", async () => {
+      const requests: ModelRequest<JsonObject>[] = [];
+      const execution = await twoCallCritic(requests, [
+        { id: "f1", code: "quality-x", category: "quality", severity: "warning", message: "m" },
+        {
+          id: "f2",
+          code: omittedAccomplishmentCode,
+          category: "coverage",
+          severity: "error",
+          message: "the critique's own omission",
+        },
+      ]);
+
+      const [check, critiqueCall] = requests;
+      expect(check?.outputName).toBe("omission_check");
+      expect(check?.systemPrompt).toBe(omissionCheckSystemPrompt);
+      expect(check?.outputSchema).toBe(omissionCheckOutputSchema);
+      expect(check?.promptCache).toBeUndefined();
+      expect(check?.maxOutputTokens).toBe(4096);
+      expect(check?.input).toEqual({
+        cv: "## undefined\nBuilt TypeScript tools.",
+        themes: [{ id: "theme-1", title: "TypeScript tooling", requirementIds: ["requirement"] }],
+        cuts: [],
+        chunks: [{ id: "chunk-1", themeIds: ["theme-1"], text: "Built TypeScript tools in 2021." }],
+      });
+      expect(critiqueCall?.outputName).toBe("draft_critique");
+      expect(critiqueCall?.systemPrompt).not.toContain("omission");
+
+      // The check's answers replace the critique's own omission findings, and both calls are billed.
+      expect(execution.output.findings).toEqual([
+        { id: "f1", code: "quality-x", category: "quality", severity: "warning", message: "m" },
+        {
+          id: "omission-1",
+          code: omittedAccomplishmentCode,
+          category: "coverage",
+          severity: "error",
+          message:
+            'The CV left out "Built TypeScript tools in 2021" (chunk-1, Engineer; serves theme-1 TypeScript tooling). Move: Add it to the experience section.',
+        },
+      ]);
+      expect(execution).toMatchObject({
+        inputTokens: 1100,
+        outputTokens: 20,
+        totalTokens: 1120,
+        cachedInputTokens: 10,
+        estimatedUsd: 0.6,
+      });
+    });
+
+    it("skips the check when the run has nothing to compare, and on earlier critic versions", async () => {
+      const requests: ModelRequest<JsonObject>[] = [];
+      const critic = createProviderCriticAgent({
+        context: v9,
+        promptContext: v9,
+        dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+        criticCompany: "openai",
+        criticModel: "c",
+        userError: (message) => new Error(message),
+        createAdapter: async () => ({
+          execute: async (request: ModelRequest<JsonObject>) => {
+            requests.push(request);
+            return response({ findings: [], coverageJudgements: [] }, 0.5, 1000);
+          },
+        }),
+      });
+      // No plan, and no critical or high requirement with an achievement: nothing to compare.
+      const execution = await critic
+        .execute({
+          ...critique(1),
+          retrievedEvidence: [],
+        } as never)
+        .catch((error: Error) => error);
+      expect(execution).toBeInstanceOf(Error); // no evidence at all refuses the critique itself
+      requests.length = 0;
+      await recordingCritic(requests).execute({ ...critique(1), applicationPlan: plan } as never);
+      expect(requests.map(({ outputName }) => outputName)).toEqual(["draft_critique"]);
+    });
+
+    it("carries the check's bill on the error when the guard then refuses the critique", async () => {
+      const requests: ModelRequest<JsonObject>[] = [];
+      const priced = defaultModelProfileRegistry.resolve("standard-anthropic-critic", 1, "critic");
+      const v9Priced = {
+        ...v9,
+        modelConfiguration: {
+          ...v9.modelConfiguration,
+          critic: {
+            ...v9.modelConfiguration.critic,
+            company: priced.provider,
+            modelId: priced.modelId,
+            profile: priced,
+          },
+        },
+      } as ContextSnapshot;
+      const critic = createProviderCriticAgent({
+        context: v9Priced,
+        promptContext: v9Priced,
+        dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+        criticCompany: priced.provider,
+        criticModel: priced.modelId,
+        userError: (message) => new Error(message),
+        createAdapter: async () => ({
+          execute: async (request: ModelRequest<JsonObject>) => {
+            requests.push(request);
+            return response({ omissions: [omission] }, 0.1, 100);
+          },
+        }),
+      });
+      // Enough for the small check, not for the critique's 16k-token output budget.
+      const error = await critic
+        .execute({ ...critique(1), applicationPlan: plan, remainingCostUsd: 0.2 } as never)
+        .catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(CallCostBudgetError);
+      expect(requests.map(({ outputName }) => outputName)).toEqual(["omission_check"]);
+      expect((error as { billed?: unknown }).billed).toEqual({
+        usage: { inputTokens: 100, outputTokens: 10, totalTokens: 110, cachedInputTokens: 5 },
+        cost: { estimatedUsd: 0.1 },
+      });
+    });
   });
 });
