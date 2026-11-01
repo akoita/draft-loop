@@ -21,8 +21,8 @@ function idPattern(id: string): RegExp {
   return new RegExp(`(['"‘“\`]?)${escaped(id)}(['"’”\`]?)`, "gu");
 }
 
-/** The model-facing evidence table's ids, and retrieved chunks named by a long hex id. */
-const evidenceReference = /\bevidence-reference-\d+\b/gu;
+/** The model-facing evidence table's ids (`ref-N`, `evidence-reference-N` before 2026-11-01). */
+const evidenceReference = /\b(?:evidence-reference|ref)-\d+\b/gu;
 const retrievedEvidence =
   /\bretrievedEvidence(?:\s+(?:ids?|IDs?|chunks?))?\s+['"`]?[0-9a-f]{12,}['"`]?/gu;
 const bareChunkId = /(['"`]?)\b[0-9a-f]{24,}\b(['"`]?)/gu;

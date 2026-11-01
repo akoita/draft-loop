@@ -34,6 +34,9 @@ describe("readable finding messages", () => {
     expect(readableFindingMessage("See chunk 63b41e9f0a2c7d8e4b5a6c7d8e9f0a1b.")).toBe(
       "See chunk the cited evidence.",
     );
+    expect(readableFindingMessage("Entry ref-12 and `ref-3` do not show it.")).toBe(
+      "Entry its cited evidence and `its cited evidence` do not show it.",
+    );
   });
 
   it("names ids it has no label for generically, and keeps a long label short", () => {

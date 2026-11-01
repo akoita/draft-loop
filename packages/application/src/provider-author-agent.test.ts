@@ -339,8 +339,8 @@ describe("provider author agent revision", () => {
     expect(currentArtifact).toMatchObject({ evidenceEncoding: "reference-table-v1" });
     const claim = currentArtifact?.claims?.[0];
     expect(claim).not.toHaveProperty("evidence");
-    expect(claim?.evidenceReferenceIds).toEqual(["evidence-reference-1"]);
-    expect(currentArtifact?.evidenceReferences?.["evidence-reference-1"]).toMatchObject({
+    expect(claim?.evidenceReferenceIds).toEqual(["ref-1"]);
+    expect(currentArtifact?.evidenceReferences?.["ref-1"]).toMatchObject({
       sourcePath: "evidence-source-1",
       locator: "line:1",
       excerpt: "Built TypeScript tools in 2021.",

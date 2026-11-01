@@ -174,7 +174,7 @@ describe("provider artifact evidence reference table", () => {
       modelFacingArtifact(artifact, context).claims[0]?.evidence,
     );
     expect(Object.keys(projected.evidenceReferences)).toEqual(
-      Array.from({ length: 5 }, (_, index) => `evidence-reference-${index + 1}`),
+      Array.from({ length: 5 }, (_, index) => `ref-${index + 1}`),
     );
     expect(JSON.stringify(projected)).not.toContain("/fictional/local/");
   });
@@ -208,7 +208,11 @@ describe("compact evidence reference table (#1986)", () => {
     expect(
       entries.map((entry) => ("excerpt" in entry ? "excerpt" : entry.retrievedEvidenceChunkId)),
     ).toEqual(["chunk-1", "chunk-2", "excerpt"]);
-    expect(entries[0]).toMatchObject({ locator: references[0]?.locator });
+    // A pointer entry names only the chunk and the locator: the chunk carries the source.
+    expect(entries[0]).toEqual({
+      locator: references[0]?.locator,
+      retrievedEvidenceChunkId: "chunk-1",
+    });
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(full).length / 2);
   });
 
@@ -230,12 +234,7 @@ describe("compact evidence reference table (#1986)", () => {
 
     const entries = Object.values(compact.evidenceReferences);
     expect(entries).toHaveLength(4);
-    expect(entries[0]).toEqual({
-      sourcePath: "evidence-source-1",
-      sourceChecksum: inside.sourceChecksum,
-      locator: "line:2",
-      retrievedEvidenceChunkId: "chunk-1",
-    });
+    expect(entries[0]).toEqual({ locator: "line:2", retrievedEvidenceChunkId: "chunk-1" });
     // Without a locator the critic could not tell which lines were cited; a short excerpt is
     // cheaper than the lookup; an excerpt no chunk holds has nowhere to point.
     expect(entries.slice(1).every((entry) => "excerpt" in entry)).toBe(true);
