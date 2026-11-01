@@ -3,7 +3,7 @@ import type {
   TextBlockParam,
 } from "@anthropic-ai/sdk/resources/messages/messages.js";
 
-import type { JsonSchema, JsonValue, ModelRequest } from "./index.js";
+import type { JsonSchema, JsonValue, ModelRequest, PromptCacheLifetime } from "./index.js";
 
 type PromptLayout = Pick<MessageCreateParamsNonStreaming, "system" | "messages">;
 
@@ -20,6 +20,13 @@ function cachesInput(request: Pick<ModelRequest, "input" | "promptCache">): bool
     promptCache.stableInputMembers >= 1 &&
     promptCache.stableInputMembers <= Object.keys(input).length
   );
+}
+
+/** How long the request's cached prefix lives after each request that touches it; none uncached. */
+export function anthropicCacheLifetime(
+  request: Pick<ModelRequest, "input" | "promptCache">,
+): PromptCacheLifetime | undefined {
+  return cachesInput(request) ? (request.promptCache?.lifetime ?? "1h") : undefined;
 }
 
 /** The output names a cached request shares one format with, when it names its own among them. */
@@ -84,9 +91,10 @@ export function anthropicSharedOutput(
  *
  * Without a cache layout, the request goes as it always has: the system prompt, then the input as
  * one JSON message. With one, the run-stable system instructions come first, then the run-stable
- * input members as one JSON block carrying the request's only cache breakpoint, with a one-hour
- * lifetime so later author calls of the run read it from the cache. The call's own instructions
- * and the rest of the input follow the breakpoint; the words sent are the same either way.
+ * input members as one JSON block carrying the request's only cache breakpoint, on the layout's
+ * lifetime (one hour unless it says five minutes), so later calls of the run read it from the
+ * cache. The call's own instructions and the rest of the input follow the breakpoint; the words
+ * sent are the same either way.
  */
 export function anthropicPromptLayout(
   request: Pick<ModelRequest, "systemPrompt" | "input" | "promptCache" | "outputName">,
@@ -106,7 +114,7 @@ export function anthropicPromptLayout(
     {
       type: "text",
       text: serialize(stable),
-      cache_control: { type: "ephemeral", ttl: "1h" },
+      cache_control: { type: "ephemeral", ttl: promptCache.lifetime ?? "1h" },
     },
   ];
   const callInstructions = `${promptCache.callInstructions}${sharedOutputInstructions(request)}`;

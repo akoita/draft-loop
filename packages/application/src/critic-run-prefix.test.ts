@@ -179,6 +179,8 @@ describe("critic run prefix", () => {
     ]);
 
     expect(review?.promptCache?.stableInputMembers).toBe(3);
+    // The critic's prefix keeps the one-hour lifetime: its calls bracket the author's drafts.
+    expect(review?.promptCache?.lifetime).toBeUndefined();
     expect(review?.promptCache?.callInstructions).toBe(applicationPlanReviewSystemPrompt);
     expect(review?.systemPrompt).toBe(
       `${review?.promptCache?.systemPrompt}\n\n${applicationPlanReviewSystemPrompt}`,
