@@ -836,8 +836,12 @@ describe("local application driver", () => {
         (criticInputs[0]?.retrievedEvidence ?? []) as readonly JsonRecord[]
       ).map(({ id }) => id);
       for (const referenceId of referenceIds ?? []) {
-        expect(referenceTable?.[referenceId]).toMatchObject({ sourcePath: "evidence-source-1" });
-        expect(referenceTable?.[referenceId]).not.toHaveProperty("excerpt");
+        expect(referenceId).toMatch(/^ref-\d+$/u);
+        // A pointer entry names only the chunk and the locator: the chunk carries the source.
+        expect(Object.keys(referenceTable?.[referenceId] as JsonRecord).sort()).toEqual([
+          "locator",
+          "retrievedEvidenceChunkId",
+        ]);
         expect(retrievedIds).toContain(
           (referenceTable?.[referenceId] as JsonRecord | undefined)?.retrievedEvidenceChunkId,
         );
