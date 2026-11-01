@@ -308,7 +308,7 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     for (const call of criticCalls) {
       expect(call).toMatchObject({ modelId: "gpt-6-luna", route: "openai-api" });
     }
-    expect(criticCalls.map((call) => call.estimatedUsd).sort((a, b) => a - b)).toEqual(
+    expect(criticCalls.map((call) => call.estimatedUsd ?? -1).sort((a, b) => a - b)).toEqual(
       [openAiCallUsd, 2 * openAiCallUsd].map((usd) => expect.closeTo(usd, 10)),
     );
     const expected = {
