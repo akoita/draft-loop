@@ -23,6 +23,7 @@ import {
   withCoverageJudgementInstructions,
 } from "./critic-adjudication.js";
 import { normalizeEmphasisSeverity } from "./critic-emphasis.js";
+import { capBlockingOmissions } from "./critic-omission.js";
 
 /** The most candidate blocks shown as hints for one coverage-judgement request. */
 export const maximumCoverageJudgementCandidateBlocks = 3;
@@ -146,31 +147,35 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
   }
   const coverageJudgements = parseCoverageJudgements(value.coverageJudgements);
   return {
-    findings: findings.map((finding) => {
-      if (typeof finding !== "object" || finding === null || Array.isArray(finding)) {
-        throw new CliUserError("The critic returned an invalid finding.");
-      }
-      const item = finding as Record<string, unknown>;
-      const required = ["id", "code", "category", "severity", "message"];
-      if (
-        required.some((key) => typeof item[key] !== "string" || (item[key] as string).trim() === "")
-      ) {
-        throw new CliUserError("The critic returned an incomplete finding.");
-      }
-      if ((item.message as string).length > maximumCritiqueMessageCharacters) {
-        throw new CliUserError("The critic returned an excessively long finding message.");
-      }
-      return normalizeEmphasisSeverity({
-        id: item.id as string,
-        code: item.code as string,
-        category: item.category as Critique["findings"][number]["category"],
-        severity: item.severity as Critique["findings"][number]["severity"],
-        message: item.message as string,
-        ...(typeof item.claimId === "string" ? { claimId: item.claimId } : {}),
-        ...(typeof item.sectionId === "string" ? { sectionId: item.sectionId } : {}),
-        ...(typeof item.requirementId === "string" ? { requirementId: item.requirementId } : {}),
-      });
-    }),
+    findings: capBlockingOmissions(
+      findings.map((finding) => {
+        if (typeof finding !== "object" || finding === null || Array.isArray(finding)) {
+          throw new CliUserError("The critic returned an invalid finding.");
+        }
+        const item = finding as Record<string, unknown>;
+        const required = ["id", "code", "category", "severity", "message"];
+        if (
+          required.some(
+            (key) => typeof item[key] !== "string" || (item[key] as string).trim() === "",
+          )
+        ) {
+          throw new CliUserError("The critic returned an incomplete finding.");
+        }
+        if ((item.message as string).length > maximumCritiqueMessageCharacters) {
+          throw new CliUserError("The critic returned an excessively long finding message.");
+        }
+        return normalizeEmphasisSeverity({
+          id: item.id as string,
+          code: item.code as string,
+          category: item.category as Critique["findings"][number]["category"],
+          severity: item.severity as Critique["findings"][number]["severity"],
+          message: item.message as string,
+          ...(typeof item.claimId === "string" ? { claimId: item.claimId } : {}),
+          ...(typeof item.sectionId === "string" ? { sectionId: item.sectionId } : {}),
+          ...(typeof item.requirementId === "string" ? { requirementId: item.requirementId } : {}),
+        });
+      }),
+    ),
     ...(coverageJudgements === undefined ? {} : { coverageJudgements }),
     ...(instructionsVersion === undefined
       ? {}
