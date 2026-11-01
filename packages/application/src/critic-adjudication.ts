@@ -4,7 +4,10 @@ import {
 } from "@draft-loop/validation";
 
 import { emphasisReviewInstructions } from "./critic-emphasis.js";
-import { omissionReviewInstructions } from "./critic-omission.js";
+import {
+  focusedOmissionReviewInstructions,
+  omissionReviewInstructions,
+} from "./critic-omission.js";
 import {
   compactEvidenceReferenceTableInstructions,
   evidenceReferenceTableInstructions,
@@ -74,12 +77,17 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   if (templateVersion === "cli-critic-v7") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV7}${editorialReviewInstructions}${emphasisReviewInstructions}${omissionReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
   }
+  // v8 keeps v7 and replaces the omission review with the focused, chunk-by-chunk one (#2031).
+  if (templateVersion === "cli-critic-v8") {
+    return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV7}${editorialReviewInstructions}${emphasisReviewInstructions}${focusedOmissionReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
+  }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }
 
 const compactEvidenceTableVersions: ReadonlySet<string> = new Set([
   "cli-critic-v6",
   "cli-critic-v7",
+  "cli-critic-v8",
 ]);
 
 /** Whether a critic prompt version reads the compact evidence table. */

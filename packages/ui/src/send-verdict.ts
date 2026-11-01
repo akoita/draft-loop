@@ -4,7 +4,7 @@ import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 
 /**
  * The editorial warning codes `cli-critic-v4` and later report, and the omission warning of
- * `cli-critic-v7`, in the order the verdict names them.
+ * `cli-critic-v7` and later, in the order the verdict names them.
  */
 const editorialLabels = [
   ["editorial-source-note", "copied source notes or narration"],
