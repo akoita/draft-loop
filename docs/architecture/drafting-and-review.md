@@ -317,7 +317,7 @@ plan cuts, what the job does not ask for, or what the evidence does not state,
 and the web verdict names open omission warnings as "supported accomplishments
 left out". Resumed v6 runs keep the v6 prompt.
 
-New runs record `cli-critic-v8`, which is v7 with a focused omission review
+`cli-critic-v8` is v7 with a focused omission review
 (#2031). On the 2026-11-01 run of reference G, v7's one-pass comparison of the
 whole CV with 316 chunks reported one omission, as a warning, while the draft
 left out 13 reference accomplishments; 10 of them were stated in chunks the
@@ -329,6 +329,28 @@ accomplishment and decide whether the CV states it, mentions it only, or
 leaves it out: a citation is not a statement. Findings, severities and the
 blocking cap are v7's, with at most eight omissions per critique. Resumed v7
 runs keep the v7 prompt.
+
+New runs record `cli-critic-v9`, which moves the omission review out of the
+critique into its own call (#2039). On the 2026-11-01 runs of reference G, v7
+and v8 each reported one omission, as a warning, while the draft left out 13
+and 10 reference accomplishments; a paragraph inside a 300k-token critique
+does not get a chunk-by-chunk comparison done. The critique step now makes a
+separate omission check first, with the critic model: its input is only the
+CV's text (sections in order, bullets marked), the plan's supported themes with
+their requirement ids, the plan's cuts, and the candidate chunks the themes
+cite with the themes each serves; on a run without a plan, each critical or
+high requirement stands as a theme and the candidates are the chunks the
+achievement plan names for them. The check lists each chunk's stated
+accomplishments and returns at most eight the CV leaves out or only mentions,
+each with the chunk id, the theme, the role and one move
+(`critic-omission-check.ts`, instructions `omission-check-v1`). They become
+`coverage-omitted-accomplishment` errors that replace any the critique still
+reports, under the same cap of three blocking; v9's critique prompt is v6's,
+without the omission paragraph. The check is guarded like every call and runs
+before the critique, so a critique the guard then refuses still carries the
+check's bill; the critic execution record sums both calls' tokens and cost. A
+run without candidate chunks skips the check. Resumed v8 runs keep the v8
+prompt and no separate check.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited

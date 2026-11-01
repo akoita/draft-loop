@@ -244,7 +244,11 @@ describe.runIf(connectionString !== undefined)("self-hosted run on Postgres", ()
       }
       expect(new Set(scripted.anthropicKeys)).toEqual(new Set(["synthetic-claude-key"]));
       expect(new Set(scripted.openAiKeys)).toEqual(new Set(["synthetic-openai-key"]));
-      expect(scripted.openAiOutputs).toEqual(["application_plan_review", "draft_critique"]);
+      expect(scripted.openAiOutputs).toEqual([
+        "application_plan_review",
+        "omission_check",
+        "draft_critique",
+      ]);
 
       // Run history names each call's route.
       const executions = await admin.query<{ provider: string; route: string }>(
