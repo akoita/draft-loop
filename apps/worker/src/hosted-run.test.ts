@@ -260,7 +260,12 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
     for (const url of gateway.vertexUrls) {
       expect(url).toMatch(/^https:\/\/aiplatform\.eu\.rep\.googleapis\.com\//u);
     }
-    expect(gateway.openAiOutputs).toEqual(["application_plan_review", "draft_critique"]);
+    // The critic's three calls: the plan review, then the omission check before the critique (#2039).
+    expect(gateway.openAiOutputs).toEqual([
+      "application_plan_review",
+      "omission_check",
+      "draft_critique",
+    ]);
     expect(new Set(gateway.openAiKeys)).toEqual(new Set(["synthetic-openai-key"]));
 
     // Run history records each call's route and its Vertex-priced cost: the draft and critique
@@ -292,27 +297,31 @@ describe.runIf(connectionString !== undefined)("hosted run on Postgres", () => {
       (scriptedUsage.openai.inputTokens * 0.1 + scriptedUsage.openai.outputTokens * 0.5) / 1e6;
     const authorCalls = calls.filter((call) => call.provider === "anthropic");
     const criticCalls = calls.filter((call) => call.provider === "openai");
-    // The plan and the draft; the plan review and the critique.
+    // The plan and the draft; the plan review and the critique, whose record also carries the
+    // omission check's call (#2039).
     expect([authorCalls.length, criticCalls.length]).toEqual([2, 2]);
+    const criticProviderCalls = gateway.openAiOutputs.length;
     for (const call of authorCalls) {
       expect(call).toMatchObject({ modelId: "claude-sonnet-5-5", route: "vertex-ai" });
       expect(call.estimatedUsd).toBeCloseTo(vertexCallUsd, 10);
     }
     for (const call of criticCalls) {
       expect(call).toMatchObject({ modelId: "gpt-6-luna", route: "openai-api" });
-      expect(call.estimatedUsd).toBeCloseTo(openAiCallUsd, 10);
     }
+    expect(criticCalls.map((call) => call.estimatedUsd).sort((a, b) => a - b)).toEqual(
+      [openAiCallUsd, 2 * openAiCallUsd].map((usd) => expect.closeTo(usd, 10)),
+    );
     const expected = {
       calls: calls.length,
       inputTokens:
         authorCalls.length * scriptedUsage.vertex.inputTokens +
-        criticCalls.length * scriptedUsage.openai.inputTokens,
+        criticProviderCalls * scriptedUsage.openai.inputTokens,
       outputTokens:
         authorCalls.length * scriptedUsage.vertex.outputTokens +
-        criticCalls.length * scriptedUsage.openai.outputTokens,
+        criticProviderCalls * scriptedUsage.openai.outputTokens,
       unpricedCalls: 0,
     };
-    const expectedUsd = authorCalls.length * vertexCallUsd + criticCalls.length * openAiCallUsd;
+    const expectedUsd = authorCalls.length * vertexCallUsd + criticProviderCalls * openAiCallUsd;
     expect(snapshot?.totalCostUsd).toBeCloseTo(expectedUsd, 10);
 
     // The API's usage routes report the same totals, per run and for the tenant's month.
