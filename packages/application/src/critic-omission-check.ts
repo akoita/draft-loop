@@ -27,9 +27,6 @@ export const omissionCheckInstructionsVersion = "omission-check-v1";
 /** The most omissions one check may report. */
 export const maximumOmissionCheckFindings = 8;
 
-/** The check's output budget: a few short entries, never a draft. */
-export const omissionCheckOutputTokens = 4096;
-
 const maximumAccomplishmentCharacters = 120;
 const maximumMoveCharacters = 200;
 const maximumRoleCharacters = 80;

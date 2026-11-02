@@ -4,12 +4,14 @@ import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/provid
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
 
+import { worstCallCostUsd } from "./call-cost-guard.js";
 import { coverageJudgementInstructions } from "./critic-adjudication.js";
 import { critiqueOutputSchemaWithCoverageJudgements } from "./critic-critique-contract.js";
 import { omittedAccomplishmentCode } from "./critic-omission.js";
 import { omissionCheckOutputSchema, omissionCheckSystemPrompt } from "./critic-omission-check.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { createProviderCriticAgent } from "./provider-critic-agent.js";
+import { criticOutputBudget } from "./run-model-profiles.js";
 
 // The model-facing artifact projection is covered elsewhere; here only the request layout matters.
 vi.mock("./provider-artifact-input.js", async (importOriginal) => ({
@@ -226,7 +228,9 @@ describe("provider critic agent", () => {
       expect(check?.systemPrompt).toBe(omissionCheckSystemPrompt);
       expect(check?.outputSchema).toBe(omissionCheckOutputSchema);
       expect(check?.promptCache).toBeUndefined();
-      expect(check?.maxOutputTokens).toBe(4096);
+      // The selected profile's budget, like every critic call: an adapter refuses any other (#2044).
+      expect(check?.maxOutputTokens).toBe(criticOutputBudget(v9.modelConfiguration.critic));
+      expect(check?.maxOutputTokens).toBe(critiqueCall?.maxOutputTokens);
       expect(check?.input).toEqual({
         cv: "## undefined\nBuilt TypeScript tools.",
         themes: [{ id: "theme-1", title: "TypeScript tooling", requirementIds: ["requirement"] }],
@@ -315,12 +319,25 @@ describe("provider critic agent", () => {
           },
         }),
       });
-      // Enough for the small check, not for the critique's 16k-token output budget.
+      await critic
+        .execute({ ...critique(1), applicationPlan: plan } as never)
+        .catch(() => undefined);
+      // Enough for the check's worst case once, not for the critique after it: the critique's
+      // prompt is larger and it carries the same output budget.
+      const check = requests[0];
+      const worstCheck = worstCallCostUsd(check as ModelRequest<JsonObject>);
+      expect(worstCheck).toBeGreaterThan(0);
+      requests.length = 0;
       const error = await critic
-        .execute({ ...critique(1), applicationPlan: plan, remainingCostUsd: 0.2 } as never)
+        .execute({
+          ...critique(1),
+          applicationPlan: plan,
+          remainingCostUsd: (worstCheck ?? 0) + 0.05,
+        } as never)
         .catch((caught: unknown) => caught);
       expect(error).toBeInstanceOf(CallCostBudgetError);
       expect(requests.map(({ outputName }) => outputName)).toEqual(["omission_check"]);
+      expect(requests[0]?.maxOutputTokens).toBe(priced.runtime.maxOutputTokens);
       expect((error as { billed?: unknown }).billed).toEqual({
         usage: { inputTokens: 100, outputTokens: 10, totalTokens: 110, cachedInputTokens: 5 },
         cost: { estimatedUsd: 0.1 },
