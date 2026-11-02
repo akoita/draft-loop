@@ -109,7 +109,7 @@ it("persists exact profile snapshots before execution and resumes without regist
     expect(context.modelConfiguration.critic).toMatchObject({
       company: "openai",
       modelId: critic.modelId,
-      promptTemplateVersion: "cli-critic-v9",
+      promptTemplateVersion: "cli-critic-v10",
       profile: critic,
     });
     expect(context.modelConfiguration.author.lineage).toBeUndefined();

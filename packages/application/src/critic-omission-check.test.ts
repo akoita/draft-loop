@@ -9,12 +9,19 @@ import {
 } from "./critic-adjudication.js";
 import { capBlockingOmissions, omittedAccomplishmentCode } from "./critic-omission.js";
 import {
+  blockingOmissionCheckFindings,
   criticRunsOmissionCheck,
   maximumOmissionCheckFindings,
+  maximumOmissionCheckRoundFindings,
+  maximumOmissionCheckSliceChunks,
+  mergeOmissionChecks,
+  type OmissionCheckInput,
   omissionCheckCvText,
   omissionCheckFindings,
   omissionCheckInput,
+  omissionCheckInputs,
   omissionCheckOutputSchema,
+  omissionCheckScope,
   omissionCheckSystemPrompt,
   parseOmissionCheck,
 } from "./critic-omission-check.js";
@@ -232,20 +239,212 @@ describe("omission check output", () => {
   });
 });
 
-describe("critic prompt v9", () => {
-  it("is the default, keeps v6's critique prompt and reads the compact table", () => {
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v9");
-    expect(createCriticAdjudicationPrompt("cli-critic-v9")).toBe(
-      createCriticAdjudicationPrompt("cli-critic-v6"),
+/** The one slice a small evidence set makes. */
+function onlySlice(slices: readonly OmissionCheckInput[]): OmissionCheckInput {
+  const [first] = slices;
+  if (first === undefined) throw new Error("expected one slice");
+  return first;
+}
+
+describe("omission check over every chunk (critic v10, #2046)", () => {
+  const widerPlan: ApplicationPlan = {
+    ...plan,
+    themes: [
+      ...plan.themes,
+      {
+        title: "Mentoring",
+        rationale: "Asked for.",
+        requirementIds: ["req-5"],
+        evidenceChunkIds: ["chunk-missing"],
+        gap: false,
+      },
+    ],
+  };
+
+  it("sends every retrieved chunk with every supported theme, uncited chunks without a theme", () => {
+    const [only, ...rest] = omissionCheckInputs(
+      artifact,
+      evidence,
+      widerPlan,
+      [],
+      noAchievements,
+      "every-chunk",
     );
-    expect(createCriticAdjudicationPrompt("cli-critic-v9")).not.toContain("omission");
-    expect(criticReadsCompactEvidenceTable("cli-critic-v9")).toBe(true);
+    expect(rest).toEqual([]);
+    expect(only).toEqual({
+      cv: omissionCheckCvText(artifact),
+      themes: [
+        { id: "theme-1", title: "Platform migration", requirementIds: ["req-1"] },
+        { id: "theme-3", title: "Delivery speed", requirementIds: ["req-3", "req-4"] },
+        { id: "theme-4", title: "Mentoring", requirementIds: ["req-5"] },
+      ],
+      cuts: [{ action: "compress", target: "Certification list" }],
+      chunks: [
+        { id: "chunk-a", themeIds: ["theme-1"], text: evidence[0]?.text },
+        { id: "chunk-b", themeIds: ["theme-1", "theme-3"], text: evidence[1]?.text },
+        { id: "chunk-c", themeIds: [], text: evidence[2]?.text },
+      ],
+    });
+    // The v9 scope keeps the cited chunks and the themes they serve, as before.
+    expect(
+      omissionCheckInput(artifact, evidence, widerPlan, [], noAchievements)?.themes.map(
+        ({ id }) => id,
+      ),
+    ).toEqual(["theme-1", "theme-3"]);
   });
 
-  it("is the only version that runs the separate check", () => {
+  it("slices the evidence by the slice size, each slice with the same CV, themes and cuts", () => {
+    const many = Array.from({ length: maximumOmissionCheckSliceChunks * 2 + 3 }, (_, index) =>
+      chunk(`chunk-${index}`, `Accomplishment ${index}.`),
+    );
+    const slices = omissionCheckInputs(artifact, many, plan, [], noAchievements, "every-chunk");
+    expect(slices.map(({ chunks }) => chunks.length)).toEqual([
+      maximumOmissionCheckSliceChunks,
+      maximumOmissionCheckSliceChunks,
+      3,
+    ]);
+    expect(slices.flatMap(({ chunks }) => chunks.map(({ id }) => id))).toEqual(
+      many.map(({ id }) => id),
+    );
+    for (const slice of slices) {
+      expect(slice.cv).toBe(slices[0]?.cv);
+      expect(slice.themes).toEqual(slices[0]?.themes);
+      expect(slice.cuts).toEqual(slices[0]?.cuts);
+    }
+  });
+
+  it("is empty without a theme to serve or a chunk to read", () => {
+    expect(
+      omissionCheckInputs(artifact, evidence, undefined, [], noAchievements, "every-chunk"),
+    ).toEqual([]);
+    expect(omissionCheckInputs(artifact, [], plan, [], noAchievements, "every-chunk")).toEqual([]);
+    // Without a plan, every chunk is read once a critical or high requirement stands as a theme.
+    const [withRequirement] = omissionCheckInputs(
+      artifact,
+      evidence,
+      undefined,
+      [{ id: "req-1", text: "Kubernetes migration", priority: "high" }],
+      {
+        achievements: [
+          { evidenceChunkId: "chunk-a", sourceId: "source", requirementIds: ["req-1"] },
+        ],
+      },
+      "every-chunk",
+    );
+    expect(withRequirement?.chunks.map(({ id, themeIds }) => [id, themeIds])).toEqual([
+      ["chunk-a", ["req-1"]],
+      ["chunk-b", []],
+      ["chunk-c", []],
+    ]);
+  });
+
+  it("keeps an uncited chunk's omission only when it names a theme the call was sent", () => {
+    const input = onlySlice(
+      omissionCheckInputs(artifact, evidence, plan, [], noAchievements, "every-chunk"),
+    );
+    const entry = (themeId: string) => ({
+      chunkId: "chunk-c",
+      themeId,
+      accomplishment: "Mentored four junior engineers",
+      role: "Platform engineer",
+      status: "bare-mention",
+      move: "Add it to the role.",
+    });
+    expect(parseOmissionCheck({ omissions: [entry("theme-3"), entry("theme-9")] }, input)).toEqual([
+      entry("theme-3"),
+    ]);
+  });
+
+  it("merges the slices' answers once per chunk and accomplishment, up to the round cap", () => {
+    const omission = (chunkId: string, accomplishment: string) => ({
+      chunkId,
+      themeId: "theme-1",
+      accomplishment,
+      role: "Engineer",
+      status: "left-out" as const,
+      move: "Add it.",
+    });
+    expect(
+      mergeOmissionChecks([
+        [
+          omission("chunk-a", "Led the migration of 40 services"),
+          omission("chunk-b", "Cut the cycle"),
+        ],
+        [
+          omission("chunk-a", "led the migration of 40 services."),
+          omission("chunk-b", "Cut the cycle!"),
+        ],
+        [omission("chunk-c", "Cut the cycle")],
+      ]),
+    ).toEqual([
+      omission("chunk-a", "Led the migration of 40 services"),
+      omission("chunk-b", "Cut the cycle"),
+      omission("chunk-c", "Cut the cycle"),
+    ]);
+    const flood = Array.from({ length: maximumOmissionCheckRoundFindings + 4 }, (_, index) =>
+      omission(`chunk-${index}`, `Accomplishment ${index}`),
+    );
+    expect(mergeOmissionChecks([flood.slice(0, 8), flood.slice(8)])).toHaveLength(
+      maximumOmissionCheckRoundFindings,
+    );
+  });
+
+  it("lets every merged answer block on v10 and keeps v9's cap of three", () => {
+    const input = onlySlice(
+      omissionCheckInputs(artifact, evidence, plan, [], noAchievements, "every-chunk"),
+    );
+    const findings = omissionCheckFindings(
+      Array.from({ length: 5 }, (_, index) => ({
+        chunkId: "chunk-a",
+        themeId: "theme-1",
+        accomplishment: `Accomplishment ${index}`,
+        role: "Engineer",
+        status: "left-out" as const,
+        move: "Add it.",
+      })),
+      input.themes,
+    );
+    expect(blockingOmissionCheckFindings("cli-critic-v10")).toBe(maximumOmissionCheckRoundFindings);
+    expect(blockingOmissionCheckFindings("cli-critic-v9")).toBeUndefined();
+    expect(blockingOmissionCheckFindings("cli-critic-v8")).toBeUndefined();
+    expect(
+      capBlockingOmissions(findings, blockingOmissionCheckFindings("cli-critic-v10")).map(
+        ({ severity }) => severity,
+      ),
+    ).toEqual(["error", "error", "error", "error", "error"]);
+    expect(
+      capBlockingOmissions(findings, blockingOmissionCheckFindings("cli-critic-v9")).map(
+        ({ severity }) => severity,
+      ),
+    ).toEqual(["error", "error", "error", "warning", "warning"]);
+  });
+
+  it("tells the check that a chunk may cite no theme", () => {
+    expect(omissionCheckSystemPrompt).toContain("a slice of the retrieved evidence");
+    expect(omissionCheckSystemPrompt).toContain("is empty when it cites none");
+  });
+});
+
+describe("critic prompts v9 and v10", () => {
+  it("v10 is the default, keeps v6's critique prompt and reads the compact table", () => {
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v10");
+    for (const version of ["cli-critic-v9", "cli-critic-v10"]) {
+      expect(createCriticAdjudicationPrompt(version)).toBe(
+        createCriticAdjudicationPrompt("cli-critic-v6"),
+      );
+      expect(createCriticAdjudicationPrompt(version)).not.toContain("omission");
+      expect(criticReadsCompactEvidenceTable(version)).toBe(true);
+    }
+  });
+
+  it("are the only versions that run the separate check, v9 on the cited chunks, v10 on every chunk", () => {
     expect(criticRunsOmissionCheck("cli-critic-v9")).toBe(true);
+    expect(criticRunsOmissionCheck("cli-critic-v10")).toBe(true);
+    expect(omissionCheckScope("cli-critic-v9")).toBe("cited-chunks");
+    expect(omissionCheckScope("cli-critic-v10")).toBe("every-chunk");
     for (const earlier of [6, 7, 8]) {
       expect(criticRunsOmissionCheck(`cli-critic-v${earlier}`)).toBe(false);
+      expect(omissionCheckScope(`cli-critic-v${earlier}`)).toBeUndefined();
     }
   });
 });

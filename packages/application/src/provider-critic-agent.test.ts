@@ -8,7 +8,11 @@ import { worstCallCostUsd } from "./call-cost-guard.js";
 import { coverageJudgementInstructions } from "./critic-adjudication.js";
 import { critiqueOutputSchemaWithCoverageJudgements } from "./critic-critique-contract.js";
 import { omittedAccomplishmentCode } from "./critic-omission.js";
-import { omissionCheckOutputSchema, omissionCheckSystemPrompt } from "./critic-omission-check.js";
+import {
+  maximumOmissionCheckSliceChunks,
+  omissionCheckOutputSchema,
+  omissionCheckSystemPrompt,
+} from "./critic-omission-check.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { createProviderCriticAgent } from "./provider-critic-agent.js";
 import { criticOutputBudget } from "./run-model-profiles.js";
@@ -343,5 +347,183 @@ describe("provider critic agent", () => {
         cost: { estimatedUsd: 0.1 },
       });
     });
+  });
+});
+
+describe("omission check over every chunk (critic v10, #2046)", () => {
+  const v10 = {
+    ...context,
+    modelConfiguration: {
+      ...context.modelConfiguration,
+      critic: { ...context.modelConfiguration.critic, promptTemplateVersion: "cli-critic-v10" },
+    },
+  } as ContextSnapshot;
+  const many: readonly ScoredEvidenceChunk[] = Array.from(
+    { length: maximumOmissionCheckSliceChunks + 2 },
+    (_, ordinal) => ({ ...(evidence[0] as ScoredEvidenceChunk), id: `chunk-${ordinal}`, ordinal }),
+  );
+  const plan = {
+    themes: [
+      {
+        title: "TypeScript tooling",
+        rationale: "Central.",
+        requirementIds: ["requirement"],
+        evidenceChunkIds: ["chunk-1"],
+        gap: false,
+      },
+    ],
+    leads: { summaryAngle: "Tooling", coreAreas: [{ text: "Tools", themeRank: 1 }] },
+    cuts: [],
+  };
+  const omission = (chunkId: string, accomplishment = `Built tools (${chunkId})`) => ({
+    chunkId,
+    themeId: "theme-1",
+    accomplishment,
+    role: "Engineer",
+    status: "left-out",
+    move: "Add it to the experience section.",
+  });
+  const response = (output: JsonObject, estimatedUsd: number, inputTokens: number) =>
+    ({
+      output,
+      provider: "openai",
+      modelId: "c",
+      usage: { inputTokens, outputTokens: 10, totalTokens: inputTokens + 10, cachedInputTokens: 5 },
+      cost: { estimatedUsd },
+    }) as unknown as ModelResponse<JsonObject>;
+
+  /** One check call per slice, answered from the slice's chunks, then the critique. */
+  function slicedCritic(
+    requests: ModelRequest<JsonObject>[],
+    refuse: (call: number) => boolean = () => false,
+  ) {
+    return createProviderCriticAgent({
+      context: v10,
+      promptContext: v10,
+      dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+      criticCompany: "openai",
+      criticModel: "c",
+      userError: (message) => new Error(message),
+      createAdapter: async () => ({
+        execute: async (request: ModelRequest<JsonObject>) => {
+          requests.push(request);
+          if (refuse(requests.length)) throw new CallCostBudgetError(1, 0);
+          if (request.outputName !== "omission_check") {
+            return response(
+              {
+                findings: [
+                  {
+                    id: "f2",
+                    code: omittedAccomplishmentCode,
+                    category: "coverage",
+                    severity: "error",
+                    message: "the critique's own omission",
+                  },
+                ],
+                coverageJudgements: [],
+              },
+              0.5,
+              1000,
+            );
+          }
+          const chunks = (request.input.chunks as { id: string }[]).map(({ id }) => id);
+          return response(
+            {
+              omissions: chunks.includes("chunk-1")
+                ? [
+                    omission("chunk-1"),
+                    omission("chunk-5"),
+                    omission("chunk-1", "built tools (chunk-1)."),
+                    omission("chunk-7"),
+                  ]
+                : [omission("chunk-33"), omission("chunk-33", "Built tools (chunk-33)!")],
+            },
+            0.1,
+            100,
+          );
+        },
+      }),
+    });
+  }
+
+  it("checks every slice first, merges the answers and lets each of them block", async () => {
+    const requests: ModelRequest<JsonObject>[] = [];
+    const execution = await slicedCritic(requests).execute({
+      ...critique(1),
+      retrievedEvidence: many,
+      applicationPlan: plan,
+    } as never);
+
+    expect(requests.map(({ outputName }) => outputName)).toEqual([
+      "omission_check",
+      "omission_check",
+      "draft_critique",
+    ]);
+    const [first, second] = requests;
+    const sent = (request: ModelRequest<JsonObject> | undefined) =>
+      (request?.input.chunks as { id: string; themeIds: string[] }[]) ?? [];
+    expect(sent(first)).toHaveLength(maximumOmissionCheckSliceChunks);
+    expect(sent(second).map(({ id }) => id)).toEqual(["chunk-32", "chunk-33"]);
+    expect(sent(first)[1]).toMatchObject({ id: "chunk-1", themeIds: ["theme-1"] });
+    expect(sent(first)[5]).toMatchObject({ id: "chunk-5", themeIds: [] });
+    expect(second?.input.themes).toEqual(first?.input.themes);
+    expect(second?.input.cv).toBe(first?.input.cv);
+    for (const request of [first, second]) {
+      expect(request?.maxOutputTokens).toBe(criticOutputBudget(v10.modelConfiguration.critic));
+      expect(request?.promptCache).toBeUndefined();
+    }
+
+    // Four distinct omissions over two slices, all blocking; the critique's own one is dropped.
+    expect(execution.output.findings.map(({ id, code, severity }) => [id, code, severity])).toEqual(
+      ["omission-1", "omission-2", "omission-3", "omission-4"].map((id) => [
+        id,
+        omittedAccomplishmentCode,
+        "error",
+      ]),
+    );
+    expect(
+      execution.output.findings.map(({ message }) => /\((chunk-\d+), Engineer/u.exec(message)?.[1]),
+    ).toEqual(["chunk-1", "chunk-5", "chunk-7", "chunk-33"]);
+    // Both slices and the critique are billed on the record.
+    expect(execution).toMatchObject({
+      inputTokens: 1200,
+      outputTokens: 30,
+      totalTokens: 1230,
+      cachedInputTokens: 15,
+      estimatedUsd: 0.7,
+    });
+  });
+
+  it("carries what the earlier slices billed when the guard refuses a later call", async () => {
+    const bill = (calls: number) => ({
+      usage: {
+        inputTokens: 100 * calls,
+        outputTokens: 10 * calls,
+        totalTokens: 110 * calls,
+        cachedInputTokens: 5 * calls,
+      },
+      cost: { estimatedUsd: 0.1 * calls },
+    });
+    for (const [refused, billedCalls] of [
+      [2, 1],
+      [3, 2],
+    ] as const) {
+      const requests: ModelRequest<JsonObject>[] = [];
+      const error = await slicedCritic(requests, (call) => call === refused)
+        .execute({ ...critique(1), retrievedEvidence: many, applicationPlan: plan } as never)
+        .catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(CallCostBudgetError);
+      expect(requests).toHaveLength(refused);
+      const billed = (error as { billed?: { cost: { estimatedUsd: number } } }).billed;
+      expect(billed).toMatchObject({ usage: bill(billedCalls).usage });
+      expect(billed?.cost.estimatedUsd).toBeCloseTo(bill(billedCalls).cost.estimatedUsd);
+    }
+    // A refusal of the first slice billed nothing.
+    const requests: ModelRequest<JsonObject>[] = [];
+    const error = await slicedCritic(requests, (call) => call === 1)
+      .execute({ ...critique(1), retrievedEvidence: many, applicationPlan: plan } as never)
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(CallCostBudgetError);
+    expect((error as { billed?: unknown }).billed).toBeUndefined();
   });
 });
