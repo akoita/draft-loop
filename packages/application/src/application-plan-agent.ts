@@ -32,6 +32,7 @@ import {
 import { authorPromptSupportsApplicationPlan } from "./author-adjudication.js";
 import { createAuthorEvidenceAliases } from "./author-evidence-aliases.js";
 import {
+  authorPromptCacheLifetime,
   authorRunOutputSchemas,
   authorRunPrefix,
   runStableInputMembers,
@@ -150,6 +151,7 @@ export function createProviderApplicationPlanner(
           role === "author"
             ? authorRunOutputSchemas(request.context, aliasNames)
             : criticRunOutputSchemas(),
+        ...(role === "author" ? { lifetime: authorPromptCacheLifetime } : {}),
       },
       input: toModel({ ...prefix.input, ...callInput }),
       outputSchema: outputSchema(aliasNames),

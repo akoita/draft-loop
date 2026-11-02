@@ -22,9 +22,14 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
-import { authorRunOutputSchemas, runStableInputMembers } from "./author-run-prefix.js";
+import {
+  authorPromptCacheLifetime,
+  authorRunOutputSchemas,
+  runStableInputMembers,
+} from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import { guardCallCost } from "./call-cost-guard.js";
+import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import {
   evidenceReferenceTableInstructions,
   modelFacingArtifactWithEvidenceTable,
@@ -122,6 +127,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       const promptVersion = context.modelConfiguration.author.promptTemplateVersion;
       const maxOutputTokens = context.modelConfiguration.author.profile?.runtime.maxOutputTokens;
       const groundingGuide = createAuthorGroundingGuide(retrievedEvidence);
+      const modelEvidence = modelFacingRunEvidence(retrievedEvidence, achievementPlan);
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
       const adapter = guardCallCost(
         await deps.createAdapter(deps.authorCompany, deps.authorModel, "author"),
@@ -153,6 +159,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             callInstructions,
             stableInputMembers: runStableInputMembers,
             outputSchemas: authorRunOutputSchemas(context, evidenceAliases.aliases),
+            lifetime: authorPromptCacheLifetime,
           },
           // Members that stay the same for every round of a run come first, so a
           // provider's prompt-prefix cache can reuse them; per-call members follow.
@@ -160,8 +167,8 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             JSON.parse(
               JSON.stringify({
                 context: deps.promptContext,
-                retrievedEvidence,
-                achievementPlan,
+                retrievedEvidence: modelEvidence.retrievedEvidence,
+                achievementPlan: modelEvidence.achievementPlan,
                 groundingGuide: promptGuide,
                 outputBudget,
                 runId,

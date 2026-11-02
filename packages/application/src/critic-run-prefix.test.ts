@@ -179,6 +179,8 @@ describe("critic run prefix", () => {
     ]);
 
     expect(review?.promptCache?.stableInputMembers).toBe(3);
+    // The critic's prefix keeps the one-hour lifetime: its calls bracket the author's drafts.
+    expect(review?.promptCache?.lifetime).toBeUndefined();
     expect(review?.promptCache?.callInstructions).toBe(applicationPlanReviewSystemPrompt);
     expect(review?.systemPrompt).toBe(
       `${review?.promptCache?.systemPrompt}\n\n${applicationPlanReviewSystemPrompt}`,
@@ -191,6 +193,15 @@ describe("critic run prefix", () => {
     // The review cites the chunks by the ids the critiques use, not by the author's aliases.
     expect(JSON.stringify(review?.input)).toContain('"chunk-0"');
     expect(JSON.stringify(review?.input)).not.toContain('"E1"');
+    // Each chunk reaches the critic with its id, source alias, line numbers and text only.
+    const sentEvidence = JSON.stringify([
+      review?.input.retrievedEvidence,
+      review?.input.achievementPlan,
+    ]);
+    expect(sentEvidence).toContain('"sourceId":"S1"');
+    for (const key of ['"checksum"', '"workspaceId"', '"rank"', '"ordinal"', '"source"']) {
+      expect(sentEvidence).not.toContain(key);
+    }
 
     // Claude's cache keys on the output format too, so every critic call lists the same outputs.
     for (const sent of [review, plain, judged, directed]) {
