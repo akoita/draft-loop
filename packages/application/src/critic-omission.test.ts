@@ -32,11 +32,11 @@ function omissionFinding(overrides: Record<string, unknown>): JsonObject {
 }
 
 describe("critic prompt v8", () => {
-  it("keeps v7 unchanged and swaps only the omission review, which new runs record (#2031)", () => {
+  it("keeps v7 unchanged and swaps only the omission review; new runs record v9 (#2031, #2039)", () => {
     const v7 = createCriticAdjudicationPrompt("cli-critic-v7");
     const v8 = createCriticAdjudicationPrompt("cli-critic-v8");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v8");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v9");
     expect(v8.replace(focusedOmissionReviewInstructions, omissionReviewInstructions)).toBe(v7);
     expect(v7).not.toContain("chunk by chunk");
     expect(criticReadsCompactEvidenceTable("cli-critic-v8")).toBe(true);
