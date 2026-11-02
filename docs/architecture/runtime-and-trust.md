@@ -278,7 +278,11 @@ critic inputs list the members that stay fixed for a run first (context,
 retrieved evidence, achievement plan, and the author's grounding guide and
 output budget), then the per-call members (run, round, execution, artifact, and
 findings). Providers with automatic prefix caching (Mistral, Gemini, DeepInfra,
-and Claude Code's own caching) can then reuse that shared prefix.
+and Claude Code's own caching) can then reuse that shared prefix. A retrieved
+chunk reaches the models with its id, its source as a run-local alias (`S1`,
+`S2`, …), its line numbers and its text; the checksum, workspace id, rank and
+ordinal stay local, since no prompt names them and they were about a sixth of
+the cached prefix on a full-source run.
 Mistral requests carry an opaque prompt-cache key hashed from the context
 snapshot ID.
 

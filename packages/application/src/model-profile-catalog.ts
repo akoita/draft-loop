@@ -129,15 +129,16 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "economy-anthropic-author@1": {
     sources: [anthropicSonnet55Overview, anthropicPricing],
+    // Sonnet 5.5 prices a cache read at 0.05x its input rate, not the 0.1x of earlier models.
     apiPricing: {
       inputUsdPerMillion: 2,
       outputUsdPerMillion: 10,
-      cacheReadUsdPerMillion: 0.2,
+      cacheReadUsdPerMillion: 0.1,
       cacheWriteUsdPerMillion: 4,
     },
     // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-23",
+    reviewedAt: "2026-11-01",
   },
   "economy-anthropic-author@2": {
     sources: [anthropicModelsOverview, anthropicPricing],
@@ -178,14 +179,15 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "balanced-anthropic-critic@1": {
     sources: [anthropicSonnet55Overview, anthropicPricing],
+    // Sonnet 5.5 prices a cache read at 0.05x its input rate, not the 0.1x of earlier models.
     apiPricing: {
       inputUsdPerMillion: 2,
       outputUsdPerMillion: 10,
-      cacheReadUsdPerMillion: 0.2,
+      cacheReadUsdPerMillion: 0.1,
       cacheWriteUsdPerMillion: 4,
     },
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-30",
+    reviewedAt: "2026-11-01",
   },
   "standard-anthropic-critic@1": {
     sources: [anthropicOverview, anthropicPricing],

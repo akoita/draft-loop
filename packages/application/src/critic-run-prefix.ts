@@ -8,6 +8,7 @@ import * as criticPrompt from "./critic-adjudication.js";
 import { reviewsEmphasis } from "./critic-application-plan.js";
 import { critiqueOutputSchemaWithCoverageJudgements } from "./critic-critique-contract.js";
 import { withPlanThemeSource } from "./critic-emphasis.js";
+import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 
 /** The leading critic input members every critic call of a run repeats: context to achievement plan. */
@@ -32,12 +33,16 @@ export function criticRunPrefix(
 ) {
   const version = context.modelConfiguration.critic.promptTemplateVersion;
   const basePrompt = criticPrompt.create(version);
+  const evidence = modelFacingRunEvidence(
+    retrievedEvidence,
+    createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+  );
   return {
     systemPrompt: plans && reviewsEmphasis(version) ? withPlanThemeSource(basePrompt) : basePrompt,
     input: {
       context: promptContext,
-      retrievedEvidence,
-      achievementPlan: createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+      retrievedEvidence: evidence.retrievedEvidence,
+      achievementPlan: evidence.achievementPlan,
     },
   };
 }

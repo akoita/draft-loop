@@ -25,6 +25,7 @@ import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revi
 import { authorRunOutputSchemas, runStableInputMembers } from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import { guardCallCost } from "./call-cost-guard.js";
+import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import {
   evidenceReferenceTableInstructions,
   modelFacingArtifactWithEvidenceTable,
@@ -122,6 +123,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       const promptVersion = context.modelConfiguration.author.promptTemplateVersion;
       const maxOutputTokens = context.modelConfiguration.author.profile?.runtime.maxOutputTokens;
       const groundingGuide = createAuthorGroundingGuide(retrievedEvidence);
+      const modelEvidence = modelFacingRunEvidence(retrievedEvidence, achievementPlan);
       const evidenceAliases = createAuthorEvidenceAliases(retrievedEvidence.map(({ id }) => id));
       const adapter = guardCallCost(
         await deps.createAdapter(deps.authorCompany, deps.authorModel, "author"),
@@ -160,8 +162,8 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             JSON.parse(
               JSON.stringify({
                 context: deps.promptContext,
-                retrievedEvidence,
-                achievementPlan,
+                retrievedEvidence: modelEvidence.retrievedEvidence,
+                achievementPlan: modelEvidence.achievementPlan,
                 groundingGuide: promptGuide,
                 outputBudget,
                 runId,

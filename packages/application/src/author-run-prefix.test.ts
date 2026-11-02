@@ -112,6 +112,15 @@ describe("author run prefix", () => {
     );
     expect(cachedPrefix(plan)).toEqual(cachedPrefix(draftRequests[0]));
     expect(cachedPrefix(plan).stable).toContain('"retrievedEvidence"');
+    // The models get each chunk's id, source alias, line numbers and text; the rest stays local.
+    const sentEvidence = JSON.stringify([
+      plan?.input.retrievedEvidence,
+      plan?.input.achievementPlan,
+    ]);
+    expect(sentEvidence).toContain('"sourceId":"S1"');
+    for (const key of ['"checksum"', '"workspaceId"', '"rank"', '"ordinal"', '"source"']) {
+      expect(sentEvidence).not.toContain(key);
+    }
 
     // Claude's cache keys on the output format too, so both calls list the same outputs.
     const [draft] = draftRequests;

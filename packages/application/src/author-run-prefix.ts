@@ -11,6 +11,7 @@ import {
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
+import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 
@@ -37,12 +38,16 @@ export function authorRunPrefix(
     undefined,
     context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
   );
+  const evidence = modelFacingRunEvidence(
+    retrievedEvidence,
+    createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+  );
   return {
     systemPrompt: `${systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
     input: {
       context: promptContext,
-      retrievedEvidence,
-      achievementPlan: createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+      retrievedEvidence: evidence.retrievedEvidence,
+      achievementPlan: evidence.achievementPlan,
       groundingGuide,
       outputBudget: providerInput.outputBudget,
     },
