@@ -23,7 +23,6 @@ import {
   omissionCheckFindings,
   omissionCheckInput,
   omissionCheckOutputSchema,
-  omissionCheckOutputTokens,
   omissionCheckSystemPrompt,
   parseOmissionCheck,
 } from "./critic-omission-check.js";
@@ -137,7 +136,10 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       );
       // The omission check (#2039) goes first: it is the cheap call, and the guard counts what it
       // spent before pricing the critique. When the critique is then refused, the error carries
-      // the check's bill so the run's record still counts it.
+      // the check's bill so the run's record still counts it. The check carries the critic's own
+      // output budget: a provider adapter refuses a request whose budget differs from the
+      // selected profile's, which is how the 2026-11-01 r10 run of reference G lost its
+      // critique before the check was sent (#2044).
       const check = criticRunsOmissionCheck(promptVersion)
         ? omissionCheckInput(
             artifact,
@@ -157,7 +159,7 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
               input: JSON.parse(JSON.stringify(check)) as JsonObject,
               outputSchema: omissionCheckOutputSchema,
               outputName: "omission_check",
-              maxOutputTokens: omissionCheckOutputTokens,
+              maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
               dataPolicy: deps.dataPolicy(deps.criticCompany),
               ...(signal === undefined ? {} : { signal }),
             });
