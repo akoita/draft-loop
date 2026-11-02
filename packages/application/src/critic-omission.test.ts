@@ -36,7 +36,7 @@ describe("critic prompt v8", () => {
     const v7 = createCriticAdjudicationPrompt("cli-critic-v7");
     const v8 = createCriticAdjudicationPrompt("cli-critic-v8");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v9");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v10");
     expect(v8.replace(focusedOmissionReviewInstructions, omissionReviewInstructions)).toBe(v7);
     expect(v7).not.toContain("chunk by chunk");
     expect(criticReadsCompactEvidenceTable("cli-critic-v8")).toBe(true);

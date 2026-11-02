@@ -114,8 +114,8 @@ describe("critic prompt versions", () => {
   });
 
   it("rejects unsupported recorded critic templates", () => {
-    expect(() => createCriticAdjudicationPrompt("cli-critic-v10")).toThrow(
-      'Unsupported critic prompt template version "cli-critic-v10".',
+    expect(() => createCriticAdjudicationPrompt("cli-critic-v11")).toThrow(
+      'Unsupported critic prompt template version "cli-critic-v11".',
     );
   });
 

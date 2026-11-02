@@ -81,8 +81,9 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   if (templateVersion === "cli-critic-v8") {
     return `${criticPromptOpeningV2}\n\n${sourceGroundedReviewInstructions}${explicitEmploymentGapReviewInstructionsV7}${editorialReviewInstructions}${emphasisReviewInstructions}${focusedOmissionReviewInstructions}${outputInstructions}\n\n${compactEvidenceReferenceTableInstructions}`;
   }
-  // v9 hands the omission review to a separate check call (#2039) and keeps v6's critique prompt.
-  if (templateVersion === "cli-critic-v9") {
+  // v9 hands the omission review to a separate check call (#2039) and keeps v6's critique prompt;
+  // v10 keeps it too and widens the check to every retrieved chunk (#2046).
+  if (templateVersion === "cli-critic-v9" || templateVersion === "cli-critic-v10") {
     return createCriticAdjudicationPrompt("cli-critic-v6");
   }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
@@ -93,6 +94,7 @@ const compactEvidenceTableVersions: ReadonlySet<string> = new Set([
   "cli-critic-v7",
   "cli-critic-v8",
   "cli-critic-v9",
+  "cli-critic-v10",
 ]);
 
 /** Whether a critic prompt version reads the compact evidence table. */

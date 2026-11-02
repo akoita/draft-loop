@@ -240,7 +240,7 @@ it.each([
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
       expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v17");
-      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v9");
+      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v10");
       expect(systemPrompts).toHaveLength(resumedCalls + 1);
       expect(systemPrompts[resumedCalls]).toBe(
         `${createAuthorAdjudicationPrompt("cli-author-v17", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
@@ -267,7 +267,7 @@ it.each([
       );
       expect(budgets[resumedCalls]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
       expect(criticSystemPrompts[2]).toBe(
-        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v9")}${criticInputSeparator}`,
+        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v10")}${criticInputSeparator}`,
       );
     } finally {
       await rm(root, { recursive: true, force: true });

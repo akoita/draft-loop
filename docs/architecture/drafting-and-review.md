@@ -330,8 +330,8 @@ leaves it out: a citation is not a statement. Findings, severities and the
 blocking cap are v7's, with at most eight omissions per critique. Resumed v7
 runs keep the v7 prompt.
 
-New runs record `cli-critic-v9`, which moves the omission review out of the
-critique into its own call (#2039). On the 2026-11-01 runs of reference G, v7
+`cli-critic-v9` moves the omission review out of the critique into its own
+call (#2039). On the 2026-11-01 runs of reference G, v7
 and v8 each reported one omission, as a warning, while the draft left out 13
 and 10 reference accomplishments; a paragraph inside a 300k-token critique
 does not get a chunk-by-chunk comparison done. The critique step now makes a
@@ -351,6 +351,22 @@ before the critique, so a critique the guard then refuses still carries the
 check's bill; the critic execution record sums both calls' tokens and cost. A
 run without candidate chunks skips the check. Resumed v8 runs keep the v8
 prompt and no separate check.
+
+New runs record `cli-critic-v10`, which widens the check to every retrieved
+chunk and lets every omission it finds block (#2046). On the 2026-11-02 run of
+reference G, v9's check read the 20 chunks the plan's themes cite of 316
+retrieved and named one of the twelve accomplishments the draft left out: eight
+of them sat in chunks no theme cites. The check now reads the retrieved
+evidence in slices of at most 32 chunks, one guarded call each with the CV's
+text, every supported theme and the cuts; a chunk carries the themes the plan
+cites it for or none, and an omission from an uncited chunk counts only when
+the check names the theme it serves (instructions `omission-check-v2`). The
+slices' answers are merged once per chunk and accomplishment, at most twelve
+per round, and each of them blocks instead of v9's three, because every one is
+verified against a named chunk. The critic execution record sums every slice
+and the critique, and a guard refusal part-way carries what the earlier slices
+billed. The critique prompt and the author's prompts are unchanged. Resumed v9
+runs keep the v9 check on the cited chunks.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited
