@@ -17,6 +17,13 @@ import { createRequirementAchievementPlan } from "./requirement-achievement-plan
 
 /** The leading author input members that every author call of a run repeats: context to output budget. */
 export const runStableInputMembers = 5;
+/**
+ * A run's author calls land within minutes of each other, so the author's cached prefix lives
+ * five minutes, written at 1.25x the input rate instead of the hour's 2x; the Anthropic adapter
+ * keeps it alive while a long draft runs (#2043). The author profiles' catalog cache-write price
+ * is this lifetime's rate.
+ */
+export const authorPromptCacheLifetime = "5m" as const;
 
 /**
  * What every author call of a run sends first: the run's author instructions and the run-stable

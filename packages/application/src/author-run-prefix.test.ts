@@ -106,6 +106,7 @@ describe("author run prefix", () => {
 
     const [plan] = planRequests;
     expect(plan?.promptCache?.stableInputMembers).toBe(5);
+    expect(plan?.promptCache?.lifetime).toBe("5m");
     expect(plan?.promptCache?.callInstructions).toBe(applicationPlanSystemPrompt);
     expect(plan?.systemPrompt).toBe(
       `${plan?.promptCache?.systemPrompt}\n\n${applicationPlanSystemPrompt}`,

@@ -309,6 +309,8 @@ describe("provider author agent revision", () => {
 
     const [first, retry] = requests;
     expect(first?.promptCache?.stableInputMembers).toBe(5);
+    // The author's prefix lives five minutes (#2043); the adapter keeps it alive during a draft.
+    expect(requests.every((sent) => sent.promptCache?.lifetime === "5m")).toBe(true);
     expect(retry?.promptCache?.systemPrompt).toBe(first?.promptCache?.systemPrompt);
     expect(retry?.promptCache?.systemPrompt).not.toContain(authorRevisionInstructions);
     expect(retry?.promptCache?.callInstructions).toContain(authorRevisionInstructions);
