@@ -35,6 +35,7 @@ import {
   registerServerImportCommands,
   type ServerImportDependencies,
 } from "./server-import-commands.js";
+import { registerWorkJournalCommands } from "./work-journal-commands.js";
 import {
   type AddKnowledgeSourceDirectoryMembersResult,
   type ApplicationIo,
@@ -2870,6 +2871,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   registerApplicationCommands(command, service, io);
   registerWorkspaceCommands(command, service, io);
   registerServerImportCommands(command, io, dependencies.serverImport);
+  registerWorkJournalCommands(command, io, dependencies.serverImport);
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,
