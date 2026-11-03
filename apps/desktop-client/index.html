@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws://localhost:*"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DraftLoop: choose a server</title>
+  </head>
+  <body>
+    <main class="picker">
+      <h1>Choose your DraftLoop server</h1>
+      <p class="lead">
+        The desktop app opens a DraftLoop server: the self-hosted server on this computer, or another server you
+        reach over https.
+      </p>
+      <section id="unreachable" class="notice" hidden role="alert"></section>
+      <section>
+        <h2>Your servers</h2>
+        <ul id="servers" class="servers"></ul>
+        <p id="no-servers" hidden>No server yet. Add one below.</p>
+      </section>
+      <section>
+        <h2>Another server</h2>
+        <form id="add">
+          <label>Address <input id="address" name="address" placeholder="https://draftloop.example" required /></label>
+          <label>Name <input id="name" name="name" placeholder="Optional" /></label>
+          <button type="submit">Open</button>
+          <p id="add-error" class="error" role="alert"></p>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="/src/picker/picker.ts"></script>
+  </body>
+</html>

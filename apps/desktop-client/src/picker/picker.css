@@ -1,0 +1,104 @@
+:root {
+  color-scheme: dark light;
+  --ground: #0f1319;
+  --surface: #1d232c;
+  --line: #3b4652;
+  --text: #f2fbf8;
+  --muted: #9aa7b4;
+  --accent: #3fb68b;
+  --warn: #f0b53c;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+}
+
+.picker {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 0 24px;
+}
+
+.lead,
+.server span {
+  color: var(--muted);
+}
+
+.notice {
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+.servers {
+  list-style: none;
+  padding: 0;
+}
+
+.servers li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.server {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+}
+
+input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--accent);
+  color: #08110d;
+  font-weight: 600;
+  cursor: pointer;
+  justify-self: start;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.error {
+  color: var(--warn);
+  min-height: 1.2em;
+  margin: 0;
+}
+
+body[aria-busy="true"] {
+  cursor: progress;
+}
