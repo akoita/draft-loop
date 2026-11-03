@@ -10,7 +10,8 @@ import { fileURLToPath, URL } from "node:url";
  * Checks the self-hosted stack the way a person installs it, with no provider call: it builds the
  * three images from this clone and tags them as release 0.0.0 of a local registry, installs that
  * release with `draft-loop-server install`, starts it with the worker on its offline fixtures, runs
- * the hosted smoke through the API (upload, run, review, approval, DOCX export), backs the stack
+ * the hosted smoke through the API (upload, run, review, approval, DOCX export) and the desktop
+ * import through the CLI (career evidence, an application and its run), backs the stack
  * up, erases it, restores the archive, checks that the records, files and owner token came back,
  * and runs the smoke once more. Used by the Self-hosted stack CI job and `pnpm self-hosted:test`.
  */
@@ -23,6 +24,12 @@ export const selfHostedSmokeProject = "draft-loop-self-hosted-smoke";
 export const selfHostedSmokePort = "58090";
 export const selfHostedSmokeApiUrl = `http://127.0.0.1:${selfHostedSmokePort}`;
 const apps = ["api", "worker", "page-fetcher"];
+
+/** The smokes run against the installed stack: the hosted flow, then the desktop import (D12). */
+export const selfHostedSmokeTests = [
+  "apps/api/src/server-stack.smoke.test.ts",
+  "apps/cli/src/server-import.smoke.test.ts",
+];
 
 /** What the smoke compares before the backup and after the restore. */
 export const selfHostedSmokeChecks = Object.freeze({
@@ -104,7 +111,7 @@ export function runSelfHostedSmoke({
   const ok = (result) => result.status === 0;
   const smoke = (token) =>
     ok(
-      run("pnpm", ["exec", "vitest", "run", "apps/api/src/server-stack.smoke.test.ts"], {
+      run("pnpm", ["exec", "vitest", "run", ...selfHostedSmokeTests], {
         env: {
           ...stackEnv,
           DRAFT_LOOP_TEST_API_URL: selfHostedSmokeApiUrl,

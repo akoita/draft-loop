@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,8 +11,11 @@ import {
   selfHostedSmokeApiUrl,
   selfHostedSmokeProject,
   selfHostedSmokeRegistry,
+  selfHostedSmokeTests,
   selfHostedSmokeVersion,
 } from "./self-hosted-smoke.mjs";
+
+const repository = new URL("..", import.meta.url).pathname;
 
 /** A spawn stand-in: records each step and answers the reads the smoke compares. */
 function fakeSpawn({ runsAfter = "2", failOn } = {}) {
@@ -92,6 +95,11 @@ describe("self-hosted smoke", () => {
     const smoke = calls.find(({ line }) => line.includes("vitest"));
     assert.equal(smoke.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN, "generated-token");
     assert.equal(smoke.env.DRAFT_LOOP_TEST_API_URL, selfHostedSmokeApiUrl);
+    // The hosted flow, then the desktop import through the CLI, both against the installed stack.
+    for (const test of selfHostedSmokeTests) {
+      assert.ok(smoke.line.includes(test), `the smoke runs ${test}`);
+      assert.ok(existsSync(join(repository, test)), `${test} exists`);
+    }
     assert.ok(calls.every(({ env }) => env.COMPOSE_PROJECT_NAME === selfHostedSmokeProject));
     assert.ok(
       calls.some(({ line }) =>
