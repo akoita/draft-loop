@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@draft-loop/schemas": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "tsx": "4.23.12",
     "zod": "4.6.7"
   }
