@@ -4,6 +4,7 @@
 #   draft-loop-server.ps1 install <version> [folder]   download a release's stack into a folder
 #   draft-loop-server.ps1 up | down | status | logs [service] | token
 #   draft-loop-server.ps1 upgrade <version>            switch to a newer release and restart
+#   draft-loop-server.ps1 backup [file] | restore <file>   one archive of the database, files and secrets
 #
 # Every command except install works on the folder that holds this script's bin\ folder, or on
 # DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
@@ -28,7 +29,7 @@ function Fail([string]$Message) {
 }
 
 function Show-Usage {
-  Get-Content -LiteralPath $PSCommandPath | Select-Object -Skip 3 -First 3 |
+  Get-Content -LiteralPath $PSCommandPath | Select-Object -Skip 3 -First 4 |
     ForEach-Object { $_ -replace '^# ?', '' }
 }
 
@@ -110,7 +111,8 @@ function Copy-Bundle([string]$Bundle, [string]$ServerHome) {
   }
 }
 
-function Invoke-Compose([string[]]$Arguments) {
+# The docker compose file arguments for the installed folder, after checking it holds a stack.
+function Get-ComposeFiles {
   $serverHome = Get-ServerHome
   $compose = Join-Path $serverHome "compose.yaml"
   if (-not (Test-Path -LiteralPath $compose)) {
@@ -120,8 +122,115 @@ function Invoke-Compose([string[]]$Arguments) {
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Fail "Docker is needed; install Docker Desktop."
   }
-  & docker compose --file $compose @Arguments
+  $files = @("--file", $compose)
+  # Your own changes go in compose.override.yaml, which install and upgrade never touch.
+  $override = Join-Path $serverHome "compose.override.yaml"
+  if (Test-Path -LiteralPath $override) { $files += @("--file", $override) }
+  return , $files
+}
+
+# Runs one docker compose step, shows its output and returns only its exit code.
+function Invoke-ComposeStep([string[]]$Arguments) {
+  $files = Get-ComposeFiles
+  & docker compose @files @Arguments | Out-Host
+  return $LASTEXITCODE
+}
+
+# Runs docker compose with its output on this script's own output, then exits with its code.
+function Invoke-Compose([string[]]$Arguments) {
+  $files = Get-ComposeFiles
+  & docker compose @files @Arguments
   exit $LASTEXITCODE
+}
+
+$BackupFormat = "draft-loop-self-hosted-backup"
+
+function New-ScratchFolder {
+  $scratch = Join-Path ([System.IO.Path]::GetTempPath()) ("draft-loop-server-" + [guid]::NewGuid())
+  New-Item -ItemType Directory -Path $scratch | Out-Null
+  return $scratch
+}
+
+# Writes one archive while the stack runs: a custom-format database dump, the volume holding the
+# uploaded and exported files, and the generated secrets (owner token and database passwords).
+# Provider keys stay in keys\ and are not included. Files move through a mounted folder and
+# `compose cp`, never through a pipe, which Windows PowerShell would not keep byte for byte.
+function Backup-Server([string[]]$Arguments) {
+  $serverHome = Get-ServerHome
+  $version = Get-InstalledVersion $serverHome
+  $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+  $target = if ($Arguments.Count -ge 1) { $Arguments[0] } else { "draft-loop-backup-$version-$stamp.tar.gz" }
+  if (Test-Path -LiteralPath $target) { Fail "$target already exists; name a new file." }
+  $scratch = New-ScratchFolder
+  if ((Invoke-ComposeStep @("exec", "-T", "postgres", "pg_dump", "--username=postgres", "--format=custom",
+        "--file=/tmp/draft-loop-backup.dump", "draft_loop")) -ne 0) {
+    Fail "the database dump failed; is the stack up?"
+  }
+  Invoke-ComposeStep @("cp", "postgres:/tmp/draft-loop-backup.dump", (Join-Path $scratch "database.dump")) | Out-Null
+  Invoke-ComposeStep @("exec", "-T", "postgres", "rm", "-f", "/tmp/draft-loop-backup.dump") | Out-Null
+  if ((Invoke-ComposeStep @("run", "--rm", "--no-deps", "-T", "--volume", "${scratch}:/backup",
+        "--entrypoint", "tar", "init", "-czf", "/backup/files.tar.gz", "-C", "/", "blobs", "secrets",
+        "postgres-secrets")) -ne 0) {
+    Fail "copying the files and secrets failed."
+  }
+  $created = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  $manifest = '{"format":"' + $BackupFormat + '","formatVersion":1,"serverVersion":"' + $version +
+    '","createdAt":"' + $created + '"}' + "`n"
+  [System.IO.File]::WriteAllText((Join-Path $scratch "backup.json"), $manifest,
+    (New-Object System.Text.UTF8Encoding $false))
+  & tar -czf $target -C $scratch backup.json database.dump files.tar.gz
+  if ($LASTEXITCODE -ne 0) { Fail "writing $target failed." }
+  Remove-Item -LiteralPath $scratch -Recurse -Force
+  Write-Output "Wrote $target. Keep it private: it holds your career material and the stack's passwords."
+}
+
+# Loads an archive into a stack that has never started, or was erased: the files and secrets
+# first, then Postgres alone, its runtime role, the dump, and finally every service.
+function Restore-Server([string[]]$Arguments) {
+  if ($Arguments.Count -lt 1 -or $Arguments[0] -eq "") {
+    Fail "say which archive to restore, such as: restore draft-loop-backup.tar.gz"
+  }
+  $archive = $Arguments[0]
+  if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { Fail "$archive is not a file." }
+  $serverHome = Get-ServerHome
+  $version = Get-InstalledVersion $serverHome
+  $scratch = New-ScratchFolder
+  & tar -xzf $archive -C $scratch backup.json database.dump files.tar.gz 2>$null
+  $manifestFile = Join-Path $scratch "backup.json"
+  if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $manifestFile)) {
+    Fail "$archive is not a DraftLoop server backup."
+  }
+  $manifest = Get-Content -Raw -LiteralPath $manifestFile | ConvertFrom-Json
+  if ($manifest.format -ne $BackupFormat -or $manifest.formatVersion -ne 1) {
+    Fail "$archive is not a DraftLoop server backup."
+  }
+  $saved = [string]$manifest.serverVersion
+  if ([version]$saved -gt [version]$version) {
+    Fail "$archive comes from server $saved, newer than $version here; upgrade to $saved first."
+  }
+  if ((Invoke-ComposeStep @("run", "--rm", "--no-deps", "-T", "--entrypoint", "sh", "init", "-c",
+        "test ! -s /secrets/owner_token")) -ne 0) {
+    Fail "this stack already holds data. Restore only into a new install, or erase this one first with: docker compose --file $(Join-Path $serverHome 'compose.yaml') down --volumes"
+  }
+  if ((Invoke-ComposeStep @("run", "--rm", "--no-deps", "-T", "--volume", "${scratch}:/backup:ro",
+        "--entrypoint", "tar", "init", "-xzf", "/backup/files.tar.gz", "-C", "/")) -ne 0) {
+    Fail "unpacking the files and secrets failed."
+  }
+  if ((Invoke-ComposeStep @("up", "--detach", "--wait", "postgres")) -ne 0) { Fail "Postgres did not start." }
+  if ((Invoke-ComposeStep @("run", "--rm", "--no-deps", "postgres-setup")) -ne 0) {
+    Fail "creating the database role failed."
+  }
+  Invoke-ComposeStep @("cp", (Join-Path $scratch "database.dump"), "postgres:/tmp/draft-loop-restore.dump") | Out-Null
+  if ((Invoke-ComposeStep @("exec", "-T", "postgres", "pg_restore", "--username=postgres",
+        "--dbname=draft_loop", "--exit-on-error", "/tmp/draft-loop-restore.dump")) -ne 0) {
+    Fail "loading the database failed."
+  }
+  Invoke-ComposeStep @("exec", "-T", "postgres", "rm", "-f", "/tmp/draft-loop-restore.dump") | Out-Null
+  Remove-Item -LiteralPath $scratch -Recurse -Force
+  if ((Invoke-ComposeStep @("up", "--detach", "--wait", "--remove-orphans")) -ne 0) {
+    Fail "the restored stack did not start."
+  }
+  Write-Output "Restored $archive (server $saved) into $serverHome."
 }
 
 function Install-Server([string[]]$Arguments) {
@@ -177,6 +286,8 @@ switch ($Command) {
   "status" { Invoke-Compose @("ps") }
   "logs" { Invoke-Compose (@("logs", "--tail", "200") + $Rest) }
   "token" { Invoke-Compose @("exec", "-T", "api", "cat", "/secrets/owner_token") }
+  "backup" { Backup-Server $Rest }
+  "restore" { Restore-Server $Rest }
   { $_ -in @("help", "--help", "-h") } { Show-Usage }
   default {
     Show-Usage | ForEach-Object { [Console]::Error.WriteLine($_) }

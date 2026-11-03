@@ -20,5 +20,5 @@ the cloud, with files on disk and your own provider keys. The full guide is
 | `init/prepare.sh` | Creates the random owner token and database passwords at first start, and copies your keys into a volume only the API and the worker read. |
 | `init/postgres-setup.sh` | Creates the database role the API and the worker use. |
 | `init/with-secrets.sh` | Gives each service only the secrets it needs. |
-| `bin/` | The `draft-loop-server` script (bash) and its PowerShell twin, which install, start, stop and upgrade the stack. |
+| `bin/` | The `draft-loop-server` script (bash) and its PowerShell twin, which install, start, stop, upgrade, back up and restore the stack. |
 | `keys/` | Your provider keys. Never commit them. |
