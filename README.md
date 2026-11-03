@@ -154,9 +154,10 @@ Its first phase ends with a run on the hosted service that matches the local
 draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
 
 To run the hosted service for real on your own machine, with your own Claude
-and OpenAI keys or a local model and files on your disk, run
-`pnpm self-hosted:up`; see the [self-hosted server](docs/operations/self-hosted.md)
-guide.
+and OpenAI keys or a local model and files on your disk, install a release with
+the `draft-loop-server` script and Docker only, or run `pnpm self-hosted:up`
+from a clone. The script also upgrades and backs up the stack; see the
+[self-hosted server](docs/operations/self-hosted.md) guide.
 
 ### Local semantic retrieval model (optional)
 

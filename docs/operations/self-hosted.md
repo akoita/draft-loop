@@ -132,6 +132,15 @@ To restore, for example on a new machine:
 Restore refuses a stack that already holds data, and an archive from a newer
 server version than the one installed.
 
+## Coming from the desktop app
+
+The desktop app is in maintenance mode and keeps working with its own
+workspaces. Importing a desktop workspace into this server, with its career
+evidence, applications and history, is planned but not built yet
+([#2056](https://github.com/akoita/draft-loop/issues/2056),
+[#2057](https://github.com/akoita/draft-loop/issues/2057)). Until then, add your
+career evidence again on the server's Career evidence page.
+
 ## Update and erase
 
 - To update an installed folder, run `draft-loop-server upgrade <version>`.

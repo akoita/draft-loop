@@ -661,6 +661,9 @@ The existing offline fixture mode keeps local runs free of provider calls.
   packaged app, so a shared change that breaks the desktop fails its PR.
   PRs that change only documentation or tests skip them, and every release
   build runs them again.
+- a Self-hosted stack job installs the PR's images with the
+  `draft-loop-server` script, runs a scripted run to an exported DOCX, and
+  backs the stack up and restores it. It is not required yet.
 
 **Releases.** Independent cadences from the same `main`:
 
