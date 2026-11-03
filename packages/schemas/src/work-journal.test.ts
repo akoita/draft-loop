@@ -156,7 +156,7 @@ describe("stored work journal note", () => {
       status: "pending",
       content: parsed(),
       dedupe_key: "pr:x",
-      screening: { verdict: "clear" },
+      screening: { verdict: "clear", signals: [], screened_at: "2026-11-03T10:00:00.000Z" },
       edit_count: 0,
       created_at: "2026-11-03T10:00:00.000Z",
       updated_at: "2026-11-03T10:00:00.000Z",

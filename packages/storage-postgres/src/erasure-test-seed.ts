@@ -266,6 +266,21 @@ export async function seedRecord(
       [tenant, run],
     ],
     [
+      `INSERT INTO work_journal_notes (tenant_id, id, workspace_id, status, dedupe_key, project, note, created_at, updated_at)
+       VALUES ($1, 'wjn_' || md5($2), $2, 'pending', 'title:fictional|' || $2, 'Fictional', '{}', $3, $3)`,
+      [tenant, record, at],
+    ],
+    [
+      `INSERT INTO work_journal_forgotten_keys (tenant_id, dedupe_key, note_id, workspace_id)
+       VALUES ($1, 'title:forgotten|' || $2, 'wjn_forgotten1', $2)`,
+      [tenant, record],
+    ],
+    [
+      `INSERT INTO work_journal_intake (tenant_id, workspace_id, enabled, changed_at)
+       VALUES ($1, $2, true, $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
        VALUES ($1, 'runs:' || $2, 'key-1', $3, now() + interval '1 day'),
               ($1, 'exports:' || $2 || ':' || $4, 'key-1', $3, now() + interval '1 day')`,

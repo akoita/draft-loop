@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   type UsageLine,
 } from "@draft-loop/application";
+import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
@@ -63,6 +64,7 @@ import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
+import { registerWorkJournalRoutes } from "./work-journal-routes.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 
@@ -111,6 +113,11 @@ export interface ApiOptions {
     readonly jobPageFetcher?: UrlFetcher;
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;
+    /**
+     * The tenant's work journal (#2018); without it the work journal routes are not served. Only
+     * owner-token mode serves them until sign-in mode records the intake as a consent.
+     */
+    readonly workJournal?: WorkJournalService;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -434,6 +441,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         consents: application.consents,
+      });
+    }
+    if (application.workJournal !== undefined && auth.mode !== "oidc") {
+      registerWorkJournalRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        journal: application.workJournal,
+        idempotency,
       });
     }
     if (application.recordArchives !== undefined) {
