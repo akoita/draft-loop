@@ -1,0 +1,28 @@
+{
+  "name": "@draft-loop/mcp",
+  "version": "0.8.0-alpha.5",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts"
+    }
+  },
+  "bin": {
+    "draftloop-mcp": "./src/main.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@draft-loop/schemas": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "tsx": "4.23.12",
+    "zod": "4.6.7"
+  }
+}
