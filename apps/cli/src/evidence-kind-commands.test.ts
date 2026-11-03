@@ -104,11 +104,23 @@ describe("knowledge source evidence kind commands", () => {
     });
   });
 
+  it("sets and shows the writer-only work-journal kind like any other kind", async () => {
+    await withStore(async ({ storeRoot, knowledgeBaseId, sourceId, run }) => {
+      await run("kind", storeRoot, knowledgeBaseId, sourceId, "work-journal");
+      const [shown] = await run("kind", storeRoot, knowledgeBaseId, sourceId, "--json");
+      expect(JSON.parse(shown ?? "")).toMatchObject({
+        sourceId,
+        kind: "work-journal",
+        origin: "user",
+      });
+    });
+  });
+
   it("rejects an unknown kind and a kind given together with --clear", async () => {
     await withStore(async ({ storeRoot, knowledgeBaseId, sourceId, run }) => {
       await expect(run("kind", storeRoot, knowledgeBaseId, sourceId, "resume")).rejects.toThrow(
         new CliUserError(
-          "Evidence kind must be one of: cv, linkedin-export, performance-review, notes, transcript, other.",
+          "Evidence kind must be one of: cv, linkedin-export, performance-review, notes, transcript, work-journal, other.",
         ),
       );
       await expect(
