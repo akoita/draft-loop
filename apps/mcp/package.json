@@ -10,13 +10,14 @@
     }
   },
   "bin": {
-    "draftloop-mcp": "./src/main.ts"
+    "draftloop-mcp": "./bin/draftloop-mcp.mjs"
   },
   "files": [
+    "bin",
     "src"
   ],
   "scripts": {
-    "start": "tsx src/main.ts",
+    "start": "node bin/draftloop-mcp.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
