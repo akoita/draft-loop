@@ -6,6 +6,7 @@ import {
   ipcMain,
   Menu,
   type MenuItemConstructorOptions,
+  safeStorage,
   screen,
   session,
   shell,
@@ -16,8 +17,10 @@ import type { NavigationScope } from "./navigation.js";
 import { partitionFor } from "./partition.js";
 import { pickerChannels } from "./picker-contract.js";
 import { createPickerService } from "./picker-service.js";
+import { createRememberedSignIns, type RememberedSignIns } from "./remembered-sign-in.js";
 import { type CheckFetch, checkServer, type ServerCheck } from "./server-check.js";
 import { createServerListStore } from "./servers.js";
+import { signInChannels } from "./sign-in-contract.js";
 import { denyPermissions, guardContents } from "./window-security.js";
 import {
   createWindowStateStore,
@@ -35,6 +38,21 @@ const windowGround = "#0f1319";
 /** The client has one window at a time: the picker or one server's screen. */
 let currentWindow: BrowserWindow | undefined;
 const configuredSessions = new Set<string>();
+/** Each server window's origin, by its web contents, so sign-in calls answer only that server. */
+const serverOrigins = new Map<number, string>();
+let signIns: RememberedSignIns | undefined;
+
+function rememberedSignIns(): RememberedSignIns {
+  signIns ??= createRememberedSignIns(app.getPath("userData"), {
+    // Linux without a keyring falls back to a fixed key, which protects nothing: remember nothing there.
+    isAvailable: () =>
+      safeStorage.isEncryptionAvailable() &&
+      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"),
+    encrypt: (text) => safeStorage.encryptString(text),
+    decrypt: (data) => safeStorage.decryptString(data),
+  });
+  return signIns;
+}
 
 function openExternal(url: string): void {
   void shell.openExternal(url);
@@ -124,6 +142,9 @@ function openServer(origin: string, check: ServerCheck & { reachable: true }): v
     issuerOrigin: check.signIn === "oidc" ? check.issuerOrigin : undefined,
   };
   guardContents(window.webContents, () => scope, openExternal);
+  const contentsId = window.webContents.id;
+  serverOrigins.set(contentsId, origin);
+  window.on("closed", () => serverOrigins.delete(contentsId));
   window.webContents.on("did-fail-load", (_event, errorCode, description, url, isMainFrame) => {
     // -3 is an aborted load, such as a navigation the guard stopped.
     if (!isMainFrame || errorCode === -3 || new URL(url).origin !== origin) return;
@@ -145,6 +166,7 @@ const picker = createPickerService({
     const serverSession = session.fromPartition(partitionFor(origin));
     await serverSession.clearStorageData();
     await serverSession.clearCache();
+    rememberedSignIns().forget(origin);
   },
 });
 
@@ -190,6 +212,34 @@ function buildMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+/** The origin of the server whose own top-level page sent a call, or nothing. */
+function senderServer(event: Electron.IpcMainEvent): string | undefined {
+  const origin = serverOrigins.get(event.sender.id);
+  const frame = event.senderFrame;
+  if (origin === undefined || frame === null || frame.parent !== null) return undefined;
+  try {
+    return new URL(frame.url).origin === origin ? origin : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function registerSignInChannels(): void {
+  ipcMain.on(signInChannels.read, (event) => {
+    const origin = senderServer(event);
+    event.returnValue = origin === undefined ? null : rememberedSignIns().read(origin);
+  });
+  ipcMain.on(signInChannels.remember, (event, token: unknown) => {
+    const origin = senderServer(event);
+    if (origin !== undefined && typeof token === "string")
+      rememberedSignIns().remember(origin, token);
+  });
+  ipcMain.on(signInChannels.forget, (event) => {
+    const origin = senderServer(event);
+    if (origin !== undefined) rememberedSignIns().forget(origin);
+  });
+}
+
 function registerPickerChannels(): void {
   ipcMain.handle(pickerChannels.view, (event) => {
     if (!isPickerFrame(event.senderFrame)) throw new Error("Refused: not the picker page.");
@@ -221,6 +271,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     buildMenu();
     registerPickerChannels();
+    registerSignInChannels();
     void openAtLaunch();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void openAtLaunch();
