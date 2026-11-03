@@ -47,6 +47,7 @@
     { "path": "./apps/mcp" },
     { "path": "./apps/cli" },
     { "path": "./apps/desktop" },
+    { "path": "./apps/desktop-client" },
     { "path": "./apps/web" }
   ]
 }
