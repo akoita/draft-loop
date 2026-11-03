@@ -64,9 +64,8 @@ On Linux or macOS, download the install script and install a release. Set
 
 ```sh
 VERSION=0.13.0
-curl -fsSLO https://raw.githubusercontent.com/akoita/draft-loop/main/deploy/local/bin/draft-loop-server
-chmod +x draft-loop-server
-./draft-loop-server install "$VERSION"
+curl -fsSL -o /tmp/draft-loop-server https://raw.githubusercontent.com/akoita/draft-loop/main/deploy/local/bin/draft-loop-server
+bash /tmp/draft-loop-server install "$VERSION"
 ```
 
 Then add your keys and start the stack:
