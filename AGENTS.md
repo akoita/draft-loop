@@ -110,6 +110,9 @@ recorded limit in the same change so the reduction cannot regress.
 - `apps/web` is the hosted service's browser screen over the HTTP API, typed
   from the API's OpenAPI document. It holds no domain logic and never imports
   `apps/api` or server packages; the API serves its built files.
+- `apps/mcp` is the agent channel's stdio MCP server (ADR 0011, D17): an HTTP
+  client of the API that depends only on `packages/schemas`. It holds no domain
+  logic, and the desktop and the CLI never depend on it.
 - `apps/desktop` is a UI shell over `packages/ui` and must call the same
   application contracts as the CLI.
 
