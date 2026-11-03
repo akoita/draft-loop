@@ -204,6 +204,11 @@ draft-loop work-journal merge <note> --into <note> [--keep-summary this]
 draft-loop work-journal discard <note>
 ```
 
+Coding agents reach the server through `draftloop-mcp`, which reads the owner
+token from `DRAFT_LOOP_SERVER_TOKEN` and the address from
+`DRAFT_LOOP_SERVER_URL`. The [agent channel](../reference/agent-channel.md)
+reference covers its setup per agent and what it records.
+
 Screening holds a note that looks like it carries instructions to a model; it
 cannot be approved until an edit screens clear. A private project's repository
 and links stay out of model input. The work journal needs the owner token for

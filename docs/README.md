@@ -15,6 +15,7 @@ contributors, maintainers, and operators to the current information they need.
 | Read workflow, provider, and trust boundaries | [Runtime and trust architecture](architecture/runtime-and-trust.md) |
 | Run CLI and desktop commands | [CLI and desktop reference](reference/cli-and-desktop.md) |
 | Read the hosted service's record export format | [Record archive v1](reference/record-archive.md) |
+| Let a coding agent record your work for review | [Agent channel](reference/agent-channel.md) |
 | Understand privacy and security boundaries | [Privacy and evaluation](security/privacy-and-evaluation.md) · [Threat model](security/threat-model.md) |
 | Review release evidence | [Release evidence](releases/) |
 | Run or review acceptance protocols | [Evaluation protocols and results](evaluation/) |

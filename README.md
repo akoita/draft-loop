@@ -159,6 +159,11 @@ the `draft-loop-server` script and Docker only, or run `pnpm self-hosted:up`
 from a clone. The script also upgrades and backs up the stack; see the
 [self-hosted server](docs/operations/self-hosted.md) guide.
 
+On the self-hosted server, your coding agent can record notable work it helped
+ship through the `draftloop-mcp` MCP server. Each note waits for your review
+before it becomes career evidence; see the
+[agent channel](docs/reference/agent-channel.md).
+
 ### Local semantic retrieval model (optional)
 
 DraftLoop can use a pinned, local embedding model (Apache-2.0; Granite, about
