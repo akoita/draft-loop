@@ -1,13 +1,43 @@
 # Architecture
 
-DraftLoop is a local-first, multi-model drafting and review workspace. The
-first artifact is a job-specific CV, but the contracts are shaped around a
-reusable workflow: canonical requirements and evidence produce an artifact,
-an independent critic evaluates it, and a human approves the result. A hosted
-client-server version is being built on the same packages
-([ADR 0011](../adr/0011-client-server-version.md)).
+DraftLoop is a multi-model drafting and review workspace that keeps candidate
+material under the candidate's control. The first artifact is a job-specific
+CV, but the contracts are shaped around a reusable workflow: canonical
+requirements and evidence produce an artifact, an independent critic evaluates
+it, and a human approves the result.
+
+## Ways to run
+
+One set of packages runs in four ways, which differ only at their adapters
+([ADR 0011](../adr/0011-client-server-version.md), D15):
+
+| Way to run | Status | Clients | Storage and keys | Model routes |
+| --- | --- | --- | --- | --- |
+| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import` | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
+| Desktop app | Maintenance mode since 2026-10-28 | Electron renderer over the main-process host | SQLite workspace store, portable CKB, local exports; keys encrypted by the desktop host ([ADR 0004](../adr/0004-desktop-credential-boundary.md)) | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
+| CLI | Source only | Terminal commands | The same workspace store and CKB as the desktop | The same adapters as the desktop |
+| Hosted service | In development, staging only | The web screen, later agents over MCP (D17) | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
+
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop app in maintenance mode and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
+
+The self-hosted server and the hosted service are the same Compose services
+and images: the API (`apps/api`) serves the web screen (`apps/web`) and queues
+runs, the worker (`apps/worker`) executes them from their last saved step, and
+the page fetcher (`apps/page-fetcher`) is the only runtime that reaches public
+web servers. The web screen and the desktop share their screens
+(`packages/ui`), and both call the same application contracts as the CLI.
+The desktop is in maintenance mode: it keeps its fixes and what shared
+packages give it, and `draft-loop server import` moves its workspaces to a
+server.
+
+The rest of this page describes the shared packages and the desktop and CLI
+boundaries; the server's hosted-only controls (tenancy, consent, credits,
+screening) are in the package table and in ADR 0011.
 
 ## Boundaries
+
+The desktop and the CLI run everything in one process tree on the user's
+machine:
 
 ![System boundaries: the candidate uses the CLI or the desktop renderer, which reaches the Electron main host through a frozen preload bridge; both call shared application contracts over a provider-independent core; local stores, provider adapters, and the credential store sit beneath it; and only approved transmissions, validated URL requests, approved local intake, and approved artifacts cross external boundaries.](../assets/system-boundaries.svg)
 
@@ -1051,6 +1081,10 @@ overview a file tour:
   and export boundaries.
 
 ## Current limitations
+
+The desktop gets no features of its own while it is in maintenance mode, so
+new features reach the web screen only. The hosted service runs on staging
+only, and production is not open.
 
 Portable CKB retrieval is explicit and scoped to selected source versions;
 index synchronization and lifecycle checks run before results are used. Local
