@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# Installs and runs DraftLoop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
+# Node and no build. The PowerShell twin is draft-loop-server.ps1. See
+# docs/operations/self-hosted.md.
+#
+#   draft-loop-server install <version> [folder]   download a release's stack into a folder
+#   draft-loop-server up | down | status | logs [service] | token
+#   draft-loop-server upgrade <version>            switch to a newer release and restart
+#
+# Every command except install works on the folder that holds this script's bin/ folder, or on
+# DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
+set -euo pipefail
+
+repository="akoita/draft-loop"
+# Where release bundles come from: the tag's source archive on GitHub. Tests point it at a local
+# archive; {version} is replaced with the version asked for.
+default_source="https://codeload.github.com/${repository}/tar.gz/refs/tags/server-v{version}"
+source_template="${DRAFT_LOOP_SERVER_SOURCE:-$default_source}"
+
+die() {
+  printf 'draft-loop-server: %s\n' "$1" >&2
+  exit 1
+}
+
+usage() {
+  sed -n '6,8p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+script_home() {
+  if [ -n "${DRAFT_LOOP_SERVER_HOME:-}" ]; then
+    printf '%s\n' "$DRAFT_LOOP_SERVER_HOME"
+  else
+    (cd "$(dirname "$0")/.." && pwd)
+  fi
+}
+
+check_version() {
+  printf '%s' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
+    die "the version must look like 0.12.0, not '$1'."
+}
+
+# The version an installed folder runs, from its .env file.
+installed_version() {
+  sed -n 's/^DRAFT_LOOP_VERSION=//p' "$1/.env" 2>/dev/null | tail -n 1
+}
+
+# Writes DRAFT_LOOP_VERSION into .env and keeps every other setting there.
+write_version() {
+  local env_file="$1/.env" kept=""
+  if [ -f "$env_file" ]; then kept="$(grep -v '^DRAFT_LOOP_VERSION=' "$env_file" || true)"; fi
+  {
+    printf 'DRAFT_LOOP_VERSION=%s\n' "$2"
+    if [ -n "$kept" ]; then printf '%s\n' "$kept"; fi
+  } > "$env_file.partial"
+  mv "$env_file.partial" "$env_file"
+}
+
+# Downloads one release's deploy/local folder into a new temporary folder and prints its path.
+fetch_bundle() {
+  local version="$1" source scratch
+  source="${source_template//\{version\}/$version}"
+  scratch="$(mktemp -d)"
+  if [ -f "$source" ]; then
+    cp "$source" "$scratch/source.tar.gz"
+  else
+    command -v curl > /dev/null || die "curl is needed to download a release."
+    curl --fail --silent --show-error --location --output "$scratch/source.tar.gz" "$source" ||
+      die "could not download server-v$version from $source."
+  fi
+  mkdir "$scratch/bundle"
+  # GNU tar needs --wildcards for the pattern; the bsdtar of macOS and Windows matches without it.
+  tar -xzf "$scratch/source.tar.gz" -C "$scratch/bundle" --strip-components=3 \
+    --wildcards '*/deploy/local/*' 2> /dev/null ||
+    tar -xzf "$scratch/source.tar.gz" -C "$scratch/bundle" --strip-components=3 \
+      '*/deploy/local/*' 2> /dev/null ||
+    die "server-v$version has no self-hosted stack in its archive."
+  [ -f "$scratch/bundle/compose.yaml" ] || die "server-v$version has no self-hosted stack."
+  printf '%s\n' "$scratch"
+}
+
+# Copies a bundle's files into a folder, keeping the folder's keys and settings.
+place_bundle() {
+  local bundle="$1" home="$2"
+  mkdir -p "$home/keys"
+  for item in compose.yaml README.md init bin; do
+    [ -e "$bundle/$item" ] || continue
+    rm -rf "${home:?}/$item"
+    cp -R "$bundle/$item" "$home/$item"
+  done
+  [ -f "$home/keys/.gitignore" ] || cp "$bundle/keys/.gitignore" "$home/keys/.gitignore"
+  chmod 0755 "$home/bin/draft-loop-server"
+  chmod 0700 "$home/keys"
+}
+
+compose() {
+  local home
+  home="$(script_home)"
+  [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
+  [ -n "$(installed_version "$home")" ] || die "$home/.env names no DRAFT_LOOP_VERSION."
+  command -v docker > /dev/null || die "Docker is needed; install Docker with the Compose plugin."
+  docker compose --file "$home/compose.yaml" "$@"
+}
+
+install() {
+  local version="${1:-}" home="${2:-$HOME/draft-loop-server}" scratch
+  [ -n "$version" ] || die "say which version to install, such as: install 0.12.0"
+  check_version "$version"
+  [ ! -e "$home/compose.yaml" ] || die "$home already holds a stack; use upgrade instead."
+  scratch="$(fetch_bundle "$version")"
+  mkdir -p "$home"
+  place_bundle "$scratch/bundle" "$home"
+  rm -rf "$scratch"
+  write_version "$home" "$version"
+  printf 'Installed DraftLoop server %s in %s.\n' "$version" "$home"
+  printf 'Next: put anthropic_api_key (and openai_api_key if you use OpenAI) in %s/keys,\n' "$home"
+  printf 'then run %s/bin/draft-loop-server up\n' "$home"
+}
+
+upgrade() {
+  local version="${1:-}" home current scratch
+  home="$(script_home)"
+  [ -n "$version" ] || die "say which version to upgrade to, such as: upgrade 0.13.0"
+  check_version "$version"
+  [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
+  current="$(installed_version "$home")"
+  if [ -n "$current" ] && [ "$current" != "$version" ] &&
+    [ "$(printf '%s\n%s\n' "$current" "$version" | sort -V | tail -n 1)" = "$current" ]; then
+    die "$home runs $current; going back to $version is not supported. Restore a backup instead."
+  fi
+  scratch="$(fetch_bundle "$version")"
+  place_bundle "$scratch/bundle" "$home"
+  rm -rf "$scratch"
+  write_version "$home" "$version"
+  printf 'Switched %s to DraftLoop server %s; starting it.\n' "$home" "$version"
+  # Pulls the new images, runs the migrations, then restarts the API and the worker.
+  compose up --detach --wait --remove-orphans
+}
+
+command="${1:-help}"
+[ "$#" -eq 0 ] || shift
+case "$command" in
+  install) install "$@" ;;
+  upgrade) upgrade "$@" ;;
+  up) compose up --detach --wait --remove-orphans ;;
+  down) compose down ;;
+  status) compose ps ;;
+  logs) compose logs --tail 200 "$@" ;;
+  token) compose exec -T api cat /secrets/owner_token ;;
+  help | --help | -h) usage ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
