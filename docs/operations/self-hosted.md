@@ -3,7 +3,7 @@
 DraftLoop's hosted service runs on your own machine with one command: the same
 API, worker, page fetcher, Postgres and web screen as the cloud, with your own
 provider keys or a local model, and files kept on your disk (ADR 0011, D15).
-It is the full local option while the desktop app is in maintenance mode.
+It is the full local option, and the server the new desktop client connects to.
 
 For development and tests, use the [local server stack](local-server-stack.md)
 instead: it emulates Cloud Storage, runs Keycloak and makes no provider calls.
@@ -135,8 +135,9 @@ server version than the one installed.
 
 ## Coming from the desktop app
 
-The desktop app is in maintenance mode and keeps working with its own
-workspaces. The `draft-loop` CLI copies its career evidence, applications and
+The v0.8 desktop alpha runs its own local engine, which gets fixes only and is
+retired one release after the desktop client ships. It keeps working with its
+own workspaces until then. The `draft-loop` CLI copies its career evidence, applications and
 run history into this server, and never changes the desktop's files. From a
 clone of this repository, run the CLI as `pnpm start -- <command>`.
 

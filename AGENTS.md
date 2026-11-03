@@ -113,8 +113,12 @@ recorded limit in the same change so the reduction cannot regress.
 - `apps/mcp` is the agent channel's stdio MCP server (ADR 0011, D17): an HTTP
   client of the API that depends only on `packages/schemas`. It holds no domain
   logic, and the desktop and the CLI never depend on it.
-- `apps/desktop` is a UI shell over `packages/ui` and must call the same
-  application contracts as the CLI.
+- `apps/desktop-client` is the desktop client (ADR 0011, D9): an Electron
+  shell over a DraftLoop server's own web screen. It holds no domain logic and
+  never depends on engine, storage, provider or server packages.
+- `apps/desktop` is the v0.8 local-first desktop, in maintenance mode until
+  the desktop client replaces it: a UI shell over `packages/ui` that calls the
+  same application contracts as the CLI.
 
 ## Commands and quality gates
 

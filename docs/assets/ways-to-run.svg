@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
   <title id="title">Ways to run DraftLoop</title>
-  <desc id="desc">On your machine, three ways to run share one set of packages. The self-hosted server, recommended, runs the web screen and API, the worker, the page fetcher, and Postgres with files on disk under Docker Compose. The desktop app, in maintenance mode, runs Electron with a SQLite workspace store, a portable knowledge base and local exports. The source-only CLI uses the same workspace store and can import a desktop workspace into the server. All three run the shared packages: application contracts, orchestrator, domain and schemas, evidence and retrieval, checks and rendering, and the shared screens. Only approved context crosses to the model routes: Claude as author, OpenAI or another Claude model as critic, or a local model. The hosted service, in development and on staging only, runs the same server images in the EU.</desc>
+  <desc id="desc">On your machine, three ways to run share one set of packages. The self-hosted server, recommended, runs the web screen and API, the worker, the page fetcher, and Postgres with files on disk under Docker Compose. The v0.8 desktop alpha, whose local engine is in maintenance mode while a desktop client of the server is built, runs Electron with a SQLite workspace store, a portable knowledge base and local exports. The source-only CLI uses the same workspace store and can import a desktop workspace into the server. All three run the shared packages: application contracts, orchestrator, domain and schemas, evidence and retrieval, checks and rendering, and the shared screens. Only approved context crosses to the model routes: Claude as author, OpenAI or another Claude model as critic, or a local model. The hosted service, in development and on staging only, runs the same server images in the EU.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1319"/>
@@ -53,7 +53,7 @@
     <!-- Desktop -->
     <rect x="340" y="162" width="262" height="212" rx="14" fill="#1d232c" stroke="#3b4652"/>
     <text x="358" y="190" font-size="17" font-weight="700" fill="#f2fbf8">Desktop app</text>
-    <text x="358" y="212" font-size="13" fill="#f0b53c">alpha · maintenance mode</text>
+    <text x="358" y="212" font-size="13" fill="#f0b53c">v0.8 alpha · local engine</text>
     <g font-size="13" fill="#c9d3dc">
       <rect x="354" y="226" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
       <text x="368" y="246">Electron 44 · React 19</text>
