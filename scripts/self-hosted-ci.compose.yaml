@@ -1,0 +1,7 @@
+# Test-only overlay for the self-hosted stack: the worker runs its offline fixtures instead of the
+# direct provider routes, so the Self-hosted stack CI job and `pnpm self-hosted:test` make no
+# provider call and need no key. Never use it for a real install.
+services:
+  worker:
+    environment:
+      DRAFT_LOOP_MODEL_ROUTES: ""
