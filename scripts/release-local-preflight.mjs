@@ -2,20 +2,18 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-const DEFAULTS = Object.freeze({
-  DRAFT_LOOP_ANTHROPIC_AUTH_MODE: "api-key",
-  DRAFT_LOOP_OPENAI_AUTH_MODE: "user-session",
-  DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-sonnet-5-5",
-  DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-6-luna",
-});
-const PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
-
+// The desktop client calls no provider (ADR 0011, D9), so the release preflight launches the
+// packaged client against a scripted server instead of the former live-provider E2E. Provider
+// credentials are kept out of every step.
 const VALIDATION_ENVIRONMENT_EXCLUSIONS = new Set([
   "ANTHROPIC_API_KEY",
   "OPENAI_API_KEY",
   "DRAFT_LOOP_PROVIDER_AUTH_MODE",
-  PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE,
-  ...Object.keys(DEFAULTS),
+  "DRAFT_LOOP_ANTHROPIC_AUTH_MODE",
+  "DRAFT_LOOP_OPENAI_AUTH_MODE",
+  "DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL",
+  "DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL",
+  "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE",
 ]);
 
 export class ReleaseLocalPreflightError extends Error {
@@ -29,15 +27,12 @@ function enabled(value) {
   return value !== undefined && value !== "" && value !== "0" && value !== "false";
 }
 
-export function resolveReleasePreflightEnvironment(environment = process.env) {
+export function assertLocalPreflight(environment = process.env) {
   if (enabled(environment.CI) || enabled(environment.GITHUB_ACTIONS)) {
     throw new ReleaseLocalPreflightError(
       "release preflight is local-only and must not run in CI/CD.",
     );
   }
-  return Object.fromEntries(
-    Object.entries(DEFAULTS).map(([name, fallback]) => [name, environment[name] ?? fallback]),
-  );
 }
 
 export function resolveReleaseValidationEnvironment(environment = process.env) {
@@ -51,23 +46,16 @@ export function runReleaseLocalPreflight({
   platform = process.platform,
   runner = spawnSync,
 } = {}) {
-  const resolved = resolveReleasePreflightEnvironment(environment);
+  assertLocalPreflight(environment);
   const validationEnvironment = resolveReleaseValidationEnvironment(environment);
   const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
   const commands = [
     { args: ["validate"], environment: validationEnvironment },
     {
-      args: ["test:model-suggestions:live"],
-      environment: { ...environment, ...resolved },
+      args: ["--filter", "@draft-loop/desktop-client", "package"],
+      environment: validationEnvironment,
     },
-    {
-      args: ["test:e2e:live"],
-      environment: {
-        ...environment,
-        ...resolved,
-        [PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE]: "1",
-      },
-    },
+    { args: ["desktop-client:acceptance"], environment: validationEnvironment },
   ];
 
   const status = runner("git", ["status", "--porcelain", "--untracked-files=normal"], {

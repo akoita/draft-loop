@@ -158,9 +158,9 @@ merge.
 Before initiating any release action locally, including dispatching the
 `Release` GitHub workflow, run `pnpm release:preflight` from the exact revision
 being released and require it to pass. Do not bypass this command or substitute
-an older live-provider result. The command runs deterministic validation first
-and then the synthetic live-provider E2E with the explicit local mixed-auth
-defaults. It must never run in CI/CD, and provider credentials or subscription
+an older result. The command runs deterministic validation first, then packages
+the desktop client and runs its packaged acceptance; the client calls no
+provider (ADR 0011, D9). It must never run in CI/CD, and provider credentials or subscription
 sessions must never be added to hosted automation. The one exception is the
 client-server live evaluation (ADR 0011, D16): a manually triggered job in a
 separate cloud evaluation project, on synthetic data only, never in GitHub

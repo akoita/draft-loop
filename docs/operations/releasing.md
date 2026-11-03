@@ -91,23 +91,15 @@ archives are rejected. Directory symlinks are not followed; ignored entries
 are listed in the report. Files and categories are sorted deterministically so
 reports can be compared between builds.
 
-The Linux packaging job also launches the unpacked Electron binary twice in an
-offline smoke workflow under a virtual X display (Xvfb). The first launch
-creates a synthetic run and requests a revision; the second launch reopens the
-workspace, resumes the run, approves the revised draft, and verifies the local
-export. This keeps the packaged host, SQLite runtime, and restart boundary in
-the release gate.
+Each packaging job, on all three platforms, builds the desktop client
+(`apps/desktop-client`, ADR 0011, D9) and runs its packaged acceptance
+(`pnpm desktop-client:acceptance`) against a scripted fake API on the runner:
+the server picker, the window's isolation and navigation rules, and a relaunch.
+A failure on any platform stops the release before publishing. The sanitized
+evidence is uploaded as `acceptance-evidence-<platform>`.
 
-This synthetic smoke is implementation and integration evidence. It is not a
-substitute for installed-app acceptance with representative real inputs on each
-supported platform.
-
-Every packaging job, on all three platforms, then runs the
-[installed-app](../evaluation/installed-app-acceptance.md) and
-[credential](../evaluation/credential-acceptance.md) acceptance harnesses
-against the packaged executable. A failure on any platform stops the release
-before publishing. The sanitized evidence is uploaded as
-`acceptance-evidence-<platform>`.
+The v0.8 desktop with its own engine is no longer packaged by the release. Its
+smoke, installed-app and credential harnesses stay in CI until it is retired.
 
 To run the smoke locally after packaging:
 
@@ -121,14 +113,18 @@ Before a release, run the mandatory local preflight:
 pnpm release:preflight
 ```
 
-The command first requires a clean worktree, then runs `pnpm validate`, the
-registry-derived model-suggestion availability check, and the existing paid
-synthetic live-provider gate. A required model-suggestion failure stops before
-the end-to-end gate; optional failures remain visible in its result. It fails
-closed on command failure and refuses to run when `CI` or `GITHUB_ACTIONS` is
-enabled. Its default mixed route is Anthropic API-key mode with OpenAI
-user-session mode; the provider-specific environment variables below remain
-available as explicit local overrides.
+The command requires a clean worktree, then runs `pnpm validate`, packages the
+desktop client for this computer and runs its packaged acceptance. The client
+calls no provider, so no step receives provider credentials or spends money.
+It fails closed on command failure and refuses to run when `CI` or
+`GITHUB_ACTIONS` is enabled. On Linux and WSL it needs a display, such as WSLg
+or `xvfb-run`.
+
+## Live provider checks (manual)
+
+`pnpm test:e2e:live` and `pnpm test:model-suggestions:live` remain manual, paid
+checks of the local-first engine that the CLI and the v0.8 desktop use. They
+are not release steps; run them only with approval for their exact plan.
 
 The synthetic candidate is too thin to pass the application-readiness checks,
 so the live gate approves past them with a recorded synthetic rationale, as a
@@ -197,16 +193,12 @@ use their separately logged-in CLI sessions. The gate incurs bounded provider
 cost. Run it before manual Electron validation with consented real data; never
 use real candidate material in the synthetic gate.
 
-This gate is a release step and not a development loop. Day-to-day work on the
-author-critic flow belongs in fixture mode, which spends nothing — see
-[CONTRIBUTING.md](../../CONTRIBUTING.md). Running the gate during ordinary
-iteration is what exhausts the provider budget this release validation depends
-on.
+This gate is not a development loop. Day-to-day work on the author-critic flow
+belongs in fixture mode, which spends nothing — see
+[CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 Direct `pnpm test:e2e:live` runs default to `claude-sonnet-5-5` as author and
-`gpt-5.6-luna` as critic. `pnpm release:preflight` uses the same author and
-deliberately uses `gpt-6-luna` as critic for its required local mixed-auth
-release gate. These pairs exercise provider paths at bounded cost; they do not
+`gpt-5.6-luna` as critic. These pairs exercise provider paths at bounded cost; they do not
 measure output quality.
 
 The author is Sonnet rather than an economy Haiku model because Haiku authors
@@ -223,11 +215,9 @@ The gate prints the pair it is about to bill before launching. If a cheap model
 ever proves unreliable on the synthetic material, override it for that run and
 change the default here rather than leaving the gate flaky.
 
-The live provider gate does not run in CI or the **Release** workflow. CI runs
+The live provider gate never runs in CI or the **Release** workflow. CI runs
 the deterministic `pnpm validate` suite and packaged offline acceptance gates,
-which require no provider credentials. Before starting a release workflow, a
-maintainer runs the live gate locally with synthetic material and records the
-sanitized result in the release evidence. Provider API keys and local vendor
+which require no provider credentials. Provider API keys and local vendor
 sessions remain outside CI/CD.
 
 ## Stage or checkpoint release procedure
@@ -240,8 +230,8 @@ sessions remain outside CI/CD.
    installation/download wording.
 3. Merge the PR into `main` and wait for CI to pass.
 4. In a clean local worktree at the exact approved `main` commit, run
-   `pnpm release:preflight` and record its sanitized live-provider result in the
-   release evidence. Do not change the release revision afterward.
+   `pnpm release:preflight` and record its result in the release evidence. Do
+   not change the release revision afterward.
 5. Run **Release** from GitHub Actions with the matching version and
    `dry_run=true`. Keep `attest_provenance=false` for a dry run.
 6. Review the dry-run manifest, platform artifacts, checksums, and known

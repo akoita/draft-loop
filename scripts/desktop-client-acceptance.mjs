@@ -3,13 +3,15 @@
 // and checks the picker, the server window's isolation and navigation rules, and a relaunch.
 // No provider, no real server and no candidate material are involved.
 //
-// Usage: node scripts/desktop-client-acceptance.mjs <packaged executable> [evidence.json]
+// Usage: node scripts/desktop-client-acceptance.mjs [packaged executable] [evidence.json]
+// Without an executable it uses the one `pnpm --filter @draft-loop/desktop-client package` wrote.
 /* global console, document, location, setTimeout, URL -- Node and the pages under test. */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 import { _electron as electron } from "playwright-core";
 
@@ -76,12 +78,26 @@ async function lastWindowWith(app, selector) {
   throw new Error(`No window showed ${selector}.`);
 }
 
+/** The executable the client's `package` script wrote for this platform. */
+export async function findPackagedClient(outDirectory = resolve("apps/desktop-client/out")) {
+  const entries = await readdir(outDirectory, { recursive: true, withFileTypes: true });
+  const executable = entries.find((entry) => {
+    if (!entry.isFile()) return false;
+    const path = join(entry.parentPath, entry.name);
+    if (process.platform === "darwin") return /\.app\/Contents\/MacOS\/[^/]+$/u.test(path);
+    return entry.name === (process.platform === "win32" ? "draftloop.exe" : "draftloop");
+  });
+  if (executable === undefined)
+    throw new Error(`No packaged client in ${outDirectory}; run the package script first.`);
+  return join(executable.parentPath, executable.name);
+}
+
 async function main() {
   const [executableArgument, evidenceArgument] = process.argv
     .slice(2)
     .filter((argument) => argument !== "--");
-  if (executableArgument === undefined) throw new Error("Pass the packaged client's executable.");
-  const executablePath = resolve(executableArgument);
+  const executablePath =
+    executableArgument === undefined ? await findPackagedClient() : resolve(executableArgument);
   const checks = {};
   const server = await startFakeServer();
   const origin = `http://127.0.0.1:${server.address().port}`;
@@ -145,7 +161,12 @@ async function main() {
     throw new Error(`Failed checks: ${failed.map(([name]) => name).join(", ")}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}
