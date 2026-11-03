@@ -3,39 +3,48 @@
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-24.22.1-339933?logo=node.js&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-10.18.3-F69220?logo=pnpm&logoColor=white)
+![Docker](https://img.shields.io/badge/self--hosted-Docker-2496ED?logo=docker&logoColor=white)
 ![Anthropic](https://img.shields.io/badge/provider-Anthropic-D97757)
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
 
-DraftLoop turns candidate-owned sources into a job-specific CV with local-first
-grounding, independent AI critique, and final human control.
+DraftLoop turns candidate-owned sources into a job-specific CV with grounded
+evidence, independent AI critique, and final human control.
 
 It is designed for candidates who want useful drafting assistance without giving
 up traceability or control of their source material. Claims remain connected to
 candidate-provided evidence, provider and model identities are visible, and the
 candidate decides what to approve and export.
 
-> **Current maturity:** DraftLoop is an alpha-stage local-first CV tool. Its
-> bounded capabilities are integrated and deterministically validated. Private
-> manual-parity observations show tailored, grounded drafts that still cover
-> fewer job requirements than the CV the manual loop produced. No
+> **Current maturity:** DraftLoop is an alpha. Its capabilities are integrated
+> and deterministically validated, but private quality checks show drafts that
+> still cover fewer job requirements than a manually tailored CV, and no
 > representative consented outcome has been recorded. The
 > [roadmap and current status](docs/roadmap.md) record the evidence and
 > remaining gaps. This project is not production-ready.
 
-**Where DraftLoop is going:** a hosted, client-server version is being built
-in this repository beside the desktop app, on the same packages
-([ADR 0011](docs/adr/0011-client-server-version.md)). It is not available yet.
-The desktop app keeps evolving and is what the rest of this README describes;
-the [roadmap](docs/roadmap.md) tracks the hosted version's phases.
+## Ways to run DraftLoop
+
+| Way to run | Status | What it is |
+| --- | --- | --- |
+| [Self-hosted server](#quick-install-with-docker) | Recommended | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk. |
+| [Desktop app](#desktop-alpha-maintenance-mode) | Maintenance mode | The original Electron alpha. It gets fixes but no new features, and its workspaces move to the server with one command. |
+| [CLI](#developer-quick-start) | Source only | Every workflow step from a terminal, over the same packages. |
+| Hosted service | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet. |
+
+All of them run the same packages and the same author–critic loop, and differ
+only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
+
+[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop app in maintenance mode and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
 ## How DraftLoop works
 
-The workflow keeps the job description and career evidence in a local
-workspace, then applies an evidence-grounded
+DraftLoop keeps the job description and career evidence in your own store, then
+applies an evidence-grounded
 [evaluator–optimizer workflow](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/evaluator_optimizer.ipynb):
 an author generates, an independent critic evaluates against a rubric, and
 accepted feedback drives bounded revision. The default cross-company pairing is
-Anthropic as author and OpenAI as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
+Anthropic as author and OpenAI as critic; Anthropic-only pairs use a different
+Claude model as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
 records DraftLoop's adaptation and controls.
 
 [![How DraftLoop works: sources and job requirements pass a visible transmission approval, a grounded Anthropic author and an independent OpenAI critic iterate in bounded rounds, and the candidate reviews every claim before a local export.](docs/assets/how-draftloop-works.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/how-draftloop-works.svg)
@@ -44,15 +53,56 @@ The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
 candidate's source material into permission to invent facts.
 
-## Try the alpha desktop build
+## Quick install with Docker
 
-Download the [newest release compatible with your platform](https://github.com/akoita/draft-loop/releases)
-and its `SHA256SUMS` file. Desktop packages are distributed as platform-specific
-ZIP archives, including Windows x64. The releases page is authoritative for the
-current platform set and release limitations.
+The self-hosted server needs only Docker with the Compose plugin: no clone, no
+Node and no build. Its images are published on GitHub Container Registry with
+each `server-v*` release on the [releases page](https://github.com/akoita/draft-loop/releases).
 
-To verify one download, replace `<downloaded-archive>.zip` below with the ZIP
-you selected and compare that single digest with its matching line in
+On Linux or macOS, download the install script and install the newest
+`server-v*` release, writing its number without the `server-v` prefix:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/akoita/draft-loop/main/deploy/local/bin/draft-loop-server
+chmod +x draft-loop-server
+./draft-loop-server install <version>      # for example 0.13.0
+```
+
+Then add your keys and start the stack:
+
+1. Put each provider key in its own file in `~/draft-loop-server/keys/`:
+   `anthropic_api_key`, and `openai_api_key` for the default OpenAI critic. A
+   local model such as Ollama can replace either; see
+   [Local models](docs/operations/self-hosted.md#local-models).
+2. Run `~/draft-loop-server/bin/draft-loop-server up`. The first start pulls
+   the images and creates a random owner token and database passwords.
+3. Open <http://127.0.0.1:8080> and sign in with the token that
+   `~/draft-loop-server/bin/draft-loop-server token` prints.
+
+On Windows, use `draft-loop-server.ps1` from the same
+[`deploy/local/bin`](deploy/local/bin) folder in PowerShell with the same
+commands. The [self-hosted server](docs/operations/self-hosted.md) guide covers
+settings, upgrades, backup and restore, privacy, and moving a desktop
+workspace to the server.
+
+On the self-hosted server, your coding agent can record notable work it helped
+ship through the `draftloop-mcp` MCP server. Each note waits for your review
+before it becomes career evidence; see the
+[agent channel](docs/reference/agent-channel.md).
+
+## Desktop alpha (maintenance mode)
+
+The desktop app has been in maintenance mode since 2026-10-28: it keeps its
+fixes and what it gains from shared packages, but gets no features of its own.
+The server's web screen is the main client. Existing users can
+send a workspace's applications and career evidence to a self-hosted server
+with `draft-loop server import`; see
+[Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
+
+To install it, download the [newest desktop release for your platform](https://github.com/akoita/draft-loop/releases)
+and its `SHA256SUMS` file. Packages are platform-specific ZIP archives,
+including Windows x64, and the releases page is authoritative for the platform
+set and release limitations. Compare the ZIP's digest with its line in
 `SHA256SUMS`:
 
 ```sh
@@ -64,48 +114,47 @@ shasum -a 256 "./<downloaded-archive>.zip"
 ```
 
 On Windows, run `(Get-FileHash .\your-download.zip -Algorithm SHA256).Hash` in
-PowerShell and compare that output with the matching `SHA256SUMS` entry. Extract
-the matching ZIP and launch the desktop executable from the extracted folder.
-These are v0.8 alpha packages, not signed installers or
-dependable real-application tooling; no representative consented outcome has
-been recorded, and signing and automatic updates remain ahead. The CLI is a
-separate, source-only interface and has no standalone installer.
+PowerShell. Extract the ZIP and launch the desktop executable from the
+extracted folder. These are v0.8 alpha packages: they are not signed and do
+not update themselves.
 
 ## Developer quick start
 
-Use Node.js **24.22.1** and pnpm **10.18.3**:
+DraftLoop has no npm package: from a clone, use Node.js **24.22.1** and pnpm
+**10.18.3**:
 
 ```sh
 pnpm install --frozen-lockfile
 ```
 
-Start the desktop shell and choose **Try demo workspace** to exercise the
-deterministic fixture workflow:
-
-```sh
-pnpm --filter @draft-loop/desktop start
-```
-
-Fixture mode is offline and uses no provider spend. To inspect the source-only
-CLI:
+The source-only CLI and the desktop shell run from the clone. The desktop's
+**Try demo workspace** runs the deterministic fixture workflow offline, with no
+provider spend:
 
 ```sh
 pnpm --filter @draft-loop/cli start --help
+pnpm --filter @draft-loop/desktop start
 ```
 
-Every command group — opportunity briefs, candidate profiles, writing
-policies, and candidate knowledge bases — is documented with runnable examples
-in the [CLI and desktop operations reference](docs/reference/cli-and-desktop.md).
-
-Live use requires an explicit provider-transmission approval in the workspace,
-configured provider credentials, and may incur provider cost. Keep real
-candidate material out of the repository.
+Every CLI command group, from opportunity briefs to candidate knowledge bases,
+is documented with runnable examples in the
+[CLI and desktop operations reference](docs/reference/cli-and-desktop.md).
+Live use requires an explicit provider-transmission approval and configured
+provider credentials, and may incur provider cost. Keep real candidate
+material out of the repository.
 
 List each job requirement as its own bullet line in `job.md`. A run started
 without a reviewed opportunity brief refuses long unbulleted paragraphs, such as
-a pasted web page, before any provider call. In the desktop app, **Extract
-requirements into a brief** turns such a page into reviewable requirements, and
-the start panel shows which requirements a run will use.
+a pasted web page, before any provider call.
+
+The server has two Compose stacks in a clone:
+
+- `pnpm server:up` and `pnpm server:test` run the development stack, with a
+  Cloud Storage emulator, Keycloak and no provider calls; see the
+  [local server stack](docs/operations/local-server-stack.md), which also
+  walks through the web screen and the sign-in mode.
+- `pnpm self-hosted:up` builds and starts the self-hosted stack from source,
+  and `pnpm self-hosted:test` checks it the way a person installs it.
 
 For the normal quality gate, run:
 
@@ -116,53 +165,6 @@ pnpm typecheck
 pnpm test
 pnpm validate
 ```
-
-The client-server version (Postgres, a Cloud Storage emulator, Keycloak, the
-API with its web screen, the page fetcher, and one worker) runs locally with
-Docker Compose:
-`pnpm server:up` starts it, and `pnpm server:test` runs the server suites and
-an end-to-end smoke against it.
-The API serves the web screen at `/`. Each candidate record opens on the
-desktop's own screens:
-
-- Home, a new application from a pasted job, a job file or an approved job
-  page address, and its requirements. A deployment's API has no route to the
-  internet, so a separate page fetcher, which holds no data or secrets, reads
-  the page.
-- Career evidence uploads and the reviewed career profile. In sign-in mode the
-  evidence page also asks for the permission to store the material. In both
-  modes it lists each file's screening check and edits the private-section
-  rules of the selected knowledge bases.
-- The run, its review and approval, and the CV the browser downloads. In
-  sign-in mode the Start dialog shows the run's credit cost and asks for the
-  candidate's consent to send material to the providers, and the header shows
-  the credit balance.
-- The run details and the comparison between an application's runs.
-
-The web also shows each file's injection screening status, and lets owners and
-admins release quarantined material with a reason. See the
-[local server stack](docs/operations/local-server-stack.md).
-In sign-in mode (`DRAFT_LOOP_AUTH_MODE=oidc`), people sign in through the
-identity provider, and each organisation is its own tenant: its members see
-only its workspaces, sources and runs. Within an organisation, each workspace
-is a candidate record: members reach only the records they are assigned to,
-and material is stored or sent to a provider only after the candidate's
-consents are recorded. Owners and admins export a record's archive and delete
-a record for good, and an owner can delete the whole organisation. The stack
-runs both modes, with fictional users for sign-in.
-Its first phase ends with a run on the hosted service that matches the local
-draft under rules fixed in advance: see [hosted parity](docs/evaluation/hosted-parity.md).
-
-To run the hosted service for real on your own machine, with your own Claude
-and OpenAI keys or a local model and files on your disk, install a release with
-the `draft-loop-server` script and Docker only, or run `pnpm self-hosted:up`
-from a clone. The script also upgrades and backs up the stack; see the
-[self-hosted server](docs/operations/self-hosted.md) guide.
-
-On the self-hosted server, your coding agent can record notable work it helped
-ship through the `draftloop-mcp` MCP server. Each note waits for your review
-before it becomes career evidence; see the
-[agent channel](docs/reference/agent-channel.md).
 
 ### Local semantic retrieval model (optional)
 
@@ -202,95 +204,48 @@ chunks it was sent and how many its draft cites, as counts and ranks only.
 
 ## Technology and architecture
 
-| Area                  | Technology or boundary                                           |
-| --------------------- | ---------------------------------------------------------------- |
-| Runtime               | TypeScript, Node.js 24.22.1, pnpm 10.18.3                        |
-| User interfaces       | React 19, Vite, Electron 44; source-only Commander CLI           |
-| Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports |
-| Providers             | Explicit Anthropic and OpenAI SDK adapters                       |
-| Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
-| Hosted storage        | Postgres with pgvector behind the same storage ports (in development) |
-| Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
+| Area                  | Technology or boundary                                                        |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Runtime               | TypeScript, Node.js 24.22.1, pnpm 10.18.3                                     |
+| User interfaces       | React 19 and Vite screens shared by the web and the desktop; Electron 44; Commander CLI |
+| Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports              |
+| Server                | Fastify API typed by Zod, a worker on a pg-boss run queue, a separate page fetcher |
+| Providers             | Explicit Anthropic and OpenAI SDK adapters; OpenAI-compatible local models on the server |
+| Data and output       | Postgres with pgvector on the server; SQLite via Drizzle ORM on the desktop; Markdown, PDF, and DOCX exports |
+| Packaging             | Server images on GitHub Container Registry with Docker Compose; desktop ZIP archives |
+| Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                           |
 
-[![DraftLoop architecture: desktop and CLI share application contracts over a framework-free core with local SQLite, portable CKB, and local exports; provider adapters send only approved context to the Anthropic author route and the OpenAI critic route.](docs/assets/architecture-at-a-glance.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/architecture-at-a-glance.svg)
+The [architecture overview](docs/architecture/overview.md) is the entry point:
+it shows how each way to run maps onto the packages, then links the detailed
+views of [candidate evidence](docs/architecture/candidate-evidence.md),
+[drafting and review](docs/architecture/drafting-and-review.md), and
+[runtime and trust](docs/architecture/runtime-and-trust.md).
 
-The portable Candidate Knowledge Base (CKB) component can store approved local
-source versions. CLI and desktop adapters can create, open, list, and inspect
-stores; workspaces can also bind explicit store/base snapshots with drift
-checks. The integrated path synchronizes and queries exact selected source
-versions through each CKB's local lexical index, while legacy workspaces
-without a CKB selection continue to use the legacy workspace evidence path.
-
-Career evidence is the material a run uses. Runs read the selected knowledge
-base; legacy workspace evidence (the workspace `evidence` folder) is used only
-when none is selected. In the desktop app, a workspace without a base gets one
-created on its first add; the app no longer offers to import or keep legacy
-evidence.
-
-The desktop Career evidence page has one **Career evidence** panel. Its top
-part shows the base the workspace uses and is the one place to add evidence:
-**Add files** and **Add folder** open a native picker, and public URLs (one
-per line) are fetched one after another after you approve them. A URL that
-fails stays in the box to fix or retry. Everything you add goes into the base
-in use.
-
-Its **Knowledge base** section can create or open a local store. In a
-collecting or stopped workspace, choose **Use this knowledge base** to replace
-the workspace selection with one active base. This clears the selected
-canonical profile so you can review a profile against the new selection.
-
-If the desktop host restarts while a review is open, a workspace operation can
-lose its connection. DraftLoop clears that stale review and offers **Open
-workspace**. Select the same local directory to recover its saved history before
-approving or exporting.
+Career evidence lives in a portable Candidate Knowledge Base (CKB): versioned
+source files with a lexical index, and optional local semantic retrieval.
+Runs read only the source versions a workspace selects; see
+[Candidate evidence](docs/architecture/candidate-evidence.md).
 
 ## Trust boundary
 
-- Career evidence, run history, and exports are local by default.
-- A provider receives only context covered by an explicit user approval; the
-  workspace shows the provider, model, transmission scope, and retention choice.
-- Independent review is a product constraint: the default author and critic use
-  different provider companies, and their identities are recorded.
-- Model profiles offer economy (Claude Haiku 5.5 with GPT-6 Luna), balanced
-  (Claude Sonnet 5.5 with GPT-6.1 Terra), and standard (Claude Opus 5.5 with
-  GPT-6.1 Sol) pair choices. Two Anthropic-only pairs, `balanced-anthropic`
-  (Sonnet 5.5 with an Opus 5.5 critic) and `standard-anthropic` (Opus 5.5 with
-  a Sonnet 5.5 critic), serve a deployment without an OpenAI budget; a
-  different model still reviews. These exact profiles are unvalidated. New
-  workspaces default to economy; existing workspace settings change only when a
-  user explicitly applies a different pair, and saved run records remain
-  unchanged. The labels
-  do not establish provider availability or CV quality. See the
-  [roadmap](docs/roadmap.md#model-strategy).
-- Each role's reasoning level can be chosen from the levels its model allows,
-  in the model editor or with `--author-effort` and `--critic-effort`. A preset
-  keeps its name with the change, such as "Balanced · writer high", and each
-  run records the level it used. A higher level usually costs more; on the
-  hosted service `high`, `xhigh` or `max` doubles a run's credits, like a
-  premium model.
-- The opt-in `development-glm` preset adds the Z.ai
-  `zai-org/GLM-5.3-Flash` author through DeepInfra and keeps the GPT-6 Luna
-  critic. It requires the dedicated `DEEPINFRA_API_KEY`; pricing metadata uses
-  standard $0.15/$0.50 per million input/output rates reviewed on 2026-10-02.
-  CV quality is unvalidated and account availability is unchecked. This choice
-  does not change defaults or existing workspaces.
-- The opt-in `development-gemini` preset adds the Gemini 3.8 Flash author
-  (`dev-google-gemini-author@2`; `@1`, Gemini 3.7 Flash, still resumes) and keeps the GPT-6 Luna critic. It requires the
-  dedicated `GEMINI_API_KEY` from a paid-tier Gemini API project, because
-  free-tier terms let Google use submitted content. Pricing metadata uses
-  standard $0.75/$3.75 per million input/output rates reviewed on 2026-10-04.
-  CV quality and account availability are unvalidated. The author is also
-  selectable with `--author-company google` in the CLI and in desktop settings.
-  This choice does not change defaults or existing workspaces.
-- The opt-in Mistral Large 4 author (`dev-mistral-author@1`, public preview)
-  is selectable from the CLI with `--author-profile` or
-  `--author-company mistral`, and requires the dedicated `MISTRAL_API_KEY`.
-  The opt-in `development-mistral` preset pairs it with the GPT-6 Luna critic.
-  Pricing metadata uses standard $1.36/$4.18 per million input/output rates
-  reviewed on 2026-10-08, without Mistral's temporary launch discount. The
-  model takes 20-40 seconds per call, desktop key storage is not available yet,
-  and CV quality is unvalidated.
-- DraftLoop prepares local artifacts. It does not submit applications, publish
+- On your machine (self-hosted server, desktop, or CLI), career evidence, run
+  history, and exports stay on your disk. A provider receives only context
+  covered by an explicit approval, and the workspace shows the provider, model,
+  transmission scope, and retention choice. A local model keeps everything on
+  the machine.
+- Independent review is a product constraint: the author and the critic are
+  different models, by default from different companies, and their identities
+  and versions are recorded with each run.
+- Model presets range from economy (Claude Haiku 5.5 with GPT-6 Luna) to
+  standard (Claude Opus 5.5 with GPT-6.1 Sol), plus Anthropic-only pairs with
+  a different Claude critic and opt-in development authors. Their CV quality is
+  unvalidated; see [CLI model profiles](docs/reference/cli-and-desktop.md#cli-model-profiles)
+  and the [model strategy](docs/roadmap.md#model-strategy).
+- The hosted service is designed to store material only with recorded
+  consent, in the EU with per-tenant encryption, and to send providers only
+  approved material under zero-retention terms
+  ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet.
+- DraftLoop prepares artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.
 
@@ -300,9 +255,9 @@ approving or exporting.
 - [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
 - [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
-- [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
-- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md) · [Local server stack](docs/operations/local-server-stack.md) · [Self-hosted server](docs/operations/self-hosted.md)
+- [Self-hosted server](docs/operations/self-hosted.md) · [Local server stack](docs/operations/local-server-stack.md) · [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
+- [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
 
 Human approval is mandatory before an artifact is exported. DraftLoop can help
 prepare a CV, but the candidate remains responsible for factual review, final
-approval, and every action outside the local workspace.
+approval, and every action beyond it.

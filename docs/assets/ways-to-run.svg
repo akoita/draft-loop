@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
+  <title id="title">Ways to run DraftLoop</title>
+  <desc id="desc">On your machine, three ways to run share one set of packages. The self-hosted server, recommended, runs the web screen and API, the worker, the page fetcher, and Postgres with files on disk under Docker Compose. The desktop app, in maintenance mode, runs Electron with a SQLite workspace store, a portable knowledge base and local exports. The source-only CLI uses the same workspace store and can import a desktop workspace into the server. All three run the shared packages: application contracts, orchestrator, domain and schemas, evidence and retrieval, checks and rendering, and the shared screens. Only approved context crosses to the model routes: Claude as author, OpenAI or another Claude model as critic, or a local model. The hosted service, in development and on staging only, runs the same server images in the EU.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1319"/>
+      <stop offset="1" stop-color="#141b24"/>
+    </linearGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#232a33"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6f7d8e"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2fd0b8"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f0b53c"/>
+    </marker>
+    <marker id="arrowGrey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9aa7b4"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="680" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="680" rx="24" fill="url(#dots)"/>
+
+  <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+    <text x="40" y="54" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">WAYS TO RUN</text>
+    <text x="40" y="88" font-size="26" font-weight="700" fill="#f2fbf8">One set of packages, run where your material lives</text>
+
+    <!-- Your machine -->
+    <rect x="30" y="118" width="870" height="414" rx="20" fill="#11151b" fill-opacity="0.75" stroke="#2fd0b8" stroke-width="1.5" stroke-dasharray="10 8"/>
+    <text x="56" y="148" font-size="14" font-weight="700" letter-spacing="2" fill="#6ae3cf">YOUR MACHINE</text>
+    <text x="196" y="148" font-size="15" fill="#9aa7b4">· career material stays on your disk</text>
+
+    <!-- Self-hosted server -->
+    <rect x="50" y="162" width="272" height="212" rx="14" fill="#0d1d1b" stroke="#2fd0b8" stroke-width="1.5"/>
+    <text x="68" y="190" font-size="17" font-weight="700" fill="#f2fbf8">Self-hosted server</text>
+    <text x="68" y="212" font-size="13" fill="#6ae3cf">recommended · Docker Compose</text>
+    <g font-size="13" fill="#e6ebf0">
+      <rect x="64" y="226" width="244" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="78" y="246">Web screen + API · Fastify</text>
+      <rect x="64" y="262" width="244" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="78" y="282">Worker · durable run queue</text>
+      <rect x="64" y="298" width="244" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="78" y="318">Page fetcher · approved job pages</text>
+      <rect x="64" y="334" width="244" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="78" y="354">Postgres + pgvector · files on disk</text>
+    </g>
+
+    <!-- Desktop -->
+    <rect x="340" y="162" width="262" height="212" rx="14" fill="#1d232c" stroke="#3b4652"/>
+    <text x="358" y="190" font-size="17" font-weight="700" fill="#f2fbf8">Desktop app</text>
+    <text x="358" y="212" font-size="13" fill="#f0b53c">alpha · maintenance mode</text>
+    <g font-size="13" fill="#c9d3dc">
+      <rect x="354" y="226" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="368" y="246">Electron 44 · React 19</text>
+      <rect x="354" y="262" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="368" y="282">SQLite workspace store</text>
+      <rect x="354" y="298" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="368" y="318">Portable knowledge base</text>
+      <rect x="354" y="334" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="368" y="354">Markdown · PDF · DOCX exports</text>
+    </g>
+
+    <!-- CLI -->
+    <rect x="620" y="162" width="262" height="212" rx="14" fill="#1d232c" stroke="#3b4652"/>
+    <text x="638" y="190" font-size="17" font-weight="700" fill="#f2fbf8">CLI</text>
+    <text x="638" y="212" font-size="13" fill="#9aa7b4">source only · pnpm</text>
+    <g font-size="13" fill="#c9d3dc">
+      <rect x="634" y="226" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="648" y="246">Every workflow step</text>
+      <rect x="634" y="262" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="648" y="282">Same store as the desktop</text>
+      <rect x="634" y="298" width="234" height="30" rx="8" fill="#161a21" stroke="#2e3742"/>
+      <text x="648" y="318">Knowledge base backups</text>
+      <rect x="634" y="334" width="234" height="30" rx="8" fill="#05231e" stroke="#0c7261"/>
+      <text x="648" y="354" fill="#6ae3cf">server import → the server</text>
+    </g>
+
+    <path d="M186 374 V 394" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M471 374 V 394" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M751 374 V 394" stroke="#6f7d8e" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Shared packages -->
+    <rect x="50" y="398" width="832" height="114" rx="14" fill="#1a2030" stroke="#5b6b9a"/>
+    <text x="68" y="426" font-size="17" font-weight="700" fill="#f2fbf8">Shared packages</text>
+    <text x="218" y="426" font-size="14" fill="#9aa7b4">framework-free core · the ways to run differ only at their adapters</text>
+    <g font-size="13" font-weight="700" fill="#f2fbf8">
+      <rect x="64" y="444" width="128" height="52" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="78" y="466">Application</text>
+      <text x="78" y="484" font-weight="400" fill="#9aa7b4">contracts</text>
+      <rect x="200" y="444" width="128" height="52" rx="10" fill="#161a21" stroke="#2fd0b8"/>
+      <text x="214" y="466">Orchestrator</text>
+      <text x="214" y="484" font-weight="400" fill="#6ae3cf">author–critic loop</text>
+      <rect x="336" y="444" width="128" height="52" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="350" y="466">Domain</text>
+      <text x="350" y="484" font-weight="400" fill="#9aa7b4">+ Zod schemas</text>
+      <rect x="472" y="444" width="128" height="52" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="486" y="466">Evidence</text>
+      <text x="486" y="484" font-weight="400" fill="#9aa7b4">+ retrieval</text>
+      <rect x="608" y="444" width="128" height="52" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="622" y="466">Checks</text>
+      <text x="622" y="484" font-weight="400" fill="#9aa7b4">+ rendering</text>
+      <rect x="744" y="444" width="124" height="52" rx="10" fill="#161a21" stroke="#2e3742"/>
+      <text x="758" y="466">Shared screens</text>
+      <text x="758" y="484" font-weight="400" fill="#9aa7b4">web + desktop</text>
+    </g>
+
+    <!-- Model routes -->
+    <text x="930" y="148" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">MODEL ROUTES</text>
+    <text x="930" y="180" font-size="14" fill="#c9d3dc">Approved context only;</text>
+    <text x="930" y="200" font-size="14" fill="#c9d3dc">provider and model recorded</text>
+    <text x="930" y="220" font-size="14" fill="#c9d3dc">for every run.</text>
+
+    <rect x="930" y="252" width="240" height="66" rx="14" fill="#161a21" stroke="#2fd0b8" stroke-width="1.5"/>
+    <circle cx="960" cy="285" r="15" fill="#05231e" stroke="#2fd0b8"/>
+    <text x="960" y="291" font-size="15" font-weight="800" fill="#6ae3cf" text-anchor="middle">A</text>
+    <text x="986" y="280" font-size="16" font-weight="700" fill="#f2fbf8">Claude</text>
+    <text x="986" y="302" font-size="13" fill="#6ae3cf">author</text>
+
+    <rect x="930" y="340" width="240" height="66" rx="14" fill="#161a21" stroke="#f0b53c" stroke-width="1.5"/>
+    <circle cx="960" cy="373" r="15" fill="#261c08" stroke="#f0b53c"/>
+    <text x="960" y="379" font-size="15" font-weight="800" fill="#f0b53c" text-anchor="middle">C</text>
+    <text x="986" y="368" font-size="16" font-weight="700" fill="#f2fbf8">Critic</text>
+    <text x="986" y="390" font-size="13" fill="#f0b53c">OpenAI or another Claude</text>
+
+    <rect x="930" y="428" width="240" height="66" rx="14" fill="#161a21" stroke="#9aa7b4" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <circle cx="960" cy="461" r="15" fill="#1d232c" stroke="#9aa7b4"/>
+    <text x="960" y="467" font-size="15" font-weight="800" fill="#c9d3dc" text-anchor="middle">L</text>
+    <text x="986" y="456" font-size="16" font-weight="700" fill="#f2fbf8">Local model</text>
+    <text x="986" y="478" font-size="13" fill="#9aa7b4">self-hosted · either role</text>
+
+    <path d="M882 455 H 896" stroke="#6f7d8e" stroke-width="2"/>
+    <path d="M900 455 C 912 455, 910 285, 924 285" fill="none" stroke="#2fd0b8" stroke-width="2.5" marker-end="url(#arrowTeal)"/>
+    <path d="M900 455 C 912 455, 910 373, 924 373" fill="none" stroke="#f0b53c" stroke-width="2.5" marker-end="url(#arrowAmber)"/>
+    <path d="M900 455 C 912 455, 910 461, 924 461" fill="none" stroke="#9aa7b4" stroke-width="2.5" marker-end="url(#arrowGrey)"/>
+    <g transform="translate(900 455)">
+      <circle r="14" fill="#0f1319" stroke="#c9d3dc" stroke-width="1.5"/>
+      <rect x="-6" y="-2" width="12" height="9" rx="1.5" fill="#c9d3dc"/>
+      <path d="M-3.5 -2 v-3 a3.5 3.5 0 0 1 7 0 v3" fill="none" stroke="#c9d3dc" stroke-width="1.8"/>
+    </g>
+
+    <!-- Hosted service -->
+    <rect x="30" y="554" width="1140" height="96" rx="20" fill="#11151b" fill-opacity="0.75" stroke="#f0b53c" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <text x="56" y="586" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">HOSTED SERVICE · IN DEVELOPMENT</text>
+    <text x="56" y="614" font-size="15" fill="#e6ebf0">The same server images in the EU, with sign-in, recorded consent and per-tenant encryption.</text>
+    <text x="56" y="636" font-size="15" fill="#9aa7b4">Staging only: it is not offered yet. On your machine, coding agents already reach the self-hosted server through draftloop-mcp.</text>
+  </g>
+</svg>

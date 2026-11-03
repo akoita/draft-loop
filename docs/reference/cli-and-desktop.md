@@ -80,7 +80,8 @@ uses the pair already recorded in run history.
 one of the `effortLevels` its profile lists in `model-profiles`. They need a
 preset or both profile options, and a role without one uses its profile's own
 level. A higher level usually costs more output tokens and can improve the
-draft or the review.
+draft or the review. On the hosted service, `high`, `xhigh` or `max` doubles
+a run's credits, like a premium model.
 
 ### Applied profile pair
 
