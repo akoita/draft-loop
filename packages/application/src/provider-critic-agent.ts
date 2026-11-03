@@ -1,6 +1,17 @@
 import type { ContextSnapshot } from "@draft-loop/domain";
-import type { CriticAgent } from "@draft-loop/orchestrator";
-import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
+import {
+  type AgentExecution,
+  CallCostBudgetError,
+  type CriticAgent,
+  type Critique,
+} from "@draft-loop/orchestrator";
+import {
+  addBilledUsage,
+  type BilledUsage,
+  type JsonObject,
+  type ModelRequest,
+  type ModelResponse,
+} from "@draft-loop/providers";
 
 import { guardCallCost } from "./call-cost-guard.js";
 import { withCandidateDirection } from "./candidate-direction.js";
@@ -12,6 +23,18 @@ import {
   invalidCritiqueError,
   parseCritique,
 } from "./critic-critique-contract.js";
+import { capBlockingOmissions, isOmissionFindingCode } from "./critic-omission.js";
+import {
+  blockingOmissionCheckFindings,
+  mergeOmissionChecks,
+  type OmissionCheckOmission,
+  omissionCheckFindings,
+  omissionCheckInputs,
+  omissionCheckOutputSchema,
+  omissionCheckScope,
+  omissionCheckSystemPrompt,
+  parseOmissionCheck,
+} from "./critic-omission-check.js";
 import {
   criticCallInstructions,
   criticRunOutputSchemas,
@@ -120,15 +143,110 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
         await deps.createAdapter(deps.criticCompany, deps.criticModel, "critic"),
         remainingCostUsd,
       );
-      const response = await adapter.execute(request);
+      // The omission check (#2039) goes first: it is the cheap call, and the guard counts what it
+      // spent before pricing the critique. When the critique is then refused, the error carries
+      // the check's bill so the run's record still counts it. The check carries the critic's own
+      // output budget: a provider adapter refuses a request whose budget differs from the
+      // selected profile's, which is how the 2026-11-01 r10 run of reference G lost its
+      // critique before the check was sent (#2044). A v10 run makes one call per slice of the
+      // retrieved evidence (#2046); a refusal mid-way carries what the earlier slices billed.
+      const scope = omissionCheckScope(promptVersion);
+      const slices =
+        scope === undefined
+          ? []
+          : omissionCheckInputs(
+              artifact,
+              retrievedEvidence,
+              applicationPlan,
+              context.requirements,
+              prefix.input.achievementPlan,
+              scope,
+            );
+      let billed: BilledUsage | undefined;
+      const withBill = (error: unknown) => {
+        if (error instanceof CallCostBudgetError && billed !== undefined) {
+          Object.assign(error, { billed });
+        }
+        return error;
+      };
+      const checked: (readonly OmissionCheckOmission[])[] = [];
+      for (const slice of slices) {
+        let checkResponse: ModelResponse<JsonObject>;
+        try {
+          checkResponse = await adapter.execute({
+            contextSnapshotId: context.id,
+            model: context.modelConfiguration.critic,
+            systemPrompt: omissionCheckSystemPrompt,
+            input: JSON.parse(JSON.stringify(slice)) as JsonObject,
+            outputSchema: omissionCheckOutputSchema,
+            outputName: "omission_check",
+            maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
+            dataPolicy: deps.dataPolicy(deps.criticCompany),
+            ...(signal === undefined ? {} : { signal }),
+          });
+        } catch (error) {
+          throw withBill(error);
+        }
+        billed = addBilledUsage(billed, {
+          usage: checkResponse.usage,
+          cost: checkResponse.cost,
+        });
+        checked.push(parseOmissionCheck(checkResponse.output, slice));
+      }
+      let response: ModelResponse<JsonObject>;
+      try {
+        response = await adapter.execute(request);
+      } catch (error) {
+        throw withBill(error);
+      }
+      let critique: Critique;
       try {
         // A critique that judged no coverage still returns the shared format's empty list.
         const { coverageJudgements: _unrequested, ...findingsOnly } = response.output;
         const output = judgesCoverage ? response.output : findingsOnly;
-        return responseExecution(response, parseCritique(output, judgement.instructionsVersion));
+        critique = parseCritique(output, judgement.instructionsVersion);
       } catch {
         throw invalidCritiqueError(response);
       }
+      const first = slices[0];
+      if (first === undefined || billed === undefined) {
+        return responseExecution(response, critique);
+      }
+      // The check owns the omission review of a run that makes it: its findings replace any the
+      // critique still reports with that code, and the blocking cap applies to the merged list.
+      const omissions = omissionCheckFindings(mergeOmissionChecks(checked), first.themes);
+      const merged: Critique = {
+        ...critique,
+        findings: capBlockingOmissions(
+          [...critique.findings.filter(({ code }) => !isOmissionFindingCode(code)), ...omissions],
+          blockingOmissionCheckFindings(promptVersion),
+        ),
+      };
+      return withBilledCall(responseExecution(response, merged), billed);
     },
+  };
+}
+
+const sumCounts = (left: number | undefined, right: number | undefined) =>
+  left === undefined && right === undefined ? undefined : (left ?? 0) + (right ?? 0);
+
+/** Add the check calls' tokens and cost to an execution, so the record carries every call. */
+function withBilledCall<T>(
+  execution: AgentExecution<T>,
+  call: Pick<ModelResponse<JsonObject>, "usage" | "cost">,
+): AgentExecution<T> {
+  const cached = sumCounts(execution.cachedInputTokens, call.usage.cachedInputTokens);
+  const written = sumCounts(execution.cacheWriteInputTokens, call.usage.cacheWriteInputTokens);
+  return {
+    ...execution,
+    inputTokens: execution.inputTokens + call.usage.inputTokens,
+    outputTokens: execution.outputTokens + call.usage.outputTokens,
+    totalTokens: execution.totalTokens + call.usage.totalTokens,
+    ...(cached === undefined ? {} : { cachedInputTokens: cached }),
+    ...(written === undefined ? {} : { cacheWriteInputTokens: written }),
+    estimatedUsd:
+      execution.estimatedUsd === null || call.cost.estimatedUsd === null
+        ? null
+        : execution.estimatedUsd + call.cost.estimatedUsd,
   };
 }

@@ -80,7 +80,8 @@ uses the pair already recorded in run history.
 one of the `effortLevels` its profile lists in `model-profiles`. They need a
 preset or both profile options, and a role without one uses its profile's own
 level. A higher level usually costs more output tokens and can improve the
-draft or the review.
+draft or the review. On the hosted service, `high`, `xhigh` or `max` doubles
+a run's credits, like a premium model.
 
 ### Applied profile pair
 
@@ -1973,8 +1974,10 @@ The desktop preflight control for this setting arrives with
 ### Source evidence kind
 
 Each knowledge source has an evidence kind that names what the material is:
-`cv`, `linkedin-export`, `performance-review`, `notes`, `transcript`, or
-`other`. The kind is detected locally from the latest version's normalized text,
+`cv`, `linkedin-export`, `performance-review`, `notes`, `transcript`,
+`work-journal`, or `other`. A `work-journal` source is an approved note from a
+coding agent (#2018): its writer sets the kind, and detection never picks it.
+Other kinds are detected locally from the latest version's normalized text,
 so nothing is sent to a provider and no detection result is stored. A user can
 override the kind for a source; the override is stored per source, so it
 survives refreshes that add new versions, and clearing it returns to detection.
@@ -1982,7 +1985,8 @@ survives refreshes that add new versions, and clearing it returns to detection.
 Profile extraction sends each source's effective kind with its text and gives
 short guidance per kind: a performance review's judgements stay attributed to
 the reviewer, notes yield only explicit statements, a LinkedIn export's sections
-map to roles, dates, and skills, and a transcript's evidence is the candidate's
+map to roles, dates, and skills, a work-journal note credits only the role it
+states, and a transcript's evidence is the candidate's
 own turns. The never-invent and exact-quote rules are the same for every kind.
 Each profile version records the kind used for every extracted source version.
 

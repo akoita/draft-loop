@@ -1,4 +1,5 @@
 import { extractApplicationBrief } from "./application-brief-extraction.js";
+import { importApplicationBundle } from "./application-bundle-import.js";
 import { recordApplicationJobPage } from "./application-job-page.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { ApplicationDriver } from "./index.js";
@@ -165,5 +166,7 @@ export function createHostedApplicationDriver(
       }),
     // Hosted-only reads, composed from the shared modules rather than the local driver.
     readRunReview: (command) => inHostedContext(() => readRunReview(command)),
+    // A desktop workspace's application, sent by the CLI's import (ADR 0011, D12).
+    importApplicationBundle: (command) => inHostedContext(() => importApplicationBundle(command)),
   } satisfies ApplicationDriver);
 }

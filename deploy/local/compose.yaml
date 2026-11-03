@@ -1,8 +1,9 @@
 # DraftLoop's hosted service on your own machine (ADR 0011, D15): the same API, worker, page fetcher
 # and Postgres as the cloud, with files on disk and your own provider keys. Every secret is random
-# and generated at first start; the API listens on 127.0.0.1 only. Start it with
-# `pnpm self-hosted:up`; see docs/operations/self-hosted.md. For development and tests, use the
-# repository's root compose.yaml instead.
+# and generated at first start; the API listens on 127.0.0.1 only. The images are the published
+# ones of DRAFT_LOOP_VERSION, which `draft-loop-server install` writes to .env; compose.build.yaml
+# builds them from a clone instead (`pnpm self-hosted:up`). See docs/operations/self-hosted.md. For
+# development and tests, use the repository's root compose.yaml instead.
 name: draft-loop-self-hosted
 
 # What the API and the worker share: the tenant, the files on disk, the provider routes and the
@@ -70,10 +71,7 @@ services:
 
   # Runs the schema migrations on every start, then grants the runtime role table access only.
   migrate:
-    build:
-      context: ../..
-      dockerfile: apps/worker/Dockerfile
-    image: draft-loop-worker:self-hosted
+    image: ${DRAFT_LOOP_IMAGE_REGISTRY:-ghcr.io/akoita}/draft-loop-worker:${DRAFT_LOOP_VERSION:-}
     depends_on:
       postgres-setup:
         condition: service_completed_successfully
@@ -94,10 +92,7 @@ services:
   # Fetches approved job pages for the API; the only service that reaches public web servers. It
   # holds no database, secret or candidate material.
   page-fetcher:
-    build:
-      context: ../..
-      dockerfile: apps/page-fetcher/Dockerfile
-    image: draft-loop-page-fetcher:self-hosted
+    image: ${DRAFT_LOOP_IMAGE_REGISTRY:-ghcr.io/akoita}/draft-loop-page-fetcher:${DRAFT_LOOP_VERSION:-}
     restart: unless-stopped
     healthcheck:
       test:
@@ -110,10 +105,7 @@ services:
       retries: 30
 
   api:
-    build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
-    image: draft-loop-api:self-hosted
+    image: ${DRAFT_LOOP_IMAGE_REGISTRY:-ghcr.io/akoita}/draft-loop-api:${DRAFT_LOOP_VERSION:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -152,10 +144,7 @@ services:
       retries: 30
 
   worker:
-    build:
-      context: ../..
-      dockerfile: apps/worker/Dockerfile
-    image: draft-loop-worker:self-hosted
+    image: ${DRAFT_LOOP_IMAGE_REGISTRY:-ghcr.io/akoita}/draft-loop-worker:${DRAFT_LOOP_VERSION:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

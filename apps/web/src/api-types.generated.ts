@@ -59,6 +59,16 @@ export interface ApiSchemas {
       };
     } | null;
   };
+  "ApplicationImport": {
+    readonly applicationId: string;
+    readonly name: string;
+    readonly status: "imported" | "already-imported";
+    readonly counts: {
+      readonly runs: number;
+      readonly briefs: number;
+      readonly briefVersions: number;
+    };
+  };
   "ApplicationJob": {
     readonly origin: "pasted-text" | "url" | "unavailable";
     readonly text: string | null;
@@ -742,6 +752,118 @@ export interface ApiSchemas {
     readonly estimatedUsd: number;
     readonly unpricedCalls: number;
   };
+  "WorkJournalIntake": {
+    readonly enabled: boolean;
+    readonly changed_at?: string;
+  };
+  "WorkJournalNoteList": {
+    readonly notes?: readonly ({
+      readonly id: string;
+      readonly title: string;
+      readonly period: {
+        readonly start: string;
+        readonly end?: string;
+      };
+      readonly project: string;
+      readonly technologies: readonly (string)[];
+      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+      readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly created_at: string;
+    })[];
+    readonly full?: readonly ({
+      readonly id: string;
+      readonly tenant_id: string;
+      readonly workspace_id: string;
+      readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly content: {
+        readonly title: string;
+        readonly summary: string;
+        readonly period: {
+          readonly start: string;
+          readonly end?: string;
+        };
+        readonly project: {
+          readonly name: string;
+          readonly visibility: "public" | "private" | "unknown";
+          readonly repository?: string;
+        };
+        readonly technologies: readonly (string)[];
+        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
+        readonly links: readonly ({
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly url: string;
+        })[];
+        readonly metrics: readonly ({
+          readonly description: string;
+          readonly how_measured?: string;
+        })[];
+      };
+      readonly dedupe_key: string;
+      readonly possible_duplicate_of: readonly (string)[];
+      readonly merged_into?: string;
+      readonly approval?: {
+        readonly knowledge_base_id: string;
+        readonly tier: "normal" | "sensitive" | "never-share";
+        readonly source_id?: string;
+        readonly approved_at: string;
+      };
+      readonly screening: {
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly screened_at: string;
+      };
+      readonly edit_count: number;
+      readonly created_at: string;
+      readonly updated_at: string;
+    })[];
+  };
+  "WorkJournalRecordResult": {
+    readonly note_id?: string;
+    readonly status: "pending" | "amended" | "duplicate" | "previously_discarded" | "validated";
+    readonly duplicate_of?: string;
+    readonly possible_duplicate_of: readonly (string)[];
+    readonly screening?: "clear" | "flagged" | "unscreened";
+    readonly review_url?: string;
+    readonly message: string;
+  };
+  "WorkJournalReviewInput": {
+    readonly action: "approve";
+    readonly knowledge_base_id: string;
+    readonly tier?: "normal" | "sensitive" | "never-share";
+  } | {
+    readonly action: "edit";
+    readonly content: {
+      readonly title: string;
+      readonly summary: string;
+      readonly period: {
+        readonly start: string;
+        readonly end?: string;
+      };
+      readonly project: {
+        readonly name: string;
+        readonly visibility: "public" | "private" | "unknown";
+        readonly repository?: string;
+      };
+      readonly technologies: readonly (string)[];
+      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+      readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
+      readonly links?: readonly ({
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly url: string;
+      })[];
+      readonly metrics?: readonly ({
+        readonly description: string;
+        readonly how_measured?: string;
+      })[];
+    };
+  } | {
+    readonly action: "merge";
+    readonly into: string;
+    readonly keep_summary?: "into" | "this";
+  } | {
+    readonly action: "discard";
+  };
   "Workspace": {
     readonly id: string;
     readonly language: string;
@@ -1307,6 +1429,49 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["ApplicationJob"];
   };
+  "POST /v1/workspaces/{workspaceId}/application-imports": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly format: "draft-loop-application-bundle";
+      readonly formatVersion: 1;
+      readonly sourceWorkspaceId: string;
+      readonly sourceApplicationId: string;
+      readonly name: string;
+      readonly jobText: string;
+      readonly briefs: readonly ({
+        readonly briefId: string;
+        readonly versions: readonly ({
+          readonly id: string;
+        })[];
+      })[];
+      readonly runs: readonly ({
+        readonly run: {
+          readonly id: string;
+        };
+        readonly contextSnapshots: readonly ({
+          readonly id: string;
+        })[];
+        readonly artifacts: readonly ({
+          readonly id: string;
+          readonly version: number;
+        })[];
+        readonly snapshots: readonly ({
+          readonly record: Record<string, never>;
+          readonly payload: unknown;
+          readonly slim: boolean;
+        })[];
+        readonly rounds: readonly (Record<string, never>)[];
+        readonly executions: readonly (Record<string, never>)[];
+        readonly findings: readonly (Record<string, never>)[];
+        readonly decisions: readonly (Record<string, never>)[];
+        readonly state?: Record<string, never>;
+        readonly events: readonly (Record<string, never>)[];
+      })[];
+    };
+    readonly response: ApiSchemas["ApplicationImport"];
+  };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/review": {
     readonly path: {
       readonly workspaceId: string;
@@ -1513,6 +1678,177 @@ export interface ApiOperations {
       readonly note?: string;
     };
     readonly response: ApiSchemas["ConsentEntry"];
+  };
+  "POST /v1/workspaces/{workspaceId}/work-journal/notes": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly header?: {
+      readonly "idempotency-key"?: string;
+    };
+    readonly body: {
+      readonly title: string;
+      readonly summary: string;
+      readonly period: {
+        readonly start: string;
+        readonly end?: string;
+      };
+      readonly project: {
+        readonly name: string;
+        readonly visibility: "public" | "private" | "unknown";
+        readonly repository?: string;
+      };
+      readonly technologies: readonly (string)[];
+      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+      readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
+      readonly links?: readonly ({
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly url: string;
+      })[];
+      readonly metrics?: readonly ({
+        readonly description: string;
+        readonly how_measured?: string;
+      })[];
+      readonly dedupe_key?: string;
+      readonly amends?: string;
+      readonly dry_run?: boolean;
+    };
+    readonly response: ApiSchemas["WorkJournalRecordResult"];
+  };
+  "GET /v1/workspaces/{workspaceId}/work-journal/notes": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query?: {
+      readonly status?: "pending" | "approved" | "merged" | "discarded";
+      readonly project?: string;
+      readonly since?: string;
+      readonly limit?: number;
+      readonly fields?: "titles" | "summary";
+    };
+    readonly response: ApiSchemas["WorkJournalNoteList"];
+  };
+  "GET /v1/workspaces/{workspaceId}/work-journal/notes/{noteId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly noteId: string;
+    };
+    readonly response: {
+      readonly id: string;
+      readonly tenant_id: string;
+      readonly workspace_id: string;
+      readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly content: {
+        readonly title: string;
+        readonly summary: string;
+        readonly period: {
+          readonly start: string;
+          readonly end?: string;
+        };
+        readonly project: {
+          readonly name: string;
+          readonly visibility: "public" | "private" | "unknown";
+          readonly repository?: string;
+        };
+        readonly technologies: readonly (string)[];
+        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
+        readonly links: readonly ({
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly url: string;
+        })[];
+        readonly metrics: readonly ({
+          readonly description: string;
+          readonly how_measured?: string;
+        })[];
+      };
+      readonly dedupe_key: string;
+      readonly possible_duplicate_of: readonly (string)[];
+      readonly merged_into?: string;
+      readonly approval?: {
+        readonly knowledge_base_id: string;
+        readonly tier: "normal" | "sensitive" | "never-share";
+        readonly source_id?: string;
+        readonly approved_at: string;
+      };
+      readonly screening: {
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly screened_at: string;
+      };
+      readonly edit_count: number;
+      readonly created_at: string;
+      readonly updated_at: string;
+    };
+  };
+  "POST /v1/workspaces/{workspaceId}/work-journal/notes/{noteId}/review": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly noteId: string;
+    };
+    readonly body: ApiSchemas["WorkJournalReviewInput"];
+    readonly response: {
+      readonly id: string;
+      readonly tenant_id: string;
+      readonly workspace_id: string;
+      readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly content: {
+        readonly title: string;
+        readonly summary: string;
+        readonly period: {
+          readonly start: string;
+          readonly end?: string;
+        };
+        readonly project: {
+          readonly name: string;
+          readonly visibility: "public" | "private" | "unknown";
+          readonly repository?: string;
+        };
+        readonly technologies: readonly (string)[];
+        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
+        readonly links: readonly ({
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly url: string;
+        })[];
+        readonly metrics: readonly ({
+          readonly description: string;
+          readonly how_measured?: string;
+        })[];
+      };
+      readonly dedupe_key: string;
+      readonly possible_duplicate_of: readonly (string)[];
+      readonly merged_into?: string;
+      readonly approval?: {
+        readonly knowledge_base_id: string;
+        readonly tier: "normal" | "sensitive" | "never-share";
+        readonly source_id?: string;
+        readonly approved_at: string;
+      };
+      readonly screening: {
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly screened_at: string;
+      };
+      readonly edit_count: number;
+      readonly created_at: string;
+      readonly updated_at: string;
+    };
+  };
+  "GET /v1/workspaces/{workspaceId}/work-journal/intake": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["WorkJournalIntake"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/work-journal/intake": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly enabled: boolean;
+    };
+    readonly response: ApiSchemas["WorkJournalIntake"];
   };
   "GET /v1/workspaces/{workspaceId}/archive": {
     readonly path: {

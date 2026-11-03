@@ -74,6 +74,43 @@ export const sourceEvidenceKindOverridesMigration = {
   `.trim(),
 } as const;
 
+const immutableTriggers = `
+    CREATE TRIGGER IF NOT EXISTS ${table}_immutable_update
+      BEFORE UPDATE ON ${table}
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source evidence kind overrides are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS ${table}_immutable_delete
+      BEFORE DELETE ON ${table}
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source evidence kind overrides are immutable'); END;`;
+
+/**
+ * Widens the stored taxonomy with `work-journal` (#2020). SQLite cannot alter a CHECK, so the
+ * table is rebuilt with its rows and triggers unchanged.
+ */
+export const sourceEvidenceKindWorkJournalMigration = {
+  version: 37,
+  sql: `
+    CREATE TABLE ${table}_v37 (
+      knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases(id),
+      source_id TEXT NOT NULL,
+      sequence INTEGER NOT NULL CHECK (sequence >= 1),
+      kind TEXT CHECK (kind IS NULL OR kind IN ('cv', 'linkedin-export', 'performance-review', 'notes', 'transcript', 'work-journal', 'other')),
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (knowledge_base_id, source_id, sequence)
+    );
+    INSERT INTO ${table}_v37 (knowledge_base_id, source_id, sequence, kind, created_at)
+      SELECT knowledge_base_id, source_id, sequence, kind, created_at FROM ${table};
+    DROP TABLE ${table};
+    ALTER TABLE ${table}_v37 RENAME TO ${table};
+    ${immutableTriggers}
+  `.trim(),
+} as const;
+
+/** Every migration of the overrides table, in version order. */
+export const sourceEvidenceKindOverridesMigrations = [
+  sourceEvidenceKindOverridesMigration,
+  sourceEvidenceKindWorkJournalMigration,
+] as const;
+
 /** Registered with the knowledge-base deletion trigger list, which lifts the delete guard while a base is erased. */
 export const sourceEvidenceKindOverridesImmutableDeleteTrigger = {
   name: `${table}_immutable_delete`,

@@ -1,0 +1,28 @@
+# Builds the self-hosted stack's images from this clone instead of pulling the published ones, for
+# developers and for trying an unreleased commit. Pass it after compose.yaml, as the
+# `pnpm self-hosted:*` scripts do:
+#   docker compose --file deploy/local/compose.yaml --file deploy/local/compose.build.yaml up --build
+services:
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    image: draft-loop-worker:self-hosted
+
+  page-fetcher:
+    build:
+      context: ../..
+      dockerfile: apps/page-fetcher/Dockerfile
+    image: draft-loop-page-fetcher:self-hosted
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    image: draft-loop-api:self-hosted
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    image: draft-loop-worker:self-hosted

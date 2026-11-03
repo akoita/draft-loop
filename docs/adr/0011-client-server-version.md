@@ -68,9 +68,12 @@ is the natural shape of the server API.
 
 ## Decisions
 
-The diagram shows where these decisions lead. It is a plan: on `main` today,
-only the Postgres storage package and the shared packages exist on the
-hosted side. The [architecture overview](../architecture/overview.md)
+The diagram shows where these decisions lead. Most of it is built: the API
+with the web screen, the worker, the page fetcher, the model gateway, and the
+Postgres and Cloud Storage adapters run on staging, and the same images run
+self-hosted. The local MCP server (`draftloop-mcp`) calls the self-hosted
+API. Keycloak is not hosted yet, so staging signs in with the owner token, and
+production is not open. The [architecture overview](../architecture/overview.md#ways-to-run)
 describes what runs now.
 
 ![Planned client-server architecture: a web app and AI agents reach a Fastify API on Cloud Run in europe-west1; the API queues runs for workers, which call a model gateway that sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic in an EU data-residency project; data lives in Cloud SQL Postgres with pgvector, already built, and Cloud Storage; sign-in uses Keycloak on Clever Cloud; every service uses the desktop app's packages, and the local-first desktop app, CLI, a planned local MCP server and SQLite keep running on the user's machine.](../assets/client-server-target-architecture.svg)
@@ -205,6 +208,12 @@ resumes rather than restarts.
   - Local models: an OpenAI-compatible endpoint the deployment declares, for
     either role. A local writer carries a warning until a local model passes
     the evaluation gate (D16).
+- **Anthropic-only pairs (decided 2026-10-30).** The OpenAI key has no
+  credit, so the owner's own runs use the `balanced-anthropic` and
+  `standard-anthropic` presets: a different Claude model reviews, so the
+  lineages differ, and the same-company warning still shows. The default pair
+  stays Anthropic and OpenAI until the quality scores (#1307) show which pair
+  the hosted default should be.
 - **Platform keys by default:** the service calls Anthropic and OpenAI with
   its own keys, meters usage per tenant, and enforces per-tenant budgets.
   The run budget machinery already exists.
@@ -451,6 +460,12 @@ backup format (ADR 0007), plus applications and their history. The upload
 is explicit, and the local copy is unchanged. This is optional for the
 first release.
 
+Built 2026-11-03 as the CLI's `draft-loop server import`, a client of the
+HTTP API ([self-hosted guide](../operations/self-hosted.md#coming-from-the-desktop-app)).
+Evidence goes through the ordinary upload route, so screening applies. The
+application import route is offered in owner-token mode only, until sign-in
+mode has its own review.
+
 ### D13. Plans and entitlements
 
 One product, tiered like Claude's plans. Every user profile is served; the
@@ -625,7 +640,9 @@ the other, and neither may break the other.
 
 **Desktop in maintenance mode (decided 2026-10-28).** The desktop keeps its
 fixes and whatever it gains from shared packages, but gets no features of its
-own. The web screen over the server is the main client.
+own. The web screen over the server is the main client. The desktop does not
+become a launcher for the local stack for now (decided 2026-11-01); a thin
+client of the service stays a later option.
 
 **Self-hosted local target (decided 2026-10-28).** The full local option is
 the server itself on the person's machine, not a second product: a separate
@@ -633,8 +650,10 @@ Compose file with one API, one worker, the page fetcher and Postgres, bound
 to `127.0.0.1`, with passwords and the owner token generated on first start.
 It only adds adapters behind the existing ports: keys from local secret
 files, `direct` and local model routes (D5), and blobs on disk. Encryption at
-rest is the host's disk encryption. Built in sprint 1z (#1946–#1954); images,
-an install script, backups, a sign-in profile and desktop import (D12) follow.
+rest is the host's disk encryption. Built in sprint 1z (#1946–#1954). The
+local install sprint (#2050–#2058) adds published images, an install script
+with backups and desktop import (D12). A sign-in profile for several people on
+one network waits until someone needs it.
 
 **Local development.** The desktop runs as today with `pnpm` scripts and no
 cloud account. The server stack runs locally with Docker Compose: Postgres
@@ -651,6 +670,9 @@ The existing offline fixture mode keeps local runs free of provider calls.
   packaged app, so a shared change that breaks the desktop fails its PR.
   PRs that change only documentation or tests skip them, and every release
   build runs them again.
+- a Self-hosted stack job installs the PR's images with the
+  `draft-loop-server` script, runs a scripted run to an exported DOCX, and
+  backs the stack up and restores it. It is not required yet.
 
 **Releases.** Independent cadences from the same `main`:
 
@@ -692,17 +714,27 @@ DraftLoop is offered there as an MCP server: one more client, like the CLI,
 not a second product.
 
 - **Two transports, one tool set:**
-  - *Local:* `apps/mcp`, a stdio server over the same application services
-    as `apps/cli`. Candidate data stays on the user's machine. It does not
-    depend on the hosted phases.
-  - *Hosted:* the same tools over the HTTP API (D10), with OAuth sign-in
-    through the identity provider and plan credits (D13). After phase 1.
-- **Tools:** list applications, start a tailored CV run from a job post,
-  follow its progress, read the draft with its findings and evidence, and
-  request an export. Inputs and outputs reuse the API's Zod contracts.
+  - *Local:* `apps/mcp`, a stdio process that is an HTTP client of the API,
+    served on the user's machine by the self-hosted stack (D15) with the
+    owner token. Candidate data stays on the user's machine. The CLI-only
+    path without the self-hosted stack is not served.
+  - *Hosted:* the same process and tools against the cloud API (D10), with
+    a signed-in token from the identity provider and plan credits (D13).
+    A remote MCP endpoint with OAuth on the API comes later.
+- **First tools: the work journal (decided 2026-11-01, #2018).**
+  `record_work` lets the candidate's coding agent file a short note about
+  notable work it just helped ship, and `list_work` lists those notes by
+  title, date, technologies and status. A note is *evidence for review*:
+  it waits in a pending inbox, and only the candidate's approval in
+  DraftLoop turns it into a knowledge source. Intake is off until the
+  candidate turns on "Accept notes from coding agents".
+- **CV tools next:** list applications, start a tailored CV run from a job
+  post, follow its progress, read the draft with its findings and evidence,
+  and request an export. Inputs and outputs reuse the API's Zod contracts.
 - **The engine stays in DraftLoop.** The host agent never writes or edits
-  CV claims; it asks DraftLoop to run the author–critic workflow, so
-  grounding and the critic still apply.
+  CV claims. It may record evidence for the candidate's review; it asks
+  DraftLoop to run the author–critic workflow, so grounding and the critic
+  still apply.
 - **Approval stays in DraftLoop.** An export or share needs the user's
   approval in DraftLoop, never through the agent.
 - **Minimal disclosure.** Whatever a tool returns reaches the host agent's

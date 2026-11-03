@@ -106,12 +106,22 @@ describe("author run prefix", () => {
 
     const [plan] = planRequests;
     expect(plan?.promptCache?.stableInputMembers).toBe(5);
+    expect(plan?.promptCache?.lifetime).toBe("5m");
     expect(plan?.promptCache?.callInstructions).toBe(applicationPlanSystemPrompt);
     expect(plan?.systemPrompt).toBe(
       `${plan?.promptCache?.systemPrompt}\n\n${applicationPlanSystemPrompt}`,
     );
     expect(cachedPrefix(plan)).toEqual(cachedPrefix(draftRequests[0]));
     expect(cachedPrefix(plan).stable).toContain('"retrievedEvidence"');
+    // The models get each chunk's id, source alias, line numbers and text; the rest stays local.
+    const sentEvidence = JSON.stringify([
+      plan?.input.retrievedEvidence,
+      plan?.input.achievementPlan,
+    ]);
+    expect(sentEvidence).toContain('"sourceId":"S1"');
+    for (const key of ['"checksum"', '"workspaceId"', '"rank"', '"ordinal"', '"source"']) {
+      expect(sentEvidence).not.toContain(key);
+    }
 
     // Claude's cache keys on the output format too, so both calls list the same outputs.
     const [draft] = draftRequests;

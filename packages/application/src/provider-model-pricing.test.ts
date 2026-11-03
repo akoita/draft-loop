@@ -44,7 +44,7 @@ describe("catalog model pricing", () => {
     ).toMatchObject({ inputUsdPerMillionTokens: 0.5, maxInputTokens: 1000000 });
   });
 
-  it("prices Claude prompt-cache reads and one-hour writes from the catalog", () => {
+  it("prices Claude prompt-cache reads and the author's five-minute writes from the catalog", () => {
     const profile = defaultModelProfileRegistry.resolve("standard-anthropic-author", 1, "author");
     expect(
       catalogModelPricing({ ...selection(profile.provider, profile.modelId), profile }),
@@ -52,9 +52,19 @@ describe("catalog model pricing", () => {
       inputUsdPerMillionTokens: 4,
       outputUsdPerMillionTokens: 20,
       cachedInputUsdPerMillionTokens: 0.2,
-      cacheWriteInputUsdPerMillionTokens: 8,
+      cacheWriteInputUsdPerMillionTokens: 5,
       maxInputTokens: 1000000,
     });
+  });
+
+  it("prices a selection without a profile by the catalog entries that serve its role", () => {
+    // Opus 5.5 writes an author's prefix at the five-minute rate and a critic's at the hour.
+    expect(catalogModelPricing(selection("anthropic", "claude-opus-5-5"))).toMatchObject({
+      cacheWriteInputUsdPerMillionTokens: 5,
+    });
+    expect(
+      catalogModelPricing({ ...selection("anthropic", "claude-opus-5-5"), role: "critic" }),
+    ).toMatchObject({ cacheWriteInputUsdPerMillionTokens: 8 });
   });
 
   it("leaves a model unpriced when the catalog does not know it or disagrees on its price", () => {

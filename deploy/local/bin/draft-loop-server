@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# Installs and runs DraftLoop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
+# Node and no build. The PowerShell twin is draft-loop-server.ps1. See
+# docs/operations/self-hosted.md.
+#
+#   draft-loop-server install <version> [folder]   download a release's stack into a folder
+#   draft-loop-server up | down | status | logs [service] | token
+#   draft-loop-server upgrade <version>            switch to a newer release and restart
+#   draft-loop-server backup [file] | restore <file>   one archive of the database, files and secrets
+#
+# Every command except install works on the folder that holds this script's bin/ folder, or on
+# DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
+set -euo pipefail
+
+repository="akoita/draft-loop"
+# Where release bundles come from: the tag's source archive on GitHub. Tests point it at a local
+# archive; {version} is replaced with the version asked for.
+default_source="https://codeload.github.com/${repository}/tar.gz/refs/tags/server-v{version}"
+source_template="${DRAFT_LOOP_SERVER_SOURCE:-$default_source}"
+
+die() {
+  printf 'draft-loop-server: %s\n' "$1" >&2
+  exit 1
+}
+
+usage() {
+  sed -n '6,9p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+script_home() {
+  if [ -n "${DRAFT_LOOP_SERVER_HOME:-}" ]; then
+    printf '%s\n' "$DRAFT_LOOP_SERVER_HOME"
+  else
+    (cd "$(dirname "$0")/.." && pwd)
+  fi
+}
+
+check_version() {
+  printf '%s' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
+    die "the version must look like 0.12.0, not '$1'."
+}
+
+# The version an installed folder runs, from its .env file.
+installed_version() {
+  sed -n 's/^DRAFT_LOOP_VERSION=//p' "$1/.env" 2>/dev/null | tail -n 1
+}
+
+# Writes DRAFT_LOOP_VERSION into .env and keeps every other setting there.
+write_version() {
+  local env_file="$1/.env" kept=""
+  if [ -f "$env_file" ]; then kept="$(grep -v '^DRAFT_LOOP_VERSION=' "$env_file" || true)"; fi
+  {
+    printf 'DRAFT_LOOP_VERSION=%s\n' "$2"
+    if [ -n "$kept" ]; then printf '%s\n' "$kept"; fi
+  } > "$env_file.partial"
+  mv "$env_file.partial" "$env_file"
+}
+
+# Downloads one release's deploy/local folder into a new temporary folder and prints its path.
+fetch_bundle() {
+  local version="$1" source scratch
+  source="${source_template//\{version\}/$version}"
+  scratch="$(mktemp -d)"
+  if [ -f "$source" ]; then
+    cp "$source" "$scratch/source.tar.gz"
+  else
+    command -v curl > /dev/null || die "curl is needed to download a release."
+    curl --fail --silent --show-error --location --output "$scratch/source.tar.gz" "$source" ||
+      die "could not download server-v$version from $source."
+  fi
+  mkdir "$scratch/bundle"
+  # GNU tar needs --wildcards for the pattern; the bsdtar of macOS and Windows matches without it.
+  tar -xzf "$scratch/source.tar.gz" -C "$scratch/bundle" --strip-components=3 \
+    --wildcards '*/deploy/local/*' 2> /dev/null ||
+    tar -xzf "$scratch/source.tar.gz" -C "$scratch/bundle" --strip-components=3 \
+      '*/deploy/local/*' 2> /dev/null ||
+    die "server-v$version has no self-hosted stack in its archive."
+  [ -f "$scratch/bundle/compose.yaml" ] || die "server-v$version has no self-hosted stack."
+  printf '%s\n' "$scratch"
+}
+
+# Copies a bundle's files into a folder, keeping the folder's keys and settings.
+place_bundle() {
+  local bundle="$1" home="$2"
+  mkdir -p "$home/keys"
+  for item in compose.yaml README.md init bin; do
+    [ -e "$bundle/$item" ] || continue
+    rm -rf "${home:?}/$item"
+    cp -R "$bundle/$item" "$home/$item"
+  done
+  [ -f "$home/keys/.gitignore" ] || cp "$bundle/keys/.gitignore" "$home/keys/.gitignore"
+  chmod 0755 "$home/bin/draft-loop-server"
+  chmod 0700 "$home/keys"
+}
+
+compose() {
+  local home
+  home="$(script_home)"
+  [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
+  [ -n "$(installed_version "$home")" ] || die "$home/.env names no DRAFT_LOOP_VERSION."
+  command -v docker > /dev/null || die "Docker is needed; install Docker with the Compose plugin."
+  # Your own changes go in compose.override.yaml, which install and upgrade never touch.
+  if [ -f "$home/compose.override.yaml" ]; then
+    docker compose --file "$home/compose.yaml" --file "$home/compose.override.yaml" "$@"
+  else
+    docker compose --file "$home/compose.yaml" "$@"
+  fi
+}
+
+backup_format="draft-loop-self-hosted-backup"
+
+# Writes one archive while the stack runs: a custom-format database dump, the volume holding the
+# uploaded and exported files, and the generated secrets (owner token and database passwords).
+# Provider keys stay in keys/ and are not included.
+backup() {
+  local home version target scratch
+  home="$(script_home)"
+  version="$(installed_version "$home")"
+  target="${1:-draft-loop-backup-$version-$(date -u +%Y%m%dT%H%M%SZ).tar.gz}"
+  [ ! -e "$target" ] || die "$target already exists; name a new file."
+  scratch="$(mktemp -d)"
+  umask 077
+  # Files move through a mounted folder and `compose cp`, never through a pipe, so the PowerShell
+  # twin can do the same steps byte for byte.
+  compose exec -T postgres pg_dump --username=postgres --format=custom \
+    --file=/tmp/draft-loop-backup.dump draft_loop || die "the database dump failed; is the stack up?"
+  compose cp postgres:/tmp/draft-loop-backup.dump "$scratch/database.dump" > /dev/null
+  compose exec -T postgres rm -f /tmp/draft-loop-backup.dump
+  compose run --rm --no-deps -T --volume "$scratch:/backup" --entrypoint tar init \
+    -czf /backup/files.tar.gz -C / blobs secrets postgres-secrets ||
+    die "copying the files and secrets failed."
+  printf '{"format":"%s","formatVersion":1,"serverVersion":"%s","createdAt":"%s"}\n' \
+    "$backup_format" "$version" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$scratch/backup.json"
+  tar -czf "$target" -C "$scratch" backup.json database.dump files.tar.gz
+  rm -rf "$scratch"
+  printf 'Wrote %s. Keep it private: it holds your career material and the stack'"'"'s passwords.\n' \
+    "$target"
+}
+
+# Loads an archive into a stack that has never started, or was erased: the files and secrets
+# first, then Postgres alone, its runtime role, the dump, and finally every service.
+restore() {
+  local archive="${1:-}" home version saved scratch
+  [ -n "$archive" ] || die "say which archive to restore, such as: restore draft-loop-backup.tar.gz"
+  [ -f "$archive" ] || die "$archive is not a file."
+  home="$(script_home)"
+  version="$(installed_version "$home")"
+  scratch="$(mktemp -d)"
+  tar -xzf "$archive" -C "$scratch" backup.json database.dump files.tar.gz 2> /dev/null ||
+    die "$archive is not a DraftLoop server backup."
+  grep -q "\"format\":\"$backup_format\",\"formatVersion\":1," "$scratch/backup.json" ||
+    die "$archive is not a DraftLoop server backup."
+  saved="$(sed -n 's/.*"serverVersion":"\([0-9.]*\)".*/\1/p' "$scratch/backup.json")"
+  if [ "$saved" != "$version" ] &&
+    [ "$(printf '%s\n%s\n' "$saved" "$version" | sort -V | tail -n 1)" = "$saved" ]; then
+    die "$archive comes from server $saved, newer than $version here; upgrade to $saved first."
+  fi
+  compose run --rm --no-deps -T --entrypoint sh init -c 'test ! -s /secrets/owner_token' ||
+    die "this stack already holds data. Restore only into a new install, or erase this one first with: docker compose --file $home/compose.yaml down --volumes"
+  compose run --rm --no-deps -T --volume "$scratch:/backup:ro" --entrypoint tar init \
+    -xzf /backup/files.tar.gz -C / || die "unpacking the files and secrets failed."
+  compose up --detach --wait postgres
+  compose run --rm --no-deps postgres-setup
+  compose cp "$scratch/database.dump" postgres:/tmp/draft-loop-restore.dump > /dev/null
+  compose exec -T postgres pg_restore --username=postgres --dbname=draft_loop --exit-on-error \
+    /tmp/draft-loop-restore.dump || die "loading the database failed."
+  compose exec -T postgres rm -f /tmp/draft-loop-restore.dump
+  rm -rf "$scratch"
+  compose up --detach --wait --remove-orphans
+  printf 'Restored %s (server %s) into %s.\n' "$archive" "$saved" "$home"
+}
+
+install() {
+  local version="${1:-}" home="${2:-$HOME/draft-loop-server}" scratch
+  [ -n "$version" ] || die "say which version to install, such as: install 0.13.0"
+  check_version "$version"
+  [ ! -e "$home/compose.yaml" ] || die "$home already holds a stack; use upgrade instead."
+  scratch="$(fetch_bundle "$version")"
+  mkdir -p "$home"
+  place_bundle "$scratch/bundle" "$home"
+  rm -rf "$scratch"
+  write_version "$home" "$version"
+  printf 'Installed DraftLoop server %s in %s.\n' "$version" "$home"
+  printf 'Next: put anthropic_api_key (and openai_api_key if you use OpenAI) in %s/keys,\n' "$home"
+  printf 'then run %s/bin/draft-loop-server up\n' "$home"
+}
+
+upgrade() {
+  local version="${1:-}" home current scratch
+  home="$(script_home)"
+  [ -n "$version" ] || die "say which version to upgrade to, such as: upgrade 0.13.0"
+  check_version "$version"
+  [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
+  current="$(installed_version "$home")"
+  if [ -n "$current" ] && [ "$current" != "$version" ] &&
+    [ "$(printf '%s\n%s\n' "$current" "$version" | sort -V | tail -n 1)" = "$current" ]; then
+    die "$home runs $current; going back to $version is not supported. Restore a backup instead."
+  fi
+  scratch="$(fetch_bundle "$version")"
+  place_bundle "$scratch/bundle" "$home"
+  rm -rf "$scratch"
+  write_version "$home" "$version"
+  printf 'Switched %s to DraftLoop server %s; starting it.\n' "$home" "$version"
+  # Pulls the new images, runs the migrations, then restarts the API and the worker.
+  compose up --detach --wait --remove-orphans
+}
+
+command="${1:-help}"
+[ "$#" -eq 0 ] || shift
+case "$command" in
+  install) install "$@" ;;
+  upgrade) upgrade "$@" ;;
+  up) compose up --detach --wait --remove-orphans ;;
+  down) compose down ;;
+  status) compose ps ;;
+  logs) compose logs --tail 200 "$@" ;;
+  token) compose exec -T api cat /secrets/owner_token ;;
+  backup) backup "$@" ;;
+  restore) restore "$@" ;;
+  help | --help | -h) usage ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
