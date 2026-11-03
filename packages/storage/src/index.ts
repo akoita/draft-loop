@@ -66,7 +66,7 @@ import {
   listCurrentSourceEvidenceKindOverrides,
   type SourceEvidenceKindOverrideInput,
   type SourceEvidenceKindOverrideRecord,
-  sourceEvidenceKindOverridesMigration,
+  sourceEvidenceKindOverridesMigrations,
 } from "./source-evidence-kinds.js";
 import {
   appendSourceSensitivityRules,
@@ -334,7 +334,7 @@ import type {
   WorkspaceRestoreOptions,
 } from "./ports/workspace.js";
 
-export const storageSchemaVersion = 36 as const;
+export const storageSchemaVersion = 37 as const;
 
 interface Migration {
   readonly version: number;
@@ -2275,8 +2275,8 @@ const migrations: readonly Migration[] = [
   vectorIndex.candidateKnowledgeVectorIndexMigration,
   semanticTrace.semanticRetrievalTraceMigration,
   ...applicationStore.applicationMigrations,
-  sourceEvidenceKindOverridesMigration,
   originTrace.retrievalOriginTraceMigration,
+  ...sourceEvidenceKindOverridesMigrations,
 ];
 const lexicalIndexRowSql =
   "SELECT store_id, knowledge_base_id, schema_version, indexer_id, manifest_checksum, scope_json, created_at, stale FROM candidate_knowledge_lexical_indexes WHERE store_id = ? AND knowledge_base_id = ?";

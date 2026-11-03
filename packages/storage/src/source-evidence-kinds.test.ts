@@ -7,7 +7,10 @@ import { candidateEvidenceKinds } from "@draft-loop/domain/candidate-evidence-ki
 import { afterEach, describe, expect, it } from "vitest";
 import { openSqliteStorage, openSqliteStorageReadOnly, StorageValidationError } from "./index.js";
 import { initializeCandidateKnowledgeStore } from "./knowledge-store.js";
-import { sourceEvidenceKindOverridesMigration } from "./source-evidence-kinds.js";
+import {
+  sourceEvidenceKindOverridesMigration,
+  sourceEvidenceKindWorkJournalMigration,
+} from "./source-evidence-kinds.js";
 
 interface RawDatabase {
   readonly exec: (sql: string) => void;
@@ -71,17 +74,54 @@ describe("candidate knowledge source evidence kind override storage", () => {
 
     const legacy = openRaw(filename);
     legacy.exec(
-      "DROP TABLE candidate_knowledge_source_evidence_kind_overrides; DELETE FROM schema_migrations WHERE version = 33;",
+      "DROP TABLE candidate_knowledge_source_evidence_kind_overrides; DELETE FROM schema_migrations WHERE version IN (33, 37);",
     );
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(36);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(37);
     expect(await upgraded.get("note")).toBe("kept");
     expect(
       await upgraded.listCandidateKnowledgeSourceEvidenceKindOverrides(knowledgeBase.id),
     ).toEqual([]);
     await upgraded.close();
+  });
+
+  it("widens an existing table to the work-journal kind and keeps its rows and immutability", async () => {
+    const directory = await temporaryDirectory();
+    const filename = join(directory, "knowledge.sqlite");
+    const before = await seededStorage(filename);
+    const kept = await before.appendCandidateKnowledgeSourceEvidenceKindOverride(
+      knowledgeBase.id,
+      "source-a",
+      { kind: "notes", createdAt },
+    );
+    await before.close();
+
+    const legacy = openRaw(filename);
+    legacy.exec(
+      `DROP TABLE candidate_knowledge_source_evidence_kind_overrides; DELETE FROM schema_migrations WHERE version = 37; ${sourceEvidenceKindOverridesMigration.sql}; INSERT INTO candidate_knowledge_source_evidence_kind_overrides (knowledge_base_id, source_id, sequence, kind, created_at) VALUES ('${knowledgeBase.id}', 'source-a', 1, 'notes', '${createdAt}');`,
+    );
+    legacy.close();
+
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(37);
+    expect(
+      await upgraded.listCandidateKnowledgeSourceEvidenceKindOverrides(knowledgeBase.id),
+    ).toEqual([kept]);
+    const journal = await upgraded.appendCandidateKnowledgeSourceEvidenceKindOverride(
+      knowledgeBase.id,
+      "source-b",
+      { kind: "work-journal", createdAt: later },
+    );
+    expect(journal.kind).toBe("work-journal");
+    await upgraded.close();
+
+    const raw = openRaw(filename);
+    expect(() =>
+      raw.exec("DELETE FROM candidate_knowledge_source_evidence_kind_overrides"),
+    ).toThrow(/immutable/u);
+    raw.close();
   });
 
   it("appends per-source rows where the latest wins and a cleared row means no override", async () => {
@@ -227,10 +267,19 @@ describe("candidate knowledge source evidence kind override storage", () => {
 });
 
 describe("source evidence kind override migration", () => {
-  it("accepts exactly the current taxonomy in its fixed CHECK list", () => {
-    const listed = /kind IN \(([^)]*)\)/u.exec(sourceEvidenceKindOverridesMigration.sql)?.[1];
-    expect(listed?.split(",").map((kind) => kind.trim().replace(/'/gu, ""))).toEqual([
-      ...candidateEvidenceKinds,
-    ]);
+  const listed = (sql: string) =>
+    /kind IN \(([^)]*)\)/u
+      .exec(sql)?.[1]
+      ?.split(",")
+      .map((kind) => kind.trim().replace(/'/gu, ""));
+
+  it("accepts exactly the current taxonomy in the latest CHECK list", () => {
+    expect(new Set(listed(sourceEvidenceKindWorkJournalMigration.sql))).toEqual(
+      new Set(candidateEvidenceKinds),
+    );
+  });
+
+  it("keeps the released migration's list fixed, without the work-journal kind", () => {
+    expect(listed(sourceEvidenceKindOverridesMigration.sql)).not.toContain("work-journal");
   });
 });

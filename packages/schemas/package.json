@@ -46,6 +46,10 @@
     "./content-screening": {
       "types": "./src/content-screening.ts",
       "import": "./src/content-screening.ts"
+    },
+    "./work-journal": {
+      "types": "./src/work-journal.ts",
+      "import": "./src/work-journal.ts"
     }
   },
   "files": [

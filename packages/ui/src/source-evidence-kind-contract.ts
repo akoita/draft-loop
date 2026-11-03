@@ -209,6 +209,8 @@ export function evidenceKindLabel(kind: CandidateEvidenceKind): string {
       return "Notes";
     case "transcript":
       return "Transcript";
+    case "work-journal":
+      return "Work journal";
     case "other":
       return "Other";
   }
