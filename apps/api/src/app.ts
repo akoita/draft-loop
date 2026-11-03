@@ -64,7 +64,7 @@ import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
-import { registerWorkJournalRoutes } from "./work-journal-routes.js";
+import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 
@@ -118,6 +118,8 @@ export interface ApiOptions {
      * owner-token mode serves them until sign-in mode records the intake as a consent.
      */
     readonly workJournal?: WorkJournalService;
+    /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
+    readonly sourceEvidenceKinds?: SourceEvidenceKinds;
   };
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
@@ -449,6 +451,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
+        ...(knowledgeIntake === undefined ||
+        application.sensitivityRules === undefined ||
+        application.sourceEvidenceKinds === undefined
+          ? {}
+          : {
+              knowledge: {
+                intake: knowledgeIntake,
+                rules: application.sensitivityRules,
+                evidenceKinds: application.sourceEvidenceKinds,
+              },
+            }),
+        ...(screening === undefined ? {} : { screening }),
       });
     }
     if (application.recordArchives !== undefined) {

@@ -36,11 +36,17 @@ export type TenantApplication = Required<
     | "profileDerivations"
     | "jobPageFetcher"
     | "workJournal"
+    | "sourceEvidenceKinds"
   >
 > &
   Pick<
     ApiApplication,
-    "idempotency" | "contentScreening" | "briefExtractions" | "profileDerivations" | "workJournal"
+    | "idempotency"
+    | "contentScreening"
+    | "briefExtractions"
+    | "profileDerivations"
+    | "workJournal"
+    | "sourceEvidenceKinds"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -238,6 +244,11 @@ export function registerTenantApplications(
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
     // An application composed without a journal refuses every note as unavailable.
     workJournal: forwarding(() => current().workJournal ?? unavailableWorkJournal),
+    sourceEvidenceKinds: forwarding(() => {
+      const kinds = current().sourceEvidenceKinds;
+      if (kinds === undefined) throw new TenantContextMissingError();
+      return kinds;
+    }),
     ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };
 }

@@ -108,6 +108,7 @@ export function composeHostedApplication(
     }),
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
     workJournal: createWorkJournalService({ store: storage.workJournalNotes, tenantId }),
+    sourceEvidenceKinds: storage,
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
       reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),

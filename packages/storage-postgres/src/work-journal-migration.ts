@@ -1,5 +1,6 @@
 import { contentScreeningMigration } from "./content-screening-migration.js";
 import { creditLedgerMigration } from "./credit-ledger-migration.js";
+import { erasureDefinition, withErasureSteps } from "./erasure-redefinition.js";
 import type { PostgresMigration } from "./migrations.js";
 
 /**
@@ -73,43 +74,28 @@ const tables = `
     $migration$;
 `;
 
-/** The `EXECUTE format(...)` statement that defines `name` in an earlier migration. */
-function definition(sql: string, name: string): string {
-  const start = sql.indexOf(
-    `EXECUTE format($template$\n        CREATE OR REPLACE FUNCTION %1$I.${name}(`,
-  );
-  const closing = "$template$, current_schema());";
-  const end = sql.indexOf(closing, start);
-  if (start < 0 || end < 0) throw new Error(`The ${name} definition was not found.`);
-  return sql.slice(start, end + closing.length);
-}
-
-function inserted(sql: string, anchor: string, lines: string): string {
-  if (!sql.includes(anchor)) throw new Error("The erasure step anchor was not found.");
-  return sql.replace(anchor, () => `${lines}${anchor}`);
-}
-
-const recordErasure = inserted(
-  definition(contentScreeningMigration.sql, "erase_candidate_record"),
+const recordErasure = withErasureSteps(
+  erasureDefinition(contentScreeningMigration.sql, "erase_candidate_record"),
   "            ['candidate_record_assignments', 'workspace_id = $2'],",
   [
     "            ['work_journal_notes', 'workspace_id = $2'],",
     "            ['work_journal_forgotten_keys', 'workspace_id = $2'],",
     "            ['work_journal_intake', 'workspace_id = $2'],",
-    "",
-  ].join("\n"),
+  ],
 );
 
-const tenantErasure = inserted(
-  definition(creditLedgerMigration.sql, "erase_tenant_remainder"),
+const tenantErasure = withErasureSteps(
+  erasureDefinition(creditLedgerMigration.sql, "erase_tenant_remainder"),
   "            'workspace_settings',",
   [
     "            'work_journal_notes',",
     "            'work_journal_forgotten_keys',",
     "            'work_journal_intake',",
-    "",
-  ].join("\n"),
+  ],
 );
+
+/** The erasure definitions this migration writes, for the next migration that adds a table. */
+export const workJournalErasure = { recordErasure, tenantErasure };
 
 export const workJournalMigration: PostgresMigration = {
   version: 23,

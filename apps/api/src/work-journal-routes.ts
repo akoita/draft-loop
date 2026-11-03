@@ -1,5 +1,10 @@
-import type { ApplicationService } from "@draft-loop/application";
+import type {
+  ApplicationService,
+  HostedKnowledgeIntake,
+  HostedSensitivityRules,
+} from "@draft-loop/application";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
+import { createWorkJournalPublisher } from "@draft-loop/application/work-journal-source";
 import {
   workJournalApprovalSchema,
   workJournalNoteContentSchema,
@@ -9,10 +14,12 @@ import {
   workJournalNoteStatuses,
   workJournalStoredNoteSchema,
 } from "@draft-loop/schemas/work-journal";
-import type { FastifyInstance } from "fastify";
+import type { SourceEvidenceKindStoragePort } from "@draft-loop/storage";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiErrorSchema } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 
@@ -21,7 +28,21 @@ export interface WorkJournalRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   readonly journal: WorkJournalService;
   readonly idempotency: IdempotencyStore;
+  /** Where approval writes a note (#2022); without all three, approve answers 503. */
+  readonly knowledge?: {
+    readonly intake: HostedKnowledgeIntake;
+    readonly rules: HostedSensitivityRules;
+    readonly evidenceKinds: SourceEvidenceKinds;
+  };
+  /** Screens the approved note's source like an upload. */
+  readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
 }
+
+/** The tenant's evidence-kind overrides, through which approval marks a note's source. */
+export type SourceEvidenceKinds = Pick<
+  SourceEvidenceKindStoragePort,
+  "appendCandidateKnowledgeSourceEvidenceKindOverride"
+>;
 
 const workspaceParams = z.strictObject({
   workspaceId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier"),
@@ -111,7 +132,35 @@ export function registerWorkJournalRoutes(
   options: WorkJournalRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, journal, idempotency } = options;
+  const { service, workspaceRoot, journal, idempotency, knowledge, screening } = options;
+  const publisherFor = (request: FastifyRequest) =>
+    knowledge === undefined
+      ? undefined
+      : createWorkJournalPublisher({
+          intake: knowledge.intake,
+          rules: knowledge.rules,
+          setEvidenceKind: async (knowledgeBaseId, sourceId, kind) => {
+            await knowledge.evidenceKinds.appendCandidateKnowledgeSourceEvidenceKindOverride(
+              knowledgeBaseId,
+              sourceId,
+              { kind, createdAt: new Date().toISOString() },
+            );
+          },
+          ...(screening === undefined
+            ? {}
+            : {
+                screen: async (added, bytes) => {
+                  await screening.screenUpload(request, {
+                    knowledgeBaseId: added.source.knowledgeBaseId,
+                    sourceId: added.source.id,
+                    sourceVersionId: added.latestVersion.id,
+                    name: added.source.displayName,
+                    mediaType: added.latestVersion.mediaType,
+                    bytes,
+                  });
+                },
+              }),
+        });
   const requireWorkspace = async (workspaceId: string) => {
     await service.readWorkspace(workspaceRoot(workspaceId));
   };
@@ -204,7 +253,13 @@ export function registerWorkJournalRoutes(
     async (request) => {
       const { workspaceId, noteId } = request.params;
       await requireWorkspace(workspaceId);
-      const note = await journal.review(workspaceId, noteId, request.body);
+      const publish = publisherFor(request);
+      const note = await journal.review(
+        workspaceId,
+        noteId,
+        request.body,
+        publish === undefined ? undefined : { publish },
+      );
       request.log.info(
         { workspaceId, noteId, action: request.body.action, status: note.status },
         "work journal note reviewed",

@@ -150,10 +150,12 @@ export interface WorkJournalService {
   /** Full notes for the candidate's review; never for the agent. */
   listFull(workspaceId: string, options?: WorkJournalListOptions): Promise<WorkJournalStoredNote[]>;
   get(workspaceId: string, id: string): Promise<WorkJournalStoredNote>;
+  /** `publish` replaces the composed publisher for one call, such as with a request's screening. */
   review(
     workspaceId: string,
     id: string,
     action: WorkJournalReviewAction,
+    context?: { readonly publish?: WorkJournalPublish },
   ): Promise<WorkJournalStoredNote>;
   intake(workspaceId: string): Promise<WorkJournalIntake>;
   /** Turning intake off deletes the workspace's pending notes. */
@@ -419,7 +421,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
 
     get: requireNote,
 
-    review: async (workspaceId, id, action) => {
+    review: async (workspaceId, id, action, context) => {
       const note = await requireNote(workspaceId, id);
       requirePending(note);
       const at = now();
@@ -481,14 +483,15 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
               "Screening holds this note; edit it or discard it.",
             );
           }
-          if (publish === undefined) {
+          const publisher = context?.publish ?? publish;
+          if (publisher === undefined) {
             throw new WorkJournalError(
               "approval_unavailable",
               "This server cannot turn notes into career evidence yet.",
             );
           }
           const tier = action.tier ?? defaultTier(note.content);
-          const published = await publish({
+          const published = await publisher({
             workspaceId,
             note,
             knowledgeBaseId: action.knowledge_base_id,
