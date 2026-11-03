@@ -711,17 +711,27 @@ DraftLoop is offered there as an MCP server: one more client, like the CLI,
 not a second product.
 
 - **Two transports, one tool set:**
-  - *Local:* `apps/mcp`, a stdio server over the same application services
-    as `apps/cli`. Candidate data stays on the user's machine. It does not
-    depend on the hosted phases.
-  - *Hosted:* the same tools over the HTTP API (D10), with OAuth sign-in
-    through the identity provider and plan credits (D13). After phase 1.
-- **Tools:** list applications, start a tailored CV run from a job post,
-  follow its progress, read the draft with its findings and evidence, and
-  request an export. Inputs and outputs reuse the API's Zod contracts.
+  - *Local:* `apps/mcp`, a stdio process that is an HTTP client of the API,
+    served on the user's machine by the self-hosted stack (D15) with the
+    owner token. Candidate data stays on the user's machine. The CLI-only
+    path without the self-hosted stack is not served.
+  - *Hosted:* the same process and tools against the cloud API (D10), with
+    a signed-in token from the identity provider and plan credits (D13).
+    A remote MCP endpoint with OAuth on the API comes later.
+- **First tools: the work journal (decided 2026-11-01, #2018).**
+  `record_work` lets the candidate's coding agent file a short note about
+  notable work it just helped ship, and `list_work` lists those notes by
+  title, date, technologies and status. A note is *evidence for review*:
+  it waits in a pending inbox, and only the candidate's approval in
+  DraftLoop turns it into a knowledge source. Intake is off until the
+  candidate turns on "Accept notes from coding agents".
+- **CV tools next:** list applications, start a tailored CV run from a job
+  post, follow its progress, read the draft with its findings and evidence,
+  and request an export. Inputs and outputs reuse the API's Zod contracts.
 - **The engine stays in DraftLoop.** The host agent never writes or edits
-  CV claims; it asks DraftLoop to run the author–critic workflow, so
-  grounding and the critic still apply.
+  CV claims. It may record evidence for the candidate's review; it asks
+  DraftLoop to run the author–critic workflow, so grounding and the critic
+  still apply.
 - **Approval stays in DraftLoop.** An export or share needs the user's
   approval in DraftLoop, never through the agent.
 - **Minimal disclosure.** Whatever a tool returns reaches the host agent's
