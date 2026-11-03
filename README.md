@@ -27,7 +27,7 @@ candidate decides what to approve and export.
 | Way to run | Status | What it is |
 | --- | --- | --- |
 | [Self-hosted server](#quick-install-with-docker) | Recommended | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk. |
-| [Desktop app](#desktop-app) | In development | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. The v0.8 alpha with its own local engine gets fixes only, and its workspaces move to the server with one command. |
+| [Desktop app](#desktop-app) | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. The v0.8 alpha with its own local engine gets fixes only, and its workspaces move to the server with one command. |
 | [CLI](#developer-quick-start) | Source only | Every workflow step from a terminal, over the same packages. |
 | Hosted service | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet. |
 
@@ -96,13 +96,13 @@ before it becomes career evidence; see the
 
 The desktop app is a first-class DraftLoop client beside the web screen: an
 Electron app over a DraftLoop server's own web screen, pointed at your
-self-hosted server or at the hosted service once it opens. It is being built in
-the [Desktop client milestone](https://github.com/akoita/draft-loop/milestone/65)
-([ADR 0011, D9](docs/adr/0011-client-server-version.md#d9-clients)).
+self-hosted server or at the hosted service once it opens. It ships from v0.9.0
+([ADR 0011, D9](docs/adr/0011-client-server-version.md#d9-clients)) and needs a
+server at 0.14.0 or later to remember your sign-in.
 
-The current v0.8 alpha still runs its own local engine. That architecture is in
-maintenance mode since 2026-10-28: it gets fixes but no features, and it is
-retired one release after the new client ships. Existing users can send a
+The v0.8 alpha runs its own local engine. That architecture is in maintenance
+mode since 2026-10-28: it gets fixes but no features, and it is retired one
+release after the client ships. Existing users can send a
 workspace's applications and career evidence to a self-hosted server with
 `draft-loop server import`; see
 [Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
