@@ -6,6 +6,7 @@
 #   draft-loop-server install <version> [folder]   download a release's stack into a folder
 #   draft-loop-server up | down | status | logs [service] | token
 #   draft-loop-server upgrade <version>            switch to a newer release and restart
+#   draft-loop-server backup [file] | restore <file>   one archive of the database, files and secrets
 #
 # Every command except install works on the folder that holds this script's bin/ folder, or on
 # DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
@@ -23,7 +24,7 @@ die() {
 }
 
 usage() {
-  sed -n '6,8p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '6,9p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 script_home() {
@@ -98,7 +99,75 @@ compose() {
   [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
   [ -n "$(installed_version "$home")" ] || die "$home/.env names no DRAFT_LOOP_VERSION."
   command -v docker > /dev/null || die "Docker is needed; install Docker with the Compose plugin."
-  docker compose --file "$home/compose.yaml" "$@"
+  # Your own changes go in compose.override.yaml, which install and upgrade never touch.
+  if [ -f "$home/compose.override.yaml" ]; then
+    docker compose --file "$home/compose.yaml" --file "$home/compose.override.yaml" "$@"
+  else
+    docker compose --file "$home/compose.yaml" "$@"
+  fi
+}
+
+backup_format="draft-loop-self-hosted-backup"
+
+# Writes one archive while the stack runs: a custom-format database dump, the volume holding the
+# uploaded and exported files, and the generated secrets (owner token and database passwords).
+# Provider keys stay in keys/ and are not included.
+backup() {
+  local home version target scratch
+  home="$(script_home)"
+  version="$(installed_version "$home")"
+  target="${1:-draft-loop-backup-$version-$(date -u +%Y%m%dT%H%M%SZ).tar.gz}"
+  [ ! -e "$target" ] || die "$target already exists; name a new file."
+  scratch="$(mktemp -d)"
+  umask 077
+  # Files move through a mounted folder and `compose cp`, never through a pipe, so the PowerShell
+  # twin can do the same steps byte for byte.
+  compose exec -T postgres pg_dump --username=postgres --format=custom \
+    --file=/tmp/draft-loop-backup.dump draft_loop || die "the database dump failed; is the stack up?"
+  compose cp postgres:/tmp/draft-loop-backup.dump "$scratch/database.dump" > /dev/null
+  compose exec -T postgres rm -f /tmp/draft-loop-backup.dump
+  compose run --rm --no-deps -T --volume "$scratch:/backup" --entrypoint tar init \
+    -czf /backup/files.tar.gz -C / blobs secrets postgres-secrets ||
+    die "copying the files and secrets failed."
+  printf '{"format":"%s","formatVersion":1,"serverVersion":"%s","createdAt":"%s"}\n' \
+    "$backup_format" "$version" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$scratch/backup.json"
+  tar -czf "$target" -C "$scratch" backup.json database.dump files.tar.gz
+  rm -rf "$scratch"
+  printf 'Wrote %s. Keep it private: it holds your career material and the stack'"'"'s passwords.\n' \
+    "$target"
+}
+
+# Loads an archive into a stack that has never started, or was erased: the files and secrets
+# first, then Postgres alone, its runtime role, the dump, and finally every service.
+restore() {
+  local archive="${1:-}" home version saved scratch
+  [ -n "$archive" ] || die "say which archive to restore, such as: restore draft-loop-backup.tar.gz"
+  [ -f "$archive" ] || die "$archive is not a file."
+  home="$(script_home)"
+  version="$(installed_version "$home")"
+  scratch="$(mktemp -d)"
+  tar -xzf "$archive" -C "$scratch" backup.json database.dump files.tar.gz 2> /dev/null ||
+    die "$archive is not a DraftLoop server backup."
+  grep -q "\"format\":\"$backup_format\",\"formatVersion\":1," "$scratch/backup.json" ||
+    die "$archive is not a DraftLoop server backup."
+  saved="$(sed -n 's/.*"serverVersion":"\([0-9.]*\)".*/\1/p' "$scratch/backup.json")"
+  if [ "$saved" != "$version" ] &&
+    [ "$(printf '%s\n%s\n' "$saved" "$version" | sort -V | tail -n 1)" = "$saved" ]; then
+    die "$archive comes from server $saved, newer than $version here; upgrade to $saved first."
+  fi
+  compose run --rm --no-deps -T --entrypoint sh init -c 'test ! -s /secrets/owner_token' ||
+    die "this stack already holds data. Restore only into a new install, or erase this one first with: docker compose --file $home/compose.yaml down --volumes"
+  compose run --rm --no-deps -T --volume "$scratch:/backup:ro" --entrypoint tar init \
+    -xzf /backup/files.tar.gz -C / || die "unpacking the files and secrets failed."
+  compose up --detach --wait postgres
+  compose run --rm --no-deps postgres-setup
+  compose cp "$scratch/database.dump" postgres:/tmp/draft-loop-restore.dump > /dev/null
+  compose exec -T postgres pg_restore --username=postgres --dbname=draft_loop --exit-on-error \
+    /tmp/draft-loop-restore.dump || die "loading the database failed."
+  compose exec -T postgres rm -f /tmp/draft-loop-restore.dump
+  rm -rf "$scratch"
+  compose up --detach --wait --remove-orphans
+  printf 'Restored %s (server %s) into %s.\n' "$archive" "$saved" "$home"
 }
 
 install() {
@@ -146,6 +215,8 @@ case "$command" in
   status) compose ps ;;
   logs) compose logs --tail 200 "$@" ;;
   token) compose exec -T api cat /secrets/owner_token ;;
+  backup) backup "$@" ;;
+  restore) restore "$@" ;;
   help | --help | -h) usage ;;
   *)
     usage >&2

@@ -8,11 +8,13 @@ It is the full local option while the desktop app is in maintenance mode.
 For development and tests, use the [local server stack](local-server-stack.md)
 instead: it emulates Cloud Storage, runs Keycloak and makes no provider calls.
 
-`pnpm self-hosted:test` checks this stack itself: it builds the images from
-your clone, starts them under a separate project name with the worker on its
-offline fixtures, runs the hosted smoke from an upload to an exported DOCX, and
-removes that stack again. The **Self-hosted stack** CI job runs it on every
-pull request.
+`pnpm self-hosted:test` checks this stack the way a person installs it. It
+builds the images from your clone, installs them with `draft-loop-server` under
+a separate project name and port, and puts the worker on its offline fixtures.
+It runs the hosted smoke from an upload to an exported DOCX, backs the stack up,
+erases and restores it, checks that the records, files and owner token came
+back, and runs the smoke again. The **Self-hosted stack** CI job runs it on
+every pull request.
 
 ## What you need
 
@@ -69,6 +71,10 @@ clone, which Git ignores:
 The full list of server settings is in the
 [local server stack](local-server-stack.md) guide.
 
+For changes beyond these settings, such as an extra volume, add a
+`compose.override.yaml` beside `compose.yaml` in the installed folder. The script
+passes it to Docker Compose, and `upgrade` never changes it.
+
 ## Keys
 
 - Add, replace or remove a key file, then run `draft-loop-server up` (or
@@ -108,21 +114,23 @@ network with your firewall.
 
 ## Back up and restore
 
-Back up the database and the files while the stack runs. From the repository
-root, these write two files to your home folder:
+`draft-loop-server backup [file]` writes one archive while the stack runs. It
+holds a dump of the database, your uploaded and exported files, and the
+stack's generated owner token and passwords. Your provider keys stay in
+`keys/` and are not included.
 
-```sh
-docker compose --file deploy/local/compose.yaml exec postgres \
-  pg_dump --username=postgres --format=custom draft_loop > ~/draft-loop.dump
-docker compose --file deploy/local/compose.yaml run --rm --no-deps \
-  --volume "$HOME:/backup" --entrypoint tar init \
-  czf /backup/draft-loop-files.tgz -C / blobs secrets postgres-secrets
-```
+Keep the archive private: it holds your career material and the stack's
+passwords.
 
-Keep both files private: they hold your career material and the stack's
-passwords. To restore on a new machine, unpack the archive into the same
-volumes with a `tar xzf` through the `init` service, start the stack, then load
-the dump with `pg_restore --clean --if-exists --dbname=draft_loop`.
+To restore, for example on a new machine:
+
+1. Run `draft-loop-server install <version>` with the backup's version or a
+   newer one, and put your keys in `keys/`. Do not start the stack yet.
+2. Run `draft-loop-server restore <file>`. It loads the files and secrets, then
+   the database, and starts the stack with the same owner token.
+
+Restore refuses a stack that already holds data, and an archive from a newer
+server version than the one installed.
 
 ## Update and erase
 

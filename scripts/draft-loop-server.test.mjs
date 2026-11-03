@@ -81,7 +81,22 @@ before(() => {
   mkdirSync(fakeBin);
   dockerLog = join(scratch, "docker.log");
   writeFileSync(dockerLog, "");
-  writeFileSync(join(fakeBin, "docker"), `#!/bin/sh\necho "$*" >> "${dockerLog}"\n`);
+  // Records each call; the steps that hand files back (a dump copied out, a files archive written
+  // to a mounted folder) leave a placeholder file where the real ones would.
+  writeFileSync(
+    join(fakeBin, "docker"),
+    [
+      "#!/bin/sh",
+      `echo "$*" >> "${dockerLog}"`,
+      "for last; do :; done",
+      'case "$*" in *" cp postgres:"*) printf dump > "$last" ;; esac',
+      'case "$*" in *"-czf /backup/files.tar.gz"*)',
+      "  folder=\"$(printf '%s\\n' \"$@\" | sed -n 's#^\\(.*\\):/backup$#\\1#p')\"",
+      '  printf files > "$folder/files.tar.gz" ;;',
+      "esac",
+      "",
+    ].join("\n"),
+  );
   chmodSync(join(fakeBin, "docker"), 0o755);
 });
 
@@ -158,6 +173,106 @@ for (const shell of shells) {
         "fixture-not-a-key",
       );
       assert.deepEqual(dockerCalls(), [`${compose()} up --detach --wait --remove-orphans`]);
+    });
+
+    it("backs up the database, files and secrets into one private archive", () => {
+      writeFileSync(dockerLog, "");
+      const archive = join(scratch, `backup-${shell.name}.tar.gz`);
+      const result = server(shell, ["backup", archive], { home: homeOf() });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /Keep it private/u);
+      const listed = spawnSync("tar", ["-tzf", archive], { encoding: "utf8" }).stdout;
+      assert.deepEqual(listed.trim().split("\n").sort(), [
+        "backup.json",
+        "database.dump",
+        "files.tar.gz",
+      ]);
+      const manifest = JSON.parse(
+        spawnSync("tar", ["-xzOf", archive, "backup.json"], { encoding: "utf8" }).stdout,
+      );
+      assert.equal(manifest.format, "draft-loop-self-hosted-backup");
+      assert.equal(manifest.formatVersion, 1);
+      assert.equal(manifest.serverVersion, "0.12.0");
+      if (shell.name === "bash") assert.equal(statSync(archive).mode & 0o077, 0);
+      const calls = dockerCalls().map((call) => call.replace(`${compose()} `, ""));
+      assert.match(calls[0], /^exec -T postgres pg_dump --username=postgres --format=custom /u);
+      assert.match(calls[1], /^cp postgres:\/tmp\/draft-loop-backup\.dump /u);
+      assert.match(
+        calls[3],
+        /^run --rm --no-deps -T --volume .+:\/backup --entrypoint tar init -czf \/backup\/files\.tar\.gz -C \/ blobs secrets postgres-secrets$/u,
+      );
+      assert.ok(calls.every((call) => !call.includes("provider-keys")));
+      assert.match(
+        server(shell, ["backup", archive], { home: homeOf() }).stderr,
+        /already exists; name a new file/u,
+      );
+    });
+
+    it("restores an archive in order: files and secrets, Postgres, its role, the dump, the rest", () => {
+      writeFileSync(dockerLog, "");
+      const archive = join(scratch, `backup-${shell.name}.tar.gz`);
+      const result = server(shell, ["restore", archive], { home: homeOf() });
+      assert.equal(result.status, 0, result.stderr);
+      const calls = dockerCalls().map((call) => call.replace(`${compose()} `, ""));
+      const steps = calls.map((call) =>
+        call.includes("test ! -s /secrets/owner_token")
+          ? "check-empty"
+          : call.includes("-xzf /backup/files.tar.gz")
+            ? "unpack-files"
+            : call === "up --detach --wait postgres"
+              ? "postgres"
+              : call === "run --rm --no-deps postgres-setup"
+                ? "role"
+                : call.startsWith("cp ")
+                  ? "copy-dump"
+                  : call.includes("pg_restore")
+                    ? "load-dump"
+                    : call.includes("rm -f")
+                      ? "clean"
+                      : call === "up --detach --wait --remove-orphans"
+                        ? "start"
+                        : call,
+      );
+      assert.deepEqual(steps, [
+        "check-empty",
+        "unpack-files",
+        "postgres",
+        "role",
+        "copy-dump",
+        "load-dump",
+        "clean",
+        "start",
+      ]);
+      assert.match(calls[1], /--volume .+:\/backup:ro /u);
+    });
+
+    it("refuses an archive from a newer server or one that is not a backup", () => {
+      const newer = join(scratch, `newer-${shell.name}`);
+      mkdirSync(newer, { recursive: true });
+      writeFileSync(
+        join(newer, "backup.json"),
+        '{"format":"draft-loop-self-hosted-backup","formatVersion":1,"serverVersion":"0.99.0","createdAt":"2026-11-03T00:00:00Z"}\n',
+      );
+      writeFileSync(join(newer, "database.dump"), "dump");
+      writeFileSync(join(newer, "files.tar.gz"), "files");
+      const archive = join(scratch, `newer-${shell.name}.tar.gz`);
+      spawnSync("tar", [
+        "-czf",
+        archive,
+        "-C",
+        newer,
+        "backup.json",
+        "database.dump",
+        "files.tar.gz",
+      ]);
+      assert.match(
+        server(shell, ["restore", archive], { home: homeOf() }).stderr,
+        /comes from server 0\.99\.0, newer than 0\.12\.0 here/u,
+      );
+      assert.match(
+        server(shell, ["restore", join(scratch, "source.tar.gz")], { home: homeOf() }).stderr,
+        /is not a DraftLoop server backup/u,
+      );
     });
 
     it("names a folder that holds no stack instead of calling Docker", () => {
