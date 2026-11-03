@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { type ApiSchemas, createApiClient } from "./api-client.js";
 import { App } from "./app.js";
+import { desktopSignIn, withDesktopSignIn } from "./desktop-sign-in.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
@@ -29,7 +30,13 @@ const navigation: ScreenNavigation = {
 function screenFor(config: ApiSchemas["AuthConfig"]) {
   if (config.mode === "owner")
     return (
-      <App tokens={createTokenStore(() => globalThis.sessionStorage)} createClient={createClient} />
+      <App
+        tokens={withDesktopSignIn(
+          createTokenStore(() => globalThis.sessionStorage),
+          desktopSignIn(),
+        )}
+        createClient={createClient}
+      />
     );
   const session = createOidcSession({
     issuer: config.issuer,
