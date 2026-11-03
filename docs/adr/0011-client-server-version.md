@@ -457,6 +457,12 @@ backup format (ADR 0007), plus applications and their history. The upload
 is explicit, and the local copy is unchanged. This is optional for the
 first release.
 
+Built 2026-11-03 as the CLI's `draft-loop server import`, a client of the
+HTTP API ([self-hosted guide](../operations/self-hosted.md#coming-from-the-desktop-app)).
+Evidence goes through the ordinary upload route, so screening applies. The
+application import route is offered in owner-token mode only, until sign-in
+mode has its own review.
+
 ### D13. Plans and entitlements
 
 One product, tiered like Claude's plans. Every user profile is served; the

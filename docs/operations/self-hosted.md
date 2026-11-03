@@ -11,7 +11,8 @@ instead: it emulates Cloud Storage, runs Keycloak and makes no provider calls.
 `pnpm self-hosted:test` checks this stack the way a person installs it. It
 builds the images from your clone, installs them with `draft-loop-server` under
 a separate project name and port, and puts the worker on its offline fixtures.
-It runs the hosted smoke from an upload to an exported DOCX, backs the stack up,
+It runs the hosted smoke from an upload to an exported DOCX, imports a fictional
+desktop workspace and career evidence backup through the CLI, backs the stack up,
 erases and restores it, checks that the records, files and owner token came
 back, and runs the smoke again. The **Self-hosted stack** CI job runs it on
 every pull request.
