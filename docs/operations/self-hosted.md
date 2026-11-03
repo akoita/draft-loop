@@ -38,7 +38,9 @@ The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 2. Put each key in its own file in the folder's `keys/`: `anthropic_api_key`
    and `openai_api_key`.
 3. Run `~/draft-loop-server/bin/draft-loop-server up`. The first start pulls
-   the images and creates a random owner token and database passwords.
+   the images and creates a random owner token and database passwords. When
+   the stack is up, it prints the address, the token command and where to get
+   the desktop app.
 4. Open <http://127.0.0.1:8080> and sign in with the token that
    `draft-loop-server token` prints.
 

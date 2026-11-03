@@ -143,6 +143,34 @@ function Invoke-Compose([string[]]$Arguments) {
   exit $LASTEXITCODE
 }
 
+# Starts the stack, then says where it answers and how to sign in, so a first start needs no
+# README. It names the token command, never the token.
+function Start-Server {
+  $files = Get-ComposeFiles
+  & docker compose @files up --detach --wait --remove-orphans
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  $serverHome = Get-ServerHome
+  $port = "8080"
+  $envFile = Join-Path $serverHome ".env"
+  if (Test-Path -LiteralPath $envFile) {
+    $line = Get-Content -LiteralPath $envFile | Where-Object { $_ -match '^DRAFT_LOOP_PORT=' } |
+      Select-Object -Last 1
+    if ($null -ne $line -and $line.Length -gt "DRAFT_LOOP_PORT=".Length) {
+      $port = $line.Substring("DRAFT_LOOP_PORT=".Length)
+    }
+  }
+  $script = Join-Path (Join-Path $serverHome "bin") "draft-loop-server.ps1"
+  Write-Output ""
+  Write-Output "DraftLoop is running at http://127.0.0.1:$port"
+  Write-Output "Sign in with the owner token, which this prints: $script token"
+  if ($port -eq "8080") {
+    Write-Output "Desktop app: get DraftLoop from https://github.com/$Repository/releases and choose This computer."
+  } else {
+    Write-Output "Desktop app: get DraftLoop from https://github.com/$Repository/releases and add http://127.0.0.1:$port."
+  }
+  exit 0
+}
+
 $BackupFormat = "draft-loop-self-hosted-backup"
 
 function New-ScratchFolder {
@@ -278,13 +306,13 @@ function Update-Server([string[]]$Arguments) {
   Set-InstalledVersion $serverHome $version
   Write-Output "Switched $serverHome to DraftLoop server $version; starting it."
   # Pulls the new images, runs the migrations, then restarts the API and the worker.
-  Invoke-Compose @("up", "--detach", "--wait", "--remove-orphans")
+  Start-Server
 }
 
 switch ($Command) {
   "install" { Install-Server $Rest }
   "upgrade" { Update-Server $Rest }
-  "up" { Invoke-Compose @("up", "--detach", "--wait", "--remove-orphans") }
+  "up" { Start-Server }
   "down" { Invoke-Compose @("down") }
   "status" { Invoke-Compose @("ps") }
   "logs" { Invoke-Compose (@("logs", "--tail", "200") + $Rest) }

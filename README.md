@@ -75,7 +75,8 @@ Then add your keys and start the stack:
    local model such as Ollama can replace either; see
    [Local models](docs/operations/self-hosted.md#local-models).
 2. Run `~/draft-loop-server/bin/draft-loop-server up`. The first start pulls
-   the images and creates a random owner token and database passwords.
+   the images, creates a random owner token and database passwords, and
+   prints what to do next.
 3. Open <http://127.0.0.1:8080> and sign in with the token that
    `~/draft-loop-server/bin/draft-loop-server token` prints.
 

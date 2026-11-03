@@ -134,6 +134,17 @@ for (const shell of shells) {
       for (const command of ["up", "status", "token", "down"]) {
         const result = server(shell, [command], { home: homeOf() });
         assert.equal(result.status, 0, `${command}: ${result.stderr}`);
+        if (command === "up") {
+          assert.match(result.stdout, /DraftLoop is running at http:\/\/127\.0\.0\.1:8080\n/u);
+          assert.match(
+            result.stdout,
+            /owner token, which this prints: .+draft-loop-server(\.ps1)? token\n/u,
+          );
+          assert.match(
+            result.stdout,
+            /github\.com\/akoita\/draft-loop\/releases and choose This computer/u,
+          );
+        }
       }
       assert.deepEqual(dockerCalls(), [
         `${compose()} up --detach --wait --remove-orphans`,
@@ -170,6 +181,8 @@ for (const shell of shells) {
       writeFileSync(dockerLog, "");
       const upgraded = server(shell, ["upgrade", "0.12.0"], { home: homeOf() });
       assert.equal(upgraded.status, 0, upgraded.stderr);
+      assert.match(upgraded.stdout, /running at http:\/\/127\.0\.0\.1:9090\n/u);
+      assert.match(upgraded.stdout, /releases and add http:\/\/127\.0\.0\.1:9090\./u);
       assert.equal(
         readFileSync(join(homeOf(), ".env"), "utf8"),
         "DRAFT_LOOP_VERSION=0.12.0\nDRAFT_LOOP_PORT=9090\n",
