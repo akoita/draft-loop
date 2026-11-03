@@ -41,19 +41,18 @@ function startFakeServer() {
   });
 }
 
-function profileEnvironment(profile) {
-  return {
-    ...process.env,
-    HOME: profile,
-    USERPROFILE: profile,
-    APPDATA: join(profile, "AppData", "Roaming"),
-    LOCALAPPDATA: join(profile, "AppData", "Local"),
-    XDG_CONFIG_HOME: join(profile, ".config"),
-  };
+/** Keeps the client off the release check, so no dialog opens during the run. */
+function clientEnvironment() {
+  return { ...process.env, DRAFT_LOOP_DESKTOP_RELEASE_CHECK: "off" };
 }
 
-async function launch(executablePath, env) {
-  const args = process.platform === "linux" ? ["--no-sandbox"] : [];
+async function launch(executablePath, userData) {
+  // A fresh profile through Chromium's own switch, which Electron honours on every platform.
+  const args = [
+    `--user-data-dir=${userData}`,
+    ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+  ];
+  const env = clientEnvironment();
   const app = await electron.launch({ executablePath, args, env, timeout: 60_000 });
   // Links the client sends outside are recorded instead of opening a browser.
   await app.evaluate(({ shell }) => {
@@ -87,9 +86,9 @@ async function main() {
   const server = await startFakeServer();
   const origin = `http://127.0.0.1:${server.address().port}`;
   const profile = await mkdtemp(join(tmpdir(), "draftloop-client-acceptance-"));
-  const env = profileEnvironment(profile);
+  const userData = join(profile, "user-data");
   try {
-    let app = await launch(executablePath, env);
+    let app = await launch(executablePath, userData);
     const picker = await lastWindowWith(app, "#add");
     checks.pickerAtFirstLaunch = picker.url().startsWith("file:");
 
@@ -122,7 +121,7 @@ async function main() {
     });
     await app.close();
 
-    app = await launch(executablePath, env);
+    app = await launch(executablePath, userData);
     window = await lastWindowWith(app, "#ready");
     checks.relaunchOpensLastServer = new URL(window.url()).origin === origin;
     await app.close();
