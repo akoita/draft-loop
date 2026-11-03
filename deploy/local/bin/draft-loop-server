@@ -107,6 +107,23 @@ compose() {
   fi
 }
 
+# Starts the stack, then says where it answers and how to sign in, so a first start needs no
+# README. It names the token command, never the token.
+start() {
+  local home port
+  compose up --detach --wait --remove-orphans
+  home="$(script_home)"
+  port="$(sed -n 's/^DRAFT_LOOP_PORT=//p' "$home/.env" 2>/dev/null | tail -n 1)"
+  port="${port:-8080}"
+  printf '\nDraftLoop is running at http://127.0.0.1:%s\n' "$port"
+  printf 'Sign in with the owner token, which this prints: %s/bin/draft-loop-server token\n' "$home"
+  if [ "$port" = "8080" ]; then
+    printf 'Desktop app: get DraftLoop from https://github.com/%s/releases and choose This computer.\n' "$repository"
+  else
+    printf 'Desktop app: get DraftLoop from https://github.com/%s/releases and add http://127.0.0.1:%s.\n' "$repository" "$port"
+  fi
+}
+
 backup_format="draft-loop-self-hosted-backup"
 
 # Writes one archive while the stack runs: a custom-format database dump, the volume holding the
@@ -205,7 +222,7 @@ upgrade() {
   write_version "$home" "$version"
   printf 'Switched %s to DraftLoop server %s; starting it.\n' "$home" "$version"
   # Pulls the new images, runs the migrations, then restarts the API and the worker.
-  compose up --detach --wait --remove-orphans
+  start
 }
 
 command="${1:-help}"
@@ -213,7 +230,7 @@ command="${1:-help}"
 case "$command" in
   install) install "$@" ;;
   upgrade) upgrade "$@" ;;
-  up) compose up --detach --wait --remove-orphans ;;
+  up) start ;;
   down) compose down ;;
   status) compose ps ;;
   logs) compose logs --tail 200 "$@" ;;
