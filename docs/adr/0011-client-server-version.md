@@ -205,6 +205,12 @@ resumes rather than restarts.
   - Local models: an OpenAI-compatible endpoint the deployment declares, for
     either role. A local writer carries a warning until a local model passes
     the evaluation gate (D16).
+- **Anthropic-only pairs (decided 2026-10-30).** The OpenAI key has no
+  credit, so the owner's own runs use the `balanced-anthropic` and
+  `standard-anthropic` presets: a different Claude model reviews, so the
+  lineages differ, and the same-company warning still shows. The default pair
+  stays Anthropic and OpenAI until the quality scores (#1307) show which pair
+  the hosted default should be.
 - **Platform keys by default:** the service calls Anthropic and OpenAI with
   its own keys, meters usage per tenant, and enforces per-tenant budgets.
   The run budget machinery already exists.
@@ -625,7 +631,9 @@ the other, and neither may break the other.
 
 **Desktop in maintenance mode (decided 2026-10-28).** The desktop keeps its
 fixes and whatever it gains from shared packages, but gets no features of its
-own. The web screen over the server is the main client.
+own. The web screen over the server is the main client. The desktop does not
+become a launcher for the local stack for now (decided 2026-11-01); a thin
+client of the service stays a later option.
 
 **Self-hosted local target (decided 2026-10-28).** The full local option is
 the server itself on the person's machine, not a second product: a separate
@@ -633,8 +641,10 @@ Compose file with one API, one worker, the page fetcher and Postgres, bound
 to `127.0.0.1`, with passwords and the owner token generated on first start.
 It only adds adapters behind the existing ports: keys from local secret
 files, `direct` and local model routes (D5), and blobs on disk. Encryption at
-rest is the host's disk encryption. Built in sprint 1z (#1946–#1954); images,
-an install script, backups, a sign-in profile and desktop import (D12) follow.
+rest is the host's disk encryption. Built in sprint 1z (#1946–#1954). The
+local install sprint (#2050–#2058) adds published images, an install script
+with backups and desktop import (D12). A sign-in profile for several people on
+one network waits until someone needs it.
 
 **Local development.** The desktop runs as today with `pnpm` scripts and no
 cloud account. The server stack runs locally with Docker Compose: Postgres
