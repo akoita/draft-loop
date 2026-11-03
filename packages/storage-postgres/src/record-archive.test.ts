@@ -283,6 +283,28 @@ async function seedRecord(
      VALUES ($1, 'member-1', $2, $3)`,
     [`screening-job-${run}`, `Reviewed by hand for ${marker}.`, at],
   );
+  // The work journal, keyed by the API's workspace id.
+  await q(
+    "INSERT INTO work_journal_intake (workspace_id, enabled, changed_at) VALUES ($1, true, $2)",
+    [workspaceId, at],
+  );
+  await q(
+    `INSERT INTO work_journal_notes (id, workspace_id, status, dedupe_key, project, note, created_at,
+       updated_at)
+     VALUES ($1, $2, 'pending', $3, 'fictional-project', $4::jsonb, $5, $5)`,
+    [
+      `wjn_note-${run}`,
+      workspaceId,
+      `live-${marker}`,
+      JSON.stringify({ title: `Shipped a fictional queue for ${marker}.` }),
+      at,
+    ],
+  );
+  await q(
+    `INSERT INTO work_journal_forgotten_keys (dedupe_key, note_id, workspace_id, forgotten_at)
+     VALUES ($1, $2, $3, $4)`,
+    [`forgotten-${marker}`, `wjn_gone-${run}`, workspaceId, at],
+  );
   // Never archived: command results and the tenant's store list.
   await q(
     `INSERT INTO idempotency_keys (scope, key, fingerprint, result_json, expires_at)
@@ -299,6 +321,7 @@ const keyOnlyTables = new Set<string>([
   "content_screening_results",
   "candidate_knowledge_source_versions",
   "candidate_knowledge_managed_source_versions",
+  "work_journal_intake",
 ]);
 
 async function collect(files: AsyncIterable<RecordArchiveFile>): Promise<RecordArchiveFile[]> {
@@ -401,6 +424,7 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
       const text = decoder.decode(file.content);
       if (keyOnlyTables.has(parsed.table)) {
         expect(text, parsed.table).toMatch(/"(history-1|coach-1|kb-1|source-kb-1|version-kb-1)"/u);
+        expect(text, parsed.table).not.toContain('"coach-2"');
       } else {
         expect(text, parsed.table).toContain(first.marker);
       }

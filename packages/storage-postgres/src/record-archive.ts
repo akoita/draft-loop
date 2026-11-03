@@ -198,6 +198,20 @@ const tableQueries: Readonly<
      WHERE r.workspace_id = $1 OR r.knowledge_base_id = ANY($2::text[]) ORDER BY r.sequence`,
     [s.historyId, s.knowledgeBaseIds],
   ],
+  // The work journal is keyed by the API's workspace id, like the record's base ownership.
+  work_journal_intake: (s) => [
+    "SELECT * FROM work_journal_intake WHERE workspace_id = $1",
+    [s.workspaceId],
+  ],
+  work_journal_notes: (s) => [
+    `SELECT * FROM work_journal_notes WHERE workspace_id = $1 ORDER BY created_at, id COLLATE "C"`,
+    [s.workspaceId],
+  ],
+  work_journal_forgotten_keys: (s) => [
+    `SELECT * FROM work_journal_forgotten_keys WHERE workspace_id = $1
+     ORDER BY forgotten_at, dedupe_key COLLATE "C"`,
+    [s.workspaceId],
+  ],
 };
 
 /** One record's rows of each table that has any, without the tenant column. */

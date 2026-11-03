@@ -52,6 +52,9 @@ export const recordArchiveTables = [
   "candidate_knowledge_source_sensitivity_rule_versions",
   "content_screening_results",
   "content_screening_releases",
+  "work_journal_intake",
+  "work_journal_notes",
+  "work_journal_forgotten_keys",
 ] as const;
 
 export type RecordArchiveTable = (typeof recordArchiveTables)[number];
