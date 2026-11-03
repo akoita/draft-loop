@@ -71,8 +71,9 @@ is the natural shape of the server API.
 The diagram shows where these decisions lead. Most of it is built: the API
 with the web screen, the worker, the page fetcher, the model gateway, and the
 Postgres and Cloud Storage adapters run on staging, and the same images run
-self-hosted. Keycloak is not hosted yet, so staging signs in with the owner
-token; the MCP server is not built; and production is not open. The [architecture overview](../architecture/overview.md#ways-to-run)
+self-hosted. The local MCP server (`draftloop-mcp`) calls the self-hosted
+API. Keycloak is not hosted yet, so staging signs in with the owner token, and
+production is not open. The [architecture overview](../architecture/overview.md#ways-to-run)
 describes what runs now.
 
 ![Planned client-server architecture: a web app and AI agents reach a Fastify API on Cloud Run in europe-west1; the API queues runs for workers, which call a model gateway that sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic in an EU data-residency project; data lives in Cloud SQL Postgres with pgvector, already built, and Cloud Storage; sign-in uses Keycloak on Clever Cloud; every service uses the desktop app's packages, and the local-first desktop app, CLI, a planned local MCP server and SQLite keep running on the user's machine.](../assets/client-server-target-architecture.svg)
@@ -713,17 +714,27 @@ DraftLoop is offered there as an MCP server: one more client, like the CLI,
 not a second product.
 
 - **Two transports, one tool set:**
-  - *Local:* `apps/mcp`, a stdio server over the same application services
-    as `apps/cli`. Candidate data stays on the user's machine. It does not
-    depend on the hosted phases.
-  - *Hosted:* the same tools over the HTTP API (D10), with OAuth sign-in
-    through the identity provider and plan credits (D13). After phase 1.
-- **Tools:** list applications, start a tailored CV run from a job post,
-  follow its progress, read the draft with its findings and evidence, and
-  request an export. Inputs and outputs reuse the API's Zod contracts.
+  - *Local:* `apps/mcp`, a stdio process that is an HTTP client of the API,
+    served on the user's machine by the self-hosted stack (D15) with the
+    owner token. Candidate data stays on the user's machine. The CLI-only
+    path without the self-hosted stack is not served.
+  - *Hosted:* the same process and tools against the cloud API (D10), with
+    a signed-in token from the identity provider and plan credits (D13).
+    A remote MCP endpoint with OAuth on the API comes later.
+- **First tools: the work journal (decided 2026-11-01, #2018).**
+  `record_work` lets the candidate's coding agent file a short note about
+  notable work it just helped ship, and `list_work` lists those notes by
+  title, date, technologies and status. A note is *evidence for review*:
+  it waits in a pending inbox, and only the candidate's approval in
+  DraftLoop turns it into a knowledge source. Intake is off until the
+  candidate turns on "Accept notes from coding agents".
+- **CV tools next:** list applications, start a tailored CV run from a job
+  post, follow its progress, read the draft with its findings and evidence,
+  and request an export. Inputs and outputs reuse the API's Zod contracts.
 - **The engine stays in DraftLoop.** The host agent never writes or edits
-  CV claims; it asks DraftLoop to run the author–critic workflow, so
-  grounding and the critic still apply.
+  CV claims. It may record evidence for the candidate's review; it asks
+  DraftLoop to run the author–critic workflow, so grounding and the critic
+  still apply.
 - **Approval stays in DraftLoop.** An export or share needs the user's
   approval in DraftLoop, never through the agent.
 - **Minimal disclosure.** Whatever a tool returns reaches the host agent's

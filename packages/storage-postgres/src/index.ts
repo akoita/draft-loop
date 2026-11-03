@@ -97,3 +97,4 @@ export {
   type PostgresTenantDirectory,
 } from "./tenant-directory.js";
 export type { MonthUsageRow } from "./usage.js";
+export { createWorkJournalNoteStore } from "./work-journal-notes.js";

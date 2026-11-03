@@ -10,6 +10,7 @@ import {
   RunModelProfileError,
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
+import { WorkJournalError, type WorkJournalErrorCode } from "@draft-loop/application/work-journal";
 import { RunTransitionError } from "@draft-loop/orchestrator";
 import {
   CandidateRecordAccessError,
@@ -25,6 +26,7 @@ import {
   TenantDirectoryError,
   type TenantDirectoryErrorCode,
 } from "@draft-loop/storage/tenant-directory";
+import { WorkJournalStoreError } from "@draft-loop/storage/work-journal-notes";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -186,6 +188,21 @@ const recordAccessStatus: Readonly<Record<CandidateRecordAccessErrorCode, number
   member_not_found: 404,
 };
 
+/** The work journal's refusals by HTTP status; the codes are the API's error codes too. */
+const workJournalStatus: Readonly<Record<WorkJournalErrorCode, number>> = {
+  invalid_note: 422,
+  secret_like_content: 422,
+  link_not_https: 422,
+  metric_without_how_measured: 422,
+  amend_not_pending: 409,
+  not_consented: 403,
+  rate_limited: 429,
+  note_not_found: 404,
+  note_not_pending: 409,
+  note_quarantined: 409,
+  approval_unavailable: 503,
+};
+
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.code(404).send(apiError("not_found", "No such route."));
 }
@@ -292,6 +309,24 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     return;
   }
   // The ledger's messages are fixed and never quote a note, so they are safe to answer with.
+  if (error instanceof WorkJournalError) {
+    void reply.code(workJournalStatus[error.code]).send({
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.fields.length === 0
+          ? {}
+          : { issues: error.fields.map((path) => ({ path, message: "Invalid value." })) }),
+      },
+    } satisfies ApiError);
+    return;
+  }
+  if (error instanceof WorkJournalStoreError) {
+    void reply
+      .code(error.code === "note_not_found" ? 404 : 409)
+      .send(apiError(error.code, error.message));
+    return;
+  }
   if (error instanceof ConsentLedgerError) {
     void reply.code(400).send(apiError(error.code, error.message));
     return;

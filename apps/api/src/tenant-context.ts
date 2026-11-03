@@ -1,9 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-
 import {
   defaultHostedKnowledgeSourceMaxBytes,
   type RunBudgetCeiling,
 } from "@draft-loop/application";
+import { WorkJournalError, type WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { FastifyInstance } from "fastify";
 
@@ -35,11 +35,18 @@ export type TenantApplication = Required<
     | "briefExtractions"
     | "profileDerivations"
     | "jobPageFetcher"
+    | "workJournal"
+    | "sourceEvidenceKinds"
   >
 > &
   Pick<
     ApiApplication,
-    "idempotency" | "contentScreening" | "briefExtractions" | "profileDerivations"
+    | "idempotency"
+    | "contentScreening"
+    | "briefExtractions"
+    | "profileDerivations"
+    | "workJournal"
+    | "sourceEvidenceKinds"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -152,6 +159,21 @@ function tenantIdempotency(shared: IdempotencyStore, tenantId: string): Idempote
   };
 }
 
+const unavailable = async (): Promise<never> => {
+  throw new WorkJournalError("approval_unavailable", "This server keeps no work journal.");
+};
+
+/** Stands in for a tenant composed without a work journal. */
+const unavailableWorkJournal: WorkJournalService = {
+  record: unavailable,
+  list: unavailable,
+  listFull: unavailable,
+  get: unavailable,
+  review: unavailable,
+  intake: unavailable,
+  setIntake: unavailable,
+};
+
 /**
  * Serves each request from its caller's tenant. A `preHandler` hook, which runs after sign-in and
  * body parsing, binds the caller's tenant application to the request's async context; the
@@ -220,6 +242,13 @@ export function registerTenantApplications(
     briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
     // Nor does it derive career profiles there.
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
+    // An application composed without a journal refuses every note as unavailable.
+    workJournal: forwarding(() => current().workJournal ?? unavailableWorkJournal),
+    sourceEvidenceKinds: forwarding(() => {
+      const kinds = current().sourceEvidenceKinds;
+      if (kinds === undefined) throw new TenantContextMissingError();
+      return kinds;
+    }),
     ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };
 }

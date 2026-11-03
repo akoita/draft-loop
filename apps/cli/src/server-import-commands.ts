@@ -17,7 +17,7 @@ import {
   readDesktopWorkspaceBundles,
 } from "./workflow.js";
 
-const defaultServerUrl = "http://127.0.0.1:8080";
+export const defaultServerUrl = "http://127.0.0.1:8080";
 
 interface ImportOptions {
   readonly server?: string;
@@ -129,8 +129,8 @@ export async function importEvidenceToServer(
   return { ...plannedCounts(plan), alreadyOnServer, quarantined };
 }
 
-async function readToken(
-  options: ImportOptions,
+export async function readServerToken(
+  options: { readonly tokenFile?: string | undefined },
   environment: Readonly<Record<string, string | undefined>>,
 ): Promise<string> {
   const token =
@@ -246,7 +246,7 @@ export function registerServerImportCommands(
       }
       const connection: ServerConnection = {
         baseUrl: options.server ?? environment.DRAFT_LOOP_SERVER_URL ?? defaultServerUrl,
-        token: await readToken(options, environment),
+        token: await readServerToken(options, environment),
         fetch: dependencies.fetch ?? ((input, init) => fetch(input, init)),
       };
       // Evidence first, so the imported runs' career evidence is on the server when they are.

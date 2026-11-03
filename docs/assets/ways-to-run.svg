@@ -147,6 +147,6 @@
     <rect x="30" y="554" width="1140" height="96" rx="20" fill="#11151b" fill-opacity="0.75" stroke="#f0b53c" stroke-width="1.5" stroke-dasharray="6 6"/>
     <text x="56" y="586" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">HOSTED SERVICE · IN DEVELOPMENT</text>
     <text x="56" y="614" font-size="15" fill="#e6ebf0">The same server images in the EU, with sign-in, recorded consent and per-tenant encryption.</text>
-    <text x="56" y="636" font-size="15" fill="#9aa7b4">Staging only: it is not offered yet. Agents will reach it, and the local packages, through an MCP server (ADR 0011, D17).</text>
+    <text x="56" y="636" font-size="15" fill="#9aa7b4">Staging only: it is not offered yet. On your machine, coding agents already reach the self-hosted server through draftloop-mcp.</text>
   </g>
 </svg>

@@ -44,6 +44,7 @@
     { "path": "./apps/api" },
     { "path": "./apps/worker" },
     { "path": "./apps/page-fetcher" },
+    { "path": "./apps/mcp" },
     { "path": "./apps/cli" },
     { "path": "./apps/desktop" },
     { "path": "./apps/web" }

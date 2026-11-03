@@ -85,6 +85,11 @@ commands. The [self-hosted server](docs/operations/self-hosted.md) guide covers
 settings, upgrades, backup and restore, privacy, and moving a desktop
 workspace to the server.
 
+On the self-hosted server, your coding agent can record notable work it helped
+ship through the `draftloop-mcp` MCP server. Each note waits for your review
+before it becomes career evidence; see the
+[agent channel](docs/reference/agent-channel.md).
+
 ## Desktop alpha (maintenance mode)
 
 The desktop app has been in maintenance mode since 2026-10-28: it keeps its

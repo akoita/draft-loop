@@ -13,10 +13,10 @@ One set of packages runs in four ways, which differ only at their adapters
 
 | Way to run | Status | Clients | Storage and keys | Model routes |
 | --- | --- | --- | --- | --- |
-| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import` | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
+| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, coding agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
 | Desktop app | Maintenance mode since 2026-10-28 | Electron renderer over the main-process host | SQLite workspace store, portable CKB, local exports; keys encrypted by the desktop host ([ADR 0004](../adr/0004-desktop-credential-boundary.md)) | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | CLI | Source only | Terminal commands | The same workspace store and CKB as the desktop | The same adapters as the desktop |
-| Hosted service | In development, staging only | The web screen, later agents over MCP (D17) | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
+| Hosted service | In development, staging only | The web screen | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
 
 ![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop app in maintenance mode and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
 
