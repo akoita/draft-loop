@@ -30,6 +30,10 @@
     "./model-profile-selection": {
       "types": "./src/model-profile-selection.ts",
       "import": "./src/model-profile-selection.ts"
+    },
+    "./work-journal": {
+      "types": "./src/work-journal.ts",
+      "import": "./src/work-journal.ts"
     }
   },
   "files": [

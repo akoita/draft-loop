@@ -9,6 +9,7 @@ import { organisationPlansMigration } from "./organisation-plans-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import type { SqlClient } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
+import { workJournalMigration } from "./work-journal-migration.js";
 
 /** One forward-only schema change. Versions are applied in order and never edited once released. */
 export interface PostgresMigration {
@@ -781,6 +782,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   contentScreeningMigration,
   organisationPlansMigration,
   creditLedgerMigration,
+  workJournalMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

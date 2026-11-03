@@ -36,6 +36,7 @@ import { tenantDirectoryGrant } from "./tenant-directory-migration.js";
 import { createUsageReads } from "./usage.js";
 import { createVectorIndex } from "./vector-index.js";
 import { createVersionedRecords } from "./versioned-records.js";
+import { createWorkJournalNoteStore } from "./work-journal-notes.js";
 import { createWorkspaceRecords } from "./workspace-records.js";
 import { createWorkspaceSettings } from "./workspace-settings.js";
 
@@ -134,6 +135,7 @@ function tenantStorage(client: SqlSession) {
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),
+    workJournalNotes: createWorkJournalNoteStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

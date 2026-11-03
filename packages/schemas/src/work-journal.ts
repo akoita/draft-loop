@@ -1,4 +1,6 @@
+import { sourceSensitivityTiers } from "@draft-loop/domain/source-sensitivity";
 import { z } from "zod";
+import { contentScreeningSignals, contentScreeningVerdicts } from "./content-screening.js";
 
 /**
  * The work journal (ADR 0011 D17, #2018): a coding agent files a short note about notable work it
@@ -190,12 +192,29 @@ export const workJournalNoteInputSchema = workJournalNoteContentSchema
   .strict();
 export type WorkJournalNoteInput = z.infer<typeof workJournalNoteInputSchema>;
 
+/**
+ * The note's injection screening (sprint 1m rules): a `flagged` or `unscreened` note is
+ * quarantined and cannot be approved. Closed codes only, never text.
+ */
 export const workJournalScreeningSchema = z
   .object({
-    verdict: z.enum(["clear", "quarantined"]),
-    reference: line(1, 200).optional(),
+    verdict: z.enum(contentScreeningVerdicts),
+    signals: z.array(z.enum(contentScreeningSignals)).max(contentScreeningSignals.length),
+    screened_at: z.iso.datetime({ offset: true }),
   })
   .strict();
+export type WorkJournalScreening = z.infer<typeof workJournalScreeningSchema>;
+
+/** The candidate's approval: where the note went and the tier they confirmed. */
+export const workJournalApprovalSchema = z
+  .object({
+    knowledge_base_id: line(1, 200),
+    tier: z.enum(sourceSensitivityTiers),
+    source_id: line(1, 200).optional(),
+    approved_at: z.iso.datetime({ offset: true }),
+  })
+  .strict();
+export type WorkJournalApproval = z.infer<typeof workJournalApprovalSchema>;
 
 /**
  * A stored note. After an edit it holds the edited content only: the agent's original text is
@@ -211,6 +230,7 @@ export const workJournalStoredNoteSchema = z
     dedupe_key: line(1, 400),
     possible_duplicate_of: z.array(workJournalNoteIdSchema).max(20).default([]),
     merged_into: workJournalNoteIdSchema.optional(),
+    approval: workJournalApprovalSchema.optional(),
     screening: workJournalScreeningSchema,
     edit_count: z.number().int().min(0),
     created_at: z.iso.datetime({ offset: true }),

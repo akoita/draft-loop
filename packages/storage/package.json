@@ -114,6 +114,10 @@
     "./conformance": {
       "types": "./src/conformance/index.ts",
       "import": "./src/conformance/index.ts"
+    },
+    "./work-journal-notes": {
+      "types": "./src/work-journal-notes.ts",
+      "import": "./src/work-journal-notes.ts"
     }
   },
   "files": [
