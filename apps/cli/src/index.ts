@@ -32,6 +32,11 @@ import { generateSanitizedPilotReport } from "./pilot-report.js";
 import { registerRetrievalModeCommands } from "./retrieval-mode-commands.js";
 import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
+  registerServerImportCommands,
+  type ServerImportDependencies,
+} from "./server-import-commands.js";
+import { registerWorkJournalCommands } from "./work-journal-commands.js";
+import {
   type AddKnowledgeSourceDirectoryMembersResult,
   type ApplicationIo,
   type ApplicationService,
@@ -258,6 +263,8 @@ const stdoutIo: ApplicationIo = {
 export interface CliDependencies {
   /** The application boundary the commands drive; replaced in tests. */
   readonly service?: ApplicationService;
+  /** The server import's HTTP access and environment; replaced in tests. */
+  readonly serverImport?: ServerImportDependencies;
   /** The candidate-knowledge boundary the path-explicit controls drive; replaced in tests. */
   readonly knowledgeService?: CandidateKnowledgeStoreService;
   /** The source-sensitivity rule boundary; replaced in tests. */
@@ -2863,6 +2870,8 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   );
   registerApplicationCommands(command, service, io);
   registerWorkspaceCommands(command, service, io);
+  registerServerImportCommands(command, io, dependencies.serverImport);
+  registerWorkJournalCommands(command, io, dependencies.serverImport);
   registerEvidenceModeCommands(
     command,
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,

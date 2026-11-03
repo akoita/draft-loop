@@ -6,8 +6,17 @@ import {
   anthropicBillingLimitDiagnosticCode,
   classifyAnthropicBillingError,
 } from "./anthropic-billing-error.js";
+import {
+  type CacheKeepAlive,
+  keepCacheAlive,
+  noCacheKeepAlive,
+} from "./anthropic-cache-keep-alive.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
-import { anthropicPromptLayout, anthropicSharedOutput } from "./anthropic-prompt-cache.js";
+import {
+  anthropicCacheLifetime,
+  anthropicPromptLayout,
+  anthropicSharedOutput,
+} from "./anthropic-prompt-cache.js";
 import { anthropicUsage } from "./anthropic-usage.js";
 import { addBilledUsage } from "./billed-usage.js";
 import { openAIPromptLayout } from "./openai-prompt-cache.js";
@@ -94,7 +103,17 @@ export interface PromptCacheLayout {
    * the cached prefix while each still returns its own output.
    */
   readonly outputSchemas?: Readonly<Record<string, JsonSchema>>;
+  /**
+   * How long the cached prefix lives after each request that writes or reads it; one hour when
+   * unset. A run's author calls land within minutes of each other, so the author declares five
+   * minutes (written at 1.25x the input rate instead of 2x) and the adapter keeps the prefix
+   * alive while a long call runs (#2043). The critic keeps the hour.
+   */
+  readonly lifetime?: PromptCacheLifetime;
 }
+
+/** The prompt-cache lifetimes Claude offers. */
+export type PromptCacheLifetime = "5m" | "1h";
 
 export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly contextSnapshotId: string;
@@ -683,6 +702,11 @@ export interface ProviderAdapterOptions {
 export interface AnthropicAdapterOptions extends ProviderAdapterOptions {
   /** The endpoint the client reaches, such as Claude on Vertex AI; the Claude API by default. */
   readonly route?: AnthropicRoute;
+  /**
+   * How often a five-minute cached request still in flight sends a one-token copy of itself so
+   * the prefix outlives the call (#2043); 3.5 minutes by default.
+   */
+  readonly cacheKeepAliveIntervalMs?: number;
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -811,6 +835,7 @@ export class AnthropicAdapter<
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
   private readonly retry: RetryOptions | undefined;
+  private readonly cacheKeepAliveIntervalMs: number | undefined;
 
   constructor(client: AnthropicClient, options: AnthropicAdapterOptions) {
     this.client = client;
@@ -818,6 +843,43 @@ export class AnthropicAdapter<
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
     this.retry = options.retry;
+    this.cacheKeepAliveIntervalMs = options.cacheKeepAliveIntervalMs;
+  }
+
+  /**
+   * While a five-minute cached request runs, a copy of it with one output token reads the prefix
+   * every few minutes, so the cache lifetime, counted from each request's start, outlives a draft
+   * that takes longer than five minutes (#2043). The copy keeps the request's thinking and output
+   * format, since a change to either would miss the cache. A request with budgeted thinking
+   * cannot run with one output token, so it sends none.
+   */
+  private startCacheKeepAlive(
+    request: ModelRequest<Input>,
+    parameters: MessageCreateParamsNonStreaming,
+  ): CacheKeepAlive {
+    if (anthropicCacheLifetime(request) !== "5m" || parameters.thinking?.type === "enabled") {
+      return noCacheKeepAlive;
+    }
+    const copy: MessageCreateParamsNonStreaming = { ...parameters, max_tokens: 1 };
+    return keepCacheAlive(
+      async () => {
+        const responsePromise = this.client.messages.create(
+          copy,
+          ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
+        );
+        const response =
+          typeof responsePromise.withResponse === "function"
+            ? await responsePromise.withResponse()
+            : { data: await responsePromise, request_id: null };
+        return accountOpenAIUsage(
+          anthropicUsage(anthropicMessageData(response.data).rawUsage),
+          this.pricing,
+        );
+      },
+      ...(this.cacheKeepAliveIntervalMs === undefined
+        ? []
+        : [{ intervalMs: this.cacheKeepAliveIntervalMs }]),
+    );
   }
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
@@ -864,6 +926,7 @@ export class AnthropicAdapter<
     let earlier: BilledUsage | undefined;
     return executeWithRetry(async () => {
       let billed: BilledUsage | undefined;
+      const keepAlive = this.startCacheKeepAlive(request, parameters);
       try {
         const responsePromise = this.client.messages.create(
           parameters,
@@ -874,7 +937,10 @@ export class AnthropicAdapter<
             ? await responsePromise.withResponse()
             : { data: await responsePromise, request_id: null };
         const message = anthropicMessageData(response.data);
-        billed = accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing);
+        billed = addBilledUsage(
+          await keepAlive.stop(),
+          accountOpenAIUsage(anthropicUsage(message.rawUsage), this.pricing),
+        );
         if (message.stop_reason !== "end_turn") {
           throw anthropicStopReasonError(message.stop_reason);
         }
@@ -925,7 +991,7 @@ export class AnthropicAdapter<
       } catch (error) {
         const failure = withBilledUsage(
           normalizeProviderError(this.provider, error, this.route),
-          addBilledUsage(earlier, billed),
+          addBilledUsage(earlier, addBilledUsage(billed, await keepAlive.stop())),
         );
         earlier = failure.billed ?? undefined;
         throw failure;

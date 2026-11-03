@@ -61,6 +61,54 @@ describe("self-hosted stack", () => {
     );
   });
 
+  it("runs the published images of one version", async () => {
+    const compose = await read("compose.yaml");
+    assert.doesNotMatch(compose, /\n {4}build:/u);
+    // Compose's own variable syntax, not template placeholders.
+    const registry = ["$", "{DRAFT_LOOP_IMAGE_REGISTRY:-ghcr.io/akoita}"].join("");
+    const version = ["$", "{DRAFT_LOOP_VERSION:-}"].join("");
+    for (const [service, app] of [
+      ["migrate", "worker"],
+      ["page-fetcher", "page-fetcher"],
+      ["api", "api"],
+      ["worker", "worker"],
+    ]) {
+      assert.ok(
+        serviceBlock(compose, service).includes(
+          `    image: ${registry}/draft-loop-${app}:${version}\n`,
+        ),
+        service,
+      );
+    }
+  });
+
+  it("builds the same services from a clone with the override file", async () => {
+    const build = await read("compose.build.yaml");
+    for (const [service, app] of [
+      ["migrate", "worker"],
+      ["page-fetcher", "page-fetcher"],
+      ["api", "api"],
+      ["worker", "worker"],
+    ]) {
+      const block = build.match(
+        new RegExp(`\\n  ${service}:\\n([\\s\\S]*?)(?=\\n  [a-z-]+:\\n|$)`, "u"),
+      );
+      assert.ok(block, service);
+      assert.match(block[1], new RegExp(`dockerfile: apps/${app}/Dockerfile\\n`, "u"), service);
+      assert.match(block[1], new RegExp(`image: draft-loop-${app}:self-hosted`, "u"), service);
+    }
+    const scripts = JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url), "utf8"),
+    ).scripts;
+    for (const name of ["self-hosted:up", "self-hosted:down", "self-hosted:token"]) {
+      assert.match(
+        scripts[name],
+        /--file deploy\/local\/compose\.yaml --file deploy\/local\/compose\.build\.yaml /u,
+        name,
+      );
+    }
+  });
+
   it("never commits a provider key", async () => {
     assert.deepEqual(
       (await read("keys/.gitignore"))

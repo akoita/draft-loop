@@ -18,6 +18,7 @@ export const canonicalProfileEvidenceKindInstructions = [
   "For a notes source, the text is fragmentary: extract only explicit statements, and never complete a fragment or infer what it implies.",
   "For a linkedin-export source, the layout is fixed: map its experience, education, licenses and certifications, skills, and languages sections to role, employer, date, education, certification, skill, and language entries, and ignore page headers, footers, and page numbers.",
   "For a transcript source, only the candidate's own turns are evidence: never extract facts from an interviewer's or another speaker's turns.",
+  "For a work-journal source, the text is a note the candidate approved about work a coding agent helped ship: its Role section states the candidate's own part, so attribute only that part to the candidate, take technologies only from its Technologies section, take a metric only together with how it was measured, and keep its pull request, commit, issue and release links as the references of the facts they support.",
   "For a cv or other source, apply the general rules.",
   "Every kind keeps the same rules: never invent facts, and every evidence quote is exact contiguous source text.",
 ].join(" ");

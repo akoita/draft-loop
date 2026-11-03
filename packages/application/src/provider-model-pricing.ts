@@ -24,7 +24,9 @@ function servesModel(entry: ModelProfileCatalogEntry, model: ModelSelection): bo
 /**
  * The catalog's API rates for the model a run calls, so each call records an estimated cost.
  * The selected profile decides when it is known; otherwise the model must have one agreed price
- * across the catalog. Anything else stays unpriced rather than guessed.
+ * across the catalog entries that serve the selection's role, since an author's cache write is
+ * priced at its five-minute lifetime and a critic's at the hour (#2043). Anything else stays
+ * unpriced rather than guessed.
  */
 export function catalogModelPricing(
   model: ModelSelection,
@@ -41,7 +43,9 @@ export function catalogModelPricing(
             servesModel(entry, model),
         );
   if (selected !== undefined) return adapterPricing(selected);
-  const prices = catalog.filter((entry) => servesModel(entry, model)).map(adapterPricing);
+  const serving = catalog.filter((entry) => servesModel(entry, model));
+  const inRole = serving.filter((entry) => entry.profile.roles.includes(model.role));
+  const prices = (inRole.length > 0 ? inRole : serving).map(adapterPricing);
   const [first] = prices;
   if (first === undefined) return undefined;
   const agreed = prices.every((price) => JSON.stringify(price) === JSON.stringify(first));

@@ -266,6 +266,21 @@ export async function seedRecord(
       [tenant, run],
     ],
     [
+      `INSERT INTO work_journal_notes (tenant_id, id, workspace_id, status, dedupe_key, project, note, created_at, updated_at)
+       VALUES ($1, 'wjn_' || md5($2), $2, 'pending', 'title:fictional|' || $2, 'Fictional', '{}', $3, $3)`,
+      [tenant, record, at],
+    ],
+    [
+      `INSERT INTO work_journal_forgotten_keys (tenant_id, dedupe_key, note_id, workspace_id)
+       VALUES ($1, 'title:forgotten|' || $2, 'wjn_forgotten1', $2)`,
+      [tenant, record],
+    ],
+    [
+      `INSERT INTO work_journal_intake (tenant_id, workspace_id, enabled, changed_at)
+       VALUES ($1, $2, true, $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
        VALUES ($1, 'runs:' || $2, 'key-1', $3, now() + interval '1 day'),
               ($1, 'exports:' || $2 || ':' || $4, 'key-1', $3, now() + interval '1 day')`,
@@ -332,6 +347,11 @@ export async function seedRecord(
       `INSERT INTO content_screening_releases (tenant_id, result_id, member_id, reason, released_at)
        VALUES ($1, $2, 'member-1', 'Reviewed by hand.', $3)`,
       [tenant, `${p}screening-job`, at],
+    ],
+    [
+      `INSERT INTO candidate_knowledge_source_evidence_kind_overrides (tenant_id, knowledge_base_id, source_id, sequence, kind, created_at)
+       VALUES ($1, $2, $3, 1, 'work-journal', $4)`,
+      [tenant, base, source, at],
     ],
     [
       `INSERT INTO candidate_knowledge_source_sensitivity_rule_versions (tenant_id, knowledge_base_id, version, rules_json, checksum, created_at)

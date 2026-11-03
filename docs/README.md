@@ -1,28 +1,30 @@
 # Documentation
 
-DraftLoop is a local-first desktop and CLI alpha, with a hosted client-server
-version in development beside it. This index routes candidates,
+DraftLoop is an alpha that runs as a self-hosted server on your own machine,
+as a desktop app in maintenance mode, or from the source-only CLI; a hosted
+service is in development on the same packages. This index routes candidates,
 contributors, maintainers, and operators to the current information they need.
 
 ## Start here
 
 | Need | Document |
 | --- | --- |
+| Install and run DraftLoop on your own machine | [Self-hosted server](operations/self-hosted.md) |
 | Understand the current product and status | [Roadmap and current status](roadmap.md) |
-| Understand system boundaries and flows | [Architecture overview](architecture/overview.md) |
+| Understand the ways to run, system boundaries and flows | [Architecture overview](architecture/overview.md) |
 | Read source, policy, opportunity, and profile contracts | [Candidate evidence architecture](architecture/candidate-evidence.md) |
 | Read drafting, review, and rendering boundaries | [Drafting and review architecture](architecture/drafting-and-review.md) |
 | Read workflow, provider, and trust boundaries | [Runtime and trust architecture](architecture/runtime-and-trust.md) |
 | Run CLI and desktop commands | [CLI and desktop reference](reference/cli-and-desktop.md) |
 | Read the hosted service's record export format | [Record archive v1](reference/record-archive.md) |
+| Let a coding agent record your work for review | [Agent channel](reference/agent-channel.md) |
 | Understand privacy and security boundaries | [Privacy and evaluation](security/privacy-and-evaluation.md) · [Threat model](security/threat-model.md) |
 | Review release evidence | [Release evidence](releases/) |
 | Run or review acceptance protocols | [Evaluation protocols and results](evaluation/) |
 | Understand recorded design decisions | [Architecture decision records](adr/) |
 | Release DraftLoop | [Release procedure](operations/releasing.md) |
 | Follow the hosted version's design and phases | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md) |
-| Run the server's storage locally | [Local server stack](operations/local-server-stack.md) |
-| Run the hosted service on your own machine | [Self-hosted server](operations/self-hosted.md) |
+| Develop and test the server locally | [Local server stack](operations/local-server-stack.md) |
 | Deploy the hosted service | [Server deploy](operations/server-deploy.md) |
 
 ## Document types

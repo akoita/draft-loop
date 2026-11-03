@@ -39,19 +39,19 @@ export function isOmissionFindingCode(code: string): boolean {
 }
 
 /**
- * Enforce the blocking cap on a parsed critique: the first `maximumBlockingOmissionFindings`
- * omission errors, in the critic's order, keep blocking and every later one becomes a warning, so
- * one critique cannot fill the blockers with omissions. Every other finding is returned untouched.
+ * Enforce the blocking cap on a parsed critique: the first `limit` omission errors, in the
+ * critic's order, keep blocking and every later one becomes a warning, so one critique cannot
+ * fill the blockers with omissions. The limit is `maximumBlockingOmissionFindings` unless the
+ * caller raises it, as the separate check of `cli-critic-v10` does for its verified answers
+ * (#2046). Every other finding is returned untouched.
  */
 export function capBlockingOmissions<
   T extends { readonly code: string; readonly severity: string },
->(findings: readonly T[]): readonly T[] {
+>(findings: readonly T[], limit: number = maximumBlockingOmissionFindings): readonly T[] {
   let blocking = 0;
   return findings.map((finding) => {
     if (!isOmissionFindingCode(finding.code) || finding.severity !== "error") return finding;
     blocking += 1;
-    return blocking <= maximumBlockingOmissionFindings
-      ? finding
-      : { ...finding, severity: "warning" };
+    return blocking <= limit ? finding : { ...finding, severity: "warning" };
   });
 }
