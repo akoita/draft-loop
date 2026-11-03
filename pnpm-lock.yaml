@@ -319,8 +319,8 @@ importers:
         specifier: 6.2.12
         version: 6.2.12
       openai:
-        specifier: 7.23.0
-        version: 7.23.0(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
+        specifier: 7.45.1
+        version: 7.45.1(google-auth-library@11.3.1)(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
       pg:
         specifier: 8.23.1
         version: 8.23.1
@@ -367,8 +367,8 @@ importers:
         specifier: workspace:*
         version: link:../validation
       openai:
-        specifier: 7.23.0
-        version: 7.23.0(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
+        specifier: 7.45.1
+        version: 7.45.1(google-auth-library@11.3.1)(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -454,8 +454,8 @@ importers:
         specifier: 7.2.0
         version: 7.2.0
       openai:
-        specifier: 7.23.0
-        version: 7.23.0(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
+        specifier: 7.45.1
+        version: 7.45.1(google-auth-library@11.3.1)(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -506,8 +506,8 @@ importers:
         specifier: 2.7.0
         version: 2.7.0(@opentelemetry/api@1.9.1)
       openai:
-        specifier: 7.23.0
-        version: 7.23.0(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
+        specifier: 7.45.1
+        version: 7.45.1(google-auth-library@11.3.1)(undici@6.29.1)(ws@8.22.0)(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -3544,13 +3544,14 @@ packages:
     resolution: {integrity: sha512-twhs1C2C/BFkz1yc5OY0KIU2GUq6DURO7hD4bx5Q2Qy3nAMJwRXW8xU3NVczE29VA9lolLOYepoD8fjTGOfIqw==}
     os: [win32, darwin, linux]
 
-  openai@7.23.0:
-    resolution: {integrity: sha512-0ecOXnFSMNWZq6cUBcTV6Lf93y+fm8BH/+QzFvpoP1UGNOE5pnytRa6HAPGCw+3IS9SIAW7rc1M8yyzN1PiBAQ==}
+  openai@7.45.1:
+    resolution: {integrity: sha512-mutrJXwhJIMZ24Lab2COFtNp44OcpZSnV4O2O7q38wAHUa2m2fQqUO5pj1XS3PqLfOTeODBUS9YoadqDnnGk5A==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
       '@smithy/signature-v4': '>=5.4.0 <6'
+      google-auth-library: '>=9.15.1 <12'
       undici: 6.29.1
       ws: ^8.21.0
       zod: ^3.25 || ^4.0
@@ -3560,6 +3561,8 @@ packages:
       '@smithy/hash-node':
         optional: true
       '@smithy/signature-v4':
+        optional: true
+      google-auth-library:
         optional: true
       undici:
         optional: true
@@ -7679,8 +7682,9 @@ snapshots:
       global-agent: 4.1.3
       onnxruntime-common: 1.30.0
 
-  openai@7.23.0(undici@6.29.1)(ws@8.22.0)(zod@4.6.7):
+  openai@7.45.1(google-auth-library@11.3.1)(undici@6.29.1)(ws@8.22.0)(zod@4.6.7):
     optionalDependencies:
+      google-auth-library: 11.3.1
       undici: 6.29.1
       ws: 8.22.0
       zod: 4.6.7
