@@ -183,6 +183,32 @@ server already holds elsewhere refuses that application.
 `--token-file` reads the token from a file. Only a self-hosted server signed in
 with its owner token takes applications.
 
+## Work journal
+
+Coding agents can record notable work you shipped as notes in a work journal
+(ADR 0011, D17). Notes wait as pending until you review them, and only an
+approved note becomes career evidence.
+
+- **Turn it on** with "Accept notes from coding agents" in the Work journal
+  panel of the Career evidence page. The server refuses notes while it is off.
+- **Review on the web** in the same panel: approve a note into a knowledge
+  base, edit it, merge it with a likely duplicate shown beside it, or discard
+  it.
+- **Review from the CLI** with the owner token:
+
+```text
+draft-loop work-journal list
+draft-loop work-journal show <note>
+draft-loop work-journal approve <note> [--knowledge-base <id>] [--tier sensitive]
+draft-loop work-journal merge <note> --into <note> [--keep-summary this]
+draft-loop work-journal discard <note>
+```
+
+Screening holds a note that looks like it carries instructions to a model; it
+cannot be approved until an edit screens clear. A private project's repository
+and links stay out of model input. The work journal needs the owner token for
+now, so the web shows it only on a server signed in with it.
+
 ## Update and erase
 
 - To update an installed folder, run `draft-loop-server upgrade <version>`.
