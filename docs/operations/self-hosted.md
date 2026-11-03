@@ -31,7 +31,7 @@ no clone, no Node and no build. Copy it from
 [`deploy/local/bin`](../../deploy/local/bin) (`draft-loop-server` for Linux and
 macOS, `draft-loop-server.ps1` for Windows PowerShell), then:
 
-1. Run `draft-loop-server install 0.12.0`. It downloads that release's stack
+1. Run `draft-loop-server install 0.13.0`. It downloads that release's stack
    into `~/draft-loop-server`, or into the folder you name after the version.
 2. Put each key in its own file in the folder's `keys/`: `anthropic_api_key`
    and `openai_api_key`.

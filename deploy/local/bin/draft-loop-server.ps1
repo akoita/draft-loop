@@ -235,7 +235,7 @@ function Restore-Server([string[]]$Arguments) {
 
 function Install-Server([string[]]$Arguments) {
   if ($Arguments.Count -lt 1 -or $Arguments[0] -eq "") {
-    Fail "say which version to install, such as: install 0.12.0"
+    Fail "say which version to install, such as: install 0.13.0"
   }
   $version = $Arguments[0]
   Assert-Version $version
