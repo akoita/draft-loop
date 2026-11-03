@@ -135,40 +135,52 @@ server version than the one installed.
 ## Coming from the desktop app
 
 The desktop app is in maintenance mode and keeps working with its own
-workspaces. The `draft-loop` CLI copies its career evidence into this server
-and never changes the desktop copy. From a clone of this repository, run the
-CLI as `pnpm start -- <command>`.
+workspaces. The `draft-loop` CLI copies its career evidence, applications and
+run history into this server, and never changes the desktop's files. From a
+clone of this repository, run the CLI as `pnpm start -- <command>`.
 
 1. Write a portable backup of the desktop's career evidence. The desktop keeps
    it in the `candidate-knowledge` folder of its data folder:
    `%LOCALAPPDATA%\DraftLoop` on Windows, `~/Library/Application Support/DraftLoop`
    on macOS and `~/.local/share/draft-loop` on Linux.
-2. Check what the import would send. It prints counts and sends nothing.
-3. Send it with the owner token, which `draft-loop-server token` prints.
+2. Open the server's web screen once and finish its setup, so its workspace
+   exists.
+3. Check what the import would send. It prints counts and sends nothing.
+4. Send it with the owner token, which `draft-loop-server token` prints. Name
+   each desktop workspace folder with its own `--workspace`.
 
 ```text
 draft-loop knowledge store backup <candidate-knowledge folder> <backup> --yes
-draft-loop server import <backup>
-DRAFT_LOOP_SERVER_TOKEN=<token> draft-loop server import <backup> --approve
+draft-loop server import <backup> --workspace <folder>
+DRAFT_LOOP_SERVER_TOKEN=<token> draft-loop server import <backup> --workspace <folder> --approve
 ```
 
-What the import does:
+What the import brings:
 
-- **Each active knowledge base** becomes a knowledge base on the server, with
-  the latest version of each source.
-- **Each file** goes through the same upload, screening and quarantine as a
-  file added on the Career evidence page.
-- **Left behind:** retired sources, archived bases, and files the server does
-  not take. It takes PDF, Word, Markdown and plain text.
-- **Sensitivity choices** made on the desktop are not copied. Set them again on
-  the server.
-- **Running it again** is safe. Files already on the server are not stored
-  again, so an interrupted import resumes.
+- **Career evidence.** Each active knowledge base becomes a knowledge base on
+  the server, with the latest version of each source. Each file goes through
+  the same upload, screening and quarantine as a file added on the Career
+  evidence page.
+- **Applications.** Each application of a workspace arrives with its job, its
+  job briefs and its runs, so it shows on Home and its runs open for review.
+  The job text is screened against each imported brief.
+
+What it leaves behind:
+
+- **Files the server does not take,** retired sources and archived bases. The
+  server takes PDF, Word, Markdown and plain text.
+- **Exported files.** Export the imported runs again on the server.
+- **Sensitivity choices** made on the desktop. Set them again on the server.
+- **An application whose job text cannot be read,** such as a moved job file.
+  The import counts it.
+
+Running it again is safe. Files and applications already on the server are not
+written again, so an interrupted import resumes. A run or job brief id the
+server already holds elsewhere refuses that application.
 
 `--server` names another server than `http://127.0.0.1:8080`, and
-`--token-file` reads the token from a file. Importing applications and their
-history is planned but not built yet
-([#2057](https://github.com/akoita/draft-loop/issues/2057)).
+`--token-file` reads the token from a file. Only a self-hosted server signed in
+with its owner token takes applications.
 
 ## Update and erase
 

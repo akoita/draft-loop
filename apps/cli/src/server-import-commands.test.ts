@@ -145,7 +145,7 @@ describe("server import", () => {
     expect(server.sources.get("kb-1")).toHaveLength(2);
     expect(JSON.parse(second.lines.join("\n"))).toMatchObject({
       status: "imported",
-      counts: { sources: 2, alreadyOnServer: 2 },
+      evidence: { sources: 2, alreadyOnServer: 2 },
     });
   });
 

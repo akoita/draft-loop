@@ -1,12 +1,20 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Command } from "commander";
+import {
+  applicationCountLines,
+  importApplicationsToServer,
+  ownerServerWorkspace,
+  plannedApplicationCounts,
+} from "./server-application-import.js";
 import { type ServerConnection, type ServerFetch, serverRequest } from "./server-client.js";
 import {
   type ApplicationIo,
   type BackupImportPlan,
   CliUserError,
+  type DesktopWorkspaceBundles,
   readBackupForServerImport,
+  readDesktopWorkspaceBundles,
 } from "./workflow.js";
 
 const defaultServerUrl = "http://127.0.0.1:8080";
@@ -14,7 +22,8 @@ const defaultServerUrl = "http://127.0.0.1:8080";
 interface ImportOptions {
   readonly server?: string;
   readonly tokenFile?: string;
-  readonly workspaceId?: string;
+  readonly workspace?: readonly string[];
+  readonly serverWorkspace?: string;
   readonly approve?: boolean;
   readonly json?: boolean;
 }
@@ -164,9 +173,14 @@ function countLines(counts: EvidenceImportCounts, sent: boolean): string[] {
   return lines;
 }
 
+function collect(value: string, previous: readonly string[] = []): readonly string[] {
+  return [...previous, value];
+}
+
 /**
- * Registers `server import`, which brings a desktop user's career evidence into a DraftLoop server
- * through its HTTP API. It prints what it would send and sends only with `--approve`.
+ * Registers `server import`, which brings a desktop user's career evidence, applications and run
+ * history into a DraftLoop server through its HTTP API. It prints what it would send and sends
+ * only with `--approve`; the desktop backup and workspaces are only read.
  */
 export function registerServerImportCommands(
   root: Command,
@@ -181,9 +195,14 @@ export function registerServerImportCommands(
   server
     .command("import")
     .description(
-      "Upload a portable career evidence backup to the server; nothing is sent without --approve",
+      "Send a career evidence backup and desktop workspaces to the server; nothing is sent without --approve",
     )
-    .argument("<backup>", "portable backup directory, from `draft-loop knowledge export`")
+    .argument("[backup]", "portable backup directory, from `draft-loop knowledge store backup`")
+    .option(
+      "--workspace <folder>",
+      "desktop workspace whose applications and history to send; repeat for more",
+      collect,
+    )
     .option(
       "--server <url>",
       `server address (default: DRAFT_LOOP_SERVER_URL or ${defaultServerUrl})`,
@@ -192,19 +211,37 @@ export function registerServerImportCommands(
       "--token-file <path>",
       "file holding the server token (default: DRAFT_LOOP_SERVER_TOKEN)",
     )
-    .option("--workspace-id <id>", "server candidate record that owns the imported bases")
-    .option("--approve", "send the files; without it only the counts are printed")
+    .option(
+      "--server-workspace <id>",
+      `server workspace that receives the import (default: ${ownerServerWorkspace}, the owner token's)`,
+    )
+    .option("--approve", "send the data; without it only the counts are printed")
     .option("--json", "print machine-readable JSON")
-    .action(async (backup: string, options: ImportOptions) => {
-      const plan = await readBackupForServerImport(resolve(backup));
+    .action(async (backup: string | undefined, options: ImportOptions) => {
+      const folders = options.workspace ?? [];
+      if (backup === undefined && folders.length === 0) {
+        throw new CliUserError("Name a backup folder, one or more --workspace folders, or both.");
+      }
+      const plan =
+        backup === undefined ? undefined : await readBackupForServerImport(resolve(backup));
+      const workspaces: DesktopWorkspaceBundles[] = [];
+      for (const folder of folders) workspaces.push(await readDesktopWorkspaceBundles(folder));
       if (options.approve !== true) {
-        const counts = plannedCounts(plan);
+        const preview = {
+          ...(plan === undefined ? {} : { evidence: plannedCounts(plan) }),
+          ...(folders.length === 0 ? {} : { applications: plannedApplicationCounts(workspaces) }),
+        };
         if (options.json === true) {
-          io.write(JSON.stringify({ status: "preview", counts }, null, 2));
+          io.write(JSON.stringify({ status: "preview", ...preview }, null, 2));
           return;
         }
-        for (const line of countLines(counts, false)) io.write(line);
-        io.write("Nothing was sent. Run again with --approve to upload these files.");
+        if (preview.evidence !== undefined) {
+          for (const line of countLines(preview.evidence, false)) io.write(line);
+        }
+        if (preview.applications !== undefined) {
+          for (const line of applicationCountLines(preview.applications, false)) io.write(line);
+        }
+        io.write("Nothing was sent. Run again with --approve to send it.");
         return;
       }
       const connection: ServerConnection = {
@@ -212,12 +249,37 @@ export function registerServerImportCommands(
         token: await readToken(options, environment),
         fetch: dependencies.fetch ?? ((input, init) => fetch(input, init)),
       };
-      const counts = await importEvidenceToServer(plan, connection, options.workspaceId);
+      // Evidence first, so the imported runs' career evidence is on the server when they are.
+      const evidence =
+        plan === undefined
+          ? undefined
+          : await importEvidenceToServer(plan, connection, options.serverWorkspace);
+      const applications =
+        folders.length === 0
+          ? undefined
+          : await importApplicationsToServer(
+              workspaces,
+              connection,
+              options.serverWorkspace ?? ownerServerWorkspace,
+            );
       if (options.json === true) {
-        io.write(JSON.stringify({ status: "imported", counts }, null, 2));
+        io.write(
+          JSON.stringify(
+            {
+              status: "imported",
+              ...(evidence === undefined ? {} : { evidence }),
+              ...(applications === undefined ? {} : { applications }),
+            },
+            null,
+            2,
+          ),
+        );
         return;
       }
-      for (const line of countLines(counts, true)) io.write(line);
-      io.write("The desktop backup was not changed.");
+      if (evidence !== undefined) for (const line of countLines(evidence, true)) io.write(line);
+      if (applications !== undefined) {
+        for (const line of applicationCountLines(applications, true)) io.write(line);
+      }
+      io.write("Nothing on the desktop side was changed.");
     });
 }
