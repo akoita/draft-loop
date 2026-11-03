@@ -22,7 +22,9 @@ instead: it emulates Cloud Storage, runs Keycloak and makes no provider calls.
 1. Put each key in its own file in `deploy/local/keys/`:
    `anthropic_api_key` and `openai_api_key`. Git ignores every file there.
 2. From the repository root, run `pnpm self-hosted:up`, or
-   `docker compose --file deploy/local/compose.yaml up --detach --wait --build`.
+   `docker compose --file deploy/local/compose.yaml --file deploy/local/compose.build.yaml up --detach --wait --build`.
+   The second file builds the images from your clone instead of pulling the
+   published ones.
 3. Open <http://127.0.0.1:8080> and sign in with the owner token that
    `pnpm self-hosted:token` prints.
 
