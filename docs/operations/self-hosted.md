@@ -135,11 +135,40 @@ server version than the one installed.
 ## Coming from the desktop app
 
 The desktop app is in maintenance mode and keeps working with its own
-workspaces. Importing a desktop workspace into this server, with its career
-evidence, applications and history, is planned but not built yet
-([#2056](https://github.com/akoita/draft-loop/issues/2056),
-[#2057](https://github.com/akoita/draft-loop/issues/2057)). Until then, add your
-career evidence again on the server's Career evidence page.
+workspaces. The `draft-loop` CLI copies its career evidence into this server
+and never changes the desktop copy. From a clone of this repository, run the
+CLI as `pnpm start -- <command>`.
+
+1. Write a portable backup of the desktop's career evidence. The desktop keeps
+   it in the `candidate-knowledge` folder of its data folder:
+   `%LOCALAPPDATA%\DraftLoop` on Windows, `~/Library/Application Support/DraftLoop`
+   on macOS and `~/.local/share/draft-loop` on Linux.
+2. Check what the import would send. It prints counts and sends nothing.
+3. Send it with the owner token, which `draft-loop-server token` prints.
+
+```text
+draft-loop knowledge store backup <candidate-knowledge folder> <backup> --yes
+draft-loop server import <backup>
+DRAFT_LOOP_SERVER_TOKEN=<token> draft-loop server import <backup> --approve
+```
+
+What the import does:
+
+- **Each active knowledge base** becomes a knowledge base on the server, with
+  the latest version of each source.
+- **Each file** goes through the same upload, screening and quarantine as a
+  file added on the Career evidence page.
+- **Left behind:** retired sources, archived bases, and files the server does
+  not take. It takes PDF, Word, Markdown and plain text.
+- **Sensitivity choices** made on the desktop are not copied. Set them again on
+  the server.
+- **Running it again** is safe. Files already on the server are not stored
+  again, so an interrupted import resumes.
+
+`--server` names another server than `http://127.0.0.1:8080`, and
+`--token-file` reads the token from a file. Importing applications and their
+history is planned but not built yet
+([#2057](https://github.com/akoita/draft-loop/issues/2057)).
 
 ## Update and erase
 
