@@ -24,6 +24,7 @@ import {
 import { type ZodType, z } from "zod";
 
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
+import { registerApplicationImportRoutes } from "./application-import-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
@@ -384,6 +385,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
     });
+    // A desktop import writes history as it was recorded, so only the one owner may send one.
+    if (auth.mode !== "oidc") {
+      registerApplicationImportRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        ...(screening === undefined ? {} : { screening }),
+      });
+    }
     registerApplicationFileRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,

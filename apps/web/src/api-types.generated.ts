@@ -59,6 +59,16 @@ export interface ApiSchemas {
       };
     } | null;
   };
+  "ApplicationImport": {
+    readonly applicationId: string;
+    readonly name: string;
+    readonly status: "imported" | "already-imported";
+    readonly counts: {
+      readonly runs: number;
+      readonly briefs: number;
+      readonly briefVersions: number;
+    };
+  };
   "ApplicationJob": {
     readonly origin: "pasted-text" | "url" | "unavailable";
     readonly text: string | null;
@@ -1306,6 +1316,49 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly response: ApiSchemas["ApplicationJob"];
+  };
+  "POST /v1/workspaces/{workspaceId}/application-imports": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly format: "draft-loop-application-bundle";
+      readonly formatVersion: 1;
+      readonly sourceWorkspaceId: string;
+      readonly sourceApplicationId: string;
+      readonly name: string;
+      readonly jobText: string;
+      readonly briefs: readonly ({
+        readonly briefId: string;
+        readonly versions: readonly ({
+          readonly id: string;
+        })[];
+      })[];
+      readonly runs: readonly ({
+        readonly run: {
+          readonly id: string;
+        };
+        readonly contextSnapshots: readonly ({
+          readonly id: string;
+        })[];
+        readonly artifacts: readonly ({
+          readonly id: string;
+          readonly version: number;
+        })[];
+        readonly snapshots: readonly ({
+          readonly record: Record<string, never>;
+          readonly payload: unknown;
+          readonly slim: boolean;
+        })[];
+        readonly rounds: readonly (Record<string, never>)[];
+        readonly executions: readonly (Record<string, never>)[];
+        readonly findings: readonly (Record<string, never>)[];
+        readonly decisions: readonly (Record<string, never>)[];
+        readonly state?: Record<string, never>;
+        readonly events: readonly (Record<string, never>)[];
+      })[];
+    };
+    readonly response: ApiSchemas["ApplicationImport"];
   };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/review": {
     readonly path: {
