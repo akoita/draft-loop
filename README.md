@@ -27,14 +27,14 @@ candidate decides what to approve and export.
 | Way to run | Status | What it is |
 | --- | --- | --- |
 | [Self-hosted server](#quick-install-with-docker) | Recommended | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk. |
-| [Desktop app](#desktop-alpha-maintenance-mode) | Maintenance mode | The original Electron alpha. It gets fixes but no new features, and its workspaces move to the server with one command. |
+| [Desktop app](#desktop-app) | In development | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. The v0.8 alpha with its own local engine gets fixes only, and its workspaces move to the server with one command. |
 | [CLI](#developer-quick-start) | Source only | Every workflow step from a terminal, over the same packages. |
 | Hosted service | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet. |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
 
-[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop app in maintenance mode and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
+[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the v0.8 desktop alpha and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
 ## How DraftLoop works
 
@@ -91,16 +91,24 @@ ship through the `draftloop-mcp` MCP server. Each note waits for your review
 before it becomes career evidence; see the
 [agent channel](docs/reference/agent-channel.md).
 
-## Desktop alpha (maintenance mode)
+## Desktop app
 
-The desktop app has been in maintenance mode since 2026-10-28: it keeps its
-fixes and what it gains from shared packages, but gets no features of its own.
-The server's web screen is the main client. Existing users can
-send a workspace's applications and career evidence to a self-hosted server
-with `draft-loop server import`; see
+The desktop app is a first-class DraftLoop client beside the web screen: an
+Electron app over a DraftLoop server's own web screen, pointed at your
+self-hosted server or at the hosted service once it opens. It is being built in
+the [Desktop client milestone](https://github.com/akoita/draft-loop/milestone/65)
+([ADR 0011, D9](docs/adr/0011-client-server-version.md#d9-clients)).
+
+The current v0.8 alpha still runs its own local engine. That architecture is in
+maintenance mode since 2026-10-28: it gets fixes but no features, and it is
+retired one release after the new client ships. Existing users can send a
+workspace's applications and career evidence to a self-hosted server with
+`draft-loop server import`; see
 [Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
 
-To install it, download the [newest desktop release for your platform](https://github.com/akoita/draft-loop/releases)
+### Installing the v0.8 alpha
+
+To install the alpha, download the [newest desktop release for your platform](https://github.com/akoita/draft-loop/releases)
 and its `SHA256SUMS` file. Packages are platform-specific ZIP archives,
 including Windows x64, and the releases page is authoritative for the platform
 set and release limitations. Compare the ZIP's digest with its line in

@@ -383,9 +383,20 @@ Build on what the local version already records:
     owner. Sprints 1o and 1p replace its screens with the shared ones; its
     sign-in, consent, credits, records and screening panels stay in the web
     shell.
-- **The desktop app** stays the local-first product and keeps evolving in
-  parallel (D15). Making it a thin client of the service is a later,
-  separate decision.
+- **The desktop app** is a first-class client beside the web, with mobile
+  later (amended 2026-11-03): an Electron app over a DraftLoop server's own
+  web screen, pointed at the self-hosted server or the hosted service. It
+  holds no engine, storage or provider keys, so it gets each feature the day
+  its server ships it.
+  - *Why:* most products of this kind ship web and desktop clients over one
+    service. What held the desktop back was its full-local engine, not
+    Electron. Loading the served screen instead of bundling a copy keeps one
+    version of the screens per server and needs no cross-origin API.
+  - *Shell:* a server picker (this computer, the hosted service once
+    production opens, or another `https` server), navigation kept to the
+    server and its sign-in issuer, one storage partition per server, the
+    system Save dialog for exports and sign-in remembered in the operating
+    system's keychain. There is no offline drafting.
 - **The CLI** becomes an API client, for scripting and support.
 - **Agents** reach DraftLoop through an MCP server (D17).
 
@@ -638,11 +649,14 @@ the other, and neither may break the other.
 - **The bridge between versions** is the portable backup format (ADR 0007),
   used for import (D12). Changing it needs a version bump and a migration.
 
-**Desktop in maintenance mode (decided 2026-10-28).** The desktop keeps its
-fixes and whatever it gains from shared packages, but gets no features of its
-own. The web screen over the server is the main client. The desktop does not
-become a launcher for the local stack for now (decided 2026-11-01); a thin
-client of the service stays a later option.
+**The desktop as a client of the server (decided 2026-11-03).** The desktop
+is a supported product surface, like the web (D9). Maintenance mode
+(2026-10-28) applies to the full-local desktop architecture, not to the
+desktop itself: the v0.8 engine keeps its fixes but gets no features, and it
+is retired one release after the client ships. Its users bring their work
+across with `draft-loop server import` (D12). The desktop does not start or
+install the local stack (decided 2026-11-01). Local-first runs stay in the CLI
+and the shared packages.
 
 **Self-hosted local target (decided 2026-10-28).** The full local option is
 the server itself on the person's machine, not a second product: a separate
@@ -676,11 +690,11 @@ The existing offline fixture mode keeps local runs free of provider calls.
 
 **Releases.** Independent cadences from the same `main`:
 
-| | Local-first desktop | Client-server |
+| | Desktop | Client-server |
 |---|---|---|
 | Tags | `v*`, as today | `server-v*` |
 | Workflow | `release.yml`, manual | A deploy workflow: staging, then production after manual approval |
-| Precondition | `pnpm release:preflight` passes locally | The evaluation gate passes on the release commit (D16) |
+| Precondition | `pnpm release:preflight` passes locally (for the desktop client, a packaged launch against a server instead of the live-provider run) | The evaluation gate passes on the release commit (D16) |
 | Rollback | Previous installer | Previous Cloud Run revision; database migrations are backward compatible for one release |
 
 ### D16. Observability and quality evaluation

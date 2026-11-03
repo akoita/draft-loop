@@ -14,11 +14,11 @@ One set of packages runs in four ways, which differ only at their adapters
 | Way to run | Status | Clients | Storage and keys | Model routes |
 | --- | --- | --- | --- | --- |
 | Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, coding agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
-| Desktop app | Maintenance mode since 2026-10-28 | Electron renderer over the main-process host | SQLite workspace store, portable CKB, local exports; keys encrypted by the desktop host ([ADR 0004](../adr/0004-desktop-credential-boundary.md)) | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
+| Desktop app (v0.8 alpha) | Local engine in maintenance mode since 2026-10-28; a client of the server is in development | Electron renderer over the main-process host | SQLite workspace store, portable CKB, local exports; keys encrypted by the desktop host ([ADR 0004](../adr/0004-desktop-credential-boundary.md)) | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | CLI | Source only | Terminal commands | The same workspace store and CKB as the desktop | The same adapters as the desktop |
 | Hosted service | In development, staging only | The web screen | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop app in maintenance mode and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the v0.8 desktop alpha and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service are the same Compose services
 and images: the API (`apps/api`) serves the web screen (`apps/web`) and queues
@@ -26,9 +26,10 @@ runs, the worker (`apps/worker`) executes them from their last saved step, and
 the page fetcher (`apps/page-fetcher`) is the only runtime that reaches public
 web servers. The web screen and the desktop share their screens
 (`packages/ui`), and both call the same application contracts as the CLI.
-The desktop is in maintenance mode: it keeps its fixes and what shared
-packages give it, and `draft-loop server import` moves its workspaces to a
-server.
+The desktop is becoming a first-class client of the server beside the web
+(ADR 0011, D9): an Electron app over the server's own web screen. Until it
+ships, the v0.8 alpha keeps its own local engine with fixes only, and
+`draft-loop server import` moves its workspaces to a server.
 
 The rest of this page describes the shared packages and the desktop and CLI
 boundaries; the server's hosted-only controls (tenancy, consent, credits,
@@ -1082,8 +1083,8 @@ overview a file tour:
 
 ## Current limitations
 
-The desktop gets no features of its own while it is in maintenance mode, so
-new features reach the web screen only. The hosted service runs on staging
+The v0.8 desktop's local engine gets no new features, so they reach the web
+screen only until the desktop client ships. The hosted service runs on staging
 only, and production is not open.
 
 Portable CKB retrieval is explicit and scoped to selected source versions;

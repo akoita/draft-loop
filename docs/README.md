@@ -1,8 +1,9 @@
 # Documentation
 
 DraftLoop is an alpha that runs as a self-hosted server on your own machine,
-as a desktop app in maintenance mode, or from the source-only CLI; a hosted
-service is in development on the same packages. This index routes candidates,
+as a desktop app, or from the source-only CLI; a hosted service is in
+development on the same packages. The desktop is becoming a client of the
+server, and its v0.8 local engine gets fixes only. This index routes candidates,
 contributors, maintainers, and operators to the current information they need.
 
 ## Start here
