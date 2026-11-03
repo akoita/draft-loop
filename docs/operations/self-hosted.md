@@ -33,7 +33,7 @@ macOS, `draft-loop-server.ps1` for Windows PowerShell) to a temporary place,
 not your home folder, where `install` creates the `draft-loop-server` folder.
 The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 
-1. Run `draft-loop-server install 0.13.0`. It downloads that release's stack
+1. Run `draft-loop-server install 0.14.0`. It downloads that release's stack
    into `~/draft-loop-server`, or into the folder you name after the version.
 2. Put each key in its own file in the folder's `keys/`: `anthropic_api_key`
    and `openai_api_key`.
