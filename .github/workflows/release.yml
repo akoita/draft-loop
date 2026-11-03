@@ -89,7 +89,7 @@ jobs:
         run: pnpm validate
 
   build:
-    name: Build ${{ matrix.name }} desktop artifact
+    name: Build ${{ matrix.name }} desktop client artifact
     needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
@@ -133,38 +133,30 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install --no-install-recommends -y xvfb xauth
 
-      - name: Build packaged desktop application
-        run: pnpm --filter @draft-loop/desktop make --arch ${{ matrix.arch }}
+      - name: Build the packaged desktop client
+        run: pnpm --filter @draft-loop/desktop-client make --arch ${{ matrix.arch }}
 
       - name: Locate packaged executable
         id: executable
         shell: bash
         run: |
           case "${{ runner.os }}" in
-            Linux) path="$(find apps/desktop/out -type f -name '@draft-loop-desktop' -perm -u+x -print -quit)" ;;
-            macOS) path="$(find apps/desktop/out -type f -path '*.app/Contents/MacOS/*' -print -quit)" ;;
-            Windows) path="$(find apps/desktop/out -type f -name '@draft-loop-desktop.exe' -print -quit)" ;;
+            Linux) path="$(find apps/desktop-client/out -type f -name 'draftloop' -perm -u+x -not -path '*/make/*' -print -quit)" ;;
+            macOS) path="$(find apps/desktop-client/out -type f -path '*.app/Contents/MacOS/*' -not -path '*/make/*' -print -quit)" ;;
+            Windows) path="$(find apps/desktop-client/out -type f -name 'draftloop.exe' -not -path '*/make/*' -print -quit)" ;;
           esac
           test -n "$path"
           echo "path=$path" >> "$GITHUB_OUTPUT"
 
-      - name: Run packaged desktop smoke
-        if: ${{ matrix.name == 'linux-x64' }}
-        run: xvfb-run --auto-servernum pnpm desktop:smoke -- "${{ steps.executable.outputs.path }}"
-
-      - name: Run installed-app and credential acceptance (Linux)
+      - name: Run packaged desktop client acceptance (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run: |
-          xvfb-run --auto-servernum pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/installed-app-${{ matrix.name }}.json"
-          xvfb-run --auto-servernum pnpm desktop:credential-acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/credential-${{ matrix.name }}.json"
+        run: xvfb-run --auto-servernum pnpm desktop-client:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/desktop-client-${{ matrix.name }}.json"
 
-      - name: Run installed-app and credential acceptance (macOS and Windows)
+      - name: Run packaged desktop client acceptance (macOS and Windows)
         if: runner.os != 'Linux'
         shell: bash
-        run: |
-          pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/installed-app-${{ matrix.name }}.json"
-          pnpm desktop:credential-acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/credential-${{ matrix.name }}.json"
+        run: pnpm desktop-client:acceptance -- "${{ steps.executable.outputs.path }}" "release-evidence/desktop-client-${{ matrix.name }}.json"
 
       - name: Upload sanitized acceptance evidence
         uses: actions/upload-artifact@v7
@@ -178,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.name }}
-          path: apps/desktop/out/make
+          path: apps/desktop-client/out/make
           if-no-files-found: error
           retention-days: 14
 
@@ -276,12 +268,12 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Local-first CV quality checkpoint: this alpha checkpoint precedes the Local-first final: CV quality parity stage exit and claims no parity or outcome validation. Since v0.8.0-alpha.4 the desktop bundles Electron 44.10.0 with Node.js 24.22.1, which carries the October 2026 Node.js security fixes. A reasoning level can be chosen per role and is shown before and after a run. Review edits are applied as a new draft version at approval, and edited blocks are marked. Confirmed coverage gaps are named and settled in one step. New warnings flag a missing CV header, header placeholders, a fact repeated across sections, third-person narration and a revision that loses a covered requirement. The author writes one statement per bullet and a full first draft (cli-author-v17), and the critic cites retrieved evidence by id. Claude reviewer profiles and Anthropic-only presets are available, and GPT-6.1 Terra is the Balanced reviewer. A provider call whose worst-case cost would pass the run's cost limit is refused, and every billed call counts toward the run's cost. A saved provider API key can be tested before a run, and Word exports draw the Modern template. The desktop screens now live in a shared UI package that the hosted web version also uses. The other changes since alpha.4 build the hosted client-server version and do not change desktop or CLI behavior.",
+            "Desktop client: from v0.9.0 the desktop app is a client of a DraftLoop server (ADR 0011, D9): an Electron window over the server's own web screen, for your self-hosted server and, once production opens, the hosted service. It holds no engine, storage or provider keys, so its screens update with the server. The v0.8 desktop with its own local engine is not in this release; move its workspaces to a self-hosted server with `draft-loop server import`.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),
             "",
-            "Known limitations: representative consented CV quality and manual-parity outcomes remain unvalidated, and the #1309 stage exit is not met; parity scoring on the private references is in progress (#1307). Templates derived from a CV the person likes are not available yet (#1331). The provider sign-in check in the start checklist is advisory. DOCX checks cannot establish office pagination or clipping, broad cross-viewer validation remains outstanding, signing and automatic updates remain incomplete, and the CLI remains source-distributed. Codex user-session and local routes do not support profile controls.",
+            "Known limitations: the packages are not signed and do not update themselves; the client offers the releases page when a newer version is published. There is no offline drafting: the client needs its server. Sign-in mode is proven only once the hosted identity provider runs; owner-token mode is what this release covers. Representative consented CV quality remains unvalidated, and the #1309 stage exit is not met.",
           ].join("\n");
           fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
           NODE

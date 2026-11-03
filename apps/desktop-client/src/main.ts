@@ -1,8 +1,10 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   type MenuItemConstructorOptions,
@@ -17,6 +19,7 @@ import type { NavigationScope } from "./navigation.js";
 import { partitionFor } from "./partition.js";
 import { pickerChannels } from "./picker-contract.js";
 import { createPickerService } from "./picker-service.js";
+import { newerDesktopRelease, releasesApiUrl, releasesUrl } from "./release-notice.js";
 import { createRememberedSignIns, type RememberedSignIns } from "./remembered-sign-in.js";
 import { type CheckFetch, checkServer, type ServerCheck } from "./server-check.js";
 import { createServerListStore } from "./servers.js";
@@ -181,6 +184,56 @@ async function openAtLaunch(): Promise<void> {
   if (!result.ok) openPicker();
 }
 
+const releaseNoticeFile = () => join(app.getPath("userData"), "release-notice.json");
+
+function dismissedRelease(): string | undefined {
+  try {
+    const value: unknown = JSON.parse(readFileSync(releaseNoticeFile(), "utf8"));
+    const tag = (value as { dismissed?: unknown } | null)?.dismissed;
+    return typeof tag === "string" ? tag : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Offers the releases page when a newer desktop release exists; never downloads anything. */
+async function checkForNewVersion(asked: boolean): Promise<void> {
+  let tag: string | undefined;
+  try {
+    const response = await fetch(releasesApiUrl, {
+      headers: { accept: "application/vnd.github+json", "user-agent": "DraftLoop-desktop" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    tag = response.ok ? newerDesktopRelease(await response.json(), app.getVersion()) : undefined;
+  } catch {
+    tag = undefined;
+  }
+  if (tag === undefined || (!asked && tag === dismissedRelease())) {
+    if (asked) {
+      await dialog.showMessageBox({
+        type: "info",
+        message: "No newer desktop version was found.",
+        buttons: ["OK"],
+      });
+    }
+    return;
+  }
+  const choice = await dialog.showMessageBox({
+    type: "info",
+    message: "A new desktop version is available.",
+    detail: `DraftLoop ${tag} is on the releases page. Download it there and replace this app.`,
+    buttons: ["Open the releases page", "Later"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  try {
+    writeFileSync(releaseNoticeFile(), `${JSON.stringify({ dismissed: tag })}\n`, "utf8");
+  } catch {
+    // The notice simply shows again next launch.
+  }
+  if (choice.response === 0) openExternal(releasesUrl);
+}
+
 function buildMenu(): void {
   const serverMenu: MenuItemConstructorOptions = {
     label: "Server",
@@ -208,6 +261,10 @@ function buildMenu(): void {
       ],
     },
     { role: "windowMenu" },
+    {
+      role: "help",
+      submenu: [{ label: "Check for a new version…", click: () => void checkForNewVersion(true) }],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -273,6 +330,8 @@ if (!app.requestSingleInstanceLock()) {
     registerPickerChannels();
     registerSignInChannels();
     void openAtLaunch();
+    if (app.isPackaged && process.env.DRAFT_LOOP_DESKTOP_RELEASE_CHECK !== "off")
+      void checkForNewVersion(false);
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void openAtLaunch();
     });

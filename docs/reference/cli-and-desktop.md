@@ -1,13 +1,38 @@
 # CLI and desktop operations reference
 
 This reference documents the source-only CLI command groups and the equivalent
-desktop operations. Start from the [developer quick start](../../README.md#developer-quick-start)
+operations of the v0.8 desktop, which runs its own local engine. The desktop
+client of the server is described first. Start from the [developer quick start](../../README.md#developer-quick-start)
 for installation and the fixture demo; run any command below from the
 repository root with Node.js 24.22.1 and pnpm 10.18.3.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
 candidate material out of the repository.
+
+## Desktop client
+
+The desktop client (`apps/desktop-client`, ADR 0011, D9) is an Electron window
+over a DraftLoop server's own web screen, so every screen and action is the
+web's. Run it from a clone with `pnpm --filter @draft-loop/desktop-client start`.
+
+- **Servers.** It opens the last server when `GET /v1/health` and
+  `/v1/auth/config` answer, otherwise a picker that says why. The picker adds a
+  server by address (`https` only, except this computer), opens or removes
+  one, and the **Server** menu switches servers. It never starts the server.
+- **What stays on this computer.** The server list, the window size, and each
+  server's browser storage in its own partition; removing a server clears
+  that partition. In owner-token mode the token is remembered per server,
+  encrypted by the system keychain, and forgotten on sign-out. Linux without a
+  keyring remembers nothing.
+- **Isolation.** The window stays on its server and, in sign-in mode, its
+  identity provider. Other web links open in the system browser, every other
+  scheme is refused, and the page gets no device permissions and no Node.
+- **Exports** are saved through the system Save dialog.
+- **New versions.** At launch the packaged client asks GitHub Releases for a
+  newer `v*` tag and offers the releases page once per version; it never
+  downloads anything. `DRAFT_LOOP_DESKTOP_RELEASE_CHECK=off` turns the check
+  off, and **Help > Check for a new version** runs it on demand.
 
 ## CLI model profiles
 

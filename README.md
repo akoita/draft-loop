@@ -106,13 +106,13 @@ workspace's applications and career evidence to a self-hosted server with
 `draft-loop server import`; see
 [Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
 
-### Installing the v0.8 alpha
+### Installing
 
-To install the alpha, download the [newest desktop release for your platform](https://github.com/akoita/draft-loop/releases)
-and its `SHA256SUMS` file. Packages are platform-specific ZIP archives,
-including Windows x64, and the releases page is authoritative for the platform
-set and release limitations. Compare the ZIP's digest with its line in
-`SHA256SUMS`:
+Download the [newest desktop release for your platform](https://github.com/akoita/draft-loop/releases)
+and its `SHA256SUMS` file. Releases from v0.9.0 hold the desktop client; the
+v0.8 alpha releases hold the old app with its own engine. Packages are
+platform-specific ZIP archives, including Windows x64. Compare the ZIP's digest
+with its line in `SHA256SUMS`:
 
 ```sh
 # Linux
@@ -123,9 +123,16 @@ shasum -a 256 "./<downloaded-archive>.zip"
 ```
 
 On Windows, run `(Get-FileHash .\your-download.zip -Algorithm SHA256).Hash` in
-PowerShell. Extract the ZIP and launch the desktop executable from the
-extracted folder. These are v0.8 alpha packages: they are not signed and do
-not update themselves.
+PowerShell. Extract the ZIP and launch the executable from the extracted
+folder. The packages are not signed and do not update themselves; the client
+says when a newer version is on the releases page.
+
+On first launch the client opens this computer's self-hosted server
+(`http://127.0.0.1:8080`) when it answers, or a picker where you add another
+server by its `https` address. It never starts the server itself: run
+`draft-loop-server up` first. It needs its server to work; there is no offline
+drafting. See [the desktop client](docs/reference/cli-and-desktop.md#desktop-client)
+for what it stores on your computer.
 
 ## Developer quick start
 
@@ -136,12 +143,13 @@ DraftLoop has no npm package: from a clone, use Node.js **24.22.1** and pnpm
 pnpm install --frozen-lockfile
 ```
 
-The source-only CLI and the desktop shell run from the clone. The desktop's
-**Try demo workspace** runs the deterministic fixture workflow offline, with no
-provider spend:
+The source-only CLI and both desktop apps run from the clone. The desktop client
+opens your self-hosted server; the v0.8 desktop's **Try demo workspace** runs
+the deterministic fixture workflow offline, with no provider spend:
 
 ```sh
 pnpm --filter @draft-loop/cli start --help
+pnpm --filter @draft-loop/desktop-client start
 pnpm --filter @draft-loop/desktop start
 ```
 
