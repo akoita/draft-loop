@@ -18,8 +18,9 @@ const config: ForgeConfig = {
       build: [
         { entry: "src/main.ts", config: "vite.main.config.ts" },
         { entry: "src/preload.ts", config: "vite.preload.config.ts" },
+        { entry: "src/picker-preload.ts", config: "vite.preload.config.ts" },
       ],
-      renderer: [],
+      renderer: [{ name: "picker", config: "vite.renderer.config.ts" }],
     }),
   ],
 };
