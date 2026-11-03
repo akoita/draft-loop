@@ -8,6 +8,12 @@ It is the full local option while the desktop app is in maintenance mode.
 For development and tests, use the [local server stack](local-server-stack.md)
 instead: it emulates Cloud Storage, runs Keycloak and makes no provider calls.
 
+`pnpm self-hosted:test` checks this stack itself: it builds the images from
+your clone, starts them under a separate project name with the worker on its
+offline fixtures, runs the hosted smoke from an upload to an exported DOCX, and
+removes that stack again. The **Self-hosted stack** CI job runs it on every
+pull request.
+
 ## What you need
 
 - Docker with the Compose plugin. Docker Desktop works on macOS and Windows.
