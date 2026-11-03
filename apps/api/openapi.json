@@ -1847,6 +1847,56 @@
           "lastError"
         ]
       },
+      "ApplicationImportInput": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "already-imported"
+            ],
+            "description": "already-imported when an earlier import of the same application finished."
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "runs": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "briefs": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "briefVersions": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "runs",
+              "briefs",
+              "briefVersions"
+            ]
+          }
+        },
+        "required": [
+          "applicationId",
+          "name",
+          "status",
+          "counts"
+        ]
+      },
       "ApplicationJobInput": {
         "type": "object",
         "properties": {
@@ -7018,6 +7068,58 @@
           "startedAt",
           "updatedAt",
           "lastError"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationImport": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "already-imported"
+            ],
+            "description": "already-imported when an earlier import of the same application finished."
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "runs": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "briefs": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "briefVersions": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "runs",
+              "briefs",
+              "briefVersions"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "applicationId",
+          "name",
+          "status",
+          "counts"
         ],
         "additionalProperties": false
       },
@@ -13922,6 +14024,302 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/application-imports": {
+      "post": {
+        "summary": "Import one application from a desktop workspace",
+        "description": "Writes the bundle's application, job briefs and runs into the workspace, keeping their ids. A run or brief id the workspace already holds elsewhere refuses the whole import (422). The same bundle sent again answers already-imported, and a bundle sent after an interrupted import resumes it. Export files are not carried; export the imported runs again. After the import, the job text is screened against each imported brief, so a flagged job quarantines runs on that brief. Only owner-token mode offers this route.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "draft-loop-application-bundle"
+                    ]
+                  },
+                  "formatVersion": {
+                    "type": "number",
+                    "enum": [
+                      1
+                    ]
+                  },
+                  "sourceWorkspaceId": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                  },
+                  "sourceApplicationId": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "jobText": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200000
+                  },
+                  "briefs": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "briefId": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                        },
+                        "versions": {
+                          "minItems": 1,
+                          "maxItems": 1000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "briefId",
+                        "versions"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "runs": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "run": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        "contextSnapshots": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "artifacts": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "snapshots": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "record": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": {}
+                              },
+                              "payload": {},
+                              "slim": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "record",
+                              "payload",
+                              "slim"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "rounds": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        },
+                        "executions": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        },
+                        "findings": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        },
+                        "decisions": {
+                          "maxItems": 10000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        },
+                        "state": {
+                          "type": "object",
+                          "properties": {},
+                          "additionalProperties": {}
+                        },
+                        "events": {
+                          "maxItems": 100000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "run",
+                        "contextSnapshots",
+                        "artifacts",
+                        "snapshots",
+                        "rounds",
+                        "executions",
+                        "findings",
+                        "decisions",
+                        "events"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "format",
+                  "formatVersion",
+                  "sourceWorkspaceId",
+                  "sourceApplicationId",
+                  "name",
+                  "jobText",
+                  "briefs",
+                  "runs"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationImport"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationImport"
+                }
+              }
+            }
+          },
+          "400": {
             "description": "Default Response",
             "content": {
               "application/json": {
