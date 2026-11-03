@@ -29,7 +29,9 @@ every pull request.
 The `draft-loop-server` script installs a published release with Docker only:
 no clone, no Node and no build. Copy it from
 [`deploy/local/bin`](../../deploy/local/bin) (`draft-loop-server` for Linux and
-macOS, `draft-loop-server.ps1` for Windows PowerShell), then:
+macOS, `draft-loop-server.ps1` for Windows PowerShell) to a temporary place,
+not your home folder, where `install` creates the `draft-loop-server` folder.
+The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 
 1. Run `draft-loop-server install 0.13.0`. It downloads that release's stack
    into `~/draft-loop-server`, or into the folder you name after the version.

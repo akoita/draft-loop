@@ -175,6 +175,9 @@ install() {
   [ -n "$version" ] || die "say which version to install, such as: install 0.13.0"
   check_version "$version"
   [ ! -e "$home/compose.yaml" ] || die "$home already holds a stack; use upgrade instead."
+  if [ -e "$home" ] && [ ! -d "$home" ]; then
+    die "$home is a file, not a folder: if it is a downloaded copy of this script, move or delete it, or name another folder after the version."
+  fi
   scratch="$(fetch_bundle "$version")"
   mkdir -p "$home"
   place_bundle "$scratch/bundle" "$home"

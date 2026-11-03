@@ -245,6 +245,9 @@ function Install-Server([string[]]$Arguments) {
   if (Test-Path -LiteralPath (Join-Path $serverHome "compose.yaml")) {
     Fail "$serverHome already holds a stack; use upgrade instead."
   }
+  if (Test-Path -LiteralPath $serverHome -PathType Leaf) {
+    Fail "$serverHome is a file, not a folder: if it is a downloaded copy of this script, move or delete it, or name another folder after the version."
+  }
   $scratch = Get-Bundle $version
   New-Item -ItemType Directory -Force -Path $serverHome | Out-Null
   Copy-Bundle (Join-Path $scratch "bundle") $serverHome

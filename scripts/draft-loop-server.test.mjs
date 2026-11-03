@@ -148,6 +148,12 @@ for (const shell of shells) {
         server(shell, ["install", "0.12.0", homeOf()]).stderr,
         /already holds a stack; use upgrade/u,
       );
+      const fileInTheWay = join(scratch, "file-in-the-way");
+      writeFileSync(fileInTheWay, "#!/usr/bin/env bash\n");
+      assert.match(
+        server(shell, ["install", "0.12.0", fileInTheWay]).stderr,
+        /is a file, not a folder/u,
+      );
       assert.match(
         server(shell, ["install", "latest", join(scratch, "other")]).stderr,
         /must look like 0\.12\.0/u,
