@@ -23,6 +23,7 @@ import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
+import { createSourceEvidenceKindOverrides } from "./source-evidence-kinds.js";
 import {
   createSqlClient,
   createSqlPool,
@@ -123,6 +124,7 @@ function tenantStorage(client: SqlSession) {
     ...createLexicalIndex(client),
     ...createUsageReads(client),
     ...createRecordArchiveRows(client),
+    ...createSourceEvidenceKindOverrides(client),
     candidateKnowledgeVectorIndex: createVectorIndex(client),
     applications: createApplications(client),
     candidateRecords: createCandidateRecordAccess(client),

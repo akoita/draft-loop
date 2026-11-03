@@ -349,6 +349,11 @@ export async function seedRecord(
       [tenant, `${p}screening-job`, at],
     ],
     [
+      `INSERT INTO candidate_knowledge_source_evidence_kind_overrides (tenant_id, knowledge_base_id, source_id, sequence, kind, created_at)
+       VALUES ($1, $2, $3, 1, 'work-journal', $4)`,
+      [tenant, base, source, at],
+    ],
+    [
       `INSERT INTO candidate_knowledge_source_sensitivity_rule_versions (tenant_id, knowledge_base_id, version, rules_json, checksum, created_at)
        VALUES ($1, $2, 1, '[]', $3, $4)`,
       [tenant, base, checksum, at],

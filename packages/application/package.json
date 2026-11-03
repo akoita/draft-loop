@@ -34,6 +34,10 @@
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
+    },
+    "./work-journal-source": {
+      "types": "./src/work-journal-source.ts",
+      "import": "./src/work-journal-source.ts"
     }
   },
   "files": [
