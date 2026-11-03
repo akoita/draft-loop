@@ -3,19 +3,11 @@ import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { applicationNameMaxLength, normalizeApplicationName } from "@draft-loop/domain/application";
 import {
-  createSnapshotReferenceCache,
-  createStorageRunStore,
-  isSlimSnapshotPayload,
-  resolveSnapshotPayload,
-  slimSnapshotPayload,
-  snapshotPayloadArtifactId,
-} from "@draft-loop/orchestrator";
-import type {
-  ArtifactVersionRecord,
-  OpportunityBriefStoragePort,
-  RunHistoryStorage,
-  WorkspaceApplicationsStoragePort,
-} from "@draft-loop/storage";
+  type ApplicationBundleHistory,
+  readRunBundle,
+  retargetWorkspace,
+  writeRunBundle,
+} from "./application-bundle.js";
 import { jobHeading } from "./application-name.js";
 import { CliUserError } from "./cli-user-error.js";
 import {
@@ -68,23 +60,6 @@ export function importedApplicationId(sourceWorkspaceId: string): string {
   return `imported-${createHash("sha256").update(sourceWorkspaceId).digest("hex").slice(0, 12)}`;
 }
 
-/**
- * Replaces the source workspace id with the target's wherever a record or payload names its
- * workspace, so an imported run reads as belonging to the workspace that now holds it.
- */
-function retarget<Value>(value: Value, sourceId: string, targetId: string): Value {
-  if (Array.isArray(value)) {
-    return value.map((item) => retarget(item, sourceId, targetId)) as Value;
-  }
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, child]) => [
-      key,
-      key === "workspaceId" && child === sourceId ? targetId : retarget(child, sourceId, targetId),
-    ]),
-  ) as Value;
-}
-
 async function fileExists(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
@@ -127,9 +102,7 @@ function importedName(command: ImportApplicationCommand, jobText: string): strin
 }
 
 /** The history an import copies from one workspace into another. */
-type ImportHistory = RunHistoryStorage &
-  OpportunityBriefStoragePort &
-  WorkspaceApplicationsStoragePort;
+type ImportHistory = ApplicationBundleHistory;
 
 interface CopyContext {
   readonly source: ImportHistory;
@@ -140,23 +113,6 @@ interface CopyContext {
   readonly targetId: string;
   readonly applicationId: string;
   readonly now: () => string;
-}
-
-async function copyArtifacts(context: CopyContext, ids: ReadonlySet<string>): Promise<void> {
-  const found = new Map<string, ArtifactVersionRecord>();
-  const pending = [...ids];
-  for (let id = pending.pop(); id !== undefined; id = pending.pop()) {
-    if (found.has(id)) continue;
-    const record = await context.source.getArtifactVersion(id);
-    if (record === undefined) continue;
-    found.set(id, record);
-    if (record.parentVersionId !== null) pending.push(record.parentVersionId);
-  }
-  // A version's parent has the lower number, and the parent row must exist first.
-  for (const record of [...found.values()].sort((left, right) => left.version - right.version)) {
-    const { checksum: _checksum, ...input } = record;
-    await context.target.saveArtifactVersion({ ...input, workspaceId: context.targetId });
-  }
 }
 
 /** Copies an export file into the workspace, reusing a file that is already there byte for byte. */
@@ -182,116 +138,8 @@ async function copyExportFile(
 }
 
 async function copyRun(context: CopyContext, runId: string): Promise<void> {
-  const { source, target, sourceId, targetId } = context;
-  const run = await source.getRun(runId);
-  if (run === undefined) return;
-  // Bind before writing any row: an interrupted import then leaves the run inside the imported
-  // application rather than in the default one.
-  await target.applications.bindRun({
-    workspaceId: targetId,
-    applicationId: context.applicationId,
-    runId,
-    createdAt: context.now(),
-  });
-  const [snapshots, rounds, executions, findings, decisions, exports] = await Promise.all([
-    source.listRunSnapshots(runId),
-    source.listRounds(runId),
-    source.listExecutions(runId),
-    source.listFindings(runId),
-    source.listDecisions(runId),
-    source.listExports(runId),
-  ]);
-  const contextIds = new Set([
-    run.contextSnapshotId,
-    ...snapshots.map((item) => item.contextSnapshotId),
-    ...executions.map((item) => item.contextSnapshotId),
-  ]);
-  for (const id of contextIds) {
-    const record = await source.getContextSnapshot(id);
-    if (record === undefined) continue;
-    const { checksum: _checksum, ...input } = record;
-    await target.saveContextSnapshot(retarget(input, sourceId, targetId));
-  }
-  const artifactIds = new Set<string>();
-  const remember = (id: string | null | undefined): void => {
-    if (typeof id === "string") artifactIds.add(id);
-  };
-  remember(run.artifactId);
-  for (const item of [...snapshots, ...executions, ...findings, ...decisions]) {
-    remember(item.artifactId);
-  }
-  for (const item of exports) remember(item.artifactId);
-  for (const item of snapshots) {
-    const payload = item.payload as { approvedArtifact?: { id?: unknown } };
-    remember(snapshotPayloadArtifactId(item.payload));
-    remember(
-      typeof payload.approvedArtifact?.id === "string" ? payload.approvedArtifact.id : undefined,
-    );
-  }
-  await copyArtifacts(context, artifactIds);
-
-  const { checksum: _runChecksum, ...runInput } = run;
-  await target.saveRun(retarget(runInput, sourceId, targetId));
-  // The orchestration state a run is read from: its latest snapshot, executions and event log.
-  // Executions go in first because slim snapshot rows reference them.
-  const sourceStore = createStorageRunStore(source);
-  // A run imported from legacy rows keeps writing legacy rows so its final snapshot still matches
-  // the row that was copied for it.
-  const targetStore = createStorageRunStore(target, {
-    slimSnapshots: snapshots.some((item) => isSlimSnapshotPayload(item.payload)),
-  });
-  const loaded = await sourceStore.loadRun(runId);
-  const moved = loaded === undefined ? undefined : retarget(loaded, sourceId, targetId);
-  if (moved !== undefined) {
-    for (const execution of moved.executionHistory) await targetStore.saveExecution(execution);
-  }
-  const sourceReferences = createSnapshotReferenceCache();
-  const targetReferences = createSnapshotReferenceCache();
-  for (const item of snapshots) {
-    const { id: _id, sequence: _sequence, checksum: _checksum, payload, ...input } = item;
-    // A slim row's references name content under the source workspace, so it is rebuilt, moved
-    // and written again as a slim row whose checksums describe the moved content.
-    await target.saveRunSnapshot({
-      ...retarget(input, sourceId, targetId),
-      payload: isSlimSnapshotPayload(payload)
-        ? await slimSnapshotPayload(
-            target,
-            retarget(
-              await resolveSnapshotPayload(source, payload, sourceReferences),
-              sourceId,
-              targetId,
-            ),
-            targetReferences,
-          )
-        : retarget(payload, sourceId, targetId),
-    });
-  }
-  for (const item of rounds) {
-    const { checksum: _checksum, ...input } = item;
-    await target.saveRound(retarget(input, sourceId, targetId));
-  }
-  for (const item of executions) {
-    const { checksum: _checksum, ...input } = item;
-    await target.saveExecution(retarget(input, sourceId, targetId));
-  }
-  for (const item of findings) {
-    const { checksum: _checksum, ...input } = item;
-    await target.saveFinding(retarget(input, sourceId, targetId));
-  }
-  for (const item of decisions) {
-    const { checksum: _checksum, ...input } = item;
-    await target.saveDecision(retarget(input, sourceId, targetId));
-  }
-
-  if (moved !== undefined) {
-    await targetStore.saveRun(moved);
-    const events = await sourceStore.listEvents(runId);
-    const present = (await targetStore.listEvents(runId)).length;
-    for (const event of events.slice(present)) {
-      const { sequence: _sequence, ...input } = event;
-      await targetStore.appendEvent(retarget(input, sourceId, targetId));
-    }
-  }
+  const bundle = await readRunBundle(context.source, runId);
+  if (bundle !== undefined) await writeRunBundle(context, bundle);
 }
 
 async function copyExports(context: CopyContext, runId: string): Promise<[number, number]> {
@@ -309,7 +157,7 @@ async function copyExports(context: CopyContext, runId: string): Promise<[number
       }
       outputPath = destination;
     }
-    await target.saveExport({ ...retarget(input, sourceId, targetId), outputPath });
+    await target.saveExport({ ...retargetWorkspace(input, sourceId, targetId), outputPath });
     copied += 1;
   }
   return [copied, skipped];

@@ -32,7 +32,8 @@ const maxHeadingLength = 40;
 const maxFragmentLength = 80;
 const maxSpeakerLabels = 8;
 
-type ScoredKind = Exclude<CandidateEvidenceKind, "other">;
+// A work-journal source is always kinded by its writer, so detection never scores it.
+type ScoredKind = Exclude<CandidateEvidenceKind, "other" | "work-journal">;
 
 interface Scorecard {
   score: number;

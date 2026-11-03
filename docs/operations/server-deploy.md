@@ -30,6 +30,22 @@ project id, service account, pool id or bucket name belongs here.
 The workflow signs in to Google Cloud through Workload Identity Federation, so
 no long-lived service account key exists.
 
+### Self-hosted images
+
+Each server tag also publishes the self-hosted stack's images to GitHub's
+container registry, from this repository's
+[Server images](../../.github/workflows/server-images.yml) workflow:
+`ghcr.io/akoita/draft-loop-api`, `-worker` and `-page-fetcher`, tagged with the
+version (`server-v0.12.0` gives `0.12.0`) for `linux/amd64` and `linux/arm64`.
+
+- **Contents.** Code and the pinned embedding model only; no data, keys or
+  settings.
+- **Sign-in.** The workflow pushes with its own short-lived token, so no
+  registry credential is stored.
+- **Older tags.** Run the workflow by hand with an existing tag to publish it.
+- **Visibility.** A new package starts private on GHCR. The owner makes each
+  package public once, in its package settings, so an install needs no sign-in.
+
 ### Server release notes
 
 Each server tag that passed on staging gets a GitHub Release titled

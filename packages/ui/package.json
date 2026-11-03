@@ -32,6 +32,10 @@
       "types": "./src/workspace-setup.tsx",
       "import": "./src/workspace-setup.tsx"
     },
+    "./work-journal-panel": {
+      "types": "./src/work-journal-panel.tsx",
+      "import": "./src/work-journal-panel.tsx"
+    },
     "./*": {
       "types": "./src/*.ts",
       "import": "./src/*.ts"
@@ -48,8 +52,8 @@
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/providers": "workspace:*",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@draft-loop/rendering": "workspace:*",

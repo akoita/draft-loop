@@ -7,6 +7,7 @@ import { useRecordId } from "./record-context.js";
 import { ScreeningNote, useScreening } from "./screening.js";
 import { sourceStatus } from "./screening-model.js";
 import { activeBases, formatBytes } from "./sources-model.js";
+import { WorkJournalSection } from "./work-journal.js";
 
 type KnowledgeBase = ApiSchemas["KnowledgeBase"];
 type KnowledgeSource = ApiSchemas["KnowledgeSource"];
@@ -187,13 +188,18 @@ export function EvidenceFileChecks({ client, revision, groups, problem }: Eviden
   );
 }
 
-/** The panels below the knowledge panel: file checks, then private sections, over one reading. */
-export function EvidenceSections({ client, revision }: EvidenceSectionsProps) {
+/**
+ * The panels below the knowledge panel over one reading: file checks, private sections, and the
+ * work journal where the server serves it.
+ */
+export function EvidenceSections({ client, revision, workJournal }: EvidenceSectionsProps) {
   const { groups, problem } = useSelectedBases(client, revision);
+  const bases = groups?.map((group) => group.base);
   return (
     <>
       <EvidenceFileChecks client={client} revision={revision} groups={groups} problem={problem} />
-      <PrivateSections client={client} bases={groups?.map((group) => group.base)} />
+      <PrivateSections client={client} bases={bases} />
+      {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
     </>
   );
 }
@@ -201,4 +207,6 @@ export function EvidenceSections({ client, revision }: EvidenceSectionsProps) {
 export interface EvidenceSectionsProps {
   readonly client: ApiClient;
   readonly revision: number;
+  /** Shows the work journal review; the server serves it only with the owner token for now. */
+  readonly workJournal?: boolean;
 }

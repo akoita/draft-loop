@@ -278,17 +278,31 @@ critic inputs list the members that stay fixed for a run first (context,
 retrieved evidence, achievement plan, and the author's grounding guide and
 output budget), then the per-call members (run, round, execution, artifact, and
 findings). Providers with automatic prefix caching (Mistral, Gemini, DeepInfra,
-and Claude Code's own caching) can then reuse that shared prefix.
+and Claude Code's own caching) can then reuse that shared prefix. A retrieved
+chunk reaches the models with its id, its source as a run-local alias (`S1`,
+`S2`, …), its line numbers and its text; the checksum, workspace id, rank and
+ordinal stay local, since no prompt names them and they were about a sixth of
+the cached prefix on a full-source run.
 Mistral requests carry an opaque prompt-cache key hashed from the context
 snapshot ID.
 
 Claude has no automatic prefix cache, so the Anthropic adapter, on the Claude
 API and on Vertex AI, marks one. An author call sends the run's system
 instructions, then the run-stable input members as one block with the
-request's only cache breakpoint, on a one-hour lifetime. The call's own
-instructions (adjudication, retry, revision, or patch) and per-call members
-follow it. The words are the ones other providers receive in one system prompt
-and one input; only their order differs.
+request's only cache breakpoint. The call's own instructions (adjudication,
+retry, revision, or patch) and per-call members follow it. The words are the
+ones other providers receive in one system prompt and one input; only their
+order differs.
+
+The author's prefix lives five minutes, written at 1.25x the input rate, since
+a run's author calls land within minutes of each other; the critic's lives one
+hour, at 2x, because its calls bracket the author's drafts. The lifetime counts
+from the start of each request that touches the prefix, and a draft can run
+longer than five minutes, so while a five-minute cached request is in flight
+the adapter sends a copy of it with one output token every 3.5 minutes. The
+copy keeps the request's thinking and output format, reads the prefix at the
+cache-read rate, and its usage joins the call's; a failed copy is ignored. A
+request with budgeted thinking cannot run with one output token and sends none.
 
 The author's application plan calls send the same prefix as its drafts, with the
 plan instructions after it, so the first plan call writes the cache and the plan
@@ -319,7 +333,8 @@ breakpoint, keyed on the context snapshot.
 Recorded input tokens count every input token a call carried, including
 prompt-cache reads and writes. Adapters that report them also return the
 cached and cache-write counts, and the estimated cost prices each at its own
-rate: the catalog records Claude's cache-read and one-hour cache-write rates.
+rate: the catalog records Claude's cache-read rate and, per profile, the
+cache-write rate of the lifetime its role uses.
 Run history records the cache-read and cache-write counts beside each
 execution's totals, and on each call of the plan step, so a parity run can
 report what its calls read back instead of inferring it from cost.

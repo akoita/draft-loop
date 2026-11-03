@@ -1,7 +1,11 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 
-import { anthropicPromptLayout, anthropicSharedOutput } from "./anthropic-prompt-cache.js";
+import {
+  anthropicCacheLifetime,
+  anthropicPromptLayout,
+  anthropicSharedOutput,
+} from "./anthropic-prompt-cache.js";
 import {
   AnthropicAdapter,
   type AnthropicClient,
@@ -72,6 +76,22 @@ describe("Anthropic prompt layout", () => {
         },
       ],
     });
+  });
+
+  it("marks the breakpoint with the layout's five-minute lifetime when it declares one", () => {
+    const layout = anthropicPromptLayout(
+      { ...cached, promptCache: { ...promptCache, lifetime: "5m" } },
+      JSON.stringify,
+    );
+    const content = layout.messages[0]?.content;
+    expect(Array.isArray(content) && content[0]).toMatchObject({
+      cache_control: { type: "ephemeral", ttl: "5m" },
+    });
+    expect(
+      anthropicCacheLifetime({ ...cached, promptCache: { ...promptCache, lifetime: "5m" } }),
+    ).toBe("5m");
+    expect(anthropicCacheLifetime(cached)).toBe("1h");
+    expect(anthropicCacheLifetime({ input: cached.input })).toBeUndefined();
   });
 
   it("leaves out empty call instructions", () => {

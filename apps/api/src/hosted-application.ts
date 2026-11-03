@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
+import { createWorkJournalService } from "@draft-loop/application/work-journal";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import {
@@ -106,6 +107,8 @@ export function composeHostedApplication(
       setup: parts.screening ?? rulesScreeningSetup(),
     }),
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
+    workJournal: createWorkJournalService({ store: storage.workJournalNotes, tenantId }),
+    sourceEvidenceKinds: storage,
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
       reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),

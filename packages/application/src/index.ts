@@ -20,6 +20,10 @@ import type {
   ApplicationBriefExtractionResult,
   ExtractApplicationBriefCommand,
 } from "./application-brief-extraction.js";
+import type {
+  ImportApplicationBundleCommand,
+  ImportApplicationBundleResult,
+} from "./application-bundle-import.js";
 import type { RecordApplicationJobPageCommand } from "./application-job-page.js";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
 import type {
@@ -615,6 +619,13 @@ export interface ApplicationDriver {
    */
   readonly readRunReview?: (command: RunReviewCommand) => Promise<RunReview | undefined>;
   /**
+   * Writes one application bundle from a desktop workspace into this workspace (ADR 0011, D12).
+   * The hosted driver offers it.
+   */
+  readonly importApplicationBundle?: (
+    command: ImportApplicationBundleCommand,
+  ) => Promise<ImportApplicationBundleResult>;
+  /**
    * Lifts the person's pause without executing, for a service whose workers resume runs in the
    * background; `resume` lifts it and executes in one call. The hosted driver offers it.
    */
@@ -869,6 +880,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunReview === undefined
         ? undefined
         : driver.readRunReview({ ...command, root: requireRoot(command.root) }),
+    importApplicationBundle: async (command) => {
+      if (driver.importApplicationBundle === undefined)
+        throw new CliUserError("This application driver does not import application bundles.");
+      return driver.importApplicationBundle({ ...command, root: requireRoot(command.root) });
+    },
     previewEvidenceMode: async (command) =>
       driver.previewEvidenceMode === undefined
         ? undefined
@@ -927,6 +943,8 @@ export {
   type ExtractApplicationBriefCommand,
   extractApplicationBrief,
 } from "./application-brief-extraction.js";
+export * from "./application-bundle.js";
+export * from "./application-bundle-import.js";
 export {
   type RecordApplicationJobPageCommand,
   recordApplicationJobPage,
@@ -950,6 +968,7 @@ export {
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
 export * from "./deployment-auth-mode.js";
+export * from "./desktop-workspace-bundles.js";
 export * from "./embedding-model-install.js";
 export {
   type EvidenceModePreview,
@@ -1052,6 +1071,7 @@ export * from "./semantic-candidate-knowledge-retrieval.js";
 export * from "./semantic-coverage-candidates.js";
 export * from "./sensitive-knowledge-consent.js";
 export * from "./sensitive-knowledge-consent-service.js";
+export * from "./server-import-backup.js";
 export * from "./source-evidence-kind-service.js";
 export * from "./source-sensitivity-service.js";
 export * from "./user-data-root.js";

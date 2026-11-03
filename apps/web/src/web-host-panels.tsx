@@ -7,7 +7,8 @@ import { StartPanel } from "./start-panels.js";
 /**
  * What the web adds to the shared screens. In sign-in mode, where the server enforces consent and
  * credits, the storage permission above the Career evidence and the consent and credit cost in
- * the Start dialog; in both modes the evidence page's file checks and private-section rules.
+ * the Start dialog; in both modes the evidence page's file checks and private-section rules; with
+ * the owner token, the work journal review (#2024).
  */
 export function webHostPanels(
   client: ApiClient,
@@ -21,6 +22,8 @@ export function webHostPanels(
           startDialog: (context) => <StartPanel client={client} {...context} />,
         }
       : {}),
-    evidenceAfter: ({ revision }) => <EvidenceSections client={client} revision={revision} />,
+    evidenceAfter: ({ revision }) => (
+      <EvidenceSections client={client} revision={revision} workJournal={mode === "owner"} />
+    ),
   };
 }

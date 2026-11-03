@@ -57,8 +57,9 @@ export async function openPostgresCandidateKnowledgeStore(
       return Object.freeze({ metadata, bytes });
     },
     getCandidateKnowledgeSource: storage.getCandidateKnowledgeSource,
-    // The hosted service records no evidence-kind overrides yet, so each source's kind is detected.
-    listCandidateKnowledgeSourceEvidenceKindOverrides: async () => [],
+    // A writer-set kind, such as an approved work-journal note's; other sources are detected.
+    listCandidateKnowledgeSourceEvidenceKindOverrides:
+      storage.listCandidateKnowledgeSourceEvidenceKindOverrides,
     inspectCandidateKnowledgeLexicalIndex: storage.inspectCandidateKnowledgeLexicalIndex,
     queryCandidateKnowledge: storage.queryCandidateKnowledge,
     rebuildCandidateKnowledgeLexicalIndex: storage.rebuildCandidateKnowledgeLexicalIndex,

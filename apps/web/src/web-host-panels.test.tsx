@@ -28,4 +28,16 @@ describe("the web's host panels", () => {
     expect(panels.startDialog).toBeUndefined();
     expect(panels.evidenceAfter?.({ revision: 0 })).toBeDefined();
   });
+
+  it("adds the work journal review with the owner token only, where the server serves it", () => {
+    const owner = renderToStaticMarkup(
+      webHostPanels(unusedClient, "owner", undefined).evidenceAfter?.({ revision: 0 }),
+    );
+    const signIn = renderToStaticMarkup(
+      webHostPanels(unusedClient, "sign-in", undefined).evidenceAfter?.({ revision: 0 }),
+    );
+
+    expect(owner).toContain("Accept notes from coding agents");
+    expect(signIn).not.toContain("Work journal");
+  });
 });

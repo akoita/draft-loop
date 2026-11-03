@@ -91,27 +91,31 @@ function openAIModelPage(modelId: string): string {
 const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   "standard-anthropic-author@1": {
     sources: [anthropicOverview, anthropicPricing],
+    // An author's prefix is cached for five minutes (#2043), so the cache-write rate is 1.25x
+    // the input rate, not the one-hour 2x a critic profile records.
     apiPricing: {
       inputUsdPerMillion: 4,
       outputUsdPerMillion: 20,
       cacheReadUsdPerMillion: 0.2,
-      cacheWriteUsdPerMillion: 8,
+      cacheWriteUsdPerMillion: 5,
     },
     // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-23",
+    reviewedAt: "2026-11-01",
   },
   "standard-anthropic-author@2": {
     sources: [anthropicOverview, anthropicPricing],
+    // An author's prefix is cached for five minutes (#2043), so the cache-write rate is 1.25x
+    // the input rate, not the one-hour 2x a critic profile records.
     apiPricing: {
       inputUsdPerMillion: 4,
       outputUsdPerMillion: 20,
       cacheReadUsdPerMillion: 0.2,
-      cacheWriteUsdPerMillion: 8,
+      cacheWriteUsdPerMillion: 5,
     },
     // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-23",
+    reviewedAt: "2026-11-01",
   },
   // OpenAI reports cache writes on every call that fills its prompt cache, so a critic without a
   // cache-write rate leaves those calls unpriced, which stops a run with a cost limit.
@@ -129,30 +133,33 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "economy-anthropic-author@1": {
     sources: [anthropicSonnet55Overview, anthropicPricing],
+    // Sonnet 5.5 prices a cache read at 0.05x its input rate, not the 0.1x of earlier models.
+    // An author's prefix is cached for five minutes (#2043), so the cache-write rate is 1.25x
+    // the input rate, not the one-hour 2x a critic profile records.
     apiPricing: {
       inputUsdPerMillion: 2,
       outputUsdPerMillion: 10,
-      cacheReadUsdPerMillion: 0.2,
-      cacheWriteUsdPerMillion: 4,
+      cacheReadUsdPerMillion: 0.1,
+      cacheWriteUsdPerMillion: 2.5,
     },
     // Claude 4.6 and later (except Haiku 5.5) bill the whole 1M-token window at standard rates.
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-23",
+    reviewedAt: "2026-11-01",
   },
   "economy-anthropic-author@2": {
     sources: [anthropicModelsOverview, anthropicPricing],
     // Haiku 5.5 bills prompts above 100K tokens at $0.50/$2.50 instead of $0.10/$0.50. A run's
     // full-source prompts pass 100K, so every call is priced at the higher card: an upper bound
-    // for a shorter prompt, never an unpriced call. Cache rates keep the 0.1x read and 2x
-    // one-hour write multipliers.
+    // for a shorter prompt, never an unpriced call. Cache rates keep the 0.1x read multiplier
+    // and, as an author's prefix is cached for five minutes (#2043), the 1.25x write multiplier.
     apiPricing: {
       inputUsdPerMillion: 0.5,
       outputUsdPerMillion: 2.5,
       cacheReadUsdPerMillion: 0.05,
-      cacheWriteUsdPerMillion: 1,
+      cacheWriteUsdPerMillion: 0.625,
     },
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-30",
+    reviewedAt: "2026-11-01",
   },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],
@@ -178,14 +185,15 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
   },
   "balanced-anthropic-critic@1": {
     sources: [anthropicSonnet55Overview, anthropicPricing],
+    // Sonnet 5.5 prices a cache read at 0.05x its input rate, not the 0.1x of earlier models.
     apiPricing: {
       inputUsdPerMillion: 2,
       outputUsdPerMillion: 10,
-      cacheReadUsdPerMillion: 0.2,
+      cacheReadUsdPerMillion: 0.1,
       cacheWriteUsdPerMillion: 4,
     },
     maxInputTokens: 1000000,
-    reviewedAt: "2026-10-30",
+    reviewedAt: "2026-11-01",
   },
   "standard-anthropic-critic@1": {
     sources: [anthropicOverview, anthropicPricing],

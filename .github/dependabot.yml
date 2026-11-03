@@ -5,3 +5,12 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      # React refuses mismatched react and react-dom versions, so bump the
+      # runtime and its type packages together.
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
