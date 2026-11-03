@@ -15,7 +15,8 @@ the cloud, with files on disk and your own provider keys. The full guide is
 
 | Piece | Where |
 | --- | --- |
-| `compose.yaml` | The services, with the API on `127.0.0.1` only. |
+| `compose.yaml` | The services, with the API on `127.0.0.1` only. It runs the published images of `DRAFT_LOOP_VERSION`. |
+| `compose.build.yaml` | Builds those images from a clone instead; the `pnpm self-hosted:*` scripts pass it. |
 | `init/prepare.sh` | Creates the random owner token and database passwords at first start, and copies your keys into a volume only the API and the worker read. |
 | `init/postgres-setup.sh` | Creates the database role the API and the worker use. |
 | `init/with-secrets.sh` | Gives each service only the secrets it needs. |
