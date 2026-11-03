@@ -36,6 +36,10 @@ once.
   that lifted a quarantine, with the releasing member's id and written reason.
   Results hold closed signal codes and screener identities, never the screened
   text.
+- **Work journal:** the record's "Accept notes from coding agents" switch, its
+  notes in every status with their content, and the keys of discarded notes
+  whose text was deleted after 30 days, kept so an agent does not record that
+  work again.
 - **Knowledge:** knowledge bases with their sources, source versions and
   sensitivity rule versions. In sign-in mode these are the bases the record
   owns. In owner-token mode, which holds one workspace and organisation-wide
@@ -44,8 +48,10 @@ once.
   exported document.
 
 The screening tables, `content_screening_results` and
-`content_screening_releases`, were added to v1 as two more table files. Readers
-that skip table files they do not know are unaffected, so the version stays 1.
+`content_screening_releases`, and the work journal tables,
+`work_journal_intake`, `work_journal_notes` and `work_journal_forgotten_keys`,
+were added to v1 as more table files. Readers that skip table files they do not
+know are unaffected, so the version stays 1.
 
 ## What it never holds
 
