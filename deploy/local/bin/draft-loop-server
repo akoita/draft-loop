@@ -189,7 +189,7 @@ restore() {
 
 install() {
   local version="${1:-}" home="${2:-$HOME/draft-loop-server}" scratch
-  [ -n "$version" ] || die "say which version to install, such as: install 0.13.0"
+  [ -n "$version" ] || die "say which version to install, such as: install 0.14.0"
   check_version "$version"
   [ ! -e "$home/compose.yaml" ] || die "$home already holds a stack; use upgrade instead."
   if [ -e "$home" ] && [ ! -d "$home" ]; then
@@ -208,7 +208,7 @@ install() {
 upgrade() {
   local version="${1:-}" home current scratch
   home="$(script_home)"
-  [ -n "$version" ] || die "say which version to upgrade to, such as: upgrade 0.13.0"
+  [ -n "$version" ] || die "say which version to upgrade to, such as: upgrade 0.14.0"
   check_version "$version"
   [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
   current="$(installed_version "$home")"
