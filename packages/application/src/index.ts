@@ -968,6 +968,7 @@ export {
   withDefaultWritingPolicy,
 } from "./default-writing-policy.js";
 export * from "./deployment-auth-mode.js";
+export * from "./desktop-workspace-bundles.js";
 export * from "./embedding-model-install.js";
 export {
   type EvidenceModePreview,
