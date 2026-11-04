@@ -7,6 +7,7 @@ import {
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
+import { defaultRateLimits, type RateLimits } from "./rate-limit.js";
 import { isCloudRunJobName } from "./worker-wake.js";
 
 /** How the API authenticates requests: the owner token alone, or sign-in through the provider. */
@@ -24,6 +25,8 @@ export interface ApiConfig {
   readonly webRoot?: string;
   /** The separate page fetcher job pages are fetched through; the API fetches them itself when unset. */
   readonly pageFetcherUrl?: string;
+  /** Requests and refused credentials per source address and minute (#2145). */
+  readonly rateLimits: RateLimits;
 }
 
 export class ApiConfigError extends Error {
@@ -67,10 +70,32 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
     port,
     ownerToken,
     auth: readAuthConfig(env),
+    rateLimits: {
+      requestsPerWindow: readLimit(
+        env.DRAFT_LOOP_API_RATE_LIMIT,
+        "DRAFT_LOOP_API_RATE_LIMIT",
+        defaultRateLimits.requestsPerWindow,
+      ),
+      refusedPerWindow: readLimit(
+        env.DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT,
+        "DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT",
+        defaultRateLimits.refusedPerWindow,
+      ),
+    },
     ...(workerJob === "" ? {} : { workerJob }),
     ...(webRoot === "" ? {} : { webRoot }),
     ...(pageFetcherUrl === "" ? {} : { pageFetcherUrl }),
   };
+}
+
+/** A positive whole number of requests per minute, or the default when unset. */
+function readLimit(value: string | undefined, name: string, fallback: number): number {
+  if (value === undefined || value === "") return fallback;
+  const limit = Number(value);
+  if (!/^\d+$/u.test(value) || limit < 1) {
+    throw new ApiConfigError(`${name} must be a whole number of requests per minute, at least 1.`);
+  }
+  return limit;
 }
 
 /** An http or https origin such as `https://fetcher.example`, with at most a trailing slash. */

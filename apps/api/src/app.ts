@@ -54,6 +54,7 @@ import {
   type ProfileDerivations,
   registerProfileRoutes,
 } from "./profile-routes.js";
+import { type RateLimits, registerRateLimit } from "./rate-limit.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
@@ -75,6 +76,8 @@ export interface ApiOptions {
   /** How requests are authenticated; owner mode when unset. */
   readonly auth?: ApiAuthOptions;
   readonly logger?: FastifyServerOptions["logger"];
+  /** Request limits per source address (#2145); the server always passes them, tests may not. */
+  readonly rateLimits?: RateLimits;
   /**
    * One tenant's application service and how to address its workspaces, served to every caller;
    * without it or `tenants` only health is served.
@@ -204,6 +207,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         (ownerTenantId === undefined
           ? undefined
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
+  if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
   registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
 
   app.get(
