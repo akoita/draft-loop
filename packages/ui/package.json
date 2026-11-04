@@ -32,6 +32,10 @@
       "types": "./src/workspace-setup.tsx",
       "import": "./src/workspace-setup.tsx"
     },
+    "./career-interview-panel": {
+      "types": "./src/career-interview-panel.tsx",
+      "import": "./src/career-interview-panel.tsx"
+    },
     "./work-journal-panel": {
       "types": "./src/work-journal-panel.tsx",
       "import": "./src/work-journal-panel.tsx"
