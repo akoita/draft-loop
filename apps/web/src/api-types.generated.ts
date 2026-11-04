@@ -450,6 +450,12 @@ export interface ApiSchemas {
     readonly organisationId: string;
     readonly members: readonly (ApiSchemas["OrganisationMember"])[];
   };
+  "OwnerTokenProof": {
+    readonly proof: string;
+  };
+  "OwnerTokenProofRequestInput": {
+    readonly challenge: string;
+  };
   "PlanAssignment": {
     readonly planId: string;
     readonly catalogVersion: number;
@@ -925,6 +931,10 @@ export interface ApiOperations {
   };
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
+  };
+  "POST /v1/auth/proof": {
+    readonly body: ApiSchemas["OwnerTokenProofRequestInput"];
+    readonly response: ApiSchemas["OwnerTokenProof"];
   };
   "GET /v1/workspaces": {
     readonly response: ApiSchemas["WorkspaceList"];

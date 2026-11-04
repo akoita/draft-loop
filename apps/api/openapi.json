@@ -4304,6 +4304,32 @@
           "balance"
         ]
       },
+      "OwnerTokenProofRequestInput": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "32 random bytes as lower-case hex, fresh for each check."
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "additionalProperties": false
+      },
+      "OwnerTokenProofInput": {
+        "type": "object",
+        "properties": {
+          "proof": {
+            "type": "string",
+            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
+          }
+        },
+        "required": [
+          "proof"
+        ]
+      },
       "OrganisationMemberInput": {
         "type": "object",
         "properties": {
@@ -9664,6 +9690,33 @@
         ],
         "additionalProperties": false
       },
+      "OwnerTokenProofRequest": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "32 random bytes as lower-case hex, fresh for each check."
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "additionalProperties": false
+      },
+      "OwnerTokenProof": {
+        "type": "object",
+        "properties": {
+          "proof": {
+            "type": "string",
+            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
+          }
+        },
+        "required": [
+          "proof"
+        ],
+        "additionalProperties": false
+      },
       "OrganisationMember": {
         "type": "object",
         "properties": {
@@ -11403,6 +11456,34 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/proof": {
+      "post": {
+        "summary": "Prove this server holds the owner token, without either side sending it",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerTokenProofRequestInput"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerTokenProof"
                 }
               }
             }

@@ -48,6 +48,7 @@ import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerOwnerTokenKnowledge } from "./owner-token-knowledge.js";
+import { registerOwnerTokenProofRoutes } from "./owner-token-proof-routes.js";
 import { createPlanLimits } from "./plan-limits.js";
 import {
   noProfileDerivations,
@@ -222,6 +223,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => ({ status: "ok" as const }),
   );
   registerAuthConfigRoutes(app, auth);
+  registerOwnerTokenProofRoutes(app, options.ownerToken);
 
   app.get(
     "/v1/openapi.json",
