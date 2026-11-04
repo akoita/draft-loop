@@ -21,7 +21,8 @@ data/
 *.sqlite-shm
 *.sqlite-wal
 
-# Agent tooling state and nested worktrees
-.claude/
+# Agent tooling state and nested worktrees; the shared Claude Code settings are tracked
+.claude/*
+!.claude/settings.json
 .codex/
 .entire/

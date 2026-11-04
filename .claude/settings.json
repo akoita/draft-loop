@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "agent-toolkit": {
+      "source": {
+        "source": "github",
+        "repo": "akoita/agent-toolkit"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "utilities@agent-toolkit": true
+  }
+}
