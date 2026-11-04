@@ -3,6 +3,7 @@
 #
 #   draft-loop-server.ps1 install <version> [folder]   download a release's stack into a folder
 #   draft-loop-server.ps1 up | down | status | logs [service] | token
+#   draft-loop-server.ps1 token --rotate                replace the owner token and restart the API
 #   draft-loop-server.ps1 upgrade <version>            switch to a newer release and restart
 #   draft-loop-server.ps1 backup [file] | restore <file>   one archive of the database, files and secrets
 #
@@ -29,7 +30,7 @@ function Fail([string]$Message) {
 }
 
 function Show-Usage {
-  Get-Content -LiteralPath $PSCommandPath | Select-Object -Skip 3 -First 4 |
+  Get-Content -LiteralPath $PSCommandPath | Select-Object -Skip 3 -First 5 |
     ForEach-Object { $_ -replace '^# ?', '' }
 }
 
@@ -316,6 +317,23 @@ function Update-Server([string[]]$Arguments) {
   Start-Server
 }
 
+# Replaces the owner token (threat model S-004, #2146): removes it, lets the init step create a
+# new one, and recreates the API, which reads it at start. Agent tokens stay valid. It never prints
+# the old or the new token.
+function Reset-OwnerToken {
+  $steps = @(
+    @("run", "--rm", "--no-deps", "-T", "--entrypoint", "sh", "init", "-c", "rm -f /secrets/owner_token"),
+    @("run", "--rm", "--no-deps", "-T", "init"),
+    @("up", "--detach", "--wait", "--no-deps", "--force-recreate", "api")
+  )
+  foreach ($step in $steps) {
+    if ((Invoke-ComposeStep $step) -ne 0) { Fail "replacing the owner token failed; run up, then try again." }
+  }
+  $script = Join-Path (Join-Path (Get-ServerHome) "bin") "draft-loop-server.ps1"
+  Write-Output "Replaced the owner token; the old one is refused from now on."
+  Write-Output "Sign in again with the new one, which this prints: $script token"
+}
+
 switch ($Command) {
   "install" { Install-Server $Rest }
   "upgrade" { Update-Server $Rest }
@@ -323,7 +341,11 @@ switch ($Command) {
   "down" { Invoke-Compose @("down") }
   "status" { Invoke-Compose @("ps") }
   "logs" { Invoke-Compose (@("logs", "--tail", "200") + $Rest) }
-  "token" { Invoke-Compose @("exec", "-T", "api", "cat", "/secrets/owner_token") }
+  "token" {
+    if ($Rest.Count -eq 0) { Invoke-Compose @("exec", "-T", "api", "cat", "/secrets/owner_token") }
+    elseif ($Rest.Count -eq 1 -and $Rest[0] -eq "--rotate") { Reset-OwnerToken }
+    else { Fail "token takes no argument but --rotate." }
+  }
   "backup" { Backup-Server $Rest }
   "restore" { Restore-Server $Rest }
   { $_ -in @("help", "--help", "-h") } { Show-Usage }

@@ -5,6 +5,7 @@
 #
 #   draft-loop-server install <version> [folder]   download a release's stack into a folder
 #   draft-loop-server up | down | status | logs [service] | token
+#   draft-loop-server token --rotate                replace the owner token and restart the API
 #   draft-loop-server upgrade <version>            switch to a newer release and restart
 #   draft-loop-server backup [file] | restore <file>   one archive of the database, files and secrets
 #
@@ -24,7 +25,7 @@ die() {
 }
 
 usage() {
-  sed -n '6,9p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '6,10p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 script_home() {
@@ -231,6 +232,19 @@ upgrade() {
   start
 }
 
+# Replaces the owner token (threat model S-004, #2146): removes it, lets the init step create a
+# new one, and recreates the API, which reads it at start. Agent tokens stay valid. It never prints
+# the old or the new token.
+rotate_token() {
+  local home
+  home="$(script_home)"
+  compose run --rm --no-deps -T --entrypoint sh init -c 'rm -f /secrets/owner_token'
+  compose run --rm --no-deps -T init
+  compose up --detach --wait --no-deps --force-recreate api
+  printf 'Replaced the owner token; the old one is refused from now on.\n'
+  printf 'Sign in again with the new one, which this prints: %s/bin/draft-loop-server token\n' "$home"
+}
+
 command="${1:-help}"
 [ "$#" -eq 0 ] || shift
 case "$command" in
@@ -240,7 +254,13 @@ case "$command" in
   down) compose down ;;
   status) compose ps ;;
   logs) compose logs --tail 200 "$@" ;;
-  token) compose exec -T api cat /secrets/owner_token ;;
+  token)
+    case "${1:-}" in
+      "") compose exec -T api cat /secrets/owner_token ;;
+      --rotate) rotate_token ;;
+      *) die "token takes no argument but --rotate." ;;
+    esac
+    ;;
   backup) backup "$@" ;;
   restore) restore "$@" ;;
   help | --help | -h) usage ;;

@@ -155,6 +155,19 @@ for (const shell of shells) {
       ]);
     });
 
+    it("replaces the owner token without printing it and restarts the API", () => {
+      const result = server(shell, ["token", "--rotate"], { home: homeOf() });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /old one is refused/u);
+      assert.match(result.stdout, /draft-loop-server(\.ps1)? token\n/u);
+      assert.deepEqual(dockerCalls().slice(-3), [
+        `${compose()} run --rm --no-deps -T --entrypoint sh init -c rm -f /secrets/owner_token`,
+        `${compose()} run --rm --no-deps -T init`,
+        `${compose()} up --detach --wait --no-deps --force-recreate api`,
+      ]);
+      assert.notEqual(server(shell, ["token", "--show"], { home: homeOf() }).status, 0);
+    });
+
     it("refuses a second install, a malformed version and a downgrade", () => {
       assert.match(
         server(shell, ["install", "0.12.0", homeOf()]).stderr,

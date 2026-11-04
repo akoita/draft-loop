@@ -128,6 +128,25 @@ network with your firewall.
   serves plain HTTP. Keep the port on `127.0.0.1`; do not publish it to a
   network.
 
+## Replace the owner token
+
+Replace the owner token when it may have leaked, or to retire every copy of it.
+
+1. Run `draft-loop-server token --rotate`. It writes a new random token and
+   restarts the API, which is unreachable for a few seconds. It prints neither
+   token.
+2. Run `draft-loop-server token` to print the new one.
+3. Sign in again wherever the old token was kept:
+   - **Desktop app:** it asks for the token at its next request.
+   - **Web screen:** reload the page and sign in.
+   - **Terminal:** update `DRAFT_LOOP_SERVER_TOKEN` or your shell's export.
+   - **Coding agents:** nothing to do. `draftloop-mcp init` gave them an agent
+     token, which keeps working. A configuration made before 0.15.0 holds the
+     owner token, so rerun `draftloop-mcp init` there.
+
+Expected result: a request with the old token answers `401`. If the API does
+not come back, run `draft-loop-server logs api`.
+
 ## Back up and restore
 
 `draft-loop-server backup [file]` writes one archive while the stack runs. It
