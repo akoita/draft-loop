@@ -196,7 +196,7 @@ export function registerWorkJournalRoutes(
       return reply.code(result.status === "pending" ? 201 : 200).send({
         ...result,
         possible_duplicate_of: [...result.possible_duplicate_of],
-        ...(result.note_id === undefined ? {} : { review_url: "/career-evidence#work-journal" }),
+        ...(result.note_id === undefined ? {} : { review_url: "/#work-journal" }),
       });
     },
   );

@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-
+import { workJournalPanelId } from "./shared-link.js";
 import {
   type WorkJournalEditDraft,
   type WorkJournalReviewAction,
@@ -64,7 +64,11 @@ export function WorkJournalPanel({
   }
 
   return (
-    <section className="panel host-panel work-journal" aria-labelledby={`${id}-heading`}>
+    <section
+      id={workJournalPanelId}
+      className="panel host-panel work-journal"
+      aria-labelledby={`${id}-heading`}
+    >
       <h2 id={`${id}-heading`}>Work journal</h2>
       <p className="muted">
         Coding agents can record notable work you shipped. Each note waits here; only the notes you

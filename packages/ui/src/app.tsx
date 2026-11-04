@@ -951,8 +951,11 @@ export function WorkspaceSetupForm({
 export function App({
   port,
   hostActions,
+  startView,
 }: {
   readonly port?: DesktopSetupPort;
+  /** The page the first workspace opens on, such as Career evidence from a shared link. */
+  readonly startView?: WorkspaceView;
   /**
    * The host's own header actions, such as the web's sign-out, drawn where each screen's header
    * puts its workspace actions, before Close workspace.
@@ -966,7 +969,9 @@ export function App({
   const [noWorkspaceOpen, setNoWorkspaceOpen] = useState(false);
   const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
   // Opening a workspace lands on Home; an application's review is one screen inside it.
-  const [navigation, setNavigation] = useState<PageNavigation>(initialPageNavigation);
+  const [navigation, setNavigation] = useState<PageNavigation>(() =>
+    initialPageNavigation(startView),
+  );
   const navigationRef = useRef(navigation);
   navigationRef.current = navigation;
   const view = navigation.view;

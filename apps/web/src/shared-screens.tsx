@@ -1,6 +1,7 @@
 import { App } from "@draft-loop/ui/app";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
+import { startViewForFragment } from "@draft-loop/ui/shared-link";
 import { type ReactNode, useMemo, useState } from "react";
 
 import type { ApiClient, ApiRequestError } from "./api-client.js";
@@ -24,6 +25,8 @@ export interface SharedScreensProps {
  */
 export function SharedScreens({ client, workspaceId, hostActions }: SharedScreensProps) {
   const [refusal, setRefusal] = useState<ApiRequestError | undefined>(undefined);
+  // A shared link names its page in the fragment, read once when the screens open (#2149).
+  const [startView] = useState(() => startViewForFragment(window.location.hash));
   const port = useMemo(
     () =>
       createBridgeReviewPort(
@@ -38,7 +41,11 @@ export function SharedScreens({ client, workspaceId, hostActions }: SharedScreen
         <RefusalNotice client={client} refusal={refusal} onDismiss={() => setRefusal(undefined)} />
       )}
       <div className="shared-screens">
-        <App port={port} {...(hostActions === undefined ? {} : { hostActions })} />
+        <App
+          port={port}
+          {...(hostActions === undefined ? {} : { hostActions })}
+          {...(startView === undefined ? {} : { startView })}
+        />
       </div>
     </>
   );
