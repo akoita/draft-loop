@@ -1,126 +1,139 @@
-# CLI and desktop operations reference
+# CLI and desktop reference
 
-This reference documents the desktop client of a DraftLoop server, then the
-source-only CLI command groups. Start from the [developer quick start](../../README.md#developer-quick-start)
-for installation and the fixture demo; run any command below from the
-repository root with Node.js 24.22.1 and pnpm 10.18.3.
+This page is the reference for two clients. The first is the **desktop client**, a
+window over a DraftLoop server. The second is the source-only **CLI**, which
+runs a local workspace. It is for a developer or power user who needs the exact
+command, the setting file it writes, and what the screen shows for the same
+action.
 
-Live use requires an explicit provider-transmission approval in the workspace,
-configured provider credentials, and may incur provider cost. Keep real
-candidate material out of the repository.
+To install and run the fixture demo, start from the
+[developer quick start](../../README.md#developer-quick-start). Run every
+command below from the repository root, using Node.js 24.22.1 and pnpm 10.18.3.
+
+> **Before a live run.** A live run needs three things: an explicit
+> provider-transmission approval in the workspace, provider keys (see
+> [Provider credentials](#provider-credentials)), and a budget, because it costs
+> provider money. Keep real candidate material out of the repository.
+
+## Contents
+
+- [Desktop client](#desktop-client)
+- [Command groups at a glance](#command-groups-at-a-glance)
+- [CLI model profiles](#cli-model-profiles)
+- [Provider credentials](#provider-credentials)
+- [Autopilot](#autopilot)
+- [Applications](#applications)
+- [Compacting run history](#compacting-run-history)
+- [Opportunity briefs](#opportunity-briefs)
+- [Review and approval](#review-and-approval)
+- [Candidate profiles](#candidate-profiles)
+- [Writing policies](#writing-policies)
+- [Candidate knowledge bases](#candidate-knowledge-bases)
+- [Requirement coverage in run output](#requirement-coverage-in-run-output)
+
+Notes marked **On screen** describe the shared screens (`packages/ui`). The
+server's web screen shows them, and the desktop client shows that same web
+screen.
 
 ## Desktop client
 
 The desktop client (`apps/desktop-client`, ADR 0011, D9) is an Electron window
-over a DraftLoop server's own web screen, so every screen and action is the
-web's. Run it from a clone with `pnpm --filter @draft-loop/desktop-client start`.
+over a DraftLoop server's own web screen. Every screen and action it offers is
+the web's. To run it from a clone:
 
-- **Servers.** It opens the last server when `GET /v1/health` and
-  `/v1/auth/config` answer, otherwise a picker that says why. The picker adds a
-  server by address (`https` only, except this computer), opens or removes
-  one, and the **Server** menu switches servers. It never starts the server.
-- **What stays on this computer.** The server list, the window size, and each
-  server's browser storage in its own partition; removing a server clears
-  that partition. In owner-token mode the token is remembered per server,
-  encrypted by the system keychain, and forgotten on sign-out. Linux without a
-  keyring remembers nothing.
-- **Isolation.** The window stays on its server and, in sign-in mode, its
-  identity provider. Other web links open in the system browser, every other
-  scheme is refused, and the page gets no device permissions and no Node.
-- **Exports** are saved through the system Save dialog.
-- **New versions.** At launch the packaged client asks GitHub Releases for a
-  newer `v*` tag and offers the releases page once per version; it never
-  downloads anything. `DRAFT_LOOP_DESKTOP_RELEASE_CHECK=off` turns the check
-  off, and **Help > Check for a new version** runs it on demand.
+```sh
+pnpm --filter @draft-loop/desktop-client start
+```
+
+| Topic                       | Behaviour                                                                                                                                                                                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Servers                     | It opens the last server when `GET /v1/health` and `/v1/auth/config` answer. Otherwise it shows a picker that says why. The picker adds a server by address (`https` only, except for this computer), and opens or removes one. The **Server** menu switches servers. The client never starts a server.   |
+| What stays on this computer | The server list, the window size, and each server's browser storage in its own partition. Removing a server clears that partition. In owner-token mode the token is remembered per server, encrypted by the system keychain, and forgotten on sign-out. On Linux without a keyring nothing is remembered. |
+| Isolation                   | The window stays on its server and, in sign-in mode, on its identity provider. Other web links open in the system browser, and every other scheme is refused. The page gets no device permissions and no Node.                                                                                            |
+| Exports                     | Saved through the system Save dialog.                                                                                                                                                                                                                                                                     |
+| New versions                | At launch the packaged client asks GitHub Releases for a newer `v*` tag. It offers the releases page once per version and never downloads anything. `DRAFT_LOOP_DESKTOP_RELEASE_CHECK=off` turns the check off, and **Help > Check for a new version** runs it on demand.                                 |
+
+## Command groups at a glance
+
+Every command runs as `pnpm --filter @draft-loop/cli start <command> ...`.
+Most commands accept `--json` for machine-readable output.
+
+| Command                                         | What it does                                                                                                                       | Section                                                                              |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `model-profiles`                                | List, apply or clear model pairs                                                                                                   | [CLI model profiles](#cli-model-profiles)                                            |
+| `start`                                         | Start a run, optionally with a pair, brief, profile or policy override                                                             | [CLI model profiles](#cli-model-profiles), [Opportunity briefs](#opportunity-briefs) |
+| `approve`, `revise`, `pause`, `stop`, `recover` | Act on a run: approve (optionally with an override), ask for a revision, pause, stop, or return to review after a provider failure | [Review and approval](#review-and-approval)                                          |
+| `status`, `evidence-usage`                      | Show a run's coverage and evidence use                                                                                             | [Requirement coverage](#requirement-coverage-in-run-output)                          |
+| `autopilot`                                     | Switch autopilot on or off                                                                                                         | [Autopilot](#autopilot)                                                              |
+| `application`                                   | List, create, import, rename, archive, restore or delete applications                                                              | [Applications](#applications)                                                        |
+| `workspace compact`                             | Shrink an old run history                                                                                                          | [Compacting run history](#compacting-run-history)                                    |
+| `opportunity`                                   | Create, edit and review job briefs                                                                                                 | [Opportunity briefs](#opportunity-briefs)                                            |
+| `profile`                                       | Derive, edit and review candidate profiles                                                                                         | [Candidate profiles](#candidate-profiles)                                            |
+| `policy`                                        | Import and activate writing policies                                                                                               | [Writing policies](#writing-policies)                                                |
+| `knowledge`                                     | Manage stores, knowledge bases, sources and sensitivity                                                                            | [Candidate knowledge bases](#candidate-knowledge-bases)                              |
+| `evidence mode`, `retrieval mode`, `embeddings` | Choose what a run receives and how it searches                                                                                     | [Evidence mode](#evidence-mode), [Retrieval mode](#retrieval-mode)                   |
 
 ## CLI model profiles
 
-Use `model-profiles` to print the registered profile catalog and pair presets
-as JSON. The output includes exact versions, roles, bounded API pricing scope,
-and separate quality and availability statuses. Catalog quality is unvalidated
-and account or provider availability has not been checked. Listing is
-content-free and does not call a provider.
-
-The local release preflight checks each registry-derived provider/model
-destination with one synthetic request before its end-to-end gate. Inspect that
-request and plan with `pnpm test:model-suggestions:live --plan`; it does not
-create provider adapters or resolve credentials. The default command performs
-the live check, which can use paid API or subscription routes, and is reserved
-for an explicitly approved local availability check or release preflight. Its result covers
-availability under that bounded check only, not account guarantees, profile
-controls, or CV quality.
-
-The paid validation cohort remains limited to the required Economy and Standard
-Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in Balanced pair (Claude Sonnet 5.5 and GPT-6.1 Terra), the two Claude reviewer
-profiles of the Anthropic-only presets, and the DeepInfra GLM,
-Google Gemini, and Mistral development author profiles are omitted from this cohort; listing a development preset does not add a provider
-to release checks.
+A run uses a **pair**: an author profile and a critic profile, each an exact
+`profile-id@version`. Choose one with a preset, or name both profiles.
 
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced-anthropic
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard-anthropic
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
-pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-mistral
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@2 \
   --critic-profile standard-openai-critic@2
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset balanced --author-effort high
 ```
 
-`start` accepts either one pair preset or both exact `--author-profile` and
-`--critic-profile` references. Each reference uses `profile-id@version` and
-must support its selected role. Economy, balanced, and standard are unvalidated
-opt-in pairs; balanced pairs the Claude Sonnet 5.5 author with the GPT-6.1 Terra
-critic, between the cost of economy and standard.
+`model-profiles` prints the catalog and presets as JSON. The output includes
+exact versions, roles, the bounded pricing scope, and separate quality and
+availability statuses. Listing it calls no provider and sends no content.
 
-The `balanced-anthropic` and `standard-anthropic` opt-in pairs use Claude on
-both sides, for a deployment without an OpenAI budget. A different Claude model
-reviews each draft, so the lineages still differ: `balanced-anthropic` pairs the
-Sonnet 5.5 author with an Opus 5.5 critic (`standard-anthropic-critic@1`), and
-`standard-anthropic` pairs the Opus 5.5 author with a Sonnet 5.5 critic
-(`balanced-anthropic-critic@1`). Both critics run at low effort. They need only
-an Anthropic key, and their quality is unvalidated.
+### Presets
 
-The separate `development-glm` opt-in pair uses the Z.ai
-`zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
-requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
-the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
-`GEMINI_API_KEY`. The separate `development-mistral` opt-in pair uses the Mistral
-Large 4 (public preview) author and the GPT-6 Luna critic; it requires
-`MISTRAL_API_KEY`. The active catalog contains eleven unique exact
-profile versions; older profile
-versions remain available for historical references but are not current
-choices. A pair passed to `start` is recorded on that run only. It does not
-change workspace model settings, transmission approval, or credentials. Resume
-uses the pair already recorded in run history.
+Every preset is an unvalidated opt-in pair: catalog quality is unvalidated,
+and account or provider availability is unchecked.
 
-`--author-effort` and `--critic-effort` choose a reasoning level for that role,
-one of the `effortLevels` its profile lists in `model-profiles`. They need a
-preset or both profile options, and a role without one uses its profile's own
-level. A higher level usually costs more output tokens and can improve the
-draft or the review. On the hosted service, `high`, `xhigh` or `max` doubles
-a run's credits, like a premium model.
+| Preset                | Author                                         | Critic                                                        | Keys needed                |
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------- | -------------------------- |
+| `economy`             | Claude Haiku 5.5                               | GPT-6 Luna                                                    | Anthropic, OpenAI          |
+| `balanced`            | Claude Sonnet 5.5                              | GPT-6.1 Terra                                                 | Anthropic, OpenAI          |
+| `standard`            | Claude Opus 5.5                                | GPT-6.1 Sol                                                   | Anthropic, OpenAI          |
+| `balanced-anthropic`  | Claude Sonnet 5.5                              | Claude Opus 5.5 (`standard-anthropic-critic@1`), low effort   | Anthropic                  |
+| `standard-anthropic`  | Claude Opus 5.5                                | Claude Sonnet 5.5 (`balanced-anthropic-critic@1`), low effort | Anthropic                  |
+| `development-glm`     | Z.ai `zai-org/GLM-5.3-Flash` through DeepInfra | GPT-6 Luna                                                    | DeepInfra, OpenAI          |
+| `development-gemini`  | Gemini 3.8 Flash                               | GPT-6 Luna                                                    | Gemini (paid tier), OpenAI |
+| `development-mistral` | Mistral Large 4 (public preview)               | GPT-6 Luna                                                    | Mistral, OpenAI            |
+
+- **Balanced** sits between economy and standard on cost.
+- **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
+  A different Claude model reviews each draft, so author and critic still
+  differ.
+- **The active catalog** holds eleven exact profile versions. Older versions
+  stay resolvable so that saved runs resume, but they are not offered as
+  choices.
+
+### How a pair applies to a run
+
+- **Recorded per run.** A pair passed to `start` applies to that run only. It
+  does not change workspace models, transmission approval or credentials.
+- **Resume** reuses the pair recorded in the run history.
+- **Reasoning level.** `--author-effort` and `--critic-effort` take one of the
+  `effortLevels` that the profile lists in `model-profiles`. They need a preset
+  or both profile options. A role without one uses its profile's own level.
+- **Cost of effort.** A higher level usually costs more output tokens, and can
+  improve the draft or the review. On the hosted service, `high`, `xhigh` or
+  `max` doubles a run's credits, like a premium model.
 
 ### Applied profile pair
 
-A workspace created without an explicit model choice, from `init` or the desktop,
-gets the economy pair (Claude Haiku 5.5 author, GPT-6 Luna critic) with
-`economy-anthropic-author@2` and `economy-openai-critic@1` already applied, as if
-Economy had been chosen. The desktop's new-workspace form starts on that pair.
-An explicit model or pair wins, and existing workspaces keep their stored models.
-
-A workspace can keep an applied pair so that new runs do not start without
-profiles after a restart. The pair is stored as exact ids and versions in
-`.draft-loop/model-profile-selection.json`, with the time it was applied. Each
-role may also store a chosen reasoning `effort` from the levels its profile
-allows; a role without one uses the profile's own level, and each run records
-the level it actually used in its profile snapshot.
+A workspace can keep an **applied pair**, so new runs still have profiles after
+a restart. A workspace created by `init` without an explicit model choice gets
+the economy pair already applied (`economy-anthropic-author@2` and
+`economy-openai-critic@1`). An explicit model or pair wins, and existing
+workspaces keep their stored models.
 
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles apply ./workspace --model-preset development-gemini
@@ -131,149 +144,245 @@ pnpm --filter @draft-loop/cli start model-profiles applied ./workspace
 pnpm --filter @draft-loop/cli start model-profiles clear ./workspace
 ```
 
-- `apply` takes one preset or both exact references, plus the same optional
-  `--author-effort` and `--critic-effort` as `start`, and refuses a pair that is
-  not registered for its roles or whose company and model differ from the
-  workspace's configured author and critic.
-- `start` without profile options uses the applied pair when it still matches
-  the workspace models. Profiles passed to `start` always win.
-- A saved pair that no longer matches is ignored, and the run preflight says
-  why. With no applied pair the preflight says that no profiles are attached
-  and the run uses the legacy path: provider-default runtime controls and
-  unknown context windows.
-- A corrupt selection file stops `start` before any provider work. Fix it with
-  `apply` or `clear`.
-- Resume never reads the applied pair; it reuses the profiles recorded in the
-  run.
+The pair is stored in `.draft-loop/model-profile-selection.json` as exact ids
+and versions, with the time it was applied. Each role may also store an
+`effort`. Each run records the level it actually used in its profile snapshot.
 
-The desktop app uses the same saved pair; saving and displaying it in the
-desktop UI arrives with issue #910.
+| Situation                                                                                                                  | What happens                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `apply` with a pair not registered for its roles, or whose company and model differ from the workspace's author and critic | Refused                                                                                                          |
+| `start` without profile options                                                                                            | Uses the applied pair when it still matches the workspace models                                                 |
+| `start` with profile options                                                                                               | The options always win                                                                                           |
+| The saved pair no longer matches                                                                                           | Ignored, and the run preflight says why                                                                          |
+| No applied pair                                                                                                            | The preflight says no profiles are attached. The run uses provider-default controls and unknown context windows. |
+| A corrupt selection file                                                                                                   | `start` stops before any provider work. Fix it with `apply` or `clear`.                                          |
+| Resume                                                                                                                     | Never reads the applied pair. It reuses the profiles recorded in the run.                                        |
 
-The opt-in Gemini 3.8 Flash development author is also selectable with
-`--author-profile dev-google-gemini-author@2` and an exact critic profile, or
-with `--author-company google --author-model gemini-3.8-flash`. Profile `@1`
-(Gemini 3.7 Flash) stays registered and accepted so existing runs resume, but it
-is no longer a preset or catalog entry. The 3.8 author requires
-`GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
-use submitted content. The desktop offers the same `development-gemini` preset
-in its model picker and stores the key in its own settings row; see
-[Provider credentials](#provider-credentials). Desktop readiness for a Gemini
-author requires the Google key, and Gemini model discovery is manual: enter the
-exact model ID `gemini-3.8-flash`.
+### Development authors
 
-The opt-in Mistral Large 4 development author is selectable with
-`--author-profile dev-mistral-author@1` and an exact critic profile, for example
-`economy-openai-critic@1`, or with `--author-company mistral --author-model
-mistral-large-4`. It requires the dedicated `MISTRAL_API_KEY`, which is never
-shared with another provider, and sends candidate material to
-`https://api.mistral.ai/v1/chat/completions`. The model is in public preview and
-exposes no thinking or effort control, so the profile uses provider defaults at a
-32,768-token output ceiling. The `development-mistral` preset pairs it with the
-GPT-6 Luna critic in the CLI (`--model-preset development-mistral`) and in the
-desktop model picker, where it is labeled "Mistral Large 4 (preview)". The
-desktop stores the key in its own settings row; see
-[Provider credentials](#provider-credentials). Mistral model discovery is
-manual: enter the exact model ID `mistral-large-4`.
+The three development authors are opt-in, and their quality is unvalidated.
 
-A live check found that the model writes about 2-4K output tokens even for
-short structured tasks and takes 20-40 seconds per call, so expect slower runs
-than with the other development authors. Responses stream, so a long answer
-fails only after 90 seconds without any data or at a 30-minute cap per attempt,
-not at a fixed five-minute deadline. Review Mistral's
+| Author           | Select it with                                                                                              | Notes                                                                                                                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gemini 3.8 Flash | `--author-profile dev-google-gemini-author@2`, or `--author-company google --author-model gemini-3.8-flash` | The key must come from a paid-tier Gemini API project, because free-tier terms let Google use submitted content. Profile `@1` (Gemini 3.7 Flash) stays accepted so old runs resume.                                 |
+| Mistral Large 4  | `--author-profile dev-mistral-author@1`, or `--author-company mistral --author-model mistral-large-4`       | Sends material to `https://api.mistral.ai/v1/chat/completions` with its own `MISTRAL_API_KEY`. The model has no thinking or effort control, so the profile uses provider defaults at a 32,768-token output ceiling. |
+| GLM-5.3-Flash    | `--model-preset development-glm`                                                                            | Through DeepInfra with `DEEPINFRA_API_KEY`. The normal author profile uses `low` reasoning.                                                                                                                         |
+
+Pair a development author named by profile with an exact critic profile, such as
+`economy-openai-critic@1`. Model discovery for Gemini and Mistral is manual,
+so enter the exact model id.
+
+**Mistral is slow.** In a live check it wrote about 2,000 to 4,000 output
+tokens even for short structured tasks, and took 20 to 40 seconds per call.
+Responses stream, so a long answer fails only after 90 seconds without data or
+at a 30-minute cap per attempt. Before sending candidate material, review
+Mistral's
 [data-training controls](https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training)
 and
-[Zero Data Retention terms](https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr)
-before sending candidate material; the roadmap's model strategy summarizes them.
+[Zero Data Retention terms](https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr).
+The roadmap's [model strategy](../roadmap.md#model-strategy) summarizes them.
 
-Profile selection requires a supported configured authentication route. Current
-OpenAI Codex user-session and local routes reject profile selections; the CLI
-does not switch authentication modes automatically. Account and provider
-availability remains unchecked.
+### Authentication routes and retries
 
-Each application OpenAI API-key adapter invocation makes one provider request
-by default. Callers can explicitly configure retries; Anthropic, local, and
-user-session adapters keep their existing retry behavior. This does not change
-orchestration recovery.
+- **A supported route is required.** Profile selection needs a supported
+  authentication route. OpenAI Codex user-session routes and local routes
+  reject profile selections.
+- **No automatic switching.** The CLI never switches authentication modes on
+  its own. When a Codex ChatGPT session rejects a selected model, the
+  diagnosis suggests a supported model, or switching OpenAI to an API key
+  yourself.
+- **Retries.** An OpenAI API-key adapter call makes one provider request unless
+  the caller configures retries. Anthropic, local and user-session adapters
+  keep their own retry behaviour. This does not change orchestration recovery.
 
-If a Codex ChatGPT session explicitly rejects a selected model, the desktop
-shows that diagnosis and suggests choosing a supported model or explicitly
-switching OpenAI authentication to an API key. It never switches automatically.
+### The live availability check
+
+The local release preflight sends one synthetic request to each
+provider and model in the registry before its end-to-end gate. The result
+covers availability under that check only. It says nothing about account
+guarantees, profile controls or CV quality.
+
+```sh
+pnpm test:model-suggestions:live --plan
+```
+
+`--plan` prints the requests without creating adapters or reading credentials.
+Without it, the command makes the live check, which can use paid API or
+subscription routes. Run it only for an approved availability check or a
+release preflight.
+
+The paid validation cohort is the required Economy and Standard Anthropic and
+OpenAI destinations, plus supported optional entries from the same two
+companies. It leaves out the Balanced pair, the two Claude critics of the
+Anthropic-only presets, and the development authors. Listing a development
+preset does not add its provider to release checks.
+
+### Choosing models on screen
+
+**On screen**, **Change models** opens one editor with **Presets** and
+**Custom** choices. It fits a 1280×800 window without scrolling.
+
+| Part                          | What it shows                                                                                                                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Summary line                  | What new runs use now, for example "Now: Standard — Claude Opus 5.5 writes · GPT-6.1 Sol reviews". Exact ids, versions and runtime controls sit under a collapsed **Details**.                                              |
+| Preset cards                  | Up to three columns. Each names the writer → reviewer pair, the providers and the public per-million-token prices on one line. Badges read **Unvalidated**, **Development** or **Not available with your current sign-in**. |
+| Custom pair                   | A card of the same size that reveals exact author and critic profile selects.                                                                                                                                               |
+| Writer and Reviewer reasoning | The levels each profile allows, with its own level marked as the default. Choosing another preset or profile resets the level. A changed level is added to the preset's name, as in "Balanced · writer high".               |
+| Quality and sign-in note      | One line, with the full text behind **More**.                                                                                                                                                                               |
+| Cancel, Apply for future runs | A bar pinned to the bottom of the window.                                                                                                                                                                                   |
+
+- **Choices stay a draft** until **Apply for future runs**. Saving replaces
+  the pair for future runs. It keeps the workspace name, the round limit and
+  existing run records.
+- **Transmission consent.** A changed provider identity needs fresh
+  acknowledgement before the next run starts or resumes. Saving never sends
+  candidate material.
+- **Unsupported routes** block profile-backed starts. Codex user-session
+  routes support no profiles.
+- **The applied pair** is the same one the CLI saves. After a restart, the
+  summary line names it. Saving custom models clears it, and a saved pair that
+  no longer matches is not used. The editor says why.
+- **No profiles.** The configured-models card warns "No model profiles:
+  provider defaults, unknown context windows." when the next run would attach
+  none.
+- **Suggested model ids.** When provider model discovery fails or returns
+  nothing, the setup and **Change models** forms suggest exact ids from the
+  catalog. A suggestion is not guaranteed to work with your account or plan.
+  You can still enter any exact id. Local endpoints stay free text.
+
+### Prices and cost estimates
+
+The picker offers an editable token-cost scenario for a draft pair. The
+default example plans two author calls and one critic call, at 10,000 input
+and 1,000 output tokens. The estimate is not a forecast, a cap or a bill, and
+it sets no runtime budget. The reusable code is
+`@draft-loop/application/model-profile-budget`.
+
+The estimate leaves out:
+
+- extra calls and retries
+- input growth
+- cache
+- tools and batch
+- regional premiums
+- unsupported long context
+
+User-session routes show public rates only.
+
+| Model                     | Input / output per million tokens | Notes                                                              |
+| ------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| GLM-5.3-Flash (DeepInfra) | $0.15 / $0.50                     | Reviewed 2026-10-02                                                |
+| Gemini 3.8 Flash          | $0.75 / $3.75                     | Reviewed 2026-10-04                                                |
+| Mistral Large 4           | $1.36 / $4.18                     | Reviewed 2026-10-08, without the launch discount; 1M-token context |
+
+Claude and OpenAI rates are in the catalog (`model-profiles`).
+
+- **Standard text API only.** Prices cover up to 200,000 input tokens by
+  default.
+- **Claude Opus 5.5 and Sonnet 5.5** bill their whole 1,000,000-token window at
+  standard rates, so their cap is 1,000,000.
+- **Claude Haiku 5.5** bills a prompt above 100,000 tokens at a higher rate.
+  DraftLoop applies that rate to every Haiku call, which gives an upper bound,
+  with a 1,000,000 cap.
+- **OpenAI critics** are capped at 272,000, and a longer prompt leaves the
+  estimate unknown.
+- **Cache rates.** The Claude authors and the OpenAI critics carry cache-read
+  and cache-write rates. The OpenAI adapter keeps cached-input, cache-write and
+  reasoning token details. Missing usage, or a missing rate, leaves the cost
+  unknown.
+- **Reasoning levels.** Each current Anthropic and OpenAI profile lists the
+  levels it accepts, `low` to `max`, from the [Claude effort page] and each
+  OpenAI model page. Development profiles keep a fixed level.
+- **Haiku 5.5** gets no sampling parameters, thinking budget or assistant
+  prefill, which it rejects. The Claude session route reports an unknown model
+  with a prompt to update the installed `claude` CLI.
+
+Each catalog entry shows its metadata review date, which is not a live probe.
+Sources: [Anthropic model overview], [Claude models overview],
+[Claude Sonnet 5.5 overview], [GPT-6.1 Sol], [GPT-6.1 Terra], [GPT-6 Luna],
+the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
+[Gemini API pricing], [Gemini models] and the [Mistral Large 4 model page].
+
+[Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
+[Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
+[Claude Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+[Claude effort page]: https://platform.claude.com/docs/en/build-with-claude/effort
+[GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+[GPT-6.1 Terra]: https://developers.openai.com/api/docs/models/gpt-6.1-terra
+[GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
+[GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
+[model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
+[Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
+[Gemini models]: https://ai.google.dev/gemini-api/docs/models
+[Mistral Large 4 model page]: https://docs.mistral.ai/models/mistral-large-4
 
 ## Provider credentials
 
-The CLI reads provider keys from the environment: `ANTHROPIC_API_KEY` and
-`OPENAI_API_KEY`, plus `DEEPINFRA_API_KEY`, `GEMINI_API_KEY` or
-`MISTRAL_API_KEY` for the opt-in development authors. A Gemini key must come
-from a paid-tier project, because free-tier terms let Google use submitted
-content. Each key is sent only to its own provider.
+The CLI reads provider keys from the environment. Each key is sent only to its
+own provider.
+
+| Variable            | Provider  | Needed for                                              |
+| ------------------- | --------- | ------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic | Claude authors and critics                              |
+| `OPENAI_API_KEY`    | OpenAI    | GPT critics                                             |
+| `DEEPINFRA_API_KEY` | DeepInfra | The GLM development author                              |
+| `GEMINI_API_KEY`    | Google    | The Gemini development author, from a paid-tier project |
+| `MISTRAL_API_KEY`   | Mistral   | The Mistral development author                          |
 
 ## Autopilot
 
-By default a review pauses for you whenever the critic reports a blocking
-finding, so you decide each finding before the next revision. Autopilot is a
-workspace setting, off by default in the desktop and the CLI and on for a new
-hosted workspace, that runs the author/critic/revise loop through to the
-workspace's maximum rounds instead. The author revises from every critic
-finding, blocking or warning, on its own.
-
-An autopilot review still pauses early when:
-
-- the draft is ready;
-- the same blocking finding persists for two rounds in a row;
-- a claim is disputed;
-- a blocking factuality finding says the draft contradicts your materials, such
-  as a date or metric that disagrees with the source;
-- a provider or validation error stops a step, as without autopilot.
-
-The last round always ends in review, and approval and export stay with you.
-**Run details** says which of these stopped the run; a pause on a disputed
-claim or a factuality finding reads "Paused: autopilot found a conflict only
-you can settle".
-
-Turn it on in the desktop with the **Autopilot** checkbox in an application's Review step
-or in **Run progress** (in **Run details** once the run stops executing). In the CLI, pass `--autopilot` to `init`, or switch an
-existing workspace:
+By default, a review pauses whenever the critic reports a blocking finding, so
+you decide each finding before the next revision. With **autopilot**, the
+author revises from every finding, blocking or warning, and the loop runs to
+the workspace's maximum rounds. Autopilot is off by default in a CLI workspace,
+and on for a new hosted workspace.
 
 ```sh
 pnpm --filter @draft-loop/cli start autopilot on ./workspace
 pnpm --filter @draft-loop/cli start autopilot off ./workspace
 ```
 
-The setting applies from the next run action, including **Request revision** on
-a run already awaiting approval.
+You can also pass `--autopilot` to `init`. The setting applies from the next
+run action, including **Request revision** on a run that is awaiting approval.
+**On screen**, the **Autopilot** checkbox is in an application's Review step and
+in **Run progress**, or in **Run details** once the run stops.
+
+An autopilot review still pauses early when:
+
+- the draft is ready
+- the same blocking finding persists for two rounds in a row
+- a claim is disputed
+- a blocking factuality finding says the draft contradicts your materials, such
+  as a date or metric that disagrees with the source
+- a provider or validation error stops a step
+
+The last round always ends in review, and approval and export stay with you. A
+pause on a disputed claim or a factuality finding reads "Paused: autopilot
+found a conflict only you can settle".
 
 ### Stop and pause reasons
 
-The review states why the loop stopped or paused, in **Run details** and in the
-footer:
+**Run details** and the review footer say why the loop stopped or paused. The
+CLI run output shows the raw reason after `stop=`.
 
-- **Stopped: author and critic agree it's ready** (`consensus-ready`): the draft
-  is ready and the blocking findings from the previous round are resolved.
-- **Paused: the same blocking finding persisted for two rounds — decide it to
-  continue** (`persisting-findings`): the same finding blocked two rounds in a
-  row, with or without autopilot. Only an exact match counts; the footer line
-  clears once you decide the finding. The CLI run output shows the raw reason
-  after `stop=`.
+| Reason                | Shown as                                                                           | Meaning                                                                                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `consensus-ready`     | Stopped: author and critic agree it's ready                                        | The draft is ready, and the previous round's blocking findings are resolved.                                                                             |
+| `persisting-findings` | Paused: the same blocking finding persisted for two rounds — decide it to continue | The same finding blocked two rounds in a row, with or without autopilot. Only an exact match counts. The footer line clears once you decide the finding. |
 
 ## Applications
 
-A workspace is the candidate's home, and each job is an *application* inside
+A workspace is the candidate's home, and each job is an **application** inside
 it ([ADR 0010](../adr/0010-workspace-as-candidate-home.md)). An application has
-a name, a job source, and its own opportunity briefs, runs and exports. Its
-status is derived from them, never stored:
+a name, a job source, and its own briefs, runs and exports. Its status is
+derived from them, never stored:
 
-| Status      | Meaning                                                          |
-| ----------- | ---------------------------------------------------------------- |
+| Status      | Meaning                                                             |
+| ----------- | ------------------------------------------------------------------- |
 | `drafting`  | No run yet, or every run is still collecting, ingesting or drafting |
-| `in-review` | A run is past drafting, including paused, stopped or out of budget |
-| `approved`  | A run was approved                                               |
-| `exported`  | An export completed                                              |
-
-An existing workspace is read as one **default** application (id `default`)
-built from its configured `job.md`, named after that file's first Markdown
-heading, or "Default application" when it has none, until it is renamed. Its
-existing runs, briefs and exports belong to it, and listing it writes nothing. A
-run or brief with no application also belongs to the default application.
+| `in-review` | A run is past drafting, including paused, stopped or out of budget  |
+| `approved`  | A run was approved                                                  |
+| `exported`  | An export completed                                                 |
 
 ```sh
 pnpm --filter @draft-loop/cli start application list ./workspace
@@ -284,114 +393,77 @@ pnpm --filter @draft-loop/cli start application create ./workspace \
 pnpm --filter @draft-loop/cli start start ./workspace --application app-0123456789ab
 ```
 
-- **Name.** Trimmed, 1 to 120 characters. Add `--json` to either command for
-  machine-readable output.
-- **Job file.** `--job-file` is referenced, not copied. `--job-text` is stored
-  in the workspace at `.draft-loop/applications/<id>/job.md`.
-- **Runs.** `start --application <id>` reads that application's job and binds
-  the run to it. Without the option the run belongs to the default application.
-- **Briefs.** `opportunity create --application <id>` binds the new brief to
-  that application. Without the option the brief belongs to the default
-  application.
-- **Service only.** The application service (`createApplication`,
-  `listApplications`, `getApplication`, `importApplication`,
-  `renameApplication`, `archiveApplication`, `deleteApplication`) also accepts an approved URL as a job
-  source. A URL application
-  starts a run only with a reviewed opportunity brief, and a brief belonging to
-  another application is refused.
+| Topic      | Rule                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name       | Trimmed, 1 to 120 characters.                                                                                                                                                                                                   |
+| Job file   | `--job-file` is referenced, not copied. `--job-text` is stored at `.draft-loop/applications/<id>/job.md`.                                                                                                                       |
+| URL source | The application service also accepts an approved URL as a job source. A URL application starts a run only with a reviewed brief.                                                                                                |
+| Runs       | `start --application <id>` reads that application's job and binds the run to it. Without the option, the run belongs to the default application.                                                                                |
+| Briefs     | `opportunity create --application <id>` binds the brief. Each application keeps its own latest and reviewed brief, and editing or reviewing another application's brief is refused.                                             |
+| Model pair | A created application can hold its own pair from two different companies. Its new runs use and record that pair, even when a start names the workspace's applied profiles. Switching to it asks for transmission consent again. |
 
-A created application can also hold its own model pair: exact author and critic
-model profiles from two different companies. Its new runs use and record that
-pair instead of the workspace's, even when a start names the workspace's applied
-profiles, and a resumed run keeps the pair it recorded. Its review state and
-provider-transmission consent follow the pair, so switching to it asks for
-consent again. The default application always uses the workspace's pair.
+**The default application.** An existing workspace reads as one application
+with the id `default`, built from its configured `job.md`. It is named after
+that file's first Markdown heading, or "Default application" when there is
+none. Its runs, briefs and exports belong to it, as does any run or brief with
+no application. It always uses the workspace's pair, and listing it writes
+nothing.
 
-Briefs belong to applications. `opportunity.create`, `opportunity.latest`,
-`opportunity.edit` and `opportunity.review` accept an optional `applicationId`.
-Each created application keeps its own latest and reviewed brief, and an edit
-or review of another application's brief is refused. Without an `applicationId`
-the default application keeps the workspace's own latest and reviewed brief.
-
-The bridge exposes `application.list`, `application.get`,
-`application.create`, `application.import`, `application.archive` (with
-`archived: true` or `false`), `application.delete` and `application.set-models`
-(with `modelProfiles: { author, critic }` profile references, or `null` to use
-the workspace's pair again). `application.create` takes the job
-as `jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `application.import`
-takes only the workspace id: the host shows the folder picker, so no path crosses
-the bridge in either direction. Results carry the name, job source kind,
-status, timestamps, run, brief and export counts, the latest run id, when it
-was archived and its own model pair, never a
-path, URL or job text. An import also returns content-free counts of what it
-copied. `review.load`, `review.dispatch` and `run.start` accept an
-optional `applicationId`.
+**On screen**, the web screen reaches the same service through its bridge. Its
+commands include `application.list`, `get`, `create`, `archive`, `rename` and
+`set-models`. `application.create` takes the job as `jobText`, or as a
+`jobUrl` with `jobUrlApproved: true`. `set-models` takes
+`modelProfiles: { author, critic }`, or `null` to use the workspace's pair
+again. Results carry counts, status and timestamps, never a path, URL or job
+text.
 
 ### Importing a workspace
 
-Before applications, one workspace held one job. **Import from another
-workspace** on Home, or `application import` in the CLI, brings such a workspace
-into the current one as a new application:
+Before applications existed, one workspace held one job.
+`application import` brings such a workspace into the current one as a new
+application:
 
 ```sh
 pnpm --filter @draft-loop/cli start application import ./home-workspace \
   --from ./hc4 --name "Hc4, Platform Engineer"
 ```
 
-- **What to choose.** The other workspace's folder, the same folder you would
-  open in DraftLoop. An application has no folder or address of its own, so
-  there is nothing else to pick.
-- **Name.** Defaults to the source workspace's display name in the desktop, then
-  to the job's first Markdown heading, then to the folder name.
-- **What is copied.** The job description (stored in this workspace like pasted
-  text), every opportunity brief version, every run with its rounds, executions,
-  findings, decisions, artifact versions, snapshots and event log, and each
-  completed export with its file (copied to `exports/<application id>/`). The
-  application's status is derived from them as usual.
-- **Ids.** Run, brief, export, artifact and context ids and brief versions are
-  kept exactly. Runs are written with this workspace's id, so they read as its
-  own; the workspace id inside a stored snapshot is rewritten and nothing else.
-  The pinned profile and brief references inside a run stay as they were, as
-  history. If an id already exists in this workspace, the import is refused
-  before anything is written; ids embed a timestamp or a UUID, so this only
-  happens for a copied workspace folder.
-- **Source.** Opened read only and never changed. Only its default application is
-  imported, that is the runs and briefs that belong to no application.
-- **Not imported.** Profiles (this workspace's own profile stays the one reused),
-  evidence sources and chunks, writing policy versions, and desktop review
-  overrides. A completed export whose file is missing is skipped and counted.
-- **Idempotency.** The application id is derived from the source workspace id and
-  the import is recorded as an `application.imported` audit event. Importing the
-  same source again is refused ("already imported"). An interrupted import leaves
-  its runs inside the new application, never in the default one, and running it
-  again resumes it.
-- **Refusals.** A folder that is not a DraftLoop workspace, the current
-  workspace itself, and a workspace without a job description are refused with a
-  sentence that names no path.
+| Topic          | Rule                                                                                                                                                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What to choose | The other workspace's folder.                                                                                                                                                                                                            |
+| Name           | Defaults to the job's first Markdown heading, then to the folder name.                                                                                                                                                                   |
+| What is copied | The job description, every brief version, and every run with its rounds, executions, findings, decisions, artifact versions, snapshots and event log. Each completed export is copied with its file, to `exports/<application id>/`.     |
+| Not copied     | Profiles (this workspace's own profile is reused), evidence sources and chunks, writing policy versions, and review overrides. A completed export whose file is missing is skipped and counted.                                          |
+| Ids            | Run, brief, export, artifact and context ids are kept exactly. Runs take this workspace's id, so they read as its own. Pinned profile and brief references inside a run stay as history.                                                 |
+| Collisions     | An id that already exists here refuses the import before anything is written. Ids embed a timestamp or a UUID, so this only happens with a copied workspace folder.                                                                      |
+| Source         | Opened read-only. Only its default application is imported.                                                                                                                                                                              |
+| Repeats        | The application id derives from the source workspace id, and the import is recorded as an `application.imported` event. Importing the same source again is refused ("already imported"). Running an interrupted import again resumes it. |
+| Refusals       | A folder that is not a workspace, the current workspace, and a workspace without a job description. The message names no path.                                                                                                           |
+
+The `draft-loop server import` command, which moves v0.8 desktop workspaces to
+a server, is a different command. It is covered in the
+[self-hosted guide](../operations/self-hosted.md#coming-from-the-desktop-app).
 
 ### Renaming
 
-Any application can be renamed, the default one included:
+Any application can be renamed, including the default one:
 
 ```sh
 pnpm --filter @draft-loop/cli start application rename default "Acme, Staff Engineer" ./workspace
 ```
 
-- **Name.** Trimmed, 1 to 120 characters, as when creating one. A created
-  application's name changes on its own record. The default application's name is
-  derived from `job.md`, so the chosen name is stored beside it in the history.
-- **Desktop.** Rename in place, as for the workspace: double-click the name on the
-  application's page, or use the pencil beside it there or on its Home card. Enter
-  or leaving the field saves, and Escape cancels.
-- **Naming nudge.** Until the default application has a chosen name, its page and
-  its Home card ask for one. When its newest brief names the role or the employer,
-  the page offers "Role at Employer" as one click. Keeping the current name also
-  counts as choosing it and ends the nudge.
+- **Name rules** are the same as for creating one.
+- **The default application's name** comes from `job.md`, so a chosen name is
+  stored beside it in the history.
+- **On screen.** Double-click the name on the application's page, or use the
+  pencil there or on its Home card. Enter or leaving the field saves, and
+  Escape cancels.
+- **Naming nudge.** Until the default application has a chosen name, its page
+  and Home card ask for one. When its newest brief names the role or employer,
+  the page offers "Role at Employer" in one click. Keeping the current name
+  ends the nudge.
 
 ### Archiving and deleting
-
-Archive an application to take it off the main list. Nothing it holds changes,
-and it can be restored at any time:
 
 ```sh
 pnpm --filter @draft-loop/cli start application archive app-0123456789ab ./workspace
@@ -399,55 +471,46 @@ pnpm --filter @draft-loop/cli start application restore app-0123456789ab ./works
 pnpm --filter @draft-loop/cli start application delete app-0123456789ab ./workspace
 ```
 
-- **Archive.** Any application can be archived, the default one included. It is
-  still listed (`application list` marks it `(archived)`), can still be opened,
-  and keeps its runs, briefs and exports.
-- **Delete.** Only a created application with no runs, briefs or exports can be
-  deleted. It is removed with its stored job text; a referenced job file is left
-  in place. Runs and briefs are kept as history, so an application that holds
-  any is refused with "can only be archived". The default application is the
-  workspace's own job and is never deleted.
-- **Desktop.** Home asks for confirmation before deleting, naming the
-  application.
+- **Archive** takes any application off the main list, including the default
+  one. Nothing it holds changes. `application list` marks it `(archived)`, and
+  it can still be opened or restored.
+- **Delete** only works on a created application with no runs, briefs or
+  exports. It removes the stored job text, but leaves a referenced job file in
+  place. An application that holds history is refused with "can only be
+  archived".
+- **The default application** is the workspace's own job and is never deleted.
 
 ## Compacting run history
 
-Workspaces created before run snapshots became slim keep a full copy of each
-run's draft and steps in every snapshot row and audit event, which can grow a
-history file to gigabytes. Compaction rewrites that history to the slim shape:
+Workspaces created before slim run snapshots keep a full copy of each run's
+draft in every snapshot and audit event. Their history file can grow to
+gigabytes. Compaction rewrites it to the slim shape:
 
 ```sh
 pnpm --filter @draft-loop/cli start workspace compact ./workspace --yes
 ```
 
-- **Backup first.** The command refuses without `--yes`. It then copies
-  `.draft-loop/history.sqlite` to `history.sqlite.pre-compaction-<UTC time>`
-  beside it and checks the copy. Delete the backup yourself once you are
-  satisfied; it needs as much disk space as the history had.
-- **Refusals.** It refuses while a run is working, when the audit chain does
-  not verify, or when the disk cannot hold the backup and the working copy.
-  Any failure leaves the history file as it was.
-- **What changes.** The live file is never edited. A copy is rewritten, then
-  checked: its audit chain verifies, and every run and snapshot reads back equal
-  to the original. Only then does it replace the history file. The new chain's
-  `workspace.history-compacted` event records the old chain's head checksum, the
-  backup's file name and the sizes. The old chain survives whole in the backup.
-- **Output.** The command prints the sizes before and after (`--json` for
-  machine-readable output).
-- **Desktop.** **Compact run history** in Home's Workspace settings asks for
-  confirmation, stating that a backup is kept, then shows the same sizes. It is
-  disabled while a run is working.
+1. **Backup.** The command refuses without `--yes`. It copies
+   `.draft-loop/history.sqlite` to `history.sqlite.pre-compaction-<UTC time>`
+   and checks the copy. The backup needs as much disk space as the history.
+2. **Rewrite and check.** It rewrites a working copy, never the live file.
+   The copy's audit chain must verify, and every run and snapshot must read back
+   equal to the original.
+3. **Swap.** Only then does the copy replace the history file. A
+   `workspace.history-compacted` event records the old chain's head checksum,
+   the backup's name and the sizes.
+4. **Output.** It prints the sizes before and after.
+
+It refuses while a run is working, when the audit chain does not verify, or
+when the disk cannot hold the backup and the copy. Any failure leaves the
+history as it was. Delete the backup yourself once you are satisfied.
 
 ## Opportunity briefs
 
-The `opportunity` command group creates and reloads one durable brief, lists
-its immutable versions, and creates edited or reviewed successors. Creation
-reads a JSON manifest containing an `id` and ordered `sources`; local-file
-paths exist only in that runtime input. Add `--allow-provider-data` only when
-the source text may be sent to the configured author model for structured
-extraction. A fixture workspace always extracts with its local fixture
-extractor, which reaches no provider, so it needs no flag; the hosted service's
-fixture workspaces extract the same way.
+A **brief** is the reviewed version of a job post: its role, requirements,
+priorities and responsibilities, each citing its source. The `opportunity`
+group creates one brief, lists its immutable versions, and creates edited or
+reviewed successors.
 
 ```sh
 pnpm --filter @draft-loop/cli start opportunity create ./workspace \
@@ -466,460 +529,180 @@ pnpm --filter @draft-loop/cli start start ./workspace \
   --allow-provider-data
 ```
 
-In the desktop, the application's **Job & requirements** step offers **Extract
-requirements** when the application has a job description and no reviewed brief
-is selected. It asks for consent first, naming the configured writing model and
-saying that only the job description is sent, never career evidence. **Extract**
-then creates a draft brief from the application's own job document with the same
-structured extraction. The host reads that document itself, so no file dialog
-or path is involved, and a document over the 64 KiB limit fails with a message.
-The step shows the draft brief ID, version, requirement and responsibility
-counts, and any open extraction issues. While extraction runs, **Cancel**
-aborts the provider request and saves no brief; the step returns to idle with
-"Extraction cancelled. No brief was saved." The draft cannot start a run until
-it is reviewed.
+- **Input.** `create` reads a JSON manifest with an `id` and ordered `sources`.
+  Local file paths exist only in that input.
+- **Provider data.** Add `--allow-provider-data` only when the source text may
+  go to the configured author model for structured extraction.
+- **Fixture workspaces** always extract with their local fixture extractor.
+  This reaches no provider and needs no flag, and the hosted service's fixture
+  workspaces do the same.
 
-For a job page address or saved job page, extraction reads only that page:
+### Extracting requirements
 
-- **JobPosting data first.** When the page carries schema.org `JobPosting`
-  data, which most job boards publish for search engines, DraftLoop reads the
-  job from it: the title and company as a heading, then the description with
-  its headings and list items kept. This is what makes pages rendered by
-  JavaScript readable. No other address is fetched. The brief's source
-  provenance records this origin, and its review says "Read from the page's job
-  posting data."
-- **Too little text.** A page that yields under 400 characters of job text
-  fails before anything is sent to a provider, and no brief is saved: "DraftLoop
-  could not read enough job text from this page. It may show the job only with
-  JavaScript. Paste the job text instead."
-- **Garbled text.** For any job-posting source, typographic ligatures such as
-  "ﬁ" and "ﬂ" are expanded before extraction. Text with at least 30 Latin-script
-  words of which a quarter or more are implausible (such as "FsaocG" or
-  "ViHHG", as a broken PDF text layer produces) fails before anything is sent:
-  "The job text looks garbled, so DraftLoop did not extract requirements from
-  it. Import the job again from the original PDF, or paste the job text from
-  the careers page." Camel-case names such as "JavaScript" and all-capital
-  acronyms count as plausible.
-- **No requirements found.** If extraction returns no requirements, the step
-  says "No requirements were found in this job text" and offers **Extract
-  again** instead of a review. The empty draft keeps offering extraction after
-  a restart, and the start checklist offers **Extract requirements again**.
+**On screen**, the application's **Job & requirements** step offers **Extract
+requirements** when the application has a job and no reviewed brief is
+selected. It first asks for consent, naming the writing model, and says that
+only the job description is sent. **Cancel** stops the provider request and
+saves no brief.
 
-The step also shows the application's latest brief as "Requirements brief vN
-(draft)" or "(reviewed)", so an unreviewed draft can be reopened with **Review
-requirements** after the app restarts; a reviewed brief offers **View
-requirements**. The host remembers only the brief ID for this.
+For a job page address or a saved job page, extraction reads only that page:
 
-**Review requirements** opens the brief with each requirement's text, priority
-(critical, high, medium or low) and source, plus the responsibilities. Sources
-carry plain labels such as "Job posting", "Job page" or "Pasted job text"; the
-dialog shows no internal brief or source ids.
+| Case                                      | What happens                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The page has schema.org `JobPosting` data | DraftLoop reads the job from it: title and company as a heading, then the description with its headings and lists. This makes pages rendered by JavaScript readable. No other address is fetched, and the review says "Read from the page's job posting data."                                                                       |
+| Under 400 characters of job text          | Fails before any provider call, and no brief is saved: "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead."                                                                                                                                              |
+| Garbled text                              | Ligatures such as "ﬁ" are expanded first. Text with at least 30 Latin-script words, a quarter or more of them implausible (such as "FsaocG" from a broken PDF), fails before any provider call: "The job text looks garbled, so DraftLoop did not extract requirements from it. …" Camel-case names and acronyms count as plausible. |
+| No requirements found                     | The step says "No requirements were found in this job text" and offers **Extract again**. The start checklist offers **Extract requirements again**.                                                                                                                                                                                 |
+| A job document over 64 KiB                | Fails with a message.                                                                                                                                                                                                                                                                                                                |
 
-Where the extraction found one, each requirement and responsibility also shows
-the exact job-text quotation it came from under "From the job text". The
-application keeps a quotation only after checking that it appears, ignoring
-whitespace differences, in a source the entry cites and is at most 300
-characters; otherwise it is left out rather than corrected. Briefs saved before
-this check have no quotations and stay valid. Editing a requirement's wording
-keeps its quotation.
+A draft brief cannot start a run until it is reviewed. The step shows the
+latest brief as "Requirements brief vN (draft)" or "(reviewed)". **Review
+requirements** reopens a draft after a restart, and **View requirements** opens
+a reviewed one.
 
-While the version is a draft, edit a requirement's text, change its priority,
-drop it, restore it, or acknowledge an open issue, then **Save changes** to
-create the next draft version. The dialog stays open on the new version and
-says "Saved as draft vN", so **Mark reviewed** is one click away. Saving uses
-the version you read, and a version conflict reloads the latest one. Requirements cannot be added by hand, because
-every requirement must cite a source.
+### Reviewing a brief
 
-When the job posting names no employer, the brief shows "Not named in the job
-posting" and, while you edit it, an employer field marked "Entered by you".
-What you type is saved as your own entry on a source of its own, never as
-something the job posting says, and the brief then shows "Entered by you" beside
-it. The field appears only while the brief has no employer; an employer the
-posting names is not overwritten. A missing employer does not block review. The
-author's job context says "Employer: not named in the job posting", or
-"Employer: Name (entered by the candidate)" for an entry.
+**Review requirements** shows each requirement's text, priority (critical,
+high, medium or low) and source, then the responsibilities. Sources carry plain
+labels such as "Job posting" or "Pasted job text", never internal ids.
 
-**Mark reviewed** creates the immutable reviewed version once the brief has a
-role, at least one requirement and no open issues. While it is disabled, the
-reason appears beside it, such as "Acknowledge or resolve the open issue
-first." A reviewed version is read-only; **Edit** and **Save as new draft**
-create a draft successor that must be reviewed again.
+- **Quotations.** Each entry shows the job text it came from under "From the
+  job text". A quotation is kept only if it appears in a cited source, ignoring
+  whitespace, and is at most 300 characters. Otherwise it is left out, not
+  corrected.
+- **Editing a draft.** You can edit a requirement's text, change its priority,
+  drop or restore it, or acknowledge an issue. **Save changes** creates the next
+  draft, and the dialog says "Saved as draft vN". A version conflict reloads the
+  latest version.
+- **No hand-added requirements.** Every requirement must cite a source.
+- **Missing employer.** The brief shows "Not named in the job posting". While
+  you edit, an employer field marked "Entered by you" appears. Your entry is
+  saved as your own, on a source of its own, and never overwrites an employer
+  the posting names. It does not block review.
+- **Mark reviewed** needs a role, at least one requirement and no open issues.
+  While it is disabled, the reason appears beside it. A reviewed version is
+  read-only, and **Edit** creates a draft successor.
 
-When the latest brief is reviewed, the **Job & requirements** step shows
-"Using reviewed requirements: brief vN · R requirements · C critical · P
-responsibilities" and starts the run with that exact version. **Use the raw job description instead**
-starts without the brief; the local parser, including its refusals, then
-applies. If the policy override selected for the run belongs to the reviewed
-brief, starting from the raw job description is refused. A run's preflight
-states the source: "Requirements: reviewed opportunity brief ID vN (R
-requirements)" or "Requirements: job description (unreviewed source units)".
-A reviewed brief's responsibilities are checked like requirements, at medium
-priority after the extracted requirements, so coverage and critique ask for
-them and the preflight count includes them. The relevance score is weighted
-over the brief's own requirements only, so an unmet responsibility shows in
-coverage without holding back approval. A responsibility that repeats a
-requirement's ID or wording is left to that requirement.
+### Starting a run with a brief
 
-The review screens keep the two kinds apart (#1857). The start dialog reads
-"Reviewed brief vN · R requirements · P responsibilities", the Coverage tab
-reads "Coverage · 0/9 + 2/4" with a tally line for each kind, a
-responsibility's row is tagged as one, and a relevance blocker says it is
-scored over the R requirements, not the P responsibilities.
+When the latest brief is reviewed, the step shows "Using reviewed requirements:
+brief vN · R requirements · C critical · P responsibilities". The run starts with
+that exact version.
 
-`start` accepts each brief or candidate-profile ID and version only as a pair.
-Each selected version must already be reviewed. DraftLoop verifies and pins
-the exact immutable versions and their checksums in run context; later edits do
-not change a started or resumed run. A run with a pinned profile re-verifies
-its checksum at start and resume, and its evidence leads with the profile's
-grounded facts ([fact-first retrieval](../architecture/candidate-evidence.md#canonical-candidate-profile-contract)). Starts that predate canonical profiles
-remain supported without a profile selection.
+- **Exact versions.** `start` takes each brief or profile id and version only as
+  a pair, and both must be reviewed. DraftLoop pins the versions and their
+  checksums in the run, so later edits do not change it.
+- **Profile check.** A pinned profile's checksum is checked again at start and
+  resume. Its grounded facts lead the evidence
+  ([fact-first retrieval](../architecture/candidate-evidence.md#canonical-candidate-profile-contract)).
+- **Preflight.** The preflight names the source: "Requirements: reviewed
+  opportunity brief ID vN (R requirements)" or "Requirements: job description
+  (unreviewed source units)".
+- **Responsibilities** are checked like requirements, at medium priority, so
+  coverage and critique ask for them. The relevance score counts only the
+  brief's requirements, so an unmet responsibility shows in coverage without
+  blocking approval. The screens keep the two apart, as in "Coverage · 0/9 +
+  2/4" (#1857).
+- **Raw job description.** **Use the raw job description instead** starts
+  without the brief. It is refused when the run's policy override belongs to
+  the reviewed brief.
 
-Without a reviewed opportunity brief, a local job document supplies complete
-list items and paragraphs with neutral priority. Markdown headings are excluded,
-wrapped lines are joined, and later units are retained. These are syntactic
-source units, not reviewed job criteria: use an opportunity brief to select
-requirements and priorities before interpreting relevance as job fit. Local
-input limits are 64 KiB, 100 units, and 2,000 characters per unit; overflow,
-code fences, and tables require a reviewed brief instead of silent truncation.
-A unit longer than 40 meaningful tokens is also refused at start, before any
-provider call, because no CV block could cover half of it. This happens when a
-web page is pasted with its navigation and biographies: list each requirement
-as its own bullet line, remove boilerplate, or use a reviewed brief. The CLI
-and desktop show the message.
+### Without a brief
 
-Deterministic relevance uses lexical overlap within individual CV blocks: at
-least half of a requirement’s meaningful tokens must appear in one block.
-Words scattered across unrelated blocks cannot jointly satisfy a requirement.
-Three narrow rules refine that match. Explicit degree entries answer standalone
-computer-science/quantitative degree requirements while coursework and negated
-or unfinished credentials are rejected; the degree clause is read on its own, so
-`MSc in Computer Science; training in secure development.` still answers the
-requirement. A requirement listing permitted
-alternatives, such as `Prometheus or OpenTelemetry`, is satisfied by a block
-naming one of them, with any surrounding condition still required. A stated
-maturity qualifier, such as `early-stage`, must appear in the matching block
-and is never inferred from headcount, funding, or the word `startup`. See the
-[coverage contract](../architecture/drafting-and-review.md#degree-coverage). Other equivalent
-phrasing can still be missed, including inflected forms such as `implemented`
-for `implement`, and these signals do not establish semantic coverage or verify
-a credential.
+Without a reviewed brief, the local job document supplies source units. These
+are complete list items and paragraphs, at neutral priority. They are syntactic
+units, not reviewed criteria, so use a brief before reading relevance as job
+fit.
+
+| Limit                      | Value  |
+| -------------------------- | ------ |
+| Document size              | 64 KiB |
+| Units                      | 100    |
+| Characters per unit        | 2,000  |
+| Meaningful tokens per unit | 40     |
+
+- **Over a limit.** A document over a limit, or one with code fences or tables,
+  is refused at start, never truncated.
+- **Long units.** A unit over 40 meaningful tokens is refused before any
+  provider call, because no CV block could cover half of it. This usually means
+  a web page was pasted with its navigation. List each requirement on its own
+  line, or use a brief.
+- **Parsing.** Headings are excluded, wrapped lines are joined, and later units
+  are kept.
+
+### How relevance is matched
+
+Deterministic relevance uses lexical overlap inside one CV block. At least half
+of a requirement's meaningful tokens must appear in that block, so words
+scattered across blocks cannot satisfy it. Three rules refine the match:
+
+- **Degrees.** An explicit degree entry answers a computer-science or
+  quantitative degree requirement. Coursework and unfinished or negated
+  credentials do not. The degree clause is read on its own, so
+  `MSc in Computer Science; training in secure development.` still counts.
+- **Alternatives.** `Prometheus or OpenTelemetry` is satisfied by a block that
+  names one of them, and any surrounding condition is still required.
+- **Maturity.** A qualifier such as `early-stage` must appear in the block. It
+  is never inferred from headcount, funding or the word `startup`.
+
+Other equivalent phrasing can be missed, including inflections such as
+`implemented` for `implement`. These signals do not prove semantic coverage or
+verify a credential. See the
+[coverage contract](../architecture/drafting-and-review.md#degree-coverage).
+
+## Review and approval
+
+Above the approval gate, a reviewed draft shows one verdict: **Ready to send**,
+or **Not ready to send yet** with its reasons. The reasons are:
+
+- unresolved blocking findings
+- final-check blockers
+- the critic's unresolved editorial warnings: copied source notes or
+  narration, fragments, negative asides, and job-relevant evidence left out
+
+Editorial warnings alone never block approval. A rubric blocker shows its score
+and the required threshold. That score is a check result, not a confirmed gap,
+because token matching can miss equivalent phrasing. Accepting a finding does
+not change coverage or bypass the gate.
+
+### Editing the draft
+
+Text you change in the review is part of what you approve. Approving creates
+the next version with your edits, runs the final checks on it again, and
+exports that version. The critic has not reviewed your wording.
+
+- **Saving.** Each line saves when you pause typing or leave it, and **Approve**
+  waits while an edit saves. Edited lines keep an **edited** mark.
+- **When you can edit.** The draft is read-only while a round runs and once it
+  is approved (#1925).
+- **Edits can fix failed checks.** With edits, **Approve** stays available even
+  when the final checks failed, since your edits may fix them. The usual case is
+  replacing header placeholders such as `[Your name]`, which block approval
+  (#1902). The footer reads "Approving checks your edits again".
+- **When edits still fail.** If the edited version fails, nothing is saved and
+  the footer names the checks. Change the edits, or approve with an override
+  (#1939).
+
+### Approving with an override
+
+Once blocking findings are resolved, you can approve a draft whose final checks
+fail. Type a reason and choose **Approve with override**, or run:
+
+```sh
+pnpm --filter @draft-loop/cli start approve ./workspace --override-final-checks "Checked by hand"
+```
+
+The reason and the blocker codes it covers are bound to that exact artifact and
+recorded in the run history. Export accepts only that recorded override. This
+keeps a review finishable at the round limit, when **Request revision** is
+unavailable.
 
 ## Candidate profiles
 
-The `profile` command group derives a canonical candidate profile from the
-workspace's configured CKB selection, reloads exact or latest versions, and
-creates immutable edited or reviewed successors. Derivation is the only
-provider-backed operation and requires `--allow-provider-data`; the other
-commands operate on workspace-local history. Profile commands never accept a
-CKB store root. A draft can become reviewed, and a reviewed version can enter a
-new run, only while its exact CKB selection still matches the workspace's
-current lifecycle-ready selection. Historical profile versions and existing
-run/export records remain available for audit after lifecycle changes.
-
-Application consumers can omit `profileId` when listing profile versions to
-load every complete history in the workspace, ordered by profile name and
-version. The catalog is bounded to 256 profile names and fails closed when
-larger; supplying a name keeps the existing exact-history behavior.
-
-The desktop's optional **Existing reviewed profiles** picker loads the exact
-reviewed version locally; it does not derive or transmit candidate material.
-Source compatibility is checked again before starting a review. Older hosts
-without the catalog capability retain the profile-name and history controls.
-
-When a workspace opens, the desktop lists its saved profiles, drafts included,
-in a **Saved profiles** picker (newest first, showing version and status) and
-loads the most recent one locally if no profile name is entered. Dismissing the
-native folder dialog for **Open knowledge store** is not an error and shows no
-message.
-
-Before approval, the desktop can show blockers from the readiness decision
-persisted for the exact artifact. A rubric blocker includes its recorded score
-and required threshold. The score is a check result, not a confirmed candidate
-gap; token matching can miss equivalent phrasing. Accepting a finding does not
-change coverage or bypass the gate. Review requirements and coverage evidence;
-readiness can remain blocked after a revision or new run.
-
-Above the gate, a reviewed draft that is not yet approved shows one verdict:
-**Ready to send**, or **Not ready to send yet** followed by its reasons. The
-reasons are the unresolved blocking findings, the final-check blockers, and the
-critic's unresolved editorial warnings by kind: copied source notes or
-narration, fragments, negative asides, and job-relevant evidence left out.
-Editorial warnings alone never block approval.
-
-Text you change in the review is part of what you approve. Approving makes the
-next version with your edits, runs the final checks again on it, and exports
-that version; the critic has not reviewed your wording. Edited lines keep an
-**edited** mark in the review, before and after approval.
-
-Each line saves once you pause typing or leave it, and **Approve** waits while
-an edit is saving. Edit before you approve: the draft is read-only while a
-round runs and once it is approved (#1925).
-
-With edits, **Approve** stays available even when the final checks failed on
-the reviewed version, since your edits may fix them: replacing the header's
-placeholders such as `[Your name]`, which block approval (#1902), is the usual
-case. Until then the footer reads "Approving checks your edits again", followed
-by what failed before them, rather than "Not ready". If the edited version
-still fails, nothing is saved and the footer names the checks once; change the
-edits or approve with an override (#1939).
-
-Once blocking findings are resolved, you can still approve a draft whose final
-checks fail. Type a reason and press Enter or choose **Approve with override**,
-or run `draft-loop approve --override-final-checks "<reason>"`. The reason and the
-blocker codes it covers are bound to that exact artifact and recorded in the run
-history, and export accepts only that recorded override. This keeps a review
-finishable at the round limit, when **Request revision** is unavailable.
-
-Extraction produces entry-level facts: one fact per achievement bullet, degree,
-certification, language, or skill group, with its numbers and context kept
-together in the value and the exact source text of that entry as evidence. An
-entry is not split into separate project, metric, or technology facts, and
-achievement facts do not repeat the employer, role title, or dates. Each
-employment keeps separate employer, role title, and date facts that share one
-subject.
-
-Facts with the same category, subject, field, and value found in several places
-(for example the same skill in different sections of one source) are merged into
-one fact that keeps all their sources. A possible-duplicate warning remains only
-when such facts cannot be merged because the combined sources would exceed the
-per-fact limit; different values of a single-valued field still raise a conflict.
-
-If extraction fails, it saves no facts and returns one omission issue with
-opaque source references. Recognized provider failures provide fixed action
-guidance; unrecognized errors and provider diagnostics are never shown. Input
-preparation, response format, and grounding failures have distinct messages.
-
-DeepInfra malformed-stream guidance may include up to two fixed protocol reason
-counts and a bounded remainder; it never includes chunk data, model identifiers,
-source content, or paths.
-
-DeepInfra timeout guidance distinguishes the initial response, an idle stream,
-and the total deadline; missing or conflicting phase diagnostics use generic
-timeout guidance. Idle and total timeout guidance may also state how many answer
-and reasoning characters the stream returned before stopping; the counts never
-include the text itself. Transient errors name only HTTP 500, 502, 503, or 504; other
-statuses use generic provider guidance. Older saved generic failures cannot be
-reconstructed because their timeout phase and status were not retained.
-
-An otherwise valid source-backed omission can retain its visible review warning
-when it names a fact the model did not return; only those dangling omission
-references are removed, followed by strict validation and evidence grounding.
-Dangling conflict or duplicate references and omissions without source
-references still fail without saving facts.
-Repeated model fact keys are repaired only when no issue refers to that key;
-later facts receive collision-free local identities, with all evidence still
-grounded. Issues that reference an ambiguous duplicate key remain failures.
-
-An explicit Anthropic credit-balance or enforced spending-limit response shows
-billing guidance; the app does not estimate charges from failed attempts.
-
-The desktop distinguishes a saved extraction failure, an empty profile, a draft
-that still needs human review, open issue blockers, and a reviewed version. An
-empty failed version shows one callout with up to three deduplicated, sanitized
-issue reasons; the version details only note that the failure is recorded rather
-than repeating the cause. The action is labeled **Retry profile generation**;
-the send approval beside it must be ticked again before career evidence is
-sent, and a hint says so while the approval box is unticked.
-
-While a profile is generating, the desktop shows a spinner, an elapsed timer,
-and, once the plan is known, how many parts are done (for example **1 of 4
-parts done**, then **Finishing…**); parts run in parallel, and it does not
-estimate completion time. The button reads
-**Generating…**. Large knowledge bases are processed in parts and can take
-several minutes, so keep DraftLoop open. **Cancel generation** stops further
-provider calls and saves nothing.
-
-Before retrying, follow the recorded cause and recovery guidance. Renaming the
-profile does not fix the underlying failure. Retrying sends selected material
-again and may consume provider credits.
-
-A grounding failure on a smaller input may trigger one additional full-context
-request with the same approved sources and fixed diagnostic counts. It returns a
-full replacement proposal, which must pass schema and grounding checks before any
-facts are saved. Large inputs use per-call recovery instead (see the proactive
-plan below). Failed values and quotes are not sent as feedback. This bounded
-recovery has no live-provider reliability claim.
-
-If the replacement still fails grounding, DraftLoop keeps the grounded facts and
-drops only the ungrounded ones, including any proposed issue that cites a
-dropped fact or an unknown source. It adds one open warning, with no quoted
-content, that states how many facts were dropped; acknowledge it after checking
-the profile for missing facts. An ungrounded fact is never saved. If nothing
-grounded remains, no facts are saved and the profile shows as empty rather than
-as a failed extraction.
-
-Empty profiles and drafts with open issues cannot be marked reviewed; warnings
-also block until acknowledged or resolved and saved. In the desktop app, a
-severity group with several issues offers one control that sets the status of
-every error or every warning at once. A reviewed profile is a
-human-reviewed record, not a claim of application readiness or quality.
-
-Anthropic structured output uses the SDK-normalized provider schema, while
-application schema and source-grounding checks remain authoritative. Requests
-require exact contiguous evidence quotes, unique fact and issue references,
-and grounded facts for both sides of any conflict.
-
-Extraction guidance gives each subject key one specific real-world entity and
-distinguishes attributes, events, and contexts before proposing conflicts. For
-example, separate credentials remain separate when they share an issuer, and a
-launch date differs from a publication date. The prompt still requires genuine
-disputed claims to remain conflicts without choosing an authoritative answer.
-
-Quote and value checks ignore meaning-preserving formatting on both sides:
-Markdown emphasis and inline-code markers, leading list, heading, and
-blockquote markers, link markup reduced to its text, whitespace and line
-breaks, case, and typographic quotes, dashes, and ellipses. When a quote
-matches only this way, the extractor replaces it with the exact source text it
-matched, provided that text still contains the entire fact value. Paraphrases,
-changed numbers, and elided text remain fail-closed; fact values and source
-text are not rewritten.
-
-Coverage instructions direct the extractor to scan every supplied source
-rather than return only highlights; they do not guarantee that every supported
-fact will be found. The 32,768-token ceiling applies to API-key requests for
-Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
-Canonical profile extraction uses a detached GLM profile at the same ceiling
-and requests `reasoning_effort: "none"` to disable reasoning, following
-[DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
-normal GLM author profile keeps `low` reasoning. The Gemini author route uses the same ceiling, with a
-detached extraction profile that sets `thinkingBudget: 0`. The Mistral Large 4
-author route uses the same ceiling with a detached extraction profile that sends
-`reasoningEffort: "none"`, so extraction runs without reasoning to save time and
-output budget; the review-run author keeps provider defaults. Because Mistral
-counts that hidden reasoning against the request limit, a Mistral request with
-reasoning on is sent the model's 65,536-token limit while the prompt still states
-the 32,768-token answer budget. If Mistral still stops at its limit, the error
-counts the answer and reasoning characters it returned, never the text. These settings make no speed
-or quality guarantee; user-session, local, and other model routes keep 8,192
-tokens.
-
-For more than 65,536 UTF-16 text units across one to four unique prepared
-sources, extraction proactively makes one call per source up to the window size
-and divides each larger source into contiguous windows of at most that size. The
-window size is three quarters of the call's output-token budget divided by 1.6
-(the planning ratio of output tokens per character of dense career text; Mistral
-Large 4 measured at most 1.33 on dense and 0.85 on prose synthetic text), clamped to 8,192 to 32,768
-UTF-16 units. The 8,192-token routes therefore use 8,192-unit windows and the
-32,768-token ceiling uses 15,360-unit windows. `pnpm test:profile-windows:live` checks the
-ratio on a developer machine: it extracts made-up dense and prose career text
-through the planned windows and reports each call's output tokens per character
-and any call that hit the output limit.
-The plan uses at most 96 calls and is declined if it would exceed that cap.
-
-Markdown sources are cut at ATX headings (`#` to `######`, outside fenced code)
-and whole sections are packed into windows in document order. A section larger
-than one window is split by size, and each piece also carries its heading path
-(for example `Experience > Senior Engineer at X`) as context that is never
-quotable. Text without Markdown headings is cut by size alone.
-
-Ingestion turns HTML headings (`<h1>` to `<h6>`) and DOCX heading paragraphs
-(Word heading styles or outline levels 1 to 6) into the same `#` markers, so
-those sources are cut at headings too. Stored source versions keep the text
-they were normalized with.
-
-One source may be up to 524,288 characters, the same bound as the whole
-selection, and is extracted in these bounded windows without manual splitting.
-No provider request ever carries more than 131,072 characters of one source.
-When a source above that size cannot be windowed, for example because more than
-four sources are selected, it is left out of extraction and the profile records
-a source-too-large issue naming it; sources above 524,288 characters are
-likewise reported and skipped.
-
-Each planned call sends only its own source, or only its window text with the
-source ID, media type, and the window's UTF-16 offsets and source length. Other
-sources and windows are never included. Each result is grounded as it arrives. A
-call that fails grounding gets at most one replacement for that same call with
-fixed diagnostic counts, so a plan without output-limit splits makes at most 192 calls. After a second
-failure, only that call's ungrounded facts are dropped and counted toward the
-single warning above; planned extractions never make the full-corpus replacement.
-
-Planned calls run four at a time by default (eight for Mistral) and are combined
-in plan order, so the result matches a sequential run. A call that still fails is
-retried once alone after the others finish; if it fails again the whole
-extraction fails and no partial profile is saved. While the host stays open,
-completed calls are kept in memory so a user retry re-runs only the failed ones.
-
-When a planned call fails with an output-token limit, it is not retried
-unchanged. Its window is split into two contiguous halves, cut at the Markdown
-heading nearest the middle, else the newline nearest the middle, else the exact
-middle, and each half is extracted on its own with its original source offsets
-and the parent's heading path. Halves split again up to three levels and never
-below 1,000 characters. The splits count toward the 96-call cap. A window that
-still overflows at those limits, or would exceed the cap, fails the extraction
-with the output-limit message and is not retried. Progress still counts the
-original planned calls, and a user retry reuses the halves already extracted.
-
-Cross-source conflicts and duplicates for planned extractions come from local
-detection over the aggregated facts, which depends on consistent subject naming
-across calls.
-
-For smaller inputs, an explicit output-token truncation
-can trigger one focused call per source for two to four sources; if a focused
-call also truncates, that source can be retried in four contiguous text windows.
-This fallback uses at most 21 application calls including the original request.
-Those focused calls keep the full selected source set as context.
-
-Every request keeps the same per-call token cap. These bounds make no latency or
-coverage guarantee. Results are aggregated after every call succeeds, then pass
-the existing schema and source-grounding checks before any facts are saved.
-
-One profile holds at most 2,048 facts and 1,024 review issues. When the
-aggregated calls exceed either bound, nothing is saved and the guidance names
-the bound and asks for fewer or smaller sources. When an incremental
-generation would exceed a bound after merging reused and new facts, the
-generation is recorded as a failed profile version with an error issue ("The
-profile would have more than 2,048 facts. Remove or split sources and try
-again.") instead of ending in an unexpected error.
-
-Proposal validation removes redundant entries only when failures consist solely
-of repeated evidence tuples or issue fact/source references, then reruns the full
-schema. Other schema failures reject the full proposal, so no facts are saved.
-Guidance may show bounded reason counts, such as fact values or evidence
-quotes over the 2,000-character limit, but omits values, source text, and
-paths.
-
-Automatic conflicts apply only to single-valued fields of one subject: for
-example role title, start and end dates, employment period, employer name,
-degree, institution, certification issuer and date, a contact email or phone,
-or an achievement metric. Every other field is a collection, so several
-revisions, studies, confirmations, or events for one subject are not conflicts.
-Skills and unscoped certifications are always collections. Equal values still
-merge or raise duplicate warnings. Explicitly proposed conflicts remain visible
-for every field.
-
-Exact duplicate source contents are sent once per bounded group while every
-original source version remains attached to facts as local provenance.
-
-Each fact also keeps, for every cited source version, the exact quote that
-grounded it: a verbatim contiguous span of that version's normalized text, up to
-2,000 characters. The quote is omitted when no such span can be resolved, and
-issue source references never carry quotes.
-
-### Incremental derivation
-
-Derivation extracts only new or changed sources. It reuses the facts of
-unchanged source versions from the latest profile version, then recomputes
-duplicates, conflicts, and omissions over the merged facts. Reuse needs both of
-these conditions:
-
-- The latest version records the same extraction route (provider, model, prompt,
-  and extraction profile). Older versions without a recorded route are
-  extracted in full.
-- The source version is unchanged since that version, its knowledge base was
-  filtered the same way, and no earlier extraction error cites it. Each version
-  records the sensitivity rules version and checksum applied to every knowledge
-  base and the excluded tiers. A knowledge base with rules is reused only when
-  both match the current run; older versions without this record are extracted
-  in full for knowledge bases that have rules.
-- The source's [evidence kind](#source-evidence-kind) is the one recorded for
-  its version. Changing a source's kind extracts that source again under the
-  new kind's guidance.
-
-A fact is kept only when every source it cites is unchanged; the others are
-extracted again. When nothing changed, derivation makes no provider call and
-still saves a new version. The result reports `reusedSourceCount` and
-`extractedSourceCount`. Pass `--full-extraction`, or tick **Re-extract all
-sources** in the desktop, to extract every source again.
+A **candidate profile** is a reviewed set of facts derived from the workspace's
+selected knowledge bases, each fact citing an exact quote. The `profile` group
+derives a profile, reloads versions, and creates immutable edited or reviewed
+successors.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
@@ -934,161 +717,228 @@ pnpm --filter @draft-loop/cli start profile review ./workspace \
   --profile-id default-profile --expected-version 2
 ```
 
-The packaged desktop host exposes the same five profile operations through its
-validated native capability boundary. Renderer commands use the active
-workspace identity, never accept a CKB root or open a profile-specific picker,
-and receive an explicit bounded projection of facts, issues, and opaque source
-references. The collecting workspace includes a dedicated profile surface for
-derivation approval, immutable version selection, fact-value and issue-status
-editing, review, and exact reviewed-version selection for the next run.
+- **Provider data.** Only `derive` calls a provider, and it needs
+  `--allow-provider-data`. The other commands work on local history and never
+  take a store root.
+- **Selection must match.** A draft can become reviewed, and a reviewed version
+  can enter a new run, only while its exact CKB selection still matches the
+  workspace's current ready selection. Old versions and run records stay
+  available for audit.
+- **Listing all histories.** Leaving out `profileId` lists every profile
+  history in the workspace, ordered by name and version. The list is capped at
+  256 names, and a longer list fails closed.
+- **Limits.** One profile holds at most 2,048 facts and 1,024 review issues.
+  Going over a limit saves nothing. An incremental derivation over a limit is
+  recorded as a failed version, with an issue that names the limit.
 
-When the native host advertises `workspace.configure-models`, **Change models**
-opens one editor with **Presets** and **Custom** choices. Custom settings use
-the same discovery and independence checks as before. Saving replaces the
-author and critic pair for future runs without changing the workspace name,
-round limit, or existing run records. A changed provider
-transmission identity requires fresh acknowledgement before a later run starts
-or resumes; saving settings never sends candidate material to a provider.
+### What extraction produces
 
-The native host can report which registered exact profiles the active
-workspace's configured authentication routes support. This is local metadata
-and makes no credential or provider calls. The editor's **Presets** view offers
-presets and role-specific exact profile choices when both model-configuration
-and route-support capabilities are available.
+- **One fact per entry.** Each achievement bullet, degree, certification,
+  language or skill group is one fact. Its numbers and context stay in the
+  value, and the entry's exact source text is the evidence.
+- **Employment.** Each job keeps separate employer, role title and date facts
+  for one subject. Achievement facts do not repeat them.
+- **Merged duplicates.** Facts with the same category, subject, field and value
+  merge into one fact that keeps all their sources. A duplicate warning remains
+  only when the merged sources would exceed the per-fact limit.
+- **Conflicts.** These apply only to single-valued fields of one subject, such
+  as role title, dates, employer, degree, institution, certification issuer,
+  contact email or phone, or a metric. Skills and other fields are collections.
+  Conflicts the model proposes stay visible for every field.
+- **Quotes.** Each fact keeps, for each cited source version, an exact quote of
+  up to 2,000 characters from that version's normalized text. A quote that
+  cannot be resolved is left out.
+- **Subject keys.** Each subject key names one real-world entity. Separate
+  credentials stay separate even when they share an issuer, and a launch date
+  differs from a publication date.
+- **Coverage.** The extractor is told to scan every source, not only
+  highlights. That does not guarantee every fact is found.
 
-The editor fits a 1280×800 window without scrolling:
+### Quote matching
 
-- **One summary line** names what new runs use now, for example "Now: Standard —
-  Claude Opus 5.5 writes · GPT-6.1 Sol reviews". Exact model IDs, profile
-  versions and runtime controls sit under its collapsed **Details** disclosure.
-- **Compact preset cards** sit in up to three columns. Each names the writer →
-  reviewer pair, the providers, and the public per-million-token prices as one
-  short line; the full wording stays available to screen readers and on hover.
-  Cards carry **Unvalidated**, **Development**, and **Not available with your
-  current sign-in** badges where they apply.
-- **Custom pair** is a card of the same size that reveals the exact author and
-  critic profile selects.
-- **Writer reasoning** and **Reviewer reasoning** list the levels each selected
-  profile allows, with its own level marked as the default. Choosing a preset
-  or another profile resets the level. A changed level keeps the preset's name
-  and adds it, as in "Balanced · writer high", on the checked card, the summary
-  line and an application's pair.
-- **The quality and sign-in note** is one line, with the full text behind
-  **More**.
-- **Cancel** and **Apply for future runs** sit in a bar pinned to the bottom of
-  the window.
+Quote and value checks ignore formatting that keeps the meaning. When a quote
+matches only this way, it is replaced with the exact source text, provided that
+text still holds the whole value. Paraphrases, changed numbers and elided text
+fail closed, and values and source text are never rewritten.
 
-Choices stay a draft until **Apply for future runs** saves their provider/model
-destinations and the pair itself. Existing run records remain unchanged.
-Unsupported or unavailable routes block profile-backed starts, and
-provider-transmission acknowledgement is still required. OpenAI Codex
-user-session routes do not support these profiles, and authentication is never
-switched automatically.
+The checks ignore:
 
-The applied pair is the one the CLI saves in `.draft-loop/model-profile-selection.json`
-(see [Applied profile pair](#applied-profile-pair)). The desktop reads it when a
-workspace opens, so after reopening the workspace or restarting the app the
-editor's summary line names that pair, its **Details** list the exact versions, and new
-runs send that pair. If the pair cannot be saved, the dialog says so and does
-not show it as applied, although the models themselves were already changed.
-Saving custom models clears the pair. A saved pair that no longer matches the
-workspace models is not used; the dialog says why.
+- Markdown emphasis and inline-code markers
+- leading list, heading and blockquote markers
+- link markup, reduced to its text
+- whitespace and line breaks
+- case
+- typographic quotes, dashes and ellipses
 
-The configured-models card names the applied preset, or warns "No model
-profiles: provider defaults, unknown context windows." when the next run would
-attach none.
+### Grounding recovery
 
-For a selected draft pair, the picker also provides an editable API token-cost
-scenario based on the catalog's dated public, uncached text API rates. Its
-initial 10,000-input/1,000-output-token example plans two author calls and one
-critic call; change the values to describe another scenario. The estimate is
-not a forecast, hard cap, or bill and does not set runtime token budgets. It
-excludes extra calls and retries, input growth, cache, tools, batch, regional
-premiums, and unsupported long context. User-session routes show public rates
-only and do not estimate subscription quota or charges. The reusable
-application boundary is `@draft-loop/application/model-profile-budget`.
+1. **Retry once.** On a smaller input, a grounding failure can trigger one more
+   full-context request with the same sources and fixed diagnostic counts.
+   Failed values and quotes are not sent back.
+2. **Drop what is ungrounded.** If the retry still fails, DraftLoop keeps the
+   grounded facts and drops the rest, along with any issue that cites them. One
+   warning, with no quoted text, says how many were dropped. Acknowledge it
+   after checking for missing facts.
+3. **Nothing grounded.** If no grounded fact remains, the profile shows as
+   empty, not as a failed extraction.
 
-Cancel leaves the saved provider/model destinations and current next-run
-selection unchanged.
+An ungrounded fact is never saved.
 
-When provider model discovery fails or returns no IDs, the setup and **Change
-models** forms offer exact IDs from the active application profile catalog.
-Labels show only each entry's configured tier and registered author or critic
-role. These fields do not establish account, plan, or CV-quality suitability.
-Suggested IDs are not guaranteed to work with your account, plan, or CLI version.
-You can still enter any exact model ID, and successful live discovery remains
-the displayed source. Each catalog entry shows its metadata review date;
-CLI-specific live availability for these suggestions has not been reverified. Economy,
-balanced, and standard remain the curated pair presets, with a separate development GLM
-preset, a separate development Gemini preset, and a separate development
-Mistral preset. The active catalog lists
-Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Terra, GPT-6.1 Sol, GLM-5.3-Flash
-through DeepInfra, Gemini 3.8 Flash, and Mistral Large 4. GLM's standard uncached
-API rates are $0.15 per million input tokens and $0.50 per million output tokens,
-reviewed 2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04; Mistral
-Large 4's are $1.36 and $4.18, reviewed 2026-10-08, without Mistral's temporary
-launch discount, with the 1M-token context window from Mistral's model page.
-Quality is
-unvalidated and account availability unchecked. Each current Anthropic and OpenAI
-profile also lists the reasoning levels it accepts, `low` to `max`, from the
-[Claude effort page] and each OpenAI model page; development profiles and
-historical versions keep their fixed level. Historical profile versions, including premium-tier entries, remain
-resolvable but are not offered as current suggestions or presets; this includes
-the Sonnet 5.5 economy author profile's earlier role as the economy author,
-so saved selections and runs still load. That profile is now offered again as the
-Balanced preset's author. All catalog
-quality entries are unvalidated and availability has not been checked; the
-review date documents metadata review, not a live provider probe. Local
-endpoints remain free-text because there are no local server profile IDs.
+- **Model output repairs.** A source-backed omission that names a fact the model
+  did not return keeps its warning, and only that dangling reference is
+  removed. Repeated fact keys are repaired only when no issue refers to the
+  key. Other dangling references fail without saving facts.
+- **Schema repairs.** Validation removes redundant entries only when the
+  failures are repeated evidence tuples or repeated references. Any other
+  schema failure rejects the whole proposal.
 
-Catalog price metadata covers the standard text API at up to 200,000 input
-tokens by default. Claude Opus 5.5 and Sonnet 5.5 bill their whole 1,000,000-token
-window at standard rates, so their cap is 1,000,000. Claude Haiku 5.5 bills a prompt
-above 100,000 tokens at a higher rate, which DraftLoop applies to every Haiku call:
-an upper bound for a shorter prompt, with a 1,000,000 cap. The OpenAI critics are
-capped at 272,000, and a prompt above its cap leaves the estimate unknown. The Claude authors and the OpenAI critics also carry cache-read and
-cache-write rates, since both providers report cache writes. Tool, batch,
-regional, and subscription pricing are excluded. Haiku 5.5 sends no
-sampling parameters, thinking budget, or assistant prefill, which the model
-rejects, and the Claude session route reports an unrecognized model with a
-prompt to update the installed `claude` CLI. Sources are the official
-[Anthropic model overview], the [Claude models overview], the [Claude Sonnet 5.5 overview], official OpenAI pages for [GPT-6.1 Sol], [GPT-6.1 Terra] and [GPT-6 Luna], and the
-DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
-[Gemini API pricing] and [Gemini models] pages, and the Mistral [Mistral Large 4 model page].
+### Extraction failures
 
-OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
-token details alongside input/output totals. A rate estimate accounts for
-reported cache categories only when their rates are supplied; malformed or
-missing usage, or a missing applicable rate, leaves cost unknown. Missing usage
-keeps zero token totals for compatibility. These estimates are adapter results,
-not persisted run totals or invoice amounts.
+A failed extraction saves no facts. It returns one omission issue with opaque
+source references, and the guidance never shows provider diagnostics, values
+or paths.
 
-[Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
-[Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
-[Claude Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
-[Claude effort page]: https://platform.claude.com/docs/en/build-with-claude/effort
-[GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
-[GPT-6.1 Terra]: https://developers.openai.com/api/docs/models/gpt-6.1-terra
-[GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
-[GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
-[model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
-[Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
-[Gemini models]: https://ai.google.dev/gemini-api/docs/models
-[Mistral Large 4 model page]: https://docs.mistral.ai/models/mistral-large-4
+| Failure                                       | Guidance                                                                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A recognized provider failure                 | Fixed action guidance                                                                                                                                                           |
+| Input preparation, response format, grounding | A distinct message for each                                                                                                                                                     |
+| Anthropic credit balance or spending limit    | Billing guidance, with no estimate of charges                                                                                                                                   |
+| DeepInfra malformed stream                    | Up to two protocol reason counts and a remainder                                                                                                                                |
+| DeepInfra timeout                             | Says whether the initial response, an idle stream or the total deadline failed. Idle and total timeouts may count the answer and reasoning characters received, never the text. |
+| DeepInfra transient error                     | Names only HTTP 500, 502, 503 or 504                                                                                                                                            |
+| Values or quotes over 2,000 characters        | Bounded reason counts                                                                                                                                                           |
+
+Older saved generic failures cannot be reconstructed. Before retrying, follow
+the recorded cause. Renaming the profile does not fix a failure, and a retry
+sends the selected material again, which may cost credits.
+
+### The profile on screen
+
+**On screen**, the profile surface handles derivation approval, version
+selection, editing fact values and issue statuses, review, and choosing the
+reviewed version for the next run.
+
+- **States.** It tells apart a saved failure, an empty profile, a draft that
+  needs review, open issue blockers and a reviewed version.
+- **A failed version** shows one callout with up to three deduplicated
+  reasons. Its action is **Retry profile generation**, and the send approval
+  must be ticked again first.
+- **Progress.** While a profile generates, the screen shows a spinner, the
+  elapsed time and, once known, the parts done, such as **1 of 4 parts done**.
+  Parts run in parallel, and no completion time is estimated. Large knowledge
+  bases take several minutes. **Cancel generation** stops further provider
+  calls and saves nothing.
+- **Pickers.** **Saved profiles** lists every profile, drafts included, newest
+  first, and loads the latest one when no name is entered. **Existing reviewed
+  profiles** loads a reviewed version without deriving or sending anything.
+  Source compatibility is checked again before a review starts.
+- **Review blockers.** Empty profiles and drafts with open issues cannot be
+  marked reviewed. Warnings block until they are acknowledged or resolved. A
+  severity group with several issues has one control that sets them all.
+- **Re-extract all sources** does what `--full-extraction` does.
+
+A reviewed profile is a human-reviewed record. It is not a claim about
+application readiness or quality.
+
+### Incremental derivation
+
+Derivation extracts only new or changed sources, and reuses the facts of
+unchanged sources from the latest version. It then recomputes duplicates,
+conflicts and omissions over the merged facts. A source's facts are reused only
+when all of these hold:
+
+- **Same route.** The latest version records the same provider, model, prompt
+  and extraction profile. Older versions without a recorded route are
+  extracted in full.
+- **Same source and filter.** The source version is unchanged, no earlier error
+  cites it, and its knowledge base was filtered the same way. That means the
+  same sensitivity rules version, checksum and excluded tiers.
+- **Same kind.** The source's [evidence kind](#source-evidence-kind) is
+  unchanged. Changing the kind extracts it again under the new guidance.
+
+A fact is kept only when every source it cites is unchanged. When nothing
+changed, derivation calls no provider and still saves a new version. The result
+reports `reusedSourceCount` and `extractedSourceCount`. `--full-extraction`
+extracts every source again.
+
+### Output ceilings and reasoning
+
+| Route                                            | Output ceiling                                                                        | Extraction reasoning                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 (API key) | 32,768 tokens                                                                         | Profile default                                                                                       |
+| GLM through DeepInfra                            | 32,768 tokens                                                                         | `reasoning_effort: "none"` ([DeepInfra reasoning control](https://docs.deepinfra.com/chat/reasoning)) |
+| Gemini                                           | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
+| Mistral Large 4                                  | 32,768-token answer budget, sent as the 65,536-token model limit when reasoning is on | `reasoningEffort: "none"`                                                                             |
+| User-session, local and other routes             | 8,192 tokens                                                                          | Route default                                                                                         |
+
+Extraction uses a detached profile with these settings, and review runs keep the
+author's own settings. Mistral counts hidden reasoning against the request
+limit, which is why its limit is raised. If Mistral still stops at the limit,
+the error counts the characters returned, never the text. None of these
+settings promises speed or quality.
+
+### Large inputs
+
+Above 65,536 UTF-16 text units, across one to four sources, extraction plans one
+call per source, and splits larger sources into contiguous windows.
+
+| Setting                      | Value                                                                                                                        |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Window size                  | Three quarters of the output budget divided by 1.6, clamped to 8,192 to 32,768 units                                         |
+| Resulting windows            | 8,192 units on 8,192-token routes, 15,360 units at the 32,768-token ceiling                                                  |
+| Planning ratio               | 1.6 output tokens per character of dense career text. Mistral Large 4 measured at most 1.33 on dense text and 0.85 on prose. |
+| Calls per plan               | At most 96, or the plan is declined                                                                                          |
+| Calls with grounding retries | At most 192 without output-limit splits                                                                                      |
+| Parallel calls               | 4 at a time, 8 for Mistral                                                                                                   |
+| Largest source               | 524,288 characters, the same as the whole selection                                                                          |
+| Largest request              | 131,072 characters of one source                                                                                             |
+
+- **Headings.** Markdown sources are cut at ATX headings outside code fences,
+  and whole sections are packed in order. A section larger than a window is
+  split by size, and each piece carries its heading path (for example
+  `Experience > Senior Engineer at X`) as context that is never quotable.
+  Ingestion turns HTML and DOCX headings into the same markers. Text without
+  headings is cut by size alone.
+- **One window per call.** A call sends only its own source or window, with the
+  source id, media type and offsets.
+- **Grounding.** Each result is grounded as it arrives. A failing call gets one
+  replacement, and after that only its ungrounded facts are dropped.
+- **Failures.** A call that still fails is retried once alone. If it fails
+  again, the extraction fails and saves nothing. While the host stays open, a
+  user retry re-runs only the failed calls.
+- **Output-limit splits.** A call that hits the output limit is split into two
+  halves, cut at the heading or newline nearest the middle. Halves split again up
+  to three levels and never below 1,000 characters, and the splits count toward
+  the 96-call cap.
+- **Sources too large.** A source that cannot be windowed, for example with more
+  than four sources selected, is left out with a source-too-large issue. Sources
+  over 524,288 characters are skipped the same way.
+- **Conflicts and duplicates** across calls come from local detection, which
+  depends on consistent subject naming.
+- **Checking the ratio.** `pnpm test:profile-windows:live` checks the ratio on a
+  developer machine with made-up career text.
+
+Smaller inputs use a fallback instead. An output-limit truncation can trigger
+one focused call per source, for two to four sources. A focused call that also
+truncates can retry its source in four windows. The fallback makes at most 21
+calls, and the focused calls keep the full source set as context.
+
+Exact duplicate source contents are sent once per group, while every original
+version stays attached to facts as provenance.
 
 ## Writing policies
 
-New real workspaces start with a default policy that asks for a professional,
-concise, two-page CV, plain punctuation without em dashes, exact facts with no
-rounding up, every listed certification kept, employment kept distinct from
-consulting, training and personal projects, and personal circumstances left out.
-Replace it with `policy activate`. Existing workspaces and demo (fixture)
-workspaces are not changed.
+A **writing policy** tells the author how to write. A new real workspace starts
+with a default policy, which asks for:
 
-Writing policies are local, immutable versions. `policy activate` imports a
-file and makes it the workspace default for future runs; `policy import` adds a
-version without changing that default. Metadata-only reads are the default, and
-exact local content is printed only when `--content` is supplied.
+- a professional, concise, two-page CV
+- plain punctuation without em dashes
+- exact facts, with no rounding up
+- every listed certification kept
+- employment kept distinct from consulting, training and personal projects
+- personal circumstances left out
+
+Existing workspaces and fixture workspaces are not changed.
 
 ```sh
 pnpm --filter @draft-loop/cli start policy activate ./writing-policy.md ./workspace
@@ -1098,23 +948,25 @@ pnpm --filter @draft-loop/cli start policy list ./workspace
 pnpm --filter @draft-loop/cli start policy show <checksum> ./workspace --content
 ```
 
-A policy may contain `Tone`, `Spelling locale`, `Verbosity`, `Page target`,
-`Section order`, `Emphasis areas`, and `Anti-formulaic defaults` directives in
-`Name: value` form, alongside forbidden-term and punctuation rules. The
-anti-formulaic defaults are transparent and enabled unless the policy says
-`Anti-formulaic defaults: disabled`.
+- **Versions.** Policies are local, immutable versions.
+- **`activate`** imports a file and makes it the default for future runs.
+- **`import`** adds a version without changing the default.
+- **Reading.** Reads show metadata only, unless you pass `--content`.
+- **Directives.** A policy may hold `Tone`, `Spelling locale`, `Verbosity`,
+  `Page target`, `Section order`, `Emphasis areas` and
+  `Anti-formulaic defaults` directives in `Name: value` form. It can also hold
+  forbidden-term and punctuation rules.
+- **Anti-formulaic defaults** are on unless the policy says
+  `Anti-formulaic defaults: disabled`.
 
-In the desktop, **Edit policy** in Home's Workspace settings opens the
-active policy as text, or the default policy when the workspace has none.
-Tone, verbosity, page target and spelling locale selectors rewrite the matching
-`Name: value` lines, and editing the text updates the selectors. Saving creates
-a new version for future runs, as `policy activate` does; the application's
-message appears inline when the text is rejected, and nothing is saved. Choosing
-a policy file remains available.
+**On screen**, **Edit policy** in Home's Workspace settings opens the active
+policy as text, or the default when there is none. Selectors for tone,
+verbosity, page target and spelling locale rewrite the matching lines. Saving
+creates a new version for future runs, as `policy activate` does, and rejected
+text saves nothing.
 
-An imported version can be selected as a complete override for one reviewed
-opportunity. The active workspace policy is unchanged, and the run records both
-base and override versions:
+An imported version can override the policy for one reviewed brief. The
+workspace policy is unchanged, and the run records both versions:
 
 ```sh
 pnpm --filter @draft-loop/cli start start ./workspace \
@@ -1124,15 +976,23 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 
 ## Candidate knowledge bases
 
-The CLI exposes shared CKB controls through `knowledge`: initialize a portable
-store with its default CKB, open or list a store, inspect path-free lifecycle
-readiness, list path-free source/version identities, report duplicate groups,
-inspect the count-only managed-file inventory, and import an explicitly chosen
-local file, bounded local directory, or explicitly approved HTTPS URL. A later
-local file version can be appended to an existing file source without replacing
-its remembered origin.
-The CLI can also bind one or more ready CKBs to a workspace; combining CKBs
-requires `--approve-combination`. For example:
+A **store** holds one or more **knowledge bases** of career sources (the
+portable CKB, [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md)).
+A workspace selects one or more ready knowledge bases, and combining them needs
+`--approve-combination`. Every listing is path-free.
+
+| Task                          | Command                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| Create, list or count a store | `knowledge store init`, `list`, `inventory`                                            |
+| Back up and restore           | `knowledge store backup`, `inspect-backup`, `restore`                                  |
+| Manage knowledge bases        | `knowledge base create`, `archive`, `delete-preview`, `delete`                         |
+| Import material               | `knowledge source import` (file), `import-directory`, `import-url --approve`           |
+| Update a file source          | `knowledge source append-file-version`, `origin-status`, `refresh-file`, `rebind-file` |
+| Update a URL source           | `knowledge source refresh-url --approve`                                               |
+| Retire a source               | `knowledge source retirement-state`, `retire --confirm`                                |
+| Manage a directory source     | `knowledge source directory-*` (see below)                                             |
+| Inspect sources               | `knowledge source list`, `duplicates`, `kind`                                          |
+| Select for a workspace        | `knowledge select`                                                                     |
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
@@ -1173,6 +1033,24 @@ pnpm --filter @draft-loop/cli start knowledge source retirement-state \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
 pnpm --filter @draft-loop/cli start knowledge source retire \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge source list \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+pnpm --filter @draft-loop/cli start knowledge source duplicates \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+pnpm --filter @draft-loop/cli start knowledge select ./workspace \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+```
+
+`append-file-version` adds a later version of a file source and keeps its
+remembered origin.
+
+### Directory sources
+
+An imported directory keeps its members together. Rebinding, refreshing and
+reconciling each have a `-preview` command that writes nothing, and an `-apply`
+command that needs `--confirm`.
+
+```sh
 pnpm --filter @draft-loop/cli start knowledge source directory-rebind-preview \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID ./relocated-career-material
 pnpm --filter @draft-loop/cli start knowledge source directory-rebind-apply \
@@ -1192,60 +1070,62 @@ pnpm --filter @draft-loop/cli start knowledge source directory-reconciliation-ap
   --approved-retirement-source-id SOURCE_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source directory-add-members \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID --confirm
-pnpm --filter @draft-loop/cli start knowledge source list \
-  ./candidate-knowledge KNOWLEDGE_BASE_ID
-pnpm --filter @draft-loop/cli start knowledge source duplicates \
-  ./candidate-knowledge KNOWLEDGE_BASE_ID
-pnpm --filter @draft-loop/cli start knowledge select ./workspace \
-  ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
 
 ### Source sensitivity
 
-A knowledge base can hold sensitivity rules that classify the sections of its
-Markdown sources into three tiers: `normal`, `sensitive`, and `never-share`.
-Rules are saved as immutable versions; every add or remove writes a new
-version, and a knowledge base with no saved version has no rules.
+A knowledge base can hold **sensitivity rules** that sort the sections of its
+Markdown sources into three tiers. Rules are immutable versions, so every add
+or remove writes a new version. A knowledge base with no saved version has no
+rules.
 
-> **Where rules apply.** Canonical profile derivation and review runs use the
-> knowledge base's current rules. `never-share` sections are never sent to a
-> provider. `sensitive` sections are withheld too, unless the workspace has
-> explicitly allowed them (see [Sensitive-section consent](#sensitive-section-consent)).
-> Markdown only: other sources are sent unchanged.
->
-> - **Derivation** removes excluded sections before extraction and drops any
->   fact whose evidence quote is not found in allowed source text, which is
->   reported in the profile's dropped-fact warning. A source whose sections are
->   all excluded is skipped, with a warning issue on the profile. The command
->   result lists the rules version used per knowledge base; the profile file
->   does not store it.
-> - **Runs** drop every retrieved chunk that overlaps an excluded section
->   (any overlap, so a chunk that straddles a boundary is dropped) before it
->   is selected, traced or sent, on every retrieval path. A second check
->   refuses any author or critic request that still contains a distinctive
->   line of an excluded section, without calling the provider and without
->   quoting the text. If the rules or source text cannot be read, the run
->   stops instead of sending unfiltered material. A run does not record the
->   rules version yet.
+| Tier          | Sent to a provider?                                                        |
+| ------------- | -------------------------------------------------------------------------- |
+| `normal`      | Yes                                                                        |
+| `sensitive`   | No, unless the workspace allows it ([consent](#sensitive-section-consent)) |
+| `never-share` | Never                                                                      |
 
-How rules classify a source:
+```mermaid
+flowchart LR
+  src["Markdown source"] --> sections["Sections by heading"]
+  sections --> rules{"Strictest matching rule"}
+  rules -->|normal| send["May be sent"]
+  rules -->|sensitive| consent{"Workspace consent?"}
+  consent -->|on| send
+  consent -->|off| held["Withheld"]
+  rules -->|never-share| held
+  send --> check["Outgoing request check"]
+  check --> provider(["Provider"])
+```
 
-- **Heading matching.** A rule matches a section's own heading or any
-  ancestor's, either by text (`--heading-contains`, case-, accent- and
-  emphasis-insensitive) or by an exact heading path from the top level down
-  (`--heading-path`). Rules never use offsets, so they keep working when the
-  source file is refreshed.
-- **Strictest wins.** A section takes the strictest tier among the rules that
-  match it: `never-share` over `sensitive` over `normal`.
-- **Headings only.** Only ATX headings (`#` to `######`) start a section.
-  Text that is not under its own heading cannot be tiered separately; add a
-  heading to isolate it. Setext (underlined) headings and `#` lines inside
-  code fences are not headings.
+**Where rules apply.**
+
+- **Derivation** removes excluded sections before extraction. It drops any fact
+  whose quote is not in allowed text, and reports it in the dropped-fact
+  warning. A source with every section excluded is skipped, with a warning. The
+  command result lists the rules version used.
+- **Runs** drop every retrieved chunk that overlaps an excluded section, on
+  every retrieval path, before it is selected, traced or sent. A second check
+  refuses any author or critic request that still holds a distinctive line of an
+  excluded section, without calling the provider. If the rules or source cannot
+  be read, the run stops. Runs do not record the rules version yet.
+
+**How rules classify a source.**
+
+- **Heading matching.** A rule matches a section's own heading or an
+  ancestor's. It matches by text (`--heading-contains`, ignoring case, accents
+  and emphasis) or by an exact path from the top level (`--heading-path`).
+  Rules use no offsets, so they survive a refresh.
+- **Strictest wins.** `never-share` beats `sensitive`, and `sensitive` beats
+  `normal`.
+- **Only ATX headings** (`#` to `######`) start a section. Text that is not
+  under its own heading cannot be tiered separately, so add a heading. Setext
+  headings and `#` lines in code fences do not count.
 - **Markdown only.** Plain-text, HTML, PDF and DOCX sources are not split, so
   `preview` shows one root section that no rule can match.
-- **Suggestions are never applied silently.** `suggestions` lists defaults
-  such as compensation and contact headings; `adopt ... --confirm` adds the
-  ones you name, skipping any that already exist.
+- **Suggestions are never applied silently.** `suggestions` lists defaults, such
+  as compensation and contact headings, and `adopt ... --confirm` adds the ones
+  you name.
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge sensitivity list \
@@ -1265,32 +1145,18 @@ pnpm --filter @draft-loop/cli start knowledge sensitivity preview \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
 ```
 
-`add` takes exactly one of `--heading-contains <text>` or
-`--heading-path <heading...>`, with one argument per heading, and an optional
-`--id`; an id is generated when omitted. A duplicate id or an equivalent rule
-is rejected. `preview` prints each section's heading path, tier, matching rule
-ids and character count for the latest version of the source (`--version` picks
-another) and omits section text unless you pass `--text`. `list`, `add`,
-`remove`, `suggestions`, `adopt` and `preview` accept `--json`.
+- **`add`** takes exactly one of `--heading-contains <text>` or
+  `--heading-path <heading...>`, with one argument per heading. `--id` is
+  optional, and a duplicate id or an equivalent rule is refused.
+- **`preview`** prints each section's heading path, tier, matching rule ids and
+  character count, for the latest version (`--version` picks another). It
+  prints section text only with `--text`.
 
 #### Sensitive-section consent
 
-A workspace can allow `sensitive` sections, for example contact details for a
-CV header, to be sent to providers. The default is off. The setting is stored
-per workspace in `.draft-loop/sensitive-knowledge-consent.json`, separate from
-`workspace.json`.
-
-- **Never-share is unaffected.** `never-share` sections are never sent,
-  whether consent is on or off.
-- **One setting for every send.** Profile derivation reads the consent once per
-  derivation. A run reads it once on start and once on resume, and uses the same
-  setting for retrieval and for the check that refuses outgoing requests.
-- **Fails closed.** A missing file means consent is off. A corrupt or invalid
-  file stops the derivation or run before any retrieval or provider request,
-  with a message that tells you to reset it with `--deny`.
-- **Counts only.** The read form prints section and character counts per
-  selected knowledge base, now and under the opposite setting, but never
-  headings or text.
+A workspace can allow `sensitive` sections to be sent, for example contact
+details for a CV header. Consent is off by default, and is stored in
+`.draft-loop/sensitive-knowledge-consent.json`.
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace
@@ -1298,41 +1164,46 @@ pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace --
 pnpm --filter @draft-loop/cli start knowledge sensitivity consent ./workspace --deny
 ```
 
-Without a flag the command only prints the state. `--allow` and `--deny` are
-mutually exclusive, and all forms accept `--json`. The output always states that
-`never-share` sections are never sent and whether `sensitive` sections are sent.
-The desktop preflight control for this setting arrives with
-[#897](https://github.com/akoita/draft-loop/issues/897); until then, use the CLI.
+- **`never-share` is unaffected.** It is never sent, whatever the consent.
+- **One reading per send.** Derivation reads consent once. A run reads it at
+  start and at resume, and uses it for both retrieval and the outgoing check.
+- **Fails closed.** A missing file means off. A corrupt file stops the
+  derivation or run before anything is sent, and the message says to reset it
+  with `--deny`.
+- **Counts only.** Without a flag the command prints the state, with section
+  and character counts now and under the opposite setting. It never prints
+  headings or text.
+
+`--allow` and `--deny` cannot be combined. The screens have no control for
+this setting yet ([#897](https://github.com/akoita/draft-loop/issues/897)), so
+use the CLI.
 
 ### Source evidence kind
 
-Each knowledge source has an evidence kind that names what the material is:
-`cv`, `linkedin-export`, `performance-review`, `notes`, `transcript`,
-`work-journal`, or `other`. A `work-journal` source is an approved note from a
-coding agent (#2018): its writer sets the kind, and detection never picks it.
-Other kinds are detected locally from the latest version's normalized text,
-so nothing is sent to a provider and no detection result is stored. A user can
-override the kind for a source; the override is stored per source, so it
-survives refreshes that add new versions, and clearing it returns to detection.
+Each source has an **evidence kind** that says what the material is. Extraction
+sends the kind with the text, with short guidance per kind. The never-invent
+and exact-quote rules are the same for every kind.
 
-Profile extraction sends each source's effective kind with its text and gives
-short guidance per kind: a performance review's judgements stay attributed to
-the reviewer, notes yield only explicit statements, a LinkedIn export's sections
-map to roles, dates, and skills, a work-journal note credits only the role it
-states, and a transcript's evidence is the candidate's
-own turns. The never-invent and exact-quote rules are the same for every kind.
-Each profile version records the kind used for every extracted source version.
+| Kind                 | Extraction guidance                                                                                                                                |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cv`                 | Standard extraction                                                                                                                                |
+| `linkedin-export`    | Sections map to roles, dates and skills                                                                                                            |
+| `performance-review` | Judgements stay attributed to the reviewer                                                                                                         |
+| `notes`              | Only explicit statements                                                                                                                           |
+| `transcript`         | Only the candidate's own turns                                                                                                                     |
+| `work-journal`       | Credits only the role the note states. It is an approved note from a coding agent (#2018): its writer sets the kind, and detection never picks it. |
+| `other`              | Standard extraction                                                                                                                                |
 
-The application service is `source-evidence-kind-service`, used by both the CLI
-and the desktop. In the desktop, **Manage career evidence** lists each source of
-the base in use under **What each source is**, with its kind labelled
-"detected" or "set by you". Choosing a kind from the source's select records an
-override, and **use detected** clears it.
+- **Detection.** Other kinds are detected locally from the latest version's
+  text. Nothing is sent to a provider, and the result is not stored.
+- **Override.** A user can override the kind per source. The override survives
+  refreshes, and clearing it returns to detection.
+- **Recorded.** Each profile version records the kind used for every source
+  version.
+- **Service.** The code is `source-evidence-kind-service`.
 
-`knowledge source list` shows each current source's `evidenceKind` and
-`evidenceKindOrigin` (`detected` or `user`). `knowledge source kind` shows one
-source's kind, sets an override, or clears it with `--clear`; it accepts
-`--json`.
+`knowledge source list` shows each source's `evidenceKind` and
+`evidenceKindOrigin` (`detected` or `user`).
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge source kind \
@@ -1345,45 +1216,14 @@ pnpm --filter @draft-loop/cli start knowledge source kind \
 
 ### Evidence mode
 
-A workspace chooses what candidate material a run's author and critic
-receive. The setting is stored in `.draft-loop/evidence-mode.json` beside
-`workspace.json` and is read each time a run starts or resumes.
+The **evidence mode** chooses what candidate material a run's author and critic
+receive. It is stored in `.draft-loop/evidence-mode.json` and read each time a
+run starts or resumes.
 
-- `full-source` (the default) sends every eligible chunk of the selected
-  knowledge sources, in selection, source and chunk order. Chunks withheld by
-  [source sensitivity](#source-sensitivity) are never included. Evidence IDs,
-  citation rules and validation are the same as in retrieval mode.
-- `retrieval` sends the composed top excerpts, at most twenty chunks, plus up
-  to eight facts from a pinned reviewed profile.
-
-The evidence must fit a size budget: half of the smaller known context window
-of the author and critic profiles, at four characters per token, or 240,000
-characters when either window is unknown. The serialized chunks, including
-their identifiers, are counted against it. When they do not fit, or no chunk is
-eligible, the run uses retrieval instead. A `full-source` run prints an
-`Evidence mode:` line in its preflight with the chunk count and the budget, or
-the reason for the fallback, and records the decision as a `run.evidence-mode`
-audit event in the workspace history. A run in `retrieval` mode prints and
-records nothing extra. A missing setting means `full-source`; an unreadable one
-stops the run before anything is sent.
-
-The desktop review reads that recorded decision rather than a fresh retrieval.
-Its evidence strip and **Run details** show the run's chunk and source counts, for
-example "Full source: 181 chunks from 1 source", or say that retrieval was used
-and why. A `retrieval` run shows the excerpts setup selected, as before.
-
-In either mode, each author step records what it was given as a
-`run.author-input` audit event: the round, the counts of chunks and profile
-facts sent, the totals in the pinned selection, and the ids of requirements no
-sent item matched. The event holds counts and ids only, never evidence text.
-**Run details** shows the run's latest event as "Author input": the items
-sent out of the knowledge-base totals, and the requirements no sent item matched.
-
-Full source is the default because a long career loses most of its evidence to
-the twenty-chunk limit: in two real comparisons, the author saw 20 of 282
-chunks, most of them reserved role headings, and missed everything the
-job-specific reference CVs used. Choose `retrieval` for a smaller provider
-request or when the sources exceed the budget anyway.
+| Mode                    | What is sent                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `full-source` (default) | Every eligible chunk of the selected sources, in selection, source and chunk order                      |
+| `retrieval`             | The top composed excerpts, at most twenty chunks, plus up to eight facts from a pinned reviewed profile |
 
 ```sh
 pnpm --filter @draft-loop/cli start evidence mode ./workspace
@@ -1391,23 +1231,47 @@ pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source
 pnpm --filter @draft-loop/cli start evidence mode ./workspace retrieval --json
 ```
 
-The workspace argument is required. Without a mode the command shows the
-current one. It applies to workspaces with a candidate knowledge selection and
-never starts a run. Both forms accept `--json`.
+The workspace argument is required. Without a mode, the command shows the
+current one. It never starts a run.
+
+- **Why full source is the default.** In two real comparisons, the twenty-chunk
+  limit gave the author 20 of 282 chunks, mostly role headings, so it missed
+  what the reference CVs used. Choose `retrieval` for a smaller request.
+- **Size budget.** The evidence must fit half the smaller known context window
+  of the two profiles, at four characters per token, or 240,000 characters when
+  a window is unknown. Serialized chunks and their ids count.
+- **Fallback.** When the evidence does not fit, or no chunk is eligible, the run
+  uses retrieval. The preflight prints an `Evidence mode:` line with the chunk
+  count and budget, or the reason. A `run.evidence-mode` audit event records the
+  decision.
+- **Errors.** A missing setting means `full-source`, and an unreadable one stops
+  the run before anything is sent.
+- **Unchanged rules.** Sensitivity, evidence ids, citation rules and validation
+  are the same in both modes.
+
+Each author step also records a `run.author-input` event. It holds the round,
+the counts of chunks and facts sent, the totals in the selection, and the ids of
+requirements no sent item matched. It holds no evidence text.
+
+**On screen**, the evidence strip and **Run details** show the recorded
+decision, for example "Full source: 181 chunks from 1 source", or say why
+retrieval was used. **Run details** also shows the latest "Author input".
 
 ### Local embedding model
 
 Semantic retrieval ([ADR 0009](../adr/0009-local-semantic-retrieval.md)) uses a
-pinned local embedding model. It is optional and is never downloaded
-implicitly. Three tiers are available:
+pinned local embedding model. It is optional, and is never downloaded without
+your approval.
 
-- `311m` (default): Granite Embedding Multilingual R2, 768 dimensions, about
-  313 MB.
-- `97m`: Granite, 384 dimensions, about 98 MB, for low-resource machines.
-- `eg2-text` (experimental): the text model of EmbeddingGemma 2, 768
-  dimensions, about 175 MB. It scored higher on the
-  [evaluation fixtures](../evaluation/semantic-retrieval-comparison.md#embeddinggemma-2)
-  but embeds about three times slower than `311m`.
+| Tier                      | Model                              | Dimensions | Size         |
+| ------------------------- | ---------------------------------- | ---------- | ------------ |
+| `311m` (default)          | Granite Embedding Multilingual R2  | 768        | About 313 MB |
+| `97m`                     | Granite, for low-resource machines | 384        | About 98 MB  |
+| `eg2-text` (experimental) | The text model of EmbeddingGemma 2 | 768        | About 175 MB |
+
+`eg2-text` scored higher on the
+[evaluation fixtures](../evaluation/semantic-retrieval-comparison.md#embeddinggemma-2),
+but embeds about three times slower than `311m`.
 
 ```sh
 pnpm --filter @draft-loop/cli start embeddings status --tier 311m --verify
@@ -1417,40 +1281,37 @@ pnpm --filter @draft-loop/cli start embeddings install --tier 97m --from ./model
 pnpm --filter @draft-loop/cli start embeddings remove --tier 97m
 ```
 
-The commands behave as follows:
+| Command             | Behaviour                                                                                                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`            | Reports `absent`, `installing`, `ready`, `corrupt` or `unsupported-platform`. `--verify` also checks SHA-256 checksums. No network calls.                                                                   |
+| `install`           | Prints the approval details and downloads nothing: the Hugging Face source at the pinned revision, file sizes, the license and the destination.                                                             |
+| `install --confirm` | Downloads into a staging folder, checks every size and checksum, then moves it into place in one rename. A failed install leaves nothing behind. `--from <dir>` imports the same files from a local folder. |
+| `remove`            | Deletes only that tier's files.                                                                                                                                                                             |
 
-- **`status`** reports `absent`, `installing`, `ready`, `corrupt`, or
-  `unsupported-platform`. `--verify` checks SHA-256 checksums as well as sizes.
-  It makes no network calls.
-- **`install` without `--confirm`** prints the approval details and downloads
-  nothing: the Hugging Face source at the pinned revision, each file's size,
-  the license, and the destination.
-- **`install --confirm`** downloads the files into a staging directory, checks
-  every size and checksum, and moves the directory into place in one rename. A
-  failed or cancelled install leaves nothing behind. `--from <dir>` imports the
-  same files from a local directory instead, with the same checks.
-- **`remove`** deletes only that tier's files.
+Models live in one per-user folder, outside every knowledge base, workspace and
+backup:
 
-Models are stored in one per-user directory shared by the CLI and the desktop,
-outside every knowledge base, workspace, and backup:
+| System  | Folder                                                                    |
+| ------- | ------------------------------------------------------------------------- |
+| Windows | `%LOCALAPPDATA%\DraftLoop\models`                                         |
+| macOS   | `~/Library/Application Support/DraftLoop/models`                          |
+| Linux   | `$XDG_DATA_HOME/draft-loop/models`, or `~/.local/share/draft-loop/models` |
 
-- Windows: `%LOCALAPPDATA%\DraftLoop\models`.
-- macOS: `~/Library/Application Support/DraftLoop/models`.
-- Linux: `$XDG_DATA_HOME/draft-loop/models`, or `~/.local/share/draft-loop/models`.
-  Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass
-  `--model-dir`, to use another location. The runtime supports Linux x64 and
-  arm64, Windows x64 and arm64, and macOS on Apple silicon.
+Set `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`, or pass `--model-dir`, to use another
+folder. The runtime supports Linux x64 and arm64, Windows x64 and arm64, and
+macOS on Apple silicon.
 
 ### Retrieval mode
 
-A workspace chooses how its candidate knowledge is searched. The setting is
-stored in `.draft-loop/retrieval-mode.json` beside `workspace.json` and is read
-once when a run starts or resumes.
+The **retrieval mode** chooses how a workspace's knowledge is searched. It is
+stored in `.draft-loop/retrieval-mode.json` and read when a run starts or
+resumes.
 
-- `lexical` (the default) uses keyword retrieval only.
-- `semantic` searches by meaning with the [local embedding
-  model](#local-embedding-model) of the chosen tier.
-- `hybrid` fuses keyword and semantic results.
+| Mode                | Search                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `lexical` (default) | Keywords only                                                                           |
+| `semantic`          | By meaning, with the [local embedding model](#local-embedding-model) of the chosen tier |
+| `hybrid`            | Keyword and semantic results fused                                                      |
 
 ```sh
 pnpm --filter @draft-loop/cli start retrieval mode ./workspace
@@ -1459,60 +1320,47 @@ pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --tier 97m
 pnpm --filter @draft-loop/cli start retrieval mode ./workspace hybrid --json
 ```
 
-The workspace argument is required. Without a mode the command shows the
-current mode and model tier. `--tier` (`311m`, `97m`, or `eg2-text`) can only be given with a
-mode; when omitted, the saved tier is kept, starting from `311m`. `--model-dir`
-overrides the model directory, as for `embeddings`. Both forms accept `--json`.
+- **The command.** The workspace argument is required. Without a mode, it shows
+  the mode and tier.
+- **`--tier`.** It takes `311m`, `97m` or `eg2-text`, and only with a mode. When
+  it is left out, the saved tier is kept, starting from `311m`.
+- **`--model-dir`** works as for `embeddings`.
+- **Model state.** For `semantic` and `hybrid`, the command checks the local
+  model state. When it is not `ready`, it prints the `embeddings install`
+  command. The mode is saved either way, and nothing is downloaded.
 
-For `semantic` and `hybrid`, the command also reports the local model state for
-the tier (a local check, with no network request). When the model is not
-`ready`, it prints the `embeddings install` command to run. The mode is saved
-either way, and nothing is downloaded. The setting never starts a run.
+In a run:
 
-In a run, the mode works as follows:
+- **Scope.** The mode applies only to the main job-requirement query. The
+  contact, chronology, priority, skills and required-section queries stay
+  lexical, and the byte and chunk limits are unchanged.
+- **Sensitivity.** Withheld chunks are removed from semantic and hybrid hits too.
+- **Visible fallback.** When the model is absent, corrupt or unsupported, the
+  runtime fails, or an index is stale, the run uses lexical retrieval. Its
+  preflight says so, for example
+  `Retrieval mode: semantic requested; using lexical (model-absent).` A
+  `run.retrieval-mode` event and `semantic-unavailable` traces record the
+  reason. A run that uses the mode records `semantic-used` traces with the
+  model identity.
+- **Vectors.** Missing vectors are built from the selected source versions when
+  a run starts, which takes a moment the first time.
 
-- **Scope.** The mode applies only to the primary job-requirement query. The
-  contact, chronology, priority, skills, and required-section queries stay
-  lexical, and the provider byte and chunk limits are unchanged.
-- **Sensitivity.** Chunks withheld by [source sensitivity](#source-sensitivity)
-  are removed from semantic and hybrid hits before selection and tracing, as
-  for lexical hits.
-- **Visible fallback.** When the model is absent, corrupt, or unsupported, the
-  runtime fails, or a vector index is stale, the run uses lexical retrieval and
-  says so in its preflight, for example `Retrieval mode: semantic requested;
-using lexical (model-absent).` It also records a content-free
-  `run.retrieval-mode` audit event and, beside each retrieval trace, a
-  `semantic-unavailable` companion trace with the reason. A run that uses the
-  mode prints it with the indexed chunk count and records `semantic-used`
-  companions with the model identity.
-- **Vectors.** Missing vectors are built from the selected exact source
-  versions when a run starts, which can take a moment on first use.
+## Requirement coverage in run output
 
-### Requirement coverage in run output
-
-When the critic is asked to judge requirement coverage, run output replaces the
-generic event line for that step with a count-only summary:
+When the critic judges requirement coverage, the run output prints a count-only
+summary for that step:
 
 ```text
 Coverage judgement: 3 requested, 2 satisfied, 1 not satisfied (coverage-judgement-v1)
 ```
 
-Invalid and unanswered counts are added only when they are not zero, and a run
-without an instructions version shows `unversioned`. No line is printed when no
-judgement ran.
+Invalid and unanswered counts appear only when they are not zero. A run
+without an instructions version shows `unversioned`, and no line is printed when
+no judgement ran.
 
-`status` also lists each requirement's assessment from the latest completed
-critic execution of the current round, in requirement order. Each row shows the
-status, the basis (`matching wording`, `strict rule`, `semantic candidate (needs
-judgement)`, or `critic judgement`), the rationale, and the cited block ids.
-Requirement and block text is never printed.
-
-`evidence-usage [workspace] [--run-id <id>] [--json]` reads the saved run and
-prints, for each completed author or revision call that recorded the evidence
-it was sent, the chunks sent, the chunks a claim cites, the uncited ranks, and
-the claims outside the retrieved evidence or without evidence. It prints no
-content: counts, ranks and ids only. Runs recorded before the retrieved
-references were kept show no calls.
+`status` lists each requirement's assessment from the latest completed critic
+execution of the current round, in requirement order. It never prints
+requirement or block text.
 
 ```text
 Requirement coverage (round 1):
@@ -1521,12 +1369,23 @@ Requirement coverage (round 1):
   [uncovered] req-2 — strict rule — Not covered under the strict degree rule.
 ```
 
-The desktop review screen shows the same assessments in the side panel's
-**Coverage** tab, under the heading **Requirement coverage**, chosen the same
-way as `status`. Unlike `status`, it names
-each requirement by the text the run recorded (its id only when none was
-recorded) and each cited block by its section and opening words. Each row has a
-status badge, the basis, the rationale, and the cited blocks, which jump to the
-block when it is in the draft, under a summary such as
-`3 judged · 2 satisfied · 1 not satisfied`. Without a recorded coverage
-judgement there is no Coverage tab.
+Each row's basis is one of `matching wording`, `strict rule`,
+`semantic candidate (needs judgement)` or `critic judgement`.
+
+`evidence-usage [workspace] [--run-id <id>] [--json]` reads a saved run. For
+each author or revision call that recorded its evidence, it prints:
+
+- the chunks sent
+- the chunks a claim cites
+- the ranks that were not cited
+- the claims outside the retrieved evidence, or without evidence
+
+It prints counts, ranks and ids only. Runs from before retrieved references
+were kept show no calls.
+
+**On screen**, the side panel's **Coverage** tab shows the same assessments
+under **Requirement coverage**, with a summary such as
+`3 judged · 2 satisfied · 1 not satisfied`. Unlike `status`, it names each
+requirement by its recorded text and each block by its section and opening
+words. A cited block jumps to the draft. Without a recorded judgement there is
+no Coverage tab.
