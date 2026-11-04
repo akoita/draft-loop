@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-10-26<br>
+**Last reviewed:** 2026-11-04<br>
 **Current stage:** Local-first final: CV quality parity
 
 This page says where DraftLoop is going and what is being built now. It is for
@@ -107,8 +107,9 @@ Two opt-in Anthropic-only presets keep runs possible without an OpenAI budget:
 `balanced-anthropic` (Sonnet 5.5 author, Opus 5.5 critic) and
 `standard-anthropic` (Opus 5.5 author, Sonnet 5.5 critic). A different Claude
 model reviews, so the lineages differ, but the critic shares the author's
-company. The owner chose them on 2026-10-30 for the F–I re-score; whether one
-becomes the hosted default waits on those scores.
+company. The owner chose them on 2026-10-30 for the F–I re-score. On
+2026-11-04 the owner confirmed that the OpenAI critic stays the default, so
+these presets remain opt-in.
 
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
@@ -206,8 +207,9 @@ are in the [roadmap history](roadmap-history.md#current-state-checkpoints).
 Stable boundaries are in [the architecture](architecture/overview.md), and
 [ADR 0007](adr/0007-portable-candidate-knowledge-store.md) is the canonical CKB
 contract. The [privacy and evaluation policy](security/privacy-and-evaluation.md)
-and the [threat model](security/threat-model.md) remain authoritative for their
-concerns.
+the [threat model](security/threat-model.md) and the
+[server threat model](security/server-threat-model.md) remain authoritative for
+their concerns.
 
 ## Reference workflow and parity target
 
@@ -399,6 +401,12 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   for `server-v0.14.0`. It was released on 2026-11-04 as `server-v0.14.0` on
   staging and the desktop client [v0.9.0](releases/stage-evidence-v0.9.0.md).
   The work journal's sign-in mode (#2079) waits for hosted sign-in.
+- **Harden what shipped** ([milestone 68](https://github.com/akoita/draft-loop/milestone/68),
+  #2112, #2140–#2143, admitted 2026-11-04) makes those releases safe to depend
+  on without a paid model run. The desktop acceptance passes beside a running
+  server, the [server threat model](security/server-threat-model.md) covers
+  every server runtime (#2135), and a real Claude Code session walks the work
+  journal. The review's gaps are follow-ups #2144–#2148.
 
 ### Next — Manual parity: review and export
 
@@ -567,6 +575,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-04 | Admitted the Harden what shipped sprint ([milestone 68](https://github.com/akoita/draft-loop/milestone/68), #2112, #2140–#2143), with no paid model run: the desktop acceptance beside a running server, the server threat model in two parts (closing #2135), a real Claude Code work journal walk and this roadmap review. The owner confirmed the Anthropic author and OpenAI critic as the default pair.                                                                                                                                                          | The server's known gaps are listed and filed before production; no CV quality claim changes, and the #1309 exit still waits on #1307.                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-04 | Published [v0.9.0](https://github.com/akoita/draft-loop/releases/tag/v0.9.0), the desktop client alpha, with [release evidence](releases/stage-evidence-v0.9.0.md) after release prep PR [#2111](https://github.com/akoita/draft-loop/pull/2111) and the release notes fix [#2113](https://github.com/akoita/draft-loop/pull/2113).                                                                                                                                                                                                                                   | The desktop is now a client of a DraftLoop server and holds no engine or provider keys; v0.8 workspaces move with `draft-loop server import`. The release claims no CV quality result; the #1309 exit is scored by #1307.                                                                                                                                                                                                                                     |
 | 2026-11-04 | Retired the v0.8 desktop with its own local engine ([milestone 67](https://github.com/akoita/draft-loop/milestone/67), #2117–#2119): the required `Installed app acceptance gate` now packages and checks the desktop client, the credential gate is removed, and `apps/desktop` left the repository.                                                                                                                                                                                                                                                                 | The desktop client is the only desktop app. v0.8 users move their work with `draft-loop server import`; local-first runs stay in the CLI.                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-03 | Admitted the release sprint (#2103–#2105): `draft-loop-server up` prints what to do next, the record archive holds the work journal, and the notes for `server-v0.14.0` cover the work journal and desktop client sprints. The sign-in mode part of #2079 waits for hosted sign-in.                                                                                                                                                                                                                                                                                   | Two merged sprints were not released, and staging runs with the owner token, so sign-in mode would add nothing usable yet. No paid run is needed.                                                                                                                                                                                                                                                                                                             |
