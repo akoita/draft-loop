@@ -1,48 +1,58 @@
 # Installed-app acceptance
 
-The installed-app acceptance workflow runs the packaged Electron application
-twice on Linux x64, macOS arm64, and Windows x64. It runs in every release build
-before publishing, on manual dispatch, and on pull requests that can change the
-packaged app. Pull requests that change only documentation or tests skip it;
-`scripts/desktop-ci-scope.mjs` decides, and the always-reporting
-`Installed app acceptance gate` check carries the result. It uses a safely sanitized
-candidate Markdown file and a deterministic local response for an explicitly
-approved job URL. It does not contact a model provider or fetch the public
-internet.
+The `Installed app acceptance gate` check proves the packaged desktop client
+(`apps/desktop-client`, ADR 0011, D9) starts and behaves on Linux x64, macOS
+arm64 and Windows x64. It is a required check on `main`.
 
-The first launch creates a demo workspace, imports the candidate file, ingests
-the approved job URL, acknowledges the provider transmission preflight, runs
-the author–critic fixture, requests a revision, and verifies URL provenance.
-The second launch reopens the workspace, resumes the run, approves the revised
-artifact, exports Markdown, DOCX, and PDF, and checks durable history and
-workspace metadata.
+## When it runs
 
-Packaged builds ship a pruned, CPU-only `onnxruntime-node` for the target
-platform as an extra resource (`resources/onnxruntime-node`, staged by
-`apps/desktop/forge.config.ts`); the embedding model itself is not bundled.
-The second launch also runs a tiny embedded ONNX model through the packaged
-runtime and records the result as the `embeddingRuntime` check.
+- On pull requests that can change the packaged client: its sources, its
+  acceptance script, its workflow, the lockfile, `package.json` or `.nvmrc`.
+  `scripts/desktop-ci-scope.mjs` decides; other pull requests skip the
+  platform jobs and the gate still reports success.
+- In every **Release** build before publishing, and in `pnpm release:preflight`.
+- On manual dispatch of the **Installed app acceptance** workflow.
 
-Packaging stops at the Vite build when the main or preload bundle fails, and
-shows Vite's error. Without `apps/desktop/vite-build-guard.ts`, Forge's Vite
-plugin would report the target as built and fail later with "The main entry
-point to your app was not found". `pnpm validate` does not package the app, so
-check a change to the main-process bundle locally with
-`pnpm --filter @draft-loop/desktop package`.
+## What it checks
 
-Each matrix job uploads a JSON artifact containing only the app version,
-packaged executable checksum, OS metadata, boolean workflow results, and
-limitations. It does not contain candidate text, the job URL, credentials, or
-provider traffic. Credential lifecycle results are produced by the separate
-[credential acceptance workflow](credential-acceptance.md).
+The harness launches the packaged client with a fresh profile
+(`--user-data-dir`) against a scripted fake DraftLoop API on the runner. It
+calls no provider, no real server and no public site, and uses no candidate
+material.
 
-Run the harness locally against a packaged executable:
+| Check | What it proves |
+| --- | --- |
+| `pickerAtFirstLaunch` | A first launch shows the server picker. |
+| `refusesPlainHttpElsewhere` | Plain `http` is refused for any address but this computer. |
+| `opensServer` | Choosing a healthy server opens its own web screen. |
+| `desktopHost` | The page reports the desktop host to the server. |
+| `noNodeInPage` | The page has no Node.js access. |
+| `signInHook` | The remembered sign-in bridge is present. |
+| `outsideLinksLeave` | Links to other sites open in the system browser. |
+| `otherSchemesBlocked` | Other link schemes are blocked. |
+| `relaunchOpensLastServer` | A relaunch opens the last server without the picker. |
+
+Each platform job uploads a JSON file with the platform, the architecture and
+these booleans. It holds no token, address or page content.
+
+## Run it locally
+
+Package the client, then run the harness. On Linux and WSL it needs a display,
+such as WSLg or `xvfb-run`.
 
 ```text
-pnpm desktop:acceptance -- <packaged-executable> <evidence.json>
+pnpm --filter @draft-loop/desktop-client package
+pnpm desktop-client:acceptance
 ```
 
-This is installed-app integration evidence for sanitized offline material. It
-does not by itself validate live provider authentication, provider response
-quality, or the consented real-application outcome required by later roadmap
-issues.
+Without arguments the harness finds the executable that `package` wrote. To
+name it and keep the evidence, pass both paths:
+`pnpm desktop-client:acceptance -- <packaged-executable> <evidence.json>`.
+
+If packaging stops at the Vite build, read Vite's error above the failure:
+`apps/desktop-client/vite-build-guard.ts` stops Forge from reporting a broken
+bundle as built. If a check fails, the evidence names it; rerun locally with
+the same executable.
+
+This is offline evidence for the client shell. It does not validate sign-in
+against a real identity provider, a real keychain, or draft quality.

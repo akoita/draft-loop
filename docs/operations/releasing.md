@@ -71,8 +71,8 @@ explicit unpacked package directory or ZIP archive. It does not change the
 packaging configuration or package contents:
 
 ```text
-node scripts/release.mjs size-report --input ./apps/desktop/out/<unpacked-package> --format text
-node scripts/release.mjs size-report --input ./apps/desktop/out/make/<package>.zip > package-size.json
+node scripts/release.mjs size-report --input ./apps/desktop-client/out/<unpacked-package> --format text
+node scripts/release.mjs size-report --input ./apps/desktop-client/out/make/<package>.zip > package-size.json
 ```
 
 JSON is the default format. Use `--format text` for a category summary and the
@@ -98,15 +98,6 @@ the server picker, the window's isolation and navigation rules, and a relaunch.
 A failure on any platform stops the release before publishing. The sanitized
 evidence is uploaded as `acceptance-evidence-<platform>`.
 
-The v0.8 desktop with its own engine is no longer packaged by the release. Its
-smoke, installed-app and credential harnesses stay in CI until it is retired.
-
-To run the smoke locally after packaging:
-
-```text
-pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-loop-desktop
-```
-
 Before a release, run the mandatory local preflight:
 
 ```text
@@ -122,14 +113,9 @@ or `xvfb-run`.
 
 ## Live provider checks (manual)
 
-`pnpm test:e2e:live` and `pnpm test:model-suggestions:live` remain manual, paid
-checks of the local-first engine that the CLI and the v0.8 desktop use. They
-are not release steps; run them only with approval for their exact plan.
-
-The synthetic candidate is too thin to pass the application-readiness checks,
-so the live gate approves past them with a recorded synthetic rationale, as a
-person would, and its sanitized report marks `readinessOverridden`. The gate
-proves the provider, approval, and export path; it does not judge CV quality.
+`pnpm test:model-suggestions:live` remains a manual, paid check of the model
+catalog's destinations. It is not a release step; run it only with approval for
+its exact plan. The desktop client calls no provider, so no live check covers it.
 
 Inspect the exact bounded request and current registry-derived plan without
 creating provider adapters or resolving credentials:
@@ -154,69 +140,8 @@ Before running the live command, obtain approval for the exact plan: model
 IDs, routes, roles, synthetic payload, request controls, and cost/call bounds.
 Plan inspection and deterministic tests do not authorize provider calls.
 
-For an experimental local run through authenticated Claude and Codex user
-sessions, first complete `claude auth login` and `codex login`, then run:
-
-```text
-DRAFT_LOOP_PROVIDER_AUTH_MODE=user-session \
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-5-5 \
-DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
-pnpm test:e2e:live
-```
-
-This invokes the same production provider contracts with a different explicit
-authentication mode. It consumes subscription allowance, requires the vendor
-runtimes to be installed, reports per-request dollar cost as unknown, and
-never falls back to an API key. The mode is experimental and does not replace
-the API-key-backed local release check.
-
-When only one subscription or API balance is available, select each transport
-explicitly. For example, Anthropic API billing with an OpenAI subscription:
-
-```text
-DRAFT_LOOP_ANTHROPIC_AUTH_MODE=api-key \
-DRAFT_LOOP_OPENAI_AUTH_MODE=user-session \
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-5-5 \
-DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
-pnpm test:e2e:live
-```
-
-This is deterministic transport selection, not automatic fallback. The live
-provider gate is local-only: do not add provider credentials or subscription
-sessions to GitHub Actions or another CI/CD environment.
-
-The live gate uses synthetic `example.test`-style job and candidate material.
-Its development launch uses a temporary Electron user-data directory, so
-API-key mode uses environment credentials instead of keys saved in the normal
-desktop profile. Provider-managed Claude and Codex sessions remain external and
-use their separately logged-in CLI sessions. The gate incurs bounded provider
-cost. Run it before manual Electron validation with consented real data; never
-use real candidate material in the synthetic gate.
-
-This gate is not a development loop. Day-to-day work on the author-critic flow
-belongs in fixture mode, which spends nothing — see
-[CONTRIBUTING.md](../../CONTRIBUTING.md).
-
-Direct `pnpm test:e2e:live` runs default to `claude-sonnet-5-5` as author and
-`gpt-5.6-luna` as critic. These pairs exercise provider paths at bounded cost; they do not
-measure output quality.
-
-The author is Sonnet rather than an economy Haiku model because Haiku authors
-failed the synthetic gate in the alpha.2, alpha.3 and alpha.4 preflights
-(a missing Summary section, then structured-output retries). Override either
-side for a direct run without editing code:
-
-```text
-DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-5-5 pnpm test:e2e:live
-DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5 pnpm test:e2e:live
-```
-
-The gate prints the pair it is about to bill before launching. If a cheap model
-ever proves unreliable on the synthetic material, override it for that run and
-change the default here rather than leaving the gate flaky.
-
-The live provider gate never runs in CI or the **Release** workflow. CI runs
-the deterministic `pnpm validate` suite and packaged offline acceptance gates,
+The live check never runs in CI or the **Release** workflow. CI runs the
+deterministic `pnpm validate` suite and the packaged offline acceptance gate,
 which require no provider credentials. Provider API keys and local vendor
 sessions remain outside CI/CD.
 

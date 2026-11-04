@@ -18,24 +18,18 @@ databases, credentials, or candidate documents to commits.
 
 ## Working on the author-critic flow
 
-There are two ways to exercise the provider loop, and they are not
-interchangeable.
+Exercise the loop offline. It is the development loop, and it spends nothing:
 
-**Fixture mode is the development loop.** A workspace created in `demo` mode
-runs the whole workflow against local fixtures with no network call and no
-provider spend; the desktop host reports the endpoint as
-`local fixture (no network)`. `pnpm desktop:smoke` drives that path end to end.
-Iterate here.
+- **CLI:** `draft-loop init --fixture` creates a workspace that runs the whole
+  workflow against deterministic offline agents.
+- **Server:** `pnpm server:test` starts the
+  [local server stack](docs/operations/local-server-stack.md), whose worker uses
+  offline fixtures, and runs the server suites and the smoke.
 
-**The live-provider gate is a release step, not a development step.**
-`pnpm test:e2e:live` sends the synthetic material to real Anthropic and OpenAI
-endpoints and bills real usage on every run. Run it deliberately, before a
-release, as described in [docs/operations/releasing.md](docs/operations/releasing.md).
-
-Reaching for the live gate during ordinary iteration is the quickest way to
-exhaust a provider budget, and an exhausted budget blocks the release
-validation the gate exists to serve. The gate prints the models it is about to
-bill before launching, so check that line before letting a run proceed.
+Real providers bill every call. Run a paid check only with the owner's approval
+for its exact plan, as described in
+[docs/operations/releasing.md](docs/operations/releasing.md#live-provider-checks-manual).
+No paid check runs in CI.
 
 ## Pull requests
 
