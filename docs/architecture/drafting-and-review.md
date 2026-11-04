@@ -1008,7 +1008,7 @@ flowchart LR
   template --> profile["Layout profile<br/>one or two pages"]
   profile --> md[Markdown]
   profile --> docx[DOCX]
-  profile --> pdf["PDF<br/>printed or built-in"]
+  profile --> pdf["PDF"]
   md & docx & pdf --> qa{"Rendering QA"}
   qa -->|content or layout failure| refuse[Nothing written]
   qa -->|passes, or page fit only| write["File written,<br/>length warning if needed"]
@@ -1028,7 +1028,7 @@ and applied the same way to HTML, PDF and DOCX.
   in full as a Unicode font, so every character it has a glyph for reads back as
   written. The DOCX names Calibri with the same leading. Carlito Regular and
   Bold are vendored unmodified (SIL OFL 1.1) as a generated, compressed
-  TypeScript module, so neither the CLI nor the desktop needs a file lookup; a
+  TypeScript module, so no runtime needs a file lookup; a
   two-page PDF is about 570 kB. Wrapping and length use the font's real advance
   widths. Source, checksums, licence and regeneration steps are in
   `packages/rendering/fonts/carlito/NOTICE.md`.
@@ -1106,30 +1106,27 @@ and in the export payload as `renderingTemplate`; the QA report keeps only the
 layout profile.
 
 **Choosing a template.** The person picks it at export (#1330):
-`ExportCommand.templateId`, `export --template <id>` in the CLI, or the desktop
-`export` action's `template` field, which the bridge accepts only for built-in
-ids. The desktop remembers the choice per application in `localStorage`
-(`apps/desktop/src/export-template.ts`). A chosen template's page target
-replaces the writing policy's in the length warning.
+`ExportCommand.templateId`, `export --template <id>` in the CLI, or `templateId`
+in the API's export request, which accepts only built-in ids. A chosen
+template's page target replaces the writing policy's in the length warning.
 
 ### Printed PDFs
 
-On the desktop, PDFs are printed from HTML (#1362):
+A host may print PDFs from HTML instead of using the built-in writer (#1362):
 
 1. `renderPrintHtml` (`print-html.ts`) builds one self-contained A4 HTML document
    for the template. It embeds Carlito and marks every visible block with
    `data-dl-unit`, whose text is exactly the block's text. Bullets are a real `•`
    in a hanging indent, uppercase headings are a CSS transform, and keep rules
    are CSS `break-*` properties.
-2. The desktop's `PdfPrinter` (`apps/desktop/src/electron/pdf-printer.ts`) loads
-   it in a hidden, sandboxed window on an in-memory session that refuses every
-   other request, collects the marked units, and prints with `printToPDF`.
+2. The host's `PdfPrinter` prints that HTML and reports the marked units.
 3. `exportApprovedRun` builds the export from those bytes (`renderedPrintedPdf`).
    `buildPrintedPdfRenderingQa` compares the reported units with the artifact
    and takes the page count from the PDF.
 
-An export that fails QA writes nothing. Without a printer, as in the CLI, the
-built-in writer draws the PDF.
+An export that fails QA writes nothing. No current host passes a printer: the
+v0.8 desktop did, and the CLI and the server draw every PDF with the built-in
+writer.
 
 ### Rendering QA
 

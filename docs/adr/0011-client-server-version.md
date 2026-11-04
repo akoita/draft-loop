@@ -652,8 +652,8 @@ the other, and neither may break the other.
 **The desktop as a client of the server (decided 2026-11-03).** The desktop
 is a supported product surface, like the web (D9). Maintenance mode
 (2026-10-28) applies to the full-local desktop architecture, not to the
-desktop itself: the v0.8 engine keeps its fixes but gets no features, and it
-is retired one release after the client ships. Its users bring their work
+desktop itself. The v0.8 engine was retired on 2026-11-04, after the client
+shipped in v0.9.0, and its code left the repository. Its users bring their work
 across with `draft-loop server import` (D12). The desktop does not start or
 install the local stack (decided 2026-11-01). Local-first runs stay in the CLI
 and the shared packages.

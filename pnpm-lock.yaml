@@ -151,73 +151,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/storage
 
-  apps/desktop:
-    dependencies:
-      '@draft-loop/application':
-        specifier: workspace:*
-        version: link:../../packages/application
-      '@draft-loop/artifacts':
-        specifier: workspace:*
-        version: link:../../packages/artifacts
-      '@draft-loop/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
-      '@draft-loop/embeddings':
-        specifier: workspace:*
-        version: link:../../packages/embeddings
-      '@draft-loop/ingestion':
-        specifier: workspace:*
-        version: link:../../packages/ingestion
-      '@draft-loop/orchestrator':
-        specifier: workspace:*
-        version: link:../../packages/orchestrator
-      '@draft-loop/providers':
-        specifier: workspace:*
-        version: link:../../packages/providers
-      '@draft-loop/review-state':
-        specifier: workspace:*
-        version: link:../../packages/review-state
-      '@draft-loop/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      better-sqlite3:
-        specifier: 13.0.3
-        version: 13.0.3
-      react:
-        specifier: 19.3.1
-        version: 19.3.1
-      react-dom:
-        specifier: 19.3.1
-        version: 19.3.1(react@19.3.1)
-    devDependencies:
-      '@draft-loop/rendering':
-        specifier: workspace:*
-        version: link:../../packages/rendering
-      '@electron-forge/cli':
-        specifier: 7.11.2
-        version: 7.11.2(esbuild@0.28.2)
-      '@electron-forge/maker-zip':
-        specifier: 7.11.2
-        version: 7.11.2
-      '@electron-forge/plugin-auto-unpack-natives':
-        specifier: 7.11.2
-        version: 7.11.2
-      '@electron-forge/plugin-vite':
-        specifier: 7.11.2
-        version: 7.11.2
-      '@electron-forge/shared-types':
-        specifier: 7.11.2
-        version: 7.11.2
-      '@vitejs/plugin-react':
-        specifier: 6.1.1
-        version: 6.1.1(vite@8.2.4(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.1))
-      electron:
-        specifier: 44.10.0
-        version: 44.10.0
-      vite:
-        specifier: 8.2.4
-        version: 8.2.4(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.1)
-
   apps/desktop-client:
     devDependencies:
       '@electron-forge/cli':
@@ -773,10 +706,6 @@ packages:
 
   '@electron-forge/maker-zip@7.11.2':
     resolution: {integrity: sha512-FWnOm2MORX/nt8psnEtID3Vnt8Blby1NkzjU3KjXBPF9kave71C3lI8KbBbCeKKyTQ/S00i2FiglKdRWQ1WNTw==}
-    engines: {node: '>= 16.4.0'}
-
-  '@electron-forge/plugin-auto-unpack-natives@7.11.2':
-    resolution: {integrity: sha512-ktMQxO80vGjqVXVSFha+kWJscBmJaWud4Kqu7rKkbrCphr1zqaG+8EDNbkpGzV/+mhKOLuA5qII1hJ69gFNpdA==}
     engines: {node: '>= 16.4.0'}
 
   '@electron-forge/plugin-base@7.11.2':
@@ -4782,13 +4711,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron-forge/plugin-auto-unpack-natives@7.11.2':
-    dependencies:
-      '@electron-forge/plugin-base': 7.11.2
-      '@electron-forge/shared-types': 7.11.2
-    transitivePeerDependencies:
-      - supports-color
-
   '@electron-forge/plugin-base@7.11.2':
     dependencies:
       '@electron-forge/shared-types': 7.11.2
@@ -5895,6 +5817,7 @@ snapshots:
   better-sqlite3@13.0.3:
     dependencies:
       node-addon-api: 8.9.1
+    optional: true
 
   bignumber.js@9.3.1: {}
 
@@ -7613,7 +7536,8 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  node-addon-api@8.9.1: {}
+  node-addon-api@8.9.1:
+    optional: true
 
   node-api-version@0.2.1:
     dependencies:
